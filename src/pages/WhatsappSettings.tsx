@@ -51,7 +51,7 @@ interface WhatsappInstance {
 // API helper function
 const api = {
   get: async (url: string) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
     const response = await fetch(`http://localhost:8000/api${url}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -61,7 +61,7 @@ const api = {
     return { data: await response.json() };
   },
   put: async (url: string, data: any) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
     const response = await fetch(`http://localhost:8000/api${url}`, {
       method: 'PUT',
       headers: {
@@ -73,7 +73,7 @@ const api = {
     return { data: await response.json() };
   },
   post: async (url: string, data?: any) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
     const response = await fetch(`http://localhost:8000/api${url}`, {
       method: 'POST',
       headers: {
@@ -85,7 +85,7 @@ const api = {
     return { data: await response.json() };
   },
   delete: async (url: string) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
     const response = await fetch(`http://localhost:8000/api${url}`, {
       method: 'DELETE',
       headers: {
