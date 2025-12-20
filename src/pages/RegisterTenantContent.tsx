@@ -166,6 +166,14 @@ const RegisterTenantContent: React.FC = () => {
         setIsLoading(true);
         setError('');
 
+        // Clear any existing auth data before registering to prevent conflicts
+        const savedTheme = localStorage.getItem('theme');
+        localStorage.clear();
+        if (savedTheme) {
+            localStorage.setItem('theme', savedTheme);
+        }
+        apiClient.setToken(null);
+
         try {
             const payload = {
                 company_name: formData.company_name,
