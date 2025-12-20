@@ -188,9 +188,9 @@ const RegisterTenantContent: React.FC = () => {
             }>('/auth/register-tenant', payload);
 
             if (response.success && response.data) {
-                apiClient.setToken(response.data.token);
+                // Don't auto-login, let user login manually
                 setSuccess(true);
-                setTimeout(() => navigate('/dashboard'), 2000);
+                setTimeout(() => navigate('/login?registered=true'), 2000);
             } else {
                 // Show detailed validation errors if available
                 if (response.errors) {
@@ -230,7 +230,7 @@ const RegisterTenantContent: React.FC = () => {
                 <div className="auth-success">
                     <span className="auth-success__icon"><Check size={32} /></span>
                     <h2 className="auth-success__title">تم التسجيل بنجاح!</h2>
-                    <p className="auth-success__desc">مرحباً بك في منصة إدارة المحاماة. جاري تحويلك للوحة التحكم...</p>
+                    <p className="auth-success__desc">مرحباً بك في منصة إدارة المحاماة. جاري تحويلك لصفحة تسجيل الدخول...</p>
                 </div>
             </motion.div>
         );

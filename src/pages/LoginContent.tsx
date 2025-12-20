@@ -34,6 +34,15 @@ const LoginContent: React.FC = () => {
     const [showPin, setShowPin] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
+
+    // Check if user just registered
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        if (params.get('registered') === 'true') {
+            setSuccessMessage('تم تسجيل شركتك بنجاح! يمكنك الآن تسجيل الدخول.');
+        }
+    }, [location.search]);
 
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme');
@@ -130,6 +139,17 @@ const LoginContent: React.FC = () => {
                     <p className="auth-card__subtitle">سجّل دخولك للوصول إلى القضايا، المهام، والتقارير الفورية</p>
                 </div>
             </header>
+
+            {successMessage && (
+                <motion.div
+                    className="auth-alert auth-alert--success"
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    role="status"
+                >
+                    {successMessage}
+                </motion.div>
+            )}
 
             {error && (
                 <motion.div
