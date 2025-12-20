@@ -1,0 +1,27 @@
+{
+  "name": "نظام إدارة المحاماة",
+  "short_name": "نظام المحاماة", 
+  "description": "نظام شامل لإدارة مكاتب المحاماة والقضايا",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#33a381",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "ar",
+  "dir": "rtl"
+}

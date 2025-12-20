@@ -1,0 +1,1008 @@
+﻿import React, { useState, useEffect } from 'react';
+import {
+  User,
+  Bell,
+  Shield,
+  Palette,
+  Globe,
+  Database,
+  Monitor,
+  Moon,
+  Sun,
+  Settings as SettingsIcon,
+  Cloud,
+  Link,
+  Loader2,
+  AlertCircle,
+  Building2,
+  CreditCard,
+  Receipt,
+  Save,
+  Download,
+  Calendar,
+  CheckCircle,
+  XCircle
+} from 'lucide-react';
+import NotificationSettings from '../components/NotificationSettings';
+import { apiClient } from '../utils/api';
+import '../styles/settings-page.css';
+
+interface SettingsTab {
+  id: string;
+  label: string;
+  icon: React.ComponentType<any>;
+  roles: string[];
+}
+
+const Settings: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('notifications');
+
+  const tabs: SettingsTab[] = [
+    { id: 'notifications', label: 'الإشعارات', icon: Bell, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
+    { id: 'najiz', label: 'إعدادات ناجز', icon: Cloud, roles: ['admin'] },
+    { id: 'profile', label: 'الملف الشخصي', icon: User, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
+    { id: 'appearance', label: 'المظهر', icon: Palette, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
+    { id: 'privacy', label: 'الخصوصية والأمان', icon: Shield, roles: ['admin', 'lawyer', 'legal_assistant'] },
+    { id: 'language', label: 'اللغة والمنطقة', icon: Globe, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
+    { id: 'system', label: 'النظام', icon: Database, roles: ['admin'] },
+    { id: 'company', label: 'إعدادات الشركة', icon: Building2, roles: ['admin'] },
+    { id: 'subscription', label: 'الاشتراك', icon: CreditCard, roles: ['admin'] },
+    { id: 'invoices', label: 'الفواتير', icon: Receipt, roles: ['admin'] },
+  ];
+
+  // Mock user role - في التطبيق الحقيقي سيأتي من AuthContext
+  const userRole = 'admin';
+  const visibleTabs = tabs.filter(tab => tab.roles.includes(userRole));
+
+  // Najiz Settings State
+  const [najizSettings, setNajizSettings] = useState({
+    auto_link_lawyers: true,
+    send_whatsapp_on_import: false,
+    default_case_priority: 'medium'
+  });
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState('');
+
+  // Company Settings State
+  const [companyInfo, setCompanyInfo] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    license_number: ''
+  });
+  const [savingCompany, setSavingCompany] = useState(false);
+
+  // Subscription State
+  const [subscription, setSubscription] = useState<any>(null);
+  const [loadingSubscription, setLoadingSubscription] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+
+  // Invoices State
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
+
+  // User Profile State
+  const [userProfile, setUserProfile] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    national_id: ''
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editingCompany, setEditingCompany] = useState(false);
+
+  // Load Najiz settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        setLoadingSettings(true);
+        const response: any = await apiClient.get('/tenant/settings');
+        if (response.success) {
+          setNajizSettings(prev => ({ ...prev, ...response.data }));
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      } finally {
+        setLoadingSettings(false);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  // Load Company Info
+  useEffect(() => {
+    const loadCompanyInfo = async () => {
+      try {
+        const response: any = await apiClient.get('/tenant');
+        if (response.success && response.data?.tenant) {
+          const tenant = response.data.tenant;
+          setCompanyInfo({
+            name: tenant.name || '',
+            email: tenant.email || '',
+            phone: tenant.phone || '',
+            address: tenant.address || '',
+            license_number: tenant.license_number || ''
+          });
+        }
+      } catch (error) {
+        console.error('Error loading company info:', error);
+      }
+    };
+    loadCompanyInfo();
+  }, []);
+
+  // Load Subscription
+  useEffect(() => {
+    const loadSubscription = async () => {
+      try {
+        setLoadingSubscription(true);
+        const response: any = await apiClient.get('/subscription/current');
+        if (response.success && response.data) {
+          // API returns: { tenant, subscription, is_trial, trial_days_remaining, has_active_subscription, can_access_system }
+          setSubscription({
+            ...response.data.subscription,
+            status: response.data.is_trial ? 'trial' :
+              response.data.has_active_subscription ? 'active' : 'expired',
+            is_trial: response.data.is_trial,
+            trial_ends_at: response.data.tenant?.trial_ends_at,
+            trial_days_remaining: response.data.trial_days_remaining,
+          });
+        }
+      } catch (error) {
+        console.error('Error loading subscription:', error);
+      } finally {
+        setLoadingSubscription(false);
+      }
+    };
+    loadSubscription();
+  }, []);
+
+  // Load Invoices
+  useEffect(() => {
+    const loadInvoices = async () => {
+      try {
+        setLoadingInvoices(true);
+        const response: any = await apiClient.get('/subscription/invoices');
+        if (response.success && response.data) {
+          setInvoices(response.data.invoices || response.data);
+        }
+      } catch (error) {
+        console.error('Error loading invoices:', error);
+      } finally {
+        setLoadingInvoices(false);
+      }
+    };
+    loadInvoices();
+  }, []);
+
+  // Load User Profile
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const response: any = await apiClient.get('/auth/me');
+        if (response.success && response.data) {
+          const user = response.data.user || response.data;
+          setUserProfile({
+            name: user.name || '',
+            email: user.email || '',
+            phone: user.phone || '',
+            national_id: user.national_id || ''
+          });
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      }
+    };
+    loadUserProfile();
+  }, []);
+
+  // Save User Profile
+  const saveUserProfile = async () => {
+    try {
+      setSavingProfile(true);
+      const response: any = await apiClient.put('/auth/profile', userProfile);
+      if (response.success) {
+        setSettingsMessage('تم حفظ الملف الشخصي بنجاح');
+        setTimeout(() => setSettingsMessage(''), 3000);
+      }
+    } catch (error) {
+      setSettingsMessage('حدث خطأ أثناء حفظ الملف الشخصي');
+      console.error('Error saving user profile:', error);
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  // Save Company Info
+  const saveCompanyInfo = async () => {
+    try {
+      setSavingCompany(true);
+      const response: any = await apiClient.put('/tenant', companyInfo);
+      if (response.success) {
+        setSettingsMessage('تم حفظ معلومات الشركة بنجاح');
+        setTimeout(() => setSettingsMessage(''), 3000);
+      }
+    } catch (error) {
+      setSettingsMessage('حدث خطأ أثناء حفظ معلومات الشركة');
+      console.error('Error saving company info:', error);
+    } finally {
+      setSavingCompany(false);
+    }
+  };
+
+
+  // Save Najiz settings
+  const saveNajizSettings = async () => {
+    try {
+      setSavingSettings(true);
+      setSettingsMessage('');
+      const response: any = await apiClient.patch('/tenant/settings', najizSettings);
+      if (response.success) {
+        setSettingsMessage('تم حفظ الإعدادات بنجاح');
+        setTimeout(() => setSettingsMessage(''), 3000);
+      }
+    } catch (error) {
+      setSettingsMessage('حدث خطأ أثناء حفظ الإعدادات');
+      console.error('Error saving settings:', error);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'notifications':
+        return <NotificationSettings />;
+
+      case 'najiz':
+        return (
+          <div className="settings-section">
+            <div className="settings-section__header">
+              <div className="settings-section__icon">
+                <Cloud size={14} />
+              </div>
+              <span className="settings-section__title">إعدادات ناجز</span>
+            </div>
+            <div className="settings-section__content">
+              {loadingSettings ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '20px' }}>
+                  <Loader2 className="animate-spin" size={20} />
+                  <span>جاري تحميل الإعدادات...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="settings-option-card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Link size={20} />
+                      <div>
+                        <div className="settings-option-card__title">ربط المحامين تلقائياً بالقضايا</div>
+                        <div className="settings-option-card__desc">
+                          عند استيراد القضايا من ناجز، يتم ربط المحامين تلقائياً بالقضايا بناءً على رقم الهوية.
+                          <br />
+                          <strong>ملاحظة:</strong> يجب أن يكون المحامي مسجلاً في النظام مسبقاً برقم هويته.
+                        </div>
+                      </div>
+                    </div>
+                    <div className="settings-option-card__actions" style={{ marginTop: '12px' }}>
+                      <label className="settings-toggle">
+                        <input
+                          type="checkbox"
+                          checked={najizSettings.auto_link_lawyers}
+                          onChange={(e) => setNajizSettings(prev => ({
+                            ...prev,
+                            auto_link_lawyers: e.target.checked
+                          }))}
+                        />
+                        <span className="settings-toggle__slider"></span>
+                        <span style={{ marginRight: '12px' }}>
+                          {najizSettings.auto_link_lawyers ? 'مفعّل' : 'معطّل'}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="settings-btn-group" style={{ marginTop: '20px' }}>
+                    <button
+                      className="settings-btn settings-btn--primary"
+                      onClick={saveNajizSettings}
+                      disabled={savingSettings}
+                    >
+                      {savingSettings ? (
+                        <>
+                          <Loader2 className="animate-spin" size={16} />
+                          جاري الحفظ...
+                        </>
+                      ) : (
+                        'حفظ الإعدادات'
+                      )}
+                    </button>
+                    {settingsMessage && (
+                      <span style={{
+                        color: settingsMessage.includes('خطأ') ? '#ef4444' : '#22c55e',
+                        marginRight: '12px'
+                      }}>
+                        {settingsMessage}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      case 'profile':
+        return (
+          <div className="settings-section">
+            <div className="settings-section__header">
+              <div className="settings-section__icon">
+                <User size={14} />
+              </div>
+              <span className="settings-section__title">الملف الشخصي</span>
+            </div>
+            <div className="settings-section__content">
+              <div className="settings-form-grid">
+                <div className="settings-field">
+                  <label className="settings-field__label">الاسم الكامل <span style={{ color: 'var(--color-text-secondary)', fontSize: '11px' }}>(غير قابل للتعديل)</span></label>
+                  <input
+                    type="text"
+                    className="settings-field__input settings-field__input--disabled"
+                    value={userProfile.name}
+                    disabled
+                    style={{ backgroundColor: 'var(--dashboard-bg)', cursor: 'not-allowed' }}
+                  />
+                </div>
+
+                <div className="settings-field">
+                  <label className="settings-field__label">رقم الهوية الوطنية <span style={{ color: 'var(--color-text-secondary)', fontSize: '11px' }}>(غير قابل للتعديل)</span></label>
+                  <input
+                    type="text"
+                    className="settings-field__input settings-field__input--disabled"
+                    value={userProfile.national_id}
+                    disabled
+                    style={{ backgroundColor: 'var(--dashboard-bg)', cursor: 'not-allowed' }}
+                  />
+                </div>
+
+                <div className="settings-field">
+                  <label className="settings-field__label">البريد الإلكتروني</label>
+                  <input
+                    type="email"
+                    className="settings-field__input"
+                    value={userProfile.email}
+                    onChange={(e) => setUserProfile(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="example@email.com"
+                    disabled={!editingProfile}
+                    style={!editingProfile ? { backgroundColor: 'var(--dashboard-bg)', cursor: 'not-allowed' } : {}}
+                  />
+                </div>
+
+                <div className="settings-field">
+                  <label className="settings-field__label">رقم الهاتف</label>
+                  <input
+                    type="tel"
+                    className="settings-field__input"
+                    value={userProfile.phone}
+                    onChange={(e) => setUserProfile(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="+966501234567"
+                    disabled={!editingProfile}
+                    style={!editingProfile ? { backgroundColor: 'var(--dashboard-bg)', cursor: 'not-allowed' } : {}}
+                  />
+                </div>
+              </div>
+
+              <div className="settings-btn-group">
+                {!editingProfile ? (
+                  <button
+                    className="settings-btn settings-btn--secondary"
+                    onClick={() => setEditingProfile(true)}
+                  >
+                    ✏️ تعديل البيانات
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      className="settings-btn settings-btn--primary"
+                      onClick={async () => {
+                        await saveUserProfile();
+                        setEditingProfile(false);
+                      }}
+                      disabled={savingProfile}
+                    >
+                      {savingProfile ? (
+                        <><Loader2 className="animate-spin" size={16} /> جاري الحفظ...</>
+                      ) : (
+                        <><Save size={16} /> حفظ التغييرات</>
+                      )}
+                    </button>
+                    <button
+                      className="settings-btn"
+                      onClick={() => setEditingProfile(false)}
+                    >
+                      إلغاء
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'appearance':
+        return (
+          <div className="settings-section">
+            <div className="settings-section__header">
+              <div className="settings-section__icon">
+                <Palette size={14} />
+              </div>
+              <span className="settings-section__title">المظهر والثيم</span>
+            </div>
+            <div className="settings-section__content">
+              <div style={{ marginBottom: '20px' }}>
+                <label className="settings-field__label" style={{ marginBottom: '10px', display: 'block' }}>وضع الألوان</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {[
+                    { id: 'light', label: 'فاتح', icon: Sun },
+                    { id: 'dark', label: 'داكن', icon: Moon },
+                    { id: 'system', label: 'حسب النظام', icon: Monitor }
+                  ].map((theme) => (
+                    <label key={theme.id} className="settings-radio-option">
+                      <input
+                        type="radio"
+                        name="theme"
+                        value={theme.id}
+                        defaultChecked={theme.id === 'light'}
+                      />
+                      <theme.icon className="settings-radio-option__icon" />
+                      <span className="settings-radio-option__text">{theme.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="settings-field">
+                <label className="settings-field__label">حجم الخط</label>
+                <select className="settings-field__select" style={{ width: '150px' }}>
+                  <option value="small">صغير</option>
+                  <option value="medium" selected>متوسط</option>
+                  <option value="large">كبير</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'privacy':
+        return (
+          <>
+            <div className="settings-section">
+              <div className="settings-section__header">
+                <div className="settings-section__icon">
+                  <Shield size={14} />
+                </div>
+                <span className="settings-section__title">كلمة المرور</span>
+              </div>
+              <div className="settings-section__content">
+                <div className="settings-option-card">
+                  <div className="settings-option-card__title">تغيير كلمة المرور</div>
+                  <div className="settings-option-card__desc">آخر تغيير: منذ 30 يوماً</div>
+                  <div className="settings-option-card__actions">
+                    <button className="settings-btn">تغيير كلمة المرور</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <div className="settings-section__header">
+                <div className="settings-section__icon">
+                  <Shield size={14} />
+                </div>
+                <span className="settings-section__title">المصادقة الثنائية</span>
+              </div>
+              <div className="settings-section__content">
+                <div className="settings-option-card">
+                  <div className="settings-option-card__title">حماية إضافية لحسابك</div>
+                  <div className="settings-option-card__desc">أضف طبقة أمان إضافية باستخدام رمز التحقق</div>
+                  <div className="settings-option-card__actions">
+                    <button className="settings-btn settings-btn--primary">تفعيل المصادقة الثنائية</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        );
+
+      case 'language':
+        return (
+          <div className="settings-section">
+            <div className="settings-section__header">
+              <div className="settings-section__icon">
+                <Globe size={14} />
+              </div>
+              <span className="settings-section__title">اللغة والمنطقة</span>
+            </div>
+            <div className="settings-section__content">
+              <div className="settings-form-grid">
+                <div className="settings-field">
+                  <label className="settings-field__label">اللغة</label>
+                  <select className="settings-field__select">
+                    <option value="ar" selected>العربية</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
+
+                <div className="settings-field">
+                  <label className="settings-field__label">المنطقة الزمنية</label>
+                  <select className="settings-field__select">
+                    <option value="Asia/Riyadh" selected>توقيت السعودية (GMT+3)</option>
+                    <option value="Asia/Dubai">توقيت الإمارات (GMT+4)</option>
+                    <option value="Asia/Kuwait">توقيت الكويت (GMT+3)</option>
+                  </select>
+                </div>
+
+                <div className="settings-field">
+                  <label className="settings-field__label">تنسيق التاريخ</label>
+                  <select className="settings-field__select">
+                    <option value="hijri">هجري</option>
+                    <option value="gregorian" selected>ميلادي</option>
+                    <option value="both">هجري وميلادي</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'system':
+        return (
+          <>
+            <div className="settings-section">
+              <div className="settings-section__header">
+                <div className="settings-section__icon">
+                  <Database size={14} />
+                </div>
+                <span className="settings-section__title">النسخ الاحتياطي</span>
+              </div>
+              <div className="settings-section__content">
+                <div className="settings-option-card">
+                  <div className="settings-option-card__title">إدارة النسخ الاحتياطية</div>
+                  <div className="settings-option-card__desc">آخر نسخة احتياطية: اليوم 03:00 ص</div>
+                  <div className="settings-option-card__actions">
+                    <button className="settings-btn settings-btn--primary">إنشاء نسخة احتياطية</button>
+                    <button className="settings-btn">جدولة النسخ الاحتياطي</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <div className="settings-section__header">
+                <div className="settings-section__icon">
+                  <Database size={14} />
+                </div>
+                <span className="settings-section__title">تصدير البيانات</span>
+              </div>
+              <div className="settings-section__content">
+                <div className="settings-option-card">
+                  <div className="settings-option-card__title">تصدير جميع البيانات</div>
+                  <div className="settings-option-card__desc">تصدير البيانات بصيغ مختلفة</div>
+                  <div className="settings-option-card__actions">
+                    <button className="settings-btn settings-btn--success">تصدير Excel</button>
+                    <button className="settings-btn settings-btn--info">تصدير PDF</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        );
+
+      case 'company':
+        return (
+          <div className="settings-section">
+            <div className="settings-section__header">
+              <div className="settings-section__icon">
+                <Building2 size={14} />
+              </div>
+              <span className="settings-section__title">معلومات الشركة</span>
+            </div>
+            <div className="settings-section__content">
+              <div className="settings-form">
+                <div className="settings-form__group">
+                  <label className="settings-form__label">اسم الشركة</label>
+                  <input
+                    type="text"
+                    className="settings-form__input"
+                    value={companyInfo.name}
+                    onChange={(e) => setCompanyInfo(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="مكتب المحاماة"
+                    disabled={!editingCompany}
+                    style={!editingCompany ? { backgroundColor: 'var(--dashboard-bg)', cursor: 'not-allowed' } : {}}
+                  />
+                </div>
+                <div className="settings-form__group">
+                  <label className="settings-form__label">البريد الإلكتروني</label>
+                  <input
+                    type="email"
+                    className="settings-form__input"
+                    value={companyInfo.email}
+                    onChange={(e) => setCompanyInfo(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="info@lawfirm.sa"
+                    disabled={!editingCompany}
+                    style={!editingCompany ? { backgroundColor: 'var(--dashboard-bg)', cursor: 'not-allowed' } : {}}
+                  />
+                </div>
+                <div className="settings-form__group">
+                  <label className="settings-form__label">رقم الهاتف</label>
+                  <input
+                    type="tel"
+                    className="settings-form__input"
+                    value={companyInfo.phone}
+                    onChange={(e) => setCompanyInfo(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="+966 50 000 0000"
+                    disabled={!editingCompany}
+                    style={!editingCompany ? { backgroundColor: 'var(--dashboard-bg)', cursor: 'not-allowed' } : {}}
+                  />
+                </div>
+                <div className="settings-form__group">
+                  <label className="settings-form__label">العنوان</label>
+                  <input
+                    type="text"
+                    className="settings-form__input"
+                    value={companyInfo.address}
+                    onChange={(e) => setCompanyInfo(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="الرياض، المملكة العربية السعودية"
+                    disabled={!editingCompany}
+                    style={!editingCompany ? { backgroundColor: 'var(--dashboard-bg)', cursor: 'not-allowed' } : {}}
+                  />
+                </div>
+                <div className="settings-form__group">
+                  <label className="settings-form__label">رقم الترخيص</label>
+                  <input
+                    type="text"
+                    className="settings-form__input"
+                    value={companyInfo.license_number}
+                    onChange={(e) => setCompanyInfo(prev => ({ ...prev, license_number: e.target.value }))}
+                    placeholder="1234567890"
+                    disabled={!editingCompany}
+                    style={!editingCompany ? { backgroundColor: 'var(--dashboard-bg)', cursor: 'not-allowed' } : {}}
+                  />
+                </div>
+                <div className="settings-btn-group">
+                  {!editingCompany ? (
+                    <button
+                      className="settings-btn settings-btn--secondary"
+                      onClick={() => setEditingCompany(true)}
+                    >
+                      ✏️ تعديل البيانات
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        className="settings-btn settings-btn--primary"
+                        disabled={savingCompany}
+                        onClick={async () => {
+                          await saveCompanyInfo();
+                          setEditingCompany(false);
+                        }}
+                      >
+                        {savingCompany ? (
+                          <><Loader2 className="animate-spin" size={16} /> جاري الحفظ...</>
+                        ) : (
+                          <><Save size={16} /> حفظ التغييرات</>
+                        )}
+                      </button>
+                      <button
+                        className="settings-btn"
+                        onClick={() => setEditingCompany(false)}
+                      >
+                        إلغاء
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'subscription':
+        // Use API-provided trial_days_remaining if available, otherwise calculate
+        const trialEndsAt = subscription?.trial_ends_at ? new Date(subscription.trial_ends_at) : null;
+        const now = new Date();
+        const trialDaysRemaining = subscription?.trial_days_remaining !== undefined
+          ? subscription.trial_days_remaining
+          : (trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : 0);
+        const isTrial = subscription?.status === 'trial' || subscription?.is_trial === true;
+        const isActive = subscription?.status === 'active';
+
+        return (
+          <div className="settings-section">
+            <div className="settings-section__header">
+              <div className="settings-section__icon">
+                <CreditCard size={14} />
+              </div>
+              <span className="settings-section__title">إدارة الاشتراك</span>
+            </div>
+            <div className="settings-section__content">
+              {loadingSubscription ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '20px' }}>
+                  <Loader2 className="animate-spin" size={20} />
+                  <span>جاري التحميل...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="settings-subscription-card">
+                    <div className="settings-subscription-card__header">
+                      <div className="settings-subscription-card__badge" style={
+                        isTrial ? { background: 'var(--status-blue-light)', color: 'var(--status-blue)' } :
+                          isActive ? { background: 'var(--status-green-light)', color: 'var(--status-green)' } :
+                            { background: 'var(--status-red-light)', color: 'var(--status-red)' }
+                      }>
+                        {isActive ? (
+                          <><CheckCircle size={16} /> اشتراك نشط</>
+                        ) : isTrial ? (
+                          <><Calendar size={16} /> فترة تجريبية</>
+                        ) : (
+                          <><XCircle size={16} /> منتهي</>
+                        )}
+                      </div>
+                    </div>
+
+                    {isTrial ? (
+                      // Trial Mode Display
+                      <div className="settings-subscription-card__content">
+                        <div style={{
+                          background: 'var(--status-blue-light)',
+                          borderRadius: '8px',
+                          padding: '16px',
+                          marginBottom: '16px',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{ fontSize: '14px', color: 'var(--status-blue)', marginBottom: '8px' }}>
+                            🎁 أنت في الفترة التجريبية المجانية
+                          </div>
+                          <div style={{ fontSize: '28px', fontWeight: 700, color: 'var(--status-blue)' }}>
+                            {trialDaysRemaining} يوم متبقي
+                          </div>
+                          <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '8px' }}>
+                            تنتهي في: {trialEndsAt ? trialEndsAt.toLocaleDateString('ar-SA') : 'غير محدد'}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'center', fontSize: '14px', color: 'var(--color-text-secondary)' }}>
+                          اشترك الآن للاستمرار في استخدام النظام بعد انتهاء الفترة التجريبية
+                        </div>
+                      </div>
+                    ) : isActive ? (
+                      // Active Subscription Display
+                      <div className="settings-subscription-card__content">
+                        <div className="settings-subscription-card__plan">الباقة الحالية</div>
+                        <div className="settings-subscription-card__price">
+                          {subscription?.plan === 'yearly' ? '2990 ر.س / سنوياً' : '299 ر.س / شهرياً'}
+                        </div>
+                        <div className="settings-subscription-card__info">
+                          <Calendar size={14} />
+                          التجديد القادم: {subscription?.renews_at ? new Date(subscription.renews_at).toLocaleDateString('ar-SA') : 'غير محدد'}
+                        </div>
+                      </div>
+                    ) : (
+                      // Expired/Inactive Display
+                      <div className="settings-subscription-card__content" style={{ textAlign: 'center' }}>
+                        <div style={{
+                          background: 'var(--status-red-light)',
+                          borderRadius: '8px',
+                          padding: '16px',
+                          marginBottom: '16px'
+                        }}>
+                          <XCircle size={32} style={{ color: 'var(--status-red)', marginBottom: '8px' }} />
+                          <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--status-red)' }}>
+                            انتهى اشتراكك
+                          </div>
+                          <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '8px' }}>
+                            اشترك الآن للاستمرار في استخدام النظام
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="settings-subscription-card__actions">
+                      <button className="settings-btn settings-btn--primary">
+                        {isTrial || !isActive ? '🚀 اشترك الآن' : 'الترقية للسنوي (2990 ر.س)'}
+                      </button>
+                      {isActive && (
+                        <button className="settings-btn settings-btn--danger">
+                          إلغاء الاشتراك
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="settings-option-card" style={{ marginTop: '16px' }}>
+                    <div className="settings-option-card__title">خيارات الاشتراك</div>
+                    <div className="settings-option-card__desc">
+                      <strong>شهري:</strong> 299 ر.س/شهر
+                      <br />
+                      <strong>سنوي:</strong> 2990 ر.س/سنة (وفر شهرين!)
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'invoices':
+        return (
+          <div className="settings-section">
+            <div className="settings-section__header">
+              <div className="settings-section__icon">
+                <Receipt size={14} />
+              </div>
+              <span className="settings-section__title">سجل الفواتير</span>
+            </div>
+            <div className="settings-section__content">
+              {loadingInvoices ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '20px' }}>
+                  <Loader2 className="animate-spin" size={20} />
+                  <span>جاري التحميل...</span>
+                </div>
+              ) : invoices.length > 0 ? (
+                <div className="settings-invoices-table">
+                  <table className="settings-table">
+                    <thead>
+                      <tr>
+                        <th>رقم الفاتورة</th>
+                        <th>التاريخ</th>
+                        <th>المبلغ</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoices.map((invoice: any) => (
+                        <tr key={invoice.id}>
+                          <td>{invoice.invoice_number}</td>
+                          <td>{new Date(invoice.created_at).toLocaleDateString('ar-SA')}</td>
+                          <td>{invoice.total_amount} ر.س</td>
+                          <td>
+                            <span className={`settings-badge settings-badge--${invoice.status === 'paid' ? 'success' : invoice.status === 'pending' ? 'warning' : 'danger'}`}>
+                              {invoice.status === 'paid' ? 'مدفوع' : invoice.status === 'pending' ? 'معلق' : 'فشل'}
+                            </span>
+                          </td>
+                          <td>
+                            <button className="settings-btn settings-btn--small">
+                              <Download size={14} />
+                              تحميل
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '60px 40px',
+                  color: 'var(--color-text-secondary)'
+                }}>
+                  <Receipt size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
+                  <div style={{ fontSize: '16px', fontWeight: 500 }}>لا توجد فواتير حالياً</div>
+                  <div style={{ fontSize: '13px', marginTop: '8px' }}>ستظهر الفواتير هنا بعد أول اشتراك</div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      default:
+        return <div>التبويب غير موجود</div>;
+    }
+  };
+
+  return (
+    <div className="settings-page">
+      {/* Header */}
+      <div className="settings-header">
+        <div className="settings-header__title-area">
+          <h1>
+            <SettingsIcon size={18} />
+            الإعدادات
+          </h1>
+          <p>إدارة تفضيلاتك وإعدادات النظام</p>
+        </div>
+      </div>
+
+      <div className="settings-layout">
+        {/* Sidebar */}
+        <div className="settings-sidebar">
+          {visibleTabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                className={`settings-sidebar__tab ${activeTab === tab.id ? 'settings-sidebar__tab--active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <Icon size={16} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Content */}
+        <div className="settings-content">
+          {renderTabContent()}
+        </div>
+
+        {/* Help Panel */}
+        <div className="settings-help-panel">
+          <div className="settings-help-panel__header">
+            <div className="settings-help-panel__icon">
+              <AlertCircle size={16} />
+            </div>
+            <span className="settings-help-panel__title">المساعدة</span>
+          </div>
+
+          <div className="settings-help-panel__content">
+            <div className="settings-help-panel__section">
+              <div className="settings-help-panel__section-title">
+                💡 {activeTab === 'notifications' && 'إعدادات الإشعارات'}
+                {activeTab === 'najiz' && 'إعدادات ناجز'}
+                {activeTab === 'profile' && 'الملف الشخصي'}
+                {activeTab === 'appearance' && 'المظهر'}
+                {activeTab === 'privacy' && 'الخصوصية والأمان'}
+                {activeTab === 'language' && 'اللغة والمنطقة'}
+                {activeTab === 'system' && 'إعدادات النظام'}
+                {activeTab === 'company' && 'إعدادات الشركة'}
+                {activeTab === 'subscription' && 'إدارة الاشتراك'}
+                {activeTab === 'invoices' && 'الفواتير'}
+              </div>
+              <p className="settings-help-panel__section-text">
+                {activeTab === 'notifications' && 'تحكم في كيفية استلام التنبيهات والإشعارات من النظام.'}
+                {activeTab === 'najiz' && 'إدارة اتصال ناجز وخيارات الاستيراد التلقائي.'}
+                {activeTab === 'profile' && 'تحديث معلوماتك الشخصية وبيانات الاتصال.'}
+                {activeTab === 'appearance' && 'تخصيص مظهر النظام والألوان.'}
+                {activeTab === 'privacy' && 'إدارة إعدادات الأمان وكلمة المرور.'}
+                {activeTab === 'language' && 'تغيير اللغة والمنطقة الزمنية.'}
+                {activeTab === 'system' && 'إدارة النسخ الاحتياطي وتصدير البيانات.'}
+                {activeTab === 'company' && 'تحديث معلومات شركتك مثل الاسم والبريد والعنوان.'}
+                {activeTab === 'subscription' && 'إدارة اشتراكك الحالي، الترقية للسنوي، أو الإلغاء.'}
+                {activeTab === 'invoices' && 'عرض وتحميل جميع الفواتير السابقة.'}
+              </p>
+            </div>
+
+            <div className="settings-help-panel__tip">
+              <span className="settings-help-panel__tip-icon">💡</span>
+              <span className="settings-help-panel__tip-text">
+                {activeTab === 'notifications' && 'فعّل إشعارات الجلسات لتذكيرك بمواعيد الجلسات القادمة'}
+                {activeTab === 'najiz' && 'تأكد من صحة بيانات اتصال ناجز قبل الاستيراد'}
+                {activeTab === 'profile' && 'تأكد من تحديث رقم الهاتف لاستقبال الإشعارات'}
+                {activeTab === 'appearance' && 'جرب الوضع الداكن لتقليل إجهاد العين'}
+                {activeTab === 'privacy' && 'غيّر كلمة المرور بشكل دوري لحماية حسابك'}
+                {activeTab === 'language' && 'اختر المنطقة الزمنية المناسبة لعرض مواعيد الجلسات بشكل صحيح'}
+                {activeTab === 'system' && 'قم بعمل نسخ احتياطي دوري للحفاظ على بياناتك'}
+                {activeTab === 'company' && 'تحديث بيانات الشركة يظهر في الفواتير والتقارير'}
+                {activeTab === 'subscription' && 'الاشتراك السنوي يوفر لك شهرين مجاناً!'}
+                {activeTab === 'invoices' && 'يمكنك تحميل الفواتير بصيغة PDF للأرشفة'}
+              </span>
+            </div>
+
+            <div className="settings-help-panel__link">
+              <Globe size={14} />
+              فتح دليل المستخدم
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Settings;

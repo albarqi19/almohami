@@ -1,0 +1,345 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');
+@import './styles/design-system.css';
+@import './styles/auth.css';
+@import './styles/dashboard-theme.css';
+@import './styles/cases-page.css';
+@import './styles/case-detail.css';
+
+:root {
+  /* === الخلفيات === */
+  --color-background: #FDFBF7;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f7f5f0;
+
+  /* === الحدود === */
+  --color-border: #E0E0E0;
+  --color-border-strong: #c9c9c9;
+
+  /* === النصوص === */
+  --color-text: #212121;
+  --color-text-secondary: #5a5a5a;
+  --color-heading: #0A192F;
+
+  /* === اللون الأساسي (الأزرق الليلي) === */
+  --color-primary: #0A192F;
+  --color-primary-hover: #142840;
+  --color-primary-active: #1a3652;
+  --color-primary-soft: rgba(10, 25, 47, 0.08);
+
+  /* === لون الإجراء (الذهبي المطفي) === */
+  --color-accent: #C5A572;
+  --color-accent-hover: #d4b685;
+  --color-accent-soft: rgba(197, 165, 114, 0.15);
+
+  /* === ألوان الحالات === */
+  --color-success: #1b998b;
+  --color-warning: #f4a259;
+  --color-error: #d1495b;
+  --color-info: #3b82f6;
+
+  /* === درجات الرمادي الدافئ === */
+  --color-cream-50: #FDFBF7;
+  --color-gray-100: #f5f3ed;
+  --color-gray-200: #E0E0E0;
+  --color-gray-300: #c9c9c9;
+  --color-gray-400: #a8a8a8;
+  --color-gray-500: #8a8a8a;
+  --color-brown-600: #5a5a5a;
+  --color-brown-600-rgb: 90, 90, 90;
+  --color-slate-500-rgb: 90, 90, 90;
+
+  /* === ألوان إضافية === */
+  --color-orange-400: #f4a259;
+  --color-orange-400-rgb: 244, 162, 89;
+  --color-orange-500: #e8873a;
+  --color-teal-400: #3ac2b7;
+  --color-teal-500: #2ea8a1;
+  --color-teal-600: #258a84;
+  --color-teal-700: #1d6d69;
+
+  /* === ألوان ناعمة للحالات === */
+  --color-success-soft: rgba(27, 153, 139, 0.12);
+  --color-warning-soft: rgba(244, 162, 89, 0.15);
+  --color-error-soft: rgba(209, 73, 91, 0.12);
+  --color-info-soft: rgba(59, 130, 246, 0.12);
+  --color-neutral-soft: rgba(90, 90, 90, 0.1);
+  --focus-outline: rgba(10, 25, 47, 0.25);
+
+  /* === الظلال === */
+  --shadow-xs: 0 1px 2px rgba(10, 25, 47, 0.04);
+  --shadow-sm: 0 8px 16px rgba(10, 25, 47, 0.06);
+  --shadow-md: 0 14px 32px rgba(10, 25, 47, 0.08);
+  --shadow-lg: 0 24px 42px rgba(10, 25, 47, 0.1);
+
+  /* === الزوايا === */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* === الخطوط === */
+  --font-family-base: "IBM Plex Sans Arabic", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-lg: 17px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 30px;
+  --font-size-4xl: 36px;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.6;
+
+  color-scheme: light;
+}
+
+body.dark {
+  --color-background: #10151f;
+  --color-surface: #161d2a;
+  --color-surface-subtle: #1d2534;
+  --color-border: #293143;
+  --color-border-strong: #384258;
+  --color-text: #e3e8f4;
+  --color-text-secondary: #9aa5b9;
+  --color-heading: #f2f4f9;
+  --color-primary: #5aa5f7;
+  --color-primary-hover: #4791e1;
+  --color-primary-active: #3775b6;
+  --color-primary-soft: rgba(90, 165, 247, 0.14);
+  --color-accent: #4fd3c4;
+  --color-success: #46c2b3;
+  --color-warning: #fbc46d;
+  --color-error: #ff7b8a;
+  --color-info: #6fa3ff;
+  --color-cream-50: #f9fafb;
+  --color-gray-100: #1d2534;
+  --color-gray-200: #232d3f;
+  --color-gray-300: #2c374c;
+  --color-gray-400: #3c4861;
+  --color-gray-500: #54617a;
+  --color-brown-600: #9ba7bd;
+  --color-brown-600-rgb: 155, 167, 189;
+  --color-slate-500-rgb: 154, 165, 185;
+  --color-orange-400: #f5a971;
+  --color-orange-400-rgb: 245, 169, 113;
+  --color-orange-500: #f28d4c;
+  --color-teal-400: #5ad7ce;
+  --color-teal-500: #4fd3c4;
+  --color-teal-600: #37b7ac;
+  --color-teal-700: #2d968e;
+  --color-success-soft: rgba(70, 194, 179, 0.18);
+  --color-warning-soft: rgba(251, 196, 109, 0.2);
+  --color-error-soft: rgba(255, 123, 138, 0.24);
+  --color-info-soft: rgba(111, 163, 255, 0.22);
+  --color-accent-soft: rgba(79, 211, 196, 0.2);
+  --color-neutral-soft: rgba(154, 165, 185, 0.16);
+  --focus-outline: rgba(90, 165, 247, 0.35);
+
+  color-scheme: dark;
+}
+
+/* === Classic Law Firm Theme === */
+body.classic {
+  /* Backgrounds - Warm parchment tones */
+  --color-background: #F5EFE6;
+  --color-surface: #FFFBF5;
+  --color-surface-subtle: #EDE6DA;
+
+  /* Borders - Subtle brown */
+  --color-border: #D4C9B8;
+  --color-border-strong: #B8A994;
+
+  /* Text - Rich browns */
+  --color-text: #2B1B12;
+  --color-text-secondary: #6B5B4D;
+  --color-heading: #1A0F08;
+
+  /* Primary - Deep mahogany */
+  --color-primary: #4A2C1A;
+  --color-primary-hover: #5D3A24;
+  --color-primary-active: #3A2213;
+  --color-primary-soft: rgba(74, 44, 26, 0.1);
+
+  /* Accent - Antique gold */
+  --color-accent: #B8860B;
+  --color-accent-hover: #D4A01A;
+  --color-accent-soft: rgba(184, 134, 11, 0.15);
+
+  /* Status colors - Muted, classic tones */
+  --color-success: #2E7D32;
+  --color-warning: #C17000;
+  --color-error: #9B2C2C;
+  --color-info: #1565C0;
+
+  /* Grays - Warm tones */
+  --color-cream-50: #F5EFE6;
+  --color-gray-100: #EDE6DA;
+  --color-gray-200: #D4C9B8;
+  --color-gray-300: #B8A994;
+  --color-gray-400: #998A78;
+  --color-gray-500: #7A6F63;
+  --color-brown-600: #6B5B4D;
+  --color-brown-600-rgb: 107, 91, 77;
+  --color-slate-500-rgb: 107, 91, 77;
+
+  /* Additional colors */
+  --color-orange-400: #C17000;
+  --color-orange-400-rgb: 193, 112, 0;
+  --color-orange-500: #A35F00;
+  --color-teal-400: #2E7D6D;
+  --color-teal-500: #267363;
+  --color-teal-600: #1E6858;
+  --color-teal-700: #165D4E;
+
+  /* Soft status colors */
+  --color-success-soft: rgba(46, 125, 50, 0.12);
+  --color-warning-soft: rgba(193, 112, 0, 0.15);
+  --color-error-soft: rgba(155, 44, 44, 0.12);
+  --color-info-soft: rgba(21, 101, 192, 0.12);
+  --color-neutral-soft: rgba(107, 91, 77, 0.1);
+  --focus-outline: rgba(74, 44, 26, 0.25);
+
+  /* Shadows - Warmer */
+  --shadow-xs: 0 1px 2px rgba(42, 23, 12, 0.05);
+  --shadow-sm: 0 8px 16px rgba(42, 23, 12, 0.08);
+  --shadow-md: 0 14px 32px rgba(42, 23, 12, 0.1);
+  --shadow-lg: 0 24px 42px rgba(42, 23, 12, 0.12);
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  background-color: var(--color-background);
+  color: var(--color-text);
+  direction: rtl;
+  text-align: right;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+#root {
+  min-height: 100%;
+}
+
+p,
+span,
+li,
+label {
+  color: inherit;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover,
+a:focus-visible {
+  text-decoration: underline;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+button:disabled,
+input:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+input,
+textarea {
+  border-radius: var(--radius-xs);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+::selection {
+  background-color: var(--color-primary);
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-outline);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sr-only-focusable:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-strong);
+}

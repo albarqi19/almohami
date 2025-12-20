@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>إعادة تعيين Service Worker</title>
+</head>
+<body>
+    <h1>إعادة تعيين Service Worker</h1>
+    <button onclick="clearServiceWorker()">حذف Service Worker</button>
+    <div id="status"></div>
+
+    <script>
+        async function clearServiceWorker() {
+            const statusDiv = document.getElementById('status');
+            
+            if ('serviceWorker' in navigator) {
+                try {
+                    // الحصول على جميع registrations
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    
+                    // حذف جميع service workers
+                    for (let registration of registrations) {
+                        await registration.unregister();
+                        console.log('Service Worker unregistered:', registration);
+                    }
+                    
+                    // حذف جميع caches
+                    const cacheNames = await caches.keys();
+                    for (let cacheName of cacheNames) {
+                        await caches.delete(cacheName);
+                        console.log('Cache deleted:', cacheName);
+                    }
+                    
+                    statusDiv.innerHTML = '<p style="color: green;">✅ تم حذف جميع Service Workers والـ Caches بنجاح!</p><p>الآن أعد تحميل الصفحة الرئيسية.</p>';
+                    
+                    // إعادة توجيه تلقائية بعد 3 ثواني
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 3000);
+                    
+                } catch (error) {
+                    statusDiv.innerHTML = '<p style="color: red;">❌ خطأ: ' + error.message + '</p>';
+                    console.error('Error clearing service worker:', error);
+                }
+            } else {
+                statusDiv.innerHTML = '<p style="color: orange;">⚠️ Service Worker غير مدعوم في هذا المتصفح</p>';
+            }
+        }
+        
+        // تشغيل تلقائي عند فتح الصفحة
+        window.onload = function() {
+            clearServiceWorker();
+        };
+    </script>
+</body>
+</html>

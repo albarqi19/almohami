@@ -1,0 +1,518 @@
+/* ====================================================
+   Documents Page - ClickUp Minimal Style
+   ==================================================== */
+
+.documents-page {
+    background-color: var(--dashboard-bg);
+    height: 100vh;
+    /* Strict height to prevent page scrolling */
+    overflow: hidden;
+    /* Prevent body scroll */
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==================== Header ==================== */
+.docs-header {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    background-color: var(--dashboard-card);
+    border-bottom: 1px solid var(--color-border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.docs-title-area h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--color-heading);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.docs-title-area p {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin: 4px 0 0 0;
+}
+
+.docs-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-upload {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: var(--law-navy);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-upload:hover {
+    background-color: var(--law-navy-dark);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: var(--quiet-gray-100);
+}
+
+/* ==================== Main Layout ==================== */
+.docs-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    height: 100%;
+    /* Take remaining height */
+}
+
+/* Sidebar */
+.docs-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background-color: var(--quiet-gray-50);
+    border-left: 1px solid var(--color-border);
+    /* RTL layout */
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+}
+
+.sidebar-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    padding: 0 8px;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: var(--color-text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.sidebar-item:hover {
+    background-color: var(--quiet-gray-200);
+}
+
+.sidebar-item.active {
+    background-color: rgba(30, 58, 95, 0.1);
+    color: var(--law-navy);
+    font-weight: 500;
+}
+
+/* ==================== Content Area (Split View Support) ==================== */
+.docs-content-wrapper {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+/* The Main List/Grid Panel */
+.docs-list-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    overflow-y: auto;
+    overflow-y: auto;
+    /* transition: flex 0.3s ease;  Removed to fix jitter */
+}
+
+/* When preview is active, this shrinks */
+.docs-content-wrapper.has-preview .docs-list-panel {
+    border-left: 1px solid var(--color-border);
+}
+
+/* The Preview Pane */
+.docs-preview-pane {
+    width: 450px;
+    /* Increased width for better preview */
+    flex-shrink: 0;
+    background-color: var(--color-surface);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--color-border);
+    /* For RTL */
+    overflow: hidden;
+    /* Important for inner scrolling */
+    /* animation: slideInLeft 0.3s ease-out; REMOVED TO FIX JITTER */
+}
+
+.preview-header {
+    flex-shrink: 0;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    background-color: var(--quiet-gray-50);
+}
+
+.preview-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-heading);
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+.preview-meta {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+.preview-close-btn {
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.preview-close-btn:hover {
+    background-color: var(--quiet-gray-200);
+    color: var(--color-text);
+}
+
+.preview-body {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    /* Scroll content if needed */
+}
+
+.preview-content-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 300px;
+    margin-bottom: 20px;
+    background-color: var(--quiet-gray-50);
+    border: 1px constant var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.preview-content-area img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.preview-content-area iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.preview-details {
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.preview-details-row {
+    margin-bottom: 12px;
+}
+
+.preview-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.preview-value {
+    font-size: 14px;
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview-actions {
+    margin-top: auto;
+    /* Push to bottom */
+    padding-top: 20px;
+    border-top: 1px solid var(--color-border);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    /* 4 buttons in a row */
+    gap: 8px;
+}
+
+.preview-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    color: var(--color-text);
+}
+
+.preview-action-btn:hover {
+    background-color: var(--quiet-gray-50);
+}
+
+.preview-action-btn.primary {
+    background-color: var(--law-navy);
+    color: white;
+    border-color: var(--law-navy);
+}
+
+.preview-action-btn.primary:hover {
+    background-color: var(--law-navy-dark);
+}
+
+/* Toolbar */
+.docs-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.search-box {
+    position: relative;
+    width: 300px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 12px 10px 36px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background-color: var(--color-surface);
+    font-size: 13px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.search-input:focus {
+    border-color: var(--law-navy);
+    box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
+}
+
+.view-toggles {
+    display: flex;
+    background-color: var(--quiet-gray-100);
+    padding: 2px;
+    border-radius: 6px;
+}
+
+.view-toggle-btn {
+    padding: 6px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.view-toggle-btn.active {
+    background-color: white;
+    color: var(--law-navy);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Grid View */
+.docs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.doc-card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+    transition: all 0.2s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.doc-card:hover,
+.doc-card.selected {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border-color: var(--law-navy);
+}
+
+.doc-card.selected {
+    background-color: rgba(30, 58, 95, 0.05);
+}
+
+.doc-preview {
+    width: 100%;
+    height: 100px;
+    background-color: var(--quiet-gray-50);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+}
+
+.doc-info {
+    width: 100%;
+}
+
+.doc-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.doc-meta {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
+/* List View */
+.docs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.doc-row {
+    display: grid;
+    grid-template-columns: 40px 3fr 1fr 1fr 1fr 40px;
+    align-items: center;
+    padding: 10px 16px;
+    background-color: var(--color-surface);
+    border-bottom: 1px solid var(--quiet-gray-100);
+    transition: background-color 0.15s;
+    cursor: pointer;
+}
+
+.doc-row:hover,
+.doc-row.selected {
+    background-color: var(--quiet-gray-50);
+}
+
+.doc-row.selected {
+    background-color: rgba(30, 58, 95, 0.05);
+    border-left: 3px solid var(--law-navy);
+}
+
+.doc-row-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.doc-row-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.doc-row-meta {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+/* Headers for List View */
+.doc-list-header {
+    display: grid;
+    grid-template-columns: 40px 3fr 1fr 1fr 1fr 40px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 8px;
+}
+
+.header-cell {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+/* Empty State */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
+.empty-icon {
+    width: 64px;
+    height: 64px;
+    background-color: var(--quiet-gray-100);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    color: var(--quiet-gray-500);
+}

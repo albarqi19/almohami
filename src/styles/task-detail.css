@@ -1,0 +1,345 @@
+/* ====================================================
+   Task Detail Page - ClickUp Minimal Style
+   ==================================================== */
+
+.task-detail-page {
+    background: var(--dashboard-bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==================== Sticky Header ==================== */
+.task-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--dashboard-card);
+    border-bottom: 1px solid var(--color-border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.task-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.task-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-breadcrumb-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    background: transparent;
+    cursor: pointer;
+}
+
+.task-breadcrumb-btn:hover {
+    background: var(--quiet-gray-100);
+    color: var(--law-navy);
+}
+
+.task-id-badge {
+    background: var(--quiet-gray-100);
+    color: var(--color-text-secondary);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Status Selector in Header */
+.status-select-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.status-select-btn:hover {
+    filter: brightness(0.95);
+}
+
+/* ==================== Main Layout ==================== */
+.task-content-wrapper {
+    flex: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 350px;
+    gap: 24px;
+    padding: 24px;
+    align-items: start;
+}
+
+/* Mobile Responsive */
+@media (max-width: 1024px) {
+    .task-content-wrapper {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==================== Main Column ==================== */
+.task-main-col {
+    background: var(--dashboard-card);
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.task-title-section {
+    padding: 24px 24px 16px;
+}
+
+.task-title-input {
+    width: 100%;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--color-heading);
+    border: none;
+    outline: none;
+    background: transparent;
+    resize: none;
+    line-height: 1.4;
+}
+
+.task-title-input::placeholder {
+    color: var(--quiet-gray-300);
+}
+
+.task-desc-section {
+    padding: 0 24px 24px;
+}
+
+.task-desc-editor {
+    min-height: 100px;
+    color: var(--color-text);
+    font-size: 14px;
+    line-height: 1.6;
+    outline: none;
+}
+
+.task-desc-placeholder {
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+/* Subtasks / Checklist */
+.task-section {
+    padding: 24px;
+    border-top: 1px solid var(--quiet-gray-100);
+}
+
+.task-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    transition: all 0.2s;
+}
+
+.checklist-checkbox {
+    margin-top: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 2px solid var(--quiet-gray-400);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.checklist-checkbox.checked {
+    background: var(--law-navy);
+    border-color: var(--law-navy);
+}
+
+.checklist-text {
+    flex: 1;
+    font-size: 14px;
+    color: var(--color-text);
+}
+
+.checklist-text.checked {
+    text-decoration: line-through;
+    color: var(--color-text-secondary);
+}
+
+/* Activity & Comments */
+.activity-section {
+    background: var(--quiet-gray-50);
+    border-top: 1px solid var(--color-border);
+    padding: 24px;
+}
+
+.activity-tabs {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.activity-tab {
+    padding-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.activity-tab.active {
+    color: var(--law-navy);
+    border-bottom-color: var(--law-navy);
+}
+
+.comment-box-wrapper {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--law-navy);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.comment-input-area {
+    flex: 1;
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.comment-textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    resize: none;
+    min-height: 60px;
+}
+
+.comment-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+/* ==================== Sidebar ==================== */
+.task-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.sidebar-card {
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-row {
+    margin-bottom: 16px;
+}
+
+.sidebar-row:last-child {
+    margin-bottom: 0;
+}
+
+.sidebar-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sidebar-value-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--quiet-gray-50);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--color-text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.sidebar-value-btn:hover {
+    background: var(--quiet-gray-100);
+    border-color: var(--quiet-gray-200);
+}
+
+/* Tags */
+.tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.tag-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--quiet-gray-100);
+    color: var(--color-text);
+}

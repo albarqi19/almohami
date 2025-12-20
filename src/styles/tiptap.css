@@ -1,0 +1,197 @@
+/* CSS Variables for Analysis Progress */
+:root {
+  --color-primary: #218092;
+  --color-primary-light: #f0f9ff;
+  --color-success: #059669;
+  --color-success-light: #ecfdf5;
+  --color-error: #dc2626;
+  --color-error-light: #fef2f2;
+  --color-border: #e5e7eb;
+  --color-text: #111827;
+  --color-text-light: #6b7280;
+}
+
+/* Tiptap Editor Styles */
+.tiptap-editor {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: white;
+}
+
+.tiptap-editor-content {
+  outline: none;
+  direction: rtl;
+  text-align: right;
+}
+
+.tiptap-editor-content h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 24px 0 16px 0;
+  color: var(--color-text);
+  text-align: right;
+}
+
+.tiptap-editor-content h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 20px 0 12px 0;
+  color: var(--color-text);
+  text-align: right;
+}
+
+.tiptap-editor-content h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 16px 0 10px 0;
+  color: var(--color-text);
+  text-align: right;
+}
+
+.tiptap-editor-content p {
+  margin: 12px 0;
+  line-height: 1.7;
+  color: var(--color-text);
+  text-align: right;
+}
+
+.tiptap-editor-content ul,
+.tiptap-editor-content ol {
+  padding-right: 24px;
+  margin: 12px 0;
+  direction: rtl;
+}
+
+.tiptap-editor-content li {
+  margin: 6px 0;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.tiptap-editor-content ul li {
+  list-style-type: disc;
+}
+
+.tiptap-editor-content ol li {
+  list-style-type: decimal;
+}
+
+.tiptap-editor-content strong {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.tiptap-editor-content em {
+  font-style: italic;
+}
+
+.tiptap-editor-content u {
+  text-decoration: underline;
+}
+
+.tiptap-editor-content table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 16px 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.tiptap-editor-content table td,
+.tiptap-editor-content table th {
+  min-width: 1em;
+  border: 1px solid var(--color-border);
+  padding: 8px 12px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+  text-align: right;
+  direction: rtl;
+}
+
+.tiptap-editor-content table th {
+  font-weight: 600;
+  background-color: var(--color-background);
+}
+
+.tiptap-editor-content table .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(59, 130, 246, 0.1);
+  pointer-events: none;
+}
+
+/* Table resize handle */
+.tiptap-editor-content .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  z-index: 20;
+  background-color: var(--color-primary);
+  pointer-events: none;
+}
+
+.tiptap-editor-content table .resize-cursor {
+  cursor: ew-resize;
+}
+
+/* Highlight styles */
+.tiptap-editor-content mark {
+  background-color: #fbbf24;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Focus styles */
+.tiptap-editor-content:focus {
+  outline: none;
+}
+
+.tiptap-editor:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* RTL specific styles */
+.tiptap-editor-content[dir="rtl"] {
+  text-align: right;
+  direction: rtl;
+}
+
+.tiptap-editor-content[dir="rtl"] ul,
+.tiptap-editor-content[dir="rtl"] ol {
+  padding-right: 24px;
+  padding-left: 0;
+}
+
+/* Print styles */
+@media print {
+  .tiptap-editor .toolbar {
+    display: none !important;
+  }
+  
+  .tiptap-editor {
+    border: none;
+    box-shadow: none;
+  }
+  
+  .tiptap-editor-content {
+    padding: 0;
+  }
+}
+
+/* Placeholder styles */
+.tiptap-editor-content .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: right;
+  color: var(--color-text-light);
+  pointer-events: none;
+  height: 0;
+}

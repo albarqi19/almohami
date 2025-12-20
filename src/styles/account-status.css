@@ -1,0 +1,217 @@
+/* Account Status Page - ClickUp Minimal Style */
+
+.account-status-page {
+    min-height: 100vh;
+    background: var(--dashboard-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.account-status-container {
+    max-width: 500px;
+    width: 100%;
+}
+
+.account-status-card {
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+}
+
+.account-status-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--status-yellow-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.account-status-icon svg {
+    color: var(--status-yellow);
+}
+
+.account-status-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-heading);
+    margin: 0 0 12px 0;
+}
+
+.account-status-subtitle {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    margin: 0 0 24px 0;
+    line-height: 1.6;
+}
+
+.account-status-date {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
+    color: var(--status-red);
+    font-weight: 500;
+}
+
+.account-status-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+    text-align: right;
+}
+
+.account-status-info__section h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-heading);
+    margin: 0 0 10px 0;
+}
+
+.account-status-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.8;
+}
+
+.account-status-list--allowed {
+    color: var(--status-green);
+}
+
+.account-status-list--blocked {
+    color: var(--status-red);
+}
+
+.account-status-pricing {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--dashboard-bg);
+    border-radius: 8px;
+}
+
+.account-status-pricing__option {
+    text-align: center;
+    padding: 16px;
+    border-radius: 8px;
+    position: relative;
+}
+
+.account-status-pricing__option--recommended {
+    background: var(--law-navy-light);
+    border: 2px solid var(--law-navy);
+}
+
+.account-status-pricing__badge {
+    position: absolute;
+    top: -10px;
+    right: 50%;
+    transform: translateX(50%);
+    background: var(--law-navy);
+    color: white;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+.account-status-pricing__label {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-bottom: 4px;
+}
+
+.account-status-pricing__price {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+.account-status-pricing__period {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+.account-status-pricing__savings {
+    font-size: 11px;
+    color: var(--status-green);
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+.account-status-pricing__divider {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+.account-status-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.account-status-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: none;
+}
+
+.account-status-btn--primary {
+    background: var(--law-navy);
+    color: white;
+}
+
+.account-status-btn--primary:hover {
+    background: var(--law-navy-dark);
+}
+
+.account-status-btn--secondary {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+}
+
+.account-status-btn--secondary:hover {
+    background: var(--dashboard-bg);
+}
+
+.account-status-support {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+@media (max-width: 500px) {
+    .account-status-info {
+        grid-template-columns: 1fr;
+    }
+
+    .account-status-pricing {
+        flex-direction: column;
+    }
+
+    .account-status-actions {
+        flex-direction: column;
+    }
+}
