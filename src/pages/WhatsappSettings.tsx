@@ -48,25 +48,29 @@ interface WhatsappInstance {
   created_at: string;
 }
 
-// API helper function
+// API helper function - استخدام ngrok URL
+const API_BASE_URL = 'https://amusing-premium-jennet.ngrok-free.app/api';
+
 const api = {
   get: async (url: string) => {
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`http://localhost:8000/api${url}`, {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': '69420'
       }
     });
     return { data: await response.json() };
   },
   put: async (url: string, data: any) => {
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`http://localhost:8000/api${url}`, {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': '69420'
       },
       body: JSON.stringify(data)
     });
@@ -74,11 +78,12 @@ const api = {
   },
   post: async (url: string, data?: any) => {
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`http://localhost:8000/api${url}`, {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': '69420'
       },
       body: data ? JSON.stringify(data) : undefined
     });
@@ -86,11 +91,12 @@ const api = {
   },
   delete: async (url: string) => {
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`http://localhost:8000/api${url}`, {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': '69420'
       }
     });
     return { data: await response.json() };
