@@ -1,6 +1,7 @@
 ﻿import { apiClient } from '../utils/api';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
 import type { Case, CreateCaseForm } from '../types';
+import { cacheManager, CACHE_KEYS } from '../utils/cacheManager';
 
 export interface CaseFilters {
   status?: string;
@@ -16,18 +17,18 @@ export interface CaseFilters {
 export class CaseService {
   static async getCases(filters: CaseFilters = {}): Promise<PaginatedResponse<Case>> {
     const params = new URLSearchParams();
-    
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
         params.append(key, value.toString());
       }
     });
-    
+
     const queryString = params.toString();
     const endpoint = queryString ? `/cases?${queryString}` : '/cases';
-    
+
     const response = await apiClient.get<ApiResponse<PaginatedResponse<Case>>>(endpoint);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -37,7 +38,7 @@ export class CaseService {
 
   static async getCase(id: string): Promise<Case> {
     const response = await apiClient.get<ApiResponse<Case>>(`/cases/${id}`);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -47,20 +48,38 @@ export class CaseService {
 
   static async createCase(caseData: any): Promise<Case> {
     console.log('CaseService.createCase called with:', caseData);
-    
-    const response = await apiClient.post<ApiResponse<Case>>('/cases', caseData);
-    
-    if (response.success && response.data) {
-      return response.data;
-    } else {
-      throw new Error(response.message || 'فشل في إنشاء القضية');
+
+    try {
+      const response = await apiClient.post<ApiResponse<Case>>('/cases', caseData);
+
+      if (response.success && response.data) {
+        // ✅ Invalidate cache after creating case
+        cacheManager.invalidate(CACHE_KEYS.CASES);
+        return response.data;
+      } else {
+        throw new Error(response.message || 'فشل في إنشاء القضية');
+      }
+    } catch (error: any) {
+      // طباعة تفاصيل الخطأ للتصحيح
+      console.error('Create case error details:', error);
+      if (error.errors) {
+        console.error('Validation errors:', error.errors);
+        // تحويل أخطاء الـ validation لرسالة واضحة
+        const errorMessages = Object.entries(error.errors)
+          .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
+          .join('\n');
+        throw new Error(errorMessages || error.message);
+      }
+      throw error;
     }
   }
 
   static async updateCase(id: string, caseData: Partial<CreateCaseForm>): Promise<Case> {
     const response = await apiClient.put<ApiResponse<Case>>(`/cases/${id}`, caseData);
-    
+
     if (response.success && response.data) {
+      // ✅ Invalidate cache after updating case
+      cacheManager.invalidate(CACHE_KEYS.CASES);
       return response.data;
     } else {
       throw new Error(response.message || 'فشل في تحديث القضية');
@@ -69,10 +88,12 @@ export class CaseService {
 
   static async deleteCase(id: string): Promise<void> {
     const response = await apiClient.delete<ApiResponse>(`/cases/${id}`);
-    
+
     if (!response.success) {
       throw new Error(response.message || 'فشل في حذف القضية');
     }
+    // ✅ Invalidate cache after deleting case
+    cacheManager.invalidate(CACHE_KEYS.CASES);
   }
 
   static async assignLawyer(caseId: string, lawyerId: string, role: string = 'secondary'): Promise<void> {
@@ -80,7 +101,7 @@ export class CaseService {
       lawyer_id: lawyerId,
       role,
     });
-    
+
     if (!response.success) {
       throw new Error(response.message || 'فشل في تعيين المحامي');
     }
@@ -88,7 +109,7 @@ export class CaseService {
 
   static async removeLawyer(caseId: string, lawyerId: string): Promise<void> {
     const response = await apiClient.delete<ApiResponse>(`/cases/${caseId}/lawyers/${lawyerId}`);
-    
+
     if (!response.success) {
       throw new Error(response.message || 'فشل في إزالة المحامي');
     }
@@ -96,7 +117,7 @@ export class CaseService {
 
   static async getCaseStatistics(): Promise<any> {
     const response = await apiClient.get<ApiResponse>('/cases/statistics');
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -107,7 +128,7 @@ export class CaseService {
   // Client-specific methods
   static async getClientCases(): Promise<Case[]> {
     const response = await apiClient.get<ApiResponse<Case[]>>('/client/cases');
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -117,7 +138,7 @@ export class CaseService {
 
   static async getClientCaseDetails(caseId: string): Promise<Case> {
     const response = await apiClient.get<ApiResponse<Case>>(`/client/cases/${caseId}`);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -127,7 +148,7 @@ export class CaseService {
 
   static async getClientDashboard(): Promise<any> {
     const response = await apiClient.get<ApiResponse>('/client/dashboard');
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {

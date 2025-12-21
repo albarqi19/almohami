@@ -38,7 +38,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
   const initialFormState = {
     title: '',
     description: '',
-    type: 'general',
+    type: 'other',
     priority: 'medium',
     due_date: '',
     estimated_hours: '',
@@ -113,8 +113,8 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
       const taskData: CreateTaskForm = {
         title: formData.title.trim(),
         description: formData.description?.trim() || '',
-        type: formData.type || 'general',
-        caseId: caseId || '1', // Fallback or handle appropriately
+        type: formData.type || 'other',
+        caseId: caseId || undefined, // Allow tasks without a case
         assignedTo: formData.assigned_to || undefined,
         priority: formData.priority as any,
         dueDate: new Date(formData.due_date),
@@ -230,7 +230,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                     value={formData.type}
                     onChange={handleInputChange}
                   >
-                    <option value="general">عامة</option>
+                    <option value="other">عامة</option>
                     <option value="review">مراجعة</option>
                     <option value="research">بحث قانوني</option>
                     <option value="consultation">استشارة</option>

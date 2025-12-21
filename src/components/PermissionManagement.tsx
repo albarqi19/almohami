@@ -200,7 +200,9 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
         alert(`تم إنشاء المستخدم بنجاح!\n\nرقم الهوية: ${userData.national_id}\nالرقم السري: ${(response as any).pin}\n\nتم إرسال رسالة ترحيب عبر واتساب للمستخدم الجديد.`);
       }
 
-      await loadUsers(); // Reload users
+      // مسح الكاش وتحديث البيانات من السيرفر
+      localStorage.removeItem(USERS_CACHE_KEY);
+      await loadUsers({}, true); // Force refresh from server
       setShowAddUserModal(false);
     } catch (err) {
       console.error('Error creating user:', err);
@@ -215,7 +217,8 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
     try {
       setLoading(true);
       await UserService.updateUser(id, userData);
-      await loadUsers(); // Reload users
+      localStorage.removeItem(USERS_CACHE_KEY);
+      await loadUsers({}, true); // Force refresh from server
       setSelectedUser(null);
     } catch (err) {
       console.error('Error updating user:', err);
@@ -232,7 +235,8 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
     try {
       setLoading(true);
       await UserService.deleteUser(id);
-      await loadUsers(); // Reload users
+      localStorage.removeItem(USERS_CACHE_KEY);
+      await loadUsers({}, true); // Force refresh from server
     } catch (err) {
       console.error('Error deleting user:', err);
       setError(err instanceof Error ? err.message : 'فشل في حذف المستخدم');
@@ -246,7 +250,8 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
     try {
       setLoading(true);
       await UserService.updateUserStatus(id, !currentStatus);
-      await loadUsers(); // Reload users
+      localStorage.removeItem(USERS_CACHE_KEY);
+      await loadUsers({}, true); // Force refresh from server
     } catch (err) {
       console.error('Error updating user status:', err);
       setError(err instanceof Error ? err.message : 'فشل في تحديث حالة المستخدم');

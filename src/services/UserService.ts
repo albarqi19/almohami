@@ -1,5 +1,6 @@
 ﻿import { apiClient } from '../utils/api';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
+import { cacheManager, CACHE_KEYS } from '../utils/cacheManager';
 
 export interface User {
   id: string;
@@ -46,18 +47,18 @@ export class UserService {
   static async getAllUsers(filters: UserFilters = {}): Promise<PaginatedResponse<User>> {
     try {
       const params = new URLSearchParams();
-      
+
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
           params.append(key, value.toString());
         }
       });
-      
+
       const queryString = params.toString();
       const endpoint = queryString ? `/users?${queryString}` : '/users';
-      
+
       const response = await apiClient.get<ApiResponse<PaginatedResponse<User>>>(endpoint);
-      
+
       if (response.success && response.data) {
         return response.data;
       } else {
@@ -73,7 +74,7 @@ export class UserService {
   static async getUser(id: string): Promise<User> {
     try {
       const response = await apiClient.get<ApiResponse<User>>(`/users/${id}`);
-      
+
       if (response.success && response.data) {
         return response.data;
       } else {
@@ -89,8 +90,10 @@ export class UserService {
   static async createUser(userData: CreateUserForm): Promise<any> {
     try {
       const response = await apiClient.post<ApiResponse<any>>('/users', userData);
-      
+
       if (response.success && response.data) {
+        // ✅ Invalidate cache after creating user
+        cacheManager.invalidate(CACHE_KEYS.USERS);
         return response.data; // يحتوي على user, pin, temporary_password
       } else {
         throw new Error(response.message || 'فشل في إنشاء المستخدم');
@@ -105,8 +108,10 @@ export class UserService {
   static async updateUser(id: string, userData: UpdateUserForm): Promise<User> {
     try {
       const response = await apiClient.put<ApiResponse<User>>(`/users/${id}`, userData);
-      
+
       if (response.success && response.data) {
+        // ✅ Invalidate cache after updating user
+        cacheManager.invalidate(CACHE_KEYS.USERS);
         return response.data;
       } else {
         throw new Error(response.message || 'فشل في تحديث المستخدم');
@@ -121,10 +126,12 @@ export class UserService {
   static async deleteUser(id: string): Promise<void> {
     try {
       const response = await apiClient.delete<ApiResponse<void>>(`/users/${id}`);
-      
+
       if (!response.success) {
         throw new Error(response.message || 'فشل في حذف المستخدم');
       }
+      // ✅ Invalidate cache after deleting user
+      cacheManager.invalidate(CACHE_KEYS.USERS);
     } catch (error) {
       console.error('Error deleting user:', error);
       throw error;
@@ -135,7 +142,7 @@ export class UserService {
   static async updateUserStatus(id: string, isActive: boolean): Promise<User> {
     try {
       const response = await apiClient.put<ApiResponse<User>>(`/users/${id}`, { is_active: isActive });
-      
+
       if (response.success && response.data) {
         return response.data;
       } else {
@@ -147,17 +154,30 @@ export class UserService {
     }
   }
 
-  // جلب المحامين فقط
+  // جلب المحامين فقط (مع caching)
   static async getLawyers(): Promise<User[]> {
     try {
+      // Check cache first
+      const cacheKey = CACHE_KEYS.LAWYERS;
+      const cached = cacheManager.get<User[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
       const response = await apiClient.get<ApiResponse<User[]>>('/users?role=lawyer');
-      
+
       if (response.success && response.data) {
         // إذا كانت البيانات في format pagination
+        let lawyers: User[];
         if (typeof response.data === 'object' && 'data' in response.data) {
-          return (response.data as any).data;
+          lawyers = (response.data as any).data;
+        } else {
+          lawyers = response.data;
         }
-        return response.data;
+
+        // Cache the result
+        cacheManager.set(cacheKey, lawyers);
+        return lawyers;
       } else {
         throw new Error(response.message || 'فشل في جلب المحامين');
       }
@@ -167,17 +187,30 @@ export class UserService {
     }
   }
 
-  // جلب العملاء فقط
+  // جلب العملاء فقط (مع caching)
   static async getClients(): Promise<User[]> {
     try {
+      // Check cache first
+      const cacheKey = CACHE_KEYS.CLIENTS;
+      const cached = cacheManager.get<User[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
       const response = await apiClient.get<ApiResponse<User[]>>('/users?role=client');
-      
+
       if (response.success && response.data) {
         // إذا كانت البيانات في format pagination
+        let clients: User[];
         if (typeof response.data === 'object' && 'data' in response.data) {
-          return (response.data as any).data;
+          clients = (response.data as any).data;
+        } else {
+          clients = response.data;
         }
-        return response.data;
+
+        // Cache the result
+        cacheManager.set(cacheKey, clients);
+        return clients;
       } else {
         throw new Error(response.message || 'فشل في جلب العملاء');
       }
@@ -197,7 +230,7 @@ export class UserService {
   }> {
     try {
       const response = await apiClient.get<ApiResponse<any>>('/users/stats');
-      
+
       if (response.success && response.data) {
         return response.data;
       } else {

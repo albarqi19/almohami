@@ -215,20 +215,62 @@ const Cases: React.FC = () => {
 	const handleAddCase = async (caseData: any) => {
 		try {
 			setLoading(true);
-			const createData = {
+			setError(null);
+
+			// التحقق من المحامي
+			const lawyerId = parseInt(caseData.assignedLawyer, 10);
+			if (isNaN(lawyerId)) {
+				setError('يرجى اختيار المحامي المسؤول');
+				return;
+			}
+
+			if (!caseData.filingDate) {
+				setError('يرجى تحديد تاريخ رفع الدعوى');
+				return;
+			}
+
+			// بناء البيانات حسب نوع العميل
+			const createData: any = {
 				title: caseData.description || caseData.caseNumber || 'قضية جديدة',
 				description: caseData.description || '',
 				type: caseData.caseType || 'civil',
 				priority: caseData.priority || 'medium',
-				client_id: parseInt(caseData.clientId, 10),
-				primary_lawyer_id: parseInt(caseData.assignedLawyer, 10),
-				start_date: caseData.filingDate || new Date().toISOString().split('T')[0],
+				primary_lawyer_id: lawyerId,
+				start_date: caseData.filingDate,
 				court_name: caseData.court || null,
 				court_reference: caseData.caseNumber || null,
+				opposing_party: caseData.opponentName || null,
 				status: 'active'
 			};
+
+			// إذا كان عميل جديد
+			if (caseData.isNewClient) {
+				if (!caseData.clientName || !caseData.clientPhone) {
+					setError('يرجى إدخال اسم العميل ورقم الهاتف');
+					return;
+				}
+				createData.new_client = {
+					name: caseData.clientName,
+					phone: caseData.clientPhone,
+					email: caseData.clientEmail || null,
+					national_id: caseData.clientNationalId || null
+				};
+			} else {
+				// عميل موجود
+				const clientId = parseInt(caseData.clientId, 10);
+				if (isNaN(clientId)) {
+					setError('يرجى اختيار العميل');
+					return;
+				}
+				createData.client_id = clientId;
+			}
+
+			console.log('Sending case data:', createData);
 			await CaseService.createCase(createData);
-			await fetchCases(pagination.currentPage);
+
+			// مسح الكاش وتحديث القضايا
+			localStorage.removeItem(CACHE_KEY);
+			await fetchCases(1, true);
 			setIsAddModalOpen(false);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'خطأ في إضافة القضية');

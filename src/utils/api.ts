@@ -27,6 +27,9 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
+    // DEBUG: Track API calls
+    console.log(`🔵 API CALL: ${options.method || 'GET'} ${endpoint}`, new Date().toISOString());
+
     const headers: Record<string, string> = {
       'Accept': 'application/json',
       'ngrok-skip-browser-warning': '69420', // Skip ngrok browser warning

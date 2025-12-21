@@ -1,6 +1,6 @@
 ﻿import React, { useState } from 'react';
 import Modal from './Modal';
-import { Save, X } from 'lucide-react';
+import { Save, X, UserPlus, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface User {
@@ -15,6 +15,8 @@ interface CaseFormData {
   clientId: string;
   clientPhone: string;
   clientEmail: string;
+  clientNationalId: string;
+  isNewClient: boolean;
   opponentName: string;
   opponentLawyer: string;
   court: string;
@@ -51,6 +53,8 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     clientId: '',
     clientPhone: '',
     clientEmail: '',
+    clientNationalId: '',
+    isNewClient: true, // افتراضياً عميل جديد
     opponentName: '',
     opponentLawyer: '',
     court: '',
@@ -101,11 +105,6 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
         { value: '5', label: 'عبدالله محامي' }
       ];
 
-  // قائمة العملاء
-  const clientsList = clientsFromProps.length > 0 
-    ? clientsFromProps.map(client => ({ value: client.id, label: client.name }))
-    : [];
-
   const handleInputChange = (field: keyof CaseFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -117,11 +116,20 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     const newErrors: Partial<CaseFormData> = {};
 
     if (!formData.caseNumber.trim()) newErrors.caseNumber = 'رقم الملف مطلوب';
-    if (!formData.clientId.trim()) newErrors.clientId = 'العميل مطلوب';
+
+    // التحقق من بيانات العميل حسب النوع
+    if (formData.isNewClient) {
+      if (!formData.clientName.trim()) newErrors.clientName = 'اسم العميل مطلوب';
+      if (!formData.clientPhone.trim()) newErrors.clientPhone = 'رقم هاتف العميل مطلوب';
+    } else {
+      if (!formData.clientId) newErrors.clientId = 'يرجى اختيار العميل';
+    }
+
     if (!formData.caseType) newErrors.caseType = 'نوع القضية مطلوب';
     if (!formData.court) newErrors.court = 'المحكمة مطلوبة';
     if (!formData.assignedLawyer) newErrors.assignedLawyer = 'المحامي المسؤول مطلوب';
     if (!formData.description.trim()) newErrors.description = 'وصف القضية مطلوب';
+    if (!formData.filingDate) newErrors.filingDate = 'تاريخ رفع الدعوى مطلوب';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -148,6 +156,8 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
       clientId: '',
       clientPhone: '',
       clientEmail: '',
+      clientNationalId: '',
+      isNewClient: true,
       opponentName: '',
       opponentLawyer: '',
       court: '',
@@ -190,17 +200,7 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     },
     {
       title: 'بيانات العميل',
-      fields: [
-        ...(clientsFromProps.length > 0 
-          ? [{ name: 'clientId', label: 'اختر العميل', type: 'select', options: clientsList, required: true }]
-          : [
-              { name: 'clientName', label: 'اسم العميل', type: 'text', required: true },
-              { name: 'clientId', label: 'رقم الهوية', type: 'text', required: true }
-            ]
-        ),
-        { name: 'clientPhone', label: 'رقم الهاتف', type: 'tel' },
-        { name: 'clientEmail', label: 'البريد الإلكتروني', type: 'email' }
-      ]
+      fields: [] // سيتم عرضها يدوياً لدعم التبديل بين عميل جديد/موجود
     },
     {
       title: 'بيانات الخصم',
@@ -214,7 +214,7 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
       fields: [
         { name: 'assignedLawyer', label: 'المحامي المسؤول', type: 'select', options: lawyers, required: true },
         { name: 'contractValue', label: 'قيمة العقد/النزاع', type: 'text' },
-        { name: 'filingDate', label: 'تاريخ رفع الدعوى', type: 'date' },
+        { name: 'filingDate', label: 'تاريخ رفع الدعوى', type: 'date', required: true },
         { name: 'hearingDate', label: 'تاريخ الجلسة القادمة', type: 'date' }
       ]
     }
@@ -368,6 +368,230 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                   </div>
                 ))}
               </div>
+
+              {/* قسم بيانات العميل المخصص */}
+              {section.title === 'بيانات العميل' && (
+                <div style={{ marginTop: '16px' }}>
+                  {/* أزرار التبديل بين عميل جديد/موجود */}
+                  <div style={{
+                    display: 'flex',
+                    gap: '12px',
+                    marginBottom: '20px'
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, isNewClient: true, clientId: '' }))}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        border: `2px solid ${formData.isNewClient ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                        backgroundColor: formData.isNewClient ? 'var(--color-primary-light, rgba(59, 130, 246, 0.1))' : 'transparent',
+                        color: formData.isNewClient ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                        fontSize: 'var(--font-size-sm)',
+                        fontWeight: 'var(--font-weight-medium)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <UserPlus size={18} />
+                      عميل جديد
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, isNewClient: false, clientName: '', clientPhone: '', clientEmail: '' }))}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        border: `2px solid ${!formData.isNewClient ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                        backgroundColor: !formData.isNewClient ? 'var(--color-primary-light, rgba(59, 130, 246, 0.1))' : 'transparent',
+                        color: !formData.isNewClient ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                        fontSize: 'var(--font-size-sm)',
+                        fontWeight: 'var(--font-weight-medium)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <Users size={18} />
+                      عميل موجود
+                    </button>
+                  </div>
+
+                  {/* حقول العميل */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                    gap: '20px'
+                  }}>
+                    {formData.isNewClient ? (
+                      <>
+                        {/* حقول عميل جديد */}
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <label style={{
+                            fontSize: 'var(--font-size-sm)',
+                            fontWeight: 'var(--font-weight-medium)',
+                            color: 'var(--color-text)',
+                            marginBottom: '8px'
+                          }}>
+                            اسم العميل <span style={{ color: 'var(--color-error)' }}>*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.clientName}
+                            onChange={(e) => handleInputChange('clientName', e.target.value)}
+                            placeholder="أدخل اسم العميل"
+                            style={{
+                              padding: '12px 16px',
+                              borderRadius: '8px',
+                              border: `1px solid ${errors.clientName ? 'var(--color-error)' : 'var(--color-border)'}`,
+                              backgroundColor: 'var(--color-surface)',
+                              color: 'var(--color-text)',
+                              fontSize: 'var(--font-size-sm)',
+                              outline: 'none'
+                            }}
+                          />
+                          {errors.clientName && (
+                            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-error)', marginTop: '4px' }}>
+                              {errors.clientName}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <label style={{
+                            fontSize: 'var(--font-size-sm)',
+                            fontWeight: 'var(--font-weight-medium)',
+                            color: 'var(--color-text)',
+                            marginBottom: '8px'
+                          }}>
+                            رقم الهاتف <span style={{ color: 'var(--color-error)' }}>*</span>
+                          </label>
+                          <input
+                            type="tel"
+                            value={formData.clientPhone}
+                            onChange={(e) => handleInputChange('clientPhone', e.target.value)}
+                            placeholder="05xxxxxxxx"
+                            style={{
+                              padding: '12px 16px',
+                              borderRadius: '8px',
+                              border: `1px solid ${errors.clientPhone ? 'var(--color-error)' : 'var(--color-border)'}`,
+                              backgroundColor: 'var(--color-surface)',
+                              color: 'var(--color-text)',
+                              fontSize: 'var(--font-size-sm)',
+                              outline: 'none'
+                            }}
+                          />
+                          {errors.clientPhone && (
+                            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-error)', marginTop: '4px' }}>
+                              {errors.clientPhone}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <label style={{
+                            fontSize: 'var(--font-size-sm)',
+                            fontWeight: 'var(--font-weight-medium)',
+                            color: 'var(--color-text)',
+                            marginBottom: '8px'
+                          }}>
+                            البريد الإلكتروني
+                          </label>
+                          <input
+                            type="email"
+                            value={formData.clientEmail}
+                            onChange={(e) => handleInputChange('clientEmail', e.target.value)}
+                            placeholder="example@email.com"
+                            style={{
+                              padding: '12px 16px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--color-border)',
+                              backgroundColor: 'var(--color-surface)',
+                              color: 'var(--color-text)',
+                              fontSize: 'var(--font-size-sm)',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <label style={{
+                            fontSize: 'var(--font-size-sm)',
+                            fontWeight: 'var(--font-weight-medium)',
+                            color: 'var(--color-text)',
+                            marginBottom: '8px'
+                          }}>
+                            رقم الهوية
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.clientNationalId}
+                            onChange={(e) => handleInputChange('clientNationalId', e.target.value)}
+                            placeholder="رقم الهوية الوطنية"
+                            style={{
+                              padding: '12px 16px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--color-border)',
+                              backgroundColor: 'var(--color-surface)',
+                              color: 'var(--color-text)',
+                              fontSize: 'var(--font-size-sm)',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      /* اختيار عميل موجود */
+                      <div style={{ display: 'flex', flexDirection: 'column', gridColumn: '1 / -1' }}>
+                        <label style={{
+                          fontSize: 'var(--font-size-sm)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          color: 'var(--color-text)',
+                          marginBottom: '8px'
+                        }}>
+                          اختر العميل <span style={{ color: 'var(--color-error)' }}>*</span>
+                        </label>
+                        <select
+                          value={formData.clientId}
+                          onChange={(e) => handleInputChange('clientId', e.target.value)}
+                          style={{
+                            padding: '12px 16px',
+                            borderRadius: '8px',
+                            border: `1px solid ${errors.clientId ? 'var(--color-error)' : 'var(--color-border)'}`,
+                            backgroundColor: 'var(--color-surface)',
+                            color: 'var(--color-text)',
+                            fontSize: 'var(--font-size-sm)',
+                            outline: 'none'
+                          }}
+                        >
+                          <option value="">اختر العميل</option>
+                          {clientsFromProps.map((client) => (
+                            <option key={client.id} value={client.id}>
+                              {client.name}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.clientId && (
+                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-error)', marginTop: '4px' }}>
+                            {errors.clientId}
+                          </span>
+                        )}
+                        {clientsFromProps.length === 0 && (
+                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: '8px' }}>
+                            لا يوجد عملاء مسجلين. يرجى اختيار "عميل جديد" لإضافة عميل.
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </motion.div>
           ))}
 

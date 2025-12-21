@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -52,39 +52,69 @@ const CaseDetailPage: React.FC = () => {
   const [showQuickActionsModal, setShowQuickActionsModal] = useState(false);
   const [documentsCount, setDocumentsCount] = useState(0);
 
+  // Ref to prevent duplicate fetches
+  const hasFetchedRef = useRef<string | null>(null);
+
   useEffect(() => {
-    fetchCaseAndActivities();
+    // Skip if already fetched for this caseId
+    if (!caseId || hasFetchedRef.current === caseId) {
+      return;
+    }
+
+    // Mark as fetched IMMEDIATELY (before async call) to prevent duplicates
+    hasFetchedRef.current = caseId;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [fetchedCase, activities, documents] = await Promise.all([
+          CaseService.getCase(caseId),
+          ActivityService.getCaseActivities(caseId) as Promise<any[]>,
+          DocumentService.getCaseDocuments(caseId)
+        ]);
+
+        setCaseData(fetchedCase);
+        setDocumentsCount(documents ? documents.length : 0);
+
+        const timelineEventsData: TimelineEvent[] = activities.map(activity => ({
+          id: activity.id.toString(),
+          type: activity.type as TimelineEvent['type'],
+          title: activity.title,
+          description: activity.description || '',
+          date: new Date(activity.date),
+          user: activity.user,
+          metadata: activity.metadata
+        }));
+
+        setTimelineEvents(timelineEventsData);
+      } catch (err: any) {
+        setError(err.message || 'فشل في جلب تفاصيل القضية');
+        hasFetchedRef.current = null; // Reset on error to allow retry
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [caseId]);
 
-  const handleUpdateCase = async (updatedData: Partial<Case>) => {
-    if (!caseId) return;
-
-    try {
-      const updatedCase = await CaseService.updateCase(caseId, updatedData);
-      setCaseData(updatedCase);
-    } catch (error: any) {
-      throw new Error(error.message || 'فشل في تحديث القضية');
-    }
-  };
-
-  const handleTaskAdded = async () => {
-    await fetchCaseAndActivities();
-  };
-
-  const fetchCaseAndActivities = async () => {
+  // Separate function for force refresh
+  const refreshCaseData = async () => {
     if (!caseId) return;
 
     try {
       setLoading(true);
       setError(null);
 
-      const [caseData, activities, documents] = await Promise.all([
+      const [fetchedCase, activities, documents] = await Promise.all([
         CaseService.getCase(caseId),
         ActivityService.getCaseActivities(caseId) as Promise<any[]>,
         DocumentService.getCaseDocuments(caseId)
       ]);
 
-      setCaseData(caseData);
+      setCaseData(fetchedCase);
       setDocumentsCount(documents ? documents.length : 0);
 
       const timelineEventsData: TimelineEvent[] = activities.map(activity => ({
@@ -103,6 +133,21 @@ const CaseDetailPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdateCase = async (updatedData: Partial<Case>) => {
+    if (!caseId) return;
+
+    try {
+      const updatedCase = await CaseService.updateCase(caseId, updatedData);
+      setCaseData(updatedCase);
+    } catch (error: any) {
+      throw new Error(error.message || 'فشل في تحديث القضية');
+    }
+  };
+
+  const handleTaskAdded = async () => {
+    await refreshCaseData();
   };
 
   // Get status badge class
