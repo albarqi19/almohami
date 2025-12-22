@@ -18,7 +18,8 @@ import {
   Shield,
   X,
   Eye,
-  EyeOff
+  EyeOff,
+  ChevronsDown
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/landing.css';
@@ -82,6 +83,8 @@ const LandingPage: React.FC = () => {
   const [currentWord, setCurrentWord] = React.useState(0);
   const [showPrivacy, setShowPrivacy] = React.useState(false);
   const [privacyScene, setPrivacyScene] = React.useState(0);
+  const [isManualMode, setIsManualMode] = React.useState(false);
+  const privacyContainerRef = React.useRef<HTMLDivElement>(null);
 
   const words = ['قضاياك', 'مهامك', 'فريقك', 'جلساتك', 'مواعيدك', 'عملائك', 'مستنداتك'];
 
@@ -93,7 +96,7 @@ const LandingPage: React.FC = () => {
   }, [words.length]);
 
   React.useEffect(() => {
-    if (showPrivacy) {
+    if (showPrivacy && !isManualMode) {
       setPrivacyScene(0);
       const timer1 = setTimeout(() => setPrivacyScene(1), 3500);
       const timer2 = setTimeout(() => setPrivacyScene(2), 7000);
@@ -145,21 +148,41 @@ const LandingPage: React.FC = () => {
         clearTimeout(timer3);
       };
     }
-  }, [showPrivacy]);
+  }, [showPrivacy, isManualMode]);
 
   const handlePrivacyClick = () => {
     setShowPrivacy(true);
+    setIsManualMode(false);
     document.body.style.overflow = 'hidden';
   };
 
   const closePrivacy = () => {
     setShowPrivacy(false);
+    setIsManualMode(false);
     document.body.style.overflow = 'auto';
   };
 
   const navigateToLogin = () => {
     closePrivacy();
     navigate('/login');
+  };
+
+  const restartManualMode = () => {
+    setIsManualMode(true);
+    setPrivacyScene(0);
+    if (privacyContainerRef.current) {
+      privacyContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const scrollToNextScene = () => {
+    if (privacyContainerRef.current) {
+      const sceneHeight = privacyContainerRef.current.scrollHeight / 4;
+      privacyContainerRef.current.scrollBy({ 
+        top: sceneHeight, 
+        behavior: 'smooth' 
+      });
+    }
   };
 
   const primaryCTA = user
@@ -369,14 +392,17 @@ const LandingPage: React.FC = () => {
 
             <canvas id="privacyCanvas" className="privacy-canvas"></canvas>
 
-            <div className="privacy-container">
+            <div 
+              className={`privacy-container ${isManualMode ? 'privacy-container--manual' : ''}`}
+              ref={privacyContainerRef}
+            >
               {/* Scene 1: العنوان الرسمي */}
               <motion.div
-                className={`privacy-scene ${privacyScene === 0 ? 'active' : ''}`}
+                className={`privacy-scene ${!isManualMode && privacyScene === 0 ? 'active' : ''} ${isManualMode ? 'privacy-scene--manual' : ''}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ 
-                  opacity: privacyScene === 0 ? 1 : 0,
-                  y: privacyScene === 0 ? 0 : 20 
+                  opacity: !isManualMode && privacyScene === 0 ? 1 : isManualMode ? 1 : 0,
+                  y: !isManualMode && privacyScene === 0 ? 0 : isManualMode ? 0 : 20 
                 }}
               >
                 <h1 className="privacy-title">
@@ -389,11 +415,11 @@ const LandingPage: React.FC = () => {
 
               {/* Scene 2: السيادة على البيانات */}
               <motion.div
-                className={`privacy-scene ${privacyScene === 1 ? 'active' : ''}`}
+                className={`privacy-scene ${!isManualMode && privacyScene === 1 ? 'active' : ''} ${isManualMode ? 'privacy-scene--manual' : ''}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ 
-                  opacity: privacyScene === 1 ? 1 : 0,
-                  y: privacyScene === 1 ? 0 : 20 
+                  opacity: !isManualMode && privacyScene === 1 ? 1 : isManualMode ? 1 : 0,
+                  y: !isManualMode && privacyScene === 1 ? 0 : isManualMode ? 0 : 20 
                 }}
               >
                 <h2 className="privacy-heading">سيادة كاملة على مستنداتك</h2>
@@ -405,11 +431,11 @@ const LandingPage: React.FC = () => {
 
               {/* Scene 3: التوضيح التقني */}
               <motion.div
-                className={`privacy-scene ${privacyScene === 2 ? 'active' : ''}`}
+                className={`privacy-scene ${!isManualMode && privacyScene === 2 ? 'active' : ''} ${isManualMode ? 'privacy-scene--manual' : ''}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ 
-                  opacity: privacyScene === 2 ? 1 : 0,
-                  y: privacyScene === 2 ? 0 : 20 
+                  opacity: !isManualMode && privacyScene === 2 ? 1 : isManualMode ? 1 : 0,
+                  y: !isManualMode && privacyScene === 2 ? 0 : isManualMode ? 0 : 20 
                 }}
               >
                 <div className="privacy-architecture">
@@ -455,11 +481,11 @@ const LandingPage: React.FC = () => {
 
               {/* Scene 4: النهاية */}
               <motion.div
-                className={`privacy-scene ${privacyScene === 3 ? 'active' : ''}`}
+                className={`privacy-scene ${!isManualMode && privacyScene === 3 ? 'active' : ''} ${isManualMode ? 'privacy-scene--manual' : ''}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ 
-                  opacity: privacyScene === 3 ? 1 : 0,
-                  y: privacyScene === 3 ? 0 : 20 
+                  opacity: !isManualMode && privacyScene === 3 ? 1 : isManualMode ? 1 : 0,
+                  y: !isManualMode && privacyScene === 3 ? 0 : isManualMode ? 0 : 20 
                 }}
               >
                 <h3 className="privacy-final-title">إدارة قانونية ذكية بخصوصية تامة</h3>
@@ -467,11 +493,28 @@ const LandingPage: React.FC = () => {
                   <button onClick={navigateToLogin} className="privacy-btn privacy-btn--primary">
                     الانتقال إلى تسجيل الدخول
                   </button>
-                  <button onClick={() => setPrivacyScene(0)} className="privacy-btn privacy-btn--secondary">
-                    إعادة العرض
+                  <button onClick={restartManualMode} className="privacy-btn privacy-btn--secondary">
+                    <ChevronsDown size={18} />
+                    إعادة العرض بالتمرير
                   </button>
                 </div>
               </motion.div>
+
+              {/* Scroll Indicator for Manual Mode */}
+              {isManualMode && (
+                <motion.div 
+                  className="privacy-scroll-indicator"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5, duration: 1 }}
+                  onClick={scrollToNextScene}
+                >
+                  <div className="privacy-scroll-icon">
+                    <ChevronsDown size={24} />
+                  </div>
+                  <span>مرر للمتابعة</span>
+                </motion.div>
+              )}
             </div>
           </motion.div>
         )}

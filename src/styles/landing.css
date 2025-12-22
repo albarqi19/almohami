@@ -956,10 +956,29 @@
   background: #0a0e14;
   color: #f8fafc;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
+}
+
+.privacy-overlay::-webkit-scrollbar {
+  width: 8px;
+}
+
+.privacy-overlay::-webkit-scrollbar-track {
+  background: rgba(197, 160, 89, 0.1);
+  border-radius: 10px;
+}
+
+.privacy-overlay::-webkit-scrollbar-thumb {
+  background: #c5a059;
+  border-radius: 10px;
+}
+
+.privacy-overlay::-webkit-scrollbar-thumb:hover {
+  background: #d4b685;
 }
 
 .privacy-close-btn {
@@ -1005,6 +1024,57 @@
   text-align: center;
 }
 
+@media (max-width: 768px) {
+  .privacy-overlay {
+    padding: 20px 10px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+  
+  .privacy-overlay::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  
+  .privacy-container {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .privacy-container--manual {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .privacy-container--manual::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.privacy-container--manual {
+  overflow-y: auto;
+  max-height: 100vh;
+  padding: 100px 20px;
+  scroll-behavior: smooth;
+}
+
+.privacy-container--manual::-webkit-scrollbar {
+  width: 8px;
+}
+
+.privacy-container--manual::-webkit-scrollbar-track {
+  background: rgba(197, 160, 89, 0.1);
+  border-radius: 10px;
+}
+
+.privacy-container--manual::-webkit-scrollbar-thumb {
+  background: #c5a059;
+  border-radius: 10px;
+}
+
+.privacy-container--manual::-webkit-scrollbar-thumb:hover {
+  background: #d4b685;
+}
+
 .privacy-scene {
   position: absolute;
   inset: 0;
@@ -1022,6 +1092,14 @@
   position: relative;
   opacity: 1;
   pointer-events: auto;
+}
+
+.privacy-scene--manual {
+  position: relative;
+  opacity: 1;
+  pointer-events: auto;
+  margin-bottom: 100px;
+  min-height: 80vh;
 }
 
 .privacy-title {
@@ -1198,6 +1276,9 @@
   cursor: pointer;
   transition: all 0.4s ease;
   border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .privacy-btn--primary {
@@ -1221,6 +1302,57 @@
 .privacy-btn--secondary:hover {
   color: #c5a059;
   border-color: #c5a059;
+}
+
+/* Privacy Scroll Indicator */
+.privacy-scroll-indicator {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  z-index: 10001;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-10px);
+  }
+}
+
+.privacy-scroll-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(197, 160, 89, 0.15);
+  border: 2px solid #c5a059;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c5a059;
+  transition: all 0.3s ease;
+}
+
+.privacy-scroll-indicator:hover .privacy-scroll-icon {
+  background: #c5a059;
+  color: #0a0e14;
+  transform: scale(1.1);
+}
+
+.privacy-scroll-indicator span {
+  font-size: 13px;
+  color: #c5a059;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Responsive Privacy */
@@ -1252,5 +1384,18 @@
   .privacy-node {
     width: 80px;
     height: 80px;
+  }
+  
+  .privacy-scroll-indicator {
+    bottom: 20px;
+  }
+  
+  .privacy-scroll-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .privacy-scroll-indicator span {
+    font-size: 11px;
   }
 }
