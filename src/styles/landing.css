@@ -928,14 +928,15 @@
 
 @media (max-width: 768px) {
   .landing__privacy-btn {
-    padding: 8px 12px;
-    font-size: 12px;
-    gap: 6px;
+    padding: 6px 10px;
+    font-size: 11px;
+    gap: 4px;
+    border-radius: 8px;
   }
   
   .landing__privacy-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
   }
 }
 
