@@ -303,7 +303,7 @@ const Documents: React.FC = () => {
 
                 try {
                     const token = localStorage.getItem('authToken');
-                    const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
+                    const apiUrl = import.meta.env.VITE_API_URL || 'https://amusing-premium-jennet.ngrok-free.app/api/v1';
                     const response = await fetch(`${apiUrl}/documents/${doc.id}/preview`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
@@ -423,12 +423,22 @@ const Documents: React.FC = () => {
                 setLoading(true);
                 setError(null);
                 const token = localStorage.getItem('authToken');
-                const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
+                const apiUrl = import.meta.env.VITE_API_URL || 'https://amusing-premium-jennet.ngrok-free.app/api/v1';
 
                 fetch(`${apiUrl}/cloud-storage/onedrive/preview-url/${file.id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'ngrok-skip-browser-warning': '69420'
+                    }
                 })
-                    .then(res => res.json())
+                    .then(async res => {
+                        if (!res.ok) {
+                            const text = await res.text();
+                            console.error('Preview URL failed:', res.status, text);
+                            throw new Error(`HTTP ${res.status}`);
+                        }
+                        return res.json();
+                    })
                     .then(data => {
                         if (data.success && data.download_url) {
                             setDirectUrl(data.download_url);
