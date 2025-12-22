@@ -926,6 +926,19 @@
   box-shadow: 0 4px 12px rgba(197, 165, 114, 0.3);
 }
 
+@media (max-width: 768px) {
+  .landing__privacy-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+    gap: 6px;
+  }
+  
+  .landing__privacy-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
 /* Privacy Overlay */
 .privacy-overlay {
   position: fixed;
