@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Scale,
   Users,
@@ -14,7 +14,11 @@ import {
   MessageSquare,
   NotebookPen,
   Globe2,
-  Gavel
+  Gavel,
+  Shield,
+  X,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/landing.css';
@@ -74,7 +78,10 @@ const fadeUp = {
 
 const LandingPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [currentWord, setCurrentWord] = React.useState(0);
+  const [showPrivacy, setShowPrivacy] = React.useState(false);
+  const [privacyScene, setPrivacyScene] = React.useState(0);
 
   const words = ['قضاياك', 'مهامك', 'فريقك', 'جلساتك', 'مواعيدك', 'عملائك', 'مستنداتك'];
 
@@ -84,6 +91,76 @@ const LandingPage: React.FC = () => {
     }, 2500);
     return () => clearInterval(interval);
   }, [words.length]);
+
+  React.useEffect(() => {
+    if (showPrivacy) {
+      setPrivacyScene(0);
+      const timer1 = setTimeout(() => setPrivacyScene(1), 3500);
+      const timer2 = setTimeout(() => setPrivacyScene(2), 7000);
+      const timer3 = setTimeout(() => setPrivacyScene(3), 11000);
+      
+      // Canvas grid effect
+      const canvas = document.getElementById('privacyCanvas') as HTMLCanvasElement;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const resize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            drawGrid();
+          };
+          
+          const drawGrid = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'rgba(197, 160, 89, 0.03)';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i < canvas.width; i += 60) {
+              ctx.beginPath();
+              ctx.moveTo(i, 0);
+              ctx.lineTo(i, canvas.height);
+              ctx.stroke();
+            }
+            
+            for (let i = 0; i < canvas.height; i += 60) {
+              ctx.beginPath();
+              ctx.moveTo(0, i);
+              ctx.lineTo(canvas.width, i);
+              ctx.stroke();
+            }
+          };
+          
+          window.addEventListener('resize', resize);
+          resize();
+          
+          return () => {
+            window.removeEventListener('resize', resize);
+          };
+        }
+      }
+      
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+      };
+    }
+  }, [showPrivacy]);
+
+  const handlePrivacyClick = () => {
+    setShowPrivacy(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closePrivacy = () => {
+    setShowPrivacy(false);
+    document.body.style.overflow = 'auto';
+  };
+
+  const navigateToLogin = () => {
+    closePrivacy();
+    navigate('/login');
+  };
 
   const primaryCTA = user
     ? { label: 'الذهاب للوحة التحكم', href: '/dashboard', icon: LayoutDashboard }
@@ -102,6 +179,13 @@ const LandingPage: React.FC = () => {
               <p className="landing__brand-title">كل ما يحتاجه مكتبك القانوني</p>
             </div>
           </div>
+          <button 
+            onClick={handlePrivacyClick}
+            className="landing__privacy-btn"
+          >
+            <Shield size={18} />
+            الخصوصية
+          </button>
         </div>
       </header>
 
@@ -268,6 +352,130 @@ const LandingPage: React.FC = () => {
           <p>© {new Date().getFullYear()} جميع الحقوق محفوظة</p>
         </div>
       </footer>
+
+      {/* Privacy Overlay */}
+      <AnimatePresence>
+        {showPrivacy && (
+          <motion.div 
+            className="privacy-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <button onClick={closePrivacy} className="privacy-close-btn" aria-label="إغلاق">
+              <X size={24} />
+            </button>
+
+            <canvas id="privacyCanvas" className="privacy-canvas"></canvas>
+
+            <div className="privacy-container">
+              {/* Scene 1: العنوان الرسمي */}
+              <motion.div
+                className={`privacy-scene ${privacyScene === 0 ? 'active' : ''}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ 
+                  opacity: privacyScene === 0 ? 1 : 0,
+                  y: privacyScene === 0 ? 0 : 20 
+                }}
+              >
+                <h1 className="privacy-title">
+                  نظام <span className="privacy-highlight">الرائد</span> لإدارة المحاماة
+                </h1>
+                <p className="privacy-subtitle">
+                  الحل التقني الأمثل لربط أعمالك القانونية ببيئة سحابية تملكها وتتحكم بها بالكامل.
+                </p>
+              </motion.div>
+
+              {/* Scene 2: السيادة على البيانات */}
+              <motion.div
+                className={`privacy-scene ${privacyScene === 1 ? 'active' : ''}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ 
+                  opacity: privacyScene === 1 ? 1 : 0,
+                  y: privacyScene === 1 ? 0 : 20 
+                }}
+              >
+                <h2 className="privacy-heading">سيادة كاملة على مستنداتك</h2>
+                <p className="privacy-text">
+                  نحن نؤمن بأن أسرار موكليك هي مسؤوليتك وحدك. <br />
+                  لذا، نظامنا لا يملك حق الوصول لمحتوى ملفاتك، بل يكتفي بتنظيمها داخل حسابك الخاص.
+                </p>
+              </motion.div>
+
+              {/* Scene 3: التوضيح التقني */}
+              <motion.div
+                className={`privacy-scene ${privacyScene === 2 ? 'active' : ''}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ 
+                  opacity: privacyScene === 2 ? 1 : 0,
+                  y: privacyScene === 2 ? 0 : 20 
+                }}
+              >
+                <div className="privacy-architecture">
+                  {/* الخادم في الأعلى */}
+                  <div className="privacy-server">
+                    <div className="privacy-node privacy-node--blocked">
+                      <FileText size={32} />
+                      <div className="privacy-node-overlay">
+                        <EyeOff size={28} />
+                      </div>
+                    </div>
+                    <span className="privacy-label">خوادم النظام (محجوبة)</span>
+                  </div>
+
+                  {/* القاعدة: الواجهة والون درايف */}
+                  <div className="privacy-base">
+                    <div className="privacy-client">
+                      <div className="privacy-node">
+                        <LayoutDashboard size={32} />
+                      </div>
+                      <span className="privacy-label">واجهة المستخدم</span>
+                    </div>
+
+                    <div className="privacy-connection">
+                      <svg className="privacy-flow-line" viewBox="0 0 200 40">
+                        <path d="M0 20 L200 20" className="data-flow" />
+                      </svg>
+                      <span className="privacy-flow-label">اتصال مباشر ومؤمن</span>
+                    </div>
+
+                    <div className="privacy-storage">
+                      <div className="privacy-node privacy-node--storage">
+                        <Globe2 size={32} />
+                      </div>
+                      <span className="privacy-label">OneDrive الخاص بك</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="privacy-tech-note">
+                  البيانات تنتقل بين الواجهة ومساحتك الخاصة دون المرور بخوادم الاستضافة.
+                </p>
+              </motion.div>
+
+              {/* Scene 4: النهاية */}
+              <motion.div
+                className={`privacy-scene ${privacyScene === 3 ? 'active' : ''}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ 
+                  opacity: privacyScene === 3 ? 1 : 0,
+                  y: privacyScene === 3 ? 0 : 20 
+                }}
+              >
+                <h3 className="privacy-final-title">إدارة قانونية ذكية بخصوصية تامة</h3>
+                <div className="privacy-actions">
+                  <button onClick={navigateToLogin} className="privacy-btn privacy-btn--primary">
+                    الانتقال إلى تسجيل الدخول
+                  </button>
+                  <button onClick={() => setPrivacyScene(0)} className="privacy-btn privacy-btn--secondary">
+                    إعادة العرض
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
