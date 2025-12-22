@@ -24,6 +24,7 @@ import DocumentPreviewModal from './DocumentPreviewModal';
 import SmartUploadModal from './SmartUploadModal';
 import LegalMemoModal from './LegalMemoModal';
 import AnalysisProgress from './AnalysisProgress';
+import CloudFilePickerModal from './CloudFilePickerModal';
 
 import { DocumentService } from '../services/documentService';
 import { LegalMemoService, type LegalMemo, type AnalysisStep } from '../services/legalMemoService';
@@ -76,6 +77,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   const [selectedDocument, setSelectedDocument] = useState<DocumentType | null>(null);
   const [showSmartUpload, setShowSmartUpload] = useState(false);
   const [showCreateMemo, setShowCreateMemo] = useState(false);
+  const [showCloudPicker, setShowCloudPicker] = useState(false);
   const [editingMemo, setEditingMemo] = useState<LegalMemo | null>(null);
   
 
@@ -498,6 +500,36 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
             </div>
             
             <div style={{ display: 'flex', gap: '8px', marginLeft: '12px' }}>
+              {/* Cloud File Picker Button */}
+              <button
+                onClick={() => setShowCloudPicker(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  backgroundColor: '#0078d4',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: 'var(--font-weight-medium)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#106ebe';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#0078d4';
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                تعيين ملف سحابي
+              </button>
+
               {/* Smart Upload Button */}
               <button
                 onClick={() => setShowSmartUpload(true)}
@@ -1231,6 +1263,18 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
       <AnalysisProgress
         steps={analysisSteps}
         isVisible={showAnalysisProgress}
+      />
+
+      {/* Cloud File Picker Modal */}
+      <CloudFilePickerModal
+        isOpen={showCloudPicker}
+        onClose={() => setShowCloudPicker(false)}
+        caseId={caseId}
+        caseTitle={caseTitle}
+        onFileAssigned={() => {
+          loadDocuments();
+          setShowCloudPicker(false);
+        }}
       />
 
     </>

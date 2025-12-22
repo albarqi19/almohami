@@ -516,3 +516,58 @@
     margin-bottom: 16px;
     color: var(--quiet-gray-500);
 }
+
+/* OneDrive List Item */
+.doc-list-item {
+    display: grid;
+    grid-template-columns: 32px 1fr 80px 100px 32px;
+    align-items: center;
+    padding: 8px 12px;
+    gap: 8px;
+    background-color: var(--color-surface);
+    border-bottom: 1px solid var(--quiet-gray-100);
+    transition: background-color 0.15s;
+    cursor: pointer;
+}
+
+.doc-list-item:hover {
+    background-color: var(--quiet-gray-50);
+}
+
+.doc-list-item.selected {
+    background-color: rgba(30, 58, 95, 0.05);
+    border-right: 3px solid var(--law-navy);
+}
+
+.doc-list-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.doc-list-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.doc-list-meta {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    text-align: center;
+}
+
+.doc-list-date {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    text-align: center;
+}
+
+.doc-list-cloud {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

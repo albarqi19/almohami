@@ -17,6 +17,7 @@ export interface CloudStorageFile {
     is_folder: boolean;
     mime_type: string | null;
     web_url: string | null;
+    download_url: string | null; // Direct download/preview URL from OneDrive
     created_at: string | null;
     modified_at: string | null;
     provider: string;
@@ -264,12 +265,15 @@ export const CloudStorageService = {
         web_url?: string;
     }): Promise<{ success: boolean; document?: unknown; error?: string }> => {
         try {
+            console.log('registerUploadedFile - Sending data:', data);
             const response = await apiClient.post(
                 '/onedrive-direct/documents/register-upload',
                 data
             );
+            console.log('registerUploadedFile - Response:', response);
             return response as { success: boolean; document?: unknown; error?: string };
         } catch (error: unknown) {
+            console.error('registerUploadedFile - Error:', error);
             const err = error as { message?: string };
             return { success: false, error: err.message || 'فشل في تسجيل الملف' };
         }

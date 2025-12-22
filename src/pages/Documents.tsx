@@ -31,11 +31,20 @@ import {
     Loader2,
     CheckCircle,
     AlertCircle,
-    ExternalLink
+    ExternalLink,
+    Shield,
+    Settings,
+    FolderPlus
 } from 'lucide-react';
 import type { Document as DocumentType, Case } from '../types';
 import DocumentUploadModal from '../components/DocumentUploadModal';
 import LegalMemoModal from '../components/LegalMemoModal';
+import DocumentPermissionsModal from '../components/DocumentPermissionsModal';
+import AssignFileToCaseModal from '../components/AssignFileToCaseModal';
+import CloudStorageSettingsModal from '../components/CloudStorageSettingsModal';
+import ContextMenu, { createOneDriveContextMenu } from '../components/ContextMenu';
+import SecurePdfViewer from '../components/SecurePdfViewer';
+import SecureWordViewer from '../components/SecureWordViewer';
 import { DocumentService } from '../services/documentService';
 import { CaseService } from '../services/caseService';
 import { CloudStorageService } from '../services/cloudStorageService';
@@ -82,7 +91,7 @@ const Documents: React.FC = () => {
     });
 
     // UI States
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState('all');
     const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
@@ -93,6 +102,11 @@ const Documents: React.FC = () => {
     // Modals
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showCreateMemo, setShowCreateMemo] = useState(false);
+    const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+    const [showAssignModal, setShowAssignModal] = useState(false);
+    const [showCloudSettings, setShowCloudSettings] = useState(false);
+    const [selectedDocForPermissions, setSelectedDocForPermissions] = useState<DocumentType | null>(null);
+    const [selectedCloudFile, setSelectedCloudFile] = useState<CloudStorageFile | null>(null);
 
     // OneDrive States
     const [oneDriveStatus, setOneDriveStatus] = useState<CloudStorageStatus | null>(null);
@@ -103,6 +117,13 @@ const Documents: React.FC = () => {
     const [currentOneDriveFolder, setCurrentOneDriveFolder] = useState<string>('root');
     const [selectedOneDriveFile, setSelectedOneDriveFile] = useState<CloudStorageFile | null>(null);
     const [searchParams, setSearchParams] = useSearchParams();
+
+    // Context Menu State
+    const [contextMenu, setContextMenu] = useState<{
+        isOpen: boolean;
+        position: { x: number; y: number };
+        file: CloudStorageFile | null;
+    }>({ isOpen: false, position: { x: 0, y: 0 }, file: null });
 
     useEffect(() => {
         // Only fetch if no cached data exists
@@ -282,7 +303,8 @@ const Documents: React.FC = () => {
 
                 try {
                     const token = localStorage.getItem('authToken');
-                    const response = await fetch(`http://127.0.0.1:8000/api/v1/documents/${doc.id}/preview`, {
+                    const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
+                    const response = await fetch(`${apiUrl}/documents/${doc.id}/preview`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
 
@@ -360,11 +382,20 @@ const Documents: React.FC = () => {
                     <button className="preview-action-btn primary" onClick={() => console.log('Download')}>
                         <Download size={16} /> تنزيل
                     </button>
-                    <button className="preview-action-btn">
-                        <Share2 size={16} /> مشاركة
+                    <button className="preview-action-btn" onClick={() => {
+                        setSelectedDocForPermissions(doc);
+                        setShowPermissionsModal(true);
+                    }}>
+                        <Shield size={16} /> الصلاحيات
+                    </button>
+                    <button className="preview-action-btn" onClick={() => {
+                        setSelectedDocForPermissions(doc);
+                        setShowAssignModal(true);
+                    }}>
+                        <FolderPlus size={16} /> تعيين لقضية
                     </button>
                     <button className="preview-action-btn">
-                        <Copy size={16} /> نسخ
+                        <Share2 size={16} /> مشاركة
                     </button>
                     <button className="preview-action-btn" style={{ color: 'var(--color-error)' }}>
                         <Trash2 size={16} /> حذف
@@ -376,145 +407,352 @@ const Documents: React.FC = () => {
 
     // OneDrive Preview Pane Content
     const OneDrivePreviewPane = ({ file }: { file: CloudStorageFile }) => {
-        const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-        const [previewLoading, setPreviewLoading] = useState(false);
-        const [previewError, setPreviewError] = useState<string | null>(null);
+        const [directUrl, setDirectUrl] = useState<string | null>(null);
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState<string | null>(null);
 
         const isImage = file.mime_type?.includes('image');
         const isPdf = file.mime_type?.includes('pdf');
         const isWord = file.mime_type?.includes('word') || file.name.endsWith('.docx') || file.name.endsWith('.doc');
         const isExcel = file.mime_type?.includes('excel') || file.mime_type?.includes('spreadsheet') || file.name.endsWith('.xlsx');
-        const canPreview = isImage || isPdf;
 
+        // Fetch direct download URL from backend
         useEffect(() => {
-            if (canPreview && file.id) {
-                fetchPreview();
-            }
-            return () => {
-                if (previewUrl) URL.revokeObjectURL(previewUrl);
-            };
-        }, [file.id]);
-
-        const fetchPreview = async () => {
-            setPreviewLoading(true);
-            setPreviewError(null);
-            if (previewUrl) URL.revokeObjectURL(previewUrl);
-            setPreviewUrl(null);
-
-            try {
+            // Fetch for files that can be previewed (images, PDFs, Word docs)
+            if (file.id && !file.is_folder && (isImage || isPdf || isWord)) {
+                setLoading(true);
+                setError(null);
                 const token = localStorage.getItem('authToken');
-                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'}/cloud-storage/onedrive/preview/${file.id}`, {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
+
+                fetch(`${apiUrl}/cloud-storage/onedrive/preview-url/${file.id}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (!response.ok) throw new Error('Failed to load preview');
-
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                setPreviewUrl(url);
-            } catch (err) {
-                console.error(err);
-                setPreviewError('فشل تحميل المعاينة');
-            } finally {
-                setPreviewLoading(false);
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.download_url) {
+                            setDirectUrl(data.download_url);
+                        } else {
+                            setError(data.message || 'فشل جلب رابط المعاينة');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Failed to get preview URL:', err);
+                        setError('فشل الاتصال');
+                    })
+                    .finally(() => setLoading(false));
             }
-        };
+        }, [file.id, isImage, isPdf, isWord, file.is_folder]);
 
-        const [downloadLoading, setDownloadLoading] = useState(false);
+        // Direct access - no server proxy needed!
 
-        const handleDownload = async () => {
-            setDownloadLoading(true);
-            try {
-                const token = localStorage.getItem('authToken');
-                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'}/cloud-storage/onedrive/download/${file.id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (!response.ok) throw new Error('Download failed');
-
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = file.name;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            } catch (err) {
-                console.error('Download failed:', err);
-                alert('فشل التنزيل');
-            } finally {
-                setDownloadLoading(false);
+        const handleDownload = () => {
+            // Direct download from OneDrive - bypasses server completely!
+            if (file.web_url) {
+                window.open(file.web_url + '?download=1', '_blank');
+            } else {
+                alert('رابط التحميل غير متوفر');
             }
         };
 
         return (
-            <div className="docs-preview-pane">
-                <div className="preview-header">
-                    <div>
-                        <div className="preview-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Cloud size={16} className="text-blue-500" />
-                            {file.name}
-                        </div>
-                        <div className="preview-meta">
-                            {file.modified_at && `تم التعديل ${new Date(file.modified_at).toLocaleDateString('ar-SA')}`}
-                        </div>
+            <div className="docs-preview-pane" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                {/* Header with close button and action buttons in one row */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    borderBottom: '1px solid var(--color-border)',
+                    background: 'var(--color-bg-secondary)'
+                }}>
+                    {/* Action buttons - compact style */}
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={handleDownload}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                color: 'var(--color-primary)',
+                                background: 'var(--color-primary-bg)',
+                                border: '1px solid var(--color-primary)',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-primary)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-primary-bg)'}
+                        >
+                            <Download size={12} /> تنزيل
+                        </button>
+                        <button
+                            onClick={() => file.web_url && window.open(file.web_url, '_blank')}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                color: 'var(--color-text-secondary)',
+                                background: 'transparent',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <ExternalLink size={12} /> فتح
+                        </button>
+                        <button
+                            onClick={() => {
+                                setSelectedCloudFile(file);
+                                setShowPermissionsModal(true);
+                            }}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                color: 'var(--color-text-secondary)',
+                                background: 'transparent',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <Shield size={12} /> صلاحيات
+                        </button>
+                        <button
+                            onClick={() => {
+                                setSelectedCloudFile(file);
+                                setShowAssignModal(true);
+                            }}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                color: 'var(--color-text-secondary)',
+                                background: 'transparent',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <FolderPlus size={12} /> تعيين
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (file.web_url) {
+                                    navigator.clipboard.writeText(file.web_url);
+                                }
+                            }}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                color: 'var(--color-text-secondary)',
+                                background: 'transparent',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <Copy size={12} /> نسخ
+                        </button>
                     </div>
-                    <button className="preview-close-btn" onClick={() => setSelectedOneDriveFile(null)}>
-                        <X size={18} />
+
+                    {/* Close button */}
+                    <button
+                        onClick={() => setSelectedOneDriveFile(null)}
+                        style={{
+                            padding: '4px',
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--color-text-secondary)',
+                            borderRadius: '4px'
+                        }}
+                    >
+                        <X size={16} />
                     </button>
                 </div>
 
-                <div className="preview-body">
-                    <div className="preview-content-area" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: '350px' }}>
-                        {previewLoading ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <Loader2 size={32} className="animate-spin text-blue-500" />
-                                <span style={{ marginTop: '12px', color: 'var(--color-text-secondary)' }}>جاري التحميل...</span>
-                            </div>
-                        ) : previewError ? (
-                            <div style={{ color: 'var(--color-error)', fontSize: '13px' }}>{previewError}</div>
-                        ) : isImage && previewUrl ? (
-                            <img src={previewUrl} alt={file.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                        ) : isPdf && previewUrl ? (
-                            <iframe src={previewUrl} title={file.name} style={{ width: '100%', height: '100%', border: 'none', flex: 1 }} />
-                        ) : (
-                            <>
-                                {getFileIcon(file.mime_type || '')}
-                                <span style={{ marginTop: '12px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>
-                                    {isPdf ? 'ملف PDF' : isWord ? 'ملف Word' : isExcel ? 'ملف Excel' : 'ملف OneDrive'}
-                                </span>
-                                {!canPreview && (
-                                    <span style={{ marginTop: '8px', color: 'var(--color-text-tertiary)', fontSize: '11px' }}>
-                                        لا يمكن معاينة هذا النوع من الملفات
-                                    </span>
-                                )}
-                            </>
-                        )}
+                {/* File info */}
+                <div style={{
+                    padding: '12px 16px',
+                    borderBottom: '1px solid var(--color-border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                }}>
+                    <Cloud size={18} style={{ color: '#0078d4', flexShrink: 0 }} />
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: 'var(--color-heading)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                        }}>
+                            {file.name}
+                        </div>
+                        <div style={{
+                            fontSize: '11px',
+                            color: 'var(--color-text-tertiary)',
+                            display: 'flex',
+                            gap: '8px'
+                        }}>
+                            {file.size && <span>{(file.size / 1024).toFixed(1)} KB</span>}
+                            {file.modified_at && <span>{new Date(file.modified_at).toLocaleDateString('ar-SA')}</span>}
+                        </div>
                     </div>
+                </div>
 
-                    <div className="preview-actions" style={{ marginTop: 'auto', paddingTop: '16px' }}>
-                        <button
-                            className="preview-action-btn primary"
-                            onClick={handleDownload}
-                            disabled={downloadLoading}
-                            style={{ gridColumn: 'span 2', opacity: downloadLoading ? 0.7 : 1 }}
-                        >
-                            {downloadLoading ? (
-                                <><Loader2 size={16} className="animate-spin" /> جاري التنزيل...</>
-                            ) : (
-                                <><Download size={16} /> تنزيل مباشر</>
-                            )}
-                        </button>
-                        <button
-                            className="preview-action-btn"
-                            onClick={() => file.web_url && window.open(file.web_url, '_blank')}
-                            style={{ gridColumn: 'span 2' }}
-                        >
-                            <ExternalLink size={16} /> فتح في OneDrive
-                        </button>
-                    </div>
+                {/* Preview content */}
+                <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    background: 'var(--color-bg-primary)'
+                }}>
+                    {/* Loading state */}
+                    {loading && (
+                        <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <Loader2 size={28} className="animate-spin" style={{ color: 'var(--color-primary)' }} />
+                            <span style={{ marginTop: '8px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                                جاري تحميل المعاينة...
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Error state */}
+                    {error && !loading && (
+                        <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '24px',
+                            textAlign: 'center'
+                        }}>
+                            {getFileIcon(file.mime_type || '')}
+                            <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--color-error)' }}>
+                                {error}
+                            </div>
+                            <button
+                                onClick={() => file.web_url && window.open(file.web_url, '_blank')}
+                                style={{
+                                    marginTop: '16px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '8px 16px',
+                                    fontSize: '12px',
+                                    fontWeight: 500,
+                                    color: 'white',
+                                    background: '#0078d4',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <ExternalLink size={14} /> فتح في OneDrive
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Image preview using direct URL */}
+                    {!loading && !error && isImage && directUrl && (
+                        <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '16px'
+                        }}>
+                            <img
+                                src={directUrl}
+                                alt={file.name}
+                                style={{
+                                    maxWidth: '100%',
+                                    maxHeight: '100%',
+                                    objectFit: 'contain',
+                                    borderRadius: '6px'
+                                }}
+                            />
+                        </div>
+                    )}
+
+                    {/* PDF preview using SecurePdfViewer - no download options */}
+                    {!loading && !error && isPdf && directUrl && (
+                        <SecurePdfViewer url={directUrl} fileName={file.name} />
+                    )}
+
+                    {/* Word preview using SecureWordViewer */}
+                    {!loading && !error && isWord && directUrl && (
+                        <SecureWordViewer url={directUrl} fileName={file.name} />
+                    )}
+
+                    {/* Other files - show icon and open button */}
+                    {!loading && !error && !directUrl && !isImage && !isPdf && !isWord && (
+                        <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '24px',
+                            textAlign: 'center'
+                        }}>
+                            {getFileIcon(file.mime_type || '')}
+                            <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                                {isWord ? 'ملف Word' : isExcel ? 'ملف Excel' : file.is_folder ? 'مجلد' : 'ملف OneDrive'}
+                            </div>
+                            <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--color-text-tertiary)' }}>
+                                لا يمكن معاينة هذا النوع من الملفات
+                            </div>
+                            <button
+                                onClick={() => file.web_url && window.open(file.web_url, '_blank')}
+                                style={{
+                                    marginTop: '16px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '8px 16px',
+                                    fontSize: '12px',
+                                    fontWeight: 500,
+                                    color: 'white',
+                                    background: '#0078d4',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <ExternalLink size={14} /> فتح في OneDrive
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -594,6 +832,14 @@ const Documents: React.FC = () => {
                                     style={{ paddingRight: '32px', color: 'var(--color-text-muted)', fontSize: '11px' }}
                                 >
                                     {oneDriveStatus.email}
+                                </div>
+                                <div
+                                    className="sidebar-item"
+                                    onClick={() => setShowCloudSettings(true)}
+                                    style={{ color: 'var(--color-primary)' }}
+                                >
+                                    <Settings size={16} />
+                                    <span>إعدادات السحابة</span>
                                 </div>
                                 <div
                                     className="sidebar-item"
@@ -809,8 +1055,8 @@ const Documents: React.FC = () => {
                                     </div>
                                 )}
 
-                                {/* OneDrive Files Grid */}
-                                {!oneDriveLoading && oneDriveFiles.length > 0 && (
+                                {/* OneDrive Files Grid/List */}
+                                {!oneDriveLoading && oneDriveFiles.length > 0 && viewMode === 'grid' && (
                                     <div className="docs-grid">
                                         {oneDriveFiles.map(file => (
                                             <motion.div
@@ -826,8 +1072,16 @@ const Documents: React.FC = () => {
                                                         setSelectedOneDriveFile(null);
                                                     } else {
                                                         setSelectedOneDriveFile(file);
-                                                        setSelectedDocument(null); // Clear local file selection
+                                                        setSelectedDocument(null);
                                                     }
+                                                }}
+                                                onContextMenu={(e) => {
+                                                    e.preventDefault();
+                                                    setContextMenu({
+                                                        isOpen: true,
+                                                        position: { x: e.clientX, y: e.clientY },
+                                                        file: file
+                                                    });
                                                 }}
                                             >
                                                 <div className="doc-preview">
@@ -863,6 +1117,56 @@ const Documents: React.FC = () => {
                                     </div>
                                 )}
 
+                                {/* OneDrive Files List View */}
+                                {!oneDriveLoading && oneDriveFiles.length > 0 && viewMode === 'list' && (
+                                    <div className="docs-list">
+                                        {oneDriveFiles.map(file => (
+                                            <motion.div
+                                                key={file.id}
+                                                layout
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                className={`doc-list-item ${selectedOneDriveFile?.id === file.id ? 'selected' : ''}`}
+                                                onClick={() => {
+                                                    if (file.is_folder) {
+                                                        loadOneDriveFiles(file.id);
+                                                        setSelectedOneDriveFile(null);
+                                                    } else {
+                                                        setSelectedOneDriveFile(file);
+                                                        setSelectedDocument(null);
+                                                    }
+                                                }}
+                                                onContextMenu={(e) => {
+                                                    e.preventDefault();
+                                                    setContextMenu({
+                                                        isOpen: true,
+                                                        position: { x: e.clientX, y: e.clientY },
+                                                        file: file
+                                                    });
+                                                }}
+                                            >
+                                                <div className="doc-list-icon">
+                                                    {file.is_folder ? (
+                                                        <Folder size={18} style={{ color: '#f59e0b' }} />
+                                                    ) : (
+                                                        getFileIcon(file.mime_type || '')
+                                                    )}
+                                                </div>
+                                                <div className="doc-list-name">{file.name}</div>
+                                                <div className="doc-list-meta">
+                                                    {file.is_folder ? 'مجلد' : formatSize(file.size)}
+                                                </div>
+                                                <div className="doc-list-date">
+                                                    {file.modified_at && new Date(file.modified_at).toLocaleDateString('ar-SA')}
+                                                </div>
+                                                <div className="doc-list-cloud">
+                                                    <Cloud size={14} style={{ color: '#0078d4' }} />
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                )}
+
                                 {/* Empty OneDrive State */}
                                 {!oneDriveLoading && oneDriveFiles.length === 0 && (
                                     <div className="empty-state">
@@ -893,7 +1197,41 @@ const Documents: React.FC = () => {
                 </div>
             </div>
 
+            {/* Right-Click Context Menu */}
+            <ContextMenu
+                isOpen={contextMenu.isOpen}
+                position={contextMenu.position}
+                onClose={() => setContextMenu({ ...contextMenu, isOpen: false })}
+                items={contextMenu.file ? createOneDriveContextMenu({
+                    file: contextMenu.file,
+                    onDownload: () => {
+                        if (contextMenu.file?.web_url) {
+                            window.open(contextMenu.file.web_url + '?download=1', '_blank');
+                        }
+                    },
+                    onOpenInOneDrive: () => {
+                        if (contextMenu.file?.web_url) {
+                            window.open(contextMenu.file.web_url, '_blank');
+                        }
+                    },
+                    onPermissions: () => {
+                        setSelectedCloudFile(contextMenu.file);
+                        setShowPermissionsModal(true);
+                    },
+                    onAssignToCase: () => {
+                        setSelectedCloudFile(contextMenu.file);
+                        setShowAssignModal(true);
+                    },
+                    onCopyLink: () => {
+                        if (contextMenu.file?.web_url) {
+                            navigator.clipboard.writeText(contextMenu.file.web_url);
+                        }
+                    }
+                }) : []}
+            />
+
             {/* Modals */}
+
             {showUploadModal && (
                 <DocumentUploadModal
                     isOpen={showUploadModal}
@@ -901,12 +1239,63 @@ const Documents: React.FC = () => {
                     onUploadSuccess={loadData}
                     cases={cases}
                 />
+
             )}
+
 
             {showCreateMemo && (
                 <LegalMemoModal
                     isOpen={showCreateMemo}
                     onClose={() => setShowCreateMemo(false)}
+                />
+            )}
+
+            {/* Document Permissions Modal */}
+            {showPermissionsModal && (selectedDocForPermissions || selectedCloudFile) && (
+                <DocumentPermissionsModal
+                    isOpen={showPermissionsModal}
+                    onClose={() => {
+                        setShowPermissionsModal(false);
+                        setSelectedDocForPermissions(null);
+                        setSelectedCloudFile(null);
+                    }}
+                    documentId={selectedDocForPermissions ? Number(selectedDocForPermissions.id) : 0}
+                    documentName={selectedDocForPermissions
+                        ? (selectedDocForPermissions.title || selectedDocForPermissions.fileName || 'ملف')
+                        : (selectedCloudFile?.name || 'ملف سحابي')}
+                    isCloudDocument={!!selectedCloudFile}
+                    cloudFileId={selectedCloudFile?.id}
+                />
+            )}
+
+            {/* Assign File to Case Modal */}
+            {showAssignModal && (selectedDocForPermissions || selectedCloudFile) && (
+                <AssignFileToCaseModal
+                    isOpen={showAssignModal}
+                    onClose={() => {
+                        setShowAssignModal(false);
+                        setSelectedDocForPermissions(null);
+                        setSelectedCloudFile(null);
+                    }}
+                    documentId={selectedDocForPermissions ? Number(selectedDocForPermissions.id) : 0}
+                    documentName={selectedDocForPermissions
+                        ? (selectedDocForPermissions.title || selectedDocForPermissions.fileName || 'ملف')
+                        : (selectedCloudFile?.name || 'ملف سحابي')}
+                    cases={cases}
+                    currentCaseId={selectedDocForPermissions?.case_id || selectedDocForPermissions?.relatedCaseId}
+                    onAssigned={loadData}
+                    isCloudFile={!!selectedCloudFile}
+                    cloudFileId={selectedCloudFile?.id}
+                />
+            )}
+
+            {/* Cloud Storage Settings Modal */}
+            {showCloudSettings && (
+                <CloudStorageSettingsModal
+                    isOpen={showCloudSettings}
+                    onClose={() => setShowCloudSettings(false)}
+                    oneDriveStatus={oneDriveStatus}
+                    onRefreshStatus={checkOneDriveStatus}
                 />
             )}
         </div>

@@ -64,6 +64,7 @@ class ApiClient {
         }
 
         const errorData = await response.json().catch(() => ({}));
+        console.error('API Error Response:', response.status, JSON.stringify(errorData, null, 2));
         // Create error with full details
         const error = new Error(errorData.message || `HTTP ${response.status}`) as Error & { errors?: Record<string, string[]> };
         error.errors = errorData.errors;
