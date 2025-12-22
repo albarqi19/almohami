@@ -13,8 +13,11 @@ import {
   Maximize2,
   Eye,
   AlertTriangle,
-  Loader2
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
+import SecurePdfViewer from './SecurePdfViewer';
+import SecureWordViewer from './SecureWordViewer';
 
 // Add CSS for spinner animation
 const spinnerStyle = `
@@ -58,6 +61,12 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Determine file type
+  const isImage = document?.type?.includes('image');
+  const isPdf = document?.type?.includes('pdf');
+  const isWord = document?.type?.includes('word') || document?.type?.includes('document') || 
+                 document?.name?.endsWith('.docx') || document?.name?.endsWith('.doc');
+
   // Fetch preview with authentication when document changes
   useEffect(() => {
     if (document && isOpen) {
@@ -82,6 +91,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
       const response = await fetch(document.url, {
         headers: {
           'Authorization': `Bearer ${token}`,
+          'ngrok-skip-browser-warning': '69420'
         },
       });
 
@@ -232,133 +242,85 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
           </h3>
           <p style={{
             color: 'var(--color-text-secondary)',
-            fontSize: 'var(--font-size-sm)'
+            fontSize: 'var(--font-size-sm)',
+            marginBottom: '20px'
           }}>
             {error}
           </p>
+          <button
+            onClick={handleDownload}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: 'white',
+              background: 'var(--color-primary)',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            <Download size={16} /> تحميل الملف
+          </button>
         </div>
       );
     }
 
     if (!previewUrl) {
-      return (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flex: 1,
-          backgroundColor: 'var(--color-background)',
-          borderRadius: '8px',
-          padding: '60px 40px',
-          textAlign: 'center'
-        }}>
-          <Eye 
-            size={64} 
-            style={{ 
-              color: 'var(--color-text-tertiary)',
-              marginBottom: '20px'
-            }} 
-          />
-          <h3 style={{
-            fontSize: 'var(--font-size-lg)',
-            fontWeight: 'var(--font-weight-semibold)',
-            color: 'var(--color-text)',
-            marginBottom: '8px'
-          }}>
-            لا توجد معاينة متاحة
-          </h3>
-        </div>
-      );
+      return null;
     }
 
-    const isImage = document?.type.startsWith('image/');
-    const isPdf = document?.type.includes('pdf');
-    const isText = document?.type.includes('text/');
-
-    if (isImage) {
+    // Image preview - direct display
+    if (isImage && previewUrl) {
       return (
         <div style={{
+          flex: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          flex: 1,
           padding: '20px',
           backgroundColor: 'var(--color-background)',
           borderRadius: '8px',
-          overflow: 'hidden'
+          overflow: 'auto'
         }}>
-          <motion.img
+          <img
             src={previewUrl}
             alt={document?.name}
             style={{
               maxWidth: '100%',
               maxHeight: '100%',
+              objectFit: 'contain',
               transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
               transition: 'transform 0.3s ease',
-              borderRadius: '4px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+              borderRadius: '6px'
             }}
           />
         </div>
       );
     }
 
-    if (isPdf) {
+    // PDF preview - use SecurePdfViewer
+    if (isPdf && previewUrl) {
       return (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flex: 1,
-          backgroundColor: 'var(--color-background)',
-          borderRadius: '8px',
-          padding: '40px'
-        }}>
-          <iframe
-            src={previewUrl}
-            title={document?.name}
-            style={{
-              width: '100%',
-              height: '600px',
-              border: 'none',
-              borderRadius: '4px',
-              transform: `scale(${zoom / 100})`,
-              transformOrigin: 'top left'
-            }}
-          />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <SecurePdfViewer url={previewUrl} fileName={document?.name} />
         </div>
       );
     }
 
-    if (isText) {
+    // Word document preview - use SecureWordViewer
+    if (isWord && previewUrl) {
       return (
-        <div style={{
-          flex: 1,
-          backgroundColor: 'var(--color-background)',
-          borderRadius: '8px',
-          padding: '20px',
-          fontSize: `${zoom}%`,
-          lineHeight: 1.6,
-          fontFamily: 'monospace',
-          overflow: 'auto',
-          maxHeight: '600px'
-        }}>
-          <iframe
-            src={previewUrl}
-            title={document?.name}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              borderRadius: '4px'
-            }}
-          />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <SecureWordViewer url={previewUrl} fileName={document?.name} />
         </div>
       );
     }
 
-    // For unsupported file types
+    // Unsupported file type
     return (
       <div style={{
         display: 'flex',
@@ -371,59 +333,53 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
         padding: '60px 40px',
         textAlign: 'center'
       }}>
-        <AlertTriangle 
-          size={64} 
-          style={{ 
-            color: 'var(--color-warning)',
-            marginBottom: '20px'
-          }} 
-        />
+        {getFileIcon(document?.type || '')}
         <h3 style={{
           fontSize: 'var(--font-size-lg)',
           fontWeight: 'var(--font-weight-semibold)',
           color: 'var(--color-text)',
-          margin: '0 0 12px 0'
+          marginTop: '20px',
+          marginBottom: '8px'
         }}>
           لا يمكن معاينة هذا النوع من الملفات
         </h3>
         <p style={{
-          fontSize: 'var(--font-size-sm)',
           color: 'var(--color-text-secondary)',
-          margin: '0 0 24px 0',
-          lineHeight: 1.5
+          fontSize: 'var(--font-size-sm)',
+          marginBottom: '4px'
         }}>
-          نوع الملف "{document.type}" لا يدعم المعاينة المباشرة.<br />
+          نوع الملف "{document?.type}" لا يدعم المعاينة المباشرة.
+        </p>
+        <p style={{
+          color: 'var(--color-text-tertiary)',
+          fontSize: 'var(--font-size-xs)',
+          marginBottom: '24px'
+        }}>
           يمكنك تحميل الملف لفتحه في التطبيق المناسب.
         </p>
         <button
           onClick={handleDownload}
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '12px 24px',
-            backgroundColor: 'var(--color-primary)',
+            padding: '10px 20px',
+            fontSize: '14px',
+            fontWeight: 500,
             color: 'white',
+            background: 'var(--color-primary)',
             border: 'none',
-            borderRadius: '8px',
-            fontSize: 'var(--font-size-sm)',
-            fontWeight: 'var(--font-weight-medium)',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-primary-hover)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-primary)';
+            borderRadius: '6px',
+            cursor: 'pointer'
           }}
         >
-          <Download size={16} />
-          تحميل الملف
+          <Download size={16} /> تحميل الملف
         </button>
       </div>
     );
   };
+
+  if (!document) return null;
 
   return (
     <Modal 
@@ -482,7 +438,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
             gap: '8px'
           }}>
             {/* Zoom Controls (for images) */}
-            {document.type.startsWith('image/') && (
+            {isImage && (
               <>
                 <button
                   onClick={handleZoomOut}
@@ -552,7 +508,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                     cursor: 'pointer',
                     transition: 'all 0.2s ease'
                   }}
-                  title="دوران"
+                  title="تدوير"
                 >
                   <RotateCw size={16} />
                 </button>
@@ -572,7 +528,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                     cursor: 'pointer',
                     transition: 'all 0.2s ease'
                   }}
-                  title="إعادة تعيين العرض"
+                  title="إعادة تعيين"
                 >
                   <Eye size={16} />
                 </button>

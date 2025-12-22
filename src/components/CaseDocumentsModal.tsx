@@ -397,12 +397,15 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   };
 
   const handlePreview = (doc: DocumentType) => {
+    // Use ngrok URL or configured API URL
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://amusing-premium-jennet.ngrok-free.app/api/v1';
+    
     const previewDoc = {
       id: doc.id,
       name: doc.file_name || doc.fileName || 'ملف غير معروف',
       size: doc.file_size || doc.fileSize || 0,
       type: doc.mime_type || doc.mimeType || 'application/octet-stream',
-      url: `http://127.0.0.1:8000/api/v1/documents/${doc.id}/preview`,
+      url: `${apiUrl}/documents/${doc.id}/preview`,
       uploadedAt: doc.uploaded_at ? new Date(doc.uploaded_at) : (doc.uploadedAt || new Date())
     };
     setPreviewDocument(previewDoc);
