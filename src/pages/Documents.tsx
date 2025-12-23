@@ -287,11 +287,18 @@ const Documents: React.FC = () => {
         setSelectedDocument(null);
     };
 
-    // Preview Pane Content
+    // Preview Pane Content - Unified for both Local and OneDrive files
     const PreviewPane = ({ doc }: { doc: DocumentType }) => {
         const [blobUrl, setBlobUrl] = useState<string | null>(null);
         const [loading, setLoading] = useState(false);
         const [error, setError] = useState<string | null>(null);
+
+        const isCloudFile = !!doc.cloud_file_id;
+        const isImage = doc.mimeType?.includes('image') || doc.mime_type?.includes('image');
+        const isPdf = doc.mimeType?.includes('pdf') || doc.mime_type?.includes('pdf');
+        const isWord = doc.mimeType?.includes('word') || doc.mime_type?.includes('word') ||
+            doc.mime_type?.includes('document') ||
+            doc.file_name?.endsWith('.docx') || doc.file_name?.endsWith('.doc');
 
         useEffect(() => {
             const fetchPreview = async () => {
@@ -304,15 +311,36 @@ const Documents: React.FC = () => {
                 try {
                     const token = localStorage.getItem('authToken');
                     const apiUrl = import.meta.env.VITE_API_URL || 'https://amusing-premium-jennet.ngrok-free.app/api/v1';
-                    const response = await fetch(`${apiUrl}/documents/${doc.id}/preview`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
 
-                    if (!response.ok) throw new Error('Failed to load preview');
+                    if (isCloudFile && doc.cloud_file_id) {
+                        // OneDrive file - get direct URL
+                        const response = await fetch(`${apiUrl}/cloud-storage/onedrive/preview-url/${doc.cloud_file_id}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'ngrok-skip-browser-warning': '69420'
+                            }
+                        });
 
-                    const blob = await response.blob();
-                    const url = URL.createObjectURL(blob);
-                    setBlobUrl(url);
+                        if (!response.ok) throw new Error('Failed to load preview URL');
+
+                        const data = await response.json();
+                        if (data.success && data.download_url) {
+                            setBlobUrl(data.download_url);
+                        } else {
+                            setError(data.message || 'فشل جلب رابط المعاينة');
+                        }
+                    } else {
+                        // Local file - download and create blob URL
+                        const response = await fetch(`${apiUrl}/documents/${doc.id}/preview`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+
+                        if (!response.ok) throw new Error('Failed to load preview');
+
+                        const blob = await response.blob();
+                        const url = URL.createObjectURL(blob);
+                        setBlobUrl(url);
+                    }
                 } catch (err) {
                     console.error(err);
                     setError('فشل تحميل المعاينة');
@@ -324,82 +352,229 @@ const Documents: React.FC = () => {
             fetchPreview();
 
             return () => {
-                if (blobUrl) URL.revokeObjectURL(blobUrl);
+                if (blobUrl && !isCloudFile) URL.revokeObjectURL(blobUrl);
             };
-        }, [doc.id]);
-
-        const isImage = doc.mimeType?.includes('image') || doc.mime_type?.includes('image');
-        const isPdf = doc.mimeType?.includes('pdf') || doc.mime_type?.includes('pdf');
+        }, [doc.id, doc.cloud_file_id]);
 
         return (
             <div className="docs-preview-pane">
-                <div className="preview-header">
-                    <div>
-                        <div className="preview-title">{doc.title || doc.fileName}</div>
-                        <div className="preview-meta">تم التعديل {new Date(doc.uploadedAt || doc.uploaded_at).toLocaleDateString('ar-SA')}</div>
+                {/* Header with action buttons - matching OneDrive */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    borderBottom: '1px solid var(--color-border)',
+                    background: 'var(--color-bg-secondary)'
+                }}>
+                    {/* Action buttons - compact style */}
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={() => console.log('Download')}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                color: 'var(--color-primary)',
+                                background: 'var(--color-primary-bg)',
+                                border: '1px solid var(--color-primary)',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s'
+                            }}
+                        >
+                            <Download size={12} /> تنزيل
+                        </button>
+                        <button
+                            onClick={() => {
+                                setSelectedDocForPermissions(doc);
+                                setShowPermissionsModal(true);
+                            }}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                color: 'var(--color-text-secondary)',
+                                background: 'transparent',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <Shield size={12} /> صلاحيات
+                        </button>
+                        <button
+                            onClick={() => {
+                                setSelectedDocForPermissions(doc);
+                                setShowAssignModal(true);
+                            }}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                color: 'var(--color-text-secondary)',
+                                background: 'transparent',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <FolderPlus size={12} /> تعيين
+                        </button>
+                        <button
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                color: 'var(--color-text-secondary)',
+                                background: 'transparent',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <Share2 size={12} /> مشاركة
+                        </button>
                     </div>
-                    <button className="preview-close-btn" onClick={closePreview}>
-                        <X size={18} />
+
+                    {/* Close button */}
+                    <button
+                        onClick={closePreview}
+                        style={{
+                            padding: '4px',
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--color-text-secondary)',
+                            borderRadius: '4px'
+                        }}
+                    >
+                        <X size={16} />
                     </button>
                 </div>
 
-                <div className="preview-body">
-                    <div className="preview-content-area">
-                        {loading ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-                                <span style={{ fontSize: 12 }}>جاري التحميل...</span>
-                            </div>
-                        ) : error ? (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-error)', fontSize: 13 }}>{error}</div>
-                        ) : isImage && blobUrl ? (
-                            <img src={blobUrl} alt="Preview" />
-                        ) : isPdf && blobUrl ? (
-                            <iframe src={blobUrl} title="PDF Preview" />
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12 }}>
-                                {getFileIcon(doc.mimeType || doc.mime_type)}
-                                <span>لا توجد معاينة متاحة لهذا النوع</span>
-                            </div>
-                        )}
+                {/* File info */}
+                <div style={{
+                    padding: '12px 16px',
+                    borderBottom: '1px solid var(--color-border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                }}>
+                    <HardDrive size={18} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: 'var(--color-heading)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                        }}>
+                            {doc.title || doc.fileName}
+                        </div>
+                        <div style={{
+                            fontSize: '11px',
+                            color: 'var(--color-text-tertiary)',
+                            display: 'flex',
+                            gap: '8px'
+                        }}>
+                            {doc.fileSize && <span>{formatSize(doc.fileSize || doc.file_size)}</span>}
+                            {doc.uploadedAt && <span>{new Date(doc.uploadedAt || doc.uploaded_at).toLocaleDateString('ar-SA')}</span>}
+                        </div>
                     </div>
+                </div>
 
-
-
-                    {doc.tags && doc.tags.length > 0 && (
-                        <div className="preview-details-row">
-                            <div className="preview-label">الوسوم</div>
-                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                                {doc.tags.map(t => (
-                                    <span key={t} style={{ fontSize: 11, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>{t}</span>
-                                ))}
-                            </div>
+                {/* Preview content area - matching OneDrive */}
+                <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    background: 'var(--color-bg-primary)'
+                }}>
+                    {loading ? (
+                        <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <Loader2 size={28} className="animate-spin" style={{ color: 'var(--color-primary)' }} />
+                            <span style={{ marginTop: '8px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                                جاري التحميل...
+                            </span>
+                        </div>
+                    ) : error ? (
+                        <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'var(--color-error)',
+                            fontSize: 13
+                        }}>{error}</div>
+                    ) : isImage && blobUrl ? (
+                        <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '16px'
+                        }}>
+                            <img
+                                src={blobUrl}
+                                alt="Preview"
+                                style={{
+                                    maxWidth: '100%',
+                                    maxHeight: '100%',
+                                    objectFit: 'contain',
+                                    borderRadius: '6px'
+                                }}
+                            />
+                        </div>
+                    ) : isPdf && blobUrl ? (
+                        isCloudFile ? (
+                            <SecurePdfViewer url={blobUrl} fileName={doc.file_name || doc.fileName || 'document.pdf'} />
+                        ) : (
+                            <iframe
+                                src={blobUrl}
+                                title="PDF Preview"
+                                style={{
+                                    flex: 1,
+                                    width: '100%',
+                                    border: 'none'
+                                }}
+                            />
+                        )
+                    ) : isWord && blobUrl && isCloudFile ? (
+                        <SecureWordViewer url={blobUrl} fileName={doc.file_name || doc.fileName || 'document.docx'} />
+                    ) : (
+                        <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 12
+                        }}>
+                            {getFileIcon(doc.mimeType || doc.mime_type)}
+                            <span>لا توجد معاينة متاحة لهذا النوع</span>
                         </div>
                     )}
-                </div>
-
-                <div className="preview-actions">
-                    <button className="preview-action-btn primary" onClick={() => console.log('Download')}>
-                        <Download size={16} /> تنزيل
-                    </button>
-                    <button className="preview-action-btn" onClick={() => {
-                        setSelectedDocForPermissions(doc);
-                        setShowPermissionsModal(true);
-                    }}>
-                        <Shield size={16} /> الصلاحيات
-                    </button>
-                    <button className="preview-action-btn" onClick={() => {
-                        setSelectedDocForPermissions(doc);
-                        setShowAssignModal(true);
-                    }}>
-                        <FolderPlus size={16} /> تعيين لقضية
-                    </button>
-                    <button className="preview-action-btn">
-                        <Share2 size={16} /> مشاركة
-                    </button>
-                    <button className="preview-action-btn" style={{ color: 'var(--color-error)' }}>
-                        <Trash2 size={16} /> حذف
-                    </button>
                 </div>
             </div>
         );
@@ -426,7 +601,7 @@ const Documents: React.FC = () => {
                 const apiUrl = import.meta.env.VITE_API_URL || 'https://amusing-premium-jennet.ngrok-free.app/api/v1';
 
                 fetch(`${apiUrl}/cloud-storage/onedrive/preview-url/${file.id}`, {
-                    headers: { 
+                    headers: {
                         'Authorization': `Bearer ${token}`,
                         'ngrok-skip-browser-warning': '69420'
                     }
@@ -466,8 +641,8 @@ const Documents: React.FC = () => {
         };
 
         return (
-            <div className="docs-preview-pane" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                {/* Header with close button and action buttons in one row */}
+            <div className="docs-preview-pane">
+                {/* Header with action buttons - matching local files */}
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -494,8 +669,6 @@ const Documents: React.FC = () => {
                                 cursor: 'pointer',
                                 transition: 'all 0.15s'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-primary)'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-primary-bg)'}
                         >
                             <Download size={12} /> تنزيل
                         </button>
@@ -631,7 +804,7 @@ const Documents: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Preview content */}
+                {/* Preview content area - matching local files */}
                 <div style={{
                     flex: 1,
                     display: 'flex',

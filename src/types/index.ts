@@ -205,6 +205,10 @@ export interface Document {
   is_confidential: boolean;
   version: number;
   tags: string[];
+  // Cloud storage fields
+  cloud_file_id?: string;
+  cloud_provider?: 'onedrive' | 'google_drive';
+  cloud_web_url?: string;
   // Nested relationships from API
   case?: Case;
   task?: Task;
