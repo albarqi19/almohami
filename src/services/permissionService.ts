@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+import { apiClient } from '../utils/api';
 
 export interface Permission {
   id: string | number;
@@ -46,32 +44,26 @@ export interface GroupedPermission {
 }
 
 class PermissionService {
-  private getAuthHeaders() {
-    const token = localStorage.getItem('token');
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'ngrok-skip-browser-warning': 'true'
-    };
-  }
-
   /**
    * الحصول على جميع الصلاحيات
    */
   async getAllPermissions(filters: PermissionFilters = {}) {
     try {
-      console.log('🔍 PermissionService: Fetching permissions from:', `${API_BASE_URL}/permissions`);
+      console.log('🔍 PermissionService: Fetching permissions');
       console.log('🔍 PermissionService: Filters:', filters);
-      console.log('🔍 PermissionService: Headers:', this.getAuthHeaders());
 
-      const response = await axios.get(`${API_BASE_URL}/permissions`, {
-        headers: this.getAuthHeaders(),
-        params: filters
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, String(value));
+        }
       });
 
-      console.log('✅ PermissionService: Response received:', response.data);
-      return response.data;
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const response = await apiClient.get(`/permissions${queryString}`);
+
+      console.log('✅ PermissionService: Response received:', response);
+      return response;
     } catch (error: any) {
       console.error('❌ PermissionService Error fetching permissions:', error);
       console.error('❌ PermissionService Error response:', error.response);
@@ -84,10 +76,8 @@ class PermissionService {
    */
   async getGroupedPermissions(): Promise<{ data: GroupedPermission[] }> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/permissions/grouped`, {
-        headers: this.getAuthHeaders()
-      });
-      return response.data;
+      const response = await apiClient.get('/permissions/grouped');
+      return response;
     } catch (error: any) {
       console.error('Error fetching grouped permissions:', error);
       throw error.response?.data || error;
@@ -99,10 +89,8 @@ class PermissionService {
    */
   async getPermissionById(id: string | number) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/permissions/${id}`, {
-        headers: this.getAuthHeaders()
-      });
-      return response.data;
+      const response = await apiClient.get(`/permissions/${id}`);
+      return response;
     } catch (error: any) {
       console.error('Error fetching permission:', error);
       throw error.response?.data || error;
@@ -114,10 +102,8 @@ class PermissionService {
    */
   async createPermission(data: CreatePermissionData) {
     try {
-      const response = await axios.post(`${API_BASE_URL}/permissions`, data, {
-        headers: this.getAuthHeaders()
-      });
-      return response.data;
+      const response = await apiClient.post('/permissions', data);
+      return response;
     } catch (error: any) {
       console.error('Error creating permission:', error);
       throw error.response?.data || error;
@@ -129,10 +115,8 @@ class PermissionService {
    */
   async updatePermission(id: string | number, data: UpdatePermissionData) {
     try {
-      const response = await axios.put(`${API_BASE_URL}/permissions/${id}`, data, {
-        headers: this.getAuthHeaders()
-      });
-      return response.data;
+      const response = await apiClient.put(`/permissions/${id}`, data);
+      return response;
     } catch (error: any) {
       console.error('Error updating permission:', error);
       throw error.response?.data || error;
@@ -144,10 +128,8 @@ class PermissionService {
    */
   async deletePermission(id: string | number) {
     try {
-      const response = await axios.delete(`${API_BASE_URL}/permissions/${id}`, {
-        headers: this.getAuthHeaders()
-      });
-      return response.data;
+      const response = await apiClient.delete(`/permissions/${id}`);
+      return response;
     } catch (error: any) {
       console.error('Error deleting permission:', error);
       throw error.response?.data || error;
