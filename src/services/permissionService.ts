@@ -76,7 +76,7 @@ class PermissionService {
    */
   async getGroupedPermissions(): Promise<{ data: GroupedPermission[] }> {
     try {
-      const response = await apiClient.get('/permissions/grouped');
+      const response = await apiClient.get('/permissions/grouped') as { data: GroupedPermission[] };
       return response;
     } catch (error: any) {
       console.error('Error fetching grouped permissions:', error);

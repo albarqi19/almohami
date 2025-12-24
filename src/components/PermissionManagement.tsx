@@ -272,7 +272,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
     try {
       console.log('🔄 PermissionManagement: Starting to load roles...');
       setRolesLoading(true);
-      const response = await RoleService.getAllRoles({ per_page: 100 });
+      const response = await RoleService.getAllRoles({ per_page: 100 }) as any;
       console.log('📦 PermissionManagement: Roles response:', response);
 
       const transformedRoles = response.data.map((role: ApiRole) => ({
@@ -297,7 +297,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
     try {
       console.log('🔄 PermissionManagement: Starting to load permissions...');
       setPermissionsLoading(true);
-      const response = await PermissionService.getAllPermissions({ all: true });
+      const response = await PermissionService.getAllPermissions({ all: true }) as any;
       console.log('📦 PermissionManagement: Permissions response:', response);
       console.log('✨ PermissionManagement: Permissions data:', response.data);
       setPermissions(response.data);
