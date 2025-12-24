@@ -5,6 +5,8 @@ export { TaskService } from './taskService';
 export { DocumentService } from './documentService';
 export { ActivityService } from './activityService';
 export { NotificationService } from './notificationService';
+export { default as RoleService } from './roleService';
+export { default as PermissionService } from './permissionService';
 
 // Export types
 export type { LoginResponse, RegisterData } from './authService';
@@ -13,3 +15,5 @@ export type { TaskFilters } from './taskService';
 export type { DocumentFilters, DocumentUpload } from './documentService';
 export type { ActivityFilters, CreateActivityData } from './activityService';
 export type { NotificationFilters } from './notificationService';
+export type { Role, CreateRoleData, UpdateRoleData, RoleFilters } from './roleService';
+export type { Permission, CreatePermissionData, UpdatePermissionData, PermissionFilters, GroupedPermission } from './permissionService';

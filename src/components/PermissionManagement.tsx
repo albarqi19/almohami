@@ -13,20 +13,15 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { UserService, type User as ApiUser, type CreateUserForm, type UpdateUserForm, type UserFilters } from '../services/UserService';
+import RoleService, { type Role as ApiRole } from '../services/roleService';
+import PermissionService, { type Permission as ApiPermission, type GroupedPermission } from '../services/permissionService';
 
-interface Permission {
-  id: string;
-  name: string;
-  description: string;
+interface Permission extends ApiPermission {
   category: 'cases' | 'tasks' | 'documents' | 'reports' | 'admin' | 'clients';
 }
 
-interface Role {
-  id: string;
-  name: string;
+interface Role extends Omit<ApiRole, 'display_name'> {
   displayName: string;
-  description: string;
-  permissions: string[];
   isSystem: boolean;
   userCount: number;
   color: string;
@@ -53,6 +48,12 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+
+  // States for Roles & Permissions
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(true);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
 
   // States for API data - initialize from cache
   const [users, setUsers] = useState<User[]>(() => {
@@ -189,6 +190,12 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
     loadUsers();
   }, [searchTerm, selectedRole, selectedStatus, currentPage]);
 
+  // Load roles and permissions on component mount
+  useEffect(() => {
+    loadRoles();
+    loadPermissions();
+  }, []);
+
   // Handle user creation
   const handleCreateUser = async (userData: CreateUserForm) => {
     try {
@@ -260,110 +267,59 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
     }
   };
 
-  // Mock permissions data
-  const permissions: Permission[] = [
-    // Cases permissions
-    { id: 'cases_view', name: 'عرض القضايا', description: 'عرض جميع القضايا والتفاصيل', category: 'cases' },
-    { id: 'cases_create', name: 'إنشاء قضية', description: 'إنشاء قضايا جديدة', category: 'cases' },
-    { id: 'cases_edit', name: 'تعديل القضايا', description: 'تعديل تفاصيل القضايا الموجودة', category: 'cases' },
-    { id: 'cases_delete', name: 'حذف القضايا', description: 'حذف القضايا', category: 'cases' },
-    { id: 'cases_assign', name: 'إسناد القضايا', description: 'إسناد القضايا للمحامين', category: 'cases' },
+  // Load roles from API
+  const loadRoles = async () => {
+    try {
+      console.log('🔄 PermissionManagement: Starting to load roles...');
+      setRolesLoading(true);
+      const response = await RoleService.getAllRoles({ per_page: 100 });
+      console.log('📦 PermissionManagement: Roles response:', response);
 
-    // Tasks permissions
-    { id: 'tasks_view', name: 'عرض المهام', description: 'عرض جميع المهام', category: 'tasks' },
-    { id: 'tasks_create', name: 'إنشاء مهمة', description: 'إنشاء مهام جديدة', category: 'tasks' },
-    { id: 'tasks_edit', name: 'تعديل المهام', description: 'تعديل تفاصيل المهام', category: 'tasks' },
-    { id: 'tasks_delete', name: 'حذف المهام', description: 'حذف المهام', category: 'tasks' },
-    { id: 'tasks_assign', name: 'إسناد المهام', description: 'إسناد المهام للمستخدمين', category: 'tasks' },
+      const transformedRoles = response.data.map((role: ApiRole) => ({
+        ...role,
+        displayName: role.display_name,
+        isSystem: role.is_system,
+        userCount: role.users_count,
+        color: getRoleColor(role.name)
+      }));
 
-    // Documents permissions
-    { id: 'docs_view', name: 'عرض الوثائق', description: 'عرض جميع الوثائق', category: 'documents' },
-    { id: 'docs_upload', name: 'رفع الوثائق', description: 'رفع وثائق جديدة', category: 'documents' },
-    { id: 'docs_edit', name: 'تعديل الوثائق', description: 'تعديل معلومات الوثائق', category: 'documents' },
-    { id: 'docs_delete', name: 'حذف الوثائق', description: 'حذف الوثائق', category: 'documents' },
-    { id: 'docs_download', name: 'تحميل الوثائق', description: 'تحميل الوثائق', category: 'documents' },
-
-    // Reports permissions
-    { id: 'reports_view', name: 'عرض التقارير', description: 'عرض جميع التقارير', category: 'reports' },
-    { id: 'reports_create', name: 'إنشاء التقارير', description: 'إنشاء تقارير جديدة', category: 'reports' },
-    { id: 'reports_export', name: 'تصدير التقارير', description: 'تصدير التقارير', category: 'reports' },
-
-    // Admin permissions
-    { id: 'admin_users', name: 'إدارة المستخدمين', description: 'إدارة حسابات المستخدمين', category: 'admin' },
-    { id: 'admin_roles', name: 'إدارة الأدوار', description: 'إدارة الأدوار والصلاحيات', category: 'admin' },
-    { id: 'admin_settings', name: 'إدارة الإعدادات', description: 'إدارة إعدادات النظام', category: 'admin' },
-    { id: 'admin_backup', name: 'النسخ الاحتياطي', description: 'إنشاء واستعادة النسخ الاحتياطية', category: 'admin' },
-
-    // Clients permissions
-    { id: 'clients_view', name: 'عرض العملاء', description: 'عرض معلومات العملاء', category: 'clients' },
-    { id: 'clients_create', name: 'إضافة عملاء', description: 'إضافة عملاء جدد', category: 'clients' },
-    { id: 'clients_edit', name: 'تعديل العملاء', description: 'تعديل معلومات العملاء', category: 'clients' },
-    { id: 'clients_delete', name: 'حذف العملاء', description: 'حذف العملاء', category: 'clients' }
-  ];
-
-  // Mock roles data
-  const roles: Role[] = [
-    {
-      id: 'admin',
-      name: 'admin',
-      displayName: 'مدير النظام',
-      description: 'صلاحيات كاملة لإدارة النظام',
-      permissions: permissions.map(p => p.id),
-      isSystem: true,
-      userCount: 2,
-      color: 'var(--color-red-500)'
-    },
-    {
-      id: 'partner',
-      name: 'partner',
-      displayName: 'شريك',
-      description: 'شريك في المكتب مع صلاحيات إدارية',
-      permissions: permissions.filter(p => !p.id.startsWith('admin_')).map(p => p.id),
-      isSystem: true,
-      userCount: 3,
-      color: 'var(--color-blue-500)'
-    },
-    {
-      id: 'senior_lawyer',
-      name: 'senior_lawyer',
-      displayName: 'محامي أول',
-      description: 'محامي بخبرة عالية مع صلاحيات متقدمة',
-      permissions: permissions.filter(p => !p.id.startsWith('admin_') && p.category !== 'reports').map(p => p.id),
-      isSystem: true,
-      userCount: 5,
-      color: 'var(--color-green-500)'
-    },
-    {
-      id: 'lawyer',
-      name: 'lawyer',
-      displayName: 'محامي',
-      description: 'محامي مع صلاحيات أساسية',
-      permissions: ['cases_view', 'cases_edit', 'tasks_view', 'tasks_create', 'tasks_edit', 'docs_view', 'docs_upload', 'clients_view'],
-      isSystem: true,
-      userCount: 8,
-      color: 'var(--color-teal-500)'
-    },
-    {
-      id: 'legal_assistant',
-      name: 'legal_assistant',
-      displayName: 'مساعد قانوني',
-      description: 'مساعد قانوني مع صلاحيات محدودة',
-      permissions: ['cases_view', 'tasks_view', 'tasks_create', 'docs_view', 'docs_upload'],
-      isSystem: true,
-      userCount: 4,
-      color: 'var(--color-yellow-500)'
-    },
-    {
-      id: 'client',
-      name: 'client',
-      displayName: 'عميل',
-      description: 'عميل مع صلاحيات عرض محدودة',
-      permissions: ['cases_view', 'docs_view'],
-      isSystem: true,
-      userCount: 25,
-      color: 'var(--color-purple-500)'
+      console.log('✨ PermissionManagement: Transformed roles:', transformedRoles);
+      setRoles(transformedRoles);
+    } catch (err) {
+      console.error('❌ PermissionManagement Error loading roles:', err);
+    } finally {
+      setRolesLoading(false);
     }
-  ];
+  };
+
+  // Load permissions from API
+  const loadPermissions = async () => {
+    try {
+      console.log('🔄 PermissionManagement: Starting to load permissions...');
+      setPermissionsLoading(true);
+      const response = await PermissionService.getAllPermissions({ all: true });
+      console.log('📦 PermissionManagement: Permissions response:', response);
+      console.log('✨ PermissionManagement: Permissions data:', response.data);
+      setPermissions(response.data);
+    } catch (err) {
+      console.error('❌ PermissionManagement Error loading permissions:', err);
+    } finally {
+      setPermissionsLoading(false);
+    }
+  };
+
+  // Helper function for role colors
+  const getRoleColor = (roleName: string) => {
+    const colors: Record<string, string> = {
+      admin: 'var(--color-red-500)',
+      partner: 'var(--color-blue-500)',
+      senior_lawyer: 'var(--color-green-500)',
+      lawyer: 'var(--color-teal-500)',
+      legal_assistant: 'var(--color-yellow-500)',
+      client: 'var(--color-purple-500)'
+    };
+    return colors[roleName] || 'var(--color-gray-500)';
+  };
 
   const getCategoryDisplayName = (category: string) => {
     switch (category) {
@@ -870,7 +826,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
               >
                 <option value="all">جميع الأدوار</option>
                 {roles.map(role => (
-                  <option key={role.id} value={role.id}>
+                  <option key={role.id} value={role.name}>
                     {role.displayName}
                   </option>
                 ))}
@@ -1125,12 +1081,22 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
 
       {/* Roles Tab */}
       {activeTab === 'roles' && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-          gap: '24px'
-        }}>
-          {roles.map(role => (
+        <div>
+          {rolesLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
+              جاري تحميل الأدوار...
+            </div>
+          ) : roles.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
+              لا توجد أدوار بعد
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+              gap: '24px'
+            }}>
+              {roles.map(role => (
             <motion.div
               key={role.id}
               whileHover={{ scale: 1.02 }}
@@ -1231,11 +1197,11 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
                 flexWrap: 'wrap',
                 gap: '6px'
               }}>
-                {role.permissions.slice(0, 3).map(permissionId => {
-                  const permission = permissions.find(p => p.id === permissionId);
+                {role.permissions.slice(0, 3).map(permissionName => {
+                  const permission = permissions.find(p => p.name === permissionName);
                   return permission ? (
                     <span
-                      key={permissionId}
+                      key={permissionName}
                       style={{
                         padding: '2px 6px',
                         fontSize: 'var(--font-size-xs)',
@@ -1244,7 +1210,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
                         borderRadius: '4px'
                       }}
                     >
-                      {permission.name}
+                      {permission.display_name}
                     </span>
                   ) : null;
                 })}
@@ -1261,19 +1227,31 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
                 )}
               </div>
             </motion.div>
-          ))}
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* Permissions Tab */}
       {activeTab === 'permissions' && (
         <div>
-          {Object.entries(
-            permissions.reduce((acc, permission) => {
-              if (!acc[permission.category]) acc[permission.category] = [];
-              acc[permission.category].push(permission);
-              return acc;
-            }, {} as Record<string, Permission[]>)
+          {permissionsLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
+              جاري تحميل الصلاحيات...
+            </div>
+          ) : permissions.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
+              لا توجد صلاحيات بعد
+            </div>
+          ) : (
+            <>
+              {Object.entries(
+                permissions.reduce((acc, permission) => {
+                  if (!acc[permission.category]) acc[permission.category] = [];
+                  acc[permission.category].push(permission);
+                  return acc;
+                }, {} as Record<string, Permission[]>)
           ).map(([category, categoryPermissions]) => (
             <div
               key={category}
@@ -1326,7 +1304,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
                         color: 'var(--color-text)',
                         margin: 0
                       }}>
-                        {permission.name}
+                        {permission.display_name}
                       </h4>
                       <span style={{
                         padding: '2px 6px',
@@ -1335,7 +1313,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
                         color: 'var(--color-text-secondary)',
                         borderRadius: '4px'
                       }}>
-                        {permission.id}
+                        {permission.name}
                       </span>
                     </div>
                     <p style={{
@@ -1349,7 +1327,9 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
                 ))}
               </div>
             </div>
-          ))}
+              ))}
+            </>
+          )}
         </div>
       )}
 
