@@ -29,6 +29,7 @@ const Sidebar: React.FC = () => {
     { icon: Calendar, label: 'الجلسات القادمة', path: '/sessions', roles: ['admin', 'lawyer', 'legal_assistant'] },
     { icon: CheckSquare, label: 'المهام', path: '/tasks', roles: ['admin', 'lawyer', 'legal_assistant'] },
     { icon: FileText, label: 'قضاياي', path: '/my-cases', roles: ['client'] },
+    { icon: MessageSquare, label: 'رسائلي', path: '/my-messages', roles: ['client'] },
     { icon: Upload, label: 'الوثائق', path: '/documents', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { icon: Clock, label: 'سجل الأنشطة', path: '/activities', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { icon: BarChart3, label: 'التقارير', path: '/reports', roles: ['admin', 'lawyer'] },

@@ -44,7 +44,7 @@ const Settings: React.FC = () => {
     { id: 'najiz', label: 'إعدادات ناجز', icon: Cloud, roles: ['admin'] },
     { id: 'profile', label: 'الملف الشخصي', icon: User, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { id: 'appearance', label: 'المظهر', icon: Palette, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
-    { id: 'privacy', label: 'الخصوصية والأمان', icon: Shield, roles: ['admin', 'lawyer', 'legal_assistant'] },
+    { id: 'privacy', label: 'الخصوصية والأمان', icon: Shield, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { id: 'language', label: 'اللغة والمنطقة', icon: Globe, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { id: 'system', label: 'النظام', icon: Database, roles: ['admin'] },
     { id: 'company', label: 'إعدادات الشركة', icon: Building2, roles: ['admin'] },
@@ -95,6 +95,15 @@ const Settings: React.FC = () => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [editingCompany, setEditingCompany] = useState(false);
+
+  // PIN Change State (for clients)
+  const [pinForm, setPinForm] = useState({
+    current_pin: '',
+    new_pin: '',
+    confirm_pin: ''
+  });
+  const [changingPin, setChangingPin] = useState(false);
+  const [pinMessage, setPinMessage] = useState({ type: '', text: '' });
 
   // Load Najiz settings
   useEffect(() => {
@@ -477,43 +486,163 @@ const Settings: React.FC = () => {
         );
 
       case 'privacy':
+        // Handle PIN change for clients
+        const handlePinChange = async () => {
+          if (!pinForm.current_pin || !pinForm.new_pin || !pinForm.confirm_pin) {
+            setPinMessage({ type: 'error', text: 'جميع الحقول مطلوبة' });
+            return;
+          }
+          if (pinForm.new_pin.length !== 4 || !/^\d{4}$/.test(pinForm.new_pin)) {
+            setPinMessage({ type: 'error', text: 'رمز PIN يجب أن يكون 4 أرقام' });
+            return;
+          }
+          if (pinForm.new_pin !== pinForm.confirm_pin) {
+            setPinMessage({ type: 'error', text: 'رمز PIN الجديد غير متطابق' });
+            return;
+          }
+
+          try {
+            setChangingPin(true);
+            const response: any = await apiClient.put('/client/change-pin', {
+              current_pin: pinForm.current_pin,
+              new_pin: pinForm.new_pin
+            });
+            if (response.success) {
+              setPinMessage({ type: 'success', text: 'تم تغيير رمز PIN بنجاح' });
+              setPinForm({ current_pin: '', new_pin: '', confirm_pin: '' });
+              setTimeout(() => setPinMessage({ type: '', text: '' }), 3000);
+            } else {
+              setPinMessage({ type: 'error', text: response.message || 'فشل في تغيير رمز PIN' });
+            }
+          } catch (error: any) {
+            setPinMessage({ type: 'error', text: error.message || 'حدث خطأ أثناء تغيير رمز PIN' });
+          } finally {
+            setChangingPin(false);
+          }
+        };
+
         return (
           <>
-            <div className="settings-section">
-              <div className="settings-section__header">
-                <div className="settings-section__icon">
-                  <Shield size={14} />
-                </div>
-                <span className="settings-section__title">كلمة المرور</span>
-              </div>
-              <div className="settings-section__content">
-                <div className="settings-option-card">
-                  <div className="settings-option-card__title">تغيير كلمة المرور</div>
-                  <div className="settings-option-card__desc">آخر تغيير: منذ 30 يوماً</div>
-                  <div className="settings-option-card__actions">
-                    <button className="settings-btn">تغيير كلمة المرور</button>
+            {/* PIN Change Section - For Clients */}
+            {userRole === 'client' && (
+              <div className="settings-section">
+                <div className="settings-section__header">
+                  <div className="settings-section__icon">
+                    <Shield size={14} />
                   </div>
+                  <span className="settings-section__title">تغيير رمز PIN</span>
                 </div>
-              </div>
-            </div>
+                <div className="settings-section__content">
+                  <div className="settings-form-grid">
+                    <div className="settings-field">
+                      <label className="settings-field__label">رمز PIN الحالي</label>
+                      <input
+                        type="password"
+                        className="settings-field__input"
+                        value={pinForm.current_pin}
+                        onChange={(e) => setPinForm(prev => ({ ...prev, current_pin: e.target.value }))}
+                        placeholder="****"
+                        maxLength={4}
+                        pattern="\d{4}"
+                      />
+                    </div>
+                    <div className="settings-field">
+                      <label className="settings-field__label">رمز PIN الجديد</label>
+                      <input
+                        type="password"
+                        className="settings-field__input"
+                        value={pinForm.new_pin}
+                        onChange={(e) => setPinForm(prev => ({ ...prev, new_pin: e.target.value }))}
+                        placeholder="****"
+                        maxLength={4}
+                        pattern="\d{4}"
+                      />
+                    </div>
+                    <div className="settings-field">
+                      <label className="settings-field__label">تأكيد رمز PIN الجديد</label>
+                      <input
+                        type="password"
+                        className="settings-field__input"
+                        value={pinForm.confirm_pin}
+                        onChange={(e) => setPinForm(prev => ({ ...prev, confirm_pin: e.target.value }))}
+                        placeholder="****"
+                        maxLength={4}
+                        pattern="\d{4}"
+                      />
+                    </div>
+                  </div>
 
-            <div className="settings-section">
-              <div className="settings-section__header">
-                <div className="settings-section__icon">
-                  <Shield size={14} />
-                </div>
-                <span className="settings-section__title">المصادقة الثنائية</span>
-              </div>
-              <div className="settings-section__content">
-                <div className="settings-option-card">
-                  <div className="settings-option-card__title">حماية إضافية لحسابك</div>
-                  <div className="settings-option-card__desc">أضف طبقة أمان إضافية باستخدام رمز التحقق</div>
-                  <div className="settings-option-card__actions">
-                    <button className="settings-btn settings-btn--primary">تفعيل المصادقة الثنائية</button>
+                  {pinMessage.text && (
+                    <div style={{
+                      padding: '10px 14px',
+                      borderRadius: '6px',
+                      marginTop: '12px',
+                      background: pinMessage.type === 'error' ? 'var(--status-red-light)' : 'var(--status-green-light)',
+                      color: pinMessage.type === 'error' ? 'var(--status-red)' : 'var(--status-green)',
+                      fontSize: '13px'
+                    }}>
+                      {pinMessage.text}
+                    </div>
+                  )}
+
+                  <div className="settings-btn-group" style={{ marginTop: '16px' }}>
+                    <button
+                      className="settings-btn settings-btn--primary"
+                      onClick={handlePinChange}
+                      disabled={changingPin}
+                    >
+                      {changingPin ? (
+                        <><Loader2 className="animate-spin" size={16} /> جاري التغيير...</>
+                      ) : (
+                        'تغيير رمز PIN'
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Password Change Section - For Non-Clients */}
+            {userRole !== 'client' && (
+              <div className="settings-section">
+                <div className="settings-section__header">
+                  <div className="settings-section__icon">
+                    <Shield size={14} />
+                  </div>
+                  <span className="settings-section__title">كلمة المرور</span>
+                </div>
+                <div className="settings-section__content">
+                  <div className="settings-option-card">
+                    <div className="settings-option-card__title">تغيير كلمة المرور</div>
+                    <div className="settings-option-card__desc">آخر تغيير: منذ 30 يوماً</div>
+                    <div className="settings-option-card__actions">
+                      <button className="settings-btn">تغيير كلمة المرور</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Two-Factor Auth - For Non-Clients */}
+            {userRole !== 'client' && (
+              <div className="settings-section">
+                <div className="settings-section__header">
+                  <div className="settings-section__icon">
+                    <Shield size={14} />
+                  </div>
+                  <span className="settings-section__title">المصادقة الثنائية</span>
+                </div>
+                <div className="settings-section__content">
+                  <div className="settings-option-card">
+                    <div className="settings-option-card__title">حماية إضافية لحسابك</div>
+                    <div className="settings-option-card__desc">أضف طبقة أمان إضافية باستخدام رمز التحقق</div>
+                    <div className="settings-option-card__actions">
+                      <button className="settings-btn settings-btn--primary">تفعيل المصادقة الثنائية</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         );
 

@@ -29,6 +29,7 @@ import AccountStatus from './pages/AccountStatus';
 import Clients from './pages/Clients';
 import ClientDetailPage from './pages/ClientDetailPage';
 import AdminRequests from './pages/AdminRequests';
+import ClientMessages from './pages/ClientMessages';
 
 function App() {
   return (
@@ -83,6 +84,11 @@ function App() {
               <Route path="my-cases/:caseId" element={
                 <ProtectedRoute allowedRoles={['client']}>
                   <ClientCaseDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="my-messages" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientMessages />
                 </ProtectedRoute>
               } />
 
