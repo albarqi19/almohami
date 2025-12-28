@@ -31,10 +31,12 @@ import CaseDocumentsModal from '../components/CaseDocumentsModal';
 import CaseTasksModal from '../components/CaseTasksModal';
 import { CaseAppointmentsModal } from '../components/CaseAppointmentsModal';
 import QuickActionsModal from '../components/QuickActionsModal';
+import ClientPhoneModal from '../components/ClientPhoneModal';
 import type { TimelineEvent } from '../components/Timeline';
 import { CaseService } from '../services/caseService';
 import { ActivityService } from '../services/activityService';
 import { DocumentService } from '../services/documentService';
+import { TaskService } from '../services/taskService';
 import type { Case } from '../types';
 import '../styles/case-detail-page.css';
 
@@ -50,7 +52,9 @@ const CaseDetailPage: React.FC = () => {
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
   const [showQuickActionsModal, setShowQuickActionsModal] = useState(false);
+  const [showClientPhoneModal, setShowClientPhoneModal] = useState(false);
   const [documentsCount, setDocumentsCount] = useState(0);
+  const [tasksCount, setTasksCount] = useState(0);
 
   // Ref to prevent duplicate fetches
   const hasFetchedRef = useRef<string | null>(null);
@@ -69,14 +73,16 @@ const CaseDetailPage: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        const [fetchedCase, activities, documents] = await Promise.all([
+        const [fetchedCase, activities, documents, tasksData] = await Promise.all([
           CaseService.getCase(caseId),
           ActivityService.getCaseActivities(caseId) as Promise<any[]>,
-          DocumentService.getCaseDocuments(caseId)
+          DocumentService.getCaseDocuments(caseId),
+          TaskService.getTasks({ case_id: caseId })
         ]);
 
         setCaseData(fetchedCase);
         setDocumentsCount(documents ? documents.length : 0);
+        setTasksCount(tasksData?.data?.length || 0);
 
         const timelineEventsData: TimelineEvent[] = activities.map(activity => ({
           id: activity.id.toString(),
@@ -279,7 +285,7 @@ const CaseDetailPage: React.FC = () => {
                 <CheckSquare size={14} />
               </span>
               المهام
-              <span className="case-header-tab__count">8</span>
+              <span className="case-header-tab__count">{tasksCount}</span>
             </button>
             <button className="case-header-tab" onClick={() => setShowAppointmentsModal(true)}>
               <span className="case-header-tab__icon case-header-tab__icon--green">
@@ -563,7 +569,7 @@ const CaseDetailPage: React.FC = () => {
                   <div className="case-info-row__value">{caseData.client_name}</div>
                 </div>
               </div>
-              {caseData.client_phone && (
+              {caseData.client_phone ? (
                 <div className="case-info-row">
                   <div className="case-info-row__icon">
                     <Phone size={14} />
@@ -573,6 +579,14 @@ const CaseDetailPage: React.FC = () => {
                     <div className="case-info-row__value">{caseData.client_phone}</div>
                   </div>
                 </div>
+              ) : (
+                <button
+                  className="case-add-phone-btn"
+                  onClick={() => setShowClientPhoneModal(true)}
+                >
+                  <Phone size={14} />
+                  إضافة رقم العميل
+                </button>
               )}
             </div>
           </div>
@@ -650,6 +664,13 @@ const CaseDetailPage: React.FC = () => {
         onClose={() => setShowQuickActionsModal(false)}
         caseId={caseData.id}
         caseTitle={caseData.title}
+      />
+
+      <ClientPhoneModal
+        isOpen={showClientPhoneModal}
+        onClose={() => setShowClientPhoneModal(false)}
+        caseId={caseData.id}
+        onSuccess={() => refreshCaseData()}
       />
     </div>
   );

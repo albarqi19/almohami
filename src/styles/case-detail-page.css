@@ -1000,3 +1000,28 @@ body.dark .case-fee-item {
         grid-template-columns: 1fr;
     }
 }
+
+/* === Add Phone Button === */
+.case-add-phone-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    background: var(--status-green-light);
+    color: var(--status-green);
+    border: 1px dashed var(--status-green);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.case-add-phone-btn:hover {
+    background: var(--status-green);
+    color: white;
+    border-style: solid;
+}
