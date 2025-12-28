@@ -61,7 +61,7 @@ const AssignFileToCaseModal: React.FC<AssignFileToCaseModalProps> = ({
             // For cloud files, use the cloud file registration endpoint
             if (isCloudFile && cloudFileId) {
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'}/onedrive-direct/documents/register-upload`,
+                    `${import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1'}/onedrive-direct/documents/register-upload`,
                     {
                         method: 'POST',
                         headers: {
@@ -92,7 +92,7 @@ const AssignFileToCaseModal: React.FC<AssignFileToCaseModalProps> = ({
             } else {
                 // For regular documents
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'}/documents/${documentId}/assign-case`,
+                    `${import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1'}/documents/${documentId}/assign-case`,
                     {
                         method: 'PATCH',
                         headers: {
@@ -130,7 +130,7 @@ const AssignFileToCaseModal: React.FC<AssignFileToCaseModalProps> = ({
 
         try {
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'}/documents/${documentId}/unassign-case`,
+                `${import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1'}/documents/${documentId}/unassign-case`,
                 {
                     method: 'PATCH',
                     headers: {

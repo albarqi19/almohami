@@ -310,7 +310,7 @@ const Documents: React.FC = () => {
 
                 try {
                     const token = localStorage.getItem('authToken');
-                    const apiUrl = import.meta.env.VITE_API_URL || 'https://amusing-premium-jennet.ngrok-free.app/api/v1';
+                    const apiUrl = import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1';
 
                     if (isCloudFile && doc.cloud_file_id) {
                         // OneDrive file - get direct URL
@@ -598,7 +598,7 @@ const Documents: React.FC = () => {
                 setLoading(true);
                 setError(null);
                 const token = localStorage.getItem('authToken');
-                const apiUrl = import.meta.env.VITE_API_URL || 'https://amusing-premium-jennet.ngrok-free.app/api/v1';
+                const apiUrl = import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1';
 
                 fetch(`${apiUrl}/cloud-storage/onedrive/preview-url/${file.id}`, {
                     headers: {

@@ -1,10 +1,10 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  X, 
-  FileText, 
-  Download, 
-  Eye, 
+import {
+  X,
+  FileText,
+  Download,
+  Eye,
   MessageSquare,
   Send,
   File,
@@ -79,9 +79,9 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   const [showCreateMemo, setShowCreateMemo] = useState(false);
   const [showCloudPicker, setShowCloudPicker] = useState(false);
   const [editingMemo, setEditingMemo] = useState<LegalMemo | null>(null);
-  
 
-  
+
+
   const [previewDocument, setPreviewDocument] = useState<{
     id: string;
     name: string;
@@ -243,17 +243,17 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
       console.log('response.success:', response?.success);
       console.log('response.data:', response?.data);
       console.log('response.analysis_result:', response?.analysis_result);
-      
+
       // التحقق من وجود analysis_result مباشرة في response أو في response.data
       const analysis = response?.analysis_result || response?.data?.analysis_result;
-      
+
       if (response && analysis) {
         // دالة لتنسيق النص من JSON
         const formatAnalysisText = (text: string): string => {
           if (!text) return '';
-          
+
           let processedText = text;
-          
+
           // إذا كان النص يبدأ بـ { فهو JSON
           if (text.trim().startsWith('{')) {
             try {
@@ -266,7 +266,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
               console.warn('Failed to parse JSON:', e);
             }
           }
-          
+
           return processedText
             // تحويل النص العريض
             .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #1e293b; font-weight: 600;">$1</strong>')
@@ -323,9 +323,9 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                   <h3 style="color: #1e293b; margin: 0; font-size: 20px; font-weight: 600;">اقتراحات التحسين</h3>
                 </div>
                 <div style="background: white; padding: 20px; border-radius: 10px; border-right: 5px solid #16a34a;">
-                  ${analysis.improvement_suggestions.map((suggestion: string) => 
-                    `<div style="margin-bottom: 12px; color: #475569; line-height: 1.6;">• ${suggestion}</div>`
-                  ).join('')}
+                  ${analysis.improvement_suggestions.map((suggestion: string) =>
+          `<div style="margin-bottom: 12px; color: #475569; line-height: 1.6;">• ${suggestion}</div>`
+        ).join('')}
                 </div>
               </div>
               ` : ''}
@@ -337,9 +337,9 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                   <h3 style="color: #1e293b; margin: 0; font-size: 20px; font-weight: 600;">نقاط الامتثال القانوني</h3>
                 </div>
                 <div style="background: white; padding: 20px; border-radius: 10px; border-right: 5px solid #ea580c;">
-                  ${analysis.legal_compliance_issues.map((issue: string) => 
-                    `<div style="margin-bottom: 12px; color: #475569; line-height: 1.6;">• ${issue}</div>`
-                  ).join('')}
+                  ${analysis.legal_compliance_issues.map((issue: string) =>
+          `<div style="margin-bottom: 12px; color: #475569; line-height: 1.6;">• ${issue}</div>`
+        ).join('')}
                 </div>
               </div>
               ` : ''}
@@ -351,14 +351,14 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
             </div>
           </div>
         `;
-        
+
         setError(analysisDisplay);
-        
+
         // إعادة تحميل المذكرات لإظهار التحديثات
         await loadMemos();
       } else {
         setError('حدث خطأ أثناء التحليل الذكي: ' + (response?.message || 'خطأ غير معروف'));
-        
+
         // إضافة خطوة الخطأ
         updateProgress({
           id: 'analysis_error',
@@ -375,7 +375,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
 
     } catch (error) {
       console.error('خطأ في التحليل الذكي:', error);
-      
+
       // إضافة خطوة الخطأ
       setAnalysisSteps(prev => [...prev, {
         id: 'fatal_error',
@@ -397,9 +397,9 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   };
 
   const handlePreview = (doc: DocumentType) => {
-    // Use ngrok URL or configured API URL
-    const apiUrl = import.meta.env.VITE_API_URL || 'https://amusing-premium-jennet.ngrok-free.app/api/v1';
-    
+    // Use official API URL
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1';
+
     const previewDoc = {
       id: doc.id,
       name: doc.file_name || doc.fileName || 'ملف غير معروف',
@@ -501,7 +501,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                 {caseTitle}
               </p>
             </div>
-            
+
             <div style={{ display: 'flex', gap: '8px', marginLeft: '12px' }}>
               {/* Cloud File Picker Button */}
               <button
@@ -528,7 +528,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                 }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 تعيين ملف سحابي
               </button>
@@ -589,16 +589,16 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                 }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <polyline points="10,9 9,9 8,9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <polyline points="10,9 9,9 8,9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 إنشاء مذكرة
               </button>
             </div>
-            
+
             <button
               onClick={onClose}
               style={{
@@ -649,9 +649,9 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                   flexDirection: 'column',
                   gap: '16px'
                 }}>
-                  <Loader2 size={32} style={{ 
+                  <Loader2 size={32} style={{
                     color: 'var(--color-primary)',
-                    animation: 'spin 1s linear infinite' 
+                    animation: 'spin 1s linear infinite'
                   }} />
                   <p style={{ color: 'var(--color-text-secondary)' }}>جارٍ تحميل الوثائق...</p>
                 </div>
@@ -669,8 +669,8 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                 }}>
                   {!error.includes('<div') && <AlertCircle size={32} style={{ color: 'var(--color-error)' }} />}
                   {error.includes('<div') ? (
-                    <div 
-                      dangerouslySetInnerHTML={{ __html: error }} 
+                    <div
+                      dangerouslySetInnerHTML={{ __html: error }}
                       style={{
                         width: '100%',
                         maxHeight: 'inherit',
@@ -716,7 +716,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                         }}>
                           📋 المذكرات القانونية ({memos.length})
                         </div>
-                        
+
                         {memos.map((memo) => (
                           <motion.div
                             key={`memo-${memo.id}`}
@@ -747,12 +747,12 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                               marginBottom: '12px'
                             }}>
                               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                <polyline points="14,2 14,8 20,8" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                <line x1="16" y1="13" x2="8" y2="13" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                <line x1="16" y1="17" x2="8" y2="17" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <polyline points="14,2 14,8 20,8" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <line x1="16" y1="13" x2="8" y2="13" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <line x1="16" y1="17" x2="8" y2="17" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
-                              
+
                               <div style={{ flex: 1 }}>
                                 <h3 style={{
                                   margin: '0 0 4px 0',
@@ -762,14 +762,14 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                                 }}>
                                   {memo.title}
                                 </h3>
-                                
+
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
                                   <span>نوع: {(LegalMemoService.getMemoCategories() as any)[memo.category]?.types?.[memo.memo_type] || memo.memo_type}</span>
                                   <span>الحالة: {(LegalMemoService.getStatusOptions() as any)[memo.status] || memo.status}</span>
                                   <span>تاريخ الإنشاء: {new Date(memo.created_at).toLocaleDateString('ar')}</span>
                                 </div>
                               </div>
-                              
+
                               <div style={{ display: 'flex', gap: '8px' }}>
                                 <button
                                   onClick={(e) => {
@@ -787,11 +787,11 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                                   title="تحرير المذكرة"
                                 >
                                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                                   </svg>
                                 </button>
-                                
+
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -809,7 +809,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                                 >
                                   <Brain size={16} />
                                 </button>
-                                
+
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -840,7 +840,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                                 </button>
                               </div>
                             </div>
-                            
+
                             {memo.content && (
                               <div style={{
                                 fontSize: 'var(--font-size-sm)',
@@ -857,7 +857,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                         ))}
                       </div>
                     )}
-                    
+
                     {/* الوثائق العادية */}
                     {documents.length > 0 && (
                       <div>
@@ -873,7 +873,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                         </div>
                       </div>
                     )}
-                    
+
                     {documents.map((doc) => (
                       <motion.div
                         key={doc.id}
@@ -1105,9 +1105,9 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                       justifyContent: 'center',
                       gap: '12px'
                     }}>
-                      <Loader2 size={20} style={{ 
+                      <Loader2 size={20} style={{
                         color: 'var(--color-primary)',
-                        animation: 'spin 1s linear infinite' 
+                        animation: 'spin 1s linear infinite'
                       }} />
                       <span style={{ color: 'var(--color-text-secondary)' }}>جارٍ تحميل التعليقات...</span>
                     </div>
@@ -1231,7 +1231,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
         onClose={() => setPreviewDocument(null)}
         document={previewDocument}
       />
-      
+
       {/* Smart Upload Modal */}
       <SmartUploadModal
         isOpen={showSmartUpload}

@@ -48,8 +48,8 @@ interface WhatsappInstance {
   created_at: string;
 }
 
-// API helper function - استخدام ngrok URL
-const API_BASE_URL = 'https://amusing-premium-jennet.ngrok-free.app/api';
+// API helper function
+const API_BASE_URL = 'https://api.alraedlaw.com/api';
 
 const api = {
   get: async (url: string) => {

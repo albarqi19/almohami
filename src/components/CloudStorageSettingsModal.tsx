@@ -101,7 +101,7 @@ const CloudStorageSettingsModal: React.FC<CloudStorageSettingsModalProps> = ({
             // Also save to API if available
             try {
                 await fetch(
-                    `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'}/cloud-storage/settings`,
+                    `${import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1'}/cloud-storage/settings`,
                     {
                         method: 'POST',
                         headers: {
@@ -129,7 +129,7 @@ const CloudStorageSettingsModal: React.FC<CloudStorageSettingsModalProps> = ({
         try {
             // Trigger manual sync
             await fetch(
-                `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'}/cloud-storage/sync`,
+                `${import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1'}/cloud-storage/sync`,
                 {
                     method: 'POST',
                     headers: {

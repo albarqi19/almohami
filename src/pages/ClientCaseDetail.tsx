@@ -82,7 +82,7 @@ const ClientCaseDetail: React.FC = () => {
   useEffect(() => {
     const loadCaseData = async () => {
       if (!caseId) return;
-      
+
       try {
         setIsLoading(true);
         // جلب بيانات القضية
@@ -95,7 +95,7 @@ const ClientCaseDetail: React.FC = () => {
 
         // TODO: جلب الأنشطة من API
         setActivities(mockActivities);
-        
+
       } catch (error) {
         console.error('Error loading case data:', error);
       } finally {
@@ -137,7 +137,7 @@ const ClientCaseDetail: React.FC = () => {
       };
 
       setActivities([newActivity, ...activities]);
-      
+
     } catch (error) {
       console.error('Error uploading file:', error);
       // يمكن إضافة رسالة خطأ للمستخدم هنا
@@ -170,10 +170,10 @@ const ClientCaseDetail: React.FC = () => {
 
     try {
       setIsSubmitting(true);
-      
+
       // تحديد المحامي المستلم للرسالة (أول محامٍ في القضية)
       const receiverId = caseData.lawyers?.[0]?.id || caseData.assignedLawyers?.[0] || '2';
-      
+
       await MessageService.sendMessage({
         subject: messageForm.subject,
         content: messageForm.message,
@@ -190,7 +190,7 @@ const ClientCaseDetail: React.FC = () => {
         performedBy: user?.id || '4',
         performedAt: new Date(),
         caseId: caseId || '1',
-        metadata: { 
+        metadata: {
           subject: messageForm.subject,
           message: messageForm.message
         }
@@ -199,7 +199,7 @@ const ClientCaseDetail: React.FC = () => {
       setActivities([newActivity, ...activities]);
       setMessageForm({ subject: '', message: '' });
       setShowMessageModal(false);
-      
+
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -222,7 +222,7 @@ const ClientCaseDetail: React.FC = () => {
 
   const handleDocumentPreview = (doc: Document) => {
     // فتح معاينة الوثيقة في نافذة جديدة أو modal
-    const previewUrl = `http://127.0.0.1:8000/api/v1/documents/${doc.id}/preview`;
+    const previewUrl = `https://api.alraedlaw.com/api/v1/documents/${doc.id}/preview`;
     window.open(previewUrl, '_blank');
   };
 
@@ -244,11 +244,11 @@ const ClientCaseDetail: React.FC = () => {
 
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return 'غير محدد';
-    
+
     const dateObj = typeof date === 'string' ? new Date(date) : date;
-    
+
     if (isNaN(dateObj.getTime())) return 'تاريخ غير صحيح';
-    
+
     return new Intl.DateTimeFormat('ar-SA', {
       year: 'numeric',
       month: 'long',
@@ -362,7 +362,7 @@ const ClientCaseDetail: React.FC = () => {
                   {caseData.description}
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <h4 className="font-medium text-gray-900 dark:text-white mb-1">الطرف الآخر</h4>
@@ -402,7 +402,7 @@ const ClientCaseDetail: React.FC = () => {
                 رفع وثيقة
               </button>
             </div>
-            
+
             {documents.length === 0 ? (
               <div className="text-center py-12">
                 <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -464,21 +464,21 @@ const ClientCaseDetail: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 ml-4">
-                        <button 
+                        <button
                           onClick={() => handleDocumentPreview(doc)}
                           className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                           title="معاينة"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDocumentDownload(doc)}
                           className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                           title="تحميل"
                         >
                           <Download className="h-4 w-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => setShowCommentForm(showCommentForm === parseInt(doc.id) ? null : parseInt(doc.id))}
                           className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                           title="إضافة تعليق"
@@ -487,7 +487,7 @@ const ClientCaseDetail: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                    
+
                     {/* Comment Form */}
                     {showCommentForm === parseInt(doc.id) && (
                       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -605,7 +605,7 @@ const ClientCaseDetail: React.FC = () => {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <form onSubmit={handleFileUpload} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -615,32 +615,32 @@ const ClientCaseDetail: React.FC = () => {
                   type="text"
                   required
                   value={uploadForm.title}
-                  onChange={(e) => setUploadForm({...uploadForm, title: e.target.value})}
+                  onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="أدخل عنوان الوثيقة"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   وصف الوثيقة
                 </label>
                 <textarea
                   value={uploadForm.description}
-                  onChange={(e) => setUploadForm({...uploadForm, description: e.target.value})}
+                  onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="أدخل وصفاً للوثيقة (اختياري)"
                   rows={3}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   فئة الوثيقة
                 </label>
                 <select
                   value={uploadForm.category}
-                  onChange={(e) => setUploadForm({...uploadForm, category: e.target.value})}
+                  onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                   <option value="evidence">أدلة</option>
@@ -651,7 +651,7 @@ const ClientCaseDetail: React.FC = () => {
                   <option value="other">أخرى</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   الملف
@@ -659,12 +659,12 @@ const ClientCaseDetail: React.FC = () => {
                 <input
                   type="file"
                   required
-                  onChange={(e) => setUploadForm({...uploadForm, file: e.target.files?.[0] || null})}
+                  onChange={(e) => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                 />
               </div>
-              
+
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
@@ -712,7 +712,7 @@ const ClientCaseDetail: React.FC = () => {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <form onSubmit={handleSendMessage} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -722,12 +722,12 @@ const ClientCaseDetail: React.FC = () => {
                   type="text"
                   required
                   value={messageForm.subject}
-                  onChange={(e) => setMessageForm({...messageForm, subject: e.target.value})}
+                  onChange={(e) => setMessageForm({ ...messageForm, subject: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="أدخل موضوع الرسالة"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   نص الرسالة
@@ -735,13 +735,13 @@ const ClientCaseDetail: React.FC = () => {
                 <textarea
                   required
                   value={messageForm.message}
-                  onChange={(e) => setMessageForm({...messageForm, message: e.target.value})}
+                  onChange={(e) => setMessageForm({ ...messageForm, message: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="أدخل نص الرسالة"
                   rows={5}
                 />
               </div>
-              
+
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"

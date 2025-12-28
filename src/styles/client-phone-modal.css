@@ -1,0 +1,201 @@
+/* ====================================================
+   Client Phone Modal Styles
+   ==================================================== */
+
+/* Success message */
+.modal-success {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: var(--status-green-light);
+    color: var(--status-green);
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+/* Loading */
+.client-phone-loading {
+    padding: 40px;
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
+/* Section */
+.client-phone-section {
+    margin-bottom: 20px;
+}
+
+.client-phone-section__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-heading);
+    margin: 0 0 12px 0;
+}
+
+.client-phone-section__title svg {
+    color: var(--law-navy);
+}
+
+/* Client list */
+.client-phone-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Client card */
+.client-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--quiet-gray-50);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+body.dark .client-card {
+    background: var(--quiet-gray-100);
+}
+
+.client-card:hover {
+    border-color: var(--color-border);
+}
+
+.client-card--selected {
+    border-color: var(--law-navy);
+    background: var(--law-navy-light);
+}
+
+.client-card__avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--law-navy);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.client-card__info {
+    flex: 1;
+    min-width: 0;
+}
+
+.client-card__name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-heading);
+    margin-bottom: 2px;
+}
+
+.client-card__id {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    direction: ltr;
+    text-align: right;
+}
+
+.client-card__role {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    margin-top: 2px;
+}
+
+.client-card__phone {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--status-green);
+    margin-top: 4px;
+    direction: ltr;
+    text-align: right;
+}
+
+.client-card__no-phone {
+    font-size: 12px;
+    color: var(--status-orange);
+    margin-top: 4px;
+}
+
+.client-card__badge {
+    padding: 4px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--quiet-gray-200);
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+}
+
+.client-card__badge--success {
+    background: var(--status-green-light);
+    color: var(--status-green);
+}
+
+.client-card__badge--warning {
+    background: var(--status-orange-light);
+    color: var(--status-orange);
+}
+
+/* Phone form */
+.client-phone-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.client-phone-input {
+    padding: 12px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--dashboard-card);
+    color: var(--color-text);
+    font-size: 16px;
+    letter-spacing: 1px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.client-phone-input:focus {
+    border-color: var(--law-navy);
+}
+
+.client-phone-input::placeholder {
+    color: var(--color-text-secondary);
+}
+
+.client-phone-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.client-phone-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--law-navy);
+}
+
+/* Modal size override */
+.modal-content--md {
+    max-width: 500px;
+}

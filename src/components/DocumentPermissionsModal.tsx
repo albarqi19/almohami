@@ -147,7 +147,7 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
 
         try {
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'}/documents/${documentId}/access/${userId}`,
+                `${import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1'}/documents/${documentId}/access/${userId}`,
                 {
                     method: 'DELETE',
                     headers: {
@@ -171,7 +171,7 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
         try {
             const endpoint = isPublic ? 'make-restricted' : 'make-public';
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'}/documents/${documentId}/${endpoint}`,
+                `${import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1'}/documents/${documentId}/${endpoint}`,
                 {
                     method: 'PATCH',
                     headers: {
@@ -194,7 +194,7 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
     const handleGenerateShareLink = async () => {
         try {
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'}/documents/${documentId}/share`,
+                `${import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1'}/documents/${documentId}/share`,
                 {
                     method: 'POST',
                     headers: {

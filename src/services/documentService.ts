@@ -38,18 +38,18 @@ export interface SmartDocumentSave {
 export class DocumentService {
   static async getDocuments(filters: DocumentFilters = {}): Promise<PaginatedResponse<Document>> {
     const params = new URLSearchParams();
-    
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
         params.append(key, value.toString());
       }
     });
-    
+
     const queryString = params.toString();
     const endpoint = queryString ? `/documents?${queryString}` : '/documents';
-    
+
     const response = await apiClient.get<ApiResponse<PaginatedResponse<Document>>>(endpoint);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -59,7 +59,7 @@ export class DocumentService {
 
   static async getDocument(id: string): Promise<Document> {
     const response = await apiClient.get<ApiResponse<Document>>(`/documents/${id}`);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -71,7 +71,7 @@ export class DocumentService {
     const formData = new FormData();
     formData.append('file', documentData.file);
     formData.append('title', documentData.title);
-    
+
     if (documentData.description) {
       formData.append('description', documentData.description);
     }
@@ -100,12 +100,12 @@ export class DocumentService {
     }
 
     const response = await apiClient.postFormData<ApiResponse<Document>>('/documents', formData);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
       console.error('Document upload failed:', response);
-      const errorMessage = response.errors 
+      const errorMessage = response.errors
         ? Object.values(response.errors).flat().join(', ')
         : response.message || 'فشل في رفع الوثيقة';
       throw new Error(errorMessage);
@@ -122,7 +122,7 @@ export class DocumentService {
     };
 
     const response = await apiClient.put<ApiResponse<Document>>(`/documents/${id}`, updateData);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -132,7 +132,7 @@ export class DocumentService {
 
   static async deleteDocument(id: string): Promise<void> {
     const response = await apiClient.delete<ApiResponse>(`/documents/${id}`);
-    
+
     if (!response.success) {
       throw new Error(response.message || 'فشل في حذف الوثيقة');
     }
@@ -140,7 +140,7 @@ export class DocumentService {
 
   static async downloadDocument(id: string): Promise<Blob> {
     // This endpoint should return the file directly
-    const response = await fetch(`https://0e024e86d654.ngrok-free.app/api/v1/documents/${id}/download`, {
+    const response = await fetch(`https://api.alraedlaw.com/api/v1/documents/${id}/download`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
       },
@@ -155,7 +155,7 @@ export class DocumentService {
 
   static async getCaseDocuments(caseId: string): Promise<Document[]> {
     const response = await apiClient.get<ApiResponse<Document[]>>(`/cases/${caseId}/documents`);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -165,7 +165,7 @@ export class DocumentService {
 
   static async getTaskDocuments(taskId: string): Promise<Document[]> {
     const response = await apiClient.get<ApiResponse<Document[]>>(`/tasks/${taskId}/documents`);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -176,7 +176,7 @@ export class DocumentService {
   // Client-specific methods
   static async getMyDocuments(): Promise<Document[]> {
     const response = await apiClient.get<ApiResponse<Document[]>>('/client/documents');
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -188,7 +188,7 @@ export class DocumentService {
     const formData = new FormData();
     formData.append('file', documentData.file);
     formData.append('title', documentData.title);
-    
+
     if (documentData.description) {
       formData.append('description', documentData.description);
     }
@@ -200,10 +200,10 @@ export class DocumentService {
     }
 
     const response = await apiClient.postFormData<ApiResponse<Document>>(
-      `/client/cases/${caseId}/documents`, 
+      `/client/cases/${caseId}/documents`,
       formData
     );
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -214,7 +214,7 @@ export class DocumentService {
   // Document Comments Methods
   static async getDocumentComments(documentId: string): Promise<any[]> {
     const response = await apiClient.get<ApiResponse<any[]>>(`/documents/${documentId}/comments`);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -227,7 +227,7 @@ export class DocumentService {
       content,
       is_internal: isInternal
     });
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -239,7 +239,7 @@ export class DocumentService {
     const response = await apiClient.put<ApiResponse<any>>(`/documents/${documentId}/comments/${commentId}`, {
       content
     });
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -249,7 +249,7 @@ export class DocumentService {
 
   static async deleteDocumentComment(documentId: string, commentId: string): Promise<void> {
     const response = await apiClient.delete<ApiResponse>(`/documents/${documentId}/comments/${commentId}`);
-    
+
     if (!response.success) {
       throw new Error(response.message || 'فشل في حذف التعليق');
     }
@@ -258,18 +258,18 @@ export class DocumentService {
   // Smart Document Analysis methods
   static async analyzeSmartDocument(formData: FormData): Promise<ApiResponse<any>> {
     try {
-      const response = await fetch('https://0e024e86d654.ngrok-free.app/api/v1/smart-documents/analyze', {
+      const response = await fetch('https://api.alraedlaw.com/api/v1/smart-documents/analyze', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
         },
         body: formData
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       return data;
     } catch (error: any) {
@@ -280,14 +280,14 @@ export class DocumentService {
 
   static async saveSmartDocument(data: SmartDocumentSave): Promise<ApiResponse<Document>> {
     try {
-      const response = await fetch('https://0e024e86d654.ngrok-free.app/api/v1/smart-documents/save', {
+      const response = await fetch('https://api.alraedlaw.com/api/v1/smart-documents/save', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(data)
       });
-      
+
       const result = await response.json();
       return result;
     } catch (error: any) {
@@ -297,14 +297,14 @@ export class DocumentService {
 
   static async deleteTempFile(tempPath: string): Promise<ApiResponse<any>> {
     try {
-      const response = await fetch('https://0e024e86d654.ngrok-free.app/api/v1/smart-documents/temp', {
+      const response = await fetch('https://api.alraedlaw.com/api/v1/smart-documents/temp', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ temp_path: tempPath })
       });
-      
+
       const data = await response.json();
       return data;
     } catch (error: any) {

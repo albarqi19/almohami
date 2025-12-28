@@ -1,0 +1,370 @@
+/* ====================================================
+   Clients Page - ClickUp Minimal Style
+   ==================================================== */
+
+/* === Page Container === */
+.clients-page {
+    background: var(--dashboard-bg);
+    min-height: 100vh;
+}
+
+/* === Compact Header Bar === */
+.clients-header-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    background: var(--dashboard-card);
+    border-bottom: 1px solid var(--color-border);
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+}
+
+.clients-header-bar__start {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+}
+
+.clients-header-bar__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.clients-header-bar__title svg {
+    color: var(--law-navy);
+}
+
+.clients-header-bar__count {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    background: var(--quiet-gray-100);
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.clients-header-bar__center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 200px;
+}
+
+.clients-header-bar__end {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+/* === Content Area === */
+.clients-content {
+    padding: 0;
+}
+
+/* === Loading State === */
+.clients-loading {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* === Empty State === */
+.clients-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.clients-empty__icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+    color: var(--color-text-secondary);
+    opacity: 0.4;
+}
+
+.clients-empty__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 8px;
+}
+
+.clients-empty__desc {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    max-width: 300px;
+}
+
+/* === Table View === */
+.clients-table-wrapper {
+    padding: 16px 20px 0;
+}
+
+.clients-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    font-size: 13px;
+}
+
+.clients-table th {
+    text-align: right;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    background: var(--quiet-gray-50);
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
+}
+
+body.dark .clients-table th {
+    background: var(--quiet-gray-100);
+}
+
+.clients-table th:first-child {
+    border-top-right-radius: 8px;
+}
+
+.clients-table th:last-child {
+    border-top-left-radius: 8px;
+}
+
+.clients-table td {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--color-text);
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+
+.clients-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.clients-table tbody tr:last-child td:first-child {
+    border-bottom-right-radius: 8px;
+}
+
+.clients-table tbody tr:last-child td:last-child {
+    border-bottom-left-radius: 8px;
+}
+
+.clients-table tbody tr {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.clients-table tbody tr:hover {
+    background: var(--law-navy-light);
+    transform: scale(1.003);
+    box-shadow: 0 2px 8px rgba(10, 25, 47, 0.06);
+}
+
+.clients-table tbody tr:hover td {
+    background: transparent;
+}
+
+/* Client Name Cell */
+.client-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.client-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--law-navy);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.client-name {
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+/* Client ID Badge */
+.client-id-badge {
+    display: inline-flex;
+    padding: 4px 10px;
+    background: var(--quiet-gray-100);
+    color: var(--color-text-secondary);
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: monospace;
+}
+
+body.dark .client-id-badge {
+    background: var(--quiet-gray-200);
+}
+
+/* Client Phone */
+.client-phone {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--color-text);
+}
+
+.client-phone svg {
+    color: var(--status-green);
+}
+
+.client-phone .no-phone {
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+/* Cases Count */
+.cases-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--status-blue-light);
+    color: var(--status-blue);
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.cases-count svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Client Badge */
+.client-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.client-badge--vip {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: white;
+}
+
+.client-badge--regular {
+    background: var(--status-green-light);
+    color: var(--status-green);
+}
+
+/* Date Cell */
+.date-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.date-cell svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* === Pagination === */
+.clients-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: var(--dashboard-card);
+    border-top: 1px solid var(--color-border);
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+}
+
+.clients-pagination__info {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+}
+
+.clients-pagination__controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+    color: var(--color-text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    border-color: var(--law-navy);
+    background: var(--law-navy-light);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+    .clients-header-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .clients-header-bar__center {
+        order: 3;
+    }
+
+    .clients-table-wrapper {
+        padding: 12px;
+        overflow-x: auto;
+    }
+
+    .clients-table {
+        min-width: 600px;
+    }
+}
