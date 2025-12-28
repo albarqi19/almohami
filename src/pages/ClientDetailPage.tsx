@@ -74,10 +74,12 @@ const ClientDetailPage: React.FC = () => {
             setUpcomingSession(detailsResponse.upcoming_session);
 
             const casesResponse = await ClientManagementService.getClientCases(clientId!, { per_page: 20 });
-            setCases(casesResponse.data?.data || casesResponse.data || []);
+            const casesData: any = casesResponse.data;
+            setCases(Array.isArray(casesData) ? casesData : (casesData?.data || []));
 
             const activitiesResponse = await ClientManagementService.getClientActivities(clientId!, { per_page: 30 });
-            setActivities(activitiesResponse.data?.data || activitiesResponse.data || []);
+            const actData: any = activitiesResponse.data;
+            setActivities(Array.isArray(actData) ? actData : (actData?.data || []));
         } catch (error) {
             console.error('Error fetching client data:', error);
         } finally {

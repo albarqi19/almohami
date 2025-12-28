@@ -226,7 +226,7 @@ const ReviewModal: React.FC<{
 // Main Page
 const AdminRequests: React.FC = () => {
     const { user } = useAuth();
-    const isManager = user?.role === 'admin' || user?.role === 'owner';
+    const isManager = user?.role === 'admin' || (user?.role as string) === 'owner';
 
     const [requests, setRequests] = useState<AdminRequest[]>([]);
     const [requestTypes, setRequestTypes] = useState<RequestType[]>([]);
