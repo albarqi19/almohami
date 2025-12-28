@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import { X, Upload, FileText, AlertCircle, Loader2 } from 'lucide-react';
 import type { Case } from '../types';
 import { DocumentService } from '../services/documentService';
-import { CloudStorageService, CloudStorageStatus } from '../services/cloudStorageService';
+import { CloudStorageService } from '../services/cloudStorageService';
+import type { CloudStorageStatus } from '../services/cloudStorageService';
 import OneDriveRequiredAlert from './OneDriveRequiredAlert';
 
 interface DocumentUploadModalProps {

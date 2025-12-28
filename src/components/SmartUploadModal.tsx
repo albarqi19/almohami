@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import Modal from './Modal';
 import { DocumentService } from '../services/documentService';
-import { CloudStorageService, CloudStorageStatus } from '../services/cloudStorageService';
+import { CloudStorageService } from '../services/cloudStorageService';
+import type { CloudStorageStatus } from '../services/cloudStorageService';
 import OneDriveRequiredAlert from './OneDriveRequiredAlert';
 
 interface SmartUploadModalProps {
