@@ -1,11 +1,11 @@
-﻿import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Upload, 
-  Brain, 
-  FileText, 
-  CheckCircle, 
-  AlertCircle, 
+import {
+  Upload,
+  Brain,
+  FileText,
+  CheckCircle,
+  AlertCircle,
   Loader2,
   Edit3,
   Save,
@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import Modal from './Modal';
 import { DocumentService } from '../services/documentService';
+import { CloudStorageService, CloudStorageStatus } from '../services/cloudStorageService';
+import OneDriveRequiredAlert from './OneDriveRequiredAlert';
 
 interface SmartUploadModalProps {
   isOpen: boolean;
@@ -52,12 +54,36 @@ const SmartUploadModal: React.FC<SmartUploadModalProps> = ({
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // OneDrive status
+  const [oneDriveStatus, setOneDriveStatus] = useState<CloudStorageStatus | null>(null);
+  const [checkingOneDrive, setCheckingOneDrive] = useState(true);
+
   // بيانات قابلة للتعديل
   const [editableTitle, setEditableTitle] = useState('');
   const [editableDescription, setEditableDescription] = useState('');
   const [editableType, setEditableType] = useState('');
   const [editableKeywords, setEditableKeywords] = useState<string[]>([]);
+
+  // Check OneDrive connection when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      checkOneDriveConnection();
+    }
+  }, [isOpen]);
+
+  const checkOneDriveConnection = async () => {
+    setCheckingOneDrive(true);
+    try {
+      const status = await CloudStorageService.getOneDriveStatus();
+      setOneDriveStatus(status);
+    } catch (err) {
+      setOneDriveStatus({ connected: false, provider: 'onedrive' });
+    } finally {
+      setCheckingOneDrive(false);
+    }
+  };
 
   const resetModal = () => {
     setCurrentStep('upload');
@@ -116,32 +142,33 @@ const SmartUploadModal: React.FC<SmartUploadModalProps> = ({
   };
 
   const handleSave = async () => {
-    if (!analysis || !fileInfo) return;
+    if (!analysis || !fileInfo || !selectedFile) return;
 
     setCurrentStep('saving');
+    setUploadProgress(0);
 
     try {
-      const saveData = {
-        case_id: caseId,
-        temp_path: fileInfo.temp_path,
-        title: editableTitle,
-        description: editableDescription,
-        document_type: editableType,
-        keywords: editableKeywords,
-        parties: analysis.parties,
-        important_dates: analysis.important_dates,
-        priority: analysis.priority
-      };
+      // Upload directly to OneDrive
+      const uploadResult = await CloudStorageService.uploadFileToCase(
+        parseInt(caseId),
+        selectedFile,
+        (progress) => setUploadProgress(progress)
+      );
 
-      const response = await DocumentService.saveSmartDocument(saveData);
-      
-      if (response.success) {
-        onDocumentAdded?.();
-        resetModal();
-        onClose();
-      } else {
-        throw new Error(response.message || 'فشل في حفظ الوثيقة');
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || 'فشل في رفع الملف إلى OneDrive');
       }
+
+      // Delete temp file from server
+      try {
+        await DocumentService.deleteTempFile(fileInfo.temp_path);
+      } catch (e) {
+        console.warn('Could not delete temp file:', e);
+      }
+
+      onDocumentAdded?.();
+      resetModal();
+      onClose();
     } catch (error: any) {
       setError(error.message || 'فشل في حفظ الوثيقة');
       setCurrentStep('review');
@@ -171,63 +198,95 @@ const SmartUploadModal: React.FC<SmartUploadModalProps> = ({
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={handleCancel} 
+    <Modal
+      isOpen={isOpen}
+      onClose={handleCancel}
       title="رفع الوثيقة الذكي"
       size="lg"
     >
       <div style={{ minHeight: '400px' }}>
-        {/* خطوات التقدم */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: '32px',
-          padding: '0 20px'
-        }}>
-          {[
-            { step: 'upload', label: 'رفع الملف', icon: Upload },
-            { step: 'analyzing', label: 'التحليل', icon: Brain },
-            { step: 'review', label: 'المراجعة', icon: Edit3 },
-            { step: 'saving', label: 'الحفظ', icon: Save }
-          ].map((item, index) => {
-            const Icon = item.icon;
-            const isActive = currentStep === item.step;
-            const isCompleted = ['upload', 'analyzing', 'review', 'saving'].indexOf(currentStep) > index;
-            
-            return (
-              <div key={item.step} style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  backgroundColor: isCompleted ? 'var(--color-success)' : isActive ? 'var(--color-primary)' : 'var(--color-border)',
-                  color: isCompleted || isActive ? 'white' : 'var(--color-text-secondary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.3s ease'
-                }}>
-                  {isCompleted ? <CheckCircle size={20} /> : <Icon size={20} />}
-                </div>
-                <span style={{
-                  fontSize: 'var(--font-size-xs)',
-                  color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                  fontWeight: isActive ? 'var(--font-weight-semibold)' : 'var(--font-weight-normal)'
-                }}>
-                  {item.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+        {/* Loading state while checking OneDrive */}
+        {checkingOneDrive && (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '60px 20px',
+            textAlign: 'center'
+          }}>
+            <Loader2 size={40} style={{
+              color: 'var(--color-primary)',
+              animation: 'spin 1s linear infinite'
+            }} />
+            <p style={{
+              marginTop: '16px',
+              color: 'var(--color-text-secondary)',
+              fontSize: 'var(--font-size-sm)'
+            }}>
+              جاري التحقق من اتصال التخزين السحابي...
+            </p>
+          </div>
+        )}
 
-        {error && (
+        {/* OneDrive not connected alert */}
+        {!checkingOneDrive && (!oneDriveStatus?.connected) && (
+          <OneDriveRequiredAlert />
+        )}
+
+        {/* Main content - only show when OneDrive is connected */}
+        {!checkingOneDrive && oneDriveStatus?.connected && (
+          <>
+            {/* خطوات التقدم */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '32px',
+              padding: '0 20px'
+            }}>
+              {[
+                { step: 'upload', label: 'رفع الملف', icon: Upload },
+                { step: 'analyzing', label: 'التحليل', icon: Brain },
+                { step: 'review', label: 'المراجعة', icon: Edit3 },
+                { step: 'saving', label: 'الحفظ', icon: Save }
+              ].map((item, index) => {
+                const Icon = item.icon;
+                const isActive = currentStep === item.step;
+                const isCompleted = ['upload', 'analyzing', 'review', 'saving'].indexOf(currentStep) > index;
+
+                return (
+                  <div key={item.step} style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      backgroundColor: isCompleted ? 'var(--color-success)' : isActive ? 'var(--color-primary)' : 'var(--color-border)',
+                      color: isCompleted || isActive ? 'white' : 'var(--color-text-secondary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      {isCompleted ? <CheckCircle size={20} /> : <Icon size={20} />}
+                    </div>
+                    <span style={{
+                      fontSize: 'var(--font-size-xs)',
+                      color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                      fontWeight: isActive ? 'var(--font-weight-semibold)' : 'var(--font-weight-normal)'
+                    }}>
+                      {item.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {error && (
           <div style={{
             padding: '12px',
             backgroundColor: 'var(--color-red-50)',
@@ -590,20 +649,50 @@ const SmartUploadModal: React.FC<SmartUploadModalProps> = ({
           </div>
         )}
 
-        {currentStep === 'saving' && (
-          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <Loader2 size={48} style={{ 
-              color: 'var(--color-success)', 
-              marginBottom: '16px',
-              animation: 'spin 1s linear infinite' 
-            }} />
-            <h3 style={{ margin: '0 0 8px 0', color: 'var(--color-text)' }}>
-              جاري الحفظ...
-            </h3>
-            <p style={{ color: 'var(--color-text-secondary)' }}>
-              يتم حفظ الوثيقة في النظام...
-            </p>
-          </div>
+            {currentStep === 'saving' && (
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <Loader2 size={48} style={{
+                  color: 'var(--color-success)',
+                  marginBottom: '16px',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                <h3 style={{ margin: '0 0 8px 0', color: 'var(--color-text)' }}>
+                  جاري الرفع إلى OneDrive...
+                </h3>
+                {uploadProgress > 0 && (
+                  <div style={{ marginTop: '20px', maxWidth: '300px', margin: '20px auto 0' }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginBottom: '8px'
+                    }}>
+                      <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                        التقدم
+                      </span>
+                      <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-primary)' }}>
+                        {uploadProgress}%
+                      </span>
+                    </div>
+                    <div style={{
+                      width: '100%',
+                      height: '8px',
+                      backgroundColor: 'var(--color-border)',
+                      borderRadius: '4px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        width: `${uploadProgress}%`,
+                        height: '100%',
+                        backgroundColor: 'var(--color-success)',
+                        borderRadius: '4px',
+                        transition: 'width 0.3s ease'
+                      }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     </Modal>

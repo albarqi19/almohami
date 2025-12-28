@@ -1,8 +1,10 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, Upload, FileText, AlertCircle } from 'lucide-react';
+import { X, Upload, FileText, AlertCircle, Loader2 } from 'lucide-react';
 import type { Case } from '../types';
 import { DocumentService } from '../services/documentService';
+import { CloudStorageService, CloudStorageStatus } from '../services/cloudStorageService';
+import OneDriveRequiredAlert from './OneDriveRequiredAlert';
 
 interface DocumentUploadModalProps {
   isOpen: boolean;
@@ -26,6 +28,30 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   const [tags, setTags] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // OneDrive status
+  const [oneDriveStatus, setOneDriveStatus] = useState<CloudStorageStatus | null>(null);
+  const [checkingOneDrive, setCheckingOneDrive] = useState(true);
+
+  // Check OneDrive connection when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      checkOneDriveConnection();
+    }
+  }, [isOpen]);
+
+  const checkOneDriveConnection = async () => {
+    setCheckingOneDrive(true);
+    try {
+      const status = await CloudStorageService.getOneDriveStatus();
+      setOneDriveStatus(status);
+    } catch (err) {
+      setOneDriveStatus({ connected: false, provider: 'onedrive' });
+    } finally {
+      setCheckingOneDrive(false);
+    }
+  };
 
   const categories = [
     { value: 'contract', label: 'عقد' },
@@ -49,7 +75,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedFile) {
       setError('يرجى اختيار ملف');
       return;
@@ -60,28 +86,32 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       return;
     }
 
+    // Require case selection for OneDrive upload
+    if (!caseId) {
+      setError('يرجى اختيار القضية لربط الملف بها');
+      return;
+    }
+
     setUploading(true);
     setError(null);
+    setUploadProgress(0);
 
     try {
-      const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-      
-      const documentData = {
-        title: title.trim(),
-        description: description.trim() || undefined,
-        category,
-        case_id: caseId || undefined,
-        file: selectedFile,
-        is_confidential: isConfidential,
-        tags: tagArray.length > 0 ? tagArray : undefined
-      };
-      
-      console.log('Uploading document with data:', {
-        ...documentData,
-        file: selectedFile.name // Don't log the file object itself
+      console.log('Uploading document to OneDrive:', {
+        fileName: selectedFile.name,
+        caseId: caseId
       });
-      
-      await DocumentService.uploadDocument(documentData);
+
+      // Upload directly to OneDrive using CloudStorageService
+      const result = await CloudStorageService.uploadFileToCase(
+        parseInt(caseId),
+        selectedFile,
+        (progress) => setUploadProgress(progress)
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'فشل في رفع الملف إلى OneDrive');
+      }
 
       onUploadSuccess();
       handleClose();
@@ -89,6 +119,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       setError(err instanceof Error ? err.message : 'حدث خطأ أثناء رفع الوثيقة');
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -165,25 +196,90 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           </button>
         </div>
 
-        {error && (
+        {/* Loading state while checking OneDrive */}
+        {checkingOneDrive && (
           <div style={{
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            gap: '8px',
-            padding: '12px',
-            backgroundColor: 'var(--color-error)10',
-            border: '1px solid var(--color-error)',
-            borderRadius: '8px',
-            marginBottom: '20px'
+            justifyContent: 'center',
+            padding: '60px 20px',
+            textAlign: 'center'
           }}>
-            <AlertCircle style={{ height: '16px', width: '16px', color: 'var(--color-error)' }} />
-            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-error)' }}>
-              {error}
-            </span>
+            <Loader2 size={40} style={{
+              color: 'var(--color-primary)',
+              animation: 'spin 1s linear infinite'
+            }} />
+            <p style={{
+              marginTop: '16px',
+              color: 'var(--color-text-secondary)',
+              fontSize: 'var(--font-size-sm)'
+            }}>
+              جاري التحقق من اتصال التخزين السحابي...
+            </p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        {/* OneDrive not connected alert */}
+        {!checkingOneDrive && (!oneDriveStatus?.connected) && (
+          <OneDriveRequiredAlert />
+        )}
+
+        {/* Main form - only show when OneDrive is connected */}
+        {!checkingOneDrive && oneDriveStatus?.connected && (
+          <>
+            {error && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px',
+                backgroundColor: 'var(--color-error)10',
+                border: '1px solid var(--color-error)',
+                borderRadius: '8px',
+                marginBottom: '20px'
+              }}>
+                <AlertCircle style={{ height: '16px', width: '16px', color: 'var(--color-error)' }} />
+                <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-error)' }}>
+                  {error}
+                </span>
+              </div>
+            )}
+
+            {/* Upload progress bar */}
+            {uploading && uploadProgress > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '8px'
+                }}>
+                  <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                    جاري الرفع إلى OneDrive...
+                  </span>
+                  <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-primary)' }}>
+                    {uploadProgress}%
+                  </span>
+                </div>
+                <div style={{
+                  width: '100%',
+                  height: '8px',
+                  backgroundColor: 'var(--color-border)',
+                  borderRadius: '4px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${uploadProgress}%`,
+                    height: '100%',
+                    backgroundColor: 'var(--color-primary)',
+                    borderRadius: '4px',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
           {/* File Upload */}
           <div style={{ marginBottom: '20px' }}>
             <label style={{
@@ -469,7 +565,9 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
               {uploading ? 'جاري الرفع...' : 'رفع الوثيقة'}
             </button>
           </div>
-        </form>
+            </form>
+          </>
+        )}
       </motion.div>
     </div>
   );
