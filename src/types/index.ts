@@ -104,6 +104,9 @@ export interface CaseSession {
   degree?: string;
   notes?: string;
   result?: string;
+  location?: string;
+  video_conference_url?: string;
+  is_video_conference?: boolean;
 }
 
 export const CaseType = {

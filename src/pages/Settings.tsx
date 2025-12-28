@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import NotificationSettings from '../components/NotificationSettings';
 import { apiClient } from '../utils/api';
+import { useAuth } from '../contexts/AuthContext';
 import '../styles/settings-page.css';
 
 interface SettingsTab {
@@ -35,6 +36,7 @@ interface SettingsTab {
 }
 
 const Settings: React.FC = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('notifications');
 
   const tabs: SettingsTab[] = [
@@ -50,8 +52,8 @@ const Settings: React.FC = () => {
     { id: 'invoices', label: 'الفواتير', icon: Receipt, roles: ['admin'] },
   ];
 
-  // Mock user role - في التطبيق الحقيقي سيأتي من AuthContext
-  const userRole = 'admin';
+  // الحصول على دور المستخدم من AuthContext
+  const userRole = user?.role || 'client';
   const visibleTabs = tabs.filter(tab => tab.roles.includes(userRole));
 
   // Najiz Settings State

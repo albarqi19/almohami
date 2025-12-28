@@ -14,7 +14,9 @@ import {
 	LayoutGrid,
 	Search,
 	X,
-	AlertCircle
+	AlertCircle,
+	Video,
+	ExternalLink
 } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import '../styles/sessions-page.css';
@@ -34,6 +36,8 @@ interface Session {
 	location: string | null;
 	degree: string | null;
 	result: string | null;
+	video_conference_url?: string | null;
+	is_video_conference?: boolean;
 	case?: {
 		id: number;
 		title: string;
@@ -181,6 +185,7 @@ const UpcomingSessions: React.FC = () => {
 						<th>المدة المتبقية</th>
 						<th>العميل</th>
 						<th>الحالة</th>
+						<th>الدخول</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -241,6 +246,52 @@ const UpcomingSessions: React.FC = () => {
 								>
 									{session.najiz_status || session.status || 'مجدولة'}
 								</span>
+							</td>
+							<td>
+								{(() => {
+									const isCompleted = session.status === 'منتهية' || session.status === 'completed';
+									const isRemote = session.method === 'عن بعد';
+
+									if (isCompleted) {
+										return (
+											<span className="session-completed-badge">
+												منتهية
+											</span>
+										);
+									}
+
+									if (session.video_conference_url) {
+										return (
+											<a
+												href={session.video_conference_url}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="join-session-btn"
+												onClick={(e) => e.stopPropagation()}
+											>
+												<Video size={14} />
+												الدخول
+												<ExternalLink size={12} />
+											</a>
+										);
+									}
+
+									if (isRemote) {
+										return (
+											<span className="no-link-badge">
+												<Video size={12} />
+												عن بعد
+											</span>
+										);
+									}
+
+									return (
+										<span className="inperson-badge">
+											<MapPin size={12} />
+											حضوري
+										</span>
+									);
+								})()}
 							</td>
 						</tr>
 					))}

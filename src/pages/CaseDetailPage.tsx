@@ -477,6 +477,20 @@ const CaseDetailPage: React.FC = () => {
                               </span>
                             )}
                           </div>
+                          {/* زر الدخول للجلسة الافتراضية - فقط للجلسات القادمة */}
+                          {session.video_conference_url && isUpcoming && (
+                            <a
+                              href={session.video_conference_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="case-session-item__join-btn"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Video size={14} />
+                              الدخول للجلسة
+                              <ExternalLink size={12} />
+                            </a>
+                          )}
                         </div>
                       </div>
                     );
