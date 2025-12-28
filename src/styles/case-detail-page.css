@@ -194,6 +194,10 @@ body.dark .case-header-tab {
     color: var(--status-green);
 }
 
+.case-header-tab__icon--purple {
+    color: #8b5cf6;
+}
+
 .case-header-tab__count {
     font-weight: 600;
     color: var(--color-heading);

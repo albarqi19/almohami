@@ -1,0 +1,360 @@
+/* ====================================================
+   Client Cases Page - ClickUp Minimal Style
+   ==================================================== */
+
+/* === Page Container === */
+.client-cases {
+  background: var(--dashboard-bg);
+  min-height: 100vh;
+}
+
+/* === Header Bar === */
+.client-cases__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px;
+  background: var(--dashboard-card);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  flex-wrap: wrap;
+}
+
+.client-cases__title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.client-cases__icon {
+  width: 40px;
+  height: 40px;
+  background: var(--law-navy-light);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--law-navy);
+}
+
+.client-cases__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0;
+}
+
+.client-cases__count {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--quiet-gray-100);
+  padding: 4px 10px;
+  border-radius: 12px;
+  margin-right: 8px;
+}
+
+/* === Filters === */
+.client-cases__filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  max-width: 500px;
+}
+
+@media (max-width: 768px) {
+  .client-cases__filters {
+    flex-basis: 100%;
+    max-width: 100%;
+    order: 3;
+    margin-top: 12px;
+  }
+}
+
+.client-cases__search {
+  flex: 1;
+  position: relative;
+}
+
+.client-cases__search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+.client-cases__search-input {
+  width: 100%;
+  padding: 10px 40px 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--dashboard-card);
+  font-size: 14px;
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.client-cases__search-input:focus {
+  border-color: var(--law-navy);
+}
+
+.client-cases__search-input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.client-cases__filter-select {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--dashboard-card);
+  font-size: 14px;
+  color: var(--color-text);
+  min-width: 140px;
+  cursor: pointer;
+  outline: none;
+}
+
+.client-cases__filter-select:focus {
+  border-color: var(--law-navy);
+}
+
+/* === Content === */
+.client-cases__content {
+  padding: 24px;
+}
+
+/* === Cases Grid === */
+.client-cases__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .client-cases__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === Case Card === */
+.case-card {
+  background: var(--dashboard-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.case-card:hover {
+  border-color: var(--law-navy);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.case-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.case-card__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0 0 4px;
+  line-height: 1.4;
+}
+
+.case-card__number {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.case-card__badges {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+/* === Status Badge === */
+.case-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.case-badge--active {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.case-badge--pending {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.case-badge--closed {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+.case-badge--settled {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.case-badge--appealed {
+  background: rgba(147, 51, 234, 0.1);
+  color: #9333ea;
+}
+
+.case-badge--dismissed {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.case-badge--low {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+.case-badge--medium {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.case-badge--high {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.case-badge--urgent {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+/* === Case Details === */
+.case-card__details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.case-card__detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.case-card__detail svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+}
+
+/* === Case Footer === */
+.case-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.case-card__updated {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.case-card__action {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--law-navy);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.15s;
+}
+
+.case-card__action:hover {
+  opacity: 0.8;
+}
+
+/* === Loading State === */
+.client-cases__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+}
+
+.client-cases__spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--law-navy);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* === Empty State === */
+.client-cases__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.client-cases__empty-icon {
+  width: 64px;
+  height: 64px;
+  background: var(--quiet-gray-100);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  color: var(--color-text-secondary);
+}
+
+.client-cases__empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0 0 8px;
+}
+
+.client-cases__empty-text {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}

@@ -1,16 +1,16 @@
-﻿import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  FileText, 
-  Calendar, 
-  AlertCircle, 
+import React, { useState, useEffect } from 'react';
+import {
+  FileText,
+  Calendar,
   Eye,
   Search,
-  User
+  User,
+  ChevronLeft
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CaseService } from '../services/caseService';
 import type { Case } from '../types';
+import '../styles/client-cases.css';
 
 const ClientCases: React.FC = () => {
   const { user } = useAuth();
@@ -61,54 +61,26 @@ const ClientCases: React.FC = () => {
     setFilteredCases(filtered);
   }, [searchTerm, statusFilter, cases]);
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      active: { color: 'var(--color-success)', bg: 'rgba(34, 197, 94, 0.1)', text: 'نشطة' },
-      pending: { color: 'var(--color-warning)', bg: 'rgba(251, 191, 36, 0.1)', text: 'قيد الانتظار' },
-      closed: { color: 'var(--color-text-secondary)', bg: 'rgba(107, 114, 128, 0.1)', text: 'مغلقة' },
-      settled: { color: 'var(--color-primary)', bg: 'rgba(59, 130, 246, 0.1)', text: 'مسوية' },
-      appealed: { color: 'var(--color-purple)', bg: 'rgba(147, 51, 234, 0.1)', text: 'مستأنفة' },
-      dismissed: { color: 'var(--color-error)', bg: 'rgba(239, 68, 68, 0.1)', text: 'مرفوضة' }
+  const getStatusText = (status: string) => {
+    const statusMap: Record<string, string> = {
+      active: 'نشطة',
+      pending: 'قيد الانتظار',
+      closed: 'مغلقة',
+      settled: 'مسوية',
+      appealed: 'مستأنفة',
+      dismissed: 'مرفوضة'
     };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.active;
-
-    return (
-      <span style={{
-        padding: '4px 8px',
-        borderRadius: '12px',
-        fontSize: 'var(--font-size-xs)',
-        fontWeight: 'var(--font-weight-medium)',
-        color: config.color,
-        backgroundColor: config.bg
-      }}>
-        {config.text}
-      </span>
-    );
+    return statusMap[status] || status;
   };
 
-  const getPriorityBadge = (priority: string) => {
-    const priorityConfig = {
-      low: { color: 'var(--color-text-secondary)', bg: 'rgba(107, 114, 128, 0.1)', text: 'منخفضة' },
-      medium: { color: 'var(--color-warning)', bg: 'rgba(251, 191, 36, 0.1)', text: 'متوسطة' },
-      high: { color: 'var(--color-error)', bg: 'rgba(239, 68, 68, 0.1)', text: 'عالية' },
-      urgent: { color: 'var(--color-error)', bg: 'rgba(239, 68, 68, 0.2)', text: 'عاجلة' }
+  const getPriorityText = (priority: string) => {
+    const priorityMap: Record<string, string> = {
+      low: 'منخفضة',
+      medium: 'متوسطة',
+      high: 'عالية',
+      urgent: 'عاجلة'
     };
-
-    const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.medium;
-
-    return (
-      <span style={{
-        padding: '4px 8px',
-        borderRadius: '12px',
-        fontSize: 'var(--font-size-xs)',
-        fontWeight: 'var(--font-weight-medium)',
-        color: config.color,
-        backgroundColor: config.bg
-      }}>
-        {config.text}
-      </span>
-    );
+    return priorityMap[priority] || priority;
   };
 
   const formatCurrency = (amount: number) => {
@@ -119,56 +91,58 @@ const ClientCases: React.FC = () => {
     }).format(amount);
   };
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('ar-SA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }).format(date);
+  const formatDate = (date: string | Date | null | undefined) => {
+    if (!date) return 'غير محدد';
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) return 'غير محدد';
+      return new Intl.DateTimeFormat('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }).format(dateObj);
+    } catch {
+      return 'غير محدد';
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center min-h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="client-cases">
+        <div className="client-cases__loading">
+          <div className="client-cases__spinner"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="client-cases">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          قضاياي
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          جميع القضايا المرتبطة بحسابك
-        </p>
-      </div>
+      <div className="client-cases__header">
+        <div className="client-cases__title-section">
+          <div className="client-cases__icon">
+            <FileText size={20} />
+          </div>
+          <h1 className="client-cases__title">قضاياي</h1>
+          <span className="client-cases__count">{filteredCases.length} قضية</span>
+        </div>
 
-      {/* Filters */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        {/* Search */}
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+        {/* Filters */}
+        <div className="client-cases__filters">
+          <div className="client-cases__search">
+            <Search size={18} className="client-cases__search-icon" />
             <input
               type="text"
               placeholder="البحث في القضايا..."
-              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="client-cases__search-input"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-        </div>
 
-        {/* Status Filter */}
-        <div className="sm:w-48">
           <select
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="client-cases__filter-select"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -181,92 +155,85 @@ const ClientCases: React.FC = () => {
         </div>
       </div>
 
-      {/* Cases Grid */}
-      {filteredCases.length === 0 ? (
-        <div className="text-center py-12">
-          <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            لا توجد قضايا
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            {searchTerm || statusFilter !== 'all' 
-              ? 'لا توجد قضايا تطابق معايير البحث'
-              : 'لم يتم العثور على أي قضايا مرتبطة بحسابك'
-            }
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredCases.map((case_, index) => (
-            <motion.div
-              key={case_.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => window.location.href = `/cases/${case_.id}`}
-            >
-              {/* Header */}
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-1">
-                    {case_.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    رقم الملف: {case_.file_number}
-                  </p>
+      {/* Content */}
+      <div className="client-cases__content">
+        {filteredCases.length === 0 ? (
+          <div className="client-cases__empty">
+            <div className="client-cases__empty-icon">
+              <FileText size={28} />
+            </div>
+            <h3 className="client-cases__empty-title">لا توجد قضايا</h3>
+            <p className="client-cases__empty-text">
+              {searchTerm || statusFilter !== 'all'
+                ? 'لا توجد قضايا تطابق معايير البحث'
+                : 'لم يتم العثور على أي قضايا مرتبطة بحسابك'
+              }
+            </p>
+          </div>
+        ) : (
+          <div className="client-cases__grid">
+            {filteredCases.map((case_) => (
+              <div
+                key={case_.id}
+                className="case-card"
+                onClick={() => window.location.href = `/my-cases/${case_.id}`}
+              >
+                {/* Header */}
+                <div className="case-card__header">
+                  <div>
+                    <h3 className="case-card__title">{case_.title}</h3>
+                    <p className="case-card__number">رقم الملف: {case_.file_number}</p>
+                  </div>
+                  <div className="case-card__badges">
+                    <span className={`case-badge case-badge--${case_.status}`}>
+                      {getStatusText(case_.status)}
+                    </span>
+                    <span className={`case-badge case-badge--${case_.priority}`}>
+                      {getPriorityText(case_.priority)}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  {getStatusBadge(case_.status)}
-                  {getPriorityBadge(case_.priority)}
+
+                {/* Details */}
+                <div className="case-card__details">
+                  {case_.opponent_name && (
+                    <div className="case-card__detail">
+                      <User size={16} />
+                      <span>الطرف الآخر: {case_.opponent_name}</span>
+                    </div>
+                  )}
+
+                  {case_.court && (
+                    <div className="case-card__detail">
+                      <FileText size={16} />
+                      <span>المحكمة: {case_.court}</span>
+                    </div>
+                  )}
+
+                  {case_.next_hearing && (
+                    <div className="case-card__detail">
+                      <Calendar size={16} />
+                      <span>الجلسة القادمة: {formatDate(case_.next_hearing)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="case-card__footer">
+                  <span className="case-card__updated">
+                    آخر تحديث: {formatDate(case_.updated_at)}
+                  </span>
+                  <button className="case-card__action">
+                    <Eye size={16} />
+                    <span>عرض التفاصيل</span>
+                    <ChevronLeft size={14} />
+                  </button>
                 </div>
               </div>
-
-              {/* Details */}
-              <div className="space-y-3 mb-4">
-                {case_.opponent_name && (
-                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                    <User className="h-4 w-4 mr-2" />
-                    الطرف الآخر: {case_.opponent_name}
-                  </div>
-                )}
-
-                {case_.court && (
-                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                    <FileText className="h-4 w-4 mr-2" />
-                    المحكمة: {case_.court}
-                  </div>
-                )}
-
-                {case_.next_hearing && (
-                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    الجلسة القادمة: {formatDate(case_.next_hearing)}
-                  </div>
-                )}
-
-                {case_.contract_value && (
-                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                    <AlertCircle className="h-4 w-4 mr-2" />
-                    القيمة المقدرة: {formatCurrency(case_.contract_value)}
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  آخر تحديث: {formatDate(case_.updated_at)}
-                </div>
-                <button className="text-primary hover:text-primary-dark font-medium text-sm flex items-center">
-                  <Eye className="h-4 w-4 mr-1" />
-                  عرض التفاصيل
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

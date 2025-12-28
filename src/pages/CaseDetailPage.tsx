@@ -22,7 +22,8 @@ import {
   Briefcase,
   Hash,
   Scale,
-  Activity
+  Activity,
+  MessageSquare
 } from 'lucide-react';
 import Timeline from '../components/Timeline';
 import EditCaseModal from '../components/EditCaseModal';
@@ -32,6 +33,7 @@ import CaseTasksModal from '../components/CaseTasksModal';
 import { CaseAppointmentsModal } from '../components/CaseAppointmentsModal';
 import QuickActionsModal from '../components/QuickActionsModal';
 import ClientPhoneModal from '../components/ClientPhoneModal';
+import CaseMessagesModal from '../components/CaseMessagesModal';
 import type { TimelineEvent } from '../components/Timeline';
 import { CaseService } from '../services/caseService';
 import { ActivityService } from '../services/activityService';
@@ -53,6 +55,7 @@ const CaseDetailPage: React.FC = () => {
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
   const [showQuickActionsModal, setShowQuickActionsModal] = useState(false);
   const [showClientPhoneModal, setShowClientPhoneModal] = useState(false);
+  const [showMessagesModal, setShowMessagesModal] = useState(false);
   const [documentsCount, setDocumentsCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
 
@@ -293,6 +296,12 @@ const CaseDetailPage: React.FC = () => {
               </span>
               الجلسات
               <span className="case-header-tab__count">{caseData.sessions?.length || 0}</span>
+            </button>
+            <button className="case-header-tab" onClick={() => setShowMessagesModal(true)}>
+              <span className="case-header-tab__icon case-header-tab__icon--purple">
+                <MessageSquare size={14} />
+              </span>
+              الرسائل
             </button>
           </div>
 
@@ -685,6 +694,14 @@ const CaseDetailPage: React.FC = () => {
         onClose={() => setShowClientPhoneModal(false)}
         caseId={caseData.id}
         onSuccess={() => refreshCaseData()}
+      />
+
+      <CaseMessagesModal
+        isOpen={showMessagesModal}
+        onClose={() => setShowMessagesModal(false)}
+        caseId={Number(caseData.id)}
+        caseTitle={caseData.title}
+        clientName={caseData.client_name}
       />
     </div>
   );

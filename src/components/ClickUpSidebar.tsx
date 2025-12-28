@@ -51,6 +51,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
         { icon: Calendar, label: 'الجلسات', path: '/sessions', roles: ['admin', 'lawyer', 'legal_assistant'], badge: 2 },
         { icon: CheckSquare, label: 'المهام', path: '/tasks', roles: ['admin', 'lawyer', 'legal_assistant'], badge: 5 },
         { icon: FileText, label: 'قضاياي', path: '/my-cases', roles: ['client'] },
+        { icon: MessageSquare, label: 'الرسائل', path: '/my-messages', roles: ['client'] },
         { icon: Upload, label: 'الوثائق', path: '/documents', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
         { icon: Clock, label: 'الأنشطة', path: '/activities', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
         { icon: Users, label: 'العملاء', path: '/clients', roles: ['admin', 'lawyer', 'legal_assistant'] },

@@ -72,7 +72,7 @@ export class ClientManagementService {
         phone: string,
         sendCredentials: boolean = true
     ): Promise<UpdatePhoneResponse> {
-        const response = await apiClient.patch<any>(`/client-management/${clientId}/phone`, {
+        const response = await apiClient.put<any>(`/client-management/${clientId}/phone`, {
             phone,
             send_credentials: sendCredentials,
         });

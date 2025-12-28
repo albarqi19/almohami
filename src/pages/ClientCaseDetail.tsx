@@ -1,6 +1,5 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import {
   FileText,
   Calendar,
@@ -13,18 +12,21 @@ import {
   X,
   CheckCircle,
   Loader2,
-  MessageCircle
+  MessageCircle,
+  User,
+  Building,
+  Clock
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CaseService } from '../services/caseService';
 import { DocumentService } from '../services/documentService';
 import { MessageService } from '../services/messageService';
-import DocumentUploadModal from '../components/DocumentUploadModal';
 import type { Case, Document, Activity } from '../types';
+import '../styles/client-case-detail.css';
 
 const ClientCaseDetail: React.FC = () => {
   const { caseId } = useParams<{ caseId: string }>();
-  const { user } = useAuth();
+  useAuth(); // for authentication check
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -41,43 +43,10 @@ const ClientCaseDetail: React.FC = () => {
     category: 'other'
   });
   const [messageForm, setMessageForm] = useState({
-    subject: '',
     message: ''
   });
-
-  // Mock data - في التطبيق الحقيقي سيتم جلبها من API
-  const mockActivities: Activity[] = [
-    {
-      id: '1',
-      type: 'case_created',
-      title: 'إنشاء القضية',
-      description: 'تم إنشاء القضية',
-      performedBy: '2',
-      performedAt: new Date('2024-01-15'),
-      caseId: caseId || '1',
-      metadata: { status: 'active' }
-    },
-    {
-      id: '2',
-      type: 'document_uploaded',
-      title: 'رفع وثيقة',
-      description: 'تم رفع صك الملكية الأصلي',
-      performedBy: user?.id || '4',
-      performedAt: new Date('2024-01-20'),
-      caseId: caseId || '1',
-      metadata: { documentId: '1', documentTitle: 'صك الملكية الأصلي' }
-    },
-    {
-      id: '3',
-      type: 'hearing_scheduled',
-      title: 'تحديد موعد الجلسة',
-      description: 'تم تحديد موعد الجلسة القادمة',
-      performedBy: '2',
-      performedAt: new Date('2024-03-01'),
-      caseId: caseId || '1',
-      metadata: { hearingDate: '2024-10-25' }
-    }
-  ];
+  const [recipients, setRecipients] = useState<Array<{ id: number; name: string; role: string }>>([]);
+  const [selectedRecipient, setSelectedRecipient] = useState<number | null>(null);
 
   useEffect(() => {
     const loadCaseData = async () => {
@@ -85,16 +54,36 @@ const ClientCaseDetail: React.FC = () => {
 
       try {
         setIsLoading(true);
-        // جلب بيانات القضية
         const caseData = await CaseService.getCase(caseId);
         setCaseData(caseData);
 
-        // جلب الوثائق الخاصة بالقضية
         const documentsData = await DocumentService.getDocuments({ case_id: caseId });
-        setDocuments(documentsData.data);
+        setDocuments(documentsData.data || []);
 
-        // TODO: جلب الأنشطة من API
-        setActivities(mockActivities);
+        // Load recipients for messaging
+        try {
+          const recipientsData = await MessageService.getRecipients(parseInt(caseId));
+          setRecipients(recipientsData || []);
+          if (recipientsData?.length > 0) {
+            setSelectedRecipient(recipientsData[0].id);
+          }
+        } catch (e) {
+          console.error('Error loading recipients:', e);
+        }
+
+        // Mock activities
+        setActivities([
+          {
+            id: '1',
+            type: 'case_created',
+            title: 'إنشاء القضية',
+            description: 'تم إنشاء القضية',
+            performedBy: '2',
+            performedAt: new Date(caseData.created_at),
+            caseId: caseId,
+            metadata: { status: 'active' }
+          }
+        ]);
 
       } catch (error) {
         console.error('Error loading case data:', error);
@@ -121,32 +110,15 @@ const ClientCaseDetail: React.FC = () => {
 
       const newDocument = await DocumentService.uploadDocument(formData as any);
       setDocuments(prev => [...prev, newDocument]);
-      setUploadForm({ title: '', description: '', file: null, category: 'evidence' });
+      setUploadForm({ title: '', description: '', file: null, category: 'other' });
       setShowUploadModal(false);
-
-      // إضافة نشاط جديد
-      const newActivity: Activity = {
-        id: Date.now().toString(),
-        type: 'document_uploaded',
-        title: 'رفع وثيقة جديدة',
-        description: `تم رفع وثيقة: ${uploadForm.title}`,
-        performedBy: user?.id || '4',
-        performedAt: new Date(),
-        caseId: caseId || '1',
-        metadata: { documentId: newDocument.id, documentTitle: uploadForm.title }
-      };
-
-      setActivities([newActivity, ...activities]);
-
     } catch (error) {
       console.error('Error uploading file:', error);
-      // يمكن إضافة رسالة خطأ للمستخدم هنا
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // دالة معالجة إرسال التعليق
   const handleCommentSubmit = async (e: React.FormEvent, documentId: string) => {
     e.preventDefault();
     if (!commentText.trim()) return;
@@ -156,7 +128,6 @@ const ClientCaseDetail: React.FC = () => {
       await DocumentService.addComment(documentId, commentText);
       setCommentText('');
       setShowCommentForm(null);
-      // TODO: إعادة تحميل الوثائق لعرض التعليق الجديد
     } catch (error) {
       console.error('Error adding comment:', error);
     } finally {
@@ -166,40 +137,18 @@ const ClientCaseDetail: React.FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageForm.subject || !messageForm.message || !caseData) return;
+    if (!messageForm.message || !caseId || !selectedRecipient) return;
 
     try {
       setIsSubmitting(true);
-
-      // تحديد المحامي المستلم للرسالة (أول محامٍ في القضية)
-      const receiverId = caseData.lawyers?.[0]?.id || caseData.assignedLawyers?.[0] || '2';
-
       await MessageService.sendMessage({
-        subject: messageForm.subject,
-        content: messageForm.message,
-        receiver_id: receiverId,
-        case_id: caseId
+        case_id: parseInt(caseId),
+        recipient_id: selectedRecipient,
+        message: messageForm.message.trim(),
+        type: 'general'
       });
-
-      // إضافة نشاط جديد
-      const newActivity: Activity = {
-        id: Date.now().toString(),
-        type: 'message_sent',
-        title: 'إرسال رسالة',
-        description: `تم إرسال رسالة: ${messageForm.subject}`,
-        performedBy: user?.id || '4',
-        performedAt: new Date(),
-        caseId: caseId || '1',
-        metadata: {
-          subject: messageForm.subject,
-          message: messageForm.message
-        }
-      };
-
-      setActivities([newActivity, ...activities]);
-      setMessageForm({ subject: '', message: '' });
+      setMessageForm({ message: '' });
       setShowMessageModal(false);
-
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -208,20 +157,29 @@ const ClientCaseDetail: React.FC = () => {
   };
 
   const getCategoryName = (category: string) => {
-    const categories: { [key: string]: string } = {
+    const categories: Record<string, string> = {
       'contract': 'عقد',
       'evidence': 'دليل',
       'pleading': 'مذكرة',
       'correspondence': 'مراسلات',
       'report': 'تقرير',
       'judgment': 'حكم',
+      'court_document': 'وثيقة محكمة',
       'other': 'أخرى'
     };
     return categories[category] || category;
   };
 
+  const getRoleName = (role: string) => {
+    const roles: Record<string, string> = {
+      lawyer: 'محامي',
+      admin: 'مدير',
+      legal_assistant: 'مساعد قانوني'
+    };
+    return roles[role] || role;
+  };
+
   const handleDocumentPreview = (doc: Document) => {
-    // فتح معاينة الوثيقة في نافذة جديدة أو modal
     const previewUrl = `https://api.alraedlaw.com/api/v1/documents/${doc.id}/preview`;
     window.open(previewUrl, '_blank');
   };
@@ -242,21 +200,23 @@ const ClientCaseDetail: React.FC = () => {
     }
   };
 
-  const formatDate = (date: Date | string | undefined) => {
+  const formatDate = (date: Date | string | undefined | null) => {
     if (!date) return 'غير محدد';
-
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-
-    if (isNaN(dateObj.getTime())) return 'تاريخ غير صحيح';
-
-    return new Intl.DateTimeFormat('ar-SA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }).format(dateObj);
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) return 'غير محدد';
+      return new Intl.DateTimeFormat('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }).format(dateObj);
+    } catch {
+      return 'غير محدد';
+    }
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined | null) => {
+    if (!amount) return 'غير محدد';
     return new Intl.NumberFormat('ar-SA', {
       style: 'currency',
       currency: 'SAR',
@@ -264,35 +224,51 @@ const ClientCaseDetail: React.FC = () => {
     }).format(amount);
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      active: { color: 'var(--color-success)', bg: 'rgba(34, 197, 94, 0.1)', text: 'نشطة' },
-      pending: { color: 'var(--color-warning)', bg: 'rgba(251, 191, 36, 0.1)', text: 'قيد الانتظار' },
-      closed: { color: 'var(--color-text-secondary)', bg: 'rgba(107, 114, 128, 0.1)', text: 'مغلقة' },
-      settled: { color: 'var(--color-primary)', bg: 'rgba(59, 130, 246, 0.1)', text: 'مسوية' }
+  const getStatusText = (status: string) => {
+    const statusMap: Record<string, string> = {
+      active: 'نشطة',
+      pending: 'قيد الانتظار',
+      closed: 'مغلقة',
+      settled: 'مسوية',
+      appealed: 'مستأنفة',
+      dismissed: 'مرفوضة'
     };
+    return statusMap[status] || status;
+  };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.active;
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'document_uploaded':
+        return <Upload size={14} />;
+      case 'hearing_scheduled':
+        return <Calendar size={14} />;
+      case 'message_sent':
+        return <MessageSquare size={14} />;
+      case 'case_created':
+        return <CheckCircle size={14} />;
+      default:
+        return <Clock size={14} />;
+    }
+  };
 
-    return (
-      <span style={{
-        padding: '6px 12px',
-        borderRadius: '12px',
-        fontSize: 'var(--font-size-sm)',
-        fontWeight: 'var(--font-weight-medium)',
-        color: config.color,
-        backgroundColor: config.bg
-      }}>
-        {config.text}
-      </span>
-    );
+  const getActivityIconClass = (type: string) => {
+    switch (type) {
+      case 'document_uploaded':
+        return 'timeline-item__icon--document';
+      case 'hearing_scheduled':
+        return 'timeline-item__icon--hearing';
+      case 'message_sent':
+        return 'timeline-item__icon--message';
+      default:
+        return '';
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center min-h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="client-case-detail">
+        <div className="case-detail__loading">
+          <div className="case-detail__spinner"></div>
         </div>
       </div>
     );
@@ -300,13 +276,13 @@ const ClientCaseDetail: React.FC = () => {
 
   if (!caseData) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center py-12">
-          <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            لم يتم العثور على القضية
-          </h3>
-          <p className="text-gray-600">
+      <div className="client-case-detail">
+        <div className="case-detail__not-found">
+          <div className="case-detail__not-found-icon">
+            <AlertCircle size={28} />
+          </div>
+          <h3 className="case-detail__not-found-title">لم يتم العثور على القضية</h3>
+          <p className="case-detail__not-found-text">
             القضية المطلوبة غير موجودة أو ليس لديك صلاحية للوصول إليها
           </p>
         </div>
@@ -315,271 +291,252 @@ const ClientCaseDetail: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
+    <div className="client-case-detail">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              {caseData.title}
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              رقم الملف: {caseData.file_number}
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              رفع وثيقة
-            </button>
-            <button
-              onClick={() => setShowMessageModal(true)}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-            >
-              <MessageSquare className="h-4 w-4" />
-              إرسال رسالة
-            </button>
-          </div>
+      <div className="case-detail__header">
+        <div className="case-detail__title-section">
+          <h1 className="case-detail__title">{caseData.title}</h1>
+          <p className="case-detail__file-number">رقم الملف: {caseData.file_number}</p>
+          <span className={`case-detail__status case-detail__status--${caseData.status}`}>
+            {getStatusText(caseData.status)}
+          </span>
         </div>
-        {getStatusBadge(caseData.status)}
+        <div className="case-detail__actions">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="case-detail__btn case-detail__btn--primary"
+          >
+            <Upload size={18} />
+            رفع وثيقة
+          </button>
+          <button
+            onClick={() => setShowMessageModal(true)}
+            className="case-detail__btn case-detail__btn--success"
+          >
+            <MessageSquare size={18} />
+            إرسال رسالة
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Content */}
+      <div className="case-detail__content">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Case Details */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              تفاصيل القضية
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-2">الوصف</h3>
-                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {caseData.description}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">الطرف الآخر</h4>
-                  <p className="text-gray-600 dark:text-gray-400">{caseData.opponent_name}</p>
+        <div className="case-detail__main">
+          {/* Case Info Card */}
+          <div className="detail-card">
+            <div className="detail-card__header">
+              <h2 className="detail-card__title">
+                <FileText size={18} />
+                تفاصيل القضية
+              </h2>
+            </div>
+            <div className="detail-card__body">
+              {caseData.description && (
+                <p className="case-info__description">{caseData.description}</p>
+              )}
+              <div className="case-info__grid">
+                <div className="case-info__item">
+                  <span className="case-info__label">الطرف الآخر</span>
+                  <span className="case-info__value">
+                    <User size={14} style={{ marginLeft: 6, opacity: 0.5 }} />
+                    {caseData.opponent_name || 'غير محدد'}
+                  </span>
                 </div>
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">المحكمة</h4>
-                  <p className="text-gray-600 dark:text-gray-400">{caseData.court}</p>
+                <div className="case-info__item">
+                  <span className="case-info__label">المحكمة</span>
+                  <span className="case-info__value">
+                    <Building size={14} style={{ marginLeft: 6, opacity: 0.5 }} />
+                    {caseData.court || 'غير محدد'}
+                  </span>
                 </div>
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">القيمة المقدرة</h4>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {caseData.contract_value ? formatCurrency(caseData.contract_value) : 'غير محدد'}
-                  </p>
+                <div className="case-info__item">
+                  <span className="case-info__label">القيمة المقدرة</span>
+                  <span className="case-info__value">{formatCurrency(caseData.contract_value)}</span>
                 </div>
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">الجلسة القادمة</h4>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {caseData.next_hearing ? formatDate(caseData.next_hearing) : 'غير محدد'}
-                  </p>
+                <div className="case-info__item">
+                  <span className="case-info__label">الجلسة القادمة</span>
+                  <span className="case-info__value">
+                    <Calendar size={14} style={{ marginLeft: 6, opacity: 0.5 }} />
+                    {formatDate(caseData.next_hearing)}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Documents */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          {/* Documents Card */}
+          <div className="detail-card">
+            <div className="detail-card__header">
+              <h2 className="detail-card__title">
+                <Upload size={18} />
                 الوثائق ({documents.length})
               </h2>
               <button
                 onClick={() => setShowUploadModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                className="detail-card__action"
               >
-                <Upload className="h-4 w-4" />
+                <Upload size={14} />
                 رفع وثيقة
               </button>
             </div>
-
-            {documents.length === 0 ? (
-              <div className="text-center py-12">
-                <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  لا توجد وثائق
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  لم يتم رفع أي وثائق لهذه القضية بعد
-                </p>
-                <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-                >
-                  <Upload className="h-4 w-4" />
-                  رفع أول وثيقة
-                </button>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {documents.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+            <div className="detail-card__body">
+              {documents.length === 0 ? (
+                <div className="documents-empty">
+                  <div className="documents-empty__icon">
+                    <FileText size={28} />
+                  </div>
+                  <h3 className="documents-empty__title">لا توجد وثائق</h3>
+                  <p className="documents-empty__text">لم يتم رفع أي وثائق لهذه القضية بعد</p>
+                  <button
+                    onClick={() => setShowUploadModal(true)}
+                    className="case-detail__btn case-detail__btn--primary"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 flex-1">
-                        <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                          <FileText className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-gray-900 dark:text-white mb-1 truncate">
-                            {doc.title}
-                          </h4>
-                          {doc.description && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
-                              {doc.description}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                            <span>
-                              {formatDate(doc.uploaded_at || doc.uploadedAt)}
+                    <Upload size={16} />
+                    رفع أول وثيقة
+                  </button>
+                </div>
+              ) : (
+                <div className="documents-list">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="document-item">
+                      <div className="document-item__icon">
+                        <FileText size={20} />
+                      </div>
+                      <div className="document-item__content">
+                        <h4 className="document-item__title">{doc.title}</h4>
+                        {doc.description && (
+                          <p className="document-item__desc">{doc.description}</p>
+                        )}
+                        <div className="document-item__meta">
+                          <span className="document-item__meta-item">
+                            <Clock size={12} />
+                            {formatDate(doc.uploaded_at || doc.uploadedAt)}
+                          </span>
+                          {doc.file_size && (
+                            <span className="document-item__meta-item">
+                              {(doc.file_size / 1024 / 1024).toFixed(1)} MB
                             </span>
-                            {doc.file_size && (
-                              <span>
-                                {(doc.file_size / 1024 / 1024).toFixed(1)} MB
-                              </span>
-                            )}
-                            {doc.category && (
-                              <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs">
-                                {getCategoryName(doc.category)}
-                              </span>
-                            )}
-                            {doc.is_confidential && (
-                              <span className="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs">
-                                سري
-                              </span>
-                            )}
-                          </div>
+                          )}
+                          {doc.category && (
+                            <span className="document-item__badge document-item__badge--category">
+                              {getCategoryName(doc.category)}
+                            </span>
+                          )}
+                          {doc.is_confidential && (
+                            <span className="document-item__badge document-item__badge--confidential">
+                              سري
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
+                      <div className="document-item__actions">
                         <button
                           onClick={() => handleDocumentPreview(doc)}
-                          className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                          className="document-item__btn"
                           title="معاينة"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye size={16} />
                         </button>
                         <button
                           onClick={() => handleDocumentDownload(doc)}
-                          className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                          className="document-item__btn"
                           title="تحميل"
                         >
-                          <Download className="h-4 w-4" />
+                          <Download size={16} />
                         </button>
                         <button
                           onClick={() => setShowCommentForm(showCommentForm === parseInt(doc.id) ? null : parseInt(doc.id))}
-                          className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                          title="إضافة تعليق"
+                          className="document-item__btn"
+                          title="تعليق"
                         >
-                          <MessageCircle className="h-4 w-4" />
+                          <MessageCircle size={16} />
                         </button>
                       </div>
+                      {showCommentForm === parseInt(doc.id) && (
+                        <div className="comment-form">
+                          <form onSubmit={(e) => handleCommentSubmit(e, doc.id)}>
+                            <textarea
+                              value={commentText}
+                              onChange={(e) => setCommentText(e.target.value)}
+                              className="form-textarea"
+                              placeholder="اكتب تعليقك هنا..."
+                              rows={3}
+                              required
+                            />
+                            <div className="comment-form__actions">
+                              <button
+                                type="button"
+                                onClick={() => setShowCommentForm(null)}
+                                className="comment-btn comment-btn--cancel"
+                              >
+                                إلغاء
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="comment-btn comment-btn--submit"
+                              >
+                                {isSubmitting ? 'جاري الإرسال...' : 'إرسال'}
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Comment Form */}
-                    {showCommentForm === parseInt(doc.id) && (
-                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <form onSubmit={(e) => handleCommentSubmit(e, doc.id)} className="space-y-3">
-                          <textarea
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none dark:bg-gray-700 dark:text-white"
-                            placeholder="اكتب تعليقك هنا..."
-                            rows={3}
-                            required
-                          />
-                          <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setShowCommentForm(null)}
-                              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                            >
-                              إلغاء
-                            </button>
-                            <button
-                              type="submit"
-                              disabled={isSubmitting}
-                              className="px-4 py-1 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark disabled:opacity-50"
-                            >
-                              {isSubmitting ? 'جاري الإرسال...' : 'إرسال'}
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Timeline */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              المخطط الزمني
-            </h2>
-            <div className="space-y-4">
-              {activities.map((activity) => (
-                <div key={activity.id} className="flex space-x-3">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-full">
-                      {activity.type === 'document_uploaded' && <Upload className="h-4 w-4 text-white" />}
-                      {activity.type === 'hearing_scheduled' && <Calendar className="h-4 w-4 text-white" />}
-                      {activity.type === 'message_sent' && <MessageSquare className="h-4 w-4 text-white" />}
-                      {activity.type === 'case_created' && <CheckCircle className="h-4 w-4 text-white" />}
+        <div className="case-detail__sidebar">
+          {/* Timeline Card */}
+          <div className="detail-card">
+            <div className="detail-card__header">
+              <h2 className="detail-card__title">
+                <Clock size={18} />
+                المخطط الزمني
+              </h2>
+            </div>
+            <div className="detail-card__body">
+              <div className="timeline">
+                {activities.map((activity) => (
+                  <div key={activity.id} className="timeline-item">
+                    <div className={`timeline-item__icon ${getActivityIconClass(activity.type)}`}>
+                      {getActivityIcon(activity.type)}
+                    </div>
+                    <div className="timeline-item__content">
+                      <p className="timeline-item__title">{activity.description}</p>
+                      <span className="timeline-item__date">{formatDate(activity.performedAt)}</span>
                     </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {activity.description}
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      {formatDate(activity.performedAt)}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Quick Info */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              معلومات سريعة
-            </h2>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">تاريخ الإنشاء</span>
-                <span className="text-gray-900 dark:text-white">
-                  {formatDate(caseData.created_at)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">آخر تحديث</span>
-                <span className="text-gray-900 dark:text-white">
-                  {formatDate(caseData.updated_at)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">عدد الوثائق</span>
-                <span className="text-gray-900 dark:text-white">
-                  {documents.length}
-                </span>
+          {/* Quick Info Card */}
+          <div className="detail-card">
+            <div className="detail-card__header">
+              <h2 className="detail-card__title">معلومات سريعة</h2>
+            </div>
+            <div className="detail-card__body">
+              <div className="quick-info">
+                <div className="quick-info__item">
+                  <span className="quick-info__label">تاريخ الإنشاء</span>
+                  <span className="quick-info__value">{formatDate(caseData.created_at)}</span>
+                </div>
+                <div className="quick-info__item">
+                  <span className="quick-info__label">آخر تحديث</span>
+                  <span className="quick-info__value">{formatDate(caseData.updated_at)}</span>
+                </div>
+                <div className="quick-info__item">
+                  <span className="quick-info__label">عدد الوثائق</span>
+                  <span className="quick-info__value">{documents.length}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -588,174 +545,154 @@ const ClientCaseDetail: React.FC = () => {
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                رفع وثيقة جديدة
-              </h3>
+        <div className="case-modal-overlay" onClick={() => setShowUploadModal(false)}>
+          <div className="case-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="case-modal__header">
+              <h3 className="case-modal__title">رفع وثيقة جديدة</h3>
               <button
                 onClick={() => setShowUploadModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="case-modal__close"
               >
-                <X className="h-5 w-5" />
+                <X size={18} />
               </button>
             </div>
-
-            <form onSubmit={handleFileUpload} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  عنوان الوثيقة
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={uploadForm.title}
-                  onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="أدخل عنوان الوثيقة"
-                />
+            <form onSubmit={handleFileUpload}>
+              <div className="case-modal__body">
+                <div className="form-group">
+                  <label className="form-label">عنوان الوثيقة</label>
+                  <input
+                    type="text"
+                    required
+                    value={uploadForm.title}
+                    onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
+                    className="form-input"
+                    placeholder="أدخل عنوان الوثيقة"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">وصف الوثيقة (اختياري)</label>
+                  <textarea
+                    value={uploadForm.description}
+                    onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
+                    className="form-textarea"
+                    placeholder="أدخل وصفاً للوثيقة"
+                    rows={3}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">فئة الوثيقة</label>
+                  <select
+                    value={uploadForm.category}
+                    onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="evidence">أدلة</option>
+                    <option value="contract">عقود</option>
+                    <option value="correspondence">مراسلات</option>
+                    <option value="report">تقارير</option>
+                    <option value="court_document">وثائق المحكمة</option>
+                    <option value="other">أخرى</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">الملف</label>
+                  <input
+                    type="file"
+                    required
+                    onChange={(e) => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })}
+                    className="form-file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  />
+                </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  وصف الوثيقة
-                </label>
-                <textarea
-                  value={uploadForm.description}
-                  onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="أدخل وصفاً للوثيقة (اختياري)"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  فئة الوثيقة
-                </label>
-                <select
-                  value={uploadForm.category}
-                  onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="evidence">أدلة</option>
-                  <option value="contract">عقود</option>
-                  <option value="correspondence">مراسلات</option>
-                  <option value="report">تقارير</option>
-                  <option value="court_document">وثائق المحكمة</option>
-                  <option value="other">أخرى</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  الملف
-                </label>
-                <input
-                  type="file"
-                  required
-                  onChange={(e) => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
+              <div className="case-modal__footer">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-dark transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="modal-btn modal-btn--primary"
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 size={16} className="animate-spin" />
                       جاري الرفع...
                     </>
                   ) : (
-                    'رفع الوثيقة'
+                    <>
+                      <Upload size={16} />
+                      رفع الوثيقة
+                    </>
                   )}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowUploadModal(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                  className="modal-btn modal-btn--secondary"
                 >
                   إلغاء
                 </button>
               </div>
             </form>
-          </motion.div>
+          </div>
         </div>
       )}
 
       {/* Message Modal */}
       {showMessageModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                إرسال رسالة للمحامي
-              </h3>
+        <div className="case-modal-overlay" onClick={() => setShowMessageModal(false)}>
+          <div className="case-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="case-modal__header">
+              <h3 className="case-modal__title">إرسال رسالة</h3>
               <button
                 onClick={() => setShowMessageModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="case-modal__close"
               >
-                <X className="h-5 w-5" />
+                <X size={18} />
               </button>
             </div>
-
-            <form onSubmit={handleSendMessage} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  موضوع الرسالة
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={messageForm.subject}
-                  onChange={(e) => setMessageForm({ ...messageForm, subject: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="أدخل موضوع الرسالة"
-                />
+            <form onSubmit={handleSendMessage}>
+              <div className="case-modal__body">
+                <div className="form-group">
+                  <label className="form-label">المستلم</label>
+                  <select
+                    value={selectedRecipient || ''}
+                    onChange={(e) => setSelectedRecipient(parseInt(e.target.value))}
+                    className="form-select"
+                    required
+                  >
+                    <option value="">اختر المستلم</option>
+                    {recipients.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} ({getRoleName(r.role)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">نص الرسالة</label>
+                  <textarea
+                    required
+                    value={messageForm.message}
+                    onChange={(e) => setMessageForm({ ...messageForm, message: e.target.value })}
+                    className="form-textarea"
+                    placeholder="اكتب رسالتك هنا..."
+                    rows={5}
+                  />
+                </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  نص الرسالة
-                </label>
-                <textarea
-                  required
-                  value={messageForm.message}
-                  onChange={(e) => setMessageForm({ ...messageForm, message: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="أدخل نص الرسالة"
-                  rows={5}
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
+              <div className="case-modal__footer">
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  disabled={isSubmitting || !selectedRecipient}
+                  className="modal-btn modal-btn--success"
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 size={16} className="animate-spin" />
                       جاري الإرسال...
                     </>
                   ) : (
                     <>
-                      <Send className="h-4 w-4" />
+                      <Send size={16} />
                       إرسال
                     </>
                   )}
@@ -763,30 +700,15 @@ const ClientCaseDetail: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowMessageModal(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                  className="modal-btn modal-btn--secondary"
                 >
                   إلغاء
                 </button>
               </div>
             </form>
-          </motion.div>
+          </div>
         </div>
       )}
-
-      {/* Document Upload Modal */}
-      <DocumentUploadModal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        onUploadSuccess={async () => {
-          // Reload documents after successful upload
-          if (caseId) {
-            const documentsData = await DocumentService.getDocuments({ case_id: caseId });
-            setDocuments(documentsData.data);
-          }
-          setShowUploadModal(false);
-        }}
-        cases={caseData ? [caseData] : []}
-      />
     </div>
   );
 };

@@ -213,17 +213,43 @@ export class MessageService {
   }
 
   /**
-   * جلب رسائل قضية محددة (للمحامين والمدراء)
+   * جلب جميع رسائل قضية محددة (للمحامين والمدراء - يرى كل الرسائل)
    */
   static async getAllCaseMessages(caseId: number, page: number = 1, perPage: number = 50): Promise<CaseMessagesResponse> {
     const response = await apiClient.get<ApiResponse<CaseMessagesResponse>>(
-      `/messages/case/${caseId}?page=${page}&per_page=${perPage}`
+      `/messages/case/${caseId}/all?page=${page}&per_page=${perPage}`
     );
 
     if (response.success && response.data) {
       return response.data;
     } else {
       throw new Error(response.message || 'فشل في جلب الرسائل');
+    }
+  }
+
+  /**
+   * جلب المستلمين المتاحين لقضية (للمحامين والمدراء)
+   */
+  static async getRecipientsGeneral(caseId: number): Promise<Recipient[]> {
+    const response = await apiClient.get<ApiResponse<Recipient[]>>(`/messages/case/${caseId}/recipients`);
+
+    if (response.success && response.data) {
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في جلب المستلمين');
+    }
+  }
+
+  /**
+   * تحديد جميع رسائل قضية كمقروءة (للمحامين والمدراء)
+   */
+  static async markCaseAsReadGeneral(caseId: number): Promise<number> {
+    const response = await apiClient.put<ApiResponse<{ updated_count: number }>>(`/messages/case/${caseId}/read-all`);
+
+    if (response.success && response.data) {
+      return response.data.updated_count;
+    } else {
+      throw new Error(response.message || 'فشل في تحديث حالة الرسائل');
     }
   }
 
