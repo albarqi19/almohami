@@ -20,7 +20,8 @@ import {
     Star,
     Clock,
     Scale,
-    X
+    X,
+    ClipboardList
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,6 +53,8 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
         { icon: FileText, label: 'قضاياي', path: '/my-cases', roles: ['client'] },
         { icon: Upload, label: 'الوثائق', path: '/documents', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
         { icon: Clock, label: 'الأنشطة', path: '/activities', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
+        { icon: Users, label: 'العملاء', path: '/clients', roles: ['admin', 'lawyer', 'legal_assistant'] },
+        { icon: ClipboardList, label: 'الطلبات الإدارية', path: '/admin/requests', roles: ['admin', 'lawyer', 'legal_assistant'] },
     ];
 
     const settingsItems = [

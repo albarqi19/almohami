@@ -25,6 +25,9 @@ import RegisterTenantContent from './pages/RegisterTenantContent';
 import LandingPage from './pages/LandingPage';
 import Wekalat from './pages/Wekalat';
 import AccountStatus from './pages/AccountStatus';
+import Clients from './pages/Clients';
+import ClientDetailPage from './pages/ClientDetailPage';
+import AdminRequests from './pages/AdminRequests';
 
 function App() {
   return (
@@ -111,6 +114,21 @@ function App() {
             <Route path="notifications" element={<Notifications />} />
             <Route path="settings" element={<Settings />} />
             <Route path="whatsapp-settings" element={<WhatsappSettings />} />
+            <Route path="clients" element={
+              <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <Clients />
+              </ProtectedRoute>
+            } />
+            <Route path="clients/:clientId" element={
+              <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ClientDetailPage />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/requests" element={
+              <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <AdminRequests />
+              </ProtectedRoute>
+            } />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
