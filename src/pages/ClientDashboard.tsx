@@ -60,7 +60,14 @@ const ClientDashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get('/client/dashboard');
+      const response = await apiClient.get('/client/dashboard') as {
+        success: boolean;
+        data?: {
+          stats?: { total_cases?: number; active_cases?: number; documents_count?: number; upcoming_hearings?: number };
+          recent_activities?: RecentActivity[];
+          upcoming_events?: UpcomingEvent[];
+        };
+      };
       if (response.success && response.data) {
         setStats({
           totalCases: response.data.stats?.total_cases || 0,

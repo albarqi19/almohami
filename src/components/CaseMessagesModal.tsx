@@ -230,7 +230,7 @@ const CaseMessagesModal: React.FC<CaseMessagesModalProps> = ({
           ) : (
             <>
               {messages.map((msg, index) => {
-                const isMine = msg.sender_id === user?.id;
+                const isMine = msg.sender_id === (user?.id ? Number(user.id) : undefined);
                 const showAvatar = index === 0 || messages[index - 1].sender_id !== msg.sender_id;
 
                 return (
