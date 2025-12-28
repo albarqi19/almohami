@@ -2,6 +2,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import ClickUpSidebar from './ClickUpSidebar';
+import FloatingTimer from './FloatingTimer';
 import ClickUpHeader from './ClickUpHeader';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -103,6 +104,9 @@ const Layout: React.FC = () => {
           >
             <Outlet />
           </main>
+
+          {/* Floating Timer Widget */}
+          <FloatingTimer />
         </div>
 
         <style>{`

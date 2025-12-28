@@ -21,6 +21,7 @@ import {
 import { TaskService } from '../services/taskService';
 import { UserService } from '../services/UserService';
 import { TaskCommentService } from '../services/taskCommentService';
+import TaskTimer from '../components/TaskTimer';
 import type { Task, TaskComment, TaskStatus, Priority } from '../types';
 import '../styles/task-detail.css';
 
@@ -298,12 +299,11 @@ const TaskDetail: React.FC = () => {
               <div className="sidebar-label">
                 <Clock size={14} /> تتبع الوقت
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--quiet-gray-50)', padding: 8, borderRadius: 6 }}>
-                <span style={{ fontSize: 18, fontWeight: 600, fontFamily: 'monospace' }}>00:00:00</span>
-                <button style={{ background: '#10b981', border: 'none', borderRadius: '50%', width: 24, height: 24, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <Plus size={14} />
-                </button>
-              </div>
+              <TaskTimer
+                taskId={taskId!}
+                taskTitle={task.title}
+                caseTitle={(task as any).case?.title || task.caseId || ''}
+              />
             </div>
           </div>
 
