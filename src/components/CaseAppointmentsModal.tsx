@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { 
+import {
   Calendar,
   Clock,
   MapPin,
@@ -60,9 +60,9 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
     const date = dateTime instanceof Date ? dateTime : new Date(dateTime);
     return {
       date: date.toLocaleDateString('ar-SA'),
-      time: date.toLocaleTimeString('ar-SA', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      time: date.toLocaleTimeString('ar-SA', {
+        hour: '2-digit',
+        minute: '2-digit'
       })
     };
   };
@@ -270,7 +270,7 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
           <div className="space-y-4">
             {appointments.map((appointment) => {
               const { date, time } = formatDateTime(appointment.scheduled_at);
-              
+
               return (
                 <div
                   key={appointment.id}
@@ -292,7 +292,7 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
                           {appointment.priority === 'low' && '📝'}
                         </span>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                         <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
                           <Calendar className="w-4 h-4" />
@@ -328,8 +328,8 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
                         <div className="flex items-center space-x-2 space-x-reverse text-gray-600 mb-3">
                           <Users className="w-4 h-4" />
                           <span className="text-sm">
-                            المشاركون: {Array.isArray(appointment.attendees) 
-                              ? appointment.attendees.join('، ') 
+                            المشاركون: {Array.isArray(appointment.attendees)
+                              ? appointment.attendees.join('، ')
                               : appointment.attendees}
                           </span>
                         </div>
@@ -356,7 +356,7 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
                           </button>
                         </>
                       )}
-                      
+
                       {appointment.status === 'confirmed' && (
                         <button
                           onClick={() => handleStartAppointment(appointment.id)}
@@ -366,7 +366,7 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
                           <Play className="w-4 h-4" />
                         </button>
                       )}
-                      
+
                       {appointment.status === 'in_progress' && (
                         <button
                           onClick={() => handleCompleteAppointment(appointment.id)}

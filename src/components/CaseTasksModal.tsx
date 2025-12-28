@@ -1,9 +1,9 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  X, 
-  CheckSquare, 
-  User, 
+import {
+  X,
+  CheckSquare,
+  User,
   Calendar,
   Loader2,
   AlertCircle,
@@ -102,7 +102,7 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
   // وظائف الإجراءات السريعة
   const handleCompleteTask = async () => {
     if (!selectedTask) return;
-    
+
     try {
       await TaskService.updateTaskStatus(selectedTask.id, 'completed');
       await loadTasks(); // إعادة تحميل المهام
@@ -273,7 +273,7 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
                 المهام ({tasks.length})
               </h3>
             </div>
-            
+
             <div style={{
               flex: 1,
               overflow: 'auto',
@@ -354,7 +354,7 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
                           marginTop: '6px',
                           flexShrink: 0
                         }} />
-                        
+
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <h4 style={{
                             fontSize: 'var(--font-size-sm)',
@@ -367,7 +367,7 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
                           }}>
                             {task.title}
                           </h4>
-                          
+
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -384,7 +384,7 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
                             }}>
                               {getTaskStatusText(task.status)}
                             </span>
-                            
+
                             <span style={{
                               fontSize: 'var(--font-size-xs)',
                               color: 'white',
@@ -395,7 +395,7 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
                               {getPriorityText(task.priority)}
                             </span>
                           </div>
-                          
+
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -450,7 +450,7 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
                     {selectedTask.title}
                   </p>
                 </div>
-                
+
                 <div style={{
                   flex: 1,
                   display: 'flex',
@@ -477,7 +477,7 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
                       <CheckSquare size={16} style={{ color: 'var(--color-primary)' }} />
                       إجراءات سريعة
                     </h4>
-                    
+
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {[
                         { icon: CheckSquare, label: 'تسليم المهمة', color: 'var(--color-success)', onClick: handleCompleteTask },
@@ -540,7 +540,7 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
                       <MessageSquare size={16} style={{ color: 'var(--color-primary)' }} />
                       التعليقات ({comments.length})
                     </h4>
-                    
+
                     <div style={{
                       flex: 1,
                       overflowY: 'auto',
@@ -560,8 +560,8 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
                           }} />
                         </div>
                       ) : comments.length === 0 ? (
-                        <p style={{ 
-                          color: 'var(--color-text-tertiary)', 
+                        <p style={{
+                          color: 'var(--color-text-tertiary)',
                           fontSize: 'var(--font-size-sm)',
                           textAlign: 'center',
                           margin: '20px 0'
