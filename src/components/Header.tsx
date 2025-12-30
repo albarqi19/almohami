@@ -22,9 +22,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [theme, setTheme] = React.useState<ThemeMode>(() => {
-    // Load theme from localStorage or default to light
+    // Load theme from localStorage or default to classic
     const savedTheme = localStorage.getItem('theme') as ThemeMode;
-    return savedTheme && ['light', 'dark', 'classic'].includes(savedTheme) ? savedTheme : 'light';
+    return savedTheme && ['light', 'dark', 'classic'].includes(savedTheme) ? savedTheme : 'classic';
   });
   const [notifications] = React.useState(3);
   const [showUserMenu, setShowUserMenu] = React.useState(false);

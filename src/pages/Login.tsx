@@ -38,15 +38,18 @@ const Login: React.FC = () => {
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (!savedTheme) {
-      document.documentElement.classList.add('dark');
-      document.body.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+      document.documentElement.classList.add('classic');
+      document.body.classList.add('classic');
+      localStorage.setItem('theme', 'classic');
     } else if (savedTheme === 'dark') {
       document.documentElement.classList.add('dark');
       document.body.classList.add('dark');
+    } else if (savedTheme === 'classic') {
+      document.documentElement.classList.add('classic');
+      document.body.classList.add('classic');
     } else {
-      document.documentElement.classList.remove('dark');
-      document.body.classList.remove('dark');
+      document.documentElement.classList.remove('dark', 'classic');
+      document.body.classList.remove('dark', 'classic');
     }
   }, []);
 

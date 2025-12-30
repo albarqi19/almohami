@@ -36,7 +36,7 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const location = useLocation();
   const [theme, setTheme] = React.useState<ThemeMode>(() => {
     const savedTheme = localStorage.getItem('theme') as ThemeMode;
-    return savedTheme && ['light', 'dark', 'classic'].includes(savedTheme) ? savedTheme : 'light';
+    return savedTheme && ['light', 'dark', 'classic'].includes(savedTheme) ? savedTheme : 'classic';
   });
   const [notifications] = React.useState(3);
   const [showUserMenu, setShowUserMenu] = React.useState(false);
