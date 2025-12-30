@@ -1,24 +1,29 @@
-﻿import React from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-    FileText,
     User,
     Scale,
     ArrowLeft,
-    Clock
+    Clock,
+    Loader2
 } from 'lucide-react';
+import type { RecentCase } from '../../../services/dashboardService';
 
 interface CaseItem {
-    id: string;
+    id: string | number;
     title: string;
-    caseType: string;
-    client: string;
-    status: 'active' | 'pending' | 'closed';
+    caseType?: string;
+    case_type?: string;
+    client?: string;
+    client_name?: string;
+    status: 'active' | 'pending' | 'closed' | string;
     progress: number;
-    lastUpdate: string;
+    lastUpdate?: string;
+    last_update?: string;
 }
 
 interface CasesListWidgetProps {
-    cases?: CaseItem[];
+    cases?: RecentCase[] | CaseItem[];
     limit?: number;
     onCaseClick?: (caseItem: CaseItem) => void;
 }
@@ -34,46 +39,54 @@ const CasesListWidget: React.FC<CasesListWidgetProps> = ({
     limit = 5,
     onCaseClick
 }) => {
-    const defaultCases: CaseItem[] = [
-        {
-            id: '1',
-            title: 'القضية العقارية - نزاع ملكية',
-            caseType: 'عقارية',
-            client: 'أحمد محمد العتيبي',
-            status: 'active',
-            progress: 65,
-            lastUpdate: 'منذ ساعتين'
-        },
-        {
-            id: '2',
-            title: 'نزاع تجاري - خلاف شراكة',
-            caseType: 'تجارية',
-            client: 'شركة النور للتجارة',
-            status: 'active',
-            progress: 45,
-            lastUpdate: 'منذ 3 ساعات'
-        },
-        {
-            id: '3',
-            title: 'قضية عمالية - فصل تعسفي',
-            caseType: 'عمالية',
-            client: 'محمد سالم القحطاني',
-            status: 'pending',
-            progress: 30,
-            lastUpdate: 'أمس'
-        },
-        {
-            id: '4',
-            title: 'نزاع أسري - حضانة أطفال',
-            caseType: 'أسرية',
-            client: 'سارة أحمد',
-            status: 'active',
-            progress: 80,
-            lastUpdate: 'منذ 5 ساعات'
-        }
-    ];
+    const navigate = useNavigate();
 
-    const cases = (initialCases || defaultCases).slice(0, limit);
+    // تحويل البيانات من API إلى الشكل المتوقع
+    const normalizeCase = (c: RecentCase | CaseItem): CaseItem => ({
+        id: c.id,
+        title: c.title,
+        caseType: (c as RecentCase).case_type || (c as CaseItem).caseType || '',
+        client: (c as RecentCase).client_name || (c as CaseItem).client || '',
+        status: c.status,
+        progress: c.progress || 0,
+        lastUpdate: (c as RecentCase).last_update || (c as CaseItem).lastUpdate || ''
+    });
+
+    const cases = initialCases?.slice(0, limit).map(normalizeCase) || [];
+
+    // Loading state
+    if (!initialCases) {
+        return (
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '40px 20px',
+                gap: '12px'
+            }}>
+                <Loader2 size={24} style={{ animation: 'spin 1s linear infinite', color: 'var(--clickup-purple)' }} />
+                <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>جاري تحميل القضايا...</span>
+            </div>
+        );
+    }
+
+    // Empty state
+    if (cases.length === 0) {
+        return (
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '40px 20px',
+                gap: '12px'
+            }}>
+                <Scale size={32} style={{ color: 'var(--quiet-gray-400)' }} />
+                <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>لا توجد قضايا نشطة</span>
+            </div>
+        );
+    }
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -150,25 +163,31 @@ const CasesListWidget: React.FC<CasesListWidgetProps> = ({
                                 fontSize: '11px',
                                 color: 'var(--color-text-secondary)'
                             }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                    <User size={10} />
-                                    {caseItem.client}
-                                </span>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                    <Clock size={10} />
-                                    {caseItem.lastUpdate}
-                                </span>
+                                {caseItem.client && (
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                        <User size={10} />
+                                        {caseItem.client}
+                                    </span>
+                                )}
+                                {caseItem.lastUpdate && (
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                        <Clock size={10} />
+                                        {caseItem.lastUpdate}
+                                    </span>
+                                )}
                             </div>
 
                             {/* Progress */}
-                            <div style={{ marginTop: '6px' }}>
-                                <div className="progress-bar">
-                                    <div
-                                        className="progress-bar__fill progress-bar__fill--purple"
-                                        style={{ width: `${caseItem.progress}%` }}
-                                    />
+                            {caseItem.progress > 0 && (
+                                <div style={{ marginTop: '6px' }}>
+                                    <div className="progress-bar">
+                                        <div
+                                            className="progress-bar__fill progress-bar__fill--purple"
+                                            style={{ width: `${caseItem.progress}%` }}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 );
@@ -176,6 +195,7 @@ const CasesListWidget: React.FC<CasesListWidgetProps> = ({
 
             {/* View More */}
             <button
+                onClick={() => navigate('/cases')}
                 style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -201,6 +221,10 @@ const CasesListWidget: React.FC<CasesListWidgetProps> = ({
         .case-list-item:hover {
           background: var(--clickup-purple-light) !important;
           border-color: var(--clickup-purple) !important;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
         </div>

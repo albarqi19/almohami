@@ -1,25 +1,32 @@
-﻿import React from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Calendar,
     Clock,
     MapPin,
     ChevronRight,
-    Bell
+    Bell,
+    Loader2
 } from 'lucide-react';
+import type { UpcomingSession } from '../../../services/dashboardService';
 
 interface Session {
-    id: string;
-    title: string;
-    caseTitle: string;
-    date: Date;
+    id: string | number;
+    title?: string;
+    caseTitle?: string;
+    case_title?: string;
+    date: Date | string;
     time: string;
-    location: string;
-    type: 'hearing' | 'meeting' | 'deadline';
+    location?: string;
+    court?: string;
+    type: 'hearing' | 'meeting' | 'deadline' | string;
     isUrgent?: boolean;
+    is_urgent?: boolean;
+    days_until?: number;
 }
 
 interface SessionsWidgetProps {
-    sessions?: Session[];
+    sessions?: UpcomingSession[] | Session[];
     onSessionClick?: (session: Session) => void;
 }
 
@@ -27,63 +34,103 @@ const SessionsWidget: React.FC<SessionsWidgetProps> = ({
     sessions: initialSessions,
     onSessionClick
 }) => {
-    const defaultSessions: Session[] = [
-        {
-            id: '1',
-            title: 'جلسة استماع',
-            caseTitle: 'القضية العقارية',
-            date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-            time: '10:00 ص',
-            location: 'المحكمة العامة - الرياض',
-            type: 'hearing',
-            isUrgent: true
-        },
-        {
-            id: '2',
-            title: 'اجتماع مع الموكل',
-            caseTitle: 'نزاع تجاري',
-            date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
-            time: '02:00 م',
-            location: 'مكتب المحاماة',
-            type: 'meeting'
-        },
-        {
-            id: '3',
-            title: 'موعد تقديم المذكرة',
-            caseTitle: 'قضية عمالية',
-            date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            time: '11:59 م',
-            location: 'نظام ناجز',
-            type: 'deadline'
-        }
-    ];
+    const navigate = useNavigate();
 
-    const sessions = initialSessions || defaultSessions;
+    // تحويل البيانات من API إلى الشكل المتوقع
+    const normalizeSession = (s: UpcomingSession | Session): Session => ({
+        id: s.id,
+        title: (s as Session).title || getSessionTypeLabel((s as UpcomingSession).type || (s as Session).type),
+        caseTitle: (s as UpcomingSession).case_title || (s as Session).caseTitle || '',
+        date: typeof s.date === 'string' ? new Date(s.date) : s.date,
+        time: s.time || '09:00',
+        location: (s as UpcomingSession).court || (s as Session).location || (s as Session).court || '',
+        type: s.type || 'hearing',
+        isUrgent: (s as UpcomingSession).is_urgent || (s as Session).isUrgent || false,
+        days_until: (s as UpcomingSession).days_until
+    });
 
-    const formatDate = (date: Date) => {
-        const day = date.getDate();
+    const getSessionTypeLabel = (type: string): string => {
+        const labels: Record<string, string> = {
+            hearing: 'جلسة استماع',
+            meeting: 'اجتماع',
+            deadline: 'موعد نهائي',
+            consultation: 'استشارة'
+        };
+        return labels[type] || 'موعد';
+    };
+
+    const sessions = initialSessions?.slice(0, 3).map(normalizeSession) || [];
+
+    const formatDate = (date: Date | string) => {
+        const d = typeof date === 'string' ? new Date(date) : date;
+        const day = d.getDate();
         const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
             'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-        return { day, month: months[date.getMonth()] };
+        return { day, month: months[d.getMonth()] };
     };
 
-    const getTypeColor = (type: Session['type']) => {
-        const colors = {
+    const getTypeColor = (type: string) => {
+        const colors: Record<string, string> = {
             hearing: 'var(--clickup-purple)',
             meeting: 'var(--clickup-blue)',
-            deadline: 'var(--clickup-red)'
+            deadline: 'var(--clickup-red)',
+            consultation: 'var(--clickup-green)'
         };
-        return colors[type];
+        return colors[type] || 'var(--clickup-purple)';
     };
 
-    const getDaysRemaining = (date: Date) => {
+    const getDaysRemaining = (session: Session) => {
+        if (session.days_until !== undefined) {
+            const days = session.days_until;
+            if (days === 0) return 'اليوم';
+            if (days === 1) return 'غداً';
+            if (days < 0) return 'منتهي';
+            return `بعد ${days} أيام`;
+        }
+
+        const date = typeof session.date === 'string' ? new Date(session.date) : session.date;
         const now = new Date();
         const diff = date.getTime() - now.getTime();
         const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
         if (days === 0) return 'اليوم';
         if (days === 1) return 'غداً';
+        if (days < 0) return 'منتهي';
         return `بعد ${days} أيام`;
     };
+
+    // Loading state
+    if (!initialSessions) {
+        return (
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '40px 20px',
+                gap: '12px'
+            }}>
+                <Loader2 size={24} style={{ animation: 'spin 1s linear infinite', color: 'var(--clickup-orange)' }} />
+                <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>جاري تحميل الجلسات...</span>
+            </div>
+        );
+    }
+
+    // Empty state
+    if (sessions.length === 0) {
+        return (
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '40px 20px',
+                gap: '12px'
+            }}>
+                <Calendar size={32} style={{ color: 'var(--quiet-gray-400)' }} />
+                <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>لا توجد جلسات قادمة</span>
+            </div>
+        );
+    }
 
     return (
         <div>
@@ -94,10 +141,10 @@ const SessionsWidget: React.FC<SessionsWidgetProps> = ({
             </div>
 
             <div className="sessions-list">
-                {sessions.slice(0, 3).map((session) => {
+                {sessions.map((session) => {
                     const { day, month } = formatDate(session.date);
                     const typeColor = getTypeColor(session.type);
-                    const remaining = getDaysRemaining(session.date);
+                    const remaining = getDaysRemaining(session);
 
                     return (
                         <div
@@ -120,7 +167,7 @@ const SessionsWidget: React.FC<SessionsWidgetProps> = ({
                                             background: 'var(--clickup-red)'
                                         }} />
                                     )}
-                                    <span className="session-item__title">{session.title}</span>
+                                    <span className="session-item__title">{session.caseTitle || session.title}</span>
                                     <span style={{
                                         padding: '1px 5px',
                                         borderRadius: '3px',
@@ -132,6 +179,7 @@ const SessionsWidget: React.FC<SessionsWidgetProps> = ({
                                         {session.type === 'hearing' && 'جلسة'}
                                         {session.type === 'meeting' && 'اجتماع'}
                                         {session.type === 'deadline' && 'موعد'}
+                                        {!['hearing', 'meeting', 'deadline'].includes(session.type) && 'موعد'}
                                     </span>
                                 </div>
 
@@ -145,10 +193,12 @@ const SessionsWidget: React.FC<SessionsWidgetProps> = ({
                                     </span>
                                 </div>
 
-                                <div className="session-item__location">
-                                    <MapPin size={9} />
-                                    {session.location}
-                                </div>
+                                {session.location && (
+                                    <div className="session-item__location">
+                                        <MapPin size={9} />
+                                        {session.location}
+                                    </div>
+                                )}
                             </div>
 
                             <ChevronRight size={14} style={{ opacity: 0.4 }} />
@@ -156,6 +206,37 @@ const SessionsWidget: React.FC<SessionsWidgetProps> = ({
                     );
                 })}
             </div>
+
+            {/* View More */}
+            <button
+                onClick={() => navigate('/sessions')}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '10px',
+                    borderRadius: '6px',
+                    background: 'var(--quiet-gray-100)',
+                    color: 'var(--clickup-orange)',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    border: 'none',
+                    cursor: 'pointer',
+                    marginTop: '8px',
+                    width: '100%',
+                    transition: 'background 0.1s'
+                }}
+            >
+                عرض جميع الجلسات
+            </button>
+
+            <style>{`
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 };
