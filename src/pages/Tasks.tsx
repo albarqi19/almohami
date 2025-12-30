@@ -40,6 +40,7 @@ import type { Task, TaskStatus, Priority } from '../types';
 import { TaskService } from '../services/taskService';
 import { UserService } from '../services/UserService';
 import AddTaskModal from '../components/AddTaskModal';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import '../styles/tasks-page.css';
 
 // --- Constants & Types ---
@@ -135,7 +136,7 @@ const DroppableColumn = ({ id, title, count, color, children }: { id: string, ti
 
 // --- Cache Constants ---
 const TASKS_CACHE_KEY = 'tasks_data';
-const TASKS_CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+const TASKS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // --- Main Page Component ---
 const Tasks: React.FC = () => {
@@ -231,6 +232,13 @@ const Tasks: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // تحديث تلقائي عند العودة للصفحة وكل دقيقتين
+  useAutoRefresh({
+    onRefresh: loadTasks,
+    refetchOnFocus: true,
+    pollingInterval: 120, // كل 2 دقيقة
+  });
 
   const loadUsers = async () => {
     try {

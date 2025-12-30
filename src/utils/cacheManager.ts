@@ -19,8 +19,8 @@ export const CACHE_KEYS = {
 // Cache durations (in milliseconds)
 export const CACHE_DURATIONS = {
     SHORT: 2 * 60 * 1000,      // 2 minutes - للبيانات المتغيرة كثيراً
-    MEDIUM: 10 * 60 * 1000,    // 10 minutes - للبيانات المتغيرة أحياناً
-    LONG: 60 * 60 * 1000,      // 1 hour - للبيانات الثابتة نسبياً
+    MEDIUM: 5 * 60 * 1000,     // 5 minutes - للبيانات المتغيرة أحياناً
+    LONG: 15 * 60 * 1000,      // 15 minutes - للبيانات الثابتة نسبياً
 } as const;
 
 // Default durations for each cache key

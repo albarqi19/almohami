@@ -26,6 +26,7 @@ import type { Case, CaseStatus, CaseType, Priority } from '../types';
 import { CaseService } from '../services';
 import { UserService, type User as UserType } from '../services/UserService';
 import AddCaseModal from '../components/AddCaseModal';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 type ViewMode = 'grid' | 'table' | 'kanban';
 
@@ -68,7 +69,7 @@ const getLawyerName = (lawyers: unknown): string => {
 };
 
 const CACHE_KEY = 'cases_data';
-const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 const Cases: React.FC = () => {
 	const navigate = useNavigate();
@@ -215,6 +216,13 @@ const Cases: React.FC = () => {
 			return () => clearTimeout(timeout);
 		}
 	}, [searchTerm, statusFilter, typeFilter]);
+
+	// تحديث تلقائي عند العودة للصفحة وكل دقيقتين
+	useAutoRefresh({
+		onRefresh: () => fetchCases(pagination.currentPage, true),
+		refetchOnFocus: true,
+		pollingInterval: 120, // كل 2 دقيقة
+	});
 
 	const handleAddCase = async (caseData: any) => {
 		try {

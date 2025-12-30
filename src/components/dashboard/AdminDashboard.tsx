@@ -23,6 +23,7 @@ import ActivityFeedWidget from './widgets/ActivityFeedWidget';
 // Import Dashboard Service
 import { DashboardService } from '../../services/dashboardService';
 import type { DashboardStats, RecentCase, UpcomingSession, RecentActivity } from '../../services/dashboardService';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 // Cache keys
 const CACHE_KEYS = {
@@ -108,6 +109,13 @@ const AdminDashboard: React.FC = () => {
     useEffect(() => {
         loadDashboardData();
     }, []);
+
+    // تحديث تلقائي عند العودة للصفحة وكل دقيقة
+    useAutoRefresh({
+        onRefresh: () => loadDashboardData(true),
+        refetchOnFocus: true,
+        pollingInterval: 60, // كل دقيقة
+    });
 
     const getGreeting = () => {
         const hour = new Date().getHours();

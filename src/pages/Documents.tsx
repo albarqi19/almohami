@@ -49,10 +49,11 @@ import { DocumentService } from '../services/documentService';
 import { CaseService } from '../services/caseService';
 import { CloudStorageService } from '../services/cloudStorageService';
 import type { CloudStorageStatus, CloudStorageFile } from '../services/cloudStorageService';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import '../styles/documents-page.css';
 
 const CACHE_KEY = 'documents_data';
-const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 const Documents: React.FC = () => {
     const [documents, setDocuments] = useState<DocumentType[]>(() => {
@@ -237,6 +238,13 @@ const Documents: React.FC = () => {
             setLoading(false);
         }
     };
+
+    // تحديث تلقائي عند العودة للصفحة
+    useAutoRefresh({
+        onRefresh: loadData,
+        refetchOnFocus: true,
+        pollingInterval: 0, // بدون polling للمستندات
+    });
 
     const getFileIcon = (mimeType: string) => {
         const type = mimeType?.toLowerCase() || '';
