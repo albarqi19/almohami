@@ -142,7 +142,7 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange })
   // تعيين مسؤول للمهمة الفرعية
   const handleAssignUser = async (subtaskId: string, userId: string, userName: string) => {
     try {
-      // تحديث محلي فوري
+      // تحديث محلي فوري (Optimistic Update)
       setSubtasks(subtasks.map(s =>
         s.id === subtaskId
           ? { ...s, assigned_to: userId, assigned_to_name: userName }
@@ -150,10 +150,12 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange })
       ));
       setAssigneeDropdownId(null);
 
-      // TODO: إرسال للـ Backend عندما يكون الـ API جاهز
-      // await SubtaskService.assignSubtask(subtaskId, userId);
+      // إرسال للـ Backend
+      await SubtaskService.updateSubtask(subtaskId, { assigned_to: userId });
     } catch (error) {
       console.error('Failed to assign user:', error);
+      // إعادة تحميل البيانات عند الفشل
+      loadSubtasks();
     }
   };
 

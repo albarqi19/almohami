@@ -22,6 +22,8 @@ import { TaskService } from '../services/taskService';
 import { UserService } from '../services/UserService';
 import { TaskCommentService } from '../services/taskCommentService';
 import TaskTimer from '../components/TaskTimer';
+import SubtasksList from '../components/SubtasksList';
+import { TasksCache } from '../utils/tasksCache';
 import type { Task, TaskComment, TaskStatus, Priority } from '../types';
 import '../styles/task-detail.css';
 
@@ -93,8 +95,14 @@ const TaskDetail: React.FC = () => {
 
   const handleStatusChange = async (newStatus: TaskStatus) => {
     if (!task) return;
+    const updatedTask = { ...task, status: newStatus };
+
     // Optimistic update
-    setTask({ ...task, status: newStatus });
+    setTask(updatedTask);
+
+    // تحديث الكاش المركزي لصفحة المهام
+    TasksCache.updateTask(updatedTask);
+
     try {
       await TaskService.updateTaskStatus(taskId!, newStatus);
     } catch (error) {
@@ -171,23 +179,14 @@ const TaskDetail: React.FC = () => {
             />
           </div>
 
-          {/* Subtasks (Mockup) */}
+          {/* Subtasks */}
           <div className="task-section">
-            <div className="task-section-header">
-              <CheckSquare size={16} />
-              خطوات العمل (Subtasks)
-            </div>
-            <div className="checklist-item">
-              <div className="checklist-checkbox checked"><CheckCircle size={10} color="white" /></div>
-              <span className="checklist-text checked">مراجعة الملفات الأولية</span>
-            </div>
-            <div className="checklist-item">
-              <div className="checklist-checkbox"></div>
-              <span className="checklist-text">إعداد مسودة الرد</span>
-            </div>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--color-text-secondary)', background: 'none', border: 'none', marginTop: 8, cursor: 'pointer' }}>
-              <Plus size={14} /> إضافة خطوة فرعية
-            </button>
+            <SubtasksList
+              taskId={taskId!}
+              onProgressChange={(progress) => {
+                console.log('Subtasks progress:', progress);
+              }}
+            />
           </div>
 
           {/* Attachments (Mockup) */}

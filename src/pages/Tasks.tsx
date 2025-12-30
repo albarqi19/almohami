@@ -41,6 +41,7 @@ import { TaskService } from '../services/taskService';
 import { UserService } from '../services/UserService';
 import AddTaskModal from '../components/AddTaskModal';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { TasksCache, UsersCache } from '../utils/tasksCache';
 import '../styles/tasks-page.css';
 
 // --- Constants & Types ---
@@ -134,49 +135,16 @@ const DroppableColumn = ({ id, title, count, color, children }: { id: string, ti
 };
 
 
-// --- Cache Constants ---
-const TASKS_CACHE_KEY = 'tasks_data';
-const TASKS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
 // --- Main Page Component ---
 const Tasks: React.FC = () => {
   const navigate = useNavigate();
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    try {
-      const cached = localStorage.getItem(TASKS_CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < TASKS_CACHE_DURATION) {
-          return data.tasks || [];
-        }
-      }
-    } catch (e) { console.error('Cache error:', e); }
-    return [];
-  });
-  const [loading, setLoading] = useState(() => {
-    try {
-      const cached = localStorage.getItem(TASKS_CACHE_KEY);
-      if (cached) {
-        const { timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < TASKS_CACHE_DURATION) return false;
-      }
-    } catch (e) { }
-    return true;
-  });
+
+  // استخدام الكاش المركزي
+  const [tasks, setTasks] = useState<Task[]>(() => TasksCache.get());
+  const [loading, setLoading] = useState(() => TasksCache.get().length === 0);
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
   const [groupBy, setGroupBy] = useState<GroupBy>('status');
-  const [users, setUsers] = useState<{ [key: string]: { name: string; avatar?: string | null } }>(() => {
-    try {
-      const cached = localStorage.getItem(TASKS_CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < TASKS_CACHE_DURATION) {
-          return data.users || {};
-        }
-      }
-    } catch (e) { }
-    return {};
-  });
+  const [users, setUsers] = useState<{ [key: string]: { name: string; avatar?: string | null } }>(() => UsersCache.get());
 
   // Drag & Drop Sensors
   const sensors = useSensors(
@@ -192,17 +160,7 @@ const Tasks: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   useEffect(() => {
-    // Only fetch if no cached data exists
-    const cached = localStorage.getItem(TASKS_CACHE_KEY);
-    if (cached) {
-      try {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < TASKS_CACHE_DURATION && data.tasks?.length > 0) {
-          // Cache is valid, don't refetch
-          return;
-        }
-      } catch (e) { }
-    }
+    // تحميل البيانات دائماً عند فتح الصفحة لضمان التحديث
     loadTasks();
     loadUsers();
   }, []);
@@ -213,19 +171,8 @@ const Tasks: React.FC = () => {
       const response = await TaskService.getTasks({});
       const tasksData = response.data || [];
       setTasks(tasksData);
-      // Save to cache
-      const cached = localStorage.getItem(TASKS_CACHE_KEY);
-      let existingData = {};
-      if (cached) {
-        try {
-          const { data } = JSON.parse(cached);
-          existingData = data || {};
-        } catch (e) { }
-      }
-      localStorage.setItem(TASKS_CACHE_KEY, JSON.stringify({
-        data: { ...existingData, tasks: tasksData },
-        timestamp: Date.now()
-      }));
+      // حفظ في الكاش المركزي
+      TasksCache.set(tasksData);
     } catch (error) {
       console.error('Error loading tasks:', error);
     } finally {
@@ -248,19 +195,8 @@ const Tasks: React.FC = () => {
         usersMap[user.id] = { name: user.name };
       });
       setUsers(usersMap);
-      // Update cache with users
-      const cached = localStorage.getItem(TASKS_CACHE_KEY);
-      let existingData = {};
-      if (cached) {
-        try {
-          const { data } = JSON.parse(cached);
-          existingData = data || {};
-        } catch (e) { }
-      }
-      localStorage.setItem(TASKS_CACHE_KEY, JSON.stringify({
-        data: { ...existingData, users: usersMap },
-        timestamp: Date.now()
-      }));
+      // حفظ في الكاش المركزي
+      UsersCache.set(usersMap);
     } catch (error) {
       console.error('Error loading users:', error);
     }
@@ -299,9 +235,13 @@ const Tasks: React.FC = () => {
 
     if (newStatus) {
       // Optimistic Update
-      setTasks(prev => prev.map(t =>
+      const updatedTasks = tasks.map(t =>
         t.id === taskId ? { ...t, status: newStatus as TaskStatus } : t
-      ));
+      );
+      setTasks(updatedTasks);
+
+      // تحديث الكاش المركزي
+      TasksCache.set(updatedTasks);
 
       // Backend Update
       try {
