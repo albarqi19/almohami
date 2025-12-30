@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell,
   X,
@@ -10,119 +10,86 @@ import {
   Clock,
   Settings,
   CheckCheck,
-  Trash2
+  Trash2,
+  Loader2,
+  MessageSquare,
+  Calendar,
+  UserPlus,
+  RefreshCw
 } from 'lucide-react';
+import { NotificationService, type Notification as ApiNotification } from '../services/notificationService';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import '../styles/notification-center.css';
-
-interface Notification {
-  id: string;
-  type: 'info' | 'warning' | 'success' | 'error' | 'reminder' | 'task' | 'case' | 'document';
-  title: string;
-  message: string;
-  timestamp: Date;
-  isRead: boolean;
-  isImportant: boolean;
-  actionUrl?: string;
-  relatedId?: string;
-  sender?: string;
-}
 
 interface NotificationCenterProps {
   isOpen: boolean;
   onClose: () => void;
-  onNotificationClick?: (notification: Notification) => void;
+  onNotificationClick?: (notification: ApiNotification) => void;
 }
-
-// Mock notifications data
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'reminder',
-    title: 'موعد جلسة محكمة',
-    message: 'جلسة قضية النزاع التجاري مقررة غداً الساعة 10:00 صباحاً',
-    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-    isRead: false,
-    isImportant: true,
-    actionUrl: '/cases/1',
-    relatedId: 'case-1'
-  },
-  {
-    id: '2',
-    type: 'task',
-    title: 'مهمة جديدة مُسندة إليك',
-    message: 'تم إسناد مهمة "مراجعة العقد التجاري" إليك بواسطة أحمد محامي',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    isRead: false,
-    isImportant: false,
-    actionUrl: '/tasks/2',
-    relatedId: 'task-2',
-    sender: 'أحمد محامي'
-  },
-  {
-    id: '3',
-    type: 'document',
-    title: 'وثيقة جديدة مُضافة',
-    message: 'تم رفع وثيقة "تقرير الخبير" إلى قضية النزاع العقاري',
-    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-    isRead: true,
-    isImportant: false,
-    actionUrl: '/documents/3',
-    relatedId: 'doc-3',
-    sender: 'سارة محامية'
-  },
-  {
-    id: '4',
-    type: 'warning',
-    title: 'مهمة متأخرة',
-    message: 'مهمة "إعداد مذكرة الدفاع" تجاوزت الموعد المحدد',
-    timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
-    isRead: true,
-    isImportant: true,
-    actionUrl: '/tasks/4',
-    relatedId: 'task-4'
-  },
-  {
-    id: '5',
-    type: 'case',
-    title: 'تحديث حالة قضية',
-    message: 'تم تحديث حالة قضية "النزاع التجاري" إلى "قيد المراجعة"',
-    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    isRead: true,
-    isImportant: false,
-    actionUrl: '/cases/5',
-    relatedId: 'case-5',
-    sender: 'محمد محامي'
-  }
-];
 
 // ==================== Helper Functions ====================
 
 const getTypeIcon = (type: string) => {
   switch (type) {
-    case 'warning': return <AlertTriangle size={18} />;
+    case 'warning':
+    case 'task_overdue':
+    case 'task_due':
+      return <AlertTriangle size={18} />;
     case 'success': return <Check size={18} />;
     case 'error': return <X size={18} />;
-    case 'reminder': return <Clock size={18} />;
+    case 'hearing_reminder': return <Calendar size={18} />;
+    case 'task_assigned':
     case 'task': return <CheckCheck size={18} />;
+    case 'case_update':
+    case 'case_assigned':
     case 'case': return <FileText size={18} />;
+    case 'document_shared':
     case 'document': return <FileText size={18} />;
+    case 'new_message': return <MessageSquare size={18} />;
+    case 'user_created':
+    case 'new_client': return <UserPlus size={18} />;
+    case 'system': return <Settings size={18} />;
     default: return <Info size={18} />;
   }
 };
 
-const getIconClass = (type: string) => `nc-item__icon nc-item__icon--${type}`;
+const getIconClass = (type: string) => {
+  // Map API types to CSS classes
+  const typeMap: { [key: string]: string } = {
+    'task_assigned': 'task',
+    'task_due': 'warning',
+    'task_overdue': 'warning',
+    'case_update': 'case',
+    'case_assigned': 'case',
+    'document_shared': 'document',
+    'hearing_reminder': 'reminder',
+    'new_message': 'info',
+    'user_created': 'success',
+    'new_client': 'success',
+    'system': 'info',
+  };
+  const cssType = typeMap[type] || type;
+  return `nc-item__icon nc-item__icon--${cssType}`;
+};
 
-const formatTimestamp = (timestamp: Date) => {
+const formatTimestamp = (dateStr: string) => {
+  const timestamp = new Date(dateStr);
   const now = new Date();
   const diff = now.getTime() - timestamp.getTime();
   const minutes = Math.floor(diff / (1000 * 60));
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
+  if (minutes < 1) return 'الآن';
   if (minutes < 60) return `منذ ${minutes} دقيقة`;
   if (hours < 24) return `منذ ${hours} ساعة`;
   if (days < 7) return `منذ ${days} يوم`;
   return timestamp.toLocaleDateString('ar-SA');
+};
+
+// Check if notification is important based on type
+const isImportantType = (type: string) => {
+  return ['task_overdue', 'task_due', 'hearing_reminder', 'warning'].includes(type);
 };
 
 // ==================== Main Component ====================
@@ -132,40 +99,100 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   onClose,
   onNotificationClick
 }) => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'important'>('all');
+  const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState({ total: 0, unread: 0, read: 0 });
 
-  useEffect(() => {
-    setNotifications(mockNotifications);
+  // Load notifications from API
+  const loadNotifications = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await NotificationService.getNotifications({
+        per_page: 15
+      });
+      setNotifications(response.data);
+      setStats(response.stats);
+    } catch (err) {
+      console.error('Failed to load notifications:', err);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  // Load on open
+  useEffect(() => {
+    if (isOpen) {
+      loadNotifications();
+    }
+  }, [isOpen, loadNotifications]);
+
+  // Auto-refresh every 30 seconds when open
+  useAutoRefresh({
+    onRefresh: loadNotifications,
+    pollingInterval: 30,
+    enabled: isOpen,
+    minRefreshInterval: 10,
+  });
 
   const filteredNotifications = notifications.filter(notification => {
     switch (filter) {
-      case 'unread': return !notification.isRead;
-      case 'important': return notification.isImportant;
+      case 'unread': return !notification.is_read;
+      case 'important': return isImportantType(notification.type);
       default: return true;
     }
   });
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-  const importantCount = notifications.filter(n => n.isImportant && !n.isRead).length;
+  const unreadCount = stats.unread;
+  const importantCount = notifications.filter(n => isImportantType(n.type) && !n.is_read).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, isRead: true } : n)
-    );
+  const markAsRead = async (id: number | string) => {
+    try {
+      await NotificationService.markAsRead(id);
+      setNotifications(prev =>
+        prev.map(n => n.id === id ? { ...n, is_read: true } : n)
+      );
+      setStats(prev => ({ ...prev, unread: Math.max(0, prev.unread - 1), read: prev.read + 1 }));
+    } catch (err) {
+      console.error('Failed to mark as read:', err);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  const markAllAsRead = async () => {
+    try {
+      await NotificationService.markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setStats(prev => ({ ...prev, unread: 0, read: prev.total }));
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+  const deleteNotification = async (id: number | string) => {
+    try {
+      await NotificationService.deleteNotification(id);
+      const wasUnread = notifications.find(n => n.id === id)?.is_read === false;
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      setStats(prev => ({
+        total: prev.total - 1,
+        unread: wasUnread ? prev.unread - 1 : prev.unread,
+        read: wasUnread ? prev.read : prev.read - 1
+      }));
+    } catch (err) {
+      console.error('Failed to delete notification:', err);
+    }
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    if (!notification.isRead) markAsRead(notification.id);
+  const handleNotificationClick = (notification: ApiNotification) => {
+    if (!notification.is_read) markAsRead(notification.id);
+
+    // Navigate to action URL if available
+    if (notification.action_url) {
+      onClose();
+      navigate(notification.action_url);
+    }
+
     onNotificationClick?.(notification);
   };
 
@@ -185,8 +212,13 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               )}
             </h2>
             <div className="notification-center__actions">
-              <button className="notification-center__icon-btn" title="الإعدادات">
-                <Settings size={16} />
+              <button
+                className="notification-center__icon-btn"
+                title="تحديث"
+                onClick={loadNotifications}
+                disabled={isLoading}
+              >
+                <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
               </button>
               <button
                 className="notification-center__icon-btn notification-center__icon-btn--close"
@@ -206,7 +238,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 onClick={() => setFilter('all')}
               >
                 الكل
-                <span className="notification-center__tab-count">{notifications.length}</span>
+                <span className="notification-center__tab-count">{stats.total}</span>
               </button>
               <button
                 className={`notification-center__tab ${filter === 'unread' ? 'notification-center__tab--active' : ''}`}
@@ -235,11 +267,16 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
         {/* List */}
         <div className="notification-center__list">
-          {filteredNotifications.length > 0 ? (
+          {isLoading && notifications.length === 0 ? (
+            <div className="notification-center__loading">
+              <Loader2 size={24} className="animate-spin" />
+              <span>جاري تحميل الإشعارات...</span>
+            </div>
+          ) : filteredNotifications.length > 0 ? (
             filteredNotifications.map(notification => (
               <div
                 key={notification.id}
-                className={`nc-item ${!notification.isRead ? 'nc-item--unread' : ''}`}
+                className={`nc-item ${!notification.is_read ? 'nc-item--unread' : ''}`}
                 onClick={() => handleNotificationClick(notification)}
               >
                 <div className={getIconClass(notification.type)}>
@@ -250,8 +287,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   <div className="nc-item__header">
                     <h4 className="nc-item__title">
                       {notification.title}
-                      {!notification.isRead && <span className="nc-item__dot nc-item__dot--unread" />}
-                      {notification.isImportant && <span className="nc-item__dot nc-item__dot--important" />}
+                      {!notification.is_read && <span className="nc-item__dot nc-item__dot--unread" />}
+                      {isImportantType(notification.type) && <span className="nc-item__dot nc-item__dot--important" />}
                     </h4>
                   </div>
 
@@ -260,7 +297,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   <div className="nc-item__footer">
                     <span className="nc-item__time">
                       <Clock size={12} />
-                      {formatTimestamp(notification.timestamp)}
+                      {formatTimestamp(notification.created_at)}
                     </span>
                     <button
                       className="nc-item__delete"
