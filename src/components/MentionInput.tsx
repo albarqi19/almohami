@@ -4,6 +4,7 @@ import { UserService, type User } from '../services/UserService';
 interface MentionInputProps {
   value: string;
   onChange: (value: string) => void;
+  onMentionsChange?: (mentionedUserIds: string[]) => void;
   onSubmit?: () => void;
   placeholder?: string;
   disabled?: boolean;
@@ -20,6 +21,7 @@ interface MentionUser {
 const MentionInput: React.FC<MentionInputProps> = ({
   value,
   onChange,
+  onMentionsChange,
   onSubmit,
   placeholder = 'اكتب تعليقاً... استخدم @ للإشارة',
   disabled = false,
@@ -32,6 +34,7 @@ const MentionInput: React.FC<MentionInputProps> = ({
   const [filteredUsers, setFilteredUsers] = useState<MentionUser[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [cursorPosition, setCursorPosition] = useState(0);
+  const [mentionedUsers, setMentionedUsers] = useState<string[]>([]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mentionListRef = useRef<HTMLDivElement>(null);
@@ -157,6 +160,17 @@ const MentionInput: React.FC<MentionInputProps> = ({
       // إضافة الاسم مع @ في البداية ومسافة في النهاية
       const newValue = `${beforeMention}@${user.name} ${afterCursor}`;
       onChange(newValue);
+
+      // إضافة المستخدم للقائمة إذا لم يكن موجوداً
+      const newMentionedUsers = mentionedUsers.includes(user.id)
+        ? mentionedUsers
+        : [...mentionedUsers, user.id];
+      setMentionedUsers(newMentionedUsers);
+
+      // إرسال التحديث للـ parent
+      if (onMentionsChange) {
+        onMentionsChange(newMentionedUsers);
+      }
 
       // تحريك الكرسور بعد الاسم
       const newCursorPos = lastAtIndex + user.name.length + 2;

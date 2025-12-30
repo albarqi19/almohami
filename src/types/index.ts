@@ -305,6 +305,7 @@ export interface TaskComment {
 
 export interface CreateTaskCommentForm {
   comment: string;
+  mentions?: string[];
 }
 
 // Notifications

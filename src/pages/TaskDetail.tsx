@@ -24,6 +24,7 @@ import { UserService } from '../services/UserService';
 import { TaskCommentService } from '../services/taskCommentService';
 import TaskTimer from '../components/TaskTimer';
 import SubtasksList from '../components/SubtasksList';
+import MentionInput from '../components/MentionInput';
 import { TasksCache } from '../utils/tasksCache';
 import type { Task, TaskComment, TaskStatus, Priority } from '../types';
 import '../styles/task-detail.css';
@@ -50,6 +51,8 @@ const TaskDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [taskComments, setTaskComments] = useState<TaskComment[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [mentions, setMentions] = useState<string[]>([]);
+  const [submittingComment, setSubmittingComment] = useState(false);
   const [users, setUsers] = useState<Record<string, { name: string }>>({});
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
@@ -296,20 +299,60 @@ const TaskDetail: React.FC = () => {
             <div className="comment-box-wrapper">
               <div className="user-avatar">أ</div>
               <div className="comment-input-area">
-                <textarea
-                  className="comment-textarea"
-                  placeholder="اكتب تعليقاً... (@mention لذكر شخص)"
+                <MentionInput
                   value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
+                  onChange={setNewComment}
+                  onMentionsChange={setMentions}
+                  placeholder="اكتب تعليقاً... استخدم @ للإشارة"
+                  onSubmit={async () => {
+                    if (!newComment.trim() || submittingComment) return;
+                    try {
+                      setSubmittingComment(true);
+                      await TaskCommentService.createTaskComment(taskId!, {
+                        comment: newComment.trim(),
+                        mentions: mentions
+                      });
+                      setNewComment('');
+                      setMentions([]);
+                      loadComments();
+                    } catch (error) {
+                      console.error('Error adding comment:', error);
+                    } finally {
+                      setSubmittingComment(false);
+                    }
+                  }}
                 />
                 <div className="comment-actions">
                   <button
+                    onClick={async () => {
+                      if (!newComment.trim() || submittingComment) return;
+                      try {
+                        setSubmittingComment(true);
+                        await TaskCommentService.createTaskComment(taskId!, {
+                          comment: newComment.trim(),
+                          mentions: mentions
+                        });
+                        setNewComment('');
+                        setMentions([]);
+                        loadComments();
+                      } catch (error) {
+                        console.error('Error adding comment:', error);
+                      } finally {
+                        setSubmittingComment(false);
+                      }
+                    }}
+                    disabled={submittingComment || !newComment.trim()}
                     style={{
-                      background: 'var(--law-navy)', color: 'white', border: 'none',
-                      padding: '6px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer'
+                      background: submittingComment ? '#94a3b8' : 'var(--law-navy)',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px 14px',
+                      borderRadius: 6,
+                      fontSize: 13,
+                      cursor: submittingComment ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    إرسال
+                    {submittingComment ? 'جاري الإرسال...' : 'إرسال'}
                   </button>
                 </div>
               </div>
