@@ -162,9 +162,11 @@ export class TimeService {
    * Format seconds to HH:MM:SS.
    */
   static formatTime(seconds: number): string {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
+    // Ensure we have a positive integer
+    const totalSeconds = Math.max(0, Math.floor(Math.abs(seconds || 0)));
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 

@@ -13,11 +13,14 @@ import {
   Clock,
   Share2,
   Flag,
-  Plus
+  Plus,
+  Trash2,
+  CheckCircle
 } from 'lucide-react';
 import Modal from './Modal';
 import AddTaskModal from './AddTaskModal';
 import MentionInput from './MentionInput';
+import TaskTimer from './TaskTimer';
 import { TaskService } from '../services/taskService';
 import { TaskCommentService } from '../services/taskCommentService';
 import type { Task, TaskComment } from '../types';
@@ -109,6 +112,8 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
       setSubmittingComment(false);
     }
   };
+
+
 
   // وظائف الإجراءات السريعة
   const handleCompleteTask = async () => {
@@ -204,57 +209,13 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} size="xl" title="مهام القضية">
+      <Modal isOpen={isOpen} onClose={onClose} size="xl" title={`مهام القضية: ${caseTitle}`}>
         <div style={{
           display: 'flex',
           flexDirection: 'column',
-          height: '80vh',
-          maxHeight: '600px'
+          height: '70vh',
+          maxHeight: '550px'
         }}>
-          {/* Header */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '24px',
-            borderBottom: '1px solid var(--color-border)'
-          }}>
-            <div>
-              <h2 style={{
-                fontSize: 'var(--font-size-xl)',
-                fontWeight: 'var(--font-weight-bold)',
-                color: 'var(--color-text)',
-                margin: 0
-              }}>
-                مهام القضية
-              </h2>
-              <p style={{
-                fontSize: 'var(--font-size-sm)',
-                color: 'var(--color-text-tertiary)',
-                margin: '4px 0 0 0'
-              }}>
-                {caseTitle}
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '8px',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--color-text-tertiary)',
-                fontSize: 0
-              }}
-            >
-              <X size={20} />
-            </button>
-          </div>
-
           {/* Main Content */}
           <div style={{
             display: 'flex',
@@ -460,97 +421,112 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
             }}>
               {selectedTask ? (
                 <>
+                  {/* شريط الإجراءات: Timer + تسليم + حذف */}
                   <div style={{
-                    padding: '16px',
-                    borderBottom: '1px solid var(--color-border)'
+                    padding: '12px 16px',
+                    borderBottom: '1px solid var(--color-border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    backgroundColor: 'var(--color-background)'
                   }}>
-                    <h3 style={{
-                      fontSize: 'var(--font-size-md)',
-                      fontWeight: 'var(--font-weight-semibold)',
-                      color: 'var(--color-text)',
-                      margin: '0 0 4px 0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <MessageSquare size={16} style={{ color: 'var(--color-primary)' }} />
-                      تفاصيل المهمة والتعليقات
-                    </h3>
-                    <p style={{
-                      fontSize: 'var(--font-size-sm)',
-                      color: 'var(--color-text-tertiary)',
-                      margin: 0
-                    }}>
-                      {selectedTask.title}
-                    </p>
+                    {/* عنوان المهمة */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h4 style={{
+                        fontSize: 'var(--font-size-sm)',
+                        fontWeight: 'var(--font-weight-semibold)',
+                        color: 'var(--color-text)',
+                        margin: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {selectedTask.title}
+                      </h4>
+                    </div>
+
+                    {/* أزرار الإجراءات - ClickUp Minimal Style */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                      {/* زر التايمر المربوط بقاعدة البيانات */}
+                      <TaskTimer
+                        taskId={selectedTask.id}
+                        taskTitle={selectedTask.title}
+                        caseTitle={caseTitle}
+                        compact={true}
+                      />
+
+                      {/* زر التسليم */}
+                      <button
+                        onClick={handleCompleteTask}
+                        disabled={selectedTask.status === 'completed'}
+                        title="تسليم المهمة"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          padding: '4px 8px',
+                          backgroundColor: selectedTask.status === 'completed' ? 'var(--color-gray-200)' : 'var(--color-success)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          cursor: selectedTask.status === 'completed' ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <CheckCircle size={12} />
+                        {selectedTask.status === 'completed' ? '✓' : 'تسليم'}
+                      </button>
+
+                      {/* زر الحذف */}
+                      <button
+                        onClick={async () => {
+                          if (confirm('هل أنت متأكد من حذف هذه المهمة؟')) {
+                            try {
+                              await TaskService.deleteTask(selectedTask.id);
+                              setSelectedTask(null);
+                              loadTasks();
+                            } catch (error) {
+                              console.error('Error deleting task:', error);
+                              alert('فشل في حذف المهمة');
+                            }
+                          }
+                        }}
+                        title="حذف المهمة"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '4px',
+                          backgroundColor: 'transparent',
+                          color: 'var(--color-text-tertiary)',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = 'var(--color-error)';
+                          e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = 'var(--color-text-tertiary)';
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
 
                   <div style={{
                     flex: 1,
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '16px',
-                    padding: '16px'
+                    gap: '12px',
+                    padding: '16px',
+                    overflowY: 'auto'
                   }}>
-                    {/* إجراءات سريعة */}
-                    <div style={{
-                      padding: '16px',
-                      backgroundColor: 'var(--color-background)',
-                      borderRadius: '8px',
-                      border: '1px solid var(--color-border)'
-                    }}>
-                      <h4 style={{
-                        fontSize: 'var(--font-size-md)',
-                        fontWeight: 'var(--font-weight-semibold)',
-                        color: 'var(--color-text)',
-                        margin: '0 0 12px 0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}>
-                        <CheckSquare size={16} style={{ color: 'var(--color-primary)' }} />
-                        إجراءات سريعة
-                      </h4>
-
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {[
-                          { icon: CheckSquare, label: 'تسليم المهمة', color: 'var(--color-success)', onClick: handleCompleteTask },
-                          { icon: Clock, label: 'طلب تمديد', color: 'var(--color-warning)', onClick: handleRequestExtension },
-                          { icon: User, label: 'إضافة متابع', color: 'var(--color-info)', onClick: handleAddFollower },
-                          { icon: Share2, label: 'مشاركة', color: 'var(--color-purple-500)', onClick: handleShareTask },
-                          { icon: Flag, label: 'إبلاغ مشكلة', color: 'var(--color-error)', onClick: handleReportIssue }
-                        ].map((action, index) => (
-                          <button
-                            key={index}
-                            onClick={action.onClick}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: '6px 12px',
-                              backgroundColor: 'transparent',
-                              border: `1px solid ${action.color}`,
-                              borderRadius: '6px',
-                              color: action.color,
-                              fontSize: 'var(--font-size-xs)',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = action.color;
-                              e.currentTarget.style.color = 'white';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'transparent';
-                              e.currentTarget.style.color = action.color;
-                            }}
-                          >
-                            <action.icon size={12} />
-                            {action.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
 
                     {/* التعليقات */}
                     <div style={{

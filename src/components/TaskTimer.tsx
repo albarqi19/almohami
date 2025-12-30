@@ -7,9 +7,10 @@ interface TaskTimerProps {
   taskId: string;
   taskTitle?: string;
   caseTitle?: string;
+  compact?: boolean; // عرض مضغوط بدون سجل الوقت
 }
 
-const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle }) => {
+const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle, compact = false }) => {
   const { timerState, startTimer, stopTimer, isLoading } = useTimer();
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [totalSeconds, setTotalSeconds] = useState(0);
@@ -52,9 +53,11 @@ const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle }) =
   };
 
   const formatTime = (seconds: number): string => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
+    // Ensure we have a positive integer
+    const totalSeconds = Math.max(0, Math.floor(Math.abs(seconds || 0)));
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
@@ -77,6 +80,102 @@ const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle }) =
     ? totalSeconds + timerState.elapsedSeconds
     : totalSeconds;
 
+  // عرض مضغوط للاستخدام في النوافذ المحدودة
+  if (compact) {
+    return (
+      <div className="task-timer-compact">
+        <button
+          className={`task-timer-compact__btn ${isTimerForThisTask ? 'task-timer-compact__btn--running' : ''}`}
+          onClick={isTimerForThisTask ? handleStopTimer : handleStartTimer}
+          disabled={isLoading || (timerState.isRunning && !isTimerForThisTask)}
+          title={
+            timerState.isRunning && !isTimerForThisTask
+              ? 'يوجد تايمر نشط في مهمة أخرى'
+              : isTimerForThisTask
+                ? 'إيقاف التايمر'
+                : 'بدء تتبع الوقت'
+          }
+        >
+          {isLoading ? (
+            <span className="task-timer-compact__loader" />
+          ) : isTimerForThisTask ? (
+            <Pause size={14} />
+          ) : (
+            <Play size={14} />
+          )}
+          <span className="task-timer-compact__time">
+            {isTimerForThisTask ? formatTime(timerState.elapsedSeconds) : formatTime(totalSeconds)}
+          </span>
+        </button>
+
+        <style>{`
+          .task-timer-compact__btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: var(--color-surface-subtle, #f8f9fa);
+            border: 1px solid var(--color-border, #e5e5e5);
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: 'SF Mono', 'Consolas', monospace;
+            color: var(--color-text-secondary, #666);
+            cursor: pointer;
+            transition: all 0.15s ease;
+          }
+
+          .task-timer-compact__btn:hover:not(:disabled) {
+            background: var(--color-primary-soft, rgba(10, 25, 47, 0.08));
+            border-color: var(--color-primary, #0A192F);
+            color: var(--color-primary, #0A192F);
+          }
+
+          .task-timer-compact__btn--running {
+            background: var(--color-success, #1B998B);
+            border-color: var(--color-success, #1B998B);
+            color: white;
+            animation: compact-timer-pulse 2s infinite;
+          }
+
+          .task-timer-compact__btn--running:hover:not(:disabled) {
+            background: #178a7d;
+            border-color: #178a7d;
+            color: white;
+          }
+
+          @keyframes compact-timer-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(27, 153, 139, 0.3); }
+            50% { box-shadow: 0 0 0 4px rgba(27, 153, 139, 0); }
+          }
+
+          .task-timer-compact__btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+
+          .task-timer-compact__loader {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+          }
+
+          .task-timer-compact__time {
+            min-width: 55px;
+            text-align: center;
+          }
+
+          body.dark .task-timer-compact__btn {
+            background: var(--color-surface-subtle);
+            border-color: var(--color-border);
+          }
+        `}</style>
+      </div>
+    );
+  }
+
   return (
     <div className="task-timer">
       {/* Timer Display */}
@@ -93,8 +192,8 @@ const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle }) =
               timerState.isRunning && !isTimerForThisTask
                 ? 'يوجد تايمر نشط في مهمة أخرى'
                 : isTimerForThisTask
-                ? 'إيقاف التايمر'
-                : 'بدء التايمر'
+                  ? 'إيقاف التايمر'
+                  : 'بدء التايمر'
             }
           >
             {isLoading ? (

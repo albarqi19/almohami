@@ -50,10 +50,12 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (response && response.entry) {
         const entry = response.entry;
+        // Ensure elapsed_seconds is a positive integer
+        const elapsed = Math.max(0, Math.floor(response.elapsed_seconds || 0));
         setTimerState({
           isRunning: true,
           currentEntry: entry,
-          elapsedSeconds: response.elapsed_seconds,
+          elapsedSeconds: elapsed,
           taskId: entry.task_id,
           taskTitle: entry.task?.title || null,
           caseTitle: entry.task?.case?.title || null,
