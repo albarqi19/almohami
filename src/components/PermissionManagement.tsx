@@ -283,18 +283,25 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
       const response = await RoleService.getAllRoles({ per_page: 100 }) as any;
       console.log('📦 PermissionManagement: Roles response:', response);
 
-      const transformedRoles = response.data.map((role: ApiRole) => ({
-        ...role,
-        displayName: role.display_name,
-        isSystem: role.is_system,
-        userCount: role.users_count,
-        color: getRoleColor(role.name)
-      }));
+      // ✅ Only update roles if API returns non-empty data
+      if (response.data && response.data.length > 0) {
+        const transformedRoles = response.data.map((role: ApiRole) => ({
+          ...role,
+          displayName: role.display_name,
+          isSystem: role.is_system,
+          userCount: role.users_count,
+          color: getRoleColor(role.name)
+        }));
 
-      console.log('✨ PermissionManagement: Transformed roles:', transformedRoles);
-      setRoles(transformedRoles);
+        console.log('✨ PermissionManagement: Transformed roles:', transformedRoles);
+        setRoles(transformedRoles);
+      } else {
+        // Keep DEFAULT_ROLES when API returns empty
+        console.log('⚠️ PermissionManagement: API returned empty, keeping defaults');
+      }
     } catch (err) {
       console.error('❌ PermissionManagement Error loading roles:', err);
+      // Keep DEFAULT_ROLES on error
     } finally {
       setRolesLoading(false);
     }
