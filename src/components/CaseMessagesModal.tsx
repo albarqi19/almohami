@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { MessageService, type Message, type Recipient } from '../services/messageService';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import '../styles/case-messages-modal.css';
 
 interface CaseMessagesModalProps {
@@ -52,6 +53,24 @@ const CaseMessagesModal: React.FC<CaseMessagesModalProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // تحديث تلقائي للرسائل كل 5 ثواني عند فتح المودال
+  useAutoRefresh({
+    onRefresh: async () => {
+      if (isOpen && caseId) {
+        try {
+          const data = await MessageService.getAllCaseMessages(caseId);
+          setMessages(data.messages.data);
+        } catch (err) {
+          console.error('Failed to refresh messages:', err);
+        }
+      }
+    },
+    refetchOnFocus: true,
+    pollingInterval: 5, // كل 5 ثواني
+    enabled: isOpen && !!caseId, // فقط عند فتح المودال
+    minRefreshInterval: 3,
+  });
 
   const scrollToBottom = () => {
     setTimeout(() => {

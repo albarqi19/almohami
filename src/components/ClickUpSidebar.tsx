@@ -46,10 +46,10 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
     // Menu items configuration
     const menuItems = [
         { icon: Home, label: 'لوحة التحكم', path: '/dashboard', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
-        { icon: FileText, label: 'القضايا', path: '/cases', roles: ['admin', 'lawyer', 'legal_assistant'], badge: 3 },
+        { icon: FileText, label: 'القضايا', path: '/cases', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: FileCheck, label: 'الوكالات', path: '/wekalat', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: Calendar, label: 'الجلسات', path: '/sessions', roles: ['admin', 'lawyer', 'legal_assistant'], badge: 2 },
-        { icon: CheckSquare, label: 'المهام', path: '/tasks', roles: ['admin', 'lawyer', 'legal_assistant'], badge: 5 },
+        { icon: Calendar, label: 'الجلسات', path: '/sessions', roles: ['admin', 'lawyer', 'legal_assistant'] },
+        { icon: CheckSquare, label: 'المهام', path: '/tasks', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: FileText, label: 'قضاياي', path: '/my-cases', roles: ['client'] },
         { icon: MessageSquare, label: 'الرسائل', path: '/my-messages', roles: ['client'] },
         { icon: Upload, label: 'الوثائق', path: '/documents', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
@@ -59,9 +59,9 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
     ];
 
     const settingsItems = [
-        { icon: BarChart3, label: 'التقارير', path: '/reports', roles: ['admin', 'lawyer'] },
+        { icon: BarChart3, label: 'التقارير', path: '/reports', roles: ['admin'] },
         { icon: Users, label: 'المستخدمين', path: '/users', roles: ['admin'] },
-        { icon: Bell, label: 'التنبيهات', path: '/notifications', roles: ['admin', 'lawyer', 'legal_assistant', 'client'], badge: 12 },
+        { icon: Bell, label: 'التنبيهات', path: '/notifications', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
         { icon: MessageSquare, label: 'الواتساب', path: '/whatsapp-settings', roles: ['admin'] },
         { icon: Settings, label: 'الإعدادات', path: '/settings', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     ];
@@ -103,9 +103,6 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                     <span className="sidebar-link__label">{item.label}</span>
                 )}
 
-                {!isCollapsed && item.badge && (
-                    <span className="sidebar-link__badge">{item.badge}</span>
-                )}
             </NavLink>
         );
 
@@ -123,7 +120,6 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                                 sideOffset={10}
                             >
                                 {item.label}
-                                {item.badge && <span style={{ marginRight: '8px', opacity: 0.7 }}>({item.badge})</span>}
                             </Tooltip.Content>
                         </Tooltip.Portal>
                     </Tooltip.Root>

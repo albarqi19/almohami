@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { MessageService, type Conversation, type Message, type Recipient } from '../services/messageService';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import '../styles/client-messages.css';
 
 const ClientMessages: React.FC = () => {
@@ -117,6 +118,32 @@ const ClientMessages: React.FC = () => {
       console.error('Failed to load recipients:', err);
     }
   };
+
+  // تحديث تلقائي للمحادثات كل 10 ثواني
+  useAutoRefresh({
+    onRefresh: loadConversations,
+    refetchOnFocus: true,
+    pollingInterval: 10, // كل 10 ثواني
+    minRefreshInterval: 5,
+  });
+
+  // تحديث تلقائي للرسائل كل 5 ثواني عند فتح محادثة
+  useAutoRefresh({
+    onRefresh: async () => {
+      if (selectedCaseId) {
+        try {
+          const data = await MessageService.getCaseMessages(selectedCaseId);
+          setMessages(data.messages.data);
+        } catch (err) {
+          console.error('Failed to refresh messages:', err);
+        }
+      }
+    },
+    refetchOnFocus: true,
+    pollingInterval: 5, // كل 5 ثواني
+    enabled: !!selectedCaseId, // فقط عند فتح محادثة
+    minRefreshInterval: 3,
+  });
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedCaseId || !selectedRecipient) return;

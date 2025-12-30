@@ -32,7 +32,7 @@ const Sidebar: React.FC = () => {
     { icon: MessageSquare, label: 'رسائلي', path: '/my-messages', roles: ['client'] },
     { icon: Upload, label: 'الوثائق', path: '/documents', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { icon: Clock, label: 'سجل الأنشطة', path: '/activities', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
-    { icon: BarChart3, label: 'التقارير', path: '/reports', roles: ['admin', 'lawyer'] },
+    { icon: BarChart3, label: 'التقارير', path: '/reports', roles: ['admin'] },
     { icon: Users, label: 'المستخدمين', path: '/users', roles: ['admin'] },
     { icon: Bell, label: 'التنبيهات', path: '/notifications', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { icon: MessageSquare, label: 'إعدادات الواتساب', path: '/whatsapp-settings', roles: ['admin'] },
