@@ -125,8 +125,11 @@ const Cases: React.FC = () => {
 
 	const fetchCases = async (page = 1, forceRefresh = false) => {
 		try {
-			// Check cache first (if not forcing refresh)
-			if (!forceRefresh) {
+			// Only use cache for first page without filters (and not forcing refresh)
+			const hasFilters = searchTerm || statusFilter !== 'all' || typeFilter !== 'all';
+			const shouldUseCache = !forceRefresh && page === 1 && !hasFilters;
+
+			if (shouldUseCache) {
 				const cached = localStorage.getItem(CACHE_KEY);
 				if (cached) {
 					const { data, timestamp } = JSON.parse(cached);
@@ -159,8 +162,8 @@ const Cases: React.FC = () => {
 			setCases(data);
 			setPagination(paginationData);
 
-			// Save to cache (only if no filters)
-			if (!searchTerm && statusFilter === 'all' && typeFilter === 'all') {
+			// Save to cache (only for first page without filters)
+			if (page === 1 && !hasFilters) {
 				localStorage.setItem(CACHE_KEY, JSON.stringify({
 					data: { cases: data, pagination: paginationData },
 					timestamp: Date.now()
@@ -172,6 +175,7 @@ const Cases: React.FC = () => {
 			setLoading(false);
 		}
 	};
+
 
 	const fetchUsersData = async () => {
 		try {
