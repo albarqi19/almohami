@@ -49,8 +49,16 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
-  // States for Roles & Permissions
-  const [roles, setRoles] = useState<Role[]>([]);
+  // States for Roles & Permissions - with fallback defaults
+  const DEFAULT_ROLES = [
+    { id: 'admin', name: 'admin', displayName: 'مدير النظام', description: '', isSystem: true, is_system: true, userCount: 0, color: 'var(--color-red-500)', permissions: [], guard_name: 'web', tenant_id: null, users_count: 0, permissions_count: 0, created_at: '', updated_at: '' },
+    { id: 'partner', name: 'partner', displayName: 'شريك', description: '', isSystem: true, is_system: true, userCount: 0, color: 'var(--color-blue-500)', permissions: [], guard_name: 'web', tenant_id: null, users_count: 0, permissions_count: 0, created_at: '', updated_at: '' },
+    { id: 'senior_lawyer', name: 'senior_lawyer', displayName: 'محامي أول', description: '', isSystem: true, is_system: true, userCount: 0, color: 'var(--color-green-500)', permissions: [], guard_name: 'web', tenant_id: null, users_count: 0, permissions_count: 0, created_at: '', updated_at: '' },
+    { id: 'lawyer', name: 'lawyer', displayName: 'محامي', description: '', isSystem: true, is_system: true, userCount: 0, color: 'var(--color-teal-500)', permissions: [], guard_name: 'web', tenant_id: null, users_count: 0, permissions_count: 0, created_at: '', updated_at: '' },
+    { id: 'legal_assistant', name: 'legal_assistant', displayName: 'مساعد قانوني', description: '', isSystem: true, is_system: true, userCount: 0, color: 'var(--color-yellow-500)', permissions: [], guard_name: 'web', tenant_id: null, users_count: 0, permissions_count: 0, created_at: '', updated_at: '' },
+    { id: 'client', name: 'client', displayName: 'عميل', description: '', isSystem: true, is_system: true, userCount: 0, color: 'var(--color-purple-500)', permissions: [], guard_name: 'web', tenant_id: null, users_count: 0, permissions_count: 0, created_at: '', updated_at: '' },
+  ] as Role[];
+  const [roles, setRoles] = useState<Role[]>(DEFAULT_ROLES);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [rolesLoading, setRolesLoading] = useState(true);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
@@ -1097,136 +1105,136 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
               gap: '24px'
             }}>
               {roles.map(role => (
-            <motion.div
-              key={role.id}
-              whileHover={{ scale: 1.02 }}
-              style={{
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '12px',
-                padding: '20px',
-                cursor: 'pointer'
-              }}
-            >
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: '16px'
-              }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  backgroundColor: `${role.color}15`,
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <Shield style={{ height: '24px', width: '24px', color: role.color }} />
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {role.isSystem && (
-                    <span style={{
-                      padding: '4px 8px',
-                      fontSize: 'var(--font-size-xs)',
-                      backgroundColor: 'var(--color-blue-100)',
-                      color: 'var(--color-blue-600)',
-                      borderRadius: '4px'
+                <motion.div
+                  key={role.id}
+                  whileHover={{ scale: 1.02 }}
+                  style={{
+                    backgroundColor: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{
+                      width: '48px',
+                      height: '48px',
+                      backgroundColor: `${role.color}15`,
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}>
-                      نظام
-                    </span>
-                  )}
-                  <button
-                    style={{
-                      padding: '6px',
-                      backgroundColor: 'transparent',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
+                      <Shield style={{ height: '24px', width: '24px', color: role.color }} />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {role.isSystem && (
+                        <span style={{
+                          padding: '4px 8px',
+                          fontSize: 'var(--font-size-xs)',
+                          backgroundColor: 'var(--color-blue-100)',
+                          color: 'var(--color-blue-600)',
+                          borderRadius: '4px'
+                        }}>
+                          نظام
+                        </span>
+                      )}
+                      <button
+                        style={{
+                          padding: '6px',
+                          backgroundColor: 'transparent',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          color: 'var(--color-text-secondary)'
+                        }}
+                      >
+                        <Edit2 style={{ height: '14px', width: '14px' }} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <h3 style={{
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--color-text)',
+                    margin: 0,
+                    marginBottom: '8px'
+                  }}>
+                    {role.displayName}
+                  </h3>
+
+                  <p style={{
+                    fontSize: 'var(--font-size-sm)',
+                    color: 'var(--color-text-secondary)',
+                    margin: 0,
+                    marginBottom: '16px'
+                  }}>
+                    {role.description}
+                  </p>
+
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '16px'
+                  }}>
+                    <span style={{
+                      fontSize: 'var(--font-size-sm)',
                       color: 'var(--color-text-secondary)'
-                    }}
-                  >
-                    <Edit2 style={{ height: '14px', width: '14px' }} />
-                  </button>
-                </div>
-              </div>
+                    }}>
+                      {role.userCount} مستخدم
+                    </span>
+                    <span style={{
+                      fontSize: 'var(--font-size-sm)',
+                      color: 'var(--color-text-secondary)'
+                    }}>
+                      {role.permissions.length} صلاحية
+                    </span>
+                  </div>
 
-              <h3 style={{
-                fontSize: 'var(--font-size-lg)',
-                fontWeight: 'var(--font-weight-semibold)',
-                color: 'var(--color-text)',
-                margin: 0,
-                marginBottom: '8px'
-              }}>
-                {role.displayName}
-              </h3>
-
-              <p style={{
-                fontSize: 'var(--font-size-sm)',
-                color: 'var(--color-text-secondary)',
-                margin: 0,
-                marginBottom: '16px'
-              }}>
-                {role.description}
-              </p>
-
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '16px'
-              }}>
-                <span style={{
-                  fontSize: 'var(--font-size-sm)',
-                  color: 'var(--color-text-secondary)'
-                }}>
-                  {role.userCount} مستخدم
-                </span>
-                <span style={{
-                  fontSize: 'var(--font-size-sm)',
-                  color: 'var(--color-text-secondary)'
-                }}>
-                  {role.permissions.length} صلاحية
-                </span>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '6px'
-              }}>
-                {role.permissions.slice(0, 3).map(permissionName => {
-                  const permission = permissions.find(p => p.name === permissionName);
-                  return permission ? (
-                    <span
-                      key={permissionName}
-                      style={{
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '6px'
+                  }}>
+                    {role.permissions.slice(0, 3).map(permissionName => {
+                      const permission = permissions.find(p => p.name === permissionName);
+                      return permission ? (
+                        <span
+                          key={permissionName}
+                          style={{
+                            padding: '2px 6px',
+                            fontSize: 'var(--font-size-xs)',
+                            backgroundColor: 'var(--color-secondary)',
+                            color: 'var(--color-text-secondary)',
+                            borderRadius: '4px'
+                          }}
+                        >
+                          {permission.display_name}
+                        </span>
+                      ) : null;
+                    })}
+                    {role.permissions.length > 3 && (
+                      <span style={{
                         padding: '2px 6px',
                         fontSize: 'var(--font-size-xs)',
                         backgroundColor: 'var(--color-secondary)',
                         color: 'var(--color-text-secondary)',
                         borderRadius: '4px'
-                      }}
-                    >
-                      {permission.display_name}
-                    </span>
-                  ) : null;
-                })}
-                {role.permissions.length > 3 && (
-                  <span style={{
-                    padding: '2px 6px',
-                    fontSize: 'var(--font-size-xs)',
-                    backgroundColor: 'var(--color-secondary)',
-                    color: 'var(--color-text-secondary)',
-                    borderRadius: '4px'
-                  }}>
-                    +{role.permissions.length - 3}
-                  </span>
-                )}
-              </div>
-            </motion.div>
+                      }}>
+                        +{role.permissions.length - 3}
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
               ))}
             </div>
           )}
@@ -1252,81 +1260,81 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
                   acc[permission.category].push(permission);
                   return acc;
                 }, {} as Record<string, Permission[]>)
-          ).map(([category, categoryPermissions]) => (
-            <div
-              key={category}
-              style={{
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '12px',
-                padding: '20px',
-                marginBottom: '24px'
-              }}
-            >
-              <h3 style={{
-                fontSize: 'var(--font-size-lg)',
-                fontWeight: 'var(--font-weight-semibold)',
-                color: 'var(--color-text)',
-                margin: 0,
-                marginBottom: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <Shield style={{ height: '20px', width: '20px', color: 'var(--color-primary)' }} />
-                {getCategoryDisplayName(category)}
-              </h3>
+              ).map(([category, categoryPermissions]) => (
+                <div
+                  key={category}
+                  style={{
+                    backgroundColor: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    marginBottom: '24px'
+                  }}
+                >
+                  <h3 style={{
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--color-text)',
+                    margin: 0,
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <Shield style={{ height: '20px', width: '20px', color: 'var(--color-primary)' }} />
+                    {getCategoryDisplayName(category)}
+                  </h3>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: '12px'
-              }}>
-                {categoryPermissions.map(permission => (
-                  <div
-                    key={permission.id}
-                    style={{
-                      padding: '12px',
-                      backgroundColor: 'var(--color-background)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: '8px'
-                    }}
-                  >
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      marginBottom: '8px'
-                    }}>
-                      <h4 style={{
-                        fontSize: 'var(--font-size-sm)',
-                        fontWeight: 'var(--font-weight-medium)',
-                        color: 'var(--color-text)',
-                        margin: 0
-                      }}>
-                        {permission.display_name}
-                      </h4>
-                      <span style={{
-                        padding: '2px 6px',
-                        fontSize: 'var(--font-size-xs)',
-                        backgroundColor: 'var(--color-secondary)',
-                        color: 'var(--color-text-secondary)',
-                        borderRadius: '4px'
-                      }}>
-                        {permission.name}
-                      </span>
-                    </div>
-                    <p style={{
-                      fontSize: 'var(--font-size-xs)',
-                      color: 'var(--color-text-secondary)',
-                      margin: 0
-                    }}>
-                      {permission.description}
-                    </p>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    gap: '12px'
+                  }}>
+                    {categoryPermissions.map(permission => (
+                      <div
+                        key={permission.id}
+                        style={{
+                          padding: '12px',
+                          backgroundColor: 'var(--color-background)',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '8px'
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          marginBottom: '8px'
+                        }}>
+                          <h4 style={{
+                            fontSize: 'var(--font-size-sm)',
+                            fontWeight: 'var(--font-weight-medium)',
+                            color: 'var(--color-text)',
+                            margin: 0
+                          }}>
+                            {permission.display_name}
+                          </h4>
+                          <span style={{
+                            padding: '2px 6px',
+                            fontSize: 'var(--font-size-xs)',
+                            backgroundColor: 'var(--color-secondary)',
+                            color: 'var(--color-text-secondary)',
+                            borderRadius: '4px'
+                          }}>
+                            {permission.name}
+                          </span>
+                        </div>
+                        <p style={{
+                          fontSize: 'var(--font-size-xs)',
+                          color: 'var(--color-text-secondary)',
+                          margin: 0
+                        }}>
+                          {permission.description}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
               ))}
             </>
           )}
