@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ChevronRight,
+  ChevronDown,
   User,
   Calendar,
   Clock,
@@ -50,6 +51,7 @@ const TaskDetail: React.FC = () => {
   const [taskComments, setTaskComments] = useState<TaskComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [users, setUsers] = useState<Record<string, { name: string }>>({});
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
   useEffect(() => {
     if (taskId) {
@@ -140,10 +142,89 @@ const TaskDetail: React.FC = () => {
           </button>
           <span className="task-id-badge">#{taskId?.slice(0, 6)}</span>
 
-          {/* Status Dropdown Trigger (Simplified for UI) */}
-          <div className="status-select-btn" style={{ backgroundColor: currentStatus.color + '20', color: currentStatus.color }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: currentStatus.color }}></span>
-            {currentStatus.label}
+          {/* Status Dropdown */}
+          <div style={{ position: 'relative' }}>
+            <button
+              className="status-select-btn"
+              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+              style={{
+                backgroundColor: currentStatus.color + '20',
+                color: currentStatus.color,
+                cursor: 'pointer',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 500
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: currentStatus.color }}></span>
+              {currentStatus.label}
+              <ChevronDown size={14} />
+            </button>
+
+            {showStatusDropdown && (
+              <>
+                {/* Backdrop */}
+                <div
+                  style={{
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 99
+                  }}
+                  onClick={() => setShowStatusDropdown(false)}
+                />
+                {/* Dropdown */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: 4,
+                    background: 'var(--color-surface, #fff)',
+                    border: '1px solid var(--color-border, #e5e5e5)',
+                    borderRadius: 8,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                    zIndex: 100,
+                    minWidth: 160,
+                    overflow: 'hidden'
+                  }}
+                >
+                  {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        handleStatusChange(key as TaskStatus);
+                        setShowStatusDropdown(false);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        width: '100%',
+                        padding: '10px 14px',
+                        background: task?.status === key ? 'var(--color-surface-subtle, #f8f9fa)' : 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 13,
+                        color: config.color,
+                        textAlign: 'right',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-surface-subtle, #f8f9fa)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = task?.status === key ? 'var(--color-surface-subtle, #f8f9fa)' : 'transparent'}
+                    >
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: config.color }}></span>
+                      {config.label}
+                      {task?.status === key && <CheckCircle size={14} style={{ marginRight: 'auto' }} />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
