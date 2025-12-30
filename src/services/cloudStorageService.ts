@@ -8,6 +8,9 @@ export interface CloudStorageStatus {
     connected_at?: string;
     expires_at?: string;
     is_expired?: boolean;
+    can_connect?: boolean;      // هل يمكنه ربط OneDrive (للمدير فقط)
+    can_disconnect?: boolean;   // هل يمكنه إلغاء الربط (للمدير فقط)
+    message?: string;           // رسالة للمستخدم
 }
 
 export interface CloudStorageFile {

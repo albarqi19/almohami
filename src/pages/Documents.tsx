@@ -1015,37 +1015,78 @@ const Documents: React.FC = () => {
                                     style={{ paddingRight: '32px', color: 'var(--color-text-muted)', fontSize: '11px' }}
                                 >
                                     {oneDriveStatus.email}
+                                    {/* رسالة للمحامين */}
+                                    {!oneDriveStatus.can_disconnect && oneDriveStatus.message && (
+                                        <div style={{ fontSize: '10px', color: 'var(--color-text-tertiary)', marginTop: '2px' }}>
+                                            {oneDriveStatus.message}
+                                        </div>
+                                    )}
                                 </div>
-                                <div
-                                    className="sidebar-item"
-                                    onClick={() => setShowCloudSettings(true)}
-                                    style={{ color: 'var(--color-primary)' }}
-                                >
-                                    <Settings size={16} />
-                                    <span>إعدادات السحابة</span>
-                                </div>
-                                <div
-                                    className="sidebar-item"
-                                    onClick={handleDisconnectOneDrive}
-                                    style={{ color: 'var(--color-error)' }}
-                                >
-                                    <CloudOff size={16} />
-                                    <span>إلغاء الربط</span>
-                                </div>
+                                {/* إعدادات السحابة - للمدير فقط */}
+                                {oneDriveStatus.can_disconnect && (
+                                    <div
+                                        className="sidebar-item"
+                                        onClick={() => setShowCloudSettings(true)}
+                                        style={{ color: 'var(--color-primary)' }}
+                                    >
+                                        <Settings size={16} />
+                                        <span>إعدادات السحابة</span>
+                                    </div>
+                                )}
+                                {/* إلغاء الربط - للمدير فقط */}
+                                {oneDriveStatus.can_disconnect && (
+                                    <div
+                                        className="sidebar-item"
+                                        onClick={handleDisconnectOneDrive}
+                                        style={{ color: 'var(--color-error)' }}
+                                    >
+                                        <CloudOff size={16} />
+                                        <span>إلغاء الربط</span>
+                                    </div>
+                                )}
                             </>
                         ) : (
-                            <div
-                                className="sidebar-item"
-                                onClick={handleConnectOneDrive}
-                                style={{ cursor: oneDriveConnecting ? 'wait' : 'pointer' }}
-                            >
-                                {oneDriveConnecting ? (
-                                    <Loader2 size={16} className="animate-spin" />
+                            <>
+                                {/* زر الربط - للمدير فقط */}
+                                {oneDriveStatus?.can_connect !== false ? (
+                                    <div
+                                        className="sidebar-item"
+                                        onClick={handleConnectOneDrive}
+                                        style={{ cursor: oneDriveConnecting ? 'wait' : 'pointer' }}
+                                    >
+                                        {oneDriveConnecting ? (
+                                            <Loader2 size={16} className="animate-spin" />
+                                        ) : (
+                                            <Link2 size={16} className="text-blue-500" />
+                                        )}
+                                        <span>ربط OneDrive</span>
+                                    </div>
                                 ) : (
-                                    <Link2 size={16} className="text-blue-500" />
+                                    /* رسالة للمحامين - غير متصل */
+                                    <div
+                                        className="sidebar-item"
+                                        style={{
+                                            cursor: 'default',
+                                            opacity: 0.8,
+                                            flexDirection: 'column',
+                                            alignItems: 'flex-start',
+                                            gap: '4px'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <CloudOff size={16} className="text-gray-400" />
+                                            <span style={{ color: 'var(--color-text-secondary)' }}>OneDrive غير متصل</span>
+                                        </div>
+                                        <span style={{
+                                            fontSize: '10px',
+                                            color: 'var(--color-text-tertiary)',
+                                            paddingRight: '24px'
+                                        }}>
+                                            {oneDriveStatus?.message || 'تواصل مع مدير الشركة'}
+                                        </span>
+                                    </div>
                                 )}
-                                <span>ربط OneDrive</span>
-                            </div>
+                            </>
                         )}
 
                         {/* Google Drive - Coming Soon */}

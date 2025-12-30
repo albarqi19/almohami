@@ -223,7 +223,10 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
         {/* OneDrive not connected alert */}
         {!checkingOneDrive && (!oneDriveStatus?.connected) && (
-          <OneDriveRequiredAlert />
+          <OneDriveRequiredAlert
+            canConnect={oneDriveStatus?.can_connect !== false}
+            message={oneDriveStatus?.message}
+          />
         )}
 
         {/* Main form - only show when OneDrive is connected */}
