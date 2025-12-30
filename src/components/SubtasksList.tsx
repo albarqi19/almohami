@@ -145,13 +145,20 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange })
       // تحديث محلي فوري (Optimistic Update)
       setSubtasks(subtasks.map(s =>
         s.id === subtaskId
-          ? { ...s, assigned_to: userId, assigned_to_name: userName }
+          ? { ...s, assigned_to: userId, assignee: { id: userId, name: userName } }
           : s
       ));
       setAssigneeDropdownId(null);
 
-      // إرسال للـ Backend
-      await SubtaskService.updateSubtask(subtaskId, { assigned_to: userId });
+      // إرسال للـ Backend - تحويل userId إلى integer
+      const updatedSubtask = await SubtaskService.updateSubtask(subtaskId, {
+        assigned_to: userId ? String(parseInt(userId, 10)) : null
+      });
+
+      // تحديث البيانات من الـ response
+      setSubtasks(subtasks.map(s =>
+        s.id === subtaskId ? updatedSubtask : s
+      ));
     } catch (error) {
       console.error('Failed to assign user:', error);
       // إعادة تحميل البيانات عند الفشل
@@ -233,13 +240,13 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange })
               {/* زر تعيين المسؤول */}
               <div className="subtasks-list__assignee-container" ref={mentionRef}>
                 <button
-                  className={`subtasks-list__assignee-btn ${(subtask as any).assigned_to ? 'subtasks-list__assignee-btn--assigned' : ''}`}
+                  className={`subtasks-list__assignee-btn ${subtask.assignee ? 'subtasks-list__assignee-btn--assigned' : ''}`}
                   onClick={() => setAssigneeDropdownId(assigneeDropdownId === subtask.id ? null : subtask.id)}
-                  title={(subtask as any).assigned_to_name || 'تعيين مسؤول'}
+                  title={subtask.assignee?.name || 'تعيين مسؤول'}
                 >
-                  {(subtask as any).assigned_to_name ? (
+                  {subtask.assignee?.name ? (
                     <span className="subtasks-list__assignee-avatar">
-                      {getInitials((subtask as any).assigned_to_name)}
+                      {getInitials(subtask.assignee.name)}
                     </span>
                   ) : (
                     <AtSign size={14} />
