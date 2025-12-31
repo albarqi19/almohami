@@ -1,90 +1,144 @@
-const CACHE_NAME = 'law-firm-system-v1';
+// ============================================
+// نظام إدارة المحاماة - Service Worker
+// مع دعم التحديثات التلقائية
+// ============================================
+
+// 🔑 مفتاح الإصدار - يتم تحديثه تلقائياً عند كل build
+// يمكن تغييره يدوياً أو عبر script
+const SW_VERSION = '2025.12.31.1148';
+const CACHE_NAME = `law-firm-system-${SW_VERSION}`;
+
+// الملفات الأساسية للتخزين المؤقت
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
   '/manifest.json',
   '/icons/icon.svg',
   '/vite.svg'
 ];
 
-// تثبيت service worker
+// ============================================
+// تثبيت Service Worker
+// ============================================
 self.addEventListener('install', (event) => {
+  console.log(`[SW ${SW_VERSION}] Installing...`);
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Opened cache');
+        console.log(`[SW ${SW_VERSION}] Caching app shell`);
         return cache.addAll(urlsToCache);
       })
+      .then(() => {
+        console.log(`[SW ${SW_VERSION}] Install complete`);
+      })
   );
-  // تفعيل Service Worker الجديد فوراً
-  self.skipWaiting();
+
+  // ❌ لا نستخدم skipWaiting() هنا - ننتظر موافقة المستخدم
 });
 
-// تفعيل service worker
+// ============================================
+// تفعيل Service Worker
+// ============================================
 self.addEventListener('activate', (event) => {
+  console.log(`[SW ${SW_VERSION}] Activating...`);
+
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
+          // حذف جميع الكاش القديمة ما عدا الحالية
+          if (cacheName !== CACHE_NAME && cacheName.startsWith('law-firm-system-')) {
+            console.log(`[SW ${SW_VERSION}] Deleting old cache: ${cacheName}`);
             return caches.delete(cacheName);
           }
         })
       );
+    }).then(() => {
+      console.log(`[SW ${SW_VERSION}] Claiming clients`);
+      return self.clients.claim();
     })
   );
-  // السيطرة على جميع العملاء فوراً
-  self.clients.claim();
 });
 
+// ============================================
 // استرجاع البيانات
+// ============================================
 self.addEventListener('fetch', (event) => {
-  // **تجاهل تماماً جميع طلبات API**
-  if (event.request.url.includes('/api/') || 
-      event.request.url.includes('127.0.0.1:8000') ||
-      event.request.url.includes('localhost:8000')) {
-    // السماح للطلب بالمرور مباشرة دون تدخل
-    console.log('API request bypassed:', event.request.url);
+  // تجاهل طلبات API تماماً - لا نريد تخزينها مؤقتاً
+  if (event.request.url.includes('/api/') ||
+    event.request.url.includes('127.0.0.1:8000') ||
+    event.request.url.includes('localhost:8000') ||
+    event.request.url.includes('alraedlaw.com/api')) {
     return;
   }
-  
-  // فقط للملفات الستاتيكية
-  if (event.request.destination === 'document' || 
-      event.request.destination === 'script' || 
-      event.request.destination === 'style' ||
-      event.request.destination === 'image') {
-    
+
+  // للملفات الستاتيكية فقط
+  if (event.request.destination === 'document' ||
+    event.request.destination === 'script' ||
+    event.request.destination === 'style' ||
+    event.request.destination === 'image') {
+
     event.respondWith(
-      caches.match(event.request)
+      // Strategy: Network First, fallback to Cache
+      fetch(event.request)
         .then((response) => {
-          // إرجاع النسخة المحفوظة إذا وجدت
-          if (response) {
-            return response;
+          // تحديث الكاش بالنسخة الجديدة
+          if (response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
           }
-          // جلب الملف من الشبكة
-          return fetch(event.request);
+          return response;
+        })
+        .catch(() => {
+          // في حالة عدم الاتصال، استخدم الكاش
+          return caches.match(event.request);
         })
     );
   }
 });
 
-// تحديث service worker
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
+// ============================================
+// استقبال رسائل من التطبيق
+// ============================================
+self.addEventListener('message', (event) => {
+  console.log(`[SW ${SW_VERSION}] Message received:`, event.data);
+
+  // رسالة لتفعيل التحديث فوراً
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log(`[SW ${SW_VERSION}] Skip waiting requested`);
+    self.skipWaiting();
+  }
+
+  // رسالة لجلب الإصدار الحالي
+  if (event.data && event.data.type === 'GET_VERSION') {
+    event.ports[0].postMessage({ version: SW_VERSION });
+  }
+
+  // رسالة لمسح كل الكاش (ما عدا بيانات تسجيل الدخول)
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    console.log(`[SW ${SW_VERSION}] Clearing all caches...`);
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
+          if (cacheName.startsWith('law-firm-system-')) {
+            console.log(`[SW ${SW_VERSION}] Deleting cache: ${cacheName}`);
             return caches.delete(cacheName);
           }
         })
       );
-    })
-  );
+    }).then(() => {
+      if (event.ports[0]) {
+        event.ports[0].postMessage({ success: true });
+      }
+    });
+  }
 });
 
+// ============================================
 // إشعارات Push
+// ============================================
 self.addEventListener('push', (event) => {
   const options = {
     body: event.data ? event.data.text() : 'تنبيه جديد من نظام المحاماة',
@@ -95,22 +149,13 @@ self.addEventListener('push', (event) => {
     vibrate: [200, 100, 200],
     requireInteraction: true,
     actions: [
-      {
-        action: 'view',
-        title: 'عرض التفاصيل',
-        icon: '/icons/icon-72x72.png'
-      },
-      {
-        action: 'close',
-        title: 'إغلاق',
-        icon: '/icons/icon-72x72.png'
-      }
+      { action: 'view', title: 'عرض التفاصيل' },
+      { action: 'close', title: 'إغلاق' }
     ]
   };
 
   let title = 'نظام إدارة المحاماة';
-  
-  // تحليل بيانات الإشعار إذا كانت متوفرة
+
   if (event.data) {
     try {
       const data = event.data.json();
@@ -121,7 +166,7 @@ self.addEventListener('push', (event) => {
         options.data.url = data.url;
       }
     } catch (e) {
-      // استخدام القيم الافتراضية في حالة فشل التحليل
+      // استخدام القيم الافتراضية
     }
   }
 
@@ -130,28 +175,35 @@ self.addEventListener('push', (event) => {
   );
 });
 
+// ============================================
 // النقر على الإشعار
+// ============================================
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  if (event.action === 'view') {
-    const url = event.notification.data?.url || '/';
+  const url = event.notification.data?.url || '/';
+
+  if (event.action === 'view' || event.action === '') {
     event.waitUntil(
-      clients.openWindow(url)
-    );
-  } else if (event.action === 'close') {
-    // الإشعار مغلق بالفعل
-    return;
-  } else {
-    // النقر الافتراضي
-    const url = event.notification.data?.url || '/';
-    event.waitUntil(
-      clients.openWindow(url)
+      clients.matchAll({ type: 'window' }).then((clientList) => {
+        // إذا كانت هناك نافذة مفتوحة، استخدمها
+        for (const client of clientList) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            client.focus();
+            client.navigate(url);
+            return;
+          }
+        }
+        // وإلا افتح نافذة جديدة
+        return clients.openWindow(url);
+      })
     );
   }
 });
 
-// مزامنة الخلفية للإجراءات دون اتصال
+// ============================================
+// مزامنة الخلفية
+// ============================================
 self.addEventListener('sync', (event) => {
   if (event.tag === 'background-sync') {
     event.waitUntil(doBackgroundSync());
@@ -159,13 +211,14 @@ self.addEventListener('sync', (event) => {
 });
 
 function doBackgroundSync() {
-  // مزامنة البيانات عند استعادة الاتصال
   return fetch('/api/sync')
     .then(response => response.json())
     .then(data => {
-      console.log('Background sync completed', data);
+      console.log(`[SW ${SW_VERSION}] Background sync completed`, data);
     })
     .catch(error => {
-      console.error('Background sync failed', error);
+      console.error(`[SW ${SW_VERSION}] Background sync failed`, error);
     });
 }
+
+console.log(`[SW ${SW_VERSION}] Service Worker loaded`);

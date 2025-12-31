@@ -1,4 +1,5 @@
 ﻿import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import UpdateBanner from './components/UpdateBanner';
 import { AuthProvider } from './contexts/AuthContext';
 import { TimerProvider } from './contexts/TimerContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -34,6 +35,7 @@ import ClientMessages from './pages/ClientMessages';
 function App() {
   return (
     <AuthProvider>
+      <UpdateBanner />
       <TimerProvider>
         <Router>
           <Routes>
