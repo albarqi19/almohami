@@ -166,10 +166,11 @@ export const useAppUpdate = (): UseAppUpdateReturn => {
                     window.location.reload();
                 });
 
-                // التحقق من التحديثات كل 30 دقيقة
+                // التحقق من التحديثات كل 5 دقائق (للاكتشاف السريع)
                 const intervalId = setInterval(() => {
+                    console.log('[AppUpdate] Checking for updates...');
                     registration.update().catch(console.error);
-                }, 30 * 60 * 1000);
+                }, 5 * 60 * 1000);
 
                 return () => {
                     clearInterval(intervalId);
