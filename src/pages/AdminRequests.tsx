@@ -14,7 +14,12 @@ import {
     LayoutGrid,
     List,
     Send,
-    Eye
+    Eye,
+    Settings,
+    Trash2,
+    Edit3,
+    ToggleLeft,
+    ToggleRight
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { AdminRequestService, RequestTypeService } from '../services/adminRequestService';
@@ -223,6 +228,207 @@ const ReviewModal: React.FC<{
     );
 };
 
+// Settings Modal (for managers to manage request types)
+const SettingsModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    requestTypes: RequestType[];
+    onRefresh: () => void;
+}> = ({ isOpen, onClose, requestTypes, onRefresh }) => {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [editingType, setEditingType] = useState<RequestType | null>(null);
+    const [showAddForm, setShowAddForm] = useState(false);
+    
+    // Form state
+    const [formData, setFormData] = useState({
+        name: '',
+        name_en: '',
+        description: '',
+        requires_dates: false,
+        requires_reason: true
+    });
+
+    const resetForm = () => {
+        setFormData({ name: '', name_en: '', description: '', requires_dates: false, requires_reason: true });
+        setEditingType(null);
+        setShowAddForm(false);
+        setError('');
+    };
+
+    const handleEdit = (type: RequestType) => {
+        setEditingType(type);
+        setFormData({
+            name: type.name,
+            name_en: type.name_en || '',
+            description: type.description || '',
+            requires_dates: type.requires_dates,
+            requires_reason: type.requires_reason
+        });
+        setShowAddForm(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!formData.name.trim()) { setError('اسم النوع مطلوب'); return; }
+        
+        setLoading(true); setError('');
+        try {
+            if (editingType) {
+                await RequestTypeService.updateType(editingType.id, formData);
+            } else {
+                await RequestTypeService.createType(formData);
+            }
+            resetForm();
+            onRefresh();
+        } catch (err: any) {
+            setError(err.message || 'حدث خطأ');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleToggle = async (type: RequestType) => {
+        try {
+            await RequestTypeService.toggleStatus(type.id);
+            onRefresh();
+        } catch (err: any) {
+            alert(err.message || 'فشل في تحديث الحالة');
+        }
+    };
+
+    const handleDelete = async (type: RequestType) => {
+        if (!window.confirm(`هل أنت متأكد من حذف "${type.name}"؟`)) return;
+        try {
+            await RequestTypeService.deleteType(type.id);
+            onRefresh();
+        } catch (err: any) {
+            alert(err.message || 'فشل في حذف النوع');
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content modal-content--lg" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2 className="modal-title"><Settings size={20} /> إعدادات أنواع الطلبات</h2>
+                    <button className="modal-close" onClick={onClose}><X size={18} /></button>
+                </div>
+                <div className="modal-body">
+                    {error && <div className="modal-error"><AlertCircle size={14} />{error}</div>}
+                    
+                    {/* Add/Edit Form */}
+                    {showAddForm ? (
+                        <form onSubmit={handleSubmit} className="settings-type-form">
+                            <h3 className="settings-form-title">{editingType ? 'تعديل نوع الطلب' : 'إضافة نوع جديد'}</h3>
+                            <div className="modal-form-row">
+                                <div className="modal-form-group">
+                                    <label>الاسم بالعربي *</label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.name} 
+                                        onChange={e => setFormData({...formData, name: e.target.value})}
+                                        placeholder="مثال: إجازة طارئة"
+                                        required 
+                                    />
+                                </div>
+                                <div className="modal-form-group">
+                                    <label>الاسم بالإنجليزي</label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.name_en} 
+                                        onChange={e => setFormData({...formData, name_en: e.target.value})}
+                                        placeholder="Example: Emergency Leave"
+                                    />
+                                </div>
+                            </div>
+                            <div className="modal-form-group">
+                                <label>الوصف</label>
+                                <textarea 
+                                    value={formData.description} 
+                                    onChange={e => setFormData({...formData, description: e.target.value})}
+                                    rows={2}
+                                    placeholder="وصف مختصر لنوع الطلب..."
+                                />
+                            </div>
+                            <div className="settings-checkboxes">
+                                <label className="settings-checkbox">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.requires_dates} 
+                                        onChange={e => setFormData({...formData, requires_dates: e.target.checked})}
+                                    />
+                                    <span>يتطلب تحديد تاريخ (بداية ونهاية)</span>
+                                </label>
+                                <label className="settings-checkbox">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.requires_reason} 
+                                        onChange={e => setFormData({...formData, requires_reason: e.target.checked})}
+                                    />
+                                    <span>يتطلب ذكر السبب</span>
+                                </label>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn-secondary" onClick={resetForm} disabled={loading}>إلغاء</button>
+                                <button type="submit" className="btn-primary" disabled={loading}>
+                                    {loading ? 'جاري الحفظ...' : (editingType ? 'تحديث' : 'إضافة')}
+                                </button>
+                            </div>
+                        </form>
+                    ) : (
+                        <>
+                            <div className="settings-add-btn-container">
+                                <button className="btn-primary" onClick={() => setShowAddForm(true)}>
+                                    <Plus size={16} /> إضافة نوع جديد
+                                </button>
+                            </div>
+                            
+                            {/* Types List */}
+                            <div className="settings-types-list">
+                                {requestTypes.length === 0 ? (
+                                    <div className="settings-empty">لا توجد أنواع طلبات. أضف نوعاً جديداً للبدء.</div>
+                                ) : (
+                                    requestTypes.map(type => (
+                                        <div key={type.id} className={`settings-type-item ${!type.is_active ? 'settings-type-item--inactive' : ''}`}>
+                                            <div className="settings-type-info">
+                                                <div className="settings-type-name">{type.name}</div>
+                                                {type.description && <div className="settings-type-desc">{type.description}</div>}
+                                                <div className="settings-type-badges">
+                                                    {type.requires_dates && <span className="settings-badge">تاريخ</span>}
+                                                    {type.requires_reason && <span className="settings-badge">سبب</span>}
+                                                    {!type.is_active && <span className="settings-badge settings-badge--inactive">معطل</span>}
+                                                </div>
+                                            </div>
+                                            <div className="settings-type-actions">
+                                                <button 
+                                                    className="settings-action-btn" 
+                                                    onClick={() => handleToggle(type)}
+                                                    title={type.is_active ? 'تعطيل' : 'تفعيل'}
+                                                >
+                                                    {type.is_active ? <ToggleRight size={18} className="text-green" /> : <ToggleLeft size={18} />}
+                                                </button>
+                                                <button className="settings-action-btn" onClick={() => handleEdit(type)} title="تعديل">
+                                                    <Edit3 size={16} />
+                                                </button>
+                                                <button className="settings-action-btn settings-action-btn--danger" onClick={() => handleDelete(type)} title="حذف">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // Main Page
 const AdminRequests: React.FC = () => {
     const { user } = useAuth();
@@ -237,6 +443,7 @@ const AdminRequests: React.FC = () => {
     const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
     const [isNewModalOpen, setIsNewModalOpen] = useState(false);
     const [reviewRequest, setReviewRequest] = useState<AdminRequest | null>(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
 
@@ -435,6 +642,11 @@ const AdminRequests: React.FC = () => {
                             <LayoutGrid size={16} />
                         </button>
                     </div>
+                    {isManager && (
+                        <button className="requests-icon-btn requests-settings-btn" onClick={() => setIsSettingsOpen(true)} title="إعدادات أنواع الطلبات">
+                            <Settings size={16} />
+                        </button>
+                    )}
                     <button className="btn-primary" onClick={() => setIsNewModalOpen(true)}>
                         <Plus size={16} /> طلب جديد
                     </button>
@@ -466,6 +678,7 @@ const AdminRequests: React.FC = () => {
 
             <RequestModal isOpen={isNewModalOpen} onClose={() => setIsNewModalOpen(false)} onSubmit={handleCreateRequest} requestTypes={requestTypes} />
             <ReviewModal request={reviewRequest} onClose={() => setReviewRequest(null)} onApprove={handleApprove} onReject={handleReject} />
+            {isManager && <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} requestTypes={requestTypes} onRefresh={loadData} />}
         </div>
     );
 };
