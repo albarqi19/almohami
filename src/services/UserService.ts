@@ -31,6 +31,7 @@ export interface UpdateUserForm {
   email: string;
   role: string;
   phone?: string;
+  national_id?: string;
   is_active?: boolean;
 }
 

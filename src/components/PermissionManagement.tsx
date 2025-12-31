@@ -1365,6 +1365,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
                   email: user.email,
                   role: user.role || '',
                   phone: user.phone,
+                  national_id: user.national_id,
                   is_active: user.status === 'active'
                 });
               } else {
