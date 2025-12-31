@@ -406,8 +406,8 @@
     background: var(--dashboard-card);
     border-radius: var(--radius-md);
     width: 100%;
-    max-width: 600px;
-    max-height: 90vh;
+    max-width: 550px;
+    max-height: 85vh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -449,11 +449,13 @@
 }
 
 .notebook-modal-body {
-    padding: 24px;
+    padding: 20px 24px;
     overflow-y: auto;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
+    max-height: calc(85vh - 140px);
 }
 
 .notebook-form-group {
@@ -489,7 +491,8 @@
 }
 
 .notebook-form-group textarea {
-    min-height: 150px;
+    min-height: 100px;
+    max-height: 150px;
     resize: vertical;
 }
 
@@ -534,15 +537,20 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 12px;
-    padding: 18px 24px;
+    gap: 8px;
+    padding: 14px 24px;
     border-top: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+    flex-shrink: 0;
 }
 
 .modal-btn {
-    padding: 10px 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
     border-radius: var(--radius-xs);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
@@ -552,6 +560,7 @@
     background: transparent;
     border: 1px solid var(--color-border);
     color: var(--color-text-secondary);
+    padding: 8px 12px;
 }
 
 .modal-btn.cancel:hover {
@@ -569,19 +578,32 @@
 }
 
 .modal-btn.danger {
-    background: var(--color-error);
-    border: none;
-    color: #fff;
+    background: transparent;
+    border: 1px solid var(--color-error);
+    color: var(--color-error);
+    padding: 8px 12px;
 }
 
 .modal-btn.danger:hover {
-    opacity: 0.9;
+    background: var(--color-error);
+    color: #fff;
 }
 
 .modal-btn.convert {
+    background: transparent;
+    border: 1px solid var(--color-accent);
+    color: var(--color-accent);
+    padding: 8px 12px;
+}
+
+.modal-btn.convert:hover {
     background: var(--color-accent);
-    border: none;
     color: #fff;
+}
+
+.modal-btn svg {
+    width: 14px;
+    height: 14px;
 }
 
 /* ==================== Empty State ==================== */
@@ -590,29 +612,39 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 80px 40px;
+    padding: 60px 40px;
     text-align: center;
 }
 
 .notebook-empty svg {
-    width: 80px;
-    height: 80px;
+    width: 56px;
+    height: 56px;
     color: var(--color-text-secondary);
-    opacity: 0.5;
-    margin-bottom: 20px;
+    opacity: 0.4;
+    margin-bottom: 16px;
 }
 
 .notebook-empty h3 {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--color-heading);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .notebook-empty p {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--color-text-secondary);
-    margin-bottom: 24px;
+    margin-bottom: 16px;
+}
+
+.notebook-empty .notebook-add-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+.notebook-empty .notebook-add-btn svg {
+    width: 16px;
+    height: 16px;
 }
 
 /* ==================== Loading State ==================== */
