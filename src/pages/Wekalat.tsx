@@ -37,6 +37,7 @@ const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
   'معتمدة': { label: 'معتمدة', class: 'wekala-status-badge--approved' },
   'منتهية': { label: 'منتهية', class: 'wekala-status-badge--expired' },
   'مفسوخة': { label: 'مفسوخة', class: 'wekala-status-badge--terminated' },
+  'مفسوخة كلياً': { label: 'مفسوخة كلياً', class: 'wekala-status-badge--terminated' },
   'قيد الاعتماد': { label: 'قيد الاعتماد', class: 'wekala-status-badge--pending' },
   'موقوفة': { label: 'موقوفة', class: 'wekala-status-badge--suspended' },
 };
@@ -347,7 +348,7 @@ const Wekalat: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('معتمدة');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [selectedWekala, setSelectedWekala] = useState<Wekala | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -377,7 +378,7 @@ const Wekalat: React.FC = () => {
   const fetchWekalat = async (page = 1, forceRefresh = false) => {
     try {
       // Check cache first - ONLY if default filter and no search
-      if (!forceRefresh && !searchTerm && statusFilter === 'معتمدة') {
+      if (!forceRefresh && !searchTerm && statusFilter === 'all') {
         const cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
           const { data, timestamp } = JSON.parse(cached);
@@ -410,8 +411,8 @@ const Wekalat: React.FC = () => {
       setWekalat(data);
       setPagination(paginationData);
 
-      // Save to cache (only if default filter - all approved)
-      if (!searchTerm && statusFilter === 'معتمدة') {
+      // Save to cache (only if default filter - all)
+      if (!searchTerm && statusFilter === 'all') {
         localStorage.setItem(CACHE_KEY, JSON.stringify({
           data: { wekalat: data, pagination: paginationData },
           timestamp: Date.now()
@@ -441,11 +442,9 @@ const Wekalat: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Only refetch on filter changes if they actually changed
-    if (searchTerm || statusFilter !== 'معتمدة') {
-      const timeout = setTimeout(() => fetchWekalat(1, true), 400);
-      return () => clearTimeout(timeout);
-    }
+    // Refetch on filter changes
+    const timeout = setTimeout(() => fetchWekalat(1, true), 400);
+    return () => clearTimeout(timeout);
   }, [searchTerm, statusFilter]);
 
   // Client-side filtered data (as fallback if API doesn't filter)
@@ -693,6 +692,7 @@ const Wekalat: React.FC = () => {
             <option value="معتمدة">معتمدة</option>
             <option value="منتهية">منتهية</option>
             <option value="مفسوخة">مفسوخة</option>
+            <option value="مفسوخة كلياً">مفسوخة كلياً</option>
             <option value="قيد الاعتماد">قيد الاعتماد</option>
             <option value="موقوفة">موقوفة</option>
           </select>
