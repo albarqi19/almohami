@@ -21,7 +21,7 @@ const AuthLayout: React.FC = () => {
         }
         if (location.pathname === '/register/tenant') {
             return {
-                title: 'ابدأ رحـلتك الرقمية',
+                title: 'ابدأ رحلتك الرقمية',
                 subtitle: 'سجّل مكتبك واحصل على فترة تجريبية مجانية لمدة 14 يوماً مع جميع الميزات'
             };
         }
