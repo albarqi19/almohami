@@ -31,6 +31,7 @@ import Clients from './pages/Clients';
 import ClientDetailPage from './pages/ClientDetailPage';
 import AdminRequests from './pages/AdminRequests';
 import ClientMessages from './pages/ClientMessages';
+import PersonalNotebook from './pages/PersonalNotebook';
 
 function App() {
   return (
@@ -137,6 +138,11 @@ function App() {
               <Route path="admin/requests" element={
                 <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
                   <AdminRequests />
+                </ProtectedRoute>
+              } />
+              <Route path="notebook" element={
+                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                  <PersonalNotebook />
                 </ProtectedRoute>
               } />
             </Route>

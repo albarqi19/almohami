@@ -21,7 +21,8 @@ import {
     Clock,
     Scale,
     X,
-    ClipboardList
+    ClipboardList,
+    BookOpen
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useAuth } from '../contexts/AuthContext';
@@ -50,6 +51,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
         { icon: FileCheck, label: 'الوكالات', path: '/wekalat', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: Calendar, label: 'الجلسات', path: '/sessions', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: CheckSquare, label: 'المهام', path: '/tasks', roles: ['admin', 'lawyer', 'legal_assistant'] },
+        { icon: BookOpen, label: 'المفكرة الشخصية', path: '/notebook', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: FileText, label: 'قضاياي', path: '/my-cases', roles: ['client'] },
         { icon: MessageSquare, label: 'الرسائل', path: '/my-messages', roles: ['client'] },
         { icon: Upload, label: 'الوثائق', path: '/documents', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },

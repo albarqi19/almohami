@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import ClickUpSidebar from './ClickUpSidebar';
 import FloatingTimer from './FloatingTimer';
+import NotebookFloatingWidget from './NotebookFloatingWidget';
 import ClickUpHeader from './ClickUpHeader';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -107,6 +108,9 @@ const Layout: React.FC = () => {
 
           {/* Floating Timer Widget */}
           <FloatingTimer />
+
+          {/* Notebook Floating Widget - Quick notes from any page */}
+          {user && user.role !== 'client' && <NotebookFloatingWidget />}
         </div>
 
         <style>{`
