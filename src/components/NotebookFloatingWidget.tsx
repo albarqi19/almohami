@@ -52,6 +52,10 @@ const NotebookFloatingWidget: React.FC<FloatingWidgetProps> = ({ defaultCaseId, 
             });
             setSuccess(true);
             setContent('');
+
+            // Dispatch custom event to notify notebook page to refresh
+            window.dispatchEvent(new CustomEvent('notebook-updated'));
+
             setTimeout(() => {
                 setSuccess(false);
                 setIsOpen(false);

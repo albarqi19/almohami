@@ -31,7 +31,7 @@ import Clients from './pages/Clients';
 import ClientDetailPage from './pages/ClientDetailPage';
 import AdminRequests from './pages/AdminRequests';
 import ClientMessages from './pages/ClientMessages';
-import PersonalNotebook from './pages/PersonalNotebook';
+import PersonalNotebook from './pages/NotebookWorkspace';
 
 function App() {
   return (

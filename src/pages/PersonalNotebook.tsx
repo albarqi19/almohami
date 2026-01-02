@@ -252,6 +252,17 @@ const PersonalNotebook: React.FC = () => {
         fetchNotes();
     }, [fetchNotes]);
 
+    // Listen for updates from floating widget
+    useEffect(() => {
+        const handleNotebookUpdate = () => {
+            fetchNotes();
+            fetchStatistics();
+        };
+
+        window.addEventListener('notebook-updated', handleNotebookUpdate);
+        return () => window.removeEventListener('notebook-updated', handleNotebookUpdate);
+    }, [fetchNotes]);
+
     const handleSaveNote = async (data: CreateNoteData) => {
         if (selectedNote) {
             await notebookService.updateNote(selectedNote.id, data);

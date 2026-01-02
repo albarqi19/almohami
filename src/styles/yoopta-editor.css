@@ -1,0 +1,431 @@
+/* Yoopta Editor Styles - Arabic RTL Full Support */
+
+.yoopta-notebook-editor {
+    direction: rtl;
+    text-align: right;
+    font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', Geneva, Verdana, sans-serif;
+    background: var(--bg-primary, #ffffff);
+    border-radius: 8px;
+    min-height: 100%;
+    cursor: text;
+
+    /* CSS Variables */
+    --editor-bg: var(--bg-primary, #ffffff);
+    --editor-text: var(--text-primary, #0f172a);
+    --editor-text-secondary: var(--text-secondary, #475569);
+    --editor-text-muted: var(--text-tertiary, #94a3b8);
+    --editor-border: var(--border-light, #e2e8f0);
+    --editor-accent: var(--accent-primary, #3b82f6);
+    --editor-accent-light: var(--accent-light, rgba(59, 130, 246, 0.1));
+}
+
+/* Force RTL on all Yoopta elements */
+.yoopta-notebook-editor * {
+    direction: rtl !important;
+}
+
+/* Editor container */
+.yoopta-notebook-editor [data-yoopta-editor] {
+    direction: rtl !important;
+}
+
+.yoopta-notebook-editor [data-yoopta-editor-id] {
+    direction: rtl !important;
+}
+
+/* Block styles - RTL */
+.yoopta-notebook-editor [data-yoopta-block] {
+    direction: rtl !important;
+    padding: 4px 0;
+}
+
+/* Block actions (+ and drag)
+   We avoid hard-coding a viewport `right:` offset because Yoopta positions this UI using block DOMRects.
+   Positioning is handled at runtime in the editor wrapper to keep it visually attached to the hovered block.
+*/
+
+.yoopta-notebook-editor .yoopta-block-action-buttons {
+    flex-direction: row-reverse !important;
+}
+
+/* Add padding to editor for icons space */
+.yoopta-notebook-editor {
+    padding-right: 55px !important;
+}
+
+/* Overflow visible for icons */
+.yoopta-notebook-editor,
+.yoopta-notebook-editor [data-yoopta-editor],
+.yoopta-notebook-editor [data-yoopta-block] {
+    overflow: visible !important;
+}
+
+/* Paragraph */
+.yoopta-notebook-editor [data-yoopta-block-type="Paragraph"] {
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--editor-text);
+}
+
+/* Headings */
+.yoopta-notebook-editor [data-yoopta-block-type="HeadingOne"] {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--editor-text);
+    margin: 28px 0 16px 0;
+    border-bottom: 2px solid var(--editor-border);
+    padding-bottom: 12px;
+}
+
+.yoopta-notebook-editor [data-yoopta-block-type="HeadingTwo"] {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--editor-text);
+    margin: 24px 0 12px 0;
+}
+
+.yoopta-notebook-editor [data-yoopta-block-type="HeadingThree"] {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--editor-text-secondary);
+    margin: 20px 0 10px 0;
+}
+
+/* Lists - RTL */
+.yoopta-notebook-editor [data-yoopta-block-type="BulletedList"],
+.yoopta-notebook-editor [data-yoopta-block-type="NumberedList"],
+.yoopta-notebook-editor [data-yoopta-block-type="TodoList"] {
+    padding-right: 28px !important;
+    padding-left: 0 !important;
+    margin: 8px 0;
+}
+
+.yoopta-notebook-editor ul,
+.yoopta-notebook-editor ol {
+    direction: rtl !important;
+    padding-right: 28px !important;
+    padding-left: 0 !important;
+    margin: 0;
+    list-style-position: inside;
+}
+
+.yoopta-notebook-editor li {
+    margin: 6px 0;
+    line-height: 1.7;
+    text-align: inherit;
+}
+
+/* Todo List checkboxes - RTL */
+.yoopta-notebook-editor [data-yoopta-block-type="TodoList"] input[type="checkbox"] {
+    margin-left: 10px !important;
+    margin-right: 0 !important;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--editor-accent);
+}
+
+/* Blockquote - RTL */
+.yoopta-notebook-editor [data-yoopta-block-type="Blockquote"] {
+    border-right: 4px solid var(--editor-accent) !important;
+    border-left: none !important;
+    padding: 14px 20px 14px 0;
+    margin: 20px 0;
+    background: var(--editor-accent-light);
+    border-radius: 0 10px 10px 0;
+    font-style: italic;
+    color: var(--editor-text-secondary);
+}
+
+/* Callout - RTL */
+.yoopta-notebook-editor [data-yoopta-block-type="Callout"] {
+    padding: 18px;
+    margin: 20px 0;
+    border-radius: 10px;
+    background: var(--editor-accent-light);
+    border-right: 4px solid var(--editor-accent) !important;
+    border-left: none !important;
+}
+
+/* Divider */
+.yoopta-notebook-editor [data-yoopta-block-type="Divider"] {
+    margin: 28px 0;
+}
+
+.yoopta-notebook-editor [data-yoopta-block-type="Divider"] hr {
+    border: none;
+    height: 2px;
+    background: linear-gradient(to left, transparent, var(--editor-border), transparent);
+}
+
+/* Code - LTR exception */
+.yoopta-notebook-editor [data-yoopta-block-type="Code"] {
+    margin: 20px 0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.yoopta-notebook-editor [data-yoopta-block-type="Code"] pre {
+    direction: ltr !important;
+    text-align: left !important;
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 18px;
+    overflow-x: auto;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.yoopta-notebook-editor [data-yoopta-block-type="Code"] code {
+    font-family: inherit;
+    direction: ltr !important;
+}
+
+/* Link */
+.yoopta-notebook-editor a {
+    color: var(--editor-accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+}
+
+.yoopta-notebook-editor a:hover {
+    border-bottom-color: var(--editor-accent);
+}
+
+/* Action Menu - Right aligned for RTL */
+[data-yoopta-action-menu-list],
+.yoopta-action-menu-list {
+    direction: rtl !important;
+    text-align: right !important;
+    background: var(--editor-bg);
+    border: 1px solid var(--editor-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    min-width: 280px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+[data-yoopta-action-menu-list]>div,
+.yoopta-action-menu-list-item {
+    display: flex;
+    flex-direction: row-reverse !important;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+[data-yoopta-action-menu-list]>div:hover,
+.yoopta-action-menu-list-item:hover,
+.yoopta-action-menu-list-item[data-active="true"] {
+    background: var(--editor-accent-light);
+}
+
+/* Toolbar - RTL */
+[data-yoopta-toolbar],
+.yoopta-toolbar {
+    direction: rtl !important;
+    background: var(--editor-bg);
+    border: 1px solid var(--editor-border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: row-reverse !important;
+    gap: 4px;
+    z-index: 1001;
+}
+
+[data-yoopta-toolbar] button,
+.yoopta-toolbar button {
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--editor-text-secondary);
+    transition: all 0.15s;
+}
+
+[data-yoopta-toolbar] button:hover,
+.yoopta-toolbar button:hover {
+    background: var(--editor-accent-light);
+    color: var(--editor-text);
+}
+
+[data-yoopta-toolbar] button[data-active="true"],
+.yoopta-toolbar button[data-active="true"] {
+    background: var(--editor-accent-light);
+    color: var(--editor-accent);
+}
+
+/* Link Tool */
+[data-yoopta-link-tool],
+.yoopta-link-tool {
+    direction: rtl !important;
+    background: var(--editor-bg);
+    border: 1px solid var(--editor-border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 14px;
+    min-width: 320px;
+}
+
+[data-yoopta-link-tool] input,
+.yoopta-link-tool input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--editor-border);
+    border-radius: 8px;
+    font-size: 14px;
+    direction: ltr !important;
+    text-align: left !important;
+    background: var(--editor-bg);
+    color: var(--editor-text);
+}
+
+[data-yoopta-link-tool] input:focus,
+.yoopta-link-tool input:focus {
+    outline: none;
+    border-color: var(--editor-accent);
+    box-shadow: 0 0 0 3px var(--editor-accent-light);
+}
+
+/* Text formatting marks */
+.yoopta-notebook-editor strong,
+.yoopta-notebook-editor b {
+    font-weight: 700;
+}
+
+.yoopta-notebook-editor em,
+.yoopta-notebook-editor i {
+    font-style: italic;
+}
+
+.yoopta-notebook-editor u {
+    text-decoration: underline;
+}
+
+.yoopta-notebook-editor s,
+.yoopta-notebook-editor del {
+    text-decoration: line-through;
+}
+
+.yoopta-notebook-editor code {
+    background: rgba(59, 130, 246, 0.1);
+    color: #dc2626;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 0.9em;
+    direction: ltr !important;
+}
+
+.yoopta-notebook-editor mark {
+    background: rgba(250, 204, 21, 0.4);
+    padding: 0 4px;
+    border-radius: 3px;
+}
+
+/* Empty block placeholder - single appearance */
+.yoopta-notebook-editor [data-slate-placeholder="true"] {
+    position: absolute !important;
+    width: 100% !important;
+    text-align: right !important;
+    color: var(--editor-text-muted) !important;
+    pointer-events: none !important;
+    opacity: 0.6 !important;
+}
+
+/* Selection - use darker background so text is visible */
+.yoopta-notebook-editor ::selection {
+    background: rgba(59, 130, 246, 0.35);
+    color: inherit;
+}
+
+/* Drag handle visibility */
+.yoopta-notebook-editor [data-yoopta-drag-handle] {
+    opacity: 0;
+    cursor: grab;
+    padding: 4px;
+    color: var(--editor-text-muted);
+    transition: opacity 0.15s;
+}
+
+.yoopta-notebook-editor [data-yoopta-block]:hover [data-yoopta-drag-handle] {
+    opacity: 1;
+}
+
+/* Focus styles */
+.yoopta-notebook-editor:focus-within {
+    outline: none;
+}
+
+/* Dark mode support - using body class */
+body.dark .yoopta-notebook-editor {
+    --editor-bg: #0f172a;
+    --editor-text: #f1f5f9;
+    --editor-text-secondary: #cbd5e1;
+    --editor-text-muted: #64748b;
+    --editor-border: #334155;
+    --editor-accent: #60a5fa;
+    --editor-accent-light: rgba(96, 165, 250, 0.15);
+}
+
+body.dark .yoopta-notebook-editor ::selection {
+    background: rgba(96, 165, 250, 0.4);
+    color: inherit;
+}
+
+body.dark .yoopta-notebook-editor [data-yoopta-block-type="Code"] pre {
+    background: #020617;
+}
+
+/* Classic theme support - using body class - brown/gold colors */
+body.classic .yoopta-notebook-editor {
+    --editor-bg: #faf8f5;
+    --editor-text: #2c2c2c;
+    --editor-text-secondary: #5c5c5c;
+    --editor-text-muted: #a0a0a0;
+    --editor-border: #e0d8c8;
+    --editor-accent: #8b7355;
+    --editor-accent-light: rgba(139, 115, 85, 0.12);
+}
+
+body.classic .yoopta-notebook-editor ::selection {
+    background: rgba(139, 115, 85, 0.35);
+    color: inherit;
+}
+
+body.classic .yoopta-notebook-editor code {
+    background: rgba(139, 115, 85, 0.1);
+    color: #8b4513;
+}
+
+body.classic .yoopta-notebook-editor a {
+    color: #8b7355;
+}
+
+body.classic .yoopta-notebook-editor mark {
+    background: rgba(201, 162, 39, 0.35);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .yoopta-notebook-editor {
+        padding: 12px;
+    }
+
+    .yoopta-notebook-editor [data-yoopta-block-type="HeadingOne"] {
+        font-size: 1.6rem;
+    }
+
+    .yoopta-notebook-editor [data-yoopta-block-type="HeadingTwo"] {
+        font-size: 1.3rem;
+    }
+}
