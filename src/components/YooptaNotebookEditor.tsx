@@ -104,6 +104,8 @@ export interface YooptaNotebookEditorRef {
     setContent: (content: YooptaContentValue) => void;
     isEmpty: () => boolean;
     focus: () => void;
+    getSelectedText: () => string | null;
+    replaceSelectedText: (newText: string) => void;
 }
 
 interface YooptaNotebookEditorProps {
@@ -339,6 +341,70 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
         return align === 'left' || align === 'center' || align === 'right' ? align : undefined;
     };
 
+    // Helper function to get selected text from the editor
+    const getSelectedTextFromEditor = (): string | null => {
+        // Try to get the selection from the window
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim()) {
+            // Check if selection is within our editor
+            const editorEl = containerRef.current;
+            if (editorEl) {
+                const anchorNode = selection.anchorNode;
+                if (anchorNode && editorEl.contains(anchorNode)) {
+                    return selection.toString().trim();
+                }
+            }
+        }
+        return null;
+    };
+
+    // Helper function to replace selected text in the editor
+    const replaceSelectedTextInEditor = (newText: string): void => {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+
+        const editorEl = containerRef.current;
+        if (!editorEl) return;
+
+        const anchorNode = selection.anchorNode;
+        if (!anchorNode || !editorEl.contains(anchorNode)) return;
+
+        // Get the range and replace content
+        const range = selection.getRangeAt(0);
+        if (!range.collapsed) {
+            // Delete the selected content
+            range.deleteContents();
+            
+            // Split text by newlines for multi-paragraph handling
+            const lines = newText.split('\n');
+            const fragment = document.createDocumentFragment();
+            
+            lines.forEach((line, index) => {
+                const textNode = document.createTextNode(line);
+                fragment.appendChild(textNode);
+                if (index < lines.length - 1) {
+                    fragment.appendChild(document.createElement('br'));
+                }
+            });
+            
+            range.insertNode(fragment);
+            
+            // Collapse selection to end
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            // Trigger input event to notify the editor
+            const inputEvent = new InputEvent('input', {
+                bubbles: true,
+                cancelable: true,
+                inputType: 'insertText',
+                data: newText
+            });
+            editorEl.dispatchEvent(inputEvent);
+        }
+    };
+
     // Expose methods via ref
     useImperativeHandle(ref, () => ({
         getContent: () => value,
@@ -367,6 +433,8 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
             // Focus the editor container
             containerRef.current?.focus();
         },
+        getSelectedText: getSelectedTextFromEditor,
+        replaceSelectedText: replaceSelectedTextInEditor,
     }), [value]);
 
     // Update internal value when initialContent changes

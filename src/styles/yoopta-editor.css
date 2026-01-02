@@ -368,13 +368,14 @@
 
 /* Dark mode support - using body class */
 body.dark .yoopta-notebook-editor {
-    --editor-bg: #0f172a;
+    --editor-bg: #191919;
     --editor-text: #f1f5f9;
     --editor-text-secondary: #cbd5e1;
     --editor-text-muted: #64748b;
     --editor-border: #334155;
     --editor-accent: #60a5fa;
     --editor-accent-light: rgba(96, 165, 250, 0.15);
+    background: #191919;
 }
 
 body.dark .yoopta-notebook-editor ::selection {
@@ -395,6 +396,7 @@ body.classic .yoopta-notebook-editor {
     --editor-border: #e0d8c8;
     --editor-accent: #8b7355;
     --editor-accent-light: rgba(139, 115, 85, 0.12);
+    background: #faf8f5;
 }
 
 body.classic .yoopta-notebook-editor ::selection {

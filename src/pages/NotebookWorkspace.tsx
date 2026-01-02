@@ -11,8 +11,10 @@ import YooptaNotebookEditor, {
     textToYooptaContent
 } from '../components/YooptaNotebookEditor';
 import type { YooptaNotebookEditorRef } from '../components/YooptaNotebookEditor';
+import LegalAIToolbarButton from '../components/LegalAIToolbarButton';
 import type { YooptaContentValue } from '@yoopta/editor';
-import '../styles/notebook-workspace.css';
+import '../styles/notebook-workspace-notion.css';
+import '../styles/legal-ai-tools.css';
 
 interface CaseOption {
     id: number;
@@ -529,6 +531,23 @@ const NotebookWorkspace: React.FC = () => {
                                         </option>
                                     ))}
                                 </select>
+
+                                {/* Legal AI Tools Button */}
+                                <div style={{ position: 'relative' }}>
+                                    <LegalAIToolbarButton
+                                        onSelectText={() => {
+                                            // Get selected text from window selection
+                                            const selection = window.getSelection();
+                                            if (selection && selection.toString().trim()) {
+                                                return selection.toString().trim();
+                                            }
+                                            return null;
+                                        }}
+                                        onReplaceText={(newText: string) => {
+                                            editorRef.current?.replaceSelectedText?.(newText);
+                                        }}
+                                    />
+                                </div>
                             </div>
 
                             <div className="toolbar-left">

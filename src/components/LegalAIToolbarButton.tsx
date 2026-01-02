@@ -1,0 +1,320 @@
+/**
+ * قائمة أدوات الذكاء الاصطناعي للمحامي
+ * Legal AI Tools Menu Component
+ */
+
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import type { LegalAIToolInfo, LegalAIResponse } from '../services/legalAIService';
+import {
+  LEGAL_AI_TOOLS,
+  processLegalAIRequest
+} from '../services/legalAIService';
+
+import { 
+  Sparkles, 
+  ChevronDown, 
+  ChevronLeft,
+  X,
+  Loader2,
+  Check,
+  RefreshCw,
+  Copy,
+  Replace,
+  AlertCircle
+} from 'lucide-react';
+
+interface LegalAIToolbarButtonProps {
+  onSelectText: () => string | null;
+  onReplaceText: (newText: string) => void;
+  disabled?: boolean;
+}
+
+interface AIResultModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  result: LegalAIResponse | null;
+  selectedText: string;
+  toolInfo: LegalAIToolInfo | null;
+  isLoading: boolean;
+  onReplace: (text: string) => void;
+  onRetry: () => void;
+}
+
+// نافذة عرض نتائج AI
+const AIResultModal: React.FC<AIResultModalProps> = ({
+  isOpen,
+  onClose,
+  result,
+  selectedText,
+  toolInfo,
+  isLoading,
+  onReplace,
+  onRetry
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleCopy = async () => {
+    if (result?.result) {
+      await navigator.clipboard.writeText(result.result);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleReplace = () => {
+    if (result?.result) {
+      onReplace(result.result);
+      onClose();
+    }
+  };
+
+  return createPortal(
+    <div className="legal-ai-modal-overlay" onClick={onClose}>
+      <div 
+        className="legal-ai-result-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="legal-ai-modal-header">
+          <div className="legal-ai-modal-title">
+            {toolInfo && <span>{toolInfo.icon}</span>}
+            <span>{toolInfo?.nameAr || 'معالجة AI'}</span>
+          </div>
+          <button className="legal-ai-close-btn" onClick={onClose}>
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="legal-ai-modal-body">
+          {/* النص الأصلي */}
+          <div className="legal-ai-section">
+            <div className="legal-ai-label">النص الأصلي</div>
+            <div className="legal-ai-original-box">
+              {selectedText}
+            </div>
+          </div>
+
+          {/* حالة التحميل */}
+          {isLoading && (
+            <div className="legal-ai-loading">
+              <Loader2 className="legal-ai-spin" size={20} />
+              <span>جارٍ المعالجة...</span>
+            </div>
+          )}
+
+          {/* الخطأ */}
+          {result && !result.success && !isLoading && (
+            <div className="legal-ai-error">
+              <AlertCircle size={16} />
+              <span>{result.error}</span>
+            </div>
+          )}
+
+          {/* النتيجة */}
+          {result?.success && result.result && !isLoading && (
+            <div className="legal-ai-section">
+              <div className="legal-ai-label">النتيجة</div>
+              <div className="legal-ai-result-box">
+                {result.result}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="legal-ai-modal-footer">
+          {result?.success && !isLoading && (
+            <>
+              <button className="legal-ai-action-btn" onClick={handleCopy}>
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+                <span>{copied ? 'تم' : 'نسخ'}</span>
+              </button>
+              <button className="legal-ai-action-btn" onClick={onRetry}>
+                <RefreshCw size={14} />
+                <span>إعادة</span>
+              </button>
+              <button className="legal-ai-action-btn primary" onClick={handleReplace}>
+                <Replace size={14} />
+                <span>استبدال</span>
+              </button>
+            </>
+          )}
+          {result && !result.success && !isLoading && (
+            <button className="legal-ai-action-btn primary" onClick={onRetry}>
+              <RefreshCw size={14} />
+              <span>إعادة المحاولة</span>
+            </button>
+          )}
+          <button className="legal-ai-action-btn" onClick={onClose}>
+            إغلاق
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+// المكون الرئيسي
+const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
+  onSelectText,
+  onReplaceText,
+  disabled = false
+}) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentResult, setCurrentResult] = useState<LegalAIResponse | null>(null);
+  const [currentTool, setCurrentTool] = useState<LegalAIToolInfo | null>(null);
+  const [selectedText, setSelectedText] = useState('');
+  
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        menuRef.current && 
+        !menuRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setIsMenuOpen(false);
+        setExpandedCategory(null);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMenuOpen]);
+
+  const categories = {
+    formalization: {
+      nameAr: 'تحسين الصياغة',
+      icon: '✍️',
+      tools: LEGAL_AI_TOOLS.filter(t => t.category === 'formalization')
+    },
+    analysis: {
+      nameAr: 'التحليل القانوني',
+      icon: '🔬',
+      tools: LEGAL_AI_TOOLS.filter(t => t.category === 'analysis')
+    },
+    summary: {
+      nameAr: 'التلخيص',
+      icon: '📄',
+      tools: LEGAL_AI_TOOLS.filter(t => t.category === 'summary')
+    },
+    creative: {
+      nameAr: 'الدعم الابتكاري',
+      icon: '💡',
+      tools: LEGAL_AI_TOOLS.filter(t => t.category === 'creative')
+    }
+  };
+
+  const handleToolClick = async (tool: LegalAIToolInfo) => {
+    const text = onSelectText();
+    if (!text?.trim()) {
+      alert('يرجى تحديد نص في المحرر أولاً');
+      return;
+    }
+
+    setSelectedText(text);
+    setCurrentTool(tool);
+    setCurrentResult(null);
+    setIsLoading(true);
+    setIsMenuOpen(false);
+    setIsResultModalOpen(true);
+
+    const result = await processLegalAIRequest({
+      tool: tool.id,
+      selectedText: text
+    });
+
+    setCurrentResult(result);
+    setIsLoading(false);
+  };
+
+  const handleRetry = async () => {
+    if (!currentTool || !selectedText) return;
+
+    setIsLoading(true);
+    setCurrentResult(null);
+
+    const result = await processLegalAIRequest({
+      tool: currentTool.id,
+      selectedText
+    });
+
+    setCurrentResult(result);
+    setIsLoading(false);
+  };
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        className={`legal-ai-btn-main ${isMenuOpen ? 'active' : ''}`}
+        onClick={() => !disabled && setIsMenuOpen(!isMenuOpen)}
+        disabled={disabled}
+        title="أدوات المحامي AI"
+      >
+        <Sparkles size={14} />
+        <span>أدوات AI</span>
+        <ChevronDown size={12} className={isMenuOpen ? 'rotated' : ''} />
+      </button>
+
+      {isMenuOpen && (
+        <div ref={menuRef} className="legal-ai-dropdown">
+          <div className="legal-ai-dropdown-header">أدوات الذكاء الاصطناعي</div>
+          
+          {Object.entries(categories).map(([key, category]) => (
+            <div key={key} className="legal-ai-group">
+              <button
+                className={`legal-ai-group-btn ${expandedCategory === key ? 'expanded' : ''}`}
+                onClick={() => setExpandedCategory(expandedCategory === key ? null : key)}
+              >
+                <span>{category.icon}</span>
+                <span>{category.nameAr}</span>
+                <ChevronLeft size={12} className={expandedCategory === key ? 'rotated' : ''} />
+              </button>
+
+              {expandedCategory === key && (
+                <div className="legal-ai-items">
+                  {category.tools.map((tool) => (
+                    <button
+                      key={tool.id}
+                      className="legal-ai-item"
+                      onClick={() => handleToolClick(tool)}
+                    >
+                      <span>{tool.icon}</span>
+                      <span>{tool.nameAr}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <AIResultModal
+        isOpen={isResultModalOpen}
+        onClose={() => setIsResultModalOpen(false)}
+        result={currentResult}
+        selectedText={selectedText}
+        toolInfo={currentTool}
+        isLoading={isLoading}
+        onReplace={onReplaceText}
+        onRetry={handleRetry}
+      />
+    </>
+  );
+};
+
+export default LegalAIToolbarButton;
+export { AIResultModal };
+export type { LegalAIToolbarButtonProps };
