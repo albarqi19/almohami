@@ -15,7 +15,7 @@ interface NoteModalProps {
     onSave: (data: CreateNoteData) => Promise<void>;
     onDelete?: (id: number) => Promise<void>;
     onConvertToTask?: (id: number) => Promise<void>;
-    cases: Array<{ id: number; case_number: string; title: string }>;
+    cases: Array<{ id: number; file_number: string; title: string }>;
 }
 
 const NoteModal: React.FC<NoteModalProps> = ({
@@ -134,7 +134,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
                                 <option value="">بدون ربط</option>
                                 {cases.map(c => (
                                     <option key={c.id} value={c.id}>
-                                        {c.case_number} - {c.title}
+                                        {c.file_number} - {c.title}
                                     </option>
                                 ))}
                             </select>
@@ -188,7 +188,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
 const PersonalNotebook: React.FC = () => {
     const [notes, setNotes] = useState<PersonalNote[]>([]);
     const [statistics, setStatistics] = useState<NoteStatistics | null>(null);
-    const [cases, setCases] = useState<Array<{ id: number; case_number: string; title: string }>>([]);
+    const [cases, setCases] = useState<Array<{ id: number; file_number: string; title: string }>>([]);
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
@@ -230,7 +230,7 @@ const PersonalNotebook: React.FC = () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const mappedCases = (response.data || []).map((c: any) => ({
                 id: Number(c.id),
-                case_number: c.case_number || '',
+                file_number: c.file_number || '',
                 title: c.title || ''
             }));
             setCases(mappedCases);
@@ -424,7 +424,7 @@ const PersonalNotebook: React.FC = () => {
                                         {note.case && (
                                             <span className="note-linked-case">
                                                 <Briefcase size={12} />
-                                                {note.case.case_number}
+                                                {note.case.file_number}
                                             </span>
                                         )}
                                         {note.reminder_at && !note.reminder_sent && (

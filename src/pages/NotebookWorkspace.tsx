@@ -18,7 +18,7 @@ import '../styles/legal-ai-tools.css';
 
 interface CaseOption {
     id: number;
-    case_number: string;
+    file_number: string;
     title: string;
 }
 
@@ -103,7 +103,7 @@ const NotebookWorkspace: React.FC = () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const mappedCases = (response.data || []).map((c: any) => ({
                 id: Number(c.id),
-                case_number: c.case_number || '',
+                file_number: c.file_number || '',
                 title: c.title || ''
             }));
             setCases(mappedCases);
@@ -585,7 +585,7 @@ const NotebookWorkspace: React.FC = () => {
                                         <Briefcase size={16} />
                                         {noteCaseId && getSelectedCase() && (
                                             <span className="linked-case-badge">
-                                                {getSelectedCase()?.case_number}
+                                                {getSelectedCase()?.file_number}
                                             </span>
                                         )}
                                     </button>
@@ -611,7 +611,7 @@ const NotebookWorkspace: React.FC = () => {
                                                     className="dropdown-item"
                                                     onClick={() => handleLinkCase(c.id)}
                                                 >
-                                                    <span>{c.case_number} - {c.title}</span>
+                                                    <span>{c.file_number} - {c.title}</span>
                                                     {noteCaseId === c.id && <Check size={14} />}
                                                 </button>
                                             ))}

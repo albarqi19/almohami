@@ -16,7 +16,7 @@ export interface PersonalNote {
     updated_at: string;
     case?: {
         id: number;
-        case_number: string;
+        file_number: string;
         title: string;
     };
     client?: {
