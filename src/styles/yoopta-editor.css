@@ -60,6 +60,15 @@
     overflow: visible !important;
 }
 
+/* Enable text selection across blocks */
+.yoopta-notebook-editor,
+.yoopta-notebook-editor * {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+}
+
 /* Paragraph */
 .yoopta-notebook-editor [data-yoopta-block-type="Paragraph"] {
     font-size: 16px;

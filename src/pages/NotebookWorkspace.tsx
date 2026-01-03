@@ -543,6 +543,10 @@ const NotebookWorkspace: React.FC = () => {
                                             }
                                             return null;
                                         }}
+                                        onGetAllText={() => {
+                                            // Get all text from editor
+                                            return editorRef.current?.getAllText?.() || null;
+                                        }}
                                         onReplaceText={(newText: string) => {
                                             editorRef.current?.replaceSelectedText?.(newText);
                                         }}

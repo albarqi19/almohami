@@ -105,6 +105,7 @@ export interface YooptaNotebookEditorRef {
     isEmpty: () => boolean;
     focus: () => void;
     getSelectedText: () => string | null;
+    getAllText: () => string | null;
     replaceSelectedText: (newText: string) => void;
 }
 
@@ -341,6 +342,36 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
         return align === 'left' || align === 'center' || align === 'right' ? align : undefined;
     };
 
+    // Helper function to get ALL text from the editor
+    const getAllTextFromEditor = (): string | null => {
+        if (!value) return null;
+        
+        const texts: string[] = [];
+        const blocks = Object.values(value);
+        
+        // Sort blocks by meta.order
+        blocks.sort((a, b) => (a.meta?.order || 0) - (b.meta?.order || 0));
+        
+        for (const block of blocks) {
+            if (block.value && Array.isArray(block.value)) {
+                for (const element of block.value) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const children = (element as any)?.children;
+                    if (children && Array.isArray(children)) {
+                        for (const child of children) {
+                            if (child.text) {
+                                texts.push(child.text);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        const result = texts.join('\n').trim();
+        return result || null;
+    };
+
     // Helper function to get selected text from the editor
     const getSelectedTextFromEditor = (): string | null => {
         // Try to get the selection from the window
@@ -434,6 +465,7 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
             containerRef.current?.focus();
         },
         getSelectedText: getSelectedTextFromEditor,
+        getAllText: getAllTextFromEditor,
         replaceSelectedText: replaceSelectedTextInEditor,
     }), [value]);
 

@@ -26,6 +26,7 @@ import {
 
 interface LegalAIToolbarButtonProps {
   onSelectText: () => string | null;
+  onGetAllText: () => string | null;
   onReplaceText: (newText: string) => void;
   disabled?: boolean;
 }
@@ -159,6 +160,7 @@ const AIResultModal: React.FC<AIResultModalProps> = ({
 // المكون الرئيسي
 const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
   onSelectText,
+  onGetAllText,
   onReplaceText,
   disabled = false
 }) => {
@@ -216,9 +218,16 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
   };
 
   const handleToolClick = async (tool: LegalAIToolInfo) => {
-    const text = onSelectText();
+    // حاول الحصول على النص المحدد، وإلا استخدم كل المحتوى
+    let text = onSelectText();
+    const isFullContent = !text?.trim();
+    
+    if (isFullContent) {
+      text = onGetAllText();
+    }
+    
     if (!text?.trim()) {
-      alert('يرجى تحديد نص في المحرر أولاً');
+      alert('المحرر فارغ. يرجى كتابة نص أولاً');
       return;
     }
 
