@@ -302,16 +302,16 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
         className={`legal-ai-btn-main ${isMenuOpen ? 'active' : ''}`}
         onClick={() => !disabled && setIsMenuOpen(!isMenuOpen)}
         disabled={disabled}
-        title="أدوات المحامي AI"
+        title="أدوات المحامي"
       >
         <Sparkles size={14} />
-        <span>أدوات AI</span>
+        <span>أدوات المحامي</span>
         <ChevronDown size={12} className={isMenuOpen ? 'rotated' : ''} />
       </button>
 
       {isMenuOpen && (
         <div ref={menuRef} className="legal-ai-dropdown">
-          <div className="legal-ai-dropdown-header">أدوات الذكاء الاصطناعي</div>
+          <div className="legal-ai-dropdown-header">أدوات نظام الرائد الذكية</div>
           
           {Object.entries(categories).map(([key, category]) => (
             <div key={key} className="legal-ai-group">
