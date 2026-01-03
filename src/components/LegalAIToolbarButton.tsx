@@ -5,7 +5,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import ReactMarkdown from 'react-markdown';
 import type { LegalAIToolInfo, LegalAIResponse } from '../services/legalAIService';
 import {
   LEGAL_AI_TOOLS,
@@ -25,25 +24,10 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-// دالة لإزالة علامات Markdown من النص
-const stripMarkdown = (text: string): string => {
-  return text
-    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Bold **text**
-    .replace(/\*([^*]+)\*/g, '$1')      // Italic *text*
-    .replace(/^#+\s+/gm, '')            // Headers # ## ###
-    .replace(/^[-*]\s+/gm, '• ')        // List items
-    .replace(/^\d+\.\s+/gm, '')         // Numbered lists
-    .replace(/---+/g, '')               // Horizontal rules
-    .replace(/`([^`]+)`/g, '$1')        // Inline code
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Links
-    .trim();
-};
-
 interface LegalAIToolbarButtonProps {
   onSelectText: () => string | null;
   onGetAllText: () => string | null;
   onReplaceText: (newText: string) => void;
-  onReplaceAllContent: (newText: string) => void;
   disabled?: boolean;
 }
 
@@ -133,8 +117,8 @@ const AIResultModal: React.FC<AIResultModalProps> = ({
           {result?.success && result.result && !isLoading && (
             <div className="legal-ai-section">
               <div className="legal-ai-label">النتيجة</div>
-              <div className="legal-ai-result-box legal-ai-markdown">
-                <ReactMarkdown>{result.result}</ReactMarkdown>
+              <div className="legal-ai-result-box">
+                {result.result}
               </div>
             </div>
           )}
@@ -178,7 +162,6 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
   onSelectText,
   onGetAllText,
   onReplaceText,
-  onReplaceAllContent,
   disabled = false
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -188,7 +171,6 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
   const [currentResult, setCurrentResult] = useState<LegalAIResponse | null>(null);
   const [currentTool, setCurrentTool] = useState<LegalAIToolInfo | null>(null);
   const [selectedText, setSelectedText] = useState('');
-  const [isFullContent, setIsFullContent] = useState(false);
   
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -238,9 +220,9 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
   const handleToolClick = async (tool: LegalAIToolInfo) => {
     // حاول الحصول على النص المحدد، وإلا استخدم كل المحتوى
     let text = onSelectText();
-    const fullContent = !text?.trim();
+    const isFullContent = !text?.trim();
     
-    if (fullContent) {
+    if (isFullContent) {
       text = onGetAllText();
     }
     
@@ -250,7 +232,6 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
     }
 
     setSelectedText(text);
-    setIsFullContent(fullContent);
     setCurrentTool(tool);
     setCurrentResult(null);
     setIsLoading(true);
@@ -336,15 +317,7 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
         selectedText={selectedText}
         toolInfo={currentTool}
         isLoading={isLoading}
-        onReplace={(text: string) => {
-          // إزالة علامات Markdown قبل الاستبدال
-          const cleanText = stripMarkdown(text);
-          if (isFullContent) {
-            onReplaceAllContent(cleanText);
-          } else {
-            onReplaceText(cleanText);
-          }
-        }}
+        onReplace={onReplaceText}
         onRetry={handleRetry}
       />
     </>
