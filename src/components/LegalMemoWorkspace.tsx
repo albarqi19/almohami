@@ -16,7 +16,7 @@ import type { YooptaNotebookEditorRef } from './YooptaNotebookEditor';
 import LegalAIToolbarButton from './LegalAIToolbarButton';
 import AnalysisProgress from './AnalysisProgress';
 import { LegalMemoService, type AnalysisStep } from '../services/legalMemoService';
-import { runFullMemoAnalysis, ANALYSIS_ENGINES, type FullMemoAnalysis, type AnalysisEngineType } from '../services/memoAnalysisService';
+import { runSingleAnalysis, ANALYSIS_ENGINES, type AnalysisEngineType, type MemoAnalysisResult } from '../services/memoAnalysisService';
 import type { YooptaContentValue } from '@yoopta/editor';
 import '../styles/legal-memo-workspace.css';
 
@@ -267,6 +267,8 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
     const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([]);
     const [analysisResult, setAnalysisResult] = useState<any>(null);
     const [showAnalysisPanel, setShowAnalysisPanel] = useState<boolean>(false);
+    const [showAnalysisMenu, setShowAnalysisMenu] = useState<boolean>(false);
+    const [lastAnalyzedAt, setLastAnalyzedAt] = useState<Date | null>(null);
 
     // الأخطاء والتحميل
     const [error, setError] = useState<string | null>(null);
@@ -280,6 +282,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
     const pendingChangesRef = useRef(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const analysisMenuRef = useRef<HTMLDivElement>(null);
     const [editorKey, setEditorKey] = useState(0);
 
     // الحصول على متطلبات الوثائق للمذكرة الحالية
@@ -454,7 +457,13 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
         setEditorKey(prev => prev + 1);
 
         if (memo.analysis_result) {
-            setAnalysisResult(memo.analysis_result);
+            const savedAnalysis = typeof memo.analysis_result === 'string'
+                ? JSON.parse(memo.analysis_result)
+                : memo.analysis_result;
+            setAnalysisResult(savedAnalysis);
+            if (savedAnalysis.analyzedAt) {
+                setLastAnalyzedAt(new Date(savedAnalysis.analyzedAt));
+            }
         }
 
         setStep('editor');
@@ -546,8 +555,8 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
         }
     };
 
-    // التحليل الذكي المتقدم - 5 محركات تحليل
-    const handleSmartAnalysis = async () => {
+    // التحليل الذكي - تحليل واحد حسب الاختيار
+    const handleSingleAnalysis = async (engineType: AnalysisEngineType) => {
         const memoContent = editorRef.current?.getAllText?.() || '';
 
         if (!memoContent.trim()) {
@@ -555,52 +564,76 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
             return;
         }
 
+        setShowAnalysisMenu(false);
         setIsAnalyzing(true);
         setShowAnalysisPanel(true);
-        setAnalysisSteps([]);
         setError(null);
 
-        // تحديث خطوات التحليل مع المحركات الخمسة
-        const updateAnalysisProgress = (completed: number, _total: number, _currentEngine: AnalysisEngineType) => {
-            const newSteps: AnalysisStep[] = Object.entries(ANALYSIS_ENGINES).map(([key, engine], index) => ({
-                id: key,
-                title: `${engine.icon} ${engine.name}`,
-                status: index < completed ? 'completed' : index === completed ? 'loading' : 'pending',
-                message: index < completed ? 'تم التحليل' : index === completed ? 'جاري التحليل...' : 'في الانتظار'
-            }));
-            setAnalysisSteps(newSteps);
-        };
+        const engineInfo = ANALYSIS_ENGINES[engineType];
+        setAnalysisSteps([{
+            id: engineType,
+            title: `${engineInfo.icon} ${engineInfo.name}`,
+            status: 'loading',
+            message: 'جاري التحليل...'
+        }]);
 
         try {
-            const result = await runFullMemoAnalysis(
+            const result = await runSingleAnalysis(
                 selectedMemoType,
-                getMemoTypeName(),
                 memoContent,
-                updateAnalysisProgress
+                engineType
             );
 
-            // تحديث حالة النهاية
-            const finalSteps: AnalysisStep[] = result.analyses.map(analysis => ({
-                id: analysis.engine,
-                title: `${analysis.icon} ${analysis.engineName}`,
-                status: analysis.success ? 'completed' : 'error',
-                message: analysis.success ? 'تم التحليل بنجاح' : 'حدث خطأ'
-            }));
-            setAnalysisSteps(finalSteps);
+            // تحديث الخطوة النهائية
+            setAnalysisSteps([{
+                id: engineType,
+                title: `${result.icon} ${result.engineName}`,
+                status: result.success ? 'completed' : 'error',
+                message: result.success ? 'تم التحليل بنجاح' : 'حدث خطأ'
+            }]);
 
-            // تحويل النتائج لصيغة العرض
-            setAnalysisResult({
-                engines: result.analyses,
-                memoType: result.memoType,
-                memoTypeName: result.memoTypeName,
-                timestamp: result.timestamp
-            });
+            const now = new Date();
+            const newAnalysisResult = {
+                ...analysisResult,
+                [engineType]: result,
+                memoType: selectedMemoType,
+                memoTypeName: getMemoTypeName(),
+                analyzedAt: now.toISOString(),
+                lastEngine: engineType
+            };
+
+            setAnalysisResult(newAnalysisResult);
+            setLastAnalyzedAt(now);
+
+            // حفظ التحليل مع المذكرة
+            if (savedMemoId) {
+                try {
+                    await LegalMemoService.updateMemo(savedMemoId.toString(), {
+                        analysis_result: newAnalysisResult
+                    });
+                } catch (e) {
+                    console.warn('Failed to save analysis result:', e);
+                }
+            }
         } catch (error: any) {
-            setError(error.message || 'فشل في إجراء التحليل الذكي');
+            setError(error.message || 'فشل في إجراء التحليل');
         } finally {
             setIsAnalyzing(false);
         }
     };
+
+    // إغلاق قائمة التحليل عند النقر خارجها
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (analysisMenuRef.current && !analysisMenuRef.current.contains(event.target as Node)) {
+                setShowAnalysisMenu(false);
+            }
+        };
+        if (showAnalysisMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showAnalysisMenu]);
 
     // رفع الملفات
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -724,20 +757,45 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                         />
                                     </div>
 
-                                    {/* زر التحليل الذكي */}
-                                    <button
-                                        className="lmw-btn lmw-btn-analysis"
-                                        onClick={handleSmartAnalysis}
-                                        disabled={!savedMemoId || isAnalyzing}
-                                        title={!savedMemoId ? 'احفظ المذكرة أولاً' : 'تحليل ذكي للمذكرة'}
-                                    >
-                                        {isAnalyzing ? (
-                                            <Loader2 size={16} className="animate-spin" />
-                                        ) : (
-                                            <Brain size={16} />
+                                    {/* قائمة التحليل الذكي */}
+                                    <div className="lmw-analysis-dropdown-wrapper" ref={analysisMenuRef}>
+                                        <button
+                                            className={`lmw-btn lmw-btn-analysis ${showAnalysisMenu ? 'active' : ''}`}
+                                            onClick={() => setShowAnalysisMenu(!showAnalysisMenu)}
+                                            disabled={isAnalyzing}
+                                            title="اختر نوع التحليل"
+                                        >
+                                            {isAnalyzing ? (
+                                                <Loader2 size={16} className="animate-spin" />
+                                            ) : (
+                                                <Zap size={16} />
+                                            )}
+                                            <span>التحليل الذكي</span>
+                                            <ChevronRight size={12} className={showAnalysisMenu ? 'rotated' : ''} />
+                                        </button>
+
+                                        {showAnalysisMenu && (
+                                            <div className="lmw-analysis-menu">
+                                                <div className="lmw-analysis-menu-header">اختر نوع التحليل</div>
+                                                {Object.entries(ANALYSIS_ENGINES).map(([key, engine]) => (
+                                                    <button
+                                                        key={key}
+                                                        className="lmw-analysis-menu-item"
+                                                        onClick={() => handleSingleAnalysis(key as AnalysisEngineType)}
+                                                    >
+                                                        <span className="lmw-analysis-icon">{engine.icon}</span>
+                                                        <div className="lmw-analysis-info">
+                                                            <div className="lmw-analysis-name">{engine.name}</div>
+                                                            <div className="lmw-analysis-desc">{engine.description}</div>
+                                                        </div>
+                                                        {analysisResult?.[key] && (
+                                                            <Check size={14} className="lmw-analysis-done" />
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         )}
-                                        <span>تحليل ذكي</span>
-                                    </button>
+                                    </div>
 
                                     {/* زر الحفظ */}
                                     <button
@@ -902,44 +960,48 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                                 )}
                                             </div>
 
-                                            {/* نتائج التحليل */}
-                                            {analysisResult && (
-                                                <div className="lmw-sidebar-section lmw-analysis-section">
-                                                    <h4>
-                                                        <Sparkles size={14} />
-                                                        نتائج التحليل
-                                                    </h4>
+                                            {/* نتائج التحليل المحفوظة */}
+                                            {analysisResult && Object.keys(analysisResult).some(k =>
+                                                ['gatekeeper', 'brain', 'opponent', 'polish', 'compliance'].includes(k)
+                                            ) && (
+                                                    <div className="lmw-sidebar-section lmw-analysis-section">
+                                                        <h4>
+                                                            <Sparkles size={14} />
+                                                            نتائج التحليل
+                                                        </h4>
 
-                                                    {analysisResult.quality_score && (
-                                                        <div className="lmw-quality-score">
-                                                            <div className="lmw-score-circle">
-                                                                <span>{analysisResult.quality_score}</span>
-                                                                <small>/100</small>
+                                                        {/* قائمة التحليلات المكتملة */}
+                                                        <div className="lmw-saved-analyses">
+                                                            {Object.entries(ANALYSIS_ENGINES).map(([key, engine]) => {
+                                                                const savedEngine = analysisResult[key];
+                                                                if (!savedEngine) return null;
+                                                                return (
+                                                                    <div key={key} className="lmw-saved-analysis-item">
+                                                                        <span className="lmw-saved-icon">{engine.icon}</span>
+                                                                        <span className="lmw-saved-name">{engine.name}</span>
+                                                                        <Check size={12} className="lmw-saved-check" />
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+
+                                                        {/* آخر تحليل */}
+                                                        {lastAnalyzedAt && (
+                                                            <div className="lmw-last-analyzed">
+                                                                <Clock size={12} />
+                                                                <span>آخر تحليل: {lastAnalyzedAt.toLocaleDateString('ar-SA')} {lastAnalyzedAt.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
                                                             </div>
-                                                            <span>درجة الجودة</span>
-                                                        </div>
-                                                    )}
+                                                        )}
 
-                                                    {analysisResult.improvement_suggestions?.length > 0 && (
-                                                        <div className="lmw-suggestions">
-                                                            <h5>اقتراحات التحسين</h5>
-                                                            <ul>
-                                                                {analysisResult.improvement_suggestions.slice(0, 3).map((s: string, i: number) => (
-                                                                    <li key={i}>{s}</li>
-                                                                ))}
-                                                            </ul>
-                                                        </div>
-                                                    )}
-
-                                                    <button
-                                                        className="lmw-view-full-analysis"
-                                                        onClick={() => setShowAnalysisPanel(true)}
-                                                    >
-                                                        <Eye size={14} />
-                                                        عرض التحليل الكامل
-                                                    </button>
-                                                </div>
-                                            )}
+                                                        <button
+                                                            className="lmw-view-full-analysis"
+                                                            onClick={() => setShowAnalysisPanel(true)}
+                                                        >
+                                                            <Eye size={14} />
+                                                            عرض التحليل الكامل
+                                                        </button>
+                                                    </div>
+                                                )}
                                         </>
                                     )}
                                 </aside>

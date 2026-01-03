@@ -43,6 +43,7 @@ export interface CreateMemoData {
   assigned_lawyer?: string;
   document_ids?: string[];
   formatting_data?: any;
+  analysis_result?: any;
 }
 
 export interface ApiResponse<T> {
@@ -53,7 +54,7 @@ export interface ApiResponse<T> {
 }
 
 export class LegalMemoService {
-  
+
   /**
    * الحصول على قائمة المذكرات
    */
@@ -76,12 +77,12 @@ export class LegalMemoService {
         }
       });
     }
-    
+
     const queryString = queryParams.toString();
     const endpoint = queryString ? `/legal-memos?${queryString}` : '/legal-memos';
-    
+
     const response = await apiClient.get<ApiResponse<any>>(endpoint);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -94,11 +95,11 @@ export class LegalMemoService {
    */
   static async createMemo(data: CreateMemoData): Promise<LegalMemo> {
     const response = await apiClient.post<ApiResponse<LegalMemo>>('/legal-memos', data);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
-      const errorMessage = response.errors 
+      const errorMessage = response.errors
         ? Object.values(response.errors).flat().join(', ')
         : response.message || 'فشل في إنشاء المذكرة';
       throw new Error(errorMessage);
@@ -110,7 +111,7 @@ export class LegalMemoService {
    */
   static async getMemo(id: string): Promise<LegalMemo> {
     const response = await apiClient.get<ApiResponse<LegalMemo>>(`/legal-memos/${id}`);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -123,11 +124,11 @@ export class LegalMemoService {
    */
   static async updateMemo(id: string, data: Partial<CreateMemoData>): Promise<LegalMemo> {
     const response = await apiClient.put<ApiResponse<LegalMemo>>(`/legal-memos/${id}`, data);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
-      const errorMessage = response.errors 
+      const errorMessage = response.errors
         ? Object.values(response.errors).flat().join(', ')
         : response.message || 'فشل في تحديث المذكرة';
       throw new Error(errorMessage);
@@ -142,7 +143,7 @@ export class LegalMemoService {
     formatting_data?: any;
   }): Promise<{ last_saved_at: string }> {
     const response = await apiClient.post<ApiResponse<{ last_saved_at: string }>>(`/legal-memos/${id}/auto-save`, data);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -159,7 +160,7 @@ export class LegalMemoService {
     analyzed_at: string;
   }> {
     const response = await apiClient.post<ApiResponse<any>>(`/legal-memos/${id}/ai-analysis`);
-    
+
     if (response.success && response.data) {
       return response.data;
     } else {
@@ -172,7 +173,7 @@ export class LegalMemoService {
    */
   static async deleteMemo(id: string): Promise<void> {
     const response = await apiClient.delete<ApiResponse<void>>(`/legal-memos/${id}`);
-    
+
     if (!response.success) {
       throw new Error(response.message || 'فشل في حذف المذكرة');
     }
@@ -269,11 +270,11 @@ export class LegalMemoService {
    */
   static async createMemoWithFiles(formData: FormData): Promise<LegalMemo> {
     const response = await apiClient.post('/legal-memos/with-files', formData) as { data: ApiResponse<LegalMemo> };
-    
+
     if (!response.data.success) {
       throw new Error(response.data.message || 'فشل في إنشاء المذكرة مع الملفات');
     }
-    
+
     return response.data.data!;
   }
 
@@ -282,23 +283,23 @@ export class LegalMemoService {
    */
   static async updateMemoWithFiles(id: string, formData: FormData): Promise<LegalMemo> {
     const response = await apiClient.post(`/legal-memos/${id}/with-files`, formData) as { data: ApiResponse<LegalMemo> };
-    
+
     if (!response.data.success) {
       throw new Error(response.data.message || 'فشل في تحديث المذكرة مع الملفات');
     }
-    
+
     return response.data.data!;
   }
 
   static async analyzeSmartly(
-    memoId: number, 
+    memoId: number,
     forceReanalysis: boolean = false,
     onProgressUpdate?: (step: AnalysisStep) => void
   ): Promise<any> {
     try {
       console.log('بدء التحليل الذكي للمذكرة:', memoId);
       console.log('إعادة تحليل إجباري:', forceReanalysis);
-      
+
       // خطوة 1: بدء التحليل
       onProgressUpdate?.({
         id: 'start_analysis',
@@ -306,10 +307,10 @@ export class LegalMemoService {
         status: 'loading',
         message: 'جاري فحص المذكرة والوثائق المرفقة...'
       });
-      
+
       const requestData = forceReanalysis ? { force_reanalysis: true } : {};
       const response = await apiClient.post(`/legal-memos/${memoId}/smart-analysis`, requestData) as { data: any };
-      
+
       // معالجة الخطوات من الاستجابة
       if (response.data.data?.analysis_steps) {
         response.data.data.analysis_steps.forEach((step: any) => {
@@ -321,7 +322,7 @@ export class LegalMemoService {
           });
         });
       }
-      
+
       // خطوة نهائية
       onProgressUpdate?.({
         id: 'analysis_complete',
@@ -329,13 +330,13 @@ export class LegalMemoService {
         status: 'completed',
         message: 'تم إنجاز التحليل الذكي بنجاح'
       });
-      
+
       console.log('تم إكمال التحليل الذكي:', response.data);
-      
+
       return response.data;
     } catch (error) {
       console.error('خطأ في التحليل الذكي:', error);
-      
+
       // إرسال خطوة الخطأ
       onProgressUpdate?.({
         id: 'analysis_error',
@@ -344,7 +345,7 @@ export class LegalMemoService {
         message: 'فشل في إجراء التحليل الذكي',
         error: (error as Error).message
       });
-      
+
       throw error;
     }
   }
