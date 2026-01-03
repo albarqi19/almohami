@@ -310,8 +310,18 @@ const LEGAL_PROMPTS: Record<LegalAIToolType, string> = {
 قدم 2-3 صيغ مختلفة للشرط الجزائي مع توضيح مميزات كل صيغة.`
 };
 
-// متغير لتخزين API Key - يتم قراءته من متغيرات البيئة
-let geminiApiKey: string | null = null;
+// مفتاح API - يُقرأ من متغيرات البيئة في Vercel
+// VITE_GEMINI_API_KEY يجب إضافته في Vercel Dashboard > Settings > Environment Variables
+const getApiKeyFromEnv = (): string | null => {
+  try {
+    return import.meta.env.VITE_GEMINI_API_KEY || null;
+  } catch {
+    return null;
+  }
+};
+
+// متغير لتخزين API Key
+let geminiApiKey: string | null = getApiKeyFromEnv();
 
 // دالة لتعيين API Key
 export function setGeminiApiKey(apiKey: string): void {
@@ -320,12 +330,7 @@ export function setGeminiApiKey(apiKey: string): void {
 
 // دالة للحصول على API Key
 export function getGeminiApiKey(): string | null {
-  // إذا كان المفتاح محفوظ في المتغير، استخدمه
-  if (geminiApiKey) {
-    return geminiApiKey;
-  }
-  // وإلا حاول القراءة من متغيرات البيئة
-  return import.meta.env.VITE_GEMINI_API_KEY || null;
+  return geminiApiKey || getApiKeyFromEnv();
 }
 
 // دالة لمسح API Key
