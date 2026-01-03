@@ -107,6 +107,7 @@ export interface YooptaNotebookEditorRef {
     getSelectedText: () => string | null;
     getAllText: () => string | null;
     replaceSelectedText: (newText: string) => void;
+    replaceAllContent: (newText: string) => void;
 }
 
 interface YooptaNotebookEditorProps {
@@ -436,6 +437,13 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
         }
     };
 
+    // Helper function to replace ALL content in the editor
+    const replaceAllContentInEditor = (newText: string): void => {
+        // تحويل النص إلى محتوى Yoopta جديد
+        const newContent = textToYooptaContent(newText);
+        setValue(newContent);
+    };
+
     // Expose methods via ref
     useImperativeHandle(ref, () => ({
         getContent: () => value,
@@ -467,6 +475,7 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
         getSelectedText: getSelectedTextFromEditor,
         getAllText: getAllTextFromEditor,
         replaceSelectedText: replaceSelectedTextInEditor,
+        replaceAllContent: replaceAllContentInEditor,
     }), [value]);
 
     // Update internal value when initialContent changes
