@@ -472,9 +472,10 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
             // استبدال كل المحتوى بنص جديد
             const lines = newText.split('\n');
             const newContent: YooptaContentValue = {};
+            const timestamp = Date.now();
             
             lines.forEach((line, index) => {
-                const blockId = `paragraph-${index}-${Date.now()}`;
+                const blockId = `paragraph-${index}-${timestamp}-${Math.random().toString(36).substr(2, 9)}`;
                 newContent[blockId] = {
                     id: blockId,
                     type: 'Paragraph',
@@ -485,7 +486,7 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
                     },
                     value: [
                         {
-                            id: `p-value-${index}-${Date.now()}`,
+                            id: `p-value-${index}-${timestamp}-${Math.random().toString(36).substr(2, 9)}`,
                             type: 'paragraph',
                             children: [{ text: line }],
                             props: {
@@ -496,10 +497,16 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
                 };
             });
             
+            // استخدام setContent بدلاً من setValue المباشر
             setValue(newContent);
             if (onChange) {
                 onChange(newContent);
             }
+            
+            // Force re-render and focus
+            setTimeout(() => {
+                containerRef.current?.focus();
+            }, 50);
         },
     }), [value, onChange]);
 
