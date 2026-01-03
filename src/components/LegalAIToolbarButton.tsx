@@ -6,6 +6,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { LegalAIToolInfo, LegalAIResponse } from '../services/legalAIService';
 import {
   LEGAL_AI_TOOLS,
@@ -136,7 +137,9 @@ const AIResultModal: React.FC<AIResultModalProps> = ({
             <div className="legal-ai-section">
               <div className="legal-ai-label">النتيجة</div>
               <div className="legal-ai-result-box legal-ai-markdown">
-                <ReactMarkdown>{result.result}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {result.result}
+                </ReactMarkdown>
               </div>
             </div>
           )}

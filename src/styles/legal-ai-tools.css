@@ -303,6 +303,35 @@
     padding: 0;
 }
 
+/* Table Styling */
+.legal-ai-markdown table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 12px;
+}
+
+.legal-ai-markdown th,
+.legal-ai-markdown td {
+    border: 1px solid var(--border-color, #e5e5e5);
+    padding: 8px 10px;
+    text-align: right;
+}
+
+.legal-ai-markdown th {
+    background: var(--bg-secondary, #f7f6f3);
+    font-weight: 600;
+    color: var(--text-primary, #37352f);
+}
+
+.legal-ai-markdown tr:nth-child(even) {
+    background: var(--bg-hover, #fafafa);
+}
+
+.legal-ai-markdown tr:hover {
+    background: var(--bg-selected, #f0f0f0);
+}
+
 .legal-ai-loading {
     display: flex;
     align-items: center;
