@@ -442,6 +442,10 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
         getContent: () => value,
         setContent: (content: YooptaContentValue) => {
             setValue(content);
+            // استخدام editor لتحديث المحتوى مباشرة
+            if (editor && typeof (editor as any).setEditorValue === 'function') {
+                (editor as any).setEditorValue(content);
+            }
         },
         isEmpty: () => {
             if (!value) return true;
@@ -497,8 +501,11 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
                 };
             });
             
-            // استخدام setContent بدلاً من setValue المباشر
+            // استخدام editor API لتحديث المحتوى
             setValue(newContent);
+            if (editor && typeof (editor as any).setEditorValue === 'function') {
+                (editor as any).setEditorValue(newContent);
+            }
             if (onChange) {
                 onChange(newContent);
             }
@@ -508,7 +515,7 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
                 containerRef.current?.focus();
             }, 50);
         },
-    }), [value, onChange]);
+    }), [value, onChange, editor]);
 
     // Update internal value when initialContent changes
     useEffect(() => {
