@@ -310,8 +310,8 @@ const LEGAL_PROMPTS: Record<LegalAIToolType, string> = {
 قدم 2-3 صيغ مختلفة للشرط الجزائي مع توضيح مميزات كل صيغة.`
 };
 
-// متغير لتخزين API Key
-let geminiApiKey: string | null = 'AIzaSyCQ_8R0hLORhdPOzxtnvlF-bG36pmDH1rA';
+// متغير لتخزين API Key - يتم قراءته من متغيرات البيئة
+let geminiApiKey: string | null = import.meta.env.VITE_GEMINI_API_KEY || null;
 
 // دالة لتعيين API Key
 export function setGeminiApiKey(apiKey: string): void {
