@@ -550,6 +550,10 @@ const NotebookWorkspace: React.FC = () => {
                                         onReplaceText={(newText: string) => {
                                             editorRef.current?.replaceSelectedText?.(newText);
                                         }}
+                                        onReplaceAllText={(newText: string) => {
+                                            // استبدال كل المحتوى
+                                            editorRef.current?.replaceAllText?.(newText);
+                                        }}
                                     />
                                 </div>
                             </div>

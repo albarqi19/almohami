@@ -107,6 +107,7 @@ export interface YooptaNotebookEditorRef {
     getSelectedText: () => string | null;
     getAllText: () => string | null;
     replaceSelectedText: (newText: string) => void;
+    replaceAllText: (newText: string) => void;
 }
 
 interface YooptaNotebookEditorProps {
@@ -467,7 +468,40 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
         getSelectedText: getSelectedTextFromEditor,
         getAllText: getAllTextFromEditor,
         replaceSelectedText: replaceSelectedTextInEditor,
-    }), [value]);
+        replaceAllText: (newText: string) => {
+            // استبدال كل المحتوى بنص جديد
+            const lines = newText.split('\n');
+            const newContent: YooptaContentValue = {};
+            
+            lines.forEach((line, index) => {
+                const blockId = `paragraph-${index}-${Date.now()}`;
+                newContent[blockId] = {
+                    id: blockId,
+                    type: 'Paragraph',
+                    meta: {
+                        order: index,
+                        depth: 0,
+                        align: 'right'
+                    },
+                    value: [
+                        {
+                            id: `p-value-${index}-${Date.now()}`,
+                            type: 'paragraph',
+                            children: [{ text: line }],
+                            props: {
+                                nodeType: 'block'
+                            }
+                        }
+                    ]
+                };
+            });
+            
+            setValue(newContent);
+            if (onChange) {
+                onChange(newContent);
+            }
+        },
+    }), [value, onChange]);
 
     // Update internal value when initialContent changes
     useEffect(() => {

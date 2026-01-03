@@ -30,6 +30,7 @@ interface LegalAIToolbarButtonProps {
   onSelectText: () => string | null;
   onGetAllText: () => string | null;
   onReplaceText: (newText: string) => void;
+  onReplaceAllText?: (newText: string) => void; // إضافة دالة لاستبدال كل المحتوى
   disabled?: boolean;
 }
 
@@ -42,6 +43,8 @@ interface AIResultModalProps {
   isLoading: boolean;
   onReplace: (text: string) => void;
   onRetry: () => void;
+  isFullContent: boolean; // إضافة flag لمعرفة إذا كان تحليل للمستند كامل
+  onReplaceAllText?: (text: string) => void; // لاستبدال المستند كامل
 }
 
 // نافذة عرض نتائج AI
@@ -53,7 +56,9 @@ const AIResultModal: React.FC<AIResultModalProps> = ({
   toolInfo,
   isLoading,
   onReplace,
-  onRetry
+  isFullContent,
+  onRetry,
+  onReplaceAllText
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -86,7 +91,11 @@ const AIResultModal: React.FC<AIResultModalProps> = ({
     if (result?.result) {
       // استبدال النص نظيف
       const cleanText = stripMarkdown(result.result);
-      onReplace(cleanText);
+      if (isFullContent && onReplaceAllText) {
+        onReplaceAllText(cleanText);
+      } else {
+        onReplace(cleanText);
+      }
       onClose();
     }
   };
@@ -158,7 +167,7 @@ const AIResultModal: React.FC<AIResultModalProps> = ({
               </button>
               <button className="legal-ai-action-btn primary" onClick={handleReplace}>
                 <Replace size={14} />
-                <span>استبدال</span>
+                <span>{isFullContent ? 'استبدال الكل' : 'استبدال'}</span>
               </button>
             </>
           )}
@@ -183,6 +192,7 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
   onSelectText,
   onGetAllText,
   onReplaceText,
+  onReplaceAllText,
   disabled = false
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -192,6 +202,7 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
   const [currentResult, setCurrentResult] = useState<LegalAIResponse | null>(null);
   const [currentTool, setCurrentTool] = useState<LegalAIToolInfo | null>(null);
   const [selectedText, setSelectedText] = useState('');
+  const [isFullContent, setIsFullContent] = useState(false); // تتبع ما إذا كان تحليل للمستند كامل
   
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -239,11 +250,11 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
   };
 
   const handleToolClick = async (tool: LegalAIToolInfo) => {
-    // حاول الحصول على النص المحدد، وإلا استخدم كل المحتوى
+    // حاول الحصول على النص المحدد
     let text = onSelectText();
-    const isFullContent = !text?.trim();
+    const isFullDoc = !text?.trim();
     
-    if (isFullContent) {
+    if (isFullDoc) {
       text = onGetAllText();
     }
     
@@ -253,6 +264,7 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
     }
 
     setSelectedText(text);
+    setIsFullContent(isFullDoc); // حفظ معلومة أن التحليل للمستند كامل
     setCurrentTool(tool);
     setCurrentResult(null);
     setIsLoading(true);
@@ -338,8 +350,16 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
         selectedText={selectedText}
         toolInfo={currentTool}
         isLoading={isLoading}
-        onReplace={onReplaceText}
+        onReplace={(text) => {
+          if (isFullContent && onReplaceAllText) {
+            onReplaceAllText(text); // استبدال كل المحتوى
+          } else {
+            onReplaceText(text); // استبدال النص المحدد
+          }
+        }}
         onRetry={handleRetry}
+        isFullContent={isFullContent}
+        onReplaceAllText={onReplaceAllText}
       />
     </>
   );
