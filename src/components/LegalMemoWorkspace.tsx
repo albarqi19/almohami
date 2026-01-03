@@ -1040,7 +1040,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                     </div>
                                 </main>
 
-                                {/* لوحة التحليل الكامل - 5 محركات */}
+                                {/* لوحة التحليل الكامل */}
                                 <AnimatePresence>
                                     {showAnalysisPanel && analysisResult && (
                                         <motion.aside
@@ -1051,8 +1051,8 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                         >
                                             <div className="lmw-analysis-header">
                                                 <h3>
-                                                    <Brain size={18} />
-                                                    التحليل الذكي المتقدم
+                                                    <Zap size={18} />
+                                                    نتائج التحليل
                                                 </h3>
                                                 <button onClick={() => setShowAnalysisPanel(false)}>
                                                     <X size={18} />
@@ -1065,52 +1065,45 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                                     <span className="lmw-analysis-badge">
                                                         📄 {analysisResult.memoTypeName || getMemoTypeName()}
                                                     </span>
-                                                    <span className="lmw-analysis-time">
-                                                        🕐 {analysisResult.timestamp ? new Date(analysisResult.timestamp).toLocaleTimeString('ar-SA') : ''}
-                                                    </span>
+                                                    {lastAnalyzedAt && (
+                                                        <span className="lmw-analysis-time">
+                                                            🕐 {lastAnalyzedAt.toLocaleDateString('ar-SA')}
+                                                        </span>
+                                                    )}
                                                 </div>
 
-                                                {/* نتائج المحركات الخمسة */}
-                                                {analysisResult.engines?.map((engine: any, index: number) => (
-                                                    <details
-                                                        key={engine.engine}
-                                                        className={`lmw-engine-block ${engine.success ? 'success' : 'error'}`}
-                                                        open={index === 0}
-                                                    >
-                                                        <summary className="lmw-engine-header">
-                                                            <span className="lmw-engine-icon">{engine.icon}</span>
-                                                            <span className="lmw-engine-name">{engine.engineName}</span>
-                                                            <span className={`lmw-engine-status ${engine.success ? 'success' : 'error'}`}>
-                                                                {engine.success ? '✓' : '✗'}
-                                                            </span>
-                                                        </summary>
-                                                        <div className="lmw-engine-content">
-                                                            <pre dir="rtl">{engine.result}</pre>
+                                                {/* نتائج المحركات المحفوظة */}
+                                                {Object.entries(ANALYSIS_ENGINES).map(([key, engine]) => {
+                                                    const savedResult = analysisResult[key];
+                                                    if (!savedResult) return null;
+                                                    return (
+                                                        <details
+                                                            key={key}
+                                                            className={`lmw-engine-block ${savedResult.success ? 'success' : 'error'}`}
+                                                            open={analysisResult.lastEngine === key}
+                                                        >
+                                                            <summary className="lmw-engine-header">
+                                                                <span className="lmw-engine-icon">{engine.icon}</span>
+                                                                <span className="lmw-engine-name">{engine.name}</span>
+                                                                <span className={`lmw-engine-status ${savedResult.success ? 'success' : 'error'}`}>
+                                                                    {savedResult.success ? '✓' : '✗'}
+                                                                </span>
+                                                            </summary>
+                                                            <div className="lmw-engine-content">
+                                                                <pre dir="rtl">{savedResult.result}</pre>
+                                                            </div>
+                                                        </details>
+                                                    );
+                                                })}
+
+                                                {/* رسالة إذا لا توجد تحليلات */}
+                                                {!Object.keys(analysisResult).some(k =>
+                                                    ['gatekeeper', 'brain', 'opponent', 'polish', 'compliance'].includes(k)
+                                                ) && (
+                                                        <div className="lmw-no-analysis">
+                                                            <p>لا توجد تحليلات بعد. اختر نوع التحليل من القائمة 🧠</p>
                                                         </div>
-                                                    </details>
-                                                ))}
-
-                                                {/* إذا لم تكن هناك نتائج engines بل نتائج قديمة */}
-                                                {!analysisResult.engines && (
-                                                    <>
-                                                        {analysisResult.quality_score && (
-                                                            <div className="lmw-analysis-score">
-                                                                <div className="lmw-big-score">
-                                                                    {analysisResult.quality_score}
-                                                                    <span>/100</span>
-                                                                </div>
-                                                                <p>درجة جودة المذكرة</p>
-                                                            </div>
-                                                        )}
-
-                                                        {analysisResult.memo_analysis && (
-                                                            <div className="lmw-analysis-block">
-                                                                <h4>⚖️ التحليل القانوني</h4>
-                                                                <p>{analysisResult.memo_analysis}</p>
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                )}
+                                                    )}
                                             </div>
                                         </motion.aside>
                                     )}
