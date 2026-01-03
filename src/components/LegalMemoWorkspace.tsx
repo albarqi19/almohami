@@ -18,6 +18,8 @@ import AnalysisProgress from './AnalysisProgress';
 import { LegalMemoService, type AnalysisStep } from '../services/legalMemoService';
 import { runSingleAnalysis, ANALYSIS_ENGINES, type AnalysisEngineType, type MemoAnalysisResult } from '../services/memoAnalysisService';
 import type { YooptaContentValue } from '@yoopta/editor';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import '../styles/legal-memo-workspace.css';
 
 // تحديد المذكرات التي تتطلب وثائق مرفقة
@@ -1090,7 +1092,11 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                                                 </span>
                                                             </summary>
                                                             <div className="lmw-engine-content">
-                                                                <pre dir="rtl">{savedResult.result}</pre>
+                                                                <div className="lmw-markdown-content" dir="rtl">
+                                                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                                        {savedResult.result}
+                                                                    </ReactMarkdown>
+                                                                </div>
                                                             </div>
                                                         </details>
                                                     );
