@@ -5,6 +5,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import ReactMarkdown from 'react-markdown';
 import type { LegalAIToolInfo, LegalAIResponse } from '../services/legalAIService';
 import {
   LEGAL_AI_TOOLS,
@@ -57,9 +58,24 @@ const AIResultModal: React.FC<AIResultModalProps> = ({
 
   if (!isOpen) return null;
 
+  // دالة لتنظيف النص من رموز markdown
+  const stripMarkdown = (text: string): string => {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '$1') // إزالة **bold**
+      .replace(/\*(.*?)\*/g, '$1')     // إزالة *italic*
+      .replace(/#{1,6}\s/g, '')         // إزالة headers
+      .replace(/`{1,3}(.*?)`{1,3}/g, '$1') // إزالة code blocks
+      .replace(/\[(.*?)\]\(.*?\)/g, '$1')  // إزالة links
+      .replace(/^\s*[-*+]\s/gm, '')     // إزالة bullet points
+      .replace(/^\s*\d+\.\s/gm, '')     // إزالة numbered lists
+      .trim();
+  };
+
   const handleCopy = async () => {
     if (result?.result) {
-      await navigator.clipboard.writeText(result.result);
+      // نسخ النص نظيف بدون رموز markdown
+      const cleanText = stripMarkdown(result.result);
+      await navigator.clipboard.writeText(cleanText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -67,7 +83,9 @@ const AIResultModal: React.FC<AIResultModalProps> = ({
 
   const handleReplace = () => {
     if (result?.result) {
-      onReplace(result.result);
+      // استبدال النص نظيف
+      const cleanText = stripMarkdown(result.result);
+      onReplace(cleanText);
       onClose();
     }
   };
@@ -117,8 +135,8 @@ const AIResultModal: React.FC<AIResultModalProps> = ({
           {result?.success && result.result && !isLoading && (
             <div className="legal-ai-section">
               <div className="legal-ai-label">النتيجة</div>
-              <div className="legal-ai-result-box">
-                {result.result}
+              <div className="legal-ai-result-box legal-ai-markdown">
+                <ReactMarkdown>{result.result}</ReactMarkdown>
               </div>
             </div>
           )}
