@@ -38,7 +38,7 @@ import {
 } from 'lucide-react';
 import type { Document as DocumentType, Case } from '../types';
 import DocumentUploadModal from '../components/DocumentUploadModal';
-import LegalMemoModal from '../components/LegalMemoModal';
+import LegalMemoWorkspace from '../components/LegalMemoWorkspace';
 import DocumentPermissionsModal from '../components/DocumentPermissionsModal';
 import AssignFileToCaseModal from '../components/AssignFileToCaseModal';
 import CloudStorageSettingsModal from '../components/CloudStorageSettingsModal';
@@ -1476,7 +1476,7 @@ const Documents: React.FC = () => {
 
 
             {showCreateMemo && (
-                <LegalMemoModal
+                <LegalMemoWorkspace
                     isOpen={showCreateMemo}
                     onClose={() => setShowCreateMemo(false)}
                 />

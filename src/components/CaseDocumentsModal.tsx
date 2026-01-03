@@ -22,7 +22,7 @@ import {
 import Modal from './Modal';
 import DocumentPreviewModal from './DocumentPreviewModal';
 import SmartUploadModal from './SmartUploadModal';
-import LegalMemoModal from './LegalMemoModal';
+import LegalMemoWorkspace from './LegalMemoWorkspace';
 import AnalysisProgress from './AnalysisProgress';
 import CloudFilePickerModal from './CloudFilePickerModal';
 
@@ -722,6 +722,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                             key={`memo-${memo.id}`}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
+                            onClick={() => handleEditMemo(memo)}
                             style={{
                               padding: '16px',
                               border: '1px solid var(--color-success)',
@@ -1244,8 +1245,8 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
         }}
       />
 
-      {/* Legal Memo Modal */}
-      <LegalMemoModal
+      {/* Legal Memo Workspace */}
+      <LegalMemoWorkspace
         isOpen={showCreateMemo}
         onClose={() => {
           setShowCreateMemo(false);

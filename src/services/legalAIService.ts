@@ -6,7 +6,7 @@
  */
 
 // أنواع أدوات الذكاء الاصطناعي القانونية
-export type LegalAIToolType = 
+export type LegalAIToolType =
   | 'legal_formalization'      // تحويل الصياغة القانونية
   | 'risk_assessment'          // كشف الثغرات والمخاطر
   | 'plain_language'           // تبسيط اللغة
@@ -563,9 +563,9 @@ export function hasGeminiApiKey(): boolean {
 }
 
 /**
- * استدعاء OpenRouter API
+ * استدعاء OpenRouter API - للاستخدام المباشر مع برومبتات مخصصة
  */
-async function callGeminiAPI(prompt: string): Promise<string> {
+export async function callLegalAI(prompt: string): Promise<string> {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error('لم يتم تعيين مفتاح API. يرجى إدخال المفتاح في الإعدادات.');
@@ -607,7 +607,7 @@ async function callGeminiAPI(prompt: string): Promise<string> {
   }
 
   const data = await response.json();
-  
+
   // استخراج النص من استجابة OpenRouter
   const generatedText = data.choices?.[0]?.message?.content;
   if (!generatedText) {
@@ -645,7 +645,7 @@ export async function processLegalAIRequest(request: LegalAIRequest): Promise<Le
 
     // بناء البرومبت النهائي
     let finalPrompt = promptTemplate.replace('{TEXT}', request.selectedText);
-    
+
     // إضافة السياق إن وجد
     if (request.documentContext) {
       finalPrompt = `سياق المستند:\n${request.documentContext}\n\n${finalPrompt}`;
@@ -657,7 +657,7 @@ export async function processLegalAIRequest(request: LegalAIRequest): Promise<Le
     }
 
     // استدعاء API
-    const result = await callGeminiAPI(finalPrompt);
+    const result = await callLegalAI(finalPrompt);
 
     const processingTime = Date.now() - startTime;
 
