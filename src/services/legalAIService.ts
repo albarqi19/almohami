@@ -373,22 +373,6 @@ async function callGeminiAPI(prompt: string): Promise<string> {
         temperature: 0.7,
         max_tokens: 4096,
       }),
-            threshold: 'BLOCK_ONLY_HIGH'
-          },
-          {
-            category: 'HARM_CATEGORY_HATE_SPEECH',
-            threshold: 'BLOCK_ONLY_HIGH'
-          },
-          {
-            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            threshold: 'BLOCK_ONLY_HIGH'
-          },
-          {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_ONLY_HIGH'
-          }
-        ]
-      })
     }
   );
 
@@ -400,15 +384,15 @@ async function callGeminiAPI(prompt: string): Promise<string> {
     if (response.status === 429) {
       throw new Error('تم تجاوز حد الاستخدام. يرجى المحاولة لاحقاً.');
     }
-    throw new Error(errorData.error?.message || `خطأ في الاتصال بـ Gemini: ${response.status}`);
+    throw new Error(errorData.error?.message || `خطأ في الاتصال بـ OpenRouter: ${response.status}`);
   }
 
   const data = await response.json();
   
-  // استخراج النص من الاستجابة
-  const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  // استخراج النص من استجابة OpenRouter
+  const generatedText = data.choices?.[0]?.message?.content;
   if (!generatedText) {
-    throw new Error('لم يتم استلام رد من Gemini. يرجى المحاولة مرة أخرى.');
+    throw new Error('لم يتم استلام رد من AI. يرجى المحاولة مرة أخرى.');
   }
 
   return generatedText;
