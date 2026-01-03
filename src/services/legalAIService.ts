@@ -311,7 +311,7 @@ const LEGAL_PROMPTS: Record<LegalAIToolType, string> = {
 };
 
 // متغير لتخزين API Key - يتم قراءته من متغيرات البيئة
-let geminiApiKey: string | null = import.meta.env.VITE_GEMINI_API_KEY || null;
+let geminiApiKey: string | null = null;
 
 // دالة لتعيين API Key
 export function setGeminiApiKey(apiKey: string): void {
@@ -320,7 +320,12 @@ export function setGeminiApiKey(apiKey: string): void {
 
 // دالة للحصول على API Key
 export function getGeminiApiKey(): string | null {
-  return geminiApiKey;
+  // إذا كان المفتاح محفوظ في المتغير، استخدمه
+  if (geminiApiKey) {
+    return geminiApiKey;
+  }
+  // وإلا حاول القراءة من متغيرات البيئة
+  return import.meta.env.VITE_GEMINI_API_KEY || null;
 }
 
 // دالة لمسح API Key
