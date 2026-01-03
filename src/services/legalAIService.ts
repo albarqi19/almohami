@@ -311,10 +311,10 @@ const LEGAL_PROMPTS: Record<LegalAIToolType, string> = {
 };
 
 // مفتاح API - يُقرأ من متغيرات البيئة في Vercel
-// VITE_GEMINI_API_KEY يجب إضافته في Vercel Dashboard > Settings > Environment Variables
+// VITE_OPENROUTER_API_KEY يجب إضافته في Vercel Dashboard > Settings > Environment Variables
 const getApiKeyFromEnv = (): string | null => {
   try {
-    return import.meta.env.VITE_GEMINI_API_KEY || null;
+    return import.meta.env.VITE_OPENROUTER_API_KEY || null;
   } catch {
     return null;
   }
@@ -344,40 +344,35 @@ export function hasGeminiApiKey(): boolean {
 }
 
 /**
- * استدعاء Google Gemini API
+ * استدعاء OpenRouter API
  */
 async function callGeminiAPI(prompt: string): Promise<string> {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
-    throw new Error('لم يتم تعيين مفتاح API لـ Google Gemini. يرجى إدخال المفتاح في الإعدادات.');
+    throw new Error('لم يتم تعيين مفتاح API. يرجى إدخال المفتاح في الإعدادات.');
   }
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
+    'https://openrouter.ai/api/v1/chat/completions',
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'Law Firm System',
       },
       body: JSON.stringify({
-        contents: [
+        model: 'google/gemini-3-flash-preview',
+        messages: [
           {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
+            role: 'user',
+            content: prompt
           }
         ],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 4096,
-        },
-        safetySettings: [
-          {
-            category: 'HARM_CATEGORY_HARASSMENT',
+        temperature: 0.7,
+        max_tokens: 4096,
+      }),
             threshold: 'BLOCK_ONLY_HIGH'
           },
           {
