@@ -951,6 +951,43 @@
   color: var(--tenant-primary, var(--color-primary));
 }
 
+/* Loading state for subdomain auth pages */
+.auth-page--loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--tenant-primary, #C5A059);
+}
+
+.auth-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.auth-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  animation: auth-spin 0.8s linear infinite;
+}
+
+.auth-loading-text {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+}
+
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (min-width: 1024px) {
   .auth-page--tenant {
     flex-direction: column;
