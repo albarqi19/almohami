@@ -329,7 +329,13 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
         
         if (annotations && annotations.length > 0) {
           console.log('[LegalAI] Sending', annotations.length, 'annotations to editor');
-          onSetTextAnnotations?.(annotations);
+          console.log('[LegalAI] onSetTextAnnotations defined?', typeof onSetTextAnnotations);
+          if (onSetTextAnnotations) {
+            onSetTextAnnotations(annotations);
+            console.log('[LegalAI] onSetTextAnnotations CALLED successfully');
+          } else {
+            console.error('[LegalAI] onSetTextAnnotations is NOT defined! Annotations cannot be sent.');
+          }
           setIsResultModalOpen(false);
           setIsLoading(false);
           return;
