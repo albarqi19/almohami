@@ -118,18 +118,32 @@ const AlkhibraLanding: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1, duration: 0.5 }}
-            whileHover={{ scale: 1.02, boxShadow: "0 15px 30px -10px rgba(0,0,0,0.2)" }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={{ 
+              scale: 1.03, 
+              boxShadow: `0 20px 40px -12px ${colors.primary}40`,
+            }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => navigate('/login')}
-            className="group px-10 py-4 text-lg font-medium rounded-lg flex items-center justify-center gap-3 mx-auto transition-all shadow-lg hover:shadow-xl"
             style={{ 
               backgroundColor: colors.primary, 
               color: '#ffffff',
-              minWidth: '240px'
+              padding: '18px 48px',
+              fontSize: '18px',
+              fontWeight: '600',
+              borderRadius: '12px',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              boxShadow: `0 10px 25px -8px ${colors.primary}50`,
+              transition: 'all 0.3s ease',
+              letterSpacing: '0.3px'
             }}
           >
             <span>الدخول إلى النظام</span>
-            <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <ChevronLeft style={{ width: '20px', height: '20px' }} />
           </motion.button>
         </motion.div>
       </main>
