@@ -795,7 +795,8 @@
 
 /* Tenant auth page - no hero, full width form */
 .auth-page--tenant {
-  background: linear-gradient(135deg, var(--tenant-secondary, #1a1a1a) 0%, #0a0a0a 100%);
+  background-color: var(--tenant-primary, #C5A059);
+  background-image: none;
   justify-content: center;
   align-items: center;
 }
