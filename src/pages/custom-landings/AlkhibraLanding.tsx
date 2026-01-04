@@ -53,57 +53,44 @@ const AlkhibraLanding: React.FC = () => {
         </div>
       </div>
 
-      {/* Header with Logo */}
-      <header className="w-full p-6 flex justify-between items-center relative z-10">
-        <div className="flex items-center gap-4">
+      {/* Header with Logo - Centered */}
+      <header className="w-full p-8 flex justify-center items-center relative z-10">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="flex items-center gap-4"
+        >
           {companyInfo.logo ? (
             <img 
               src={companyInfo.logo} 
               alt={companyInfo.name}
-              className="h-16 object-contain"
+              className="h-24 md:h-32 object-contain drop-shadow-sm"
             />
           ) : (
             <div 
-              className="h-12 w-12 rounded-full flex items-center justify-center"
+              className="h-20 w-20 rounded-full flex items-center justify-center shadow-md"
               style={{ backgroundColor: colors.primary, color: colors.secondary }}
             >
-              <Scale size={24} />
+              <Scale size={40} />
             </div>
           )}
-        </div>
+        </motion.div>
       </header>
 
       {/* Main Content - Centered */}
-      <main className="flex-grow flex flex-col items-center justify-center text-center px-6 relative z-10">
+      <main className="flex-grow flex flex-col items-center justify-center text-center px-6 relative z-10 -mt-20">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="max-w-4xl mx-auto"
+          className="max-w-5xl mx-auto"
         >
-          {/* Large Logo Display (Optional, if not in header or as main focus) */}
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.8 }}
-            className="mb-12 flex justify-center"
-          >
-             {companyInfo.logo ? (
-                <img 
-                  src={companyInfo.logo} 
-                  alt={companyInfo.name}
-                  className="h-48 md:h-64 object-contain drop-shadow-2xl"
-                />
-              ) : (
-                <Scale size={120} color={colors.primary} />
-              )}
-          </motion.div>
-
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.8 }}
-            className="text-4xl md:text-6xl font-bold mb-6 tracking-tight"
+            className="text-3xl md:text-4xl font-bold mb-8 tracking-wide whitespace-nowrap"
             style={{ color: colors.primary }}
           >
             {companyInfo.name}
@@ -113,7 +100,7 @@ const AlkhibraLanding: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6, duration: 0.8 }}
-            className="w-24 h-1 mx-auto mb-8 rounded-full"
+            className="w-16 h-0.5 mx-auto mb-8"
             style={{ backgroundColor: colors.secondary }}
           />
 
@@ -121,7 +108,7 @@ const AlkhibraLanding: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8, duration: 0.8 }}
-            className="text-xl md:text-2xl font-light mb-16 max-w-2xl mx-auto leading-relaxed"
+            className="text-lg md:text-xl font-light mb-16 max-w-2xl mx-auto leading-relaxed opacity-80"
             style={{ color: colors.primary }}
           >
             {companyInfo.tagline}
@@ -131,17 +118,18 @@ const AlkhibraLanding: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1, duration: 0.5 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.2)" }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/login')}
-            className="group px-12 py-4 text-lg font-semibold rounded-full flex items-center justify-center gap-3 mx-auto transition-all shadow-lg hover:shadow-xl"
+            className="px-10 py-3 text-base font-medium rounded-lg flex items-center justify-center gap-3 mx-auto transition-all shadow-md hover:shadow-lg border border-transparent hover:border-opacity-20"
             style={{ 
               backgroundColor: colors.primary, 
               color: '#ffffff',
+              minWidth: '200px'
             }}
           >
             <span>الدخول إلى النظام</span>
-            <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           </motion.button>
         </motion.div>
       </main>
