@@ -9,6 +9,7 @@ export interface Tenant {
   logo_url: string | null;
   primary_color: string;
   secondary_color: string;
+  text_color?: string;
   tagline: string | null;
   favicon_url: string | null;
   custom_branding_enabled: boolean;
