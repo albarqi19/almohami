@@ -912,12 +912,12 @@
 .auth-page--tenant .auth-card__title,
 .auth-page--tenant .auth-label,
 .auth-page--tenant .auth-register-prompt {
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff;
 }
 
 .auth-page--tenant .auth-card__subtitle,
 .auth-page--tenant .auth-text-muted {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .auth-page--tenant .auth-input {

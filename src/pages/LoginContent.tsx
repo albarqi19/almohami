@@ -138,8 +138,22 @@ const LoginContent: React.FC = () => {
             <header className="auth-card__brand">
                 {isSubdomain && tenant ? (
                     <div className="text-center">
-                        <h1 id="login-title" className="auth-card__title">{tenant.name}</h1>
-                        <p className="auth-card__subtitle">
+                        <h1 
+                            id="login-title" 
+                            className="auth-card__title"
+                            style={{ 
+                                color: tenant.text_color || '#ffffff',
+                                marginBottom: '8px'
+                            }}
+                        >
+                            {tenant.name}
+                        </h1>
+                        <p 
+                            className="auth-card__subtitle"
+                            style={{ 
+                                color: tenant.text_color ? `${tenant.text_color}dd` : 'rgba(255, 255, 255, 0.9)',
+                            }}
+                        >
                             {tenant.tagline || 'سجّل دخولك للوصول إلى النظام'}
                         </p>
                     </div>

@@ -108,7 +108,7 @@ const AlkhibraLanding: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8, duration: 0.8 }}
-            className="text-lg md:text-xl font-light mb-16 max-w-2xl mx-auto leading-relaxed opacity-80"
+            className="text-lg md:text-xl font-light mb-24 md:mb-28 max-w-2xl mx-auto leading-relaxed opacity-80"
             style={{ color: colors.primary }}
           >
             {companyInfo.tagline}
@@ -127,23 +127,23 @@ const AlkhibraLanding: React.FC = () => {
             style={{ 
               backgroundColor: colors.primary, 
               color: '#ffffff',
-              padding: '18px 48px',
-              fontSize: '18px',
+              padding: '14px 36px',
+              fontSize: '16px',
               fontWeight: '600',
-              borderRadius: '12px',
+              borderRadius: '10px',
               border: 'none',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '12px',
-              boxShadow: `0 10px 25px -8px ${colors.primary}50`,
+              gap: '10px',
+              boxShadow: `0 8px 20px -8px ${colors.primary}50`,
               transition: 'all 0.3s ease',
               letterSpacing: '0.3px'
             }}
           >
             <span>الدخول إلى النظام</span>
-            <ChevronLeft style={{ width: '20px', height: '20px' }} />
+            <ChevronLeft style={{ width: '18px', height: '18px' }} />
           </motion.button>
         </motion.div>
       </main>
