@@ -13,6 +13,8 @@ import {
   processLegalAIRequest
 } from '../services/legalAIService';
 
+import type { TextAnnotation } from '../types/textAnnotations';
+
 import { 
   Sparkles, 
   ChevronDown, 
@@ -32,6 +34,7 @@ interface LegalAIToolbarButtonProps {
   onReplaceText: (newText: string) => void;
   onReplaceAllText?: (newText: string) => void; // إضافة دالة لاستبدال كل المحتوى
   disabled?: boolean;
+  onSetTextAnnotations?: (annotations: TextAnnotation[]) => void;
 }
 
 interface AIResultModalProps {
@@ -193,7 +196,8 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
   onGetAllText,
   onReplaceText,
   onReplaceAllText,
-  disabled = false
+  disabled = false,
+  onSetTextAnnotations
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -263,21 +267,72 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
       return;
     }
 
+    const parseAnnotationsFromResult = (raw: string): TextAnnotation[] | null => {
+      const trimmed = raw.trim();
+      const unfenced = trimmed
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+
+      try {
+        const parsed = JSON.parse(unfenced);
+        if (!Array.isArray(parsed)) return null;
+
+        const annotations: TextAnnotation[] = parsed
+          .filter((x) => x && typeof x === 'object')
+          .map((x, idx) => ({
+            id: `${Date.now()}-${idx}-${Math.random().toString(36).slice(2)}`,
+            original_text: String((x as any).original_text ?? '').trim(),
+            suggested_text: String((x as any).suggested_text ?? '').trim(),
+            reason: (x as any).reason ? String((x as any).reason).trim() : undefined,
+            severity: (x as any).severity ? String((x as any).severity).trim() : undefined,
+            legal_reference: (x as any).legal_reference ? String((x as any).legal_reference).trim() : undefined,
+          }))
+          .filter((x) => x.original_text && x.suggested_text);
+
+        return annotations;
+      } catch {
+        return null;
+      }
+    };
+
     setSelectedText(text);
     setIsFullContent(isFullDoc); // حفظ معلومة أن التحليل للمستند كامل
     setCurrentTool(tool);
     setCurrentResult(null);
     setIsLoading(true);
     setIsMenuOpen(false);
-    setIsResultModalOpen(true);
 
-    const result = await processLegalAIRequest({
-      tool: tool.id,
-      selectedText: text
-    });
+    try {
+      const result = await processLegalAIRequest({
+        tool: tool.id,
+        selectedText: text
+      });
 
-    setCurrentResult(result);
-    setIsLoading(false);
+      // Special case: annotation tool returns JSON for in-editor highlights.
+      if (tool.id === 'legal_proofreading_annotations' && result.success && result.result) {
+        const annotations = parseAnnotationsFromResult(result.result);
+        if (annotations && annotations.length > 0) {
+          onSetTextAnnotations?.(annotations);
+          setIsResultModalOpen(false);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      setCurrentResult(result);
+      setIsResultModalOpen(true);
+    } catch (error) {
+      setCurrentResult({
+        success: false,
+        error: error instanceof Error ? error.message : 'حدث خطأ غير متوقع',
+        toolUsed: tool.id
+      });
+      setIsResultModalOpen(true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRetry = async () => {

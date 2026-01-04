@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
+import React, { useMemo, useEffect, forwardRef, useImperativeHandle, useRef, useCallback, useState } from 'react';
 import YooptaEditor, { createYooptaEditor } from '@yoopta/editor';
 import type { YooptaContentValue, YooptaOnChangeOptions } from '@yoopta/editor';
 
@@ -19,6 +19,8 @@ import LinkTool, { DefaultLinkToolRender } from '@yoopta/link-tool';
 
 // Marks
 import { Bold, Italic, CodeMark, Underline, Strike, Highlight } from '@yoopta/marks';
+
+import type { TextAnnotation } from '../types/textAnnotations';
 
 import '../styles/yoopta-editor.css';
 
@@ -116,6 +118,8 @@ interface YooptaNotebookEditorProps {
     readOnly?: boolean;
     className?: string;
     autoFocus?: boolean;
+    textAnnotations?: TextAnnotation[];
+    onAnnotationApplied?: (annotation: TextAnnotation) => void;
 }
 
 const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookEditorProps>(({
@@ -124,6 +128,8 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
     readOnly = false,
     className = '',
     autoFocus = true,
+    textAnnotations,
+    onAnnotationApplied,
 }, ref) => {
     const editor = useMemo(() => createYooptaEditor(), []);
     const [value, setValue] = React.useState<YooptaContentValue | undefined>(
@@ -133,6 +139,210 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
     const alignmentFixInProgressRef = useRef(false);
     const lastActiveAlignRef = useRef<'left' | 'center' | 'right'>('right');
     const lastPathOrderRef = useRef<number | null>(0);
+
+    type OverlayRect = { top: number; left: number; width: number; height: number };
+    type OverlayHit = {
+        annotationId: string;
+        annotationIndex: number;
+        rects: OverlayRect[];
+        anchorRect: DOMRect;
+    };
+
+    const rangeByAnnotationIdRef = useRef<Map<string, Range>>(new Map());
+    const [overlayHits, setOverlayHits] = useState<OverlayHit[]>([]);
+    const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
+    const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
+
+    const normalizeSearchText = (text: string): string => text;
+
+    const computeTextNodesMap = useCallback((root: HTMLElement) => {
+        const textNodes: Text[] = [];
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+            acceptNode(node) {
+                if (!(node instanceof Text)) return NodeFilter.FILTER_REJECT;
+                // Ignore whitespace-only nodes.
+                if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+            },
+        });
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            const n = walker.nextNode();
+            if (!n) break;
+            textNodes.push(n as Text);
+        }
+
+        let fullText = '';
+        const spans: Array<{ node: Text; start: number; end: number }> = [];
+        for (const node of textNodes) {
+            const start = fullText.length;
+            const chunk = node.nodeValue ?? '';
+            fullText += chunk;
+            spans.push({ node, start, end: start + chunk.length });
+        }
+
+        return { fullText, spans };
+    }, []);
+
+    const rangeFromGlobalOffsets = useCallback((spans: Array<{ node: Text; start: number; end: number }>, startOffset: number, endOffset: number): Range | null => {
+        const findPoint = (offset: number): { node: Text; offset: number } | null => {
+            for (const span of spans) {
+                if (offset >= span.start && offset <= span.end) {
+                    return { node: span.node, offset: offset - span.start };
+                }
+            }
+            return null;
+        };
+
+        const startPoint = findPoint(startOffset);
+        const endPoint = findPoint(endOffset);
+        if (!startPoint || !endPoint) return null;
+
+        const r = document.createRange();
+        r.setStart(startPoint.node, startPoint.offset);
+        r.setEnd(endPoint.node, endPoint.offset);
+        return r;
+    }, []);
+
+    const recomputeAnnotationOverlays = useCallback(() => {
+        const container = containerRef.current;
+        if (!container) {
+            setOverlayHits([]);
+            rangeByAnnotationIdRef.current.clear();
+            return;
+        }
+
+        const editorRoot = container.querySelector('[data-yoopta-editor]') as HTMLElement | null;
+        if (!editorRoot) {
+            setOverlayHits([]);
+            rangeByAnnotationIdRef.current.clear();
+            return;
+        }
+
+        const annotations = (textAnnotations || []).filter((a) => a && a.original_text && a.original_text.trim());
+        if (annotations.length === 0) {
+            setOverlayHits([]);
+            rangeByAnnotationIdRef.current.clear();
+            return;
+        }
+
+        const { fullText, spans } = computeTextNodesMap(editorRoot);
+        const nextHits: OverlayHit[] = [];
+        const nextRanges = new Map<string, Range>();
+
+        const containerRect = container.getBoundingClientRect();
+
+        annotations.forEach((annotation, idx) => {
+            const needle = normalizeSearchText(annotation.original_text);
+            if (!needle.trim()) return;
+
+            const matchIndex = fullText.indexOf(needle);
+            if (matchIndex < 0) return;
+
+            const r = rangeFromGlobalOffsets(spans, matchIndex, matchIndex + needle.length);
+            if (!r) return;
+
+            const clientRects = Array.from(r.getClientRects());
+            if (clientRects.length === 0) return;
+
+            const rects: OverlayRect[] = clientRects.map((rect) => ({
+                top: rect.top - containerRect.top,
+                left: rect.left - containerRect.left,
+                width: rect.width,
+                height: rect.height,
+            }));
+
+            const anchorRect = clientRects[0];
+
+            nextRanges.set(annotation.id, r);
+            nextHits.push({
+                annotationId: annotation.id,
+                annotationIndex: idx,
+                rects,
+                anchorRect,
+            });
+        });
+
+        rangeByAnnotationIdRef.current = nextRanges;
+        setOverlayHits(nextHits);
+
+        // Close tooltip if the active annotation disappeared.
+        if (activeAnnotationId && !nextRanges.has(activeAnnotationId)) {
+            setActiveAnnotationId(null);
+            setTooltipPos(null);
+        }
+    }, [activeAnnotationId, computeTextNodesMap, rangeFromGlobalOffsets, textAnnotations]);
+
+    const replaceRangeTextInEditor = useCallback((range: Range, newText: string) => {
+        const editorEl = containerRef.current;
+        if (!editorEl) return;
+
+        range.deleteContents();
+
+        const lines = newText.split('\n');
+        const fragment = document.createDocumentFragment();
+        lines.forEach((line, index) => {
+            fragment.appendChild(document.createTextNode(line));
+            if (index < lines.length - 1) {
+                fragment.appendChild(document.createElement('br'));
+            }
+        });
+        range.insertNode(fragment);
+
+        // Trigger input event to notify the editor
+        const inputEvent = new InputEvent('input', {
+            bubbles: true,
+            cancelable: true,
+            inputType: 'insertText',
+            data: newText,
+        });
+        editorEl.dispatchEvent(inputEvent);
+    }, []);
+
+    const handleApplyAnnotation = useCallback(() => {
+        if (!activeAnnotationId) return;
+        const annotation = (textAnnotations || []).find((a) => a.id === activeAnnotationId);
+        if (!annotation) return;
+
+        const r = rangeByAnnotationIdRef.current.get(activeAnnotationId);
+        if (!r) return;
+
+        replaceRangeTextInEditor(r, annotation.suggested_text);
+        onAnnotationApplied?.(annotation);
+
+        setActiveAnnotationId(null);
+        setTooltipPos(null);
+    }, [activeAnnotationId, onAnnotationApplied, replaceRangeTextInEditor, textAnnotations]);
+
+    useEffect(() => {
+        // Recompute when content changes or annotations change.
+        recomputeAnnotationOverlays();
+    }, [recomputeAnnotationOverlays, value]);
+
+    useEffect(() => {
+        // Keep overlays in sync with scrolling/resizing.
+        const schedule = (() => {
+            let rafId: number | null = null;
+            return () => {
+                if (rafId !== null) cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(() => {
+                    rafId = null;
+                    recomputeAnnotationOverlays();
+                });
+            };
+        })();
+
+        const onScroll = () => schedule();
+        const onResize = () => schedule();
+
+        document.addEventListener('scroll', onScroll, true);
+        window.addEventListener('resize', onResize);
+
+        return () => {
+            document.removeEventListener('scroll', onScroll, true);
+            window.removeEventListener('resize', onResize);
+        };
+    }, [recomputeAnnotationOverlays]);
 
     // Keep Yoopta floating block actions visually attached to the hovered block, but on the RIGHT side for RTL.
     // Yoopta's internal implementation anchors actions to `rect.left` and shifts them left; for RTL we want `rect.right`.
@@ -678,6 +888,76 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
             className={`yoopta-notebook-editor ${className}`}
             dir="rtl"
         >
+            {overlayHits.length > 0 && (
+                <div className="yoopta-annotations-layer" aria-hidden="true">
+                    {overlayHits.flatMap((hit) => {
+                        const annotation = (textAnnotations || [])[hit.annotationIndex];
+                        const severity = annotation?.severity || 'medium';
+                        return hit.rects.map((rect, rectIdx) => (
+                            <div
+                                key={`${hit.annotationId}-${rectIdx}`}
+                                className={`yoopta-annotation-hit yoopta-annotation-${severity}`}
+                                style={{
+                                    top: `${rect.top}px`,
+                                    left: `${rect.left}px`,
+                                    width: `${rect.width}px`,
+                                    height: `${rect.height}px`,
+                                }}
+                                onMouseEnter={() => {
+                                    setActiveAnnotationId(hit.annotationId);
+                                    // Tooltip anchored to viewport coordinates (fixed positioning)
+                                    const top = Math.max(8, hit.anchorRect.top - 8);
+                                    const left = Math.min(window.innerWidth - 280, Math.max(8, hit.anchorRect.left));
+                                    setTooltipPos({ top, left });
+                                }}
+                                onMouseLeave={() => {
+                                    // do nothing; tooltip manages its own hover
+                                }}
+                            />
+                        ));
+                    })}
+                </div>
+            )}
+
+            {activeAnnotationId && tooltipPos && (
+                <div
+                    className="yoopta-annotation-tooltip"
+                    style={{ top: `${tooltipPos.top}px`, left: `${tooltipPos.left}px` }}
+                    onMouseEnter={() => {
+                        // keep open
+                    }}
+                    onMouseLeave={() => {
+                        setActiveAnnotationId(null);
+                        setTooltipPos(null);
+                    }}
+                >
+                    {(() => {
+                        const annotation = (textAnnotations || []).find((a) => a.id === activeAnnotationId);
+                        if (!annotation) return null;
+                        return (
+                            <>
+                                <div className="yoopta-annotation-tooltip-title">ملاحظة</div>
+                                {annotation.reason && (
+                                    <div className="yoopta-annotation-tooltip-text">{annotation.reason}</div>
+                                )}
+                                {annotation.legal_reference && (
+                                    <div className="yoopta-annotation-tooltip-ref">{annotation.legal_reference}</div>
+                                )}
+                                <div className="yoopta-annotation-tooltip-actions">
+                                    <button
+                                        type="button"
+                                        className="yoopta-annotation-apply-btn"
+                                        onClick={handleApplyAnnotation}
+                                    >
+                                        تطبيق التصحيح
+                                    </button>
+                                </div>
+                            </>
+                        );
+                    })()}
+                </div>
+            )}
+
             <YooptaEditor
                 editor={editor}
                 plugins={plugins}

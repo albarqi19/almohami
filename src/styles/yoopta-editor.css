@@ -17,6 +17,82 @@
     --editor-border: var(--border-light, #e2e8f0);
     --editor-accent: var(--accent-primary, #3b82f6);
     --editor-accent-light: var(--accent-light, rgba(59, 130, 246, 0.1));
+
+    position: relative;
+}
+
+/* AI text annotations overlay (non-destructive highlights) */
+.yoopta-notebook-editor .yoopta-annotations-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.yoopta-notebook-editor .yoopta-annotation-hit {
+    position: absolute;
+    border-radius: 3px;
+    pointer-events: auto;
+}
+
+.yoopta-notebook-editor .yoopta-annotation-high {
+    background: rgba(220, 38, 38, 0.16);
+}
+
+.yoopta-notebook-editor .yoopta-annotation-medium {
+    background: rgba(250, 204, 21, 0.28);
+}
+
+.yoopta-notebook-editor .yoopta-annotation-low {
+    background: var(--editor-accent-light);
+}
+
+.yoopta-annotation-tooltip {
+    position: fixed;
+    z-index: 9999;
+    width: 280px;
+    transform: translateY(-100%);
+    background: var(--editor-bg);
+    color: var(--editor-text);
+    border: 1px solid var(--editor-border);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.yoopta-annotation-tooltip-title {
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.yoopta-annotation-tooltip-text {
+    color: var(--editor-text-secondary);
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+
+.yoopta-annotation-tooltip-ref {
+    color: var(--editor-text-muted);
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.yoopta-annotation-tooltip-actions {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.yoopta-annotation-apply-btn {
+    background: var(--editor-accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.yoopta-annotation-apply-btn:hover {
+    filter: brightness(0.95);
 }
 
 /* Force RTL on all Yoopta elements */
