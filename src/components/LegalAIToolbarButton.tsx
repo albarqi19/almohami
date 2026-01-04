@@ -13,7 +13,7 @@ import {
   processLegalAIRequest
 } from '../services/legalAIService';
 
-import type { TextAnnotation } from '../types/textAnnotations';
+import type { TextAnnotation, TextAnnotationSeverity } from '../types/textAnnotations';
 
 import { 
   Sparkles, 
@@ -268,6 +268,10 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
     }
 
     const parseAnnotationsFromResult = (raw: string): TextAnnotation[] | null => {
+      const isSeverity = (value: string): value is TextAnnotationSeverity => {
+        return value === 'high' || value === 'medium' || value === 'low';
+      };
+
       const trimmed = raw.trim();
       const unfenced = trimmed
         .replace(/^```json\s*/i, '')
@@ -286,7 +290,10 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
             original_text: String((x as any).original_text ?? '').trim(),
             suggested_text: String((x as any).suggested_text ?? '').trim(),
             reason: (x as any).reason ? String((x as any).reason).trim() : undefined,
-            severity: (x as any).severity ? String((x as any).severity).trim() : undefined,
+            severity: (() => {
+              const raw = (x as any).severity ? String((x as any).severity).trim() : '';
+              return isSeverity(raw) ? raw : undefined;
+            })(),
             legal_reference: (x as any).legal_reference ? String((x as any).legal_reference).trim() : undefined,
           }))
           .filter((x) => x.original_text && x.suggested_text);

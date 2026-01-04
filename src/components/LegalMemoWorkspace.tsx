@@ -18,6 +18,7 @@ import AnalysisProgress from './AnalysisProgress';
 import { LegalMemoService, type AnalysisStep } from '../services/legalMemoService';
 import { runSingleAnalysis, ANALYSIS_ENGINES, type AnalysisEngineType, type MemoAnalysisResult } from '../services/memoAnalysisService';
 import type { YooptaContentValue } from '@yoopta/editor';
+import type { TextAnnotation } from '../types/textAnnotations';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import '../styles/legal-memo-workspace.css';
@@ -271,6 +272,8 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
     const [showAnalysisPanel, setShowAnalysisPanel] = useState<boolean>(false);
     const [showAnalysisMenu, setShowAnalysisMenu] = useState<boolean>(false);
     const [lastAnalyzedAt, setLastAnalyzedAt] = useState<Date | null>(null);
+
+    const [textAnnotations, setTextAnnotations] = useState<TextAnnotation[]>([]);
 
     // الأخطاء والتحميل
     const [error, setError] = useState<string | null>(null);
@@ -756,6 +759,9 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                             onReplaceAllText={(newText: string) => {
                                                 editorRef.current?.replaceAllText?.(newText);
                                             }}
+                                            onSetTextAnnotations={(annotations) => {
+                                                setTextAnnotations(annotations);
+                                            }}
                                         />
                                     </div>
 
@@ -1038,6 +1044,10 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                             initialContent={content}
                                             onChange={handleContentChange}
                                             autoFocus={true}
+                                            textAnnotations={textAnnotations}
+                                            onAnnotationApplied={(annotation) => {
+                                                setTextAnnotations((prev) => prev.filter((a) => a.id !== annotation.id));
+                                            }}
                                         />
                                     </div>
                                 </main>
