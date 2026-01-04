@@ -21,7 +21,9 @@ import {
   Download,
   Calendar,
   CheckCircle,
-  XCircle
+  XCircle,
+  Image,
+  Upload
 } from 'lucide-react';
 import NotificationSettings from '../components/NotificationSettings';
 import { apiClient } from '../utils/api';
@@ -48,6 +50,7 @@ const Settings: React.FC = () => {
     { id: 'language', label: 'اللغة والمنطقة', icon: Globe, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { id: 'system', label: 'النظام', icon: Database, roles: ['admin'] },
     { id: 'company', label: 'إعدادات الشركة', icon: Building2, roles: ['admin'] },
+    { id: 'branding', label: 'هوية الشركة', icon: Image, roles: ['admin'] },
     { id: 'subscription', label: 'الاشتراك', icon: CreditCard, roles: ['admin'] },
     { id: 'invoices', label: 'الفواتير', icon: Receipt, roles: ['admin'] },
   ];
@@ -75,6 +78,16 @@ const Settings: React.FC = () => {
     license_number: ''
   });
   const [savingCompany, setSavingCompany] = useState(false);
+
+  // Branding Settings State
+  const [branding, setBranding] = useState({
+    primary_color: '#C5A059',
+    secondary_color: '#1a1a1a',
+    logo_url: '',
+    tagline: ''
+  });
+  const [savingBranding, setSavingBranding] = useState(false);
+  const [brandingMessage, setBrandingMessage] = useState('');
 
   // Subscription State
   const [subscription, setSubscription] = useState<any>(null);
@@ -123,7 +136,7 @@ const Settings: React.FC = () => {
     loadSettings();
   }, []);
 
-  // Load Company Info
+  // Load Company Info and Branding
   useEffect(() => {
     const loadCompanyInfo = async () => {
       try {
@@ -136,6 +149,13 @@ const Settings: React.FC = () => {
             phone: tenant.phone || '',
             address: tenant.address || '',
             license_number: tenant.license_number || ''
+          });
+          // Load branding data
+          setBranding({
+            primary_color: tenant.primary_color || '#C5A059',
+            secondary_color: tenant.secondary_color || '#1a1a1a',
+            logo_url: tenant.logo_url || tenant.logo || '',
+            tagline: tenant.tagline || ''
           });
         }
       } catch (error) {
@@ -241,6 +261,24 @@ const Settings: React.FC = () => {
       console.error('Error saving company info:', error);
     } finally {
       setSavingCompany(false);
+    }
+  };
+
+  // Save Branding Settings
+  const saveBranding = async () => {
+    try {
+      setSavingBranding(true);
+      setBrandingMessage('');
+      const response: any = await apiClient.put('/tenant', branding);
+      if (response.success) {
+        setBrandingMessage('تم حفظ هوية الشركة بنجاح');
+        setTimeout(() => setBrandingMessage(''), 3000);
+      }
+    } catch (error) {
+      setBrandingMessage('حدث خطأ أثناء حفظ هوية الشركة');
+      console.error('Error saving branding:', error);
+    } finally {
+      setSavingBranding(false);
     }
   };
 
@@ -839,6 +877,203 @@ const Settings: React.FC = () => {
           </div>
         );
 
+      case 'branding':
+        return (
+          <div className="settings-section">
+            <div className="settings-section__header">
+              <div className="settings-section__icon">
+                <Image size={14} />
+              </div>
+              <span className="settings-section__title">هوية الشركة (Branding)</span>
+            </div>
+            <div className="settings-section__content">
+              <p style={{ marginBottom: '20px', color: 'var(--color-text-secondary)', fontSize: '14px' }}>
+                خصص مظهر صفحة تسجيل الدخول الخاصة بشركتك. هذه الإعدادات تظهر عند دخول المستخدمين عبر رابط شركتك المخصص.
+              </p>
+
+              {/* Logo Preview */}
+              <div className="settings-option-card" style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '12px',
+                    background: branding.logo_url ? `url(${branding.logo_url}) center/contain no-repeat` : 'var(--color-surface-subtle)',
+                    border: '2px dashed var(--color-border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {!branding.logo_url && <Upload size={24} style={{ color: 'var(--color-text-secondary)' }} />}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div className="settings-option-card__title">شعار الشركة</div>
+                    <div className="settings-option-card__desc">يظهر في صفحة تسجيل الدخول الخاصة بشركتك</div>
+                    <div className="settings-field" style={{ marginTop: '10px' }}>
+                      <input
+                        type="url"
+                        className="settings-field__input"
+                        value={branding.logo_url}
+                        onChange={(e) => setBranding(prev => ({ ...prev, logo_url: e.target.value }))}
+                        placeholder="https://example.com/logo.png"
+                        style={{ fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Colors */}
+              <div className="settings-form-grid" style={{ marginBottom: '20px' }}>
+                <div className="settings-field">
+                  <label className="settings-field__label">اللون الأساسي</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input
+                      type="color"
+                      value={branding.primary_color}
+                      onChange={(e) => setBranding(prev => ({ ...prev, primary_color: e.target.value }))}
+                      style={{
+                        width: '50px',
+                        height: '40px',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    />
+                    <input
+                      type="text"
+                      className="settings-field__input"
+                      value={branding.primary_color}
+                      onChange={(e) => setBranding(prev => ({ ...prev, primary_color: e.target.value }))}
+                      placeholder="#C5A059"
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                  <small style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                    يُستخدم في الأزرار والعناصر الرئيسية
+                  </small>
+                </div>
+
+                <div className="settings-field">
+                  <label className="settings-field__label">اللون الثانوي</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input
+                      type="color"
+                      value={branding.secondary_color}
+                      onChange={(e) => setBranding(prev => ({ ...prev, secondary_color: e.target.value }))}
+                      style={{
+                        width: '50px',
+                        height: '40px',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    />
+                    <input
+                      type="text"
+                      className="settings-field__input"
+                      value={branding.secondary_color}
+                      onChange={(e) => setBranding(prev => ({ ...prev, secondary_color: e.target.value }))}
+                      placeholder="#1a1a1a"
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                  <small style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                    يُستخدم في الخلفيات والنصوص
+                  </small>
+                </div>
+              </div>
+
+              {/* Tagline */}
+              <div className="settings-field" style={{ marginBottom: '20px' }}>
+                <label className="settings-field__label">الشعار النصي (Tagline)</label>
+                <input
+                  type="text"
+                  className="settings-field__input"
+                  value={branding.tagline}
+                  onChange={(e) => setBranding(prev => ({ ...prev, tagline: e.target.value }))}
+                  placeholder="مثال: نخبة في القانون منذ 2010"
+                />
+                <small style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                  يظهر أسفل اسم الشركة في صفحة تسجيل الدخول
+                </small>
+              </div>
+
+              {/* Preview */}
+              <div className="settings-option-card" style={{
+                background: branding.secondary_color,
+                padding: '30px',
+                borderRadius: '12px',
+                textAlign: 'center',
+                marginBottom: '20px'
+              }}>
+                <div style={{ color: 'white', opacity: 0.5, fontSize: '12px', marginBottom: '10px' }}>معاينة</div>
+                {branding.logo_url ? (
+                  <img
+                    src={branding.logo_url}
+                    alt="Logo Preview"
+                    style={{ width: '60px', height: '60px', objectFit: 'contain', marginBottom: '10px', background: 'white', borderRadius: '8px', padding: '8px' }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '60px',
+                    height: '60px',
+                    margin: '0 auto 10px',
+                    borderRadius: '8px',
+                    background: branding.primary_color,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Building2 size={28} style={{ color: 'white' }} />
+                  </div>
+                )}
+                <div style={{ color: 'white', fontSize: '18px', fontWeight: 600 }}>{companyInfo.name || 'اسم الشركة'}</div>
+                {branding.tagline && (
+                  <div style={{ color: 'white', opacity: 0.7, fontSize: '14px', marginTop: '5px' }}>{branding.tagline}</div>
+                )}
+                <button
+                  style={{
+                    marginTop: '15px',
+                    padding: '10px 24px',
+                    background: branding.primary_color,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  تسجيل الدخول
+                </button>
+              </div>
+
+              {/* Save Button */}
+              <div className="settings-btn-group">
+                <button
+                  className="settings-btn settings-btn--primary"
+                  onClick={saveBranding}
+                  disabled={savingBranding}
+                >
+                  {savingBranding ? (
+                    <><Loader2 className="animate-spin" size={16} /> جاري الحفظ...</>
+                  ) : (
+                    <><Save size={16} /> حفظ هوية الشركة</>
+                  )}
+                </button>
+                {brandingMessage && (
+                  <span style={{
+                    color: brandingMessage.includes('خطأ') ? '#ef4444' : '#22c55e',
+                    marginRight: '12px'
+                  }}>
+                    {brandingMessage}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
       case 'subscription':
         // Use API-provided trial_days_remaining if available, otherwise calculate
         const trialEndsAt = subscription?.trial_ends_at ? new Date(subscription.trial_ends_at) : null;
@@ -1092,6 +1327,7 @@ const Settings: React.FC = () => {
                 {activeTab === 'language' && 'اللغة والمنطقة'}
                 {activeTab === 'system' && 'إعدادات النظام'}
                 {activeTab === 'company' && 'إعدادات الشركة'}
+                {activeTab === 'branding' && 'هوية الشركة'}
                 {activeTab === 'subscription' && 'إدارة الاشتراك'}
                 {activeTab === 'invoices' && 'الفواتير'}
               </div>
@@ -1104,6 +1340,7 @@ const Settings: React.FC = () => {
                 {activeTab === 'language' && 'تغيير اللغة والمنطقة الزمنية.'}
                 {activeTab === 'system' && 'إدارة النسخ الاحتياطي وتصدير البيانات.'}
                 {activeTab === 'company' && 'تحديث معلومات شركتك مثل الاسم والبريد والعنوان.'}
+                {activeTab === 'branding' && 'خصص مظهر صفحة تسجيل الدخول الخاصة بشركتك.'}
                 {activeTab === 'subscription' && 'إدارة اشتراكك الحالي، الترقية للسنوي، أو الإلغاء.'}
                 {activeTab === 'invoices' && 'عرض وتحميل جميع الفواتير السابقة.'}
               </p>
@@ -1120,6 +1357,7 @@ const Settings: React.FC = () => {
                 {activeTab === 'language' && 'اختر المنطقة الزمنية المناسبة لعرض مواعيد الجلسات بشكل صحيح'}
                 {activeTab === 'system' && 'قم بعمل نسخ احتياطي دوري للحفاظ على بياناتك'}
                 {activeTab === 'company' && 'تحديث بيانات الشركة يظهر في الفواتير والتقارير'}
+                {activeTab === 'branding' && 'رابط شركتك المخصص: company-slug.alraedlaw.com'}
                 {activeTab === 'subscription' && 'الاشتراك السنوي يوفر لك شهرين مجاناً!'}
                 {activeTab === 'invoices' && 'يمكنك تحميل الفواتير بصيغة PDF للأرشفة'}
               </span>

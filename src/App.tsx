@@ -1,6 +1,7 @@
-﻿import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import UpdateBanner from './components/UpdateBanner';
 import { AuthProvider } from './contexts/AuthContext';
+import { TenantProvider, useTenant } from './contexts/TenantContext';
 import { TimerProvider } from './contexts/TimerContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthLayout from './components/AuthLayout';
@@ -25,6 +26,7 @@ import LoginContent from './pages/LoginContent';
 import RegisterChoiceContent from './pages/RegisterChoiceContent';
 import RegisterTenantContent from './pages/RegisterTenantContent';
 import LandingPage from './pages/LandingPage';
+import TenantLandingPage from './pages/TenantLandingPage';
 import Wekalat from './pages/Wekalat';
 import AccountStatus from './pages/AccountStatus';
 import Clients from './pages/Clients';
@@ -33,14 +35,21 @@ import AdminRequests from './pages/AdminRequests';
 import ClientMessages from './pages/ClientMessages';
 import PersonalNotebook from './pages/NotebookWorkspace';
 
+// Component to choose between tenant and main landing page
+const SmartLandingPage: React.FC = () => {
+  const { isSubdomain } = useTenant();
+  return isSubdomain ? <TenantLandingPage /> : <LandingPage />;
+};
+
 function App() {
   return (
-    <AuthProvider>
-      <UpdateBanner />
-      <TimerProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
+    <TenantProvider>
+      <AuthProvider>
+        <UpdateBanner />
+        <TimerProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<SmartLandingPage />} />
             {/* Auth routes with shared layout */}
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<LoginContent />} />
@@ -146,11 +155,12 @@ function App() {
                 </ProtectedRoute>
               } />
             </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Router>
-      </TimerProvider>
-    </AuthProvider>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Router>
+        </TimerProvider>
+      </AuthProvider>
+    </TenantProvider>
   );
 }
 

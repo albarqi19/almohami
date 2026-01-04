@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTenant } from '../contexts/TenantContext';
 
 interface LoginForm {
     nationalId: string;
@@ -23,6 +24,7 @@ interface LoginForm {
  */
 const LoginContent: React.FC = () => {
     const { user, login, isLoading: authLoading } = useAuth();
+    const { tenant, isSubdomain } = useTenant();
     const location = useLocation();
     const rememberKey = useMemo(() => 'law-firm:remember', []);
     const rememberValueKey = useMemo(() => 'law-firm:last-national-id', []);
@@ -134,13 +136,37 @@ const LoginContent: React.FC = () => {
             transition={{ duration: 0.3 }}
         >
             <header className="auth-card__brand">
-                <span className="auth-card__logo" aria-hidden="true">
-                    <Scale size={32} />
-                </span>
-                <div>
-                    <h1 id="login-title" className="auth-card__title">نظام إدارة المحاماة</h1>
-                    <p className="auth-card__subtitle">سجّل دخولك للوصول إلى القضايا، المهام، والتقارير الفورية</p>
-                </div>
+                {isSubdomain && tenant ? (
+                    <>
+                        <span className="auth-card__logo" aria-hidden="true">
+                            {tenant.logo_url || tenant.logo ? (
+                                <img
+                                    src={tenant.logo_url || tenant.logo || ''}
+                                    alt={tenant.name}
+                                    className="w-10 h-10 object-contain rounded"
+                                />
+                            ) : (
+                                <Scale size={32} style={{ color: tenant.primary_color || 'var(--color-accent)' }} />
+                            )}
+                        </span>
+                        <div>
+                            <h1 id="login-title" className="auth-card__title">{tenant.name}</h1>
+                            <p className="auth-card__subtitle">
+                                {tenant.tagline || 'سجّل دخولك للوصول إلى النظام'}
+                            </p>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <span className="auth-card__logo" aria-hidden="true">
+                            <Scale size={32} />
+                        </span>
+                        <div>
+                            <h1 id="login-title" className="auth-card__title">نظام إدارة المحاماة</h1>
+                            <p className="auth-card__subtitle">سجّل دخولك للوصول إلى القضايا، المهام، والتقارير الفورية</p>
+                        </div>
+                    </>
+                )}
             </header>
 
             {successMessage && (
@@ -249,10 +275,13 @@ const LoginContent: React.FC = () => {
                     )}
                 </button>
 
-                <div className="auth-register-prompt">
-                    <span>ليس لديك حساب؟</span>
-                    <Link to="/register">إنشاء حساب جديد</Link>
-                </div>
+                {/* Hide register link on tenant subdomain */}
+                {!isSubdomain && (
+                    <div className="auth-register-prompt">
+                        <span>ليس لديك حساب؟</span>
+                        <Link to="/register">إنشاء حساب جديد</Link>
+                    </div>
+                )}
             </form>
         </motion.div>
     );

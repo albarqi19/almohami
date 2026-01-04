@@ -32,6 +32,10 @@
   --color-accent-hover: #d4b685;
   --color-accent-soft: rgba(197, 165, 114, 0.15);
 
+  /* === ألوان الشركة (Tenant Branding) === */
+  --tenant-primary: #C5A059;
+  --tenant-secondary: #1a1a1a;
+
   /* === ألوان الحالات === */
   --color-success: #1b998b;
   --color-warning: #f4a259;
