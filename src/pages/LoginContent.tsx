@@ -19,6 +19,26 @@ interface LoginForm {
 }
 
 /**
+ * Calculate if a color is light or dark
+ * Returns true if the color is light (needs dark text)
+ */
+function isLightColor(color: string): boolean {
+    // Remove # if present
+    const hex = color.replace('#', '');
+    
+    // Convert to RGB
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    // Calculate relative luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    
+    // Return true if light (luminance > 0.5)
+    return luminance > 0.5;
+}
+
+/**
  * LoginContent - محتوى صفحة تسجيل الدخول
  * يُستخدم داخل AuthLayout
  */
@@ -126,7 +146,22 @@ const LoginContent: React.FC = () => {
         }));
     };
 
+    // Calculate text color based on background color
+    const textColor = useMemo(() => {
+        if (isSubdomain && tenant?.primary_color) {
+            return isLightColor(tenant.primary_color) ? '#1a1a1a' : '#ffffff';
+        }
+        return '#ffffff';
+    }, [isSubdomain, tenant?.primary_color]);
 
+    const subtitleColor = useMemo(() => {
+        if (isSubdomain && tenant?.primary_color) {
+            return isLightColor(tenant.primary_color) 
+                ? 'rgba(26, 26, 26, 0.7)' 
+                : 'rgba(255, 255, 255, 0.85)';
+        }
+        return 'rgba(255, 255, 255, 0.85)';
+    }, [isSubdomain, tenant?.primary_color]);
 
     return (
         <motion.div
@@ -142,7 +177,7 @@ const LoginContent: React.FC = () => {
                             id="login-title" 
                             className="auth-card__title"
                             style={{ 
-                                color: tenant.text_color || '#ffffff',
+                                color: textColor,
                                 marginBottom: '8px'
                             }}
                         >
@@ -151,7 +186,7 @@ const LoginContent: React.FC = () => {
                         <p 
                             className="auth-card__subtitle"
                             style={{ 
-                                color: tenant.text_color ? `${tenant.text_color}dd` : 'rgba(255, 255, 255, 0.9)',
+                                color: subtitleColor,
                             }}
                         >
                             {tenant.tagline || 'سجّل دخولك للوصول إلى النظام'}
