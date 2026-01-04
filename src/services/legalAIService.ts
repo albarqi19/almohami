@@ -652,6 +652,156 @@ export async function callLegalAI(prompt: string): Promise<string> {
   return generatedText;
 }
 
+type DocumentAssistantColorCode = 'yellow' | 'red' | 'blue';
+
+export interface DocumentAssistantHighlight {
+  exact_text: string;
+  comment: string;
+  suggestion?: string;
+  color_code: DocumentAssistantColorCode;
+}
+
+export interface DocumentAssistantResponse {
+  answer: string;
+  highlights: DocumentAssistantHighlight[];
+}
+
+function extractJsonObject(raw: string): unknown {
+  const trimmed = raw.trim();
+  const unfenced = trimmed
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+  try {
+    return JSON.parse(unfenced);
+  } catch {
+    // Attempt to extract the first top-level JSON object.
+    const start = unfenced.indexOf('{');
+    const end = unfenced.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      const slice = unfenced.slice(start, end + 1);
+      return JSON.parse(slice);
+    }
+    throw new Error('تعذر تحليل JSON من رد الذكاء الاصطناعي');
+  }
+}
+
+function isColorCode(value: unknown): value is DocumentAssistantColorCode {
+  return value === 'yellow' || value === 'red' || value === 'blue';
+}
+
+/**
+ * Document-aware assistant for the notebook editor.
+ * - Reads the current document content (text + optional Yoopta JSON blocks)
+ * - Answers the user's question
+ * - Returns highlights that can be visually linked back to the document
+ */
+export async function askDocumentAssistant(params: {
+  question: string;
+  documentText: string;
+  documentBlocksJson?: unknown;
+}): Promise<DocumentAssistantResponse> {
+  const question = params.question?.trim();
+  if (!question) {
+    throw new Error('اكتب سؤالك أولاً');
+  }
+
+  const documentText = params.documentText ?? '';
+  if (!documentText.trim()) {
+    throw new Error('المستند فارغ. اكتب نصاً أولاً');
+  }
+
+  // Avoid extremely large payloads.
+  const MAX_TEXT_CHARS = 18000;
+  const safeText = documentText.length > MAX_TEXT_CHARS
+    ? documentText.slice(0, MAX_TEXT_CHARS) + '\n\n[... تم اختصار النص لطول كبير ...]'
+    : documentText;
+
+  let blocksJsonSection = '';
+  if (params.documentBlocksJson !== undefined) {
+    try {
+      const json = JSON.stringify(params.documentBlocksJson);
+      // Include blocks JSON only if reasonably sized; otherwise omit to avoid breaking the request.
+      if (json.length <= 25000) {
+        blocksJsonSection = `\n\nسياق JSON Blocks (Yoopta):\n${json}`;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const prompt = `الدور: أنت "المساعد القانوني الذكي". مهمتك الإجابة على أسئلة المستخدم حول المستند القانوني المرفق بدقة متناهية، مع ربط الإجابة بالنص الأصلي عند الحاجة.
+
+السياق (اقرأه كاملاً قبل الرد):
+نص المستند (Plain Text):\n${safeText}${blocksJsonSection}
+
+سؤال المستخدم: ${question}
+
+التعليمات:
+1) حلّل السؤال بناءً على النص الموجود فقط. لا تفترض معلومات غير موجودة.
+2) إذا طلب المستخدم "تصحيح لغوي" أو "كشف أخطاء" أو "ثغرات" أو أي شيء يتطلب ربطاً بالنص، حدّد المواضع بدقة باستخدام exact_text مطابق حرفياً تماماً لنص موجود داخل المستند.
+3) لا تخرج عن سياق المستند إلا إذا طلب المستخدم نصيحة عامة مرتبطة به.
+4) المخرجات يجب أن تكون JSON فقط (بدون Markdown وبدون أي شرح خارج JSON) وبالهيكل التالي تماماً:
+
+{
+  "answer": "...",
+  "highlights": [
+    {
+      "exact_text": "النص المراد تمييزه من المستند",
+      "comment": "سبب التمييز أو الاقتراح",
+      "suggestion": "النص البديل (إن وجد)",
+      "color_code": "yellow" | "red" | "blue"
+    }
+  ]
+}
+
+قيود:
+- اجعل highlights قصيرة (حد أقصى 12).
+- لا تكرر exact_text.
+- إذا لم توجد تمييزات، اجعل highlights: []
+`;
+
+  const raw = await callLegalAI(prompt);
+  const parsed = extractJsonObject(raw);
+
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('رد الذكاء الاصطناعي غير صالح');
+  }
+
+  const obj = parsed as any;
+  const answer = typeof obj.answer === 'string' ? obj.answer.trim() : '';
+  const highlightsRaw = Array.isArray(obj.highlights) ? obj.highlights : [];
+
+  const highlights: DocumentAssistantHighlight[] = highlightsRaw
+    .filter((h: any) => h && typeof h === 'object')
+    .map((h: any) => ({
+      exact_text: typeof h.exact_text === 'string' ? h.exact_text.trim() : '',
+      comment: typeof h.comment === 'string' ? h.comment.trim() : '',
+      suggestion: typeof h.suggestion === 'string' ? h.suggestion.trim() : undefined,
+      color_code: isColorCode(h.color_code) ? h.color_code : 'yellow',
+    }))
+    .filter((h: DocumentAssistantHighlight) => h.exact_text && h.comment);
+
+  if (!answer) {
+    throw new Error('لم يتم استلام إجابة صالحة من الذكاء الاصطناعي');
+  }
+
+  // De-duplicate by exact_text.
+  const seen = new Set<string>();
+  const deduped = highlights.filter((h) => {
+    if (seen.has(h.exact_text)) return false;
+    seen.add(h.exact_text);
+    return true;
+  });
+
+  return {
+    answer,
+    highlights: deduped.slice(0, 12),
+  };
+}
+
 /**
  * معالجة طلب الذكاء الاصطناعي القانوني
  */

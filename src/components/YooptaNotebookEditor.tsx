@@ -1033,6 +1033,9 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
                     {(() => {
                         const annotation = (textAnnotations || []).find((a) => a.id === activeAnnotationId);
                         if (!annotation) return null;
+                        const hasRealSuggestion =
+                            Boolean(annotation.suggested_text) &&
+                            annotation.suggested_text.trim() !== annotation.original_text.trim();
                         return (
                             <>
                                 <div className="yoopta-annotation-tooltip-title">ملاحظة</div>
@@ -1042,15 +1045,17 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
                                 {annotation.legal_reference && (
                                     <div className="yoopta-annotation-tooltip-ref">{annotation.legal_reference}</div>
                                 )}
-                                <div className="yoopta-annotation-tooltip-actions">
-                                    <button
-                                        type="button"
-                                        className="yoopta-annotation-apply-btn"
-                                        onClick={handleApplyAnnotation}
-                                    >
-                                        تطبيق التصحيح
-                                    </button>
-                                </div>
+                                {hasRealSuggestion && (
+                                    <div className="yoopta-annotation-tooltip-actions">
+                                        <button
+                                            type="button"
+                                            className="yoopta-annotation-apply-btn"
+                                            onClick={handleApplyAnnotation}
+                                        >
+                                            تطبيق التصحيح
+                                        </button>
+                                    </div>
+                                )}
                             </>
                         );
                     })()}

@@ -12,6 +12,7 @@ import YooptaNotebookEditor, {
 } from '../components/YooptaNotebookEditor';
 import type { YooptaNotebookEditorRef } from '../components/YooptaNotebookEditor';
 import LegalAIToolbarButton from '../components/LegalAIToolbarButton';
+import NotebookAssistantWidget from '../components/NotebookAssistantWidget';
 import type { YooptaContentValue } from '@yoopta/editor';
 import type { TextAnnotation } from '../types/textAnnotations';
 import '../styles/notebook-workspace-notion.css';
@@ -261,6 +262,7 @@ const NotebookWorkspace: React.FC = () => {
         }
 
         setNoteContent(parsedContent);
+        setTextAnnotations([]);
         // Force editor re-render with new content
         setEditorKey(prev => prev + 1);
         pendingChangesRef.current = false;
@@ -281,6 +283,7 @@ const NotebookWorkspace: React.FC = () => {
         setNoteContent(undefined);
         setNoteCaseId(null);
         setNoteReminder(null);
+        setTextAnnotations([]);
         // Force editor re-render
         setEditorKey(prev => prev + 1);
         pendingChangesRef.current = false;
@@ -300,6 +303,7 @@ const NotebookWorkspace: React.FC = () => {
             setNewNoteMode(false);
             setNoteContent(undefined);
             setEditorKey(prev => prev + 1);
+            setTextAnnotations([]);
 
             try {
                 await notebookService.deleteNote(deletedNoteId);
@@ -726,6 +730,16 @@ const NotebookWorkspace: React.FC = () => {
                                 }}
                             />
                         </div>
+
+                        <NotebookAssistantWidget
+                            isVisible={true}
+                            getDocumentText={() => editorRef.current?.getAllText?.() || null}
+                            getDocumentBlocksJson={() => editorRef.current?.getContent?.() || null}
+                            onSetTextAnnotations={(annotations) => {
+                                console.log('[NotebookWorkspace] Widget setting annotations:', annotations);
+                                setTextAnnotations(annotations);
+                            }}
+                        />
                     </>
                 ) : (
                     /* Empty State */

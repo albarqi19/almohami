@@ -322,6 +322,7 @@ body.classic .notebook-workspace {
     flex-direction: column;
     background: var(--bg);
     overflow: hidden;
+    position: relative;
 }
 
 /* شريط الأدوات */
@@ -517,6 +518,155 @@ body.classic .notebook-workspace {
 
 .dropdown-item:hover {
     background: var(--bg-hover);
+}
+
+/* Notebook AI Assistant Widget */
+.notebook-workspace .editor-container {
+    /* Space for the floating widget */
+    padding-bottom: 120px;
+}
+
+.notebook-ai-widget {
+    position: absolute;
+    bottom: 18px;
+    /* Center within notebook-main, respecting the sidebar automatically */
+    left: 16px;
+    right: 16px;
+    margin: 0 auto;
+    width: min(720px, 100%);
+    z-index: 300;
+
+    border: 1px solid var(--border);
+    border-radius: 12px;
+
+    /* Glass-like feel (with fallbacks) */
+    background: var(--bg-secondary);
+    background: color-mix(in srgb, var(--bg) 78%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    padding: 8px;
+}
+
+.notebook-ai-widget-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.notebook-ai-widget-input {
+    flex: 1;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 9px 11px;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+}
+
+.notebook-ai-widget-input::placeholder {
+    color: var(--text-muted);
+}
+
+.notebook-ai-widget-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.notebook-ai-widget-btn {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-secondary);
+    border-radius: 10px;
+    padding: 9px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, color 0.12s;
+}
+
+.notebook-ai-widget-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+}
+
+.notebook-ai-widget-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.notebook-ai-widget-btn.subtle {
+    background: transparent;
+}
+
+.notebook-ai-widget-spin {
+    animation: notebookAiSpin 0.9s linear infinite;
+}
+
+@keyframes notebookAiSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.notebook-ai-widget-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--accent-bg);
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.notebook-ai-widget-pulse {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--accent);
+    animation: notebookAiPulse 1.1s ease-in-out infinite;
+}
+
+@keyframes notebookAiPulse {
+    0% { transform: scale(0.85); opacity: 0.55; }
+    50% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(0.85); opacity: 0.55; }
+}
+
+.notebook-ai-widget-error {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 12px;
+}
+
+.notebook-ai-widget-answer {
+    margin-top: 8px;
+    padding: 10px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+}
+
+.notebook-ai-widget-answer-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.notebook-ai-widget-answer-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+    white-space: pre-wrap;
 }
 
 .dropdown-item.danger {
