@@ -13,6 +13,7 @@ import YooptaNotebookEditor, {
 import type { YooptaNotebookEditorRef } from '../components/YooptaNotebookEditor';
 import LegalAIToolbarButton from '../components/LegalAIToolbarButton';
 import type { YooptaContentValue } from '@yoopta/editor';
+import type { TextAnnotation } from '../types/textAnnotations';
 import '../styles/notebook-workspace-notion.css';
 import '../styles/legal-ai-tools.css';
 
@@ -48,6 +49,9 @@ const NotebookWorkspace: React.FC = () => {
 
     // Key for forcing editor re-render when switching notes
     const [editorKey, setEditorKey] = useState(0);
+
+    // Text annotations for AI proofreading
+    const [textAnnotations, setTextAnnotations] = useState<TextAnnotation[]>([]);
 
     // Auto-save timer ref
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -554,6 +558,10 @@ const NotebookWorkspace: React.FC = () => {
                                             // استبدال كل المحتوى
                                             editorRef.current?.replaceAllText?.(newText);
                                         }}
+                                        onSetTextAnnotations={(annotations) => {
+                                            console.log('[NotebookWorkspace] Setting text annotations:', annotations);
+                                            setTextAnnotations(annotations);
+                                        }}
                                     />
                                 </div>
                             </div>
@@ -711,6 +719,11 @@ const NotebookWorkspace: React.FC = () => {
                                 initialContent={noteContent}
                                 onChange={handleContentChange}
                                 autoFocus={true}
+                                textAnnotations={textAnnotations}
+                                onAnnotationApplied={(annotation) => {
+                                    console.log('[NotebookWorkspace] Annotation applied:', annotation);
+                                    setTextAnnotations(prev => prev.filter(a => a.id !== annotation.id));
+                                }}
                             />
                         </div>
                     </>
