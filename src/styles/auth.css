@@ -788,3 +788,125 @@
   padding: var(--space-8);
   min-height: 300px;
 }
+
+/* ========================================
+   Tenant-specific Auth Styles
+   ======================================== */
+
+/* Tenant auth page - no hero, full width form */
+.auth-page--tenant {
+  background: linear-gradient(135deg, var(--tenant-secondary, #1a1a1a) 0%, #0a0a0a 100%);
+  justify-content: center;
+  align-items: center;
+}
+
+.auth-page--tenant .auth-page__panel--full {
+  flex: none;
+  width: 100%;
+  max-width: 500px;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Tenant branding header */
+.auth-tenant-header {
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.auth-tenant-logo {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+  background: white;
+  padding: var(--space-3);
+  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.5);
+  margin-bottom: var(--space-4);
+}
+
+.auth-tenant-logo-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-4);
+  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.5);
+}
+
+.auth-tenant-name {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: white;
+  margin-bottom: var(--space-2);
+}
+
+.auth-tenant-tagline {
+  font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Adjust card for tenant pages */
+.auth-page--tenant .auth-card {
+  width: 100%;
+  max-width: 440px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.auth-page--tenant .auth-card__brand {
+  display: none; /* Hide the default brand in tenant mode */
+}
+
+.auth-page--tenant .auth-card__title,
+.auth-page--tenant .auth-label,
+.auth-page--tenant .auth-register-prompt {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.auth-page--tenant .auth-card__subtitle,
+.auth-page--tenant .auth-text-muted {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.auth-page--tenant .auth-input {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.auth-page--tenant .auth-input:focus {
+  border-color: var(--tenant-primary, var(--color-primary));
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.2);
+}
+
+.auth-page--tenant .auth-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.auth-page--tenant .auth-btn--primary {
+  background-color: var(--tenant-primary, var(--color-primary));
+}
+
+.auth-page--tenant .auth-btn--primary:hover {
+  filter: brightness(1.1);
+}
+
+.auth-page--tenant .auth-checkbox-label {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.auth-page--tenant .auth-link {
+  color: var(--tenant-primary, var(--color-primary));
+}
+
+@media (min-width: 1024px) {
+  .auth-page--tenant {
+    flex-direction: column;
+  }
+}

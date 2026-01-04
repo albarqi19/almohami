@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Scale, Sparkles } from 'lucide-react';
+import { useTenant } from '../contexts/TenantContext';
 import '../styles/auth.css';
 
 /**
@@ -10,6 +11,7 @@ import '../styles/auth.css';
  */
 const AuthLayout: React.FC = () => {
     const location = useLocation();
+    const { tenant, isSubdomain } = useTenant();
 
     // Dynamic hero content based on route
     const getHeroContent = () => {
@@ -34,6 +36,51 @@ const AuthLayout: React.FC = () => {
 
     const heroContent = getHeroContent();
 
+    // If it's a subdomain (tenant), show simplified layout without hero
+    if (isSubdomain && tenant) {
+        const primaryColor = tenant.primary_color || '#C5A059';
+        const secondaryColor = tenant.secondary_color || '#1a1a1a';
+        const logoUrl = tenant.logo_url || tenant.logo;
+
+        return (
+            <div 
+                className="auth-page auth-page--tenant" 
+                aria-labelledby="auth-title"
+                style={{
+                    '--tenant-primary': primaryColor,
+                    '--tenant-secondary': secondaryColor,
+                } as React.CSSProperties}
+            >
+                {/* Full width form for tenants */}
+                <section className="auth-page__panel auth-page__panel--full" role="presentation">
+                    {/* Tenant Branding Header */}
+                    <div className="auth-tenant-header">
+                        {logoUrl ? (
+                            <img 
+                                src={logoUrl} 
+                                alt={tenant.name} 
+                                className="auth-tenant-logo"
+                            />
+                        ) : (
+                            <div 
+                                className="auth-tenant-logo-placeholder"
+                                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)` }}
+                            >
+                                <Scale size={32} color="white" />
+                            </div>
+                        )}
+                        <h1 className="auth-tenant-name">{tenant.name}</h1>
+                        {tenant.tagline && (
+                            <p className="auth-tenant-tagline">{tenant.tagline}</p>
+                        )}
+                    </div>
+                    <Outlet />
+                </section>
+            </div>
+        );
+    }
+
+    // Default layout for main site
     return (
         <div className="auth-page" aria-labelledby="auth-title">
             {/* Left Panel - Form Content (changes with route) */}
