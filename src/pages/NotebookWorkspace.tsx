@@ -54,6 +54,9 @@ const NotebookWorkspace: React.FC = () => {
     // Text annotations for AI proofreading
     const [textAnnotations, setTextAnnotations] = useState<TextAnnotation[]>([]);
 
+    // Floating assistant widget visibility (closes via X, reopens on note change)
+    const [isAssistantVisible, setIsAssistantVisible] = useState(true);
+
     // Auto-save timer ref
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
     const pendingChangesRef = useRef(false);
@@ -263,6 +266,7 @@ const NotebookWorkspace: React.FC = () => {
 
         setNoteContent(parsedContent);
         setTextAnnotations([]);
+        setIsAssistantVisible(true);
         // Force editor re-render with new content
         setEditorKey(prev => prev + 1);
         pendingChangesRef.current = false;
@@ -284,6 +288,7 @@ const NotebookWorkspace: React.FC = () => {
         setNoteCaseId(null);
         setNoteReminder(null);
         setTextAnnotations([]);
+        setIsAssistantVisible(true);
         // Force editor re-render
         setEditorKey(prev => prev + 1);
         pendingChangesRef.current = false;
@@ -304,6 +309,7 @@ const NotebookWorkspace: React.FC = () => {
             setNoteContent(undefined);
             setEditorKey(prev => prev + 1);
             setTextAnnotations([]);
+            setIsAssistantVisible(true);
 
             try {
                 await notebookService.deleteNote(deletedNoteId);
@@ -732,13 +738,14 @@ const NotebookWorkspace: React.FC = () => {
                         </div>
 
                         <NotebookAssistantWidget
-                            isVisible={true}
+                            isVisible={isAssistantVisible}
                             getDocumentText={() => editorRef.current?.getAllText?.() || null}
                             getDocumentBlocksJson={() => editorRef.current?.getContent?.() || null}
                             onSetTextAnnotations={(annotations) => {
                                 console.log('[NotebookWorkspace] Widget setting annotations:', annotations);
                                 setTextAnnotations(annotations);
                             }}
+                            onRequestClose={() => setIsAssistantVisible(false)}
                         />
                     </>
                 ) : (

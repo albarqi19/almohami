@@ -14,6 +14,7 @@ interface NotebookAssistantWidgetProps {
   getDocumentText: () => string | null;
   getDocumentBlocksJson?: () => unknown | null;
   onSetTextAnnotations: (annotations: TextAnnotation[]) => void;
+  onRequestClose: () => void;
 }
 
 const mapColorToSeverity = (color: DocumentAssistantHighlight['color_code']): TextAnnotationSeverity => {
@@ -44,6 +45,7 @@ const NotebookAssistantWidget: React.FC<NotebookAssistantWidgetProps> = ({
   getDocumentText,
   getDocumentBlocksJson,
   onSetTextAnnotations,
+  onRequestClose,
 }) => {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState<string | null>(null);
@@ -52,12 +54,13 @@ const NotebookAssistantWidget: React.FC<NotebookAssistantWidgetProps> = ({
 
   const canSend = useMemo(() => !loading && question.trim().length > 0, [loading, question]);
 
-  const handleClear = useCallback(() => {
+  const handleClose = useCallback(() => {
     setQuestion('');
     setAnswer(null);
     setError(null);
     onSetTextAnnotations([]);
-  }, [onSetTextAnnotations]);
+    onRequestClose();
+  }, [onRequestClose, onSetTextAnnotations]);
 
   const handleAsk = useCallback(async () => {
     if (!canSend) return;
@@ -125,9 +128,9 @@ const NotebookAssistantWidget: React.FC<NotebookAssistantWidgetProps> = ({
             <button
               type="button"
               className="notebook-ai-widget-btn subtle"
-              onClick={handleClear}
-              disabled={loading && !answer && !error}
-              title="مسح"
+              onClick={handleClose}
+              disabled={loading}
+              title="إغلاق"
             >
               <X size={16} />
             </button>
