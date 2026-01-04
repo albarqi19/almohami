@@ -1048,6 +1048,12 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                             onAnnotationApplied={(annotation) => {
                                                 setTextAnnotations((prev) => prev.filter((a) => a.id !== annotation.id));
                                             }}
+                                            onAnnotationsMatched={({ provided, matched }) => {
+                                                if (provided > 0 && matched === 0) {
+                                                    setError('تم استلام ملاحظات التدقيق، لكن لم يتمكن النظام من تحديد مواضعها داخل النص. السبب الأكثر شيوعاً أن original_text لا يطابق النص حرفياً (مسافات/رموز RTL/اختلاف بسيط). جرّب إعادة التدقيق أو قلّل النص المراد تدقيقه.');
+                                                    setTextAnnotations([]);
+                                                }
+                                            }}
                                         />
                                     </div>
                                 </main>

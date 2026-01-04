@@ -120,6 +120,7 @@ interface YooptaNotebookEditorProps {
     autoFocus?: boolean;
     textAnnotations?: TextAnnotation[];
     onAnnotationApplied?: (annotation: TextAnnotation) => void;
+    onAnnotationsMatched?: (info: { provided: number; matched: number; unmatched: number }) => void;
 }
 
 const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookEditorProps>(({
@@ -130,6 +131,7 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
     autoFocus = true,
     textAnnotations,
     onAnnotationApplied,
+    onAnnotationsMatched,
 }, ref) => {
     const editor = useMemo(() => createYooptaEditor(), []);
     const [value, setValue] = React.useState<YooptaContentValue | undefined>(
@@ -153,15 +155,52 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
     const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
     const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
 
-    const normalizeSearchText = (text: string): string => text;
+    const normalizeForSearchWithMap = (text: string): { normalized: string; origIndexByNormIndex: number[] } => {
+        const normalizedParts: string[] = [];
+        const map: number[] = [];
+
+        let prevWasSpace = false;
+
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+
+            // Drop common zero-width / direction marks that often appear in RTL text.
+            if (
+                ch === '\u200b' ||
+                ch === '\u200c' ||
+                ch === '\u200d' ||
+                ch === '\u200e' ||
+                ch === '\u200f' ||
+                ch === '\ufeff'
+            ) {
+                continue;
+            }
+
+            if (/\s/.test(ch)) {
+                if (prevWasSpace) continue;
+                prevWasSpace = true;
+                normalizedParts.push(' ');
+                map.push(i);
+                continue;
+            }
+
+            prevWasSpace = false;
+            normalizedParts.push(ch);
+            map.push(i);
+        }
+
+        return { normalized: normalizedParts.join(''), origIndexByNormIndex: map };
+    };
+
+    const normalizeForSearch = (text: string): string => normalizeForSearchWithMap(text).normalized;
 
     const computeTextNodesMap = useCallback((root: HTMLElement) => {
         const textNodes: Text[] = [];
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
             acceptNode(node) {
                 if (!(node instanceof Text)) return NodeFilter.FILTER_REJECT;
-                // Ignore whitespace-only nodes.
-                if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+                // Keep whitespace nodes too; they matter for matching.
+                if (node.nodeValue == null) return NodeFilter.FILTER_REJECT;
                 return NodeFilter.FILTER_ACCEPT;
             },
         });
@@ -223,23 +262,29 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
         if (annotations.length === 0) {
             setOverlayHits([]);
             rangeByAnnotationIdRef.current.clear();
+            onAnnotationsMatched?.({ provided: 0, matched: 0, unmatched: 0 });
             return;
         }
 
         const { fullText, spans } = computeTextNodesMap(editorRoot);
+        const fullNorm = normalizeForSearchWithMap(fullText);
         const nextHits: OverlayHit[] = [];
         const nextRanges = new Map<string, Range>();
 
         const containerRect = container.getBoundingClientRect();
 
         annotations.forEach((annotation, idx) => {
-            const needle = normalizeSearchText(annotation.original_text);
-            if (!needle.trim()) return;
+            const needleNorm = normalizeForSearch(annotation.original_text);
+            if (!needleNorm.trim()) return;
 
-            const matchIndex = fullText.indexOf(needle);
-            if (matchIndex < 0) return;
+            const matchNormIndex = fullNorm.normalized.indexOf(needleNorm);
+            if (matchNormIndex < 0) return;
 
-            const r = rangeFromGlobalOffsets(spans, matchIndex, matchIndex + needle.length);
+            const startOrig = fullNorm.origIndexByNormIndex[matchNormIndex];
+            const endOrigInclusive = fullNorm.origIndexByNormIndex[matchNormIndex + needleNorm.length - 1];
+            const endOrigExclusive = (typeof endOrigInclusive === 'number' ? endOrigInclusive + 1 : startOrig + 1);
+
+            const r = rangeFromGlobalOffsets(spans, startOrig, endOrigExclusive);
             if (!r) return;
 
             const clientRects = Array.from(r.getClientRects());
@@ -266,12 +311,18 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
         rangeByAnnotationIdRef.current = nextRanges;
         setOverlayHits(nextHits);
 
+        onAnnotationsMatched?.({
+            provided: annotations.length,
+            matched: nextRanges.size,
+            unmatched: Math.max(0, annotations.length - nextRanges.size),
+        });
+
         // Close tooltip if the active annotation disappeared.
         if (activeAnnotationId && !nextRanges.has(activeAnnotationId)) {
             setActiveAnnotationId(null);
             setTooltipPos(null);
         }
-    }, [activeAnnotationId, computeTextNodesMap, rangeFromGlobalOffsets, textAnnotations]);
+    }, [activeAnnotationId, computeTextNodesMap, onAnnotationsMatched, rangeFromGlobalOffsets, textAnnotations]);
 
     const replaceRangeTextInEditor = useCallback((range: Range, newText: string) => {
         const editorEl = containerRef.current;
