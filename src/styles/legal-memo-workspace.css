@@ -567,6 +567,7 @@
     flex-direction: column;
     overflow: hidden;
     background: var(--color-background, #ffffff);
+    position: relative;
 }
 
 .lmw-error-banner {
@@ -612,6 +613,21 @@
     flex: 1;
     overflow-y: auto;
     padding: 0 48px 48px;
+}
+
+/* Floating assistant widget (smaller + centered) */
+.legal-memo-workspace .lmw-editor-container {
+    padding-bottom: 140px;
+}
+
+.legal-memo-workspace .notebook-ai-widget {
+    left: 24px;
+    right: 24px;
+    margin: 0 auto;
+    width: min(560px, 100%);
+    bottom: 16px;
+    border-radius: 12px;
+    padding: 7px;
 }
 
 /* ===== Analysis Panel ===== */

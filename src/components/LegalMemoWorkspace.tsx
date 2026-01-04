@@ -14,6 +14,7 @@ import {
 import YooptaNotebookEditor, { textToYooptaContent } from './YooptaNotebookEditor';
 import type { YooptaNotebookEditorRef } from './YooptaNotebookEditor';
 import LegalAIToolbarButton from './LegalAIToolbarButton';
+import NotebookAssistantWidget from './NotebookAssistantWidget';
 import AnalysisProgress from './AnalysisProgress';
 import { LegalMemoService, type AnalysisStep } from '../services/legalMemoService';
 import { runSingleAnalysis, ANALYSIS_ENGINES, type AnalysisEngineType, type MemoAnalysisResult } from '../services/memoAnalysisService';
@@ -274,6 +275,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
     const [lastAnalyzedAt, setLastAnalyzedAt] = useState<Date | null>(null);
 
     const [textAnnotations, setTextAnnotations] = useState<TextAnnotation[]>([]);
+    const [isAssistantVisible, setIsAssistantVisible] = useState(true);
 
     // الأخطاء والتحميل
     const [error, setError] = useState<string | null>(null);
@@ -399,6 +401,8 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
         setAnalysisResult(null);
         setShowAnalysisPanel(false);
         setError(null);
+        setTextAnnotations([]);
+        setIsAssistantVisible(true);
         setEditorKey(prev => prev + 1);
     };
 
@@ -465,6 +469,8 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
 
         setContent(parsedContent);
         setEditorKey(prev => prev + 1);
+        setTextAnnotations([]);
+        setIsAssistantVisible(true);
 
         if (memo.analysis_result) {
             const savedAnalysis = typeof memo.analysis_result === 'string'
@@ -490,6 +496,8 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
         setTitle(`${typeName}${caseTitle ? ` - ${caseTitle}` : ''}`);
 
         setStep('editor');
+        setTextAnnotations([]);
+        setIsAssistantVisible(true);
     };
 
     // حفظ المذكرة
@@ -1062,6 +1070,16 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                             }}
                                         />
                                     </div>
+
+                                    <NotebookAssistantWidget
+                                        isVisible={isAssistantVisible}
+                                        getDocumentText={() => editorRef.current?.getAllText?.() || null}
+                                        getDocumentBlocksJson={() => editorRef.current?.getContent?.() || null}
+                                        onSetTextAnnotations={(annotations) => {
+                                            setTextAnnotations(annotations);
+                                        }}
+                                        onRequestClose={() => setIsAssistantVisible(false)}
+                                    />
                                 </main>
 
                                 {/* لوحة التحليل الكامل */}
