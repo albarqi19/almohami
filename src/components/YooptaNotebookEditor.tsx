@@ -248,13 +248,20 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
         if (!container) {
             setOverlayHits([]);
             rangeByAnnotationIdRef.current.clear();
+            onAnnotationsMatched?.({ provided: 0, matched: 0, unmatched: 0 });
             return;
         }
 
-        const editorRoot = container.querySelector('[data-yoopta-editor]') as HTMLElement | null;
+        const editorRoot =
+            (container.querySelector('[data-yoopta-editor]') as HTMLElement | null) ??
+            (container.querySelector('[data-yoopta-editor-id]') as HTMLElement | null) ??
+            container;
+
         if (!editorRoot) {
             setOverlayHits([]);
             rangeByAnnotationIdRef.current.clear();
+            const provided = (textAnnotations || []).filter((a) => a && a.original_text && a.original_text.trim()).length;
+            onAnnotationsMatched?.({ provided, matched: 0, unmatched: provided });
             return;
         }
 
@@ -311,11 +318,16 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
         rangeByAnnotationIdRef.current = nextRanges;
         setOverlayHits(nextHits);
 
-        onAnnotationsMatched?.({
+        const matchInfo = {
             provided: annotations.length,
             matched: nextRanges.size,
             unmatched: Math.max(0, annotations.length - nextRanges.size),
-        });
+        };
+
+        // Debug: helps diagnose why highlights don't show.
+        console.log('[YooptaNotebookEditor] annotations match:', matchInfo, { overlayRects: nextHits.length });
+
+        onAnnotationsMatched?.(matchInfo);
 
         // Close tooltip if the active annotation disappeared.
         if (activeAnnotationId && !nextRanges.has(activeAnnotationId)) {
