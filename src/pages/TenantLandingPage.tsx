@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, Scale, Shield, ArrowLeft } from 'lucide-react';
 import { useTenant } from '../contexts/TenantContext';
+import { hasCustomLanding, getCustomLanding } from './custom-landings';
 
 const TenantLandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { tenant, isLoading, error } = useTenant();
+  const { tenant, isLoading, error, subdomain } = useTenant();
+
+  // Check for custom landing page
+  const CustomLanding = getCustomLanding(subdomain);
 
   // Loading state
   if (isLoading) {
@@ -50,6 +54,23 @@ const TenantLandingPage: React.FC = () => {
           </a>
         </motion.div>
       </div>
+    );
+  }
+
+  // If there's a custom landing page for this tenant, render it
+  if (CustomLanding) {
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--tenant-secondary, #1a1a1a)' }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
+            <div className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4"
+                 style={{ borderColor: 'var(--tenant-primary, #C5A059)', borderTopColor: 'transparent' }} />
+            <p className="text-white/70">جاري التحميل...</p>
+          </motion.div>
+        </div>
+      }>
+        <CustomLanding />
+      </Suspense>
     );
   }
 
