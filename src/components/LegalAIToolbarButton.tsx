@@ -299,7 +299,8 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
           .filter((x) => x.original_text && x.suggested_text);
 
         return annotations;
-      } catch {
+      } catch (e) {
+        console.error('[LegalAI] JSON parse error:', e);
         return null;
       }
     };
@@ -322,10 +323,25 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
 
       // Special case: annotation tool returns JSON for in-editor highlights.
       if (tool.id === 'legal_proofreading_annotations' && result.success && result.result) {
+        console.log('[LegalAI] Annotation tool raw result:', result.result);
         const annotations = parseAnnotationsFromResult(result.result);
+        console.log('[LegalAI] Parsed annotations:', annotations);
+        
         if (annotations && annotations.length > 0) {
+          console.log('[LegalAI] Sending', annotations.length, 'annotations to editor');
           onSetTextAnnotations?.(annotations);
           setIsResultModalOpen(false);
+          setIsLoading(false);
+          return;
+        } else {
+          // JSON parse failed or empty array – show raw result to user for debugging
+          console.warn('[LegalAI] No valid annotations parsed, showing raw result');
+          setCurrentResult({
+            ...result,
+            result: `⚠️ لم يتم استخراج ملاحظات صالحة من رد الذكاء الاصطناعي.\n\nالرد الخام:\n${result.result}`
+          });
+          setIsResultModalOpen(true);
+          setIsLoading(false);
           return;
         }
       }
