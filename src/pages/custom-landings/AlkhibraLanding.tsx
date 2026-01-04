@@ -90,7 +90,7 @@ const AlkhibraLanding: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.8 }}
-            className="text-2xl md:text-3xl font-bold mb-8 tracking-wide whitespace-nowrap"
+            className="text-xl sm:text-2xl md:text-3xl font-bold mb-8 tracking-wide px-4"
             style={{ color: colors.primary }}
           >
             {companyInfo.name}

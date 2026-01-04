@@ -812,6 +812,51 @@
 }
 
 /* Tenant branding header */
+/* Tenant Logo Header - Top of page */
+.auth-tenant-top-header {
+  width: 100%;
+  padding: var(--space-6) 0 var(--space-4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.auth-tenant-logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.auth-tenant-header-logo {
+  height: 80px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.15));
+}
+
+.auth-tenant-header-logo-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 768px) {
+  .auth-tenant-header-logo {
+    height: 60px;
+  }
+  
+  .auth-tenant-header-logo-placeholder {
+    width: 60px;
+    height: 60px;
+  }
+}
+
+/* Old tenant header styles - keeping for backwards compatibility but unused now */
 .auth-tenant-header {
   text-align: center;
   margin-bottom: var(--space-6);
@@ -861,7 +906,7 @@
 }
 
 .auth-page--tenant .auth-card__brand {
-  display: none; /* Hide the default brand in tenant mode */
+  margin-bottom: var(--space-6);
 }
 
 .auth-page--tenant .auth-card__title,

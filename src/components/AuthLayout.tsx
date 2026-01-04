@@ -51,29 +51,33 @@ const AuthLayout: React.FC = () => {
                     '--tenant-secondary': secondaryColor,
                 } as React.CSSProperties}
             >
-                {/* Full width form for tenants */}
-                <section className="auth-page__panel auth-page__panel--full" role="presentation">
-                    {/* Tenant Branding Header */}
-                    <div className="auth-tenant-header">
+                {/* Tenant Logo Header */}
+                <header className="auth-tenant-top-header">
+                    <motion.div 
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8 }}
+                        className="auth-tenant-logo-container"
+                    >
                         {logoUrl ? (
                             <img 
                                 src={logoUrl} 
                                 alt={tenant.name} 
-                                className="auth-tenant-logo"
+                                className="auth-tenant-header-logo"
                             />
                         ) : (
                             <div 
-                                className="auth-tenant-logo-placeholder"
-                                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)` }}
+                                className="auth-tenant-header-logo-placeholder"
+                                style={{ backgroundColor: primaryColor }}
                             >
-                                <Scale size={32} color="white" />
+                                <Scale size={28} color="white" />
                             </div>
                         )}
-                        <h1 className="auth-tenant-name">{tenant.name}</h1>
-                        {tenant.tagline && (
-                            <p className="auth-tenant-tagline">{tenant.tagline}</p>
-                        )}
-                    </div>
+                    </motion.div>
+                </header>
+
+                {/* Full width form for tenants */}
+                <section className="auth-page__panel auth-page__panel--full" role="presentation">
                     <Outlet />
                 </section>
             </div>
