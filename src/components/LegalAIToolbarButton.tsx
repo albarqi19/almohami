@@ -311,6 +311,9 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
     setIsLoading(true);
     setIsMenuOpen(false);
 
+    // Keep existing UX: open the result modal immediately with a loader.
+    setIsResultModalOpen(true);
+
     try {
       const result = await processLegalAIRequest({
         tool: tool.id,
@@ -323,7 +326,6 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
         if (annotations && annotations.length > 0) {
           onSetTextAnnotations?.(annotations);
           setIsResultModalOpen(false);
-          setIsLoading(false);
           return;
         }
       }
