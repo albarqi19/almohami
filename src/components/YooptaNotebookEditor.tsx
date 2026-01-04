@@ -155,7 +155,10 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
     const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
     const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
 
-    const normalizeForSearchWithMap = (text: string): { normalized: string; origIndexByNormIndex: number[] } => {
+    const normalizeForSearchWithMap = (
+        text: string,
+        baseMap?: number[]
+    ): { normalized: string; origIndexByNormIndex: number[] } => {
         const normalizedParts: string[] = [];
         const map: number[] = [];
 
@@ -163,6 +166,7 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
 
         for (let i = 0; i < text.length; i++) {
             const ch = text[i];
+            const mappedIndex = baseMap ? baseMap[i] : i;
 
             // Drop common zero-width / direction marks that often appear in RTL text.
             if (
@@ -180,13 +184,13 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
                 if (prevWasSpace) continue;
                 prevWasSpace = true;
                 normalizedParts.push(' ');
-                map.push(i);
+                map.push(mappedIndex);
                 continue;
             }
 
             prevWasSpace = false;
             normalizedParts.push(ch);
-            map.push(i);
+            map.push(mappedIndex);
         }
 
         return { normalized: normalizedParts.join(''), origIndexByNormIndex: map };
@@ -196,6 +200,7 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
 
     const computeTextNodesMap = useCallback((root: HTMLElement) => {
         const textNodes: Text[] = [];
+        const blocksByNode: Array<HTMLElement | null> = [];
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
             acceptNode(node) {
                 if (!(node instanceof Text)) return NodeFilter.FILTER_REJECT;
@@ -209,6 +214,8 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
             const n = walker.nextNode();
             if (!n) break;
             textNodes.push(n as Text);
+            const blockEl = (n as Text).parentElement?.closest?.('[data-yoopta-block]') as HTMLElement | null;
+            blocksByNode.push(blockEl);
         }
 
         let fullText = '';
@@ -220,7 +227,34 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
             spans.push({ node, start, end: start + chunk.length });
         }
 
-        return { fullText, spans };
+        // Build an alternative search string that adds a '\n' between different Yoopta blocks.
+        // This matches what users perceive (separate blocks/lines) and what the AI may return.
+        let searchText = '';
+        const noSepIndexBySearchIndex: number[] = [];
+        let lastBlock: HTMLElement | null = null;
+        let noSepCursor = 0;
+
+        for (let i = 0; i < textNodes.length; i++) {
+            const node = textNodes[i];
+            const blockEl = blocksByNode[i] ?? null;
+
+            if (i > 0 && blockEl && lastBlock && blockEl !== lastBlock) {
+                // Insert a virtual newline separator. Map it to current no-separator cursor.
+                searchText += '\n';
+                noSepIndexBySearchIndex.push(noSepCursor);
+            }
+
+            const chunk = node.nodeValue ?? '';
+            for (let j = 0; j < chunk.length; j++) {
+                searchText += chunk[j];
+                noSepIndexBySearchIndex.push(noSepCursor + j);
+            }
+
+            noSepCursor += chunk.length;
+            lastBlock = blockEl;
+        }
+
+        return { fullText, spans, searchText, noSepIndexBySearchIndex };
     }, []);
 
     const rangeFromGlobalOffsets = useCallback((spans: Array<{ node: Text; start: number; end: number }>, startOffset: number, endOffset: number): Range | null => {
@@ -273,8 +307,8 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
             return;
         }
 
-        const { fullText, spans } = computeTextNodesMap(editorRoot);
-        const fullNorm = normalizeForSearchWithMap(fullText);
+        const { fullText, spans, searchText, noSepIndexBySearchIndex } = computeTextNodesMap(editorRoot);
+        const fullNorm = normalizeForSearchWithMap(searchText, noSepIndexBySearchIndex);
         const nextHits: OverlayHit[] = [];
         const nextRanges = new Map<string, Range>();
 
