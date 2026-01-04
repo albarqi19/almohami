@@ -97,6 +97,23 @@ const LoginContent: React.FC = () => {
         }
     }, [rememberKey, rememberValueKey]);
 
+    // Calculate text color based on background color - MUST be before any early returns
+    const textColor = useMemo(() => {
+        if (isSubdomain && tenant?.primary_color) {
+            return isLightColor(tenant.primary_color) ? '#1a1a1a' : '#ffffff';
+        }
+        return '#ffffff';
+    }, [isSubdomain, tenant?.primary_color]);
+
+    const subtitleColor = useMemo(() => {
+        if (isSubdomain && tenant?.primary_color) {
+            return isLightColor(tenant.primary_color) 
+                ? 'rgba(26, 26, 26, 0.7)' 
+                : 'rgba(255, 255, 255, 0.85)';
+        }
+        return 'rgba(255, 255, 255, 0.85)';
+    }, [isSubdomain, tenant?.primary_color]);
+
     // Redirect if already logged in
     if (user) {
         const from = location.state?.from?.pathname || '/dashboard';
@@ -145,23 +162,6 @@ const LoginContent: React.FC = () => {
             [name]: type === 'checkbox' ? checked : value
         }));
     };
-
-    // Calculate text color based on background color
-    const textColor = useMemo(() => {
-        if (isSubdomain && tenant?.primary_color) {
-            return isLightColor(tenant.primary_color) ? '#1a1a1a' : '#ffffff';
-        }
-        return '#ffffff';
-    }, [isSubdomain, tenant?.primary_color]);
-
-    const subtitleColor = useMemo(() => {
-        if (isSubdomain && tenant?.primary_color) {
-            return isLightColor(tenant.primary_color) 
-                ? 'rgba(26, 26, 26, 0.7)' 
-                : 'rgba(255, 255, 255, 0.85)';
-        }
-        return 'rgba(255, 255, 255, 0.85)';
-    }, [isSubdomain, tenant?.primary_color]);
 
     return (
         <motion.div

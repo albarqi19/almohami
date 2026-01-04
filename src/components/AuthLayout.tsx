@@ -11,7 +11,30 @@ import '../styles/auth.css';
  */
 const AuthLayout: React.FC = () => {
     const location = useLocation();
-    const { tenant, isSubdomain } = useTenant();
+    const { tenant, isSubdomain, isLoading } = useTenant();
+
+    // Show loader while tenant data is loading for subdomains
+    if (isSubdomain && isLoading) {
+        return (
+            <div className="auth-page auth-page--loading">
+                <div className="auth-loading-container">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="auth-loading-spinner"
+                    />
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                        className="auth-loading-text"
+                    >
+                        جاري التحميل...
+                    </motion.p>
+                </div>
+            </div>
+        );
+    }
 
     // Dynamic hero content based on route
     const getHeroContent = () => {

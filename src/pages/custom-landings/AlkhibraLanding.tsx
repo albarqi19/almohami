@@ -108,7 +108,7 @@ const AlkhibraLanding: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8, duration: 0.8 }}
-            className="text-lg md:text-xl font-light mb-24 md:mb-28 max-w-2xl mx-auto leading-relaxed opacity-80"
+            className="text-lg md:text-xl font-light mb-32 md:mb-40 max-w-2xl mx-auto leading-relaxed opacity-80"
             style={{ color: colors.primary }}
           >
             {companyInfo.tagline}
