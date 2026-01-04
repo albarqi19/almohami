@@ -322,6 +322,11 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
         };
     }, []);
 
+    // Debug: track textAnnotations state changes
+    useEffect(() => {
+        console.log('[LegalMemoWorkspace] textAnnotations state changed, count:', textAnnotations.length);
+    }, [textAnnotations]);
+
     // الحفظ التلقائي - ينشئ مسودة أولاً ثم يحدثها
     const performAutoSave = useCallback(async () => {
         if (!pendingChangesRef.current) return;
@@ -760,6 +765,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                                 editorRef.current?.replaceAllText?.(newText);
                                             }}
                                             onSetTextAnnotations={(annotations) => {
+                                                console.log('[LegalMemoWorkspace] setTextAnnotations called with', annotations.length, 'annotations');
                                                 setTextAnnotations(annotations);
                                             }}
                                         />
