@@ -278,6 +278,7 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
     }, []);
 
     const recomputeAnnotationOverlays = useCallback(() => {
+        console.log('[YooptaNotebookEditor] recomputeAnnotationOverlays called, annotations:', textAnnotations?.length ?? 0);
         const container = containerRef.current;
         if (!container) {
             setOverlayHits([]);
@@ -413,8 +414,9 @@ const YooptaNotebookEditor = forwardRef<YooptaNotebookEditorRef, YooptaNotebookE
 
     useEffect(() => {
         // Recompute when content changes or annotations change.
+        console.log('[YooptaNotebookEditor] useEffect triggered, textAnnotations count:', textAnnotations?.length ?? 0);
         recomputeAnnotationOverlays();
-    }, [recomputeAnnotationOverlays, value]);
+    }, [recomputeAnnotationOverlays, value, textAnnotations]);
 
     useEffect(() => {
         // Keep overlays in sync with scrolling/resizing.
