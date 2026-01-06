@@ -808,6 +808,17 @@ body.dark .kanban-column {
     background: var(--law-navy);
 }
 
+.pagination-ellipsis {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    user-select: none;
+}
+
 /* === Responsive === */
 @media (max-width: 1024px) {
     .cases-header-bar {

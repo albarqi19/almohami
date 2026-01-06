@@ -503,7 +503,7 @@ const Cases: React.FC = () => {
 						<Search size={16} />
 						<input
 							type="text"
-							placeholder="بحث في القضايا..."
+							placeholder="بحث بالرقم أو اسم القضية أو العميل..."
 							value={searchTerm}
 							onChange={(e) => setSearchTerm(e.target.value)}
 						/>
@@ -626,15 +626,56 @@ const Cases: React.FC = () => {
 								<ChevronRight size={14} /> السابق
 							</button>
 							<div className="pagination-pages">
-								{Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => i + 1).map(page => (
-									<button
-										key={page}
-										className={`pagination-page ${page === pagination.currentPage ? 'pagination-page--active' : ''}`}
-										onClick={() => fetchCases(page)}
-									>
-										{page}
-									</button>
-								))}
+								{(() => {
+									const { currentPage, totalPages } = pagination;
+									const pages: (number | string)[] = [];
+									const maxVisible = 5;
+
+									if (totalPages <= maxVisible + 2) {
+										// إظهار كل الصفحات إذا كان العدد قليل
+										for (let i = 1; i <= totalPages; i++) pages.push(i);
+									} else {
+										// دائماً أظهر الصفحة الأولى
+										pages.push(1);
+
+										// حساب بداية ونهاية النطاق حول الصفحة الحالية
+										let start = Math.max(2, currentPage - 1);
+										let end = Math.min(totalPages - 1, currentPage + 1);
+
+										// تعديل النطاق إذا كنا قريبين من البداية أو النهاية
+										if (currentPage <= 3) {
+											end = Math.min(totalPages - 1, 4);
+										} else if (currentPage >= totalPages - 2) {
+											start = Math.max(2, totalPages - 3);
+										}
+
+										// إضافة ... قبل النطاق إذا لزم الأمر
+										if (start > 2) pages.push('...');
+
+										// إضافة الصفحات في النطاق
+										for (let i = start; i <= end; i++) pages.push(i);
+
+										// إضافة ... بعد النطاق إذا لزم الأمر
+										if (end < totalPages - 1) pages.push('...');
+
+										// دائماً أظهر الصفحة الأخيرة
+										if (totalPages > 1) pages.push(totalPages);
+									}
+
+									return pages.map((page, index) => (
+										typeof page === 'number' ? (
+											<button
+												key={page}
+												className={`pagination-page ${page === currentPage ? 'pagination-page--active' : ''}`}
+												onClick={() => fetchCases(page)}
+											>
+												{page}
+											</button>
+										) : (
+											<span key={`ellipsis-${index}`} className="pagination-ellipsis">...</span>
+										)
+									));
+								})()}
 							</div>
 							<button
 								className="pagination-btn"
