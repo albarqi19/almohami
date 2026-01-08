@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { CaseService } from '../services/caseService';
 import { UserService } from '../services/UserService';
-import type { User } from '../types';
 import '../styles/share-case-modal.css';
 
 interface ShareCaseModalProps {
@@ -21,6 +20,13 @@ interface ShareCaseModalProps {
   caseId: number | string;
   caseTitle: string;
   onSuccess?: () => void;
+}
+
+interface SelectableUser {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
 }
 
 interface SharedUser {
@@ -49,7 +55,7 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
   const [success, setSuccess] = useState('');
 
   const [permission, setPermission] = useState<SharingPermission | null>(null);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<SelectableUser[]>([]);
   const [sharedUsers, setSharedUsers] = useState<SharedUser[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,9 +85,14 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
 
         const usersData = usersResponse.data || [];
 
-        const filteredUsers = usersData.filter(
-          (user: User) => ['lawyer', 'senior_lawyer', 'partner', 'legal_assistant', 'admin'].includes(user.role)
-        );
+        const filteredUsers: SelectableUser[] = usersData
+          .filter((user: any) => ['lawyer', 'senior_lawyer', 'partner', 'legal_assistant', 'admin'].includes(user.role))
+          .map((user: any) => ({
+            id: Number(user.id),
+            name: user.name || '',
+            email: user.email || '',
+            role: user.role || ''
+          }));
 
         setAllUsers(filteredUsers);
         setSharedUsers(sharesData);
