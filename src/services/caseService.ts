@@ -155,4 +155,33 @@ export class CaseService {
       throw new Error(response.message || 'فشل في جلب بيانات لوحة التحكم');
     }
   }
+
+  // Case sharing methods
+  static async getCaseShares(caseId: string | number): Promise<any[]> {
+    const response = await apiClient.get<ApiResponse<any[]>>(`/cases/${caseId}/shares`);
+
+    if (response.success && response.data) {
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في جلب المشاركات');
+    }
+  }
+
+  static async shareCase(caseId: string | number, userIds: number[]): Promise<void> {
+    const response = await apiClient.post<ApiResponse>(`/cases/${caseId}/shares`, {
+      user_ids: userIds,
+    });
+
+    if (!response.success) {
+      throw new Error(response.message || 'فشل في مشاركة القضية');
+    }
+  }
+
+  static async removeShare(caseId: string | number, userId: number): Promise<void> {
+    const response = await apiClient.delete<ApiResponse>(`/cases/${caseId}/shares/${userId}`);
+
+    if (!response.success) {
+      throw new Error(response.message || 'فشل في إزالة المشاركة');
+    }
+  }
 }

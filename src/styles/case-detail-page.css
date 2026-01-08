@@ -118,6 +118,19 @@
     border-color: var(--law-navy-dark);
 }
 
+.case-header-btn--share {
+    padding: 8px;
+    background: var(--quiet-gray-100);
+    border-color: var(--color-border);
+    color: var(--color-text-secondary);
+}
+
+.case-header-btn--share:hover {
+    background: var(--law-gold-light);
+    border-color: var(--law-gold);
+    color: var(--law-gold-dark);
+}
+
 /* === Back Button === */
 .back-btn {
     display: flex;

@@ -34,6 +34,7 @@ import { CaseAppointmentsModal } from '../components/CaseAppointmentsModal';
 import QuickActionsModal from '../components/QuickActionsModal';
 import ClientPhoneModal from '../components/ClientPhoneModal';
 import CaseMessagesModal from '../components/CaseMessagesModal';
+import ShareCaseModal from '../components/ShareCaseModal';
 import type { TimelineEvent } from '../components/Timeline';
 import { CaseService } from '../services/caseService';
 import { ActivityService } from '../services/activityService';
@@ -56,6 +57,7 @@ const CaseDetailPage: React.FC = () => {
   const [showQuickActionsModal, setShowQuickActionsModal] = useState(false);
   const [showClientPhoneModal, setShowClientPhoneModal] = useState(false);
   const [showMessagesModal, setShowMessagesModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [documentsCount, setDocumentsCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
 
@@ -314,6 +316,13 @@ const CaseDetailPage: React.FC = () => {
             <button onClick={() => setShowQuickActionsModal(true)} className="case-header-btn">
               <Plus size={16} />
               <span>إجراءات</span>
+            </button>
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="case-header-btn case-header-btn--share"
+              title="مشاركة القضية"
+            >
+              <Users size={16} />
             </button>
           </div>
         </div>
@@ -702,6 +711,13 @@ const CaseDetailPage: React.FC = () => {
         caseId={Number(caseData.id)}
         caseTitle={caseData.title}
         clientName={caseData.client_name}
+      />
+
+      <ShareCaseModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        caseId={caseData.id}
+        caseTitle={caseData.title}
       />
     </div>
   );
