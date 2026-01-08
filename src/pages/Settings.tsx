@@ -1188,9 +1188,9 @@ const Settings: React.FC = () => {
                   <div className="settings-option-card" style={{ marginTop: '16px' }}>
                     <div className="settings-option-card__title">خيارات الاشتراك</div>
                     <div className="settings-option-card__desc">
-                      <strong>شهري:</strong> 299 ر.س/شهر
+                      <strong>شهري:</strong> *** ر.س/شهر
                       <br />
-                      <strong>سنوي:</strong> 2990 ر.س/سنة (وفر شهرين!)
+                      <strong>سنوي:</strong> **** ر.س/سنة (وفر شهرين!)
                     </div>
                   </div>
                 </>
