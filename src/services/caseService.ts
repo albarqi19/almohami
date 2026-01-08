@@ -157,6 +157,20 @@ export class CaseService {
   }
 
   // Case sharing methods
+  static async canShare(caseId: string | number): Promise<{
+    can_share: boolean;
+    is_admin: boolean;
+    allow_lawyer_sharing: boolean;
+  }> {
+    const response = await apiClient.get<ApiResponse<any>>(`/cases/${caseId}/can-share`);
+
+    if (response.success && response.data) {
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في التحقق من الصلاحيات');
+    }
+  }
+
   static async getCaseShares(caseId: string | number): Promise<any[]> {
     const response = await apiClient.get<ApiResponse<any[]>>(`/cases/${caseId}/shares`);
 
@@ -164,6 +178,16 @@ export class CaseService {
       return response.data;
     } else {
       throw new Error(response.message || 'فشل في جلب المشاركات');
+    }
+  }
+
+  static async updateSharingPermission(caseId: string | number, allowLawyerSharing: boolean): Promise<void> {
+    const response = await apiClient.patch<ApiResponse>(`/cases/${caseId}/sharing-permission`, {
+      allow_lawyer_sharing: allowLawyerSharing,
+    });
+
+    if (!response.success) {
+      throw new Error(response.message || 'فشل في تحديث الإعداد');
     }
   }
 

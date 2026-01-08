@@ -6,7 +6,9 @@ import {
   AlertCircle,
   CheckCircle,
   Search,
-  Trash2
+  Trash2,
+  Shield,
+  Lock
 } from 'lucide-react';
 import { CaseService } from '../services/caseService';
 import { UserService } from '../services/UserService';
@@ -28,6 +30,12 @@ interface SharedUser {
   role: string;
 }
 
+interface SharingPermission {
+  can_share: boolean;
+  is_admin: boolean;
+  allow_lawyer_sharing: boolean;
+}
+
 const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
   isOpen,
   onClose,
@@ -40,10 +48,12 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const [permission, setPermission] = useState<SharingPermission | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [sharedUsers, setSharedUsers] = useState<SharedUser[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [allowLawyerSharing, setAllowLawyerSharing] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -55,21 +65,27 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
     setLoading(true);
     setError('');
     try {
-      const [usersResponse, sharesData] = await Promise.all([
-        UserService.getAllUsers({ limit: 100 }),
-        CaseService.getCaseShares(caseId)
-      ]);
+      // أولاً نتحقق من الصلاحيات
+      const permissionData = await CaseService.canShare(caseId);
+      setPermission(permissionData);
+      setAllowLawyerSharing(permissionData.allow_lawyer_sharing);
 
-      // Get users from paginated response
-      const usersData = usersResponse.data || [];
+      // إذا كان يمكنه المشاركة، نجلب باقي البيانات
+      if (permissionData.can_share) {
+        const [usersResponse, sharesData] = await Promise.all([
+          UserService.getAllUsers({ limit: 100 }),
+          CaseService.getCaseShares(caseId)
+        ]);
 
-      // Filter to get only lawyers and assistants
-      const filteredUsers = usersData.filter(
-        (user: User) => ['lawyer', 'senior_lawyer', 'partner', 'legal_assistant', 'admin'].includes(user.role)
-      );
+        const usersData = usersResponse.data || [];
 
-      setAllUsers(filteredUsers);
-      setSharedUsers(sharesData);
+        const filteredUsers = usersData.filter(
+          (user: User) => ['lawyer', 'senior_lawyer', 'partner', 'legal_assistant', 'admin'].includes(user.role)
+        );
+
+        setAllUsers(filteredUsers);
+        setSharedUsers(sharesData);
+      }
     } catch (err: any) {
       setError(err.message || 'فشل في تحميل البيانات');
     } finally {
@@ -92,7 +108,6 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
       setSuccess('تمت مشاركة القضية بنجاح');
       setSelectedUserIds([]);
 
-      // Reload shares
       const sharesData = await CaseService.getCaseShares(caseId);
       setSharedUsers(sharesData);
 
@@ -112,6 +127,17 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
       onSuccess?.();
     } catch (err: any) {
       setError(err.message || 'فشل في إزالة المشاركة');
+    }
+  };
+
+  const handleToggleLawyerSharing = async () => {
+    try {
+      const newValue = !allowLawyerSharing;
+      await CaseService.updateSharingPermission(caseId, newValue);
+      setAllowLawyerSharing(newValue);
+      setSuccess(newValue ? 'تم السماح للمحامين بالمشاركة' : 'تم إلغاء السماح للمحامين بالمشاركة');
+    } catch (err: any) {
+      setError(err.message || 'فشل في تحديث الإعداد');
     }
   };
 
@@ -136,13 +162,50 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
     return roles[role] || role;
   };
 
-  // Filter users that are not already shared
   const availableUsers = allUsers.filter(user =>
     !sharedUsers.some(shared => shared.id === user.id) &&
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (!isOpen) return null;
+
+  // إذا لم يكن مسموح له بالمشاركة
+  if (!loading && permission && !permission.can_share) {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content modal-content--md" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2 className="modal-title">
+              <Lock size={20} /> مشاركة القضية
+            </h2>
+            <button className="modal-close" onClick={onClose}>
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="modal-body">
+            <div className="share-case-no-permission">
+              <div className="share-case-no-permission__icon">
+                <Shield size={48} />
+              </div>
+              <h3>غير مصرح لك بمشاركة هذه القضية</h3>
+              <p>
+                صلاحية مشاركة القضايا متاحة لمدير المكتب فقط.
+                <br />
+                للحصول على صلاحية المشاركة، يرجى التواصل مع مدير المكتب.
+              </p>
+            </div>
+          </div>
+
+          <div className="modal-footer">
+            <button className="btn-secondary" onClick={onClose}>
+              إغلاق
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -177,6 +240,23 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
             <div className="share-case-loading">جاري التحميل...</div>
           ) : (
             <>
+              {/* خيار السماح للمحامين - يظهر فقط للمدير */}
+              {permission?.is_admin && (
+                <div className="share-case-admin-option">
+                  <label className="share-case-toggle">
+                    <input
+                      type="checkbox"
+                      checked={allowLawyerSharing}
+                      onChange={handleToggleLawyerSharing}
+                    />
+                    <span className="share-case-toggle__slider"></span>
+                    <span className="share-case-toggle__label">
+                      السماح للمحامين المكلفين بمشاركة هذه القضية
+                    </span>
+                  </label>
+                </div>
+              )}
+
               {/* Currently shared users */}
               {sharedUsers.length > 0 && (
                 <div className="share-case-section">
