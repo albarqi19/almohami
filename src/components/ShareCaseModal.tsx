@@ -85,6 +85,10 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
 
         const usersData = usersResponse.data || [];
 
+        console.log('ShareCaseModal - usersResponse:', usersResponse);
+        console.log('ShareCaseModal - usersData:', usersData);
+        console.log('ShareCaseModal - user roles:', usersData.map((u: any) => ({ name: u.name, role: u.role })));
+
         const filteredUsers: SelectableUser[] = usersData
           .filter((user: any) => ['lawyer', 'senior_lawyer', 'partner', 'legal_assistant', 'admin'].includes(user.role))
           .map((user: any) => ({
@@ -93,6 +97,8 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
             email: user.email || '',
             role: user.role || ''
           }));
+
+        console.log('ShareCaseModal - filteredUsers:', filteredUsers);
 
         setAllUsers(filteredUsers);
         setSharedUsers(sharesData);
