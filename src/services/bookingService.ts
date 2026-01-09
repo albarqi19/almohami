@@ -18,6 +18,7 @@ export interface BookingLink {
   created_at: string;
   updated_at: string;
   url?: string;
+  full_url?: string;
   lawyer?: {
     id: number;
     name: string;
@@ -85,25 +86,30 @@ export const bookingLinkService = {
       const queryString = queryParams.toString();
       if (queryString) endpoint += `?${queryString}`;
     }
-    const response = await apiClient.get<{ success: boolean; data: BookingLink[] }>(endpoint);
-    return response.data || [];
+    const response = await apiClient.get<any>(endpoint);
+    if (response.data && response.data.data && Array.isArray(response.data.data)) {
+      return response.data.data;
+    }
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   // جلب رابط واحد
   async getById(id: number): Promise<BookingLink> {
-    const response = await apiClient.get<{ success: boolean; data: BookingLink }>(
+    const response = await apiClient.get<any>(
       `/booking-links/${id}`
     );
-    return response.data;
+    const responseData = response.data.data || response.data;
+    return responseData.link || responseData;
   },
 
   // إنشاء رابط جديد
   async create(data: CreateBookingLinkData): Promise<BookingLink> {
-    const response = await apiClient.post<{ success: boolean; data: BookingLink }>(
+    const response = await apiClient.post<any>(
       '/booking-links',
       data
     );
-    return response.data;
+    const responseData = response.data.data || response.data;
+    return responseData.link || responseData;
   },
 
   // حذف رابط

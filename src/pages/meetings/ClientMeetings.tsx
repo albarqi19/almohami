@@ -187,8 +187,8 @@ const ClientMeetings: React.FC = () => {
 
   // Actions
   const handleCopyLink = async (link: BookingLink) => {
-    if (link.url) {
-      const success = await bookingHelpers.copyLinkToClipboard(link.url);
+    if (link.full_url || link.url) {
+      const success = await bookingHelpers.copyLinkToClipboard(link.full_url || link.url || '');
       if (success) {
         setCopiedLinkId(link.id);
         setTimeout(() => setCopiedLinkId(null), 2000);
@@ -538,7 +538,7 @@ const ClientMeetings: React.FC = () => {
                       </td>
                       <td>
                         <div className="table-link-url">
-                          <input type="text" value={link.url || ''} readOnly />
+                          <input type="text" value={link.full_url || link.url || ''} readOnly />
                           <button
                             className="icon-btn-xs"
                             onClick={() => handleCopyLink(link)}
@@ -577,7 +577,7 @@ const ClientMeetings: React.FC = () => {
                           {!link.is_used && bookingHelpers.isLinkValid(link) && (
                             <>
                               <a
-                                href={bookingHelpers.createWhatsAppShareLink(link.url || '', link.client?.name)}
+                                href={bookingHelpers.createWhatsAppShareLink(link.full_url || link.url || '', link.client?.name)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="icon-btn-action icon-btn-action--whatsapp"
@@ -586,7 +586,7 @@ const ClientMeetings: React.FC = () => {
                                 <Send size={14} />
                               </a>
                               <a
-                                href={bookingHelpers.createEmailShareLink(link.url || '', link.client?.email, user?.name)}
+                                href={bookingHelpers.createEmailShareLink(link.full_url || link.url || '', link.client?.email, user?.name)}
                                 className="icon-btn-action icon-btn-action--email"
                                 title="إرسال عبر البريد"
                               >
@@ -646,7 +646,7 @@ const ClientMeetings: React.FC = () => {
                   </div>
 
                   <div className="link-card-v2__url">
-                    <input type="text" value={link.url || ''} readOnly />
+                    <input type="text" value={link.full_url || link.url || ''} readOnly />
                     <button
                       className="copy-btn-v2"
                       onClick={() => handleCopyLink(link)}
@@ -661,7 +661,7 @@ const ClientMeetings: React.FC = () => {
                     {!link.is_used && bookingHelpers.isLinkValid(link) && (
                       <>
                         <a
-                          href={bookingHelpers.createWhatsAppShareLink(link.url || '', link.client?.name)}
+                          href={bookingHelpers.createWhatsAppShareLink(link.full_url || link.url || '', link.client?.name)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="card-action-btn card-action-btn--whatsapp"
@@ -670,7 +670,7 @@ const ClientMeetings: React.FC = () => {
                           <Send size={16} />
                         </a>
                         <a
-                          href={bookingHelpers.createEmailShareLink(link.url || '', link.client?.email, user?.name)}
+                          href={bookingHelpers.createEmailShareLink(link.full_url || link.url || '', link.client?.email, user?.name)}
                           className="card-action-btn card-action-btn--email"
                           title="بريد إلكتروني"
                         >
