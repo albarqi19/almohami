@@ -35,6 +35,14 @@ import AdminRequests from './pages/AdminRequests';
 import ClientMessages from './pages/ClientMessages';
 import PersonalNotebook from './pages/NotebookWorkspace';
 
+// Meetings Pages
+import InternalMeetings from './pages/meetings/InternalMeetings';
+import ClientMeetings from './pages/meetings/ClientMeetings';
+import MyAvailability from './pages/meetings/MyAvailability';
+
+// Public Booking Page (no auth required)
+import PublicBooking from './pages/booking/PublicBooking';
+
 // Component to choose between tenant and main landing page
 const SmartLandingPage: React.FC = () => {
   const { isSubdomain } = useTenant();
@@ -58,6 +66,8 @@ function App() {
             </Route>
             {/* Account Status - For expired subscriptions */}
             <Route path="/account-status" element={<AccountStatus />} />
+            {/* Public Booking Page - No auth required */}
+            <Route path="/booking/:token" element={<PublicBooking />} />
             <Route element={
               <ProtectedRoute>
                 <Layout />
@@ -84,6 +94,23 @@ function App() {
               <Route path="wekalat" element={
                 <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
                   <Wekalat />
+                </ProtectedRoute>
+              } />
+
+              {/* Meetings routes */}
+              <Route path="meetings/internal" element={
+                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                  <InternalMeetings />
+                </ProtectedRoute>
+              } />
+              <Route path="meetings/client" element={
+                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                  <ClientMeetings />
+                </ProtectedRoute>
+              } />
+              <Route path="meetings/availability" element={
+                <ProtectedRoute allowedRoles={['lawyer']}>
+                  <MyAvailability />
                 </ProtectedRoute>
               } />
 
