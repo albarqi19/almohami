@@ -327,7 +327,7 @@ const PublicBooking: React.FC = () => {
               <div className="settings-pills">
                 {/* Duration Toggles */}
                 <div className="pill-group">
-                  {bookingInfo?.allowed_durations.map(d => (
+                  {bookingInfo?.allowed_durations?.map(d => (
                     <button
                       key={d}
                       className={`pill-btn ${booking.duration === d ? 'active' : ''}`}
