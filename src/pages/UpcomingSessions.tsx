@@ -65,6 +65,7 @@ const UpcomingSessions: React.FC = () => {
 	const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
 	const [searchTerm, setSearchTerm] = useState('');
 	const [showExportMenu, setShowExportMenu] = useState(false);
+	const [exportPeriod, setExportPeriod] = useState<'today' | 'tomorrow' | 'week'>('today');
 	const exportMenuRef = useRef<HTMLDivElement>(null);
 
 	const fetchSessions = async () => {
@@ -195,34 +196,97 @@ const UpcomingSessions: React.FC = () => {
 		return '#10b981'; // Later (Green)
 	};
 
-	// Get today's sessions for export
-	const getTodaySessions = () => {
+	// Get sessions for export based on period
+	const getSessionsForExport = () => {
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
-		const todayEnd = new Date(today);
-		todayEnd.setHours(23, 59, 59, 999);
+
+		let startDate = new Date(today);
+		let endDate = new Date(today);
+
+		if (exportPeriod === 'today') {
+			endDate.setHours(23, 59, 59, 999);
+		} else if (exportPeriod === 'tomorrow') {
+			startDate.setDate(startDate.getDate() + 1);
+			endDate.setDate(endDate.getDate() + 1);
+			endDate.setHours(23, 59, 59, 999);
+		} else if (exportPeriod === 'week') {
+			endDate.setDate(endDate.getDate() + 7);
+			endDate.setHours(23, 59, 59, 999);
+		}
 
 		return sessions.filter(session => {
 			if (!session.session_date) return false;
 			const sessionDate = new Date(session.session_date);
-			return sessionDate >= today && sessionDate <= todayEnd;
+			return sessionDate >= startDate && sessionDate <= endDate;
 		});
 	};
 
-	// Get filename with date
+	// Get export period label
+	const getExportPeriodLabel = () => {
+		switch (exportPeriod) {
+			case 'today': return 'تصدير جلسات اليوم';
+			case 'tomorrow': return 'تصدير جلسات الغد';
+			case 'week': return 'تصدير جلسات الأسبوع';
+		}
+	};
+
+	// Cycle through export periods
+	const cycleExportPeriod = () => {
+		setExportPeriod(prev => {
+			if (prev === 'today') return 'tomorrow';
+			if (prev === 'tomorrow') return 'week';
+			return 'today';
+		});
+	};
+
+	// Get filename with date based on period
 	const getExportFileName = () => {
 		const today = new Date();
 		const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-		const dayName = dayNames[today.getDay()];
-		const dateStr = today.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-		return `جلسات_${dayName}_${dateStr}`.replace(/\s/g, '_');
+
+		if (exportPeriod === 'today') {
+			const dayName = dayNames[today.getDay()];
+			const dateStr = today.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+			return `جلسات_اليوم_${dayName}_${dateStr}`.replace(/\s/g, '_');
+		} else if (exportPeriod === 'tomorrow') {
+			const tomorrow = new Date(today);
+			tomorrow.setDate(tomorrow.getDate() + 1);
+			const dayName = dayNames[tomorrow.getDay()];
+			const dateStr = tomorrow.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+			return `جلسات_الغد_${dayName}_${dateStr}`.replace(/\s/g, '_');
+		} else {
+			const weekEnd = new Date(today);
+			weekEnd.setDate(weekEnd.getDate() + 7);
+			const startStr = today.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
+			const endStr = weekEnd.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
+			return `جلسات_الأسبوع_${startStr}_إلى_${endStr}`.replace(/\s/g, '_');
+		}
+	};
+
+	// Get period title for export
+	const getExportTitle = () => {
+		switch (exportPeriod) {
+			case 'today': return 'جلسات اليوم';
+			case 'tomorrow': return 'جلسات الغد';
+			case 'week': return 'جلسات الأسبوع';
+		}
+	};
+
+	// Get no sessions message
+	const getNoSessionsMessage = () => {
+		switch (exportPeriod) {
+			case 'today': return 'لا توجد جلسات لليوم';
+			case 'tomorrow': return 'لا توجد جلسات للغد';
+			case 'week': return 'لا توجد جلسات لهذا الأسبوع';
+		}
 	};
 
 	// Export as Image
 	const exportAsImage = async () => {
-		const todaySessions = getTodaySessions();
-		if (todaySessions.length === 0) {
-			alert('لا توجد جلسات لليوم');
+		const sessionsToExport = getSessionsForExport();
+		if (sessionsToExport.length === 0) {
+			alert(getNoSessionsMessage());
 			return;
 		}
 
@@ -242,7 +306,7 @@ const UpcomingSessions: React.FC = () => {
 
 		container.innerHTML = `
 			<div style="text-align: center; margin-bottom: 30px;">
-				<h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">📅 جلسات اليوم</h1>
+				<h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">📅 ${getExportTitle()}</h1>
 				<p style="color: rgba(255,255,255,0.8); margin: 10px 0 0; font-size: 16px;">${dateStr}</p>
 			</div>
 			<div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
@@ -259,7 +323,7 @@ const UpcomingSessions: React.FC = () => {
 						</tr>
 					</thead>
 					<tbody>
-						${todaySessions.map((session, index) => `
+						${sessionsToExport.map((session: Session, index: number) => `
 							<tr style="background: ${index % 2 === 0 ? 'white' : '#f8fafc'};">
 								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${index + 1}</td>
 								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0; font-weight: 500;">${session.case?.title || '-'}</td>
@@ -302,9 +366,9 @@ const UpcomingSessions: React.FC = () => {
 
 	// Export as Word
 	const exportAsWord = () => {
-		const todaySessions = getTodaySessions();
-		if (todaySessions.length === 0) {
-			alert('لا توجد جلسات لليوم');
+		const sessionsToExport = getSessionsForExport();
+		if (sessionsToExport.length === 0) {
+			alert(getNoSessionsMessage());
 			return;
 		}
 
@@ -329,7 +393,7 @@ const UpcomingSessions: React.FC = () => {
 				</style>
 			</head>
 			<body>
-				<h1>📅 جلسات اليوم</h1>
+				<h1>📅 ${getExportTitle()}</h1>
 				<p class="date">${dateStr}</p>
 				<table>
 					<thead>
@@ -345,7 +409,7 @@ const UpcomingSessions: React.FC = () => {
 						</tr>
 					</thead>
 					<tbody>
-						${todaySessions.map((session, index) => `
+						${sessionsToExport.map((session: Session, index: number) => `
 							<tr>
 								<td>${index + 1}</td>
 								<td><strong>${session.case?.title || '-'}</strong></td>
@@ -376,9 +440,9 @@ const UpcomingSessions: React.FC = () => {
 
 	// Export as Excel
 	const exportAsExcel = () => {
-		const todaySessions = getTodaySessions();
-		if (todaySessions.length === 0) {
-			alert('لا توجد جلسات لليوم');
+		const sessionsToExport = getSessionsForExport();
+		if (sessionsToExport.length === 0) {
+			alert(getNoSessionsMessage());
 			return;
 		}
 
@@ -399,7 +463,7 @@ const UpcomingSessions: React.FC = () => {
 			</head>
 			<body>
 				<table>
-					<tr><td colspan="8" class="header">📅 جلسات اليوم</td></tr>
+					<tr><td colspan="8" class="header">📅 ${getExportTitle()}</td></tr>
 					<tr><td colspan="8" class="date">${dateStr}</td></tr>
 					<tr><td colspan="8"></td></tr>
 					<tr>
@@ -412,7 +476,7 @@ const UpcomingSessions: React.FC = () => {
 						<th>النوع</th>
 						<th>رابط الدخول</th>
 					</tr>
-					${todaySessions.map((session, index) => `
+					${sessionsToExport.map((session: Session, index: number) => `
 						<tr>
 							<td>${index + 1}</td>
 							<td>${session.case?.title || '-'}</td>
@@ -663,9 +727,14 @@ const UpcomingSessions: React.FC = () => {
 						</button>
 						{showExportMenu && (
 							<div className="export-dropdown__menu">
-								<div className="export-dropdown__header">
+								<div
+									className="export-dropdown__header export-dropdown__header--clickable"
+									onClick={cycleExportPeriod}
+									title="اضغط للتبديل بين اليوم والغد والأسبوع"
+								>
 									<Download size={14} />
-									تصدير جلسات اليوم
+									{getExportPeriodLabel()}
+									<ChevronRight size={12} className="export-dropdown__cycle-icon" />
 								</div>
 								<button onClick={exportAsImage}>
 									<FileImage size={16} />

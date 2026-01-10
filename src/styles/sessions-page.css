@@ -398,6 +398,28 @@
     border-bottom: 1px solid var(--color-border);
 }
 
+.export-dropdown__header--clickable {
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+}
+
+.export-dropdown__header--clickable:hover {
+    background: var(--quiet-gray-100);
+    color: var(--law-navy);
+}
+
+.export-dropdown__cycle-icon {
+    margin-right: auto;
+    opacity: 0.5;
+    transition: transform 0.2s;
+}
+
+.export-dropdown__header--clickable:hover .export-dropdown__cycle-icon {
+    opacity: 1;
+    transform: translateX(-2px);
+}
+
 .export-dropdown__menu button {
     display: flex;
     align-items: center;
