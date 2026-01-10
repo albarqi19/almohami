@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Calendar,
   Clock,
@@ -21,7 +21,11 @@ import {
   Send,
   Table,
   LayoutGrid,
-  Trash2
+  Trash2,
+  Download,
+  FileImage,
+  FileText,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -54,6 +58,8 @@ const ClientMeetings: React.FC = () => {
   const [copiedLinkId, setCopiedLinkId] = useState<number | null>(null);
   const [linksViewMode, setLinksViewMode] = useState<'table' | 'cards'>('table');
   const [timeFilter, setTimeFilter] = useState<'all' | 'today' | 'tomorrow' | 'week' | 'upcoming'>('upcoming');
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -82,6 +88,23 @@ const ClientMeetings: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+
+    if (showExportMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showExportMenu]);
 
   // Filter
   const filteredMeetings = meetings.filter(meeting => {
@@ -252,6 +275,243 @@ const ClientMeetings: React.FC = () => {
     }
   };
 
+  // Get today's meetings
+  const getTodayMeetings = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(today);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    return meetings.filter(meeting => {
+      const meetingDate = new Date(meeting.scheduled_at);
+      return meetingDate >= today && meetingDate <= todayEnd;
+    });
+  };
+
+  // Get filename with date
+  const getExportFileName = () => {
+    const today = new Date();
+    const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const dayName = dayNames[today.getDay()];
+    const dateStr = today.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+    return `جلسات_${dayName}_${dateStr}`.replace(/\s/g, '_');
+  };
+
+  // Export as Image
+  const exportAsImage = async () => {
+    const todayMeetings = getTodayMeetings();
+    if (todayMeetings.length === 0) {
+      alert('لا توجد جلسات لليوم');
+      return;
+    }
+
+    // Create a temporary div for rendering
+    const container = document.createElement('div');
+    container.style.cssText = `
+      position: absolute;
+      left: -9999px;
+      background: linear-gradient(135deg, #1E3A5F 0%, #2d4a6f 100%);
+      padding: 40px;
+      width: 800px;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      direction: rtl;
+    `;
+
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    container.innerHTML = `
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">📅 جلسات اليوم</h1>
+        <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0; font-size: 16px;">${dateStr}</p>
+      </div>
+      <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background: #f8fafc;">
+              <th style="padding: 16px; text-align: right; font-size: 14px; color: #64748b; border-bottom: 2px solid #e2e8f0;">#</th>
+              <th style="padding: 16px; text-align: right; font-size: 14px; color: #64748b; border-bottom: 2px solid #e2e8f0;">العميل</th>
+              <th style="padding: 16px; text-align: right; font-size: 14px; color: #64748b; border-bottom: 2px solid #e2e8f0;">الوقت</th>
+              <th style="padding: 16px; text-align: right; font-size: 14px; color: #64748b; border-bottom: 2px solid #e2e8f0;">النوع</th>
+              <th style="padding: 16px; text-align: right; font-size: 14px; color: #64748b; border-bottom: 2px solid #e2e8f0;">المدة</th>
+              <th style="padding: 16px; text-align: right; font-size: 14px; color: #64748b; border-bottom: 2px solid #e2e8f0;">رابط الدخول</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${todayMeetings.map((meeting, index) => `
+              <tr style="background: ${index % 2 === 0 ? 'white' : '#f8fafc'};">
+                <td style="padding: 14px 16px; font-size: 14px; color: #334155; border-bottom: 1px solid #e2e8f0;">${index + 1}</td>
+                <td style="padding: 14px 16px; font-size: 14px; color: #334155; border-bottom: 1px solid #e2e8f0; font-weight: 500;">${meeting.client_name || 'غير محدد'}</td>
+                <td style="padding: 14px 16px; font-size: 14px; color: #334155; border-bottom: 1px solid #e2e8f0;">${formatTime(meeting.scheduled_at)}</td>
+                <td style="padding: 14px 16px; font-size: 14px; border-bottom: 1px solid #e2e8f0;">
+                  <span style="padding: 4px 10px; border-radius: 12px; font-size: 12px; background: ${meeting.meeting_type === 'remote' ? '#EFF6FF' : '#ECFDF5'}; color: ${meeting.meeting_type === 'remote' ? '#3B82F6' : '#10B981'};">
+                    ${meeting.meeting_type === 'remote' ? '🎥 عن بعد' : '📍 حضوري'}
+                  </span>
+                </td>
+                <td style="padding: 14px 16px; font-size: 14px; color: #334155; border-bottom: 1px solid #e2e8f0;">${meeting.duration_minutes} دقيقة</td>
+                <td style="padding: 14px 16px; font-size: 12px; color: #3B82F6; border-bottom: 1px solid #e2e8f0; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
+                  ${meeting.video_meeting_url ? meeting.video_meeting_url : '-'}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <p style="text-align: center; color: rgba(255,255,255,0.6); margin-top: 20px; font-size: 12px;">تم إنشاء هذا التقرير تلقائياً</p>
+    `;
+
+    document.body.appendChild(container);
+
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(container, { scale: 2, useCORS: true });
+      const link = document.createElement('a');
+      link.download = `${getExportFileName()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      console.error('Error exporting image:', err);
+      alert('حدث خطأ أثناء التصدير. تأكد من تثبيت مكتبة html2canvas');
+    } finally {
+      document.body.removeChild(container);
+    }
+    setShowExportMenu(false);
+  };
+
+  // Export as Word
+  const exportAsWord = async () => {
+    const todayMeetings = getTodayMeetings();
+    if (todayMeetings.length === 0) {
+      alert('لا توجد جلسات لليوم');
+      return;
+    }
+
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    const htmlContent = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, sans-serif; direction: rtl; padding: 20px; }
+          h1 { color: #1E3A5F; text-align: center; margin-bottom: 5px; }
+          .date { text-align: center; color: #666; margin-bottom: 30px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th { background: #1E3A5F; color: white; padding: 12px; text-align: right; }
+          td { padding: 12px; border-bottom: 1px solid #e0e0e0; }
+          tr:nth-child(even) { background: #f8f9fa; }
+          .type-remote { color: #3B82F6; }
+          .type-inperson { color: #10B981; }
+          .meeting-link { color: #3B82F6; word-break: break-all; }
+        </style>
+      </head>
+      <body>
+        <h1>📅 جلسات اليوم</h1>
+        <p class="date">${dateStr}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>العميل</th>
+              <th>الهاتف</th>
+              <th>الوقت</th>
+              <th>النوع</th>
+              <th>المدة</th>
+              <th>رابط الدخول</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${todayMeetings.map((meeting, index) => `
+              <tr>
+                <td>${index + 1}</td>
+                <td><strong>${meeting.client_name || 'غير محدد'}</strong></td>
+                <td>${meeting.client_phone || '-'}</td>
+                <td>${formatTime(meeting.scheduled_at)}</td>
+                <td class="${meeting.meeting_type === 'remote' ? 'type-remote' : 'type-inperson'}">
+                  ${meeting.meeting_type === 'remote' ? '🎥 عن بعد' : '📍 حضوري'}
+                </td>
+                <td>${meeting.duration_minutes} دقيقة</td>
+                <td class="meeting-link">${meeting.video_meeting_url ? `<a href="${meeting.video_meeting_url}">${meeting.video_meeting_url}</a>` : '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${getExportFileName()}.doc`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    setShowExportMenu(false);
+  };
+
+  // Export as Excel
+  const exportAsExcel = async () => {
+    const todayMeetings = getTodayMeetings();
+    if (todayMeetings.length === 0) {
+      alert('لا توجد جلسات لليوم');
+      return;
+    }
+
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    const htmlContent = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="utf-8">
+        <style>
+          table { direction: rtl; }
+          th { background: #1E3A5F; color: white; font-weight: bold; padding: 10px; }
+          td { padding: 8px; border: 1px solid #ddd; }
+          .header { font-size: 18px; font-weight: bold; text-align: center; }
+          .date { text-align: center; color: #666; }
+        </style>
+      </head>
+      <body>
+        <table>
+          <tr><td colspan="7" class="header">📅 جلسات اليوم</td></tr>
+          <tr><td colspan="7" class="date">${dateStr}</td></tr>
+          <tr><td colspan="7"></td></tr>
+          <tr>
+            <th>#</th>
+            <th>العميل</th>
+            <th>الهاتف</th>
+            <th>الوقت</th>
+            <th>النوع</th>
+            <th>المدة</th>
+            <th>رابط الدخول</th>
+          </tr>
+          ${todayMeetings.map((meeting, index) => `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${meeting.client_name || 'غير محدد'}</td>
+              <td>${meeting.client_phone || '-'}</td>
+              <td>${formatTime(meeting.scheduled_at)}</td>
+              <td>${meeting.meeting_type === 'remote' ? 'عن بعد' : 'حضوري'}</td>
+              <td>${meeting.duration_minutes} دقيقة</td>
+              <td>${meeting.video_meeting_url || '-'}</td>
+            </tr>
+          `).join('')}
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', htmlContent], { type: 'application/vnd.ms-excel' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${getExportFileName()}.xls`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    setShowExportMenu(false);
+  };
+
   return (
     <div className="meetings-page">
       {/* Unified Header */}
@@ -281,6 +541,36 @@ const ClientMeetings: React.FC = () => {
         </div>
 
         <div className="notion-header__actions">
+          {/* Export Button */}
+          <div className="export-dropdown" ref={exportMenuRef}>
+            <button
+              className="notion-icon-btn"
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              title="تصدير جلسات اليوم"
+            >
+              <Download size={16} />
+            </button>
+            {showExportMenu && (
+              <div className="export-dropdown__menu">
+                <div className="export-dropdown__header">
+                  <Download size={14} />
+                  تصدير جلسات اليوم
+                </div>
+                <button onClick={exportAsImage}>
+                  <FileImage size={16} />
+                  <span>صورة (PNG)</span>
+                </button>
+                <button onClick={exportAsWord}>
+                  <FileText size={16} />
+                  <span>وورد (DOC)</span>
+                </button>
+                <button onClick={exportAsExcel}>
+                  <FileSpreadsheet size={16} />
+                  <span>إكسل (XLS)</span>
+                </button>
+              </div>
+            )}
+          </div>
           <button
             className="notion-icon-btn"
             onClick={fetchData}
@@ -1787,6 +2077,95 @@ const ClientMeetings: React.FC = () => {
           font-size: 14px;
         }
 
+        /* Export Dropdown */
+        .export-dropdown {
+          position: relative;
+        }
+
+        .export-dropdown__menu {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          background: var(--color-surface, white);
+          border-radius: 12px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+          border: 1px solid var(--color-border, #e5e7eb);
+          min-width: 200px;
+          z-index: 100;
+          overflow: hidden;
+          animation: dropdownFadeIn 0.15s ease-out;
+        }
+
+        @keyframes dropdownFadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .export-dropdown__header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 12px 16px;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--color-text-secondary);
+          background: var(--color-surface-subtle, #f8fafc);
+          border-bottom: 1px solid var(--color-border, #e5e7eb);
+        }
+
+        .export-dropdown__menu button {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+          padding: 12px 16px;
+          border: none;
+          background: none;
+          font-size: 14px;
+          color: var(--color-text);
+          cursor: pointer;
+          text-align: right;
+          transition: all 0.15s;
+        }
+
+        .export-dropdown__menu button:hover {
+          background: var(--color-surface-subtle, #f8fafc);
+        }
+
+        .export-dropdown__menu button svg {
+          color: var(--color-text-secondary);
+        }
+
+        .export-dropdown__menu button:first-of-type {
+          color: #10B981;
+        }
+
+        .export-dropdown__menu button:first-of-type svg {
+          color: #10B981;
+        }
+
+        .export-dropdown__menu button:nth-of-type(2) {
+          color: #3B82F6;
+        }
+
+        .export-dropdown__menu button:nth-of-type(2) svg {
+          color: #3B82F6;
+        }
+
+        .export-dropdown__menu button:nth-of-type(3) {
+          color: #059669;
+        }
+
+        .export-dropdown__menu button:nth-of-type(3) svg {
+          color: #059669;
+        }
+
         @media (max-width: 768px) {
           .notion-header {
             flex-direction: column;
@@ -1794,7 +2173,7 @@ const ClientMeetings: React.FC = () => {
             gap: 16px;
             padding: 16px;
           }
-          
+
           .notion-header__tabs {
             margin-right: 0;
             width: 100%;
@@ -1816,6 +2195,11 @@ const ClientMeetings: React.FC = () => {
           .time-filters {
             overflow-x: auto;
             padding-bottom: 4px;
+          }
+
+          .export-dropdown__menu {
+            left: auto;
+            right: 0;
           }
         }
       `}</style>
