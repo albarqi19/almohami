@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
 	Calendar as CalendarIcon,
@@ -16,7 +16,10 @@ import {
 	X,
 	AlertCircle,
 	Video,
-	ExternalLink
+	ExternalLink,
+	Download,
+	FileImage,
+	FileSpreadsheet
 } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import '../styles/sessions-page.css';
@@ -61,6 +64,8 @@ const UpcomingSessions: React.FC = () => {
 	const [filter, setFilter] = useState<'all' | 'upcoming' | 'today' | 'week'>('upcoming');
 	const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
 	const [searchTerm, setSearchTerm] = useState('');
+	const [showExportMenu, setShowExportMenu] = useState(false);
+	const exportMenuRef = useRef<HTMLDivElement>(null);
 
 	const fetchSessions = async () => {
 		try {
@@ -94,6 +99,23 @@ const UpcomingSessions: React.FC = () => {
 		// No valid cache, fetch fresh data
 		fetchSessions();
 	}, []);
+
+	// Close export menu when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+				setShowExportMenu(false);
+			}
+		};
+
+		if (showExportMenu) {
+			document.addEventListener('mousedown', handleClickOutside);
+		}
+
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, [showExportMenu]);
 
 	// Filter Logic
 	const filteredSessions = sessions.filter(session => {
@@ -171,6 +193,249 @@ const UpcomingSessions: React.FC = () => {
 		if (diff === 0) return '#ef4444'; // Today (Red)
 		if (diff <= 2) return '#f97316'; // Soon (Orange)
 		return '#10b981'; // Later (Green)
+	};
+
+	// Get today's sessions for export
+	const getTodaySessions = () => {
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		const todayEnd = new Date(today);
+		todayEnd.setHours(23, 59, 59, 999);
+
+		return sessions.filter(session => {
+			if (!session.session_date) return false;
+			const sessionDate = new Date(session.session_date);
+			return sessionDate >= today && sessionDate <= todayEnd;
+		});
+	};
+
+	// Get filename with date
+	const getExportFileName = () => {
+		const today = new Date();
+		const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+		const dayName = dayNames[today.getDay()];
+		const dateStr = today.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+		return `جلسات_${dayName}_${dateStr}`.replace(/\s/g, '_');
+	};
+
+	// Export as Image
+	const exportAsImage = async () => {
+		const todaySessions = getTodaySessions();
+		if (todaySessions.length === 0) {
+			alert('لا توجد جلسات لليوم');
+			return;
+		}
+
+		const container = document.createElement('div');
+		container.style.cssText = `
+			position: absolute;
+			left: -9999px;
+			background: linear-gradient(135deg, #1E3A5F 0%, #2d4a6f 100%);
+			padding: 40px;
+			width: 900px;
+			font-family: 'Segoe UI', Tahoma, sans-serif;
+			direction: rtl;
+		`;
+
+		const today = new Date();
+		const dateStr = today.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+		container.innerHTML = `
+			<div style="text-align: center; margin-bottom: 30px;">
+				<h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">📅 جلسات اليوم</h1>
+				<p style="color: rgba(255,255,255,0.8); margin: 10px 0 0; font-size: 16px;">${dateStr}</p>
+			</div>
+			<div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+				<table style="width: 100%; border-collapse: collapse;">
+					<thead>
+						<tr style="background: #f8fafc;">
+							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">#</th>
+							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">القضية</th>
+							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">العميل</th>
+							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">المحكمة</th>
+							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">الوقت</th>
+							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">النوع</th>
+							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">رابط الدخول</th>
+						</tr>
+					</thead>
+					<tbody>
+						${todaySessions.map((session, index) => `
+							<tr style="background: ${index % 2 === 0 ? 'white' : '#f8fafc'};">
+								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${index + 1}</td>
+								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0; font-weight: 500;">${session.case?.title || '-'}</td>
+								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${session.case?.client_name || '-'}</td>
+								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${session.court || session.case?.court || '-'}</td>
+								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${session.session_time || '-'}</td>
+								<td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid #e2e8f0;">
+									<span style="padding: 4px 10px; border-radius: 12px; font-size: 11px; background: ${session.method === 'عن بعد' ? '#EFF6FF' : '#ECFDF5'}; color: ${session.method === 'عن بعد' ? '#3B82F6' : '#10B981'};">
+										${session.method === 'عن بعد' ? '🎥 عن بعد' : '📍 حضوري'}
+									</span>
+								</td>
+								<td style="padding: 12px 14px; font-size: 11px; color: #3B82F6; border-bottom: 1px solid #e2e8f0; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+									${session.video_conference_url || '-'}
+								</td>
+							</tr>
+						`).join('')}
+					</tbody>
+				</table>
+			</div>
+			<p style="text-align: center; color: rgba(255,255,255,0.6); margin-top: 20px; font-size: 12px;">تم إنشاء هذا التقرير تلقائياً</p>
+		`;
+
+		document.body.appendChild(container);
+
+		try {
+			const html2canvas = (await import('html2canvas')).default;
+			const canvas = await html2canvas(container, { scale: 2, useCORS: true });
+			const link = document.createElement('a');
+			link.download = `${getExportFileName()}.png`;
+			link.href = canvas.toDataURL('image/png');
+			link.click();
+		} catch (err) {
+			console.error('Error exporting image:', err);
+			alert('حدث خطأ أثناء التصدير');
+		} finally {
+			document.body.removeChild(container);
+		}
+		setShowExportMenu(false);
+	};
+
+	// Export as Word
+	const exportAsWord = () => {
+		const todaySessions = getTodaySessions();
+		if (todaySessions.length === 0) {
+			alert('لا توجد جلسات لليوم');
+			return;
+		}
+
+		const today = new Date();
+		const dateStr = today.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+		const htmlContent = `
+			<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+			<head>
+				<meta charset="utf-8">
+				<style>
+					body { font-family: 'Segoe UI', Tahoma, sans-serif; direction: rtl; padding: 20px; }
+					h1 { color: #1E3A5F; text-align: center; margin-bottom: 5px; }
+					.date { text-align: center; color: #666; margin-bottom: 30px; }
+					table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+					th { background: #1E3A5F; color: white; padding: 12px; text-align: right; }
+					td { padding: 12px; border-bottom: 1px solid #e0e0e0; }
+					tr:nth-child(even) { background: #f8f9fa; }
+					.type-remote { color: #3B82F6; }
+					.type-inperson { color: #10B981; }
+					.meeting-link { color: #3B82F6; word-break: break-all; }
+				</style>
+			</head>
+			<body>
+				<h1>📅 جلسات اليوم</h1>
+				<p class="date">${dateStr}</p>
+				<table>
+					<thead>
+						<tr>
+							<th>#</th>
+							<th>القضية</th>
+							<th>رقم الملف</th>
+							<th>العميل</th>
+							<th>المحكمة</th>
+							<th>الوقت</th>
+							<th>النوع</th>
+							<th>رابط الدخول</th>
+						</tr>
+					</thead>
+					<tbody>
+						${todaySessions.map((session, index) => `
+							<tr>
+								<td>${index + 1}</td>
+								<td><strong>${session.case?.title || '-'}</strong></td>
+								<td>${session.case?.file_number || '-'}</td>
+								<td>${session.case?.client_name || '-'}</td>
+								<td>${session.court || session.case?.court || '-'}</td>
+								<td>${session.session_time || '-'}</td>
+								<td class="${session.method === 'عن بعد' ? 'type-remote' : 'type-inperson'}">
+									${session.method === 'عن بعد' ? '🎥 عن بعد' : '📍 حضوري'}
+								</td>
+								<td class="meeting-link">${session.video_conference_url ? `<a href="${session.video_conference_url}">${session.video_conference_url}</a>` : '-'}</td>
+							</tr>
+						`).join('')}
+					</tbody>
+				</table>
+			</body>
+			</html>
+		`;
+
+		const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
+		const link = document.createElement('a');
+		link.href = URL.createObjectURL(blob);
+		link.download = `${getExportFileName()}.doc`;
+		link.click();
+		URL.revokeObjectURL(link.href);
+		setShowExportMenu(false);
+	};
+
+	// Export as Excel
+	const exportAsExcel = () => {
+		const todaySessions = getTodaySessions();
+		if (todaySessions.length === 0) {
+			alert('لا توجد جلسات لليوم');
+			return;
+		}
+
+		const today = new Date();
+		const dateStr = today.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+		const htmlContent = `
+			<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+			<head>
+				<meta charset="utf-8">
+				<style>
+					table { direction: rtl; }
+					th { background: #1E3A5F; color: white; font-weight: bold; padding: 10px; }
+					td { padding: 8px; border: 1px solid #ddd; }
+					.header { font-size: 18px; font-weight: bold; text-align: center; }
+					.date { text-align: center; color: #666; }
+				</style>
+			</head>
+			<body>
+				<table>
+					<tr><td colspan="8" class="header">📅 جلسات اليوم</td></tr>
+					<tr><td colspan="8" class="date">${dateStr}</td></tr>
+					<tr><td colspan="8"></td></tr>
+					<tr>
+						<th>#</th>
+						<th>القضية</th>
+						<th>رقم الملف</th>
+						<th>العميل</th>
+						<th>المحكمة</th>
+						<th>الوقت</th>
+						<th>النوع</th>
+						<th>رابط الدخول</th>
+					</tr>
+					${todaySessions.map((session, index) => `
+						<tr>
+							<td>${index + 1}</td>
+							<td>${session.case?.title || '-'}</td>
+							<td>${session.case?.file_number || '-'}</td>
+							<td>${session.case?.client_name || '-'}</td>
+							<td>${session.court || session.case?.court || '-'}</td>
+							<td>${session.session_time || '-'}</td>
+							<td>${session.method === 'عن بعد' ? 'عن بعد' : 'حضوري'}</td>
+							<td>${session.video_conference_url || '-'}</td>
+						</tr>
+					`).join('')}
+				</table>
+			</body>
+			</html>
+		`;
+
+		const blob = new Blob(['\ufeff', htmlContent], { type: 'application/vnd.ms-excel' });
+		const link = document.createElement('a');
+		link.href = URL.createObjectURL(blob);
+		link.download = `${getExportFileName()}.xls`;
+		link.click();
+		URL.revokeObjectURL(link.href);
+		setShowExportMenu(false);
 	};
 
 	// Render Table View
@@ -387,6 +652,36 @@ const UpcomingSessions: React.FC = () => {
 				</div>
 
 				<div style={{ display: 'flex', gap: '8px' }}>
+					{/* Export Button */}
+					<div className="export-dropdown" ref={exportMenuRef}>
+						<button
+							className="icon-btn"
+							onClick={() => setShowExportMenu(!showExportMenu)}
+							title="تصدير جلسات اليوم"
+						>
+							<Download size={18} />
+						</button>
+						{showExportMenu && (
+							<div className="export-dropdown__menu">
+								<div className="export-dropdown__header">
+									<Download size={14} />
+									تصدير جلسات اليوم
+								</div>
+								<button onClick={exportAsImage}>
+									<FileImage size={16} />
+									<span>صورة (PNG)</span>
+								</button>
+								<button onClick={exportAsWord}>
+									<FileText size={16} />
+									<span>وورد (DOC)</span>
+								</button>
+								<button onClick={exportAsExcel}>
+									<FileSpreadsheet size={16} />
+									<span>إكسل (XLS)</span>
+								</button>
+							</div>
+						)}
+					</div>
 					<button
 						className="icon-btn"
 						onClick={fetchSessions}
