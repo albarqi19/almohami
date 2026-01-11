@@ -65,6 +65,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
 
     const settingsItems = [
         { icon: BarChart3, label: 'التقارير', path: '/reports', roles: ['admin'] },
+        { icon: Users, label: 'تقرير المحامين', path: '/lawyers-report', roles: ['admin'] },
         { icon: Users, label: 'المستخدمين', path: '/users', roles: ['admin'] },
         { icon: Bell, label: 'التنبيهات', path: '/notifications', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
         { icon: MessageSquare, label: 'الواتساب', path: '/whatsapp-settings', roles: ['admin'] },

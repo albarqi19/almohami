@@ -17,6 +17,7 @@ import TaskDetail from './pages/TaskDetail';
 import Documents from './pages/Documents';
 import Activities from './pages/Activities';
 import Reports from './pages/Reports';
+import LawyersReport from './pages/LawyersReport';
 import Notifications from './pages/Notifications';
 import Admin from './pages/Admin';
 import Statistics from './pages/Statistics';
@@ -146,6 +147,11 @@ function App() {
               <Route path="reports" element={
                 <ProtectedRoute allowedRoles={['admin', 'lawyer']}>
                   <Reports />
+                </ProtectedRoute>
+              } />
+              <Route path="lawyers-report" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <LawyersReport />
                 </ProtectedRoute>
               } />
               <Route path="users" element={

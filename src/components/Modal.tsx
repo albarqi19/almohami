@@ -13,7 +13,7 @@ interface ModalProps {
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
   const sizeClasses = {
     sm: { maxWidth: '400px' },
-    md: { maxWidth: '600px' }, 
+    md: { maxWidth: '600px' },
     lg: { maxWidth: '800px' },
     xl: { maxWidth: '1200px' }
   };
@@ -77,58 +77,57 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
               }}
               onClick={(e) => e.stopPropagation()}
             >
-            {/* Header */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '20px 24px',
-              borderBottom: '1px solid var(--color-border)',
-              backgroundColor: 'var(--color-background)'
-            }}>
-              <h2 style={{
-                fontSize: 'var(--font-size-lg)',
-                fontWeight: 'var(--font-weight-semibold)',
-                color: 'var(--color-text)',
-                margin: 0
+              {/* Header */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '20px 24px',
+                borderBottom: '1px solid var(--color-border)',
               }}>
-                {title}
-              </h2>
-              <button
-                onClick={onClose}
-                style={{
-                  padding: '8px',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  color: 'var(--color-text-secondary)',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-secondary)';
-                  e.currentTarget.style.color = 'var(--color-text)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = 'var(--color-text-secondary)';
-                }}
-              >
-                <X size={20} />
-              </button>
-            </div>
+                <h2 style={{
+                  fontSize: 'var(--font-size-lg)',
+                  fontWeight: 'var(--font-weight-semibold)',
+                  color: 'var(--color-text)',
+                  margin: 0
+                }}>
+                  {title}
+                </h2>
+                <button
+                  onClick={onClose}
+                  style={{
+                    padding: '8px',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    color: 'var(--color-text-secondary)',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-secondary)';
+                    e.currentTarget.style.color = 'var(--color-text)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--color-text-secondary)';
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
 
-            {/* Content */}
-            <div style={{
-              padding: '24px',
-              overflowY: 'auto',
-              maxHeight: 'calc(90vh - 80px)'
-            }}>
-              {children}
-            </div>
+              {/* Content */}
+              <div style={{
+                padding: '24px',
+                overflowY: 'auto',
+                maxHeight: 'calc(90vh - 80px)'
+              }}>
+                {children}
+              </div>
             </motion.div>
           </motion.div>
         </>

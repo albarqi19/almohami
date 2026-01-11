@@ -1,0 +1,535 @@
+/* Lawyers Report - Notion Style + Theme Compatible */
+
+.lawyers-report-page {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-family-base);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.lawyers-report-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding: 24px 32px 12px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.header-title-area h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0;
+}
+
+.header-title-area h1 svg {
+  color: var(--color-text);
+  width: 20px;
+  height: 20px;
+}
+
+.header-title-area p {
+  display: none;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Notion Property-style Filters */
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.filter-group label {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filter-select,
+.filter-input {
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.filter-select:hover,
+.filter-input:hover {
+  background: var(--color-surface-subtle);
+}
+
+/* Content Area */
+.lawyers-report-content {
+  flex: 1;
+  padding: 24px 32px;
+  width: 100%;
+}
+
+/* Loading & Empty States */
+.loading-state,
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+/* Lawyers Grid - Small Squares */
+.lawyers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+/* Notion Gallery Card Style */
+.lawyer-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  height: 100%;
+  min-height: 160px;
+}
+
+.lawyer-card:hover {
+  background: var(--color-surface-subtle);
+}
+
+/* Header Section inside Card */
+.lawyer-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Avatar - Small Square Icon */
+.lawyer-avatar-container {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.lawyer-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lawyer-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--color-text);
+  text-transform: uppercase;
+}
+
+/* Info Section */
+.lawyer-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.lawyer-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lawyer-role {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Card Properties */
+.card-properties {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  /* Push to bottom */
+}
+
+.card-property-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  height: 20px;
+}
+
+.card-property-label {
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 80px;
+}
+
+.card-property-label svg {
+  width: 13px;
+  height: 13px;
+  opacity: 0.7;
+}
+
+.card-property-value {
+  color: var(--color-heading);
+  font-family: var(--font-family-mono, monospace);
+  font-size: 11px;
+}
+
+/* Progress Bar (Simple) */
+.mini-progress-bar {
+  width: 50px;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mini-progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 2px;
+}
+
+/* Modal / Page View Styles (Reused) */
+.lawyer-detail-content {
+  color: var(--color-text);
+  font-family: var(--font-family-base);
+}
+
+/* Summary Properties Block - Single Row */
+.detail-properties {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.property-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.property-label {
+  width: auto;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.property-value {
+  color: var(--color-heading);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* Tabs */
+.detail-tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 20px;
+}
+
+.tab {
+  padding: 8px 0;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: var(--color-text);
+}
+
+.tab.active {
+  color: var(--color-heading);
+  font-weight: 600;
+  box-shadow: 0 1px 0 0 var(--color-heading);
+}
+
+/* DataBase Table */
+.cases-table-container {
+  overflow-x: auto;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+}
+
+.cases-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  /* Slightly smaller for Notion vibe */
+}
+
+.cases-table th {
+  text-align: right;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+  padding: 10px 12px;
+  white-space: nowrap;
+  background: var(--color-surface-subtle);
+}
+
+.cases-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.cases-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Notion Badges */
+.notion-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  height: 20px;
+  border-radius: 3px;
+  font-size: 12px;
+  white-space: nowrap;
+  line-height: 20px;
+}
+
+.badge-green {
+  background: #e3f9e5;
+  color: #1b5e20;
+}
+
+.badge-yellow {
+  background: #fff8e1;
+  color: #f57f17;
+}
+
+.badge-red {
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.badge-blue {
+  background: #e3f2fd;
+  color: #0d47a1;
+}
+
+.badge-gray {
+  background: #f5f5f5;
+  color: #616161;
+}
+
+.badge-orange {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+/* Dark mode adjustments for badges if needed */
+@media (prefers-color-scheme: dark) {
+  .badge-green {
+    background: rgba(27, 94, 32, 0.2);
+    color: #81c784;
+  }
+
+  .badge-yellow {
+    background: rgba(245, 127, 23, 0.2);
+    color: #ffd54f;
+  }
+
+  .badge-red {
+    background: rgba(183, 28, 28, 0.2);
+    color: #e57373;
+  }
+
+  .badge-blue {
+    background: rgba(13, 71, 161, 0.2);
+    color: #64b5f6;
+  }
+
+  .badge-gray {
+    background: rgba(255, 255, 255, 0.1);
+    color: #bdbdbd;
+  }
+
+  .badge-orange {
+    background: rgba(230, 81, 0, 0.2);
+    color: #ffb74d;
+  }
+}
+
+/* Performance Chart */
+.monthly-performance {
+  padding: 0;
+}
+
+.chart-container {
+  height: 240px;
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 20px 10px 30px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  position: relative;
+}
+
+.chart-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.chart-bar-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.chart-bar {
+  width: 100%;
+  background: var(--color-primary);
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  transition: height 0.3s ease;
+  position: relative;
+  opacity: 0.8;
+}
+
+.chart-bar:hover {
+  opacity: 1;
+}
+
+.chart-label {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 8px;
+}
+
+.chart-value-label {
+  font-size: 11px;
+  color: var(--color-heading);
+  font-weight: 600;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+/* Presence */
+.presence-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.presence-metric-box {
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 12px;
+  background: var(--color-surface);
+}
+
+.presence-metric-label {
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.presence-metric-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .lawyers-report-header {
+    padding: 24px 20px;
+  }
+
+  .lawyers-report-content {
+    padding: 20px;
+  }
+
+  .presence-summary-cards {
+    grid-template-columns: 1fr;
+  }
+}

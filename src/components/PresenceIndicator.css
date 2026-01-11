@@ -1,0 +1,115 @@
+/* Notion-style Presence Indicator */
+.presence-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 3px;
+  /* Rectangular with slight round for Notion tag look */
+  cursor: default;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* The dot itself - make it smaller and simpler */
+.presence-dot {
+  display: inline-block;
+  border-radius: 50%;
+  margin-left: 6px;
+  /* Spacing handled by margin in rtl context usually, or gap */
+  flex-shrink: 0;
+}
+
+.presence-label {
+  font-weight: 500;
+}
+
+/* Colors - mapping to Notion colors */
+/* Online -> Green */
+.presence-online {
+  background-color: #ddfade;
+  /* Notion Green Bg */
+  color: #0b6e29;
+  /* Notion Green Text */
+}
+
+.presence-online .presence-dot {
+  background-color: #0b6e29;
+}
+
+/* Idle -> Yellow */
+.presence-idle {
+  background-color: #fdf5d3;
+  /* Notion Yellow Bg */
+  color: #896b12;
+  /* Notion Yellow Text */
+}
+
+.presence-idle .presence-dot {
+  background-color: #896b12;
+}
+
+/* Away -> Orange/Redish */
+.presence-away {
+  background-color: #faebd7;
+  /* Notion Orange Bg */
+  color: #d9730d;
+  /* Notion Orange Text */
+}
+
+.presence-away .presence-dot {
+  background-color: #d9730d;
+}
+
+/* Offline -> Gray */
+.presence-offline {
+  background-color: #f1f1ef;
+  /* Notion Gray Bg */
+  color: #787774;
+  /* Notion Gray Text */
+}
+
+.presence-offline .presence-dot {
+  background-color: #9B9A97;
+}
+
+
+/* Sizing */
+.presence-size-small {
+  padding: 2px 6px;
+  font-size: 12px;
+  height: 20px;
+}
+
+.presence-size-small .presence-dot {
+  width: 6px;
+  height: 6px;
+}
+
+.presence-size-medium {
+  padding: 3px 8px;
+  font-size: 13px;
+  height: 24px;
+}
+
+.presence-size-medium .presence-dot {
+  width: 7px;
+  height: 7px;
+}
+
+.presence-size-large {
+  padding: 4px 10px;
+  font-size: 14px;
+  height: 28px;
+}
+
+.presence-size-large .presence-dot {
+  width: 8px;
+  height: 8px;
+}
+
+/* Disable old pulse */
+.presence-pulse-ring {
+  display: none;
+}

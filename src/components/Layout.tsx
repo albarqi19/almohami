@@ -5,6 +5,7 @@ import ClickUpSidebar from './ClickUpSidebar';
 import FloatingTimer from './FloatingTimer';
 import NotebookFloatingWidget from './NotebookFloatingWidget';
 import ClickUpHeader from './ClickUpHeader';
+import PresenceTracker from './PresenceTracker';
 import { useAuth } from '../contexts/AuthContext';
 
 // Sidebar Context للتناغم بين Sidebar والمحتوى
@@ -111,6 +112,9 @@ const Layout: React.FC = () => {
 
           {/* Notebook Floating Widget - Quick notes from any page */}
           {user && user.role !== 'client' && <NotebookFloatingWidget />}
+
+          {/* Presence Tracker - Invisible component for tracking lawyer activity */}
+          <PresenceTracker />
         </div>
 
         <style>{`
