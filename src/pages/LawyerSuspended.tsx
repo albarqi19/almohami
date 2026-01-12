@@ -4,13 +4,13 @@ import { useAuth } from '../contexts/AuthContext';
 import './LawyerSuspended.css';
 
 const LawyerSuspended: React.FC = () => {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
 
     return (
         <div className="lawyer-suspended">
             <div className="lawyer-suspended__container">
                 <div className="lawyer-suspended__icon">
-                    <AlertCircle size={64} />
+                    <AlertCircle size={48} strokeWidth={1.5} />
                 </div>
 
                 <h1 className="lawyer-suspended__title">
@@ -18,31 +18,34 @@ const LawyerSuspended: React.FC = () => {
                 </h1>
 
                 <p className="lawyer-suspended__message">
-                    مرحباً {user?.name}،
+                    {user?.name && <span className="user-greeting">مرحباً {user.name}،</span>}
                     <br />
-                    <br />
-                    حسابك معلق مؤقتاً بسبب مشكلة في اشتراك الشركة.
+                    حسابك معلق مؤقتاً .
                     <br />
                     يرجى التواصل مع إدارة المكتب لحل هذه المشكلة.
                 </p>
 
                 <div className="lawyer-suspended__contact">
-                    <h3>طرق التواصل مع الإدارة:</h3>
+                    <h3>طرق التواصل مع الإدارة</h3>
                     <div className="lawyer-suspended__contact-methods">
                         <div className="contact-method">
-                            <Phone size={20} />
+                            <div className="contact-icon">
+                                <Phone size={18} />
+                            </div>
                             <span>الاتصال هاتفياً</span>
                         </div>
                         <div className="contact-method">
-                            <Mail size={20} />
+                            <div className="contact-icon">
+                                <Mail size={18} />
+                            </div>
                             <span>البريد الإلكتروني</span>
                         </div>
                     </div>
                 </div>
 
-                <p className="lawyer-suspended__footer">
-                    شكراً لتفهمك
-                </p>
+                <button onClick={logout} className="lawyer-suspended__logout-btn">
+                    تسجيل الخروج
+                </button>
             </div>
         </div>
     );
