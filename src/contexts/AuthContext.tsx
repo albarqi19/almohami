@@ -54,7 +54,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (nationalId: string, pin: string): Promise<boolean> => {
+  const login = async (nationalId: string, pin: string): Promise<{
+    success: boolean;
+    error?: string;
+    code?: 'subscription_expired' | 'account_suspended' | 'auth_failed';
+  }> => {
     setIsLoading(true);
 
     // Preserve theme preference before clearing cache
@@ -75,11 +79,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const loginResponse = await AuthService.login({ nationalId, pin });
       setUser(loginResponse.user);
       setIsLoading(false);
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error('Login failed:', error);
       setIsLoading(false);
-      return false;
+
+      // Return detailed error info
+      return {
+        success: false,
+        error: error.message || 'حدث خطأ أثناء تسجيل الدخول',
+        code: error.subscriptionExpired ? 'subscription_expired' :
+              error.accountSuspended ? 'account_suspended' : 'auth_failed'
+      };
     }
   };
 

@@ -7,6 +7,7 @@ import NotebookFloatingWidget from './NotebookFloatingWidget';
 import ClickUpHeader from './ClickUpHeader';
 import PresenceTracker from './PresenceTracker';
 import CompanyPolicyModal from './CompanyPolicyModal';
+import SubscriptionBanner from './SubscriptionBanner';
 import { useAuth } from '../contexts/AuthContext';
 import { usePolicyCheck } from '../hooks/usePolicyCheck';
 
@@ -58,6 +59,9 @@ const Layout: React.FC = () => {
           onSignOut={handleSignOut}
         />
       )}
+
+      {/* Subscription Banner - shown at the top for expired owners */}
+      <SubscriptionBanner />
 
       <div
         className="app-layout"

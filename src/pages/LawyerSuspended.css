@@ -1,0 +1,110 @@
+.lawyer-suspended {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+}
+
+.lawyer-suspended__container {
+    background: white;
+    border-radius: 16px;
+    padding: 48px 40px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    text-align: center;
+}
+
+.lawyer-suspended__icon {
+    color: #ff6b6b;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: center;
+}
+
+.lawyer-suspended__title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 24px;
+}
+
+.lawyer-suspended__message {
+    font-size: 18px;
+    line-height: 1.8;
+    color: #4a5568;
+    margin-bottom: 40px;
+}
+
+.lawyer-suspended__contact {
+    background: #f7fafc;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+}
+
+.lawyer-suspended__contact h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 16px;
+}
+
+.lawyer-suspended__contact-methods {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.contact-method {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    color: #4a5568;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.contact-method:hover {
+    border-color: #667eea;
+    color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.lawyer-suspended__footer {
+    font-size: 16px;
+    color: #718096;
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .lawyer-suspended__container {
+        padding: 32px 24px;
+    }
+
+    .lawyer-suspended__title {
+        font-size: 26px;
+    }
+
+    .lawyer-suspended__message {
+        font-size: 16px;
+    }
+
+    .lawyer-suspended__contact-methods {
+        flex-direction: column;
+    }
+
+    .contact-method {
+        width: 100%;
+        justify-content: center;
+    }
+}

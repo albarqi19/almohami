@@ -1,0 +1,89 @@
+.subscription-banner {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+    padding: 6px 16px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    position: sticky;
+    top: 0;
+}
+
+.subscription-banner__content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.subscription-banner__icon {
+    flex-shrink: 0;
+    animation: pulse 2s ease-in-out infinite;
+    width: 16px;
+    height: 16px;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.subscription-banner__message {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    min-width: 200px;
+    line-height: 1.4;
+}
+
+.subscription-banner__button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: white;
+    color: #ff6b6b;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 12px;
+    text-decoration: none;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.subscription-banner__button:hover {
+    background: #f8f8f8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.subscription-banner__button:active {
+    transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .subscription-banner {
+        padding: 5px 12px;
+    }
+
+    .subscription-banner__content {
+        gap: 10px;
+    }
+
+    .subscription-banner__message {
+        font-size: 12px;
+        width: 100%;
+    }
+
+    .subscription-banner__button {
+        font-size: 11px;
+        padding: 3px 10px;
+    }
+}

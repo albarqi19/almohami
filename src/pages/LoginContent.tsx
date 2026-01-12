@@ -135,12 +135,25 @@ const LoginContent: React.FC = () => {
         setError('');
 
         try {
-            const success = await login(formData.nationalId.trim(), formData.pin);
-            if (!success) {
-                setError('رقم الهوية أو الرقم السري غير صحيح');
+            const result = await login(formData.nationalId.trim(), formData.pin);
+
+            if (!result.success) {
+                // Handle specific error codes
+                if (result.code === 'subscription_expired') {
+                    // This shouldn't happen now that we allow login, but keep as fallback
+                    setError('اشتراك الشركة منتهي. سيتم تحويلك إلى صفحة التجديد...');
+                    setTimeout(() => {
+                        window.location.href = '/account-status';
+                    }, 2000);
+                } else if (result.code === 'account_suspended') {
+                    setError('تم تعليق حسابك. يرجى التواصل مع الإدارة.');
+                } else {
+                    setError(result.error || 'رقم الهوية أو الرقم السري غير صحيح');
+                }
                 return;
             }
 
+            // Login successful - save remember me preference
             if (formData.rememberMe) {
                 localStorage.setItem(rememberKey, 'true');
                 localStorage.setItem(rememberValueKey, formData.nationalId.trim());

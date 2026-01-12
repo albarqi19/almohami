@@ -1,6 +1,7 @@
 ﻿import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import type { UserRole } from '../types';
 
 interface ProtectedRouteProps {
@@ -13,6 +14,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles
 }) => {
   const { user, isLoading } = useAuth();
+  const { status, isOwner, isLawyer } = useSubscription();
   const location = useLocation();
 
   if (isLoading) {
@@ -59,6 +61,38 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
     // No token, redirect to login
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Check subscription status for non-super-admins
+  if (user && user.role !== 'super_admin' && status) {
+    // For lawyers when subscription expired
+    if (isLawyer && status.isExpired) {
+      return <Navigate to="/lawyer-suspended" replace />;
+    }
+
+    // For owners when subscription expired
+    if (isOwner && status.isExpired) {
+      // Whitelist: allow these paths (read-only access)
+      const allowedPaths = [
+        '/dashboard',
+        '/cases',
+        '/hearings',
+        '/sessions',
+        '/meetings',
+        '/reports',
+        '/notifications',
+        '/settings',
+        '/account-status',
+        '/lawyer-suspended' // Allow access in case they navigate here
+      ];
+
+      const currentPath = location.pathname;
+      const isAllowed = allowedPaths.some(path => currentPath.startsWith(path));
+
+      if (!isAllowed) {
+        return <Navigate to="/dashboard" replace />;
+      }
+    }
   }
 
   if (allowedRoles && user.role && !allowedRoles.includes(user.role)) {

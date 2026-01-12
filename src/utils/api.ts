@@ -63,6 +63,35 @@ class ApiClient {
           throw new Error('Unauthorized');
         }
 
+        if (response.status === 403) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('API Forbidden Response:', response.status, JSON.stringify(errorData, null, 2));
+
+          // توجيه المحامين لصفحة التعليق
+          if (errorData.account_suspended && errorData.is_lawyer) {
+            window.location.href = '/lawyer-suspended';
+            throw new Error(errorData.message);
+          }
+
+          // للمالكين - عرض رسالة بدون redirect (سيتم التعامل معها في المكونات)
+          if (errorData.subscription_expired) {
+            console.warn('Subscription action blocked:', errorData.message);
+            const error = new Error(errorData.message || 'الاشتراك منتهي') as Error & {
+              errors?: Record<string, string[]>;
+              subscriptionExpired?: boolean;
+              actionRequired?: string;
+            };
+            error.subscriptionExpired = true;
+            error.actionRequired = errorData.action_required;
+            throw error;
+          }
+
+          // خطأ 403 عام
+          const error = new Error(errorData.message || 'غير مصرح بهذا الإجراء') as Error & { errors?: Record<string, string[]> };
+          error.errors = errorData.errors;
+          throw error;
+        }
+
         const errorData = await response.json().catch(() => ({}));
         console.error('API Error Response:', response.status, JSON.stringify(errorData, null, 2));
         // Create error with full details

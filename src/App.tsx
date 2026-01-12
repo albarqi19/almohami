@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import UpdateBanner from './components/UpdateBanner';
 import { AuthProvider } from './contexts/AuthContext';
+import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { TenantProvider, useTenant } from './contexts/TenantContext';
 import { TimerProvider } from './contexts/TimerContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -30,6 +31,7 @@ import LandingPage from './pages/LandingPage';
 import TenantLandingPage from './pages/TenantLandingPage';
 import Wekalat from './pages/Wekalat';
 import AccountStatus from './pages/AccountStatus';
+import LawyerSuspended from './pages/LawyerSuspended';
 import Clients from './pages/Clients';
 import ClientDetailPage from './pages/ClientDetailPage';
 import AdminRequests from './pages/AdminRequests';
@@ -54,10 +56,11 @@ function App() {
   return (
     <TenantProvider>
       <AuthProvider>
-        <UpdateBanner />
-        <TimerProvider>
-          <Router>
-            <Routes>
+        <SubscriptionProvider>
+          <UpdateBanner />
+          <TimerProvider>
+            <Router>
+              <Routes>
               <Route path="/" element={<SmartLandingPage />} />
             {/* Auth routes with shared layout */}
             <Route element={<AuthLayout />}>
@@ -67,6 +70,12 @@ function App() {
             </Route>
             {/* Account Status - For expired subscriptions */}
             <Route path="/account-status" element={<AccountStatus />} />
+            {/* Lawyer Suspended - For lawyers when subscription expired */}
+            <Route path="/lawyer-suspended" element={
+              <ProtectedRoute allowedRoles={['lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <LawyerSuspended />
+              </ProtectedRoute>
+            } />
             {/* Public Booking Page - No auth required */}
             <Route path="/booking/:token" element={<PublicBooking />} />
             <Route element={
@@ -192,6 +201,7 @@ function App() {
             </Routes>
           </Router>
         </TimerProvider>
+        </SubscriptionProvider>
       </AuthProvider>
     </TenantProvider>
   );
