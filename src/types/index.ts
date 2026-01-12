@@ -27,8 +27,10 @@ export interface User {
 }
 
 export const UserRole = {
+  SUPER_ADMIN: 'super_admin',
   ADMIN: 'admin',
   LAWYER: 'lawyer',
+  SENIOR_LAWYER: 'senior_lawyer',
   LEGAL_ASSISTANT: 'legal_assistant',
   CLIENT: 'client',
 } as const;
