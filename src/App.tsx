@@ -58,26 +58,30 @@ function App() {
       <AuthProvider>
         <SubscriptionProvider>
           <UpdateBanner />
-          <TimerProvider>
-            <Router>
-              <Routes>
+          <Router>
+            <Routes>
               <Route path="/" element={<SmartLandingPage />} />
-            {/* Auth routes with shared layout */}
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<LoginContent />} />
-              <Route path="/register" element={<RegisterChoiceContent />} />
-              <Route path="/register/tenant" element={<RegisterTenantContent />} />
-            </Route>
-            {/* Account Status - For expired subscriptions */}
-            <Route path="/account-status" element={<AccountStatus />} />
-            {/* Lawyer Suspended - For lawyers when subscription expired */}
-            <Route path="/lawyer-suspended" element={
-              <ProtectedRoute allowedRoles={['lawyer', 'senior_lawyer', 'legal_assistant']}>
-                <LawyerSuspended />
-              </ProtectedRoute>
-            } />
-            {/* Public Booking Page - No auth required */}
-            <Route path="/booking/:token" element={<PublicBooking />} />
+              {/* Auth routes with shared layout */}
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<LoginContent />} />
+                <Route path="/register" element={<RegisterChoiceContent />} />
+                <Route path="/register/tenant" element={<RegisterTenantContent />} />
+              </Route>
+              {/* Account Status - For expired subscriptions */}
+              <Route path="/account-status" element={<AccountStatus />} />
+              {/* Lawyer Suspended - For lawyers when subscription expired - NO TIMER */}
+              <Route path="/lawyer-suspended" element={
+                <ProtectedRoute allowedRoles={['lawyer', 'senior_lawyer', 'legal_assistant']}>
+                  <LawyerSuspended />
+                </ProtectedRoute>
+              } />
+              {/* Public Booking Page - No auth required */}
+              <Route path="/booking/:token" element={<PublicBooking />} />
+
+              {/* All routes below need TimerProvider */}
+              <Route path="*" element={
+                <TimerProvider>
+                  <Routes>
             <Route element={
               <ProtectedRoute>
                 <Layout />
@@ -197,10 +201,11 @@ function App() {
                 </ProtectedRoute>
               } />
             </Route>
-              <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </TimerProvider>
+              } />
             </Routes>
           </Router>
-        </TimerProvider>
         </SubscriptionProvider>
       </AuthProvider>
     </TenantProvider>
