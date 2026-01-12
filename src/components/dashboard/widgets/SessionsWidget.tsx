@@ -59,7 +59,7 @@ const SessionsWidget: React.FC<SessionsWidgetProps> = ({
         return labels[type] || 'موعد';
     };
 
-    const sessions = initialSessions?.slice(0, 3).map(normalizeSession) || [];
+    const sessions = initialSessions?.slice(0, 4).map(normalizeSession) || [];
 
     const formatDate = (date: Date | string) => {
         const d = typeof date === 'string' ? new Date(date) : date;
@@ -185,7 +185,7 @@ const SessionsWidget: React.FC<SessionsWidgetProps> = ({
 
                                 <div className="session-item__time">
                                     <Clock size={9} />
-                                    {session.time} •
+                                    {session.time && <>{session.time} • </>}
                                     <span style={{
                                         color: remaining === 'اليوم' || remaining === 'غداً' ? 'var(--clickup-red)' : 'inherit'
                                     }}>
