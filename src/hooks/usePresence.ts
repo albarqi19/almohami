@@ -56,13 +56,6 @@ export function usePresence() {
         }
     }, [sendHeartbeat]);
 
-    // معالجة إغلاق الصفحة
-    const handleBeforeUnload = useCallback(() => {
-        // إرسال طلب إنهاء الجلسة باستخدام sendBeacon
-        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-        navigator.sendBeacon('/api/v1/presence/end-session', blob);
-    }, []);
-
     useEffect(() => {
         // تسجيل أحداث النشاط
         const activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
@@ -72,9 +65,6 @@ export function usePresence() {
 
         // تسجيل تغيير الرؤية
         document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        // تسجيل إغلاق الصفحة
-        window.addEventListener('beforeunload', handleBeforeUnload);
 
         // إرسال heartbeat فوري عند التحميل
         sendHeartbeat(true);
@@ -90,13 +80,12 @@ export function usePresence() {
                 document.removeEventListener(event, updateActivity);
             });
             document.removeEventListener('visibilitychange', handleVisibilityChange);
-            window.removeEventListener('beforeunload', handleBeforeUnload);
 
             if (heartbeatIntervalRef.current) {
                 clearInterval(heartbeatIntervalRef.current);
             }
         };
-    }, [updateActivity, handleVisibilityChange, handleBeforeUnload, sendHeartbeat]);
+    }, [updateActivity, handleVisibilityChange, sendHeartbeat]);
 
     return {
         sendHeartbeat,
