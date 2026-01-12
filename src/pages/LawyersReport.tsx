@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Users, TrendingUp, CheckSquare, BarChart3 } from 'lucide-react';
 import Modal from '../components/Modal';
@@ -35,22 +36,16 @@ interface DateFilter {
 }
 
 const LawyersReport: React.FC = () => {
-  const [lawyers, setLawyers] = useState<LawyerReportData[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedLawyer, setSelectedLawyer] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filter, setFilter] = useState<DateFilter>({
     period: 'current_month'
   });
 
-  useEffect(() => {
-    fetchLawyersReport();
-  }, [filter]);
-
-  const fetchLawyersReport = async () => {
-    setLoading(true);
-    try {
-      // Build query string from filter
+  // ✨ TanStack Query - بديل لـ useState + useEffect + fetchLawyersReport
+  const { data: lawyers = [], isLoading: loading } = useQuery<LawyerReportData[]>({
+    queryKey: ['lawyers-report', filter],
+    queryFn: async () => {
       const queryParams = new URLSearchParams();
       if (filter.period) queryParams.append('period', filter.period);
       if (filter.start_date) queryParams.append('start_date', filter.start_date);
@@ -61,14 +56,13 @@ const LawyersReport: React.FC = () => {
 
       const response: any = await apiClient.get(endpoint);
       if (response.success) {
-        setLawyers(response.data);
+        return response.data;
       }
-    } catch (error) {
-      console.error('Failed to fetch lawyers report:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return [];
+    },
+    refetchInterval: 30000, // ⏰ تحديث تلقائي كل 30 ثانية
+    refetchOnWindowFocus: true, // 🔄 تحديث عند العودة للتبويب
+  });
 
   const handleLawyerClick = (lawyerId: number) => {
     setSelectedLawyer(lawyerId);
