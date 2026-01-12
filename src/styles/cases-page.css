@@ -367,8 +367,6 @@ body.dark .cases-table th {
 
 .cases-table tbody tr:hover {
     background: var(--law-navy-light);
-    transform: scale(1.003);
-    box-shadow: 0 2px 8px rgba(10, 25, 47, 0.06);
 }
 
 .cases-table tbody tr:hover td {

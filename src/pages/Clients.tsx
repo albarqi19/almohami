@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import {
     Users,
     Search,
@@ -16,63 +17,60 @@ import ClientManagementService from '../services/clientManagementService';
 import type { Client } from '../services/clientManagementService';
 import '../styles/clients-page.css';
 
+// Pagination response type
+interface PaginatedClientsResponse {
+    data: Client[];
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+}
+
 const Clients: React.FC = () => {
     const navigate = useNavigate();
-    const [clients, setClients] = useState<Client[]>([]);
-    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalClients, setTotalClients] = useState(0);
 
-    const fetchClients = async (page = 1, search = '') => {
-        try {
-            setLoading(true);
-            const response = await ClientManagementService.getClients({
-                page,
-                per_page: 15,
-                search: search || undefined,
-            });
-
-            // Laravel paginate response structure: { data: { data: [...], current_page, last_page, total } }
-            const paginatedData = response.data;
-            if (paginatedData && paginatedData.data) {
-                // Nested pagination response
-                setClients(paginatedData.data || []);
-                setTotalPages(paginatedData.last_page || 1);
-                setTotalClients(paginatedData.total || 0);
-            } else if (Array.isArray(paginatedData)) {
-                // Direct array response
-                setClients(paginatedData);
-                setTotalClients(paginatedData.length);
-            } else {
-                setClients([]);
-            }
-        } catch (error) {
-            console.error('Error fetching clients:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchClients(currentPage, searchQuery);
-    }, [currentPage]);
-
-    useEffect(() => {
-        const delaySearch = setTimeout(() => {
-            setCurrentPage(1);
-            fetchClients(1, searchQuery);
+    // Debounce search query
+    React.useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+            setCurrentPage(1); // Reset to page 1 when search changes
         }, 300);
-        return () => clearTimeout(delaySearch);
+        return () => clearTimeout(timer);
     }, [searchQuery]);
+
+    // TanStack Query with caching and keepPreviousData
+    const {
+        data: paginatedData,
+        isLoading: loading,
+        isFetching,
+        refetch
+    } = useQuery<PaginatedClientsResponse>({
+        queryKey: ['clients', currentPage, debouncedSearch],
+        queryFn: async () => {
+            const response = await ClientManagementService.getClients({
+                page: currentPage,
+                per_page: 15,
+                search: debouncedSearch || undefined,
+            });
+            return response as PaginatedClientsResponse;
+        },
+        placeholderData: keepPreviousData, // يحافظ على البيانات السابقة أثناء التحميل
+        staleTime: 30 * 1000, // البيانات صالحة 30 ثانية
+    });
+
+    const clients = paginatedData?.data || [];
+    const totalPages = paginatedData?.last_page || 1;
+    const totalClients = paginatedData?.total || 0;
 
     const handleClientClick = (clientId: number) => {
         navigate(`/clients/${clientId}`);
     };
 
     const handleRefresh = () => {
-        fetchClients(currentPage, searchQuery);
+        refetch();
     };
 
     const formatDate = (dateString: string | null | undefined) => {
@@ -132,7 +130,12 @@ const Clients: React.FC = () => {
                 </div>
 
                 <div className="clients-header-bar__end">
-                    <button className="icon-btn" onClick={handleRefresh} title="تحديث">
+                    <button
+                        className={`icon-btn ${isFetching ? 'spinning' : ''}`}
+                        onClick={handleRefresh}
+                        title="تحديث"
+                        disabled={isFetching}
+                    >
                         <RefreshCw size={18} />
                     </button>
                 </div>
@@ -159,6 +162,12 @@ const Clients: React.FC = () => {
                 ) : (
                     <>
                         <div className="clients-table-wrapper">
+                            {/* Loading overlay while fetching new page */}
+                            {isFetching && (
+                                <div className="table-loading-overlay">
+                                    <RefreshCw size={24} className="spinning" />
+                                </div>
+                            )}
                             <table className="clients-table">
                                 <thead>
                                     <tr>
@@ -232,7 +241,7 @@ const Clients: React.FC = () => {
                                     <button
                                         className="pagination-btn"
                                         onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
+                                        disabled={currentPage === 1 || isFetching}
                                     >
                                         <ChevronRight size={16} />
                                         السابق
@@ -240,7 +249,7 @@ const Clients: React.FC = () => {
                                     <button
                                         className="pagination-btn"
                                         onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
+                                        disabled={currentPage === totalPages || isFetching}
                                     >
                                         التالي
                                         <ChevronLeft size={16} />

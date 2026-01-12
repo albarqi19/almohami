@@ -156,7 +156,6 @@
 
 .sessions-table tbody tr:hover {
     background: var(--law-navy-light);
-    transform: scale(1.002);
 }
 
 .sessions-table tbody tr:hover td {
@@ -380,6 +379,7 @@
         opacity: 0;
         transform: translateY(-8px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);

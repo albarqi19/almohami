@@ -177,8 +177,6 @@ body.dark .clients-table th {
 
 .clients-table tbody tr:hover {
     background: var(--law-navy-light);
-    transform: scale(1.003);
-    box-shadow: 0 2px 8px rgba(10, 25, 47, 0.06);
 }
 
 .clients-table tbody tr:hover td {
@@ -302,8 +300,10 @@ body.dark .client-id-badge {
 /* === Pagination === */
 .clients-pagination {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
+    gap: 8px;
     padding: 12px 20px;
     background: var(--dashboard-card);
     border-top: 1px solid var(--color-border);
@@ -367,4 +367,42 @@ body.dark .client-id-badge {
     .clients-table {
         min-width: 600px;
     }
+}
+
+/* === Loading Overlay & Spinner === */
+.clients-table-wrapper {
+    position: relative;
+}
+
+.table-loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 8px;
+}
+
+body.dark .table-loading-overlay {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.icon-btn.spinning svg {
+    animation: spin 1s linear infinite;
 }

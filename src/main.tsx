@@ -4,8 +4,8 @@ import './index.css'
 import './styles/tiptap.css'
 import App from './App.tsx'
 
-// إعداد TanStack Query
-const queryClient = new QueryClient({
+// إعداد TanStack Query - مُصدَّر للاستخدام في AuthContext
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30 * 1000, // البيانات صالحة 30 ثانية
@@ -20,3 +20,4 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </QueryClientProvider>
 )
+

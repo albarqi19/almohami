@@ -340,3 +340,316 @@ body.dark .admin-setting-card {
         background-position: -200% 0;
     }
 }
+
+/* === Section Count Badge === */
+.admin-section__count {
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--quiet-gray-100);
+    color: var(--color-text-secondary);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* === Section Actions/Search === */
+.admin-section__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Role Filter Dropdown */
+.admin-role-filter {
+    padding: 6px 10px;
+    background: var(--quiet-gray-100);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--color-text);
+    cursor: pointer;
+    min-width: 120px;
+}
+
+body.dark .admin-role-filter {
+    background: var(--quiet-gray-200);
+}
+
+.admin-role-filter:focus {
+    outline: none;
+    border-color: var(--law-navy);
+}
+
+.admin-search-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--quiet-gray-100);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    min-width: 200px;
+}
+
+body.dark .admin-search-box {
+    background: var(--quiet-gray-200);
+}
+
+.admin-search-box input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 13px;
+    color: var(--color-text);
+    flex: 1;
+}
+
+.admin-search-box input::placeholder {
+    color: var(--color-text-secondary);
+}
+
+.admin-search-box svg {
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+}
+
+/* === Users Table === */
+.admin-users-table-wrapper {
+    position: relative;
+}
+
+.admin-users-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-users-table th {
+    text-align: right;
+    padding: 10px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    background: var(--quiet-gray-50);
+    border-bottom: 1px solid var(--color-border);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+body.dark .admin-users-table th {
+    background: var(--quiet-gray-100);
+}
+
+.admin-users-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--color-text);
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+
+.admin-users-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.admin-users-table tbody tr:hover {
+    background: var(--law-navy-light);
+}
+
+/* User Cell */
+.admin-user-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--law-navy);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.admin-user-info {
+    min-width: 0;
+}
+
+.admin-user-name {
+    font-weight: 600;
+    color: var(--color-heading);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-user-id {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    font-family: monospace;
+}
+
+/* Role Badges */
+.admin-role-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.admin-role-badge--admin {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: white;
+}
+
+.admin-role-badge--partner {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: white;
+}
+
+.admin-role-badge--lawyer {
+    background: var(--law-navy-light);
+    color: var(--law-navy);
+}
+
+.admin-role-badge--assistant {
+    background: var(--status-blue-light);
+    color: var(--status-blue);
+}
+
+.admin-role-badge--client {
+    background: var(--status-green-light);
+    color: var(--status-green);
+}
+
+/* Contact Cell */
+.admin-contact-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.admin-contact-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+.admin-contact-item svg {
+    flex-shrink: 0;
+}
+
+.admin-no-contact {
+    color: var(--color-text-secondary);
+}
+
+/* Status Badges */
+.admin-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.admin-status-badge--active {
+    background: var(--status-green-light);
+    color: var(--status-green);
+}
+
+.admin-status-badge--inactive {
+    background: var(--status-red-light);
+    color: var(--status-red);
+}
+
+/* Empty State */
+.admin-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
+.admin-empty svg {
+    margin-bottom: 12px;
+    opacity: 0.4;
+}
+
+.admin-empty p {
+    font-size: 14px;
+    margin: 0;
+}
+
+/* Users Loading */
+.admin-users-loading {
+    padding: 12px 0;
+}
+
+/* Pagination */
+.admin-pagination {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--color-border);
+    background: var(--quiet-gray-50);
+}
+
+body.dark .admin-pagination {
+    background: var(--quiet-gray-100);
+}
+
+.admin-pagination__info {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+.admin-pagination__controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Loading overlay spinner */
+.table-loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+body.dark .table-loading-overlay {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

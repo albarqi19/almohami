@@ -52,7 +52,7 @@ export class ClientManagementService {
         without_phone?: boolean;
         per_page?: number;
         page?: number;
-    }): Promise<{ data: any }> {
+    }): Promise<any> {
         const searchParams = new URLSearchParams();
         if (params?.search) searchParams.append('search', params.search);
         if (params?.without_phone) searchParams.append('without_phone', '1');

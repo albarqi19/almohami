@@ -319,8 +319,6 @@ body.dark .wekalat-table thead {
 
 .wekalat-table tbody tr:hover {
     background: var(--law-navy-light);
-    transform: scale(1.005);
-    box-shadow: 0 2px 8px rgba(10, 25, 47, 0.08);
 }
 
 .wekalat-table tbody tr:last-child td {

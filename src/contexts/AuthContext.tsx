@@ -1,6 +1,7 @@
 ﻿import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthService } from '../services';
 import { apiClient } from '../utils/api';
+import { queryClient } from '../main';
 import type { User } from '../types';
 
 interface AuthContextType {
@@ -62,6 +63,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Clear any cached data from previous user for security
     localStorage.clear();
 
+    // 🔐 مسح cache الـ TanStack Query لمنع تسرب البيانات بين المستأجرين
+    queryClient.clear();
+
     // Restore theme preference
     if (savedTheme) {
       localStorage.setItem('theme', savedTheme);
@@ -92,6 +96,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       // Clear ALL localStorage to ensure no data leaks between users
       localStorage.clear();
+
+      // 🔐 مسح cache الـ TanStack Query لمنع تسرب البيانات بين المستأجرين
+      queryClient.clear();
 
       // Restore theme preference
       if (savedTheme) {
