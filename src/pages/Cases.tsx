@@ -366,6 +366,11 @@ const Cases: React.FC = () => {
 										<>
 											<Calendar size={14} style={{ display: 'inline', marginLeft: '6px' }} />
 											{formatDate(c.next_hearing)}
+											{(c as any).next_hearing_time && (
+												<span style={{ marginRight: '6px', color: 'var(--color-text-secondary)' }}>
+													- {(c as any).next_hearing_time}
+												</span>
+											)}
 										</>
 									) : '-'}
 								</td>
