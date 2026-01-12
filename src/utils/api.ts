@@ -67,10 +67,15 @@ class ApiClient {
           const errorData = await response.json().catch(() => ({}));
           console.error('API Forbidden Response:', response.status, JSON.stringify(errorData, null, 2));
 
-          // توجيه المحامين لصفحة التعليق
+          // للمحامين - عدم redirect هنا، سيتم التعامل معه في ProtectedRoute
           if (errorData.account_suspended && errorData.is_lawyer) {
-            window.location.href = '/lawyer-suspended';
-            throw new Error(errorData.message);
+            const error = new Error(errorData.message || 'تم تعليق الحساب') as Error & {
+              accountSuspended?: boolean;
+              isLawyer?: boolean;
+            };
+            error.accountSuspended = true;
+            error.isLawyer = true;
+            throw error;
           }
 
           // للمالكين - عرض رسالة بدون redirect (سيتم التعامل معها في المكونات)
