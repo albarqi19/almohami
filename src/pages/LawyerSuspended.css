@@ -1,5 +1,4 @@
-/* Import Inter font if not globally available, though usually handled in index.css */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+/* Lawyer Suspended Page - Notion Style */
 
 .lawyer-suspended {
     min-height: 100vh;
