@@ -10,6 +10,20 @@ export interface User {
   isActive: boolean;
   createdAt: Date;
   lastLoginAt?: Date;
+  // Subscription fields
+  is_tenant_owner?: boolean;
+  subscription_active?: boolean;
+  is_trial?: boolean;
+  trial_ends_at?: string | null;
+  subscription_status?: {
+    has_access: boolean;
+    status: string;
+    subscription_active: boolean;
+    is_trial: boolean;
+    trial_expired: boolean;
+    trial_ends_at: string | null;
+    requires_renewal: boolean;
+  };
 }
 
 export const UserRole = {

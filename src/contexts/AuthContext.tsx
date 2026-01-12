@@ -4,9 +4,15 @@ import { apiClient } from '../utils/api';
 import { queryClient } from '../main';
 import type { User } from '../types';
 
+interface LoginResult {
+  success: boolean;
+  error?: string;
+  code?: 'subscription_expired' | 'account_suspended' | 'auth_failed';
+}
+
 interface AuthContextType {
   user: User | null;
-  login: (nationalId: string, pin: string) => Promise<boolean>;
+  login: (nationalId: string, pin: string) => Promise<LoginResult>;
   logout: () => void;
   isLoading: boolean;
 }
