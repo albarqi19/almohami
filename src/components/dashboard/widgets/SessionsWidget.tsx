@@ -16,7 +16,7 @@ interface Session {
     caseTitle?: string;
     case_title?: string;
     date: Date | string;
-    time: string;
+    time: string | null;
     location?: string;
     court?: string;
     type: 'hearing' | 'meeting' | 'deadline' | string;
@@ -42,7 +42,7 @@ const SessionsWidget: React.FC<SessionsWidgetProps> = ({
         title: (s as Session).title || getSessionTypeLabel((s as UpcomingSession).type || (s as Session).type),
         caseTitle: (s as UpcomingSession).case_title || (s as Session).caseTitle || '',
         date: typeof s.date === 'string' ? new Date(s.date) : s.date,
-        time: s.time || '09:00',
+        time: s.time || null,
         location: (s as UpcomingSession).court || (s as Session).location || (s as Session).court || '',
         type: s.type || 'hearing',
         isUrgent: (s as UpcomingSession).is_urgent || (s as Session).isUrgent || false,
