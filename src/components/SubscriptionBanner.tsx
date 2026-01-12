@@ -19,7 +19,7 @@ const SubscriptionBanner: React.FC = () => {
                 <span className="subscription-banner__message">
                     اشتراك الشركة منتهي. فضلاً قم بالتجديد للاستمرار في استخدام جميع المزايا.
                 </span>
-                <Link to="/settings/subscription" className="subscription-banner__button">
+                <Link to="/settings#subscription" className="subscription-banner__button">
                     <CreditCard size={14} />
                     تجديد الاشتراك
                 </Link>

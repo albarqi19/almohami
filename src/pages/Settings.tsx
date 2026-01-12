@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   User,
   Bell,
@@ -41,7 +42,21 @@ interface SettingsTab {
 
 const Settings: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('notifications');
+
+  // Check URL hash or state for initial tab
+  useEffect(() => {
+    // Check if there's a hash in the URL (e.g., /settings#subscription)
+    if (location.hash) {
+      const tabFromHash = location.hash.replace('#', '');
+      setActiveTab(tabFromHash);
+    }
+    // Check if there's a state passed via navigation
+    else if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location]);
 
   const tabs: SettingsTab[] = [
     { id: 'notifications', label: 'الإشعارات', icon: Bell, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
