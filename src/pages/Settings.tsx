@@ -23,9 +23,11 @@ import {
   CheckCircle,
   XCircle,
   Image,
-  Upload
+  Upload,
+  ShieldCheck
 } from 'lucide-react';
 import NotificationSettings from '../components/NotificationSettings';
+import TiptapEditor from '../components/TiptapEditor';
 import { apiClient } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/settings-page.css';
@@ -51,6 +53,7 @@ const Settings: React.FC = () => {
     { id: 'system', label: 'النظام', icon: Database, roles: ['admin'] },
     { id: 'company', label: 'إعدادات الشركة', icon: Building2, roles: ['admin'] },
     { id: 'branding', label: 'هوية الشركة', icon: Image, roles: ['admin'] },
+    { id: 'company_policy', label: 'سياسة الشركة', icon: ShieldCheck, roles: ['admin'] },
     { id: 'subscription', label: 'الاشتراك', icon: CreditCard, roles: ['admin'] },
     { id: 'invoices', label: 'الفواتير', icon: Receipt, roles: ['admin'] },
   ];
@@ -97,6 +100,15 @@ const Settings: React.FC = () => {
   // Invoices State
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
+
+  // Policy Settings State
+  const [policySettings, setPolicySettings] = useState({
+    enabled: false,
+    title: 'سياسة الالتزام والأمان',
+    content: '',
+    interval_days: 10,
+  });
+  const [savingPolicy, setSavingPolicy] = useState(false);
 
   // User Profile State
   const [userProfile, setUserProfile] = useState({
@@ -209,6 +221,30 @@ const Settings: React.FC = () => {
     loadInvoices();
   }, []);
 
+  // Load Policy Settings
+  useEffect(() => {
+    const loadPolicySettings = async () => {
+      if (userRole !== 'admin') return;
+
+      try {
+        const response: any = await apiClient.get('/tenant/advanced-settings/group/policy');
+        if (response.success && response.data?.settings) {
+          const settings = response.data.settings;
+          setPolicySettings({
+            enabled: settings.company_policy_enabled?.value === true || settings.company_policy_enabled?.value === 'true',
+            title: settings.company_policy_title?.value || 'سياسة الالتزام والأمان',
+            content: settings.company_policy_content?.value || '',
+            interval_days: parseInt(settings.company_policy_interval_days?.value) || 10,
+          });
+        }
+      } catch (error) {
+        console.error('Error loading policy settings:', error);
+      }
+    };
+
+    loadPolicySettings();
+  }, [userRole]);
+
   // Load User Profile
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -298,6 +334,31 @@ const Settings: React.FC = () => {
       console.error('Error saving settings:', error);
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  // Save Policy Settings
+  const savePolicySettings = async () => {
+    try {
+      setSavingPolicy(true);
+      const response: any = await apiClient.put('/tenant/advanced-settings', {
+        settings: {
+          company_policy_enabled: policySettings.enabled,
+          company_policy_title: policySettings.title,
+          company_policy_content: policySettings.content,
+          company_policy_interval_days: policySettings.interval_days,
+        },
+      });
+
+      if (response.success) {
+        setSettingsMessage('تم حفظ إعدادات السياسة بنجاح');
+        setTimeout(() => setSettingsMessage(''), 3000);
+      }
+    } catch (error) {
+      setSettingsMessage('حدث خطأ أثناء حفظ إعدادات السياسة');
+      console.error('Error saving policy settings:', error);
+    } finally {
+      setSavingPolicy(false);
     }
   };
 
@@ -1074,6 +1135,121 @@ const Settings: React.FC = () => {
           </div>
         );
 
+      case 'company_policy':
+        return (
+          <div className="settings-section">
+            <div className="settings-section__header">
+              <div className="settings-section__icon">
+                <ShieldCheck size={14} />
+              </div>
+              <span className="settings-section__title">سياسة الالتزام والأمان</span>
+            </div>
+            <div className="settings-section__content">
+              <p style={{ marginBottom: '20px', color: 'var(--color-text-secondary)', fontSize: '14px' }}>
+                قم بإعداد سياسة الشركة التي يجب على المستخدمين الموافقة عليها بشكل دوري للوصول إلى النظام.
+              </p>
+
+              {/* Enable/Disable Toggle */}
+              <div className="settings-option-card" style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div className="settings-option-card__title">تفعيل سياسة الشركة</div>
+                    <div className="settings-option-card__desc">
+                      عند التفعيل، سيُطلب من جميع المستخدمين الموافقة على سياسة الشركة للوصول إلى النظام
+                    </div>
+                  </div>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={policySettings.enabled}
+                      onChange={(e) => setPolicySettings(prev => ({ ...prev, enabled: e.target.checked }))}
+                    />
+                    <span className="settings-toggle__slider"></span>
+                    <span style={{ marginRight: '12px' }}>
+                      {policySettings.enabled ? 'مفعّل' : 'معطّل'}
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Policy Title */}
+              <div className="settings-field" style={{ marginBottom: '20px' }}>
+                <label className="settings-field__label">عنوان السياسة</label>
+                <input
+                  type="text"
+                  className="settings-field__input"
+                  value={policySettings.title}
+                  onChange={(e) => setPolicySettings(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="سياسة الالتزام والأمان"
+                />
+                <small style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                  العنوان الذي سيظهر للمستخدمين في نافذة السياسة
+                </small>
+              </div>
+
+              {/* Interval Days */}
+              <div className="settings-field" style={{ marginBottom: '20px' }}>
+                <label className="settings-field__label">فترة التجديد (بالأيام)</label>
+                <input
+                  type="number"
+                  className="settings-field__input"
+                  value={policySettings.interval_days}
+                  onChange={(e) => setPolicySettings(prev => ({ ...prev, interval_days: parseInt(e.target.value) || 10 }))}
+                  min="1"
+                  max="365"
+                  style={{ maxWidth: '200px' }}
+                />
+                <small style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                  عدد الأيام التي يجب بعدها على المستخدمين إعادة الموافقة على السياسة
+                </small>
+              </div>
+
+              {/* Policy Content */}
+              <div className="settings-field" style={{ marginBottom: '20px' }}>
+                <label className="settings-field__label">محتوى السياسة</label>
+                <div style={{
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  minHeight: '300px'
+                }}>
+                  <TiptapEditor
+                    content={policySettings.content}
+                    onChange={(content) => setPolicySettings(prev => ({ ...prev, content }))}
+                    placeholder="اكتب محتوى سياسة الشركة هنا..."
+                  />
+                </div>
+                <small style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginTop: '8px', display: 'block' }}>
+                  استخدم المحرر لتنسيق نص السياسة. يمكنك إضافة عناوين، قوائم، وتنسيقات نصية مختلفة.
+                </small>
+              </div>
+
+              {/* Save Button */}
+              <div className="settings-btn-group">
+                <button
+                  className="settings-btn settings-btn--primary"
+                  onClick={savePolicySettings}
+                  disabled={savingPolicy}
+                >
+                  {savingPolicy ? (
+                    <><Loader2 className="animate-spin" size={16} /> جاري الحفظ...</>
+                  ) : (
+                    <><Save size={16} /> حفظ إعدادات السياسة</>
+                  )}
+                </button>
+                {settingsMessage && settingsMessage.includes('السياسة') && (
+                  <span style={{
+                    color: settingsMessage.includes('خطأ') ? '#ef4444' : '#22c55e',
+                    marginRight: '12px'
+                  }}>
+                    {settingsMessage}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
       case 'subscription':
         // Use API-provided trial_days_remaining if available, otherwise calculate
         const trialEndsAt = subscription?.trial_ends_at ? new Date(subscription.trial_ends_at) : null;
@@ -1328,6 +1504,7 @@ const Settings: React.FC = () => {
                 {activeTab === 'system' && 'إعدادات النظام'}
                 {activeTab === 'company' && 'إعدادات الشركة'}
                 {activeTab === 'branding' && 'هوية الشركة'}
+                {activeTab === 'company_policy' && 'سياسة الشركة'}
                 {activeTab === 'subscription' && 'إدارة الاشتراك'}
                 {activeTab === 'invoices' && 'الفواتير'}
               </div>
@@ -1341,6 +1518,7 @@ const Settings: React.FC = () => {
                 {activeTab === 'system' && 'إدارة النسخ الاحتياطي وتصدير البيانات.'}
                 {activeTab === 'company' && 'تحديث معلومات شركتك مثل الاسم والبريد والعنوان.'}
                 {activeTab === 'branding' && 'خصص مظهر صفحة تسجيل الدخول الخاصة بشركتك.'}
+                {activeTab === 'company_policy' && 'إدارة سياسة الشركة التي يجب على المستخدمين الموافقة عليها للوصول إلى النظام.'}
                 {activeTab === 'subscription' && 'إدارة اشتراكك الحالي، الترقية للسنوي، أو الإلغاء.'}
                 {activeTab === 'invoices' && 'عرض وتحميل جميع الفواتير السابقة.'}
               </p>
@@ -1358,6 +1536,7 @@ const Settings: React.FC = () => {
                 {activeTab === 'system' && 'قم بعمل نسخ احتياطي دوري للحفاظ على بياناتك'}
                 {activeTab === 'company' && 'تحديث بيانات الشركة يظهر في الفواتير والتقارير'}
                 {activeTab === 'branding' && 'رابط شركتك المخصص: company-slug.alraedlaw.com'}
+                {activeTab === 'company_policy' && 'حدد فترة التجديد المناسبة لضمان التزام المستخدمين بالسياسة بشكل دوري'}
                 {activeTab === 'subscription' && 'الاشتراك السنوي يوفر لك شهرين مجاناً!'}
                 {activeTab === 'invoices' && 'يمكنك تحميل الفواتير بصيغة PDF للأرشفة'}
               </span>

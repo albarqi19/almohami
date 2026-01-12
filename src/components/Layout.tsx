@@ -6,7 +6,9 @@ import FloatingTimer from './FloatingTimer';
 import NotebookFloatingWidget from './NotebookFloatingWidget';
 import ClickUpHeader from './ClickUpHeader';
 import PresenceTracker from './PresenceTracker';
+import CompanyPolicyModal from './CompanyPolicyModal';
 import { useAuth } from '../contexts/AuthContext';
+import { usePolicyCheck } from '../hooks/usePolicyCheck';
 
 // Sidebar Context للتناغم بين Sidebar والمحتوى
 interface SidebarContextType {
@@ -24,10 +26,13 @@ export const SidebarContext = createContext<SidebarContextType>({
 export const useSidebar = () => useContext(SidebarContext);
 
 const Layout: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Policy Check
+  const { needsAcknowledgment, policyData, handleAcknowledged } = usePolicyCheck();
 
   // عرض Sidebar حسب الحالة
   const sidebarWidth = isCollapsed ? 64 : 240;
@@ -36,8 +41,24 @@ const Layout: React.FC = () => {
     setIsMobileOpen(!isMobileOpen);
   };
 
+  // Handle sign out from policy modal
+  const handleSignOut = () => {
+    logout();
+  };
+
   return (
     <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed, sidebarWidth }}>
+      {/* Company Policy Modal - Blocking */}
+      {needsAcknowledgment && policyData && (
+        <CompanyPolicyModal
+          isOpen={true}
+          title={policyData.title}
+          content={policyData.content}
+          onAcknowledge={handleAcknowledged}
+          onSignOut={handleSignOut}
+        />
+      )}
+
       <div
         className="app-layout"
         style={{
