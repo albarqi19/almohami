@@ -66,7 +66,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Check subscription status for non-super-admins
   if (user && user.role !== 'super_admin' && status) {
     // For lawyers when subscription expired
-    if (isLawyer && status.isExpired) {
+    if (isLawyer && status.isExpired && location.pathname !== '/lawyer-suspended') {
       return <Navigate to="/lawyer-suspended" replace />;
     }
 
