@@ -40,6 +40,18 @@ const STATUS_CONFIG: Record<InvoiceStatus, { label: string; color: string; bg: s
   refunded: { label: 'مستردة', color: '#f59e0b', bg: '#fef3c7', icon: <XCircle size={14} /> },
 };
 
+// واجهة بيانات المكتب
+interface FirmInfo {
+  name: string;
+  cr: string;
+  license: string;
+  phone: string;
+  email: string;
+  address: string;
+  iban: string;
+  bank: string;
+}
+
 const Invoices: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -56,6 +68,7 @@ const Invoices: React.FC = () => {
   const [sendModal, setSendModal] = useState<CaseInvoice | null>(null);
   const [sendChannel, setSendChannel] = useState<'email' | 'whatsapp'>('email');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [firmInfo, setFirmInfo] = useState<FirmInfo | null>(null);
 
   // جلب الفواتير
   const { data: invoicesData, isLoading, refetch } = useQuery({
@@ -66,6 +79,36 @@ const Invoices: React.FC = () => {
       page,
       per_page: 15,
     }),
+  });
+
+  // جلب بيانات المكتب/الشركة
+  useQuery({
+    queryKey: ['tenant-info'],
+    queryFn: async () => {
+      const response = await fetch('/api/tenant', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json',
+        },
+      });
+      const data = await response.json();
+      if (data.success && data.data?.tenant) {
+        const tenant = data.data.tenant;
+        // جلب معلومات البنك من settings إذا كانت متاحة
+        const settings = tenant.settings || {};
+        setFirmInfo({
+          name: tenant.name || '',
+          cr: tenant.commercial_registration || tenant.tax_number || '',
+          license: settings.license_number || tenant.commercial_registration || '',
+          phone: tenant.phone || '',
+          email: tenant.email || '',
+          address: tenant.address ? `${tenant.address}${tenant.city ? ', ' + tenant.city : ''}${tenant.country ? ', ' + tenant.country : ''}` : '',
+          iban: settings.iban || '',
+          bank: settings.bank_name || '',
+        });
+      }
+      return data;
+    },
   });
 
   // حساب الإحصائيات
@@ -396,6 +439,7 @@ const Invoices: React.FC = () => {
         <InvoiceView
           invoice={viewInvoice}
           onClose={() => setViewInvoice(null)}
+          firmInfo={firmInfo || undefined}
         />
       )}
 

@@ -58,6 +58,18 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   other: 'أخرى',
 };
 
+// واجهة بيانات المكتب
+interface FirmInfo {
+  name: string;
+  cr: string;
+  license: string;
+  phone: string;
+  email: string;
+  address: string;
+  iban: string;
+  bank: string;
+}
+
 const InvoiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -71,12 +83,43 @@ const InvoiceDetail: React.FC = () => {
   const [sendMethod, setSendMethod] = useState<'email' | 'whatsapp'>('email');
   const [isSending, setIsSending] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
+  const [firmInfo, setFirmInfo] = useState<FirmInfo | null>(null);
 
   // جلب الفاتورة
   const { data: invoiceData, isLoading } = useQuery({
     queryKey: ['invoice', id],
     queryFn: () => invoiceService.getInvoice(Number(id)),
     enabled: !!id,
+  });
+
+  // جلب بيانات المكتب/الشركة
+  useQuery({
+    queryKey: ['tenant-info'],
+    queryFn: async () => {
+      const response = await fetch('/api/tenant', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json',
+        },
+      });
+      const data = await response.json();
+      if (data.success && data.data?.tenant) {
+        const tenant = data.data.tenant;
+        // جلب معلومات البنك من settings إذا كانت متاحة
+        const settings = tenant.settings || {};
+        setFirmInfo({
+          name: tenant.name || '',
+          cr: tenant.commercial_registration || tenant.tax_number || '',
+          license: settings.license_number || tenant.commercial_registration || '',
+          phone: tenant.phone || '',
+          email: tenant.email || '',
+          address: tenant.address ? `${tenant.address}${tenant.city ? ', ' + tenant.city : ''}${tenant.country ? ', ' + tenant.country : ''}` : '',
+          iban: settings.iban || '',
+          bank: settings.bank_name || '',
+        });
+      }
+      return data;
+    },
   });
 
   const invoice = invoiceData?.data;
@@ -519,6 +562,7 @@ const InvoiceDetail: React.FC = () => {
         <InvoiceView
           invoice={invoice}
           onClose={() => setShowInvoiceView(false)}
+          firmInfo={firmInfo || undefined}
         />
       )}
 
