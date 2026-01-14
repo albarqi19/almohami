@@ -114,6 +114,8 @@ const Settings: React.FC = () => {
   const [subscribing, setSubscribing] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly');
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [plansData, setPlansData] = useState<any>(null);
+  const [loadingPlans, setLoadingPlans] = useState(false);
 
   // Invoices State
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -252,6 +254,24 @@ const Settings: React.FC = () => {
       }
     };
     loadInvoices();
+  }, []);
+
+  // Load Plans Pricing
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        setLoadingPlans(true);
+        const response: any = await apiClient.get('/subscription/plans');
+        if (response.success && response.data) {
+          setPlansData(response.data);
+        }
+      } catch (error) {
+        console.error('Error loading plans:', error);
+      } finally {
+        setLoadingPlans(false);
+      }
+    };
+    loadPlans();
   }, []);
 
   // Handle Online Subscription Payment
@@ -1399,7 +1419,13 @@ const Settings: React.FC = () => {
                       <div className="settings-subscription-card__content">
                         <div className="settings-subscription-card__plan">الباقة الحالية</div>
                         <div className="settings-subscription-card__price">
-                          {subscription?.plan === 'yearly' ? '2990 ر.س / سنوياً' : '299 ر.س / شهرياً'}
+                          {plansData ? (
+                            subscription?.plan === 'yearly'
+                              ? `${plansData.plans.yearly.price.toLocaleString('ar-SA')} ر.س / سنوياً`
+                              : `${plansData.plans.monthly.price.toLocaleString('ar-SA')} ر.س / شهرياً`
+                          ) : (
+                            subscription?.plan === 'yearly' ? 'سنوي' : 'شهري'
+                          )}
                         </div>
                         <div className="settings-subscription-card__info">
                           <Calendar size={14} />
@@ -1452,76 +1478,93 @@ const Settings: React.FC = () => {
                   {/* خيارات الاشتراك */}
                   <div className="settings-option-card" style={{ marginTop: '16px' }}>
                     <div className="settings-option-card__title">باقات الاشتراك</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
-                      {/* الباقة الشهرية */}
-                      <div
-                        style={{
-                          border: selectedPlan === 'monthly' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                          borderRadius: '12px',
-                          padding: '20px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          background: selectedPlan === 'monthly' ? 'var(--color-primary-light)' : 'var(--color-bg-secondary)'
-                        }}
-                        onClick={() => setSelectedPlan('monthly')}
-                      >
-                        <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>الباقة الشهرية</div>
-                        <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-primary)' }}>
-                          299 <span style={{ fontSize: '14px', fontWeight: 400 }}>ر.س/شهر</span>
-                        </div>
-                        <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '8px' }}>
-                          مرونة في الإلغاء والتجديد
-                        </div>
+                    {loadingPlans ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '20px', justifyContent: 'center' }}>
+                        <Loader2 className="animate-spin" size={20} />
+                        <span>جاري تحميل الباقات...</span>
                       </div>
+                    ) : plansData ? (
+                      <>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
+                          {/* الباقة الشهرية */}
+                          <div
+                            style={{
+                              border: selectedPlan === 'monthly' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                              borderRadius: '12px',
+                              padding: '20px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              background: selectedPlan === 'monthly' ? 'var(--color-primary-light)' : 'var(--color-bg-secondary)'
+                            }}
+                            onClick={() => setSelectedPlan('monthly')}
+                          >
+                            <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>الباقة الشهرية</div>
+                            <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-primary)' }}>
+                              {plansData.plans.monthly.price.toLocaleString('ar-SA')} <span style={{ fontSize: '14px', fontWeight: 400 }}>ر.س/شهر</span>
+                            </div>
+                            <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '8px' }}>
+                              مرونة في الإلغاء والتجديد
+                            </div>
+                          </div>
 
-                      {/* الباقة السنوية */}
-                      <div
-                        style={{
-                          border: selectedPlan === 'yearly' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                          borderRadius: '12px',
-                          padding: '20px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          background: selectedPlan === 'yearly' ? 'var(--color-primary-light)' : 'var(--color-bg-secondary)',
-                          position: 'relative'
-                        }}
-                        onClick={() => setSelectedPlan('yearly')}
-                      >
-                        <div style={{
-                          position: 'absolute',
-                          top: '-10px',
-                          right: '10px',
-                          background: 'var(--status-green)',
-                          color: 'white',
-                          padding: '4px 12px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          fontWeight: 600
-                        }}>
-                          وفّر شهرين! 🎉
+                          {/* الباقة السنوية */}
+                          <div
+                            style={{
+                              border: selectedPlan === 'yearly' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                              borderRadius: '12px',
+                              padding: '20px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              background: selectedPlan === 'yearly' ? 'var(--color-primary-light)' : 'var(--color-bg-secondary)',
+                              position: 'relative'
+                            }}
+                            onClick={() => setSelectedPlan('yearly')}
+                          >
+                            {plansData.plans.yearly.savings > 0 && (
+                              <div style={{
+                                position: 'absolute',
+                                top: '-10px',
+                                right: '10px',
+                                background: 'var(--status-green)',
+                                color: 'white',
+                                padding: '4px 12px',
+                                borderRadius: '12px',
+                                fontSize: '12px',
+                                fontWeight: 600
+                              }}>
+                                وفّر {plansData.plans.yearly.savings.toLocaleString('ar-SA')} ر.س!
+                              </div>
+                            )}
+                            <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>الباقة السنوية</div>
+                            <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-primary)' }}>
+                              {plansData.plans.yearly.price.toLocaleString('ar-SA')} <span style={{ fontSize: '14px', fontWeight: 400 }}>ر.س/سنة</span>
+                            </div>
+                            {plansData.plans.yearly.savings > 0 && (
+                              <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '8px' }}>
+                                <s style={{ color: 'var(--status-red)' }}>{(plansData.plans.monthly.price * 12).toLocaleString('ar-SA')} ر.س</s> توفير {plansData.plans.yearly.savings.toLocaleString('ar-SA')} ر.س
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>الباقة السنوية</div>
-                        <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-primary)' }}>
-                          2,990 <span style={{ fontSize: '14px', fontWeight: 400 }}>ر.س/سنة</span>
-                        </div>
-                        <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '8px' }}>
-                          <s style={{ color: 'var(--status-red)' }}>3,588 ر.س</s> توفير 598 ر.س
-                        </div>
+
+                        <button
+                          className="settings-btn settings-btn--primary"
+                          style={{ width: '100%', marginTop: '16px', padding: '14px' }}
+                          onClick={() => handleOnlineSubscribe(selectedPlan)}
+                          disabled={subscribing}
+                        >
+                          {subscribing ? (
+                            <><Loader2 className="animate-spin" size={18} /> جاري إنشاء رابط الدفع...</>
+                          ) : (
+                            <>الدفع الإلكتروني - {plansData.plans[selectedPlan].price.toLocaleString('ar-SA')} ر.س</>
+                          )}
+                        </button>
+                      </>
+                    ) : (
+                      <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+                        فشل في تحميل الباقات
                       </div>
-                    </div>
-
-                    <button
-                      className="settings-btn settings-btn--primary"
-                      style={{ width: '100%', marginTop: '16px', padding: '14px' }}
-                      onClick={() => handleOnlineSubscribe(selectedPlan)}
-                      disabled={subscribing}
-                    >
-                      {subscribing ? (
-                        <><Loader2 className="animate-spin" size={18} /> جاري إنشاء رابط الدفع...</>
-                      ) : (
-                        <>💳 الدفع الإلكتروني - {selectedPlan === 'yearly' ? '2,990' : '299'} ر.س</>
-                      )}
-                    </button>
+                    )}
                     <div style={{
                       display: 'flex',
                       justifyContent: 'center',
@@ -1530,8 +1573,8 @@ const Settings: React.FC = () => {
                       fontSize: '12px',
                       color: 'var(--color-text-secondary)'
                     }}>
-                      <span>🔒 دفع آمن</span>
-                      <span>💳 Visa / Mastercard / مدى</span>
+                      <span>دفع آمن</span>
+                      <span>Visa / Mastercard / مدى</span>
                       <span>🍎 Apple Pay</span>
                     </div>
                   </div>

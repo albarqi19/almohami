@@ -1,11 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Download, Calendar, CreditCard, Loader2, CheckCircle } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import '../styles/account-status.css';
 
+interface PlanData {
+    name: string;
+    price: number;
+    price_with_tax: number;
+    period: string;
+    period_label: string;
+    savings?: number;
+}
+
+interface PlansResponse {
+    plans: {
+        monthly: PlanData;
+        yearly: PlanData;
+    };
+    currency: string;
+    tax_rate: number;
+    tax_label: string;
+}
+
 const AccountStatus: React.FC = () => {
     const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
     const [subscribing, setSubscribing] = useState(false);
+    const [plansData, setPlansData] = useState<PlansResponse | null>(null);
+    const [loadingPlans, setLoadingPlans] = useState(true);
+
+    useEffect(() => {
+        const fetchPlans = async () => {
+            try {
+                const response: any = await apiClient.get('/subscription/plans');
+                if (response.success) {
+                    setPlansData(response.data);
+                }
+            } catch (error) {
+                console.error('Error fetching plans:', error);
+            } finally {
+                setLoadingPlans(false);
+            }
+        };
+        fetchPlans();
+    }, []);
 
     const handleOnlineSubscribe = async () => {
         try {
@@ -28,6 +65,16 @@ const AccountStatus: React.FC = () => {
         } finally {
             setSubscribing(false);
         }
+    };
+
+    const formatPrice = (price: number) => {
+        return price.toLocaleString('ar-SA');
+    };
+
+    const getSelectedPrice = () => {
+        if (!plansData) return '---';
+        const plan = plansData.plans[selectedPlan];
+        return formatPrice(plan.price);
     };
 
     return (
@@ -69,41 +116,50 @@ const AccountStatus: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="account-status-pricing">
-                        <div
-                            className={`account-status-pricing__option ${selectedPlan === 'monthly' ? 'account-status-pricing__option--selected' : ''}`}
-                            onClick={() => setSelectedPlan('monthly')}
-                            style={{ cursor: 'pointer' }}
-                        >
-                            {selectedPlan === 'monthly' && (
-                                <CheckCircle size={20} style={{ position: 'absolute', top: '8px', left: '8px', color: 'var(--color-primary)' }} />
-                            )}
-                            <div className="account-status-pricing__label">شهري</div>
-                            <div className="account-status-pricing__price">299 ر.س</div>
-                            <div className="account-status-pricing__period">/شهر</div>
+                    {loadingPlans ? (
+                        <div style={{ textAlign: 'center', padding: '20px' }}>
+                            <Loader2 size={24} className="animate-spin" />
+                            <p>جاري تحميل الباقات...</p>
                         </div>
-                        <div className="account-status-pricing__divider">أو</div>
-                        <div
-                            className={`account-status-pricing__option account-status-pricing__option--recommended ${selectedPlan === 'yearly' ? 'account-status-pricing__option--selected' : ''}`}
-                            onClick={() => setSelectedPlan('yearly')}
-                            style={{ cursor: 'pointer' }}
-                        >
-                            {selectedPlan === 'yearly' && (
-                                <CheckCircle size={20} style={{ position: 'absolute', top: '8px', left: '8px', color: 'var(--color-primary)' }} />
-                            )}
-                            <div className="account-status-pricing__badge">موصى به</div>
-                            <div className="account-status-pricing__label">سنوي</div>
-                            <div className="account-status-pricing__price">2,990 ر.س</div>
-                            <div className="account-status-pricing__period">/سنة</div>
-                            <div className="account-status-pricing__savings">وفر شهرين!</div>
+                    ) : plansData && (
+                        <div className="account-status-pricing">
+                            <div
+                                className={`account-status-pricing__option ${selectedPlan === 'monthly' ? 'account-status-pricing__option--selected' : ''}`}
+                                onClick={() => setSelectedPlan('monthly')}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                {selectedPlan === 'monthly' && (
+                                    <CheckCircle size={20} style={{ position: 'absolute', top: '8px', left: '8px', color: 'var(--color-primary)' }} />
+                                )}
+                                <div className="account-status-pricing__label">{plansData.plans.monthly.name}</div>
+                                <div className="account-status-pricing__price">{formatPrice(plansData.plans.monthly.price)} ر.س</div>
+                                <div className="account-status-pricing__period">{plansData.plans.monthly.period_label}</div>
+                            </div>
+                            <div className="account-status-pricing__divider">أو</div>
+                            <div
+                                className={`account-status-pricing__option account-status-pricing__option--recommended ${selectedPlan === 'yearly' ? 'account-status-pricing__option--selected' : ''}`}
+                                onClick={() => setSelectedPlan('yearly')}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                {selectedPlan === 'yearly' && (
+                                    <CheckCircle size={20} style={{ position: 'absolute', top: '8px', left: '8px', color: 'var(--color-primary)' }} />
+                                )}
+                                <div className="account-status-pricing__badge">موصى به</div>
+                                <div className="account-status-pricing__label">{plansData.plans.yearly.name}</div>
+                                <div className="account-status-pricing__price">{formatPrice(plansData.plans.yearly.price)} ر.س</div>
+                                <div className="account-status-pricing__period">{plansData.plans.yearly.period_label}</div>
+                                {plansData.plans.yearly.savings && plansData.plans.yearly.savings > 0 && (
+                                    <div className="account-status-pricing__savings">وفر {formatPrice(plansData.plans.yearly.savings)} ر.س!</div>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     <div className="account-status-actions">
                         <button
                             className="account-status-btn account-status-btn--primary"
                             onClick={handleOnlineSubscribe}
-                            disabled={subscribing}
+                            disabled={subscribing || loadingPlans}
                             style={{ minWidth: '200px' }}
                         >
                             {subscribing ? (
@@ -114,7 +170,7 @@ const AccountStatus: React.FC = () => {
                             ) : (
                                 <>
                                     <CreditCard size={18} />
-                                    💳 الدفع الإلكتروني - {selectedPlan === 'yearly' ? '2,990' : '299'} ر.س
+                                    الدفع الإلكتروني - {getSelectedPrice()} ر.س
                                 </>
                             )}
                         </button>
@@ -132,9 +188,9 @@ const AccountStatus: React.FC = () => {
                         fontSize: '12px',
                         color: 'var(--color-text-secondary)'
                     }}>
-                        <span>🔒 دفع آمن</span>
-                        <span>💳 Visa / Mastercard / مدى</span>
-                        <span>🍎 Apple Pay</span>
+                        <span>دفع آمن</span>
+                        <span>Visa / Mastercard / مدى</span>
+                        <span>Apple Pay</span>
                     </div>
 
                     <p className="account-status-support">
