@@ -1,0 +1,174 @@
+/* billing-stats-card.css - أنماط بطاقات إحصائيات الفوترة */
+
+/* === الشبكة === */
+.billing-stats-grid {
+  display: grid;
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .billing-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .billing-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* === البطاقة الرئيسية === */
+.billing-stats-card {
+  background-color: var(--dashboard-card, var(--color-surface));
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--shadow-xs, 0 1px 3px rgba(0, 0, 0, 0.1));
+  border: 1px solid var(--color-border);
+  direction: rtl;
+  transition: all 0.2s ease;
+}
+
+body.dark .billing-stats-card {
+  background-color: var(--dashboard-card, #1f2937);
+  border-color: var(--color-border, #374151);
+}
+
+.billing-stats-card.clickable {
+  cursor: pointer;
+}
+
+.billing-stats-card.clickable:hover {
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
+  border-color: var(--color-primary);
+}
+
+/* === الهيدر === */
+.billing-stats-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+/* === الأيقونة === */
+.billing-stats-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* === مؤشر الاتجاه === */
+.billing-stats-card__trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.billing-stats-card__trend--positive {
+  background-color: var(--status-green-light, #ecfdf5);
+  color: var(--status-green, #059669);
+}
+
+body.dark .billing-stats-card__trend--positive {
+  background-color: rgba(5, 150, 105, 0.15);
+}
+
+.billing-stats-card__trend--negative {
+  background-color: var(--status-red-light, #fef2f2);
+  color: var(--status-red, #dc2626);
+}
+
+body.dark .billing-stats-card__trend--negative {
+  background-color: rgba(220, 38, 38, 0.15);
+}
+
+.billing-stats-card__trend--neutral {
+  background-color: var(--quiet-gray-100, #f3f4f6);
+  color: var(--color-text-secondary, #6b7280);
+}
+
+body.dark .billing-stats-card__trend--neutral {
+  background-color: var(--quiet-gray-200, #374151);
+}
+
+/* === العنوان === */
+.billing-stats-card__title {
+  font-size: 14px;
+  color: var(--color-text-secondary, #6b7280);
+  margin-bottom: 4px;
+}
+
+/* === القيمة === */
+.billing-stats-card__value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-heading, #111827);
+  line-height: 1.2;
+}
+
+body.dark .billing-stats-card__value {
+  color: #f9fafb;
+}
+
+/* === النص الفرعي === */
+.billing-stats-card__subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary, #9ca3af);
+  margin-top: 4px;
+}
+
+/* === وصف الاتجاه === */
+.billing-stats-card__trend-label {
+  font-size: 12px;
+  color: var(--color-text-secondary, #9ca3af);
+  margin-top: 8px;
+}
+
+/* === البطاقة الصغيرة === */
+.mini-stats-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: var(--quiet-gray-50, #f9fafb);
+  border-radius: 8px;
+  direction: rtl;
+}
+
+body.dark .mini-stats-card {
+  background-color: var(--quiet-gray-100, #374151);
+}
+
+.mini-stats-card__indicator {
+  width: 4px;
+  height: 32px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.mini-stats-card__content {
+  flex: 1;
+}
+
+.mini-stats-card__label {
+  font-size: 12px;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.mini-stats-card__value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-heading, #111827);
+}
+
+body.dark .mini-stats-card__value {
+  color: #f9fafb;
+}

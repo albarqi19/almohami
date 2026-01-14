@@ -37,6 +37,34 @@ export const UserRole = {
 
 export type UserRole = typeof UserRole[keyof typeof UserRole];
 
+// Case Billing Data - البيانات المالية للقضية
+export interface CaseBilling {
+  total_contract_value: number;
+  total_invoiced: number;
+  total_paid: number;
+  total_remaining: number;
+  collection_percentage: number;
+  invoices_count: number;
+  invoices_by_status: {
+    draft: number;
+    pending: number;
+    partial: number;
+    paid: number;
+    overdue: number;
+  };
+  overdue_amount: number;
+  overdue_invoices_count: number;
+  contracts_count: number;
+  active_contracts_count: number;
+  recent_payments: {
+    id: number;
+    amount: number;
+    payment_date: string;
+    payment_method: string;
+    invoice_number: string;
+  }[];
+}
+
 // Case management
 export interface Case {
   id: string;
@@ -89,6 +117,10 @@ export interface Case {
   // Case demands and proofs
   case_demands?: string;
   case_proofs?: string;
+  // Billing data - البيانات المالية
+  billing?: CaseBilling;
+  contracts?: any[];
+  case_invoices?: any[];
 }
 
 // Case Party - طرف القضية

@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ChevronRight,
@@ -17,7 +17,9 @@ import {
   Paperclip,
   CheckSquare,
   List,
-  Activity
+  Activity,
+  Briefcase,
+  ExternalLink
 } from 'lucide-react';
 import { TaskService } from '../services/taskService';
 import { UserService } from '../services/UserService';
@@ -436,9 +438,32 @@ const TaskDetail: React.FC = () => {
             </div>
             <div className="sidebar-row">
               <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>القضية المرتبطة</div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--law-navy)', cursor: 'pointer', textDecoration: 'underline' }}>
-                {task.caseId}
-              </div>
+              {(task as any).case ? (
+                <Link
+                  to={`/cases/${(task as any).case.id}`}
+                  className="linked-case-card"
+                >
+                  <div className="linked-case-icon">
+                    <Briefcase size={16} />
+                  </div>
+                  <div className="linked-case-info">
+                    <div className="linked-case-number">{(task as any).case.file_number}</div>
+                    <div className="linked-case-title">{(task as any).case.title}</div>
+                  </div>
+                  <ExternalLink size={14} className="linked-case-arrow" />
+                </Link>
+              ) : task.caseId ? (
+                <Link
+                  to={`/cases/${task.caseId}`}
+                  style={{ fontSize: 13, fontWeight: 500, color: 'var(--law-navy)', textDecoration: 'underline' }}
+                >
+                  {task.caseId}
+                </Link>
+              ) : (
+                <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                  غير مرتبطة بقضية
+                </div>
+              )}
             </div>
             <div className="sidebar-row">
               <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>الوسوم (Tags)</div>

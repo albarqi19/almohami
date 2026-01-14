@@ -19,6 +19,10 @@ import {
   Mail,
   MapPin,
   IdCard,
+  Scale,
+  Percent,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import { contractTemplateService } from '../../services/contractTemplateService';
 import { contractService } from '../../services/contractService';
@@ -32,6 +36,7 @@ import type {
   ContractTemplate,
   CreatePaymentTermData,
   ScopeType,
+  ContractType,
 } from '../../types/contracts';
 import '../../styles/contract-builder.css';
 
@@ -87,6 +92,63 @@ const STEPS = [
   { id: 4, title: 'المعاينة والحفظ', icon: Eye },
 ];
 
+// دوال مساعدة لأنواع القوالب
+const getTypeIcon = (type: ContractType) => {
+  switch (type) {
+    case 'representation':
+      return <Scale size={16} />;
+    case 'consultation':
+      return <Briefcase size={16} />;
+    case 'contingency':
+      return <Percent size={16} />;
+    default:
+      return <FileText size={16} />;
+  }
+};
+
+const getTypeColor = (type: ContractType) => {
+  switch (type) {
+    case 'representation':
+      return { bg: '#dbeafe', text: '#1d4ed8' };
+    case 'consultation':
+      return { bg: '#fef3c7', text: '#d97706' };
+    case 'contingency':
+      return { bg: '#d1fae5', text: '#059669' };
+    case 'retainer':
+      return { bg: '#ede9fe', text: '#7c3aed' };
+    default:
+      return { bg: '#f3f4f6', text: '#6b7280' };
+  }
+};
+
+const getTypeName = (type: ContractType) => {
+  switch (type) {
+    case 'representation':
+      return 'تمثيل قانوني';
+    case 'consultation':
+      return 'استشارة';
+    case 'retainer':
+      return 'اشتراك شهري';
+    case 'contingency':
+      return 'نسبة من الحكم';
+    default:
+      return 'أخرى';
+  }
+};
+
+const getScopeName = (scope: ScopeType) => {
+  switch (scope) {
+    case 'plaintiff':
+      return 'مدعي';
+    case 'defendant':
+      return 'مدعى عليه';
+    case 'both':
+      return 'كلاهما';
+    default:
+      return scope;
+  }
+};
+
 const ContractBuilder: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -112,6 +174,10 @@ const ContractBuilder: React.FC = () => {
   // البحث
   const [clientSearch, setClientSearch] = useState('');
   const [caseSearch, setCaseSearch] = useState('');
+
+  // هل تم التحميل من صفحة القضية؟
+  const [isFromCase, setIsFromCase] = useState(false);
+  const [isLoadingCaseData, setIsLoadingCaseData] = useState(false);
 
   // جلب العملاء
   const { data: clientsData } = useQuery({
@@ -154,6 +220,51 @@ const ContractBuilder: React.FC = () => {
       });
     }
   }, [searchParams, currentStep]);
+
+  // تحميل القضية والعميل من URL (عند الضغط على "إنشاء عقد" من صفحة القضية)
+  useEffect(() => {
+    const caseId = searchParams.get('case_id');
+    if (caseId && !selectedCase && !isLoadingCaseData) {
+      setIsLoadingCaseData(true);
+      setIsFromCase(true);
+      // جلب بيانات القضية
+      apiClient.get<{ success: boolean; data: any }>(`/cases/${caseId}`).then((response) => {
+        if (response.success && response.data) {
+          const caseData = response.data;
+          // تعيين القضية
+          setSelectedCase({
+            id: caseData.id,
+            file_number: caseData.file_number,
+            title: caseData.title,
+            court_name: caseData.court,
+            case_number: caseData.file_number,
+          });
+          // تعيين العميل
+          if (caseData.client) {
+            setSelectedClient({
+              id: caseData.client.id,
+              name: caseData.client.name,
+              email: caseData.client.email,
+              phone: caseData.client.phone,
+              national_id: caseData.client.national_id,
+              address: caseData.client.address,
+            });
+          } else if (caseData.client_id) {
+            // جلب بيانات العميل إذا لم تكن موجودة
+            apiClient.get<{ data: Client }>(`/users/${caseData.client_id}`).then((clientRes) => {
+              if (clientRes.data) {
+                setSelectedClient(clientRes.data);
+              }
+            });
+          }
+        }
+        setIsLoadingCaseData(false);
+      }).catch(() => {
+        setIsLoadingCaseData(false);
+        setIsFromCase(false);
+      });
+    }
+  }, [searchParams]);
 
   // اختيار قالب
   const handleSelectTemplate = (template: ContractTemplate) => {
@@ -347,117 +458,167 @@ const ContractBuilder: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <div className="step-section">
-                <h3>
-                  <User size={20} />
-                  اختيار العميل
-                </h3>
-
-                <div className="search-input">
-                  <Search size={18} />
-                  <input
-                    type="text"
-                    placeholder="ابحث عن عميل..."
-                    value={clientSearch}
-                    onChange={(e) => setClientSearch(e.target.value)}
-                  />
-                </div>
-
-                <div className="selection-grid">
-                  {clients.map((client: Client) => (
-                    <div
-                      key={client.id}
-                      className={`selection-card ${selectedClient?.id === client.id ? 'selected' : ''}`}
-                      onClick={() => setSelectedClient(client)}
-                    >
-                      <div className="card-icon">
-                        <User size={24} />
-                      </div>
-                      <div className="card-info">
-                        <h4>{client.name}</h4>
-                        {client.phone && (
-                          <p><Phone size={12} /> {client.phone}</p>
-                        )}
-                        {client.email && (
-                          <p><Mail size={12} /> {client.email}</p>
-                        )}
-                      </div>
-                      {selectedClient?.id === client.id && (
-                        <div className="selected-badge">
-                          <Check size={16} />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* اختيار القضية (اختياري) */}
-              {selectedClient && (
-                <div className="step-section">
-                  <h3>
-                    <Briefcase size={20} />
-                    ربط بقضية (اختياري)
-                  </h3>
-
-                  <div className="search-input">
-                    <Search size={18} />
-                    <input
-                      type="text"
-                      placeholder="ابحث عن قضية..."
-                      value={caseSearch}
-                      onChange={(e) => setCaseSearch(e.target.value)}
-                    />
+              {/* عرض مختصر عند القدوم من صفحة القضية */}
+              {isFromCase && selectedClient && selectedCase ? (
+                <div className="from-case-summary">
+                  <div className="from-case-header">
+                    <Check size={24} className="success-icon" />
+                    <h3>تم تحديد العميل والقضية</h3>
                   </div>
 
-                  <div className="selection-grid">
-                    <div
-                      className={`selection-card ${!selectedCase ? 'selected' : ''}`}
-                      onClick={() => setSelectedCase(null)}
-                    >
-                      <div className="card-info">
-                        <h4>بدون قضية</h4>
-                        <p>عقد مستقل غير مرتبط بقضية</p>
+                  <div className="from-case-details">
+                    <div className="from-case-item">
+                      <div className="from-case-item__icon">
+                        <User size={20} />
+                      </div>
+                      <div className="from-case-item__content">
+                        <span className="from-case-item__label">العميل</span>
+                        <span className="from-case-item__value">{selectedClient.name}</span>
+                        {selectedClient.phone && (
+                          <span className="from-case-item__sub">{selectedClient.phone}</span>
+                        )}
                       </div>
                     </div>
 
-                    {cases.map((caseItem: Case) => (
-                      <div
-                        key={caseItem.id}
-                        className={`selection-card ${selectedCase?.id === caseItem.id ? 'selected' : ''}`}
-                        onClick={() => setSelectedCase(caseItem)}
-                      >
-                        <div className="card-icon">
-                          <Briefcase size={24} />
-                        </div>
-                        <div className="card-info">
-                          <h4>{caseItem.file_number}</h4>
-                          <p>{caseItem.title}</p>
-                          {caseItem.court_name && (
-                            <p className="court">{caseItem.court_name}</p>
+                    <div className="from-case-item">
+                      <div className="from-case-item__icon">
+                        <Briefcase size={20} />
+                      </div>
+                      <div className="from-case-item__content">
+                        <span className="from-case-item__label">القضية</span>
+                        <span className="from-case-item__value">{selectedCase.file_number}</span>
+                        <span className="from-case-item__sub">{selectedCase.title}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    className="change-selection-btn"
+                    onClick={() => setIsFromCase(false)}
+                  >
+                    تغيير الاختيار
+                  </button>
+                </div>
+              ) : isLoadingCaseData ? (
+                <div className="loading-case-data">
+                  <Loader2 size={32} className="spinner" />
+                  <p>جاري تحميل بيانات القضية...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="step-section">
+                    <h3>
+                      <User size={20} />
+                      اختيار العميل
+                    </h3>
+
+                    <div className="search-input">
+                      <Search size={18} />
+                      <input
+                        type="text"
+                        placeholder="ابحث عن عميل..."
+                        value={clientSearch}
+                        onChange={(e) => setClientSearch(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="selection-grid">
+                      {clients.map((client: Client) => (
+                        <div
+                          key={client.id}
+                          className={`selection-card ${selectedClient?.id === client.id ? 'selected' : ''}`}
+                          onClick={() => setSelectedClient(client)}
+                        >
+                          <div className="card-icon">
+                            <User size={24} />
+                          </div>
+                          <div className="card-info">
+                            <h4>{client.name}</h4>
+                            {client.phone && (
+                              <p><Phone size={12} /> {client.phone}</p>
+                            )}
+                            {client.email && (
+                              <p><Mail size={12} /> {client.email}</p>
+                            )}
+                          </div>
+                          {selectedClient?.id === client.id && (
+                            <div className="selected-badge">
+                              <Check size={16} />
+                            </div>
                           )}
                         </div>
-                        {selectedCase?.id === caseItem.id && (
-                          <div className="selected-badge">
-                            <Check size={16} />
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
 
-              {/* ملخص العميل المختار */}
-              {selectedClient && (
-                <div className="selection-summary">
-                  <h4>العميل المختار:</h4>
-                  <div className="summary-content">
-                    <p><strong>{selectedClient.name}</strong></p>
-                    {selectedClient.national_id && <p>الهوية: {selectedClient.national_id}</p>}
-                    {selectedCase && <p>القضية: {selectedCase.file_number}</p>}
-                  </div>
-                </div>
+                  {/* اختيار القضية (اختياري) */}
+                  {selectedClient && (
+                    <div className="step-section">
+                      <h3>
+                        <Briefcase size={20} />
+                        ربط بقضية (اختياري)
+                      </h3>
+
+                      <div className="search-input">
+                        <Search size={18} />
+                        <input
+                          type="text"
+                          placeholder="ابحث عن قضية..."
+                          value={caseSearch}
+                          onChange={(e) => setCaseSearch(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="selection-grid">
+                        <div
+                          className={`selection-card ${!selectedCase ? 'selected' : ''}`}
+                          onClick={() => setSelectedCase(null)}
+                        >
+                          <div className="card-info">
+                            <h4>بدون قضية</h4>
+                            <p>عقد مستقل غير مرتبط بقضية</p>
+                          </div>
+                        </div>
+
+                        {cases.map((caseItem: Case) => (
+                          <div
+                            key={caseItem.id}
+                            className={`selection-card ${selectedCase?.id === caseItem.id ? 'selected' : ''}`}
+                            onClick={() => setSelectedCase(caseItem)}
+                          >
+                            <div className="card-icon">
+                              <Briefcase size={24} />
+                            </div>
+                            <div className="card-info">
+                              <h4>{caseItem.file_number}</h4>
+                              <p>{caseItem.title}</p>
+                              {caseItem.court_name && (
+                                <p className="court">{caseItem.court_name}</p>
+                              )}
+                            </div>
+                            {selectedCase?.id === caseItem.id && (
+                              <div className="selected-badge">
+                                <Check size={16} />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ملخص العميل المختار */}
+                  {selectedClient && (
+                    <div className="selection-summary">
+                      <h4>العميل المختار:</h4>
+                      <div className="summary-content">
+                        <p><strong>{selectedClient.name}</strong></p>
+                        {selectedClient.national_id && <p>الهوية: {selectedClient.national_id}</p>}
+                        {selectedCase && <p>القضية: {selectedCase.file_number}</p>}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </motion.div>
           )}
@@ -478,27 +639,88 @@ const ContractBuilder: React.FC = () => {
                     اختيار قالب العقد
                   </h3>
                   <div className="templates-grid">
-                    {templates.map((template: ContractTemplate) => (
-                      <div
-                        key={template.id}
-                        className="template-card"
-                        onClick={() => handleSelectTemplate(template)}
-                      >
-                        <div className="template-icon">
-                          <FileText size={32} />
-                        </div>
-                        <h4>{template.name}</h4>
-                        {template.description && (
-                          <p>{template.description}</p>
-                        )}
-                        <div className="template-meta">
-                          <span>الضريبة: {template.default_vat_rate}%</span>
-                          {template.default_payment_terms && (
-                            <span>{template.default_payment_terms.length} شرط دفع</span>
+                    {templates.map((template: ContractTemplate) => {
+                      const typeColor = getTypeColor(template.type);
+                      return (
+                        <motion.div
+                          key={template.id}
+                          className="template-card-enhanced"
+                          onClick={() => handleSelectTemplate(template)}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          whileHover={{ y: -4, boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)' }}
+                        >
+                          {/* شارة القالب الافتراضي */}
+                          {template.is_default && (
+                            <div className="default-badge">افتراضي</div>
                           )}
-                        </div>
-                      </div>
-                    ))}
+
+                          {/* محتوى البطاقة */}
+                          <div className="card-content">
+                            {/* الهيدر مع النوع والحالة */}
+                            <div className="card-header">
+                              <div
+                                className="type-badge"
+                                style={{ backgroundColor: typeColor.bg, color: typeColor.text }}
+                              >
+                                {getTypeIcon(template.type)}
+                                <span>{getTypeName(template.type)}</span>
+                              </div>
+                              <div className={`status-dot ${template.is_active ? 'active' : 'inactive'}`}>
+                                {template.is_active ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                              </div>
+                            </div>
+
+                            {/* اسم القالب */}
+                            <h3 className="template-name">{template.name}</h3>
+                            {template.name_ar && template.name_ar !== template.name && (
+                              <p className="template-name-ar">{template.name_ar}</p>
+                            )}
+
+                            {/* الوصف */}
+                            {template.description && (
+                              <p className="template-description">{template.description}</p>
+                            )}
+
+                            {/* المعلومات */}
+                            <div className="template-info">
+                              <div className="info-item">
+                                <span className="label">النطاق:</span>
+                                <span className="value">{getScopeName(template.scope_type)}</span>
+                              </div>
+                              <div className="info-item">
+                                <span className="label">الضريبة:</span>
+                                <span className="value">{template.default_vat_rate}%</span>
+                              </div>
+                              {template.usage_count !== undefined && template.usage_count > 0 && (
+                                <div className="info-item">
+                                  <span className="label">الاستخدام:</span>
+                                  <span className="value">{template.usage_count} عقد</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* شروط الدفع الافتراضية */}
+                            {template.default_payment_terms && template.default_payment_terms.length > 0 && (
+                              <div className="payment-terms-preview">
+                                <span className="terms-label">شروط الدفع:</span>
+                                <span className="terms-count">
+                                  {template.default_payment_terms.length} شرط
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* زر الاختيار */}
+                          <div className="card-actions">
+                            <button className="action-btn select-btn">
+                              <Check size={16} />
+                              اختيار هذا القالب
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (

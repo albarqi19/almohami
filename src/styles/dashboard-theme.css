@@ -24,6 +24,8 @@
     --status-orange-light: rgba(217, 119, 6, 0.1);
     --status-red: #DC2626;
     --status-red-light: rgba(220, 38, 38, 0.1);
+    --status-purple: #7c3aed;
+    --status-purple-light: rgba(124, 58, 237, 0.1);
 
     /* Quiet grays */
     --quiet-gray-50: #FAFBFC;
@@ -122,6 +124,8 @@ body.classic {
     --status-orange-light: rgba(193, 112, 0, 0.12);
     --status-red: #9B2C2C;
     --status-red-light: rgba(155, 44, 44, 0.12);
+    --status-purple: #8b5cf6;
+    --status-purple-light: rgba(139, 92, 246, 0.12);
 }
 
 /* === Dashboard Layout - Full Width === */

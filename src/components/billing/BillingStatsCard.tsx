@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import '../../styles/billing-stats-card.css';
 
 interface BillingStatsCardProps {
   title: string;
@@ -24,8 +25,8 @@ const BillingStatsCard: React.FC<BillingStatsCardProps> = ({
   value,
   subtitle,
   icon: Icon,
-  iconColor = '#3b82f6',
-  iconBgColor = '#eff6ff',
+  iconColor = 'var(--color-primary)',
+  iconBgColor = 'var(--color-primary-soft)',
   trend,
   format = 'number',
   onClick,
@@ -58,19 +59,16 @@ const BillingStatsCard: React.FC<BillingStatsCardProps> = ({
     const isGood = trend.isPositiveGood !== false ? isPositive : !isPositive;
 
     let TrendIcon = Minus;
-    let trendColor = '#6b7280';
-    let trendBgColor = '#f3f4f6';
+    let trendClass = 'neutral';
 
     if (!isNeutral) {
       TrendIcon = isPositive ? TrendingUp : TrendingDown;
-      trendColor = isGood ? '#059669' : '#dc2626';
-      trendBgColor = isGood ? '#ecfdf5' : '#fef2f2';
+      trendClass = isGood ? 'positive' : 'negative';
     }
 
     return {
       Icon: TrendIcon,
-      color: trendColor,
-      bgColor: trendBgColor,
+      className: trendClass,
       text: isNeutral ? '0%' : `${isPositive ? '+' : ''}${trend.value.toFixed(1)}%`,
     };
   };
@@ -83,54 +81,23 @@ const BillingStatsCard: React.FC<BillingStatsCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       whileHover={onClick ? { scale: 1.02 } : undefined}
       onClick={onClick}
-      style={{
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        padding: '20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        border: '1px solid #e5e7eb',
-        cursor: onClick ? 'pointer' : 'default',
-        direction: 'rtl',
-      }}
+      className={`billing-stats-card ${onClick ? 'clickable' : ''}`}
     >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: '16px',
-        }}
-      >
+      <div className="billing-stats-card__header">
         {/* الأيقونة */}
         <div
+          className="billing-stats-card__icon"
           style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
             backgroundColor: iconBgColor,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            color: iconColor,
           }}
         >
-          <Icon size={24} color={iconColor} />
+          <Icon size={24} />
         </div>
 
         {/* مؤشر الاتجاه */}
         {trendInfo && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '4px 8px',
-              borderRadius: '20px',
-              backgroundColor: trendInfo.bgColor,
-              fontSize: '12px',
-              fontWeight: '600',
-              color: trendInfo.color,
-            }}
-          >
+          <div className={`billing-stats-card__trend billing-stats-card__trend--${trendInfo.className}`}>
             <trendInfo.Icon size={14} />
             <span>{trendInfo.text}</span>
           </div>
@@ -138,52 +105,19 @@ const BillingStatsCard: React.FC<BillingStatsCardProps> = ({
       </div>
 
       {/* العنوان */}
-      <div
-        style={{
-          fontSize: '14px',
-          color: '#6b7280',
-          marginBottom: '4px',
-        }}
-      >
-        {title}
-      </div>
+      <div className="billing-stats-card__title">{title}</div>
 
       {/* القيمة */}
-      <div
-        style={{
-          fontSize: '28px',
-          fontWeight: '700',
-          color: '#111827',
-          lineHeight: '1.2',
-        }}
-      >
-        {formatValue(value)}
-      </div>
+      <div className="billing-stats-card__value">{formatValue(value)}</div>
 
       {/* النص الفرعي */}
       {subtitle && (
-        <div
-          style={{
-            fontSize: '13px',
-            color: '#9ca3af',
-            marginTop: '4px',
-          }}
-        >
-          {subtitle}
-        </div>
+        <div className="billing-stats-card__subtitle">{subtitle}</div>
       )}
 
       {/* وصف الاتجاه */}
       {trend?.label && (
-        <div
-          style={{
-            fontSize: '12px',
-            color: '#9ca3af',
-            marginTop: '8px',
-          }}
-        >
-          {trend.label}
-        </div>
+        <div className="billing-stats-card__trend-label">{trend.label}</div>
       )}
     </motion.div>
   );
@@ -201,10 +135,9 @@ export const BillingStatsGrid: React.FC<BillingStatsGridProps> = ({
 }) => {
   return (
     <div
+      className="billing-stats-grid"
       style={{
-        display: 'grid',
         gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gap: '16px',
       }}
     >
       {children}
@@ -222,33 +155,17 @@ interface MiniStatsCardProps {
 export const MiniStatsCard: React.FC<MiniStatsCardProps> = ({
   label,
   value,
-  color = '#3b82f6',
+  color = 'var(--color-primary)',
 }) => {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '12px',
-        backgroundColor: '#f9fafb',
-        borderRadius: '8px',
-        direction: 'rtl',
-      }}
-    >
+    <div className="mini-stats-card">
       <div
-        style={{
-          width: '4px',
-          height: '32px',
-          backgroundColor: color,
-          borderRadius: '2px',
-        }}
+        className="mini-stats-card__indicator"
+        style={{ backgroundColor: color }}
       />
-      <div>
-        <div style={{ fontSize: '12px', color: '#6b7280' }}>{label}</div>
-        <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>
-          {value}
-        </div>
+      <div className="mini-stats-card__content">
+        <div className="mini-stats-card__label">{label}</div>
+        <div className="mini-stats-card__value">{value}</div>
       </div>
     </div>
   );

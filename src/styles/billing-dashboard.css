@@ -626,6 +626,27 @@
   color: var(--color-error);
 }
 
+/* === Icon Colors (Theme Aware) === */
+.icon-success {
+  color: var(--status-green);
+}
+
+.icon-danger {
+  color: var(--status-red);
+}
+
+.icon-warning {
+  color: var(--status-orange);
+}
+
+.icon-primary {
+  color: var(--status-blue);
+}
+
+.icon-muted {
+  color: var(--color-text-secondary);
+}
+
 /* === حالة التحميل === */
 .loading-page {
   display: flex;

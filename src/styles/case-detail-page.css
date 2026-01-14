@@ -1069,3 +1069,183 @@ body.dark .case-fee-item {
     color: white;
     border-style: solid;
 }
+
+/* === Overdue Fee Item === */
+.case-fee-item--overdue {
+    background: var(--status-red-light);
+}
+
+.case-fee-item--overdue .case-fee-item__value {
+    color: var(--status-red);
+}
+
+/* === Progress Label === */
+.case-progress__label {
+    text-align: center;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    margin-top: 6px;
+    font-weight: 500;
+}
+
+/* === Billing Stats === */
+.case-billing-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border);
+}
+
+.case-billing-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--quiet-gray-100);
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+}
+
+body.dark .case-billing-stat {
+    background: var(--quiet-gray-200);
+}
+
+.case-billing-stat:hover {
+    background: var(--law-navy-light);
+    border-color: var(--law-navy);
+}
+
+.case-billing-stat--warning {
+    background: var(--status-red-light);
+}
+
+.case-billing-stat--warning:hover {
+    background: var(--status-red-light);
+    border-color: var(--status-red);
+}
+
+.case-billing-stat__icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.case-billing-stat__icon--blue {
+    background: var(--status-blue-light);
+    color: var(--status-blue);
+}
+
+.case-billing-stat__icon--red {
+    background: var(--status-red-light);
+    color: var(--status-red);
+}
+
+.case-billing-stat__text {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+/* === Recent Payments === */
+.case-recent-payments {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border);
+}
+
+.case-recent-payments__title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 8px;
+}
+
+.case-recent-payment {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: var(--quiet-gray-50);
+    border-radius: 6px;
+    margin-bottom: 6px;
+}
+
+body.dark .case-recent-payment {
+    background: var(--quiet-gray-100);
+}
+
+.case-recent-payment:last-child {
+    margin-bottom: 0;
+}
+
+.case-recent-payment__info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.case-recent-payment__amount {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--status-green);
+}
+
+.case-recent-payment__date {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
+.case-recent-payment__method {
+    font-size: 11px;
+    padding: 3px 8px;
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    color: var(--color-text-secondary);
+}
+
+/* === No Billing Message === */
+.case-no-billing {
+    text-align: center;
+    padding: 16px;
+    background: var(--quiet-gray-50);
+    border-radius: 8px;
+    margin-top: 8px;
+}
+
+body.dark .case-no-billing {
+    background: var(--quiet-gray-100);
+}
+
+.case-no-billing p {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin-bottom: 10px;
+}
+
+.case-no-billing__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--law-navy);
+    color: white;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+
+.case-no-billing__link:hover {
+    background: var(--law-navy-dark);
+}

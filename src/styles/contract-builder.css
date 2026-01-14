@@ -275,10 +275,216 @@
 
 .templates-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 20px;
 }
 
+/* البطاقة المحسنة للقوالب */
+.template-card-enhanced {
+  position: relative;
+  background-color: var(--dashboard-card, var(--color-surface, white));
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+body.dark .template-card-enhanced {
+  background-color: var(--dashboard-card, #1f2937);
+  border-color: var(--color-border, #374151);
+}
+
+.template-card-enhanced:hover {
+  border-color: var(--color-primary, #3b82f6);
+}
+
+/* شارة الافتراضي */
+.template-card-enhanced .default-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 3px 10px;
+  background: var(--color-primary-soft, rgba(59, 130, 246, 0.15));
+  color: var(--color-primary, #3b82f6);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  z-index: 5;
+}
+
+/* محتوى البطاقة */
+.template-card-enhanced .card-content {
+  padding: 18px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: right;
+}
+
+/* الهيدر */
+.template-card-enhanced .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+/* شارة النوع */
+.template-card-enhanced .type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* نقطة الحالة */
+.template-card-enhanced .status-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+}
+
+.template-card-enhanced .status-dot.active {
+  color: var(--color-success, #059669);
+  background-color: rgba(5, 150, 105, 0.12);
+}
+
+.template-card-enhanced .status-dot.inactive {
+  color: var(--color-error, #dc2626);
+  background-color: rgba(220, 38, 38, 0.12);
+}
+
+/* اسم القالب */
+.template-card-enhanced .template-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-heading, #111827);
+  margin: 0;
+  line-height: 1.5;
+}
+
+body.dark .template-card-enhanced .template-name {
+  color: #f9fafb;
+}
+
+.template-card-enhanced .template-name-ar {
+  font-size: 13px;
+  color: var(--color-text-secondary, #6b7280);
+  margin: 0;
+}
+
+/* وصف القالب */
+.template-card-enhanced .template-description {
+  font-size: 13px;
+  color: var(--color-text-secondary, #6b7280);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.6;
+  flex: 1;
+}
+
+/* معلومات القالب */
+.template-card-enhanced .template-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: auto;
+}
+
+.template-card-enhanced .info-item {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.template-card-enhanced .info-item .label {
+  color: var(--color-text-secondary, #9ca3af);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.template-card-enhanced .info-item .value {
+  color: var(--color-text, #374151);
+  font-weight: 600;
+}
+
+body.dark .template-card-enhanced .info-item .value {
+  color: #e5e7eb;
+}
+
+/* شروط الدفع */
+.template-card-enhanced .payment-terms-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--color-border, #e5e7eb);
+}
+
+.template-card-enhanced .terms-label {
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 12px;
+}
+
+.template-card-enhanced .terms-count {
+  color: var(--color-primary, #3b82f6);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+/* أزرار البطاقة */
+.template-card-enhanced .card-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px;
+  background: var(--color-surface-subtle, rgba(0, 0, 0, 0.02));
+  border-top: 1px solid var(--color-border, #e5e7eb);
+}
+
+body.dark .template-card-enhanced .card-actions {
+  background: rgba(255, 255, 255, 0.03);
+  border-top-color: var(--color-border, #374151);
+}
+
+.template-card-enhanced .action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.template-card-enhanced .action-btn.select-btn {
+  background-color: var(--color-primary, #3b82f6);
+  color: white;
+}
+
+.template-card-enhanced .action-btn.select-btn:hover {
+  background-color: var(--color-primary-hover, #2563eb);
+}
+
+/* البطاقة القديمة للتوافق */
 .template-card {
   padding: 24px;
   background-color: white;
@@ -686,4 +892,144 @@
   .form-row {
     grid-template-columns: 1fr;
   }
+}
+
+/* === عرض مختصر عند القدوم من صفحة القضية === */
+.from-case-summary {
+  background: var(--dashboard-card, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.from-case-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.from-case-header .success-icon {
+  color: var(--status-green, #10b981);
+  background: var(--status-green-light, rgba(16, 185, 129, 0.1));
+  padding: 12px;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+}
+
+.from-case-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-heading, #111827);
+  margin: 0;
+}
+
+.from-case-details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.from-case-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: var(--quiet-gray-50, #f9fafb);
+  border-radius: 8px;
+  text-align: right;
+}
+
+body.dark .from-case-item {
+  background: var(--quiet-gray-100, #374151);
+}
+
+.from-case-item__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--law-navy-light, rgba(30, 58, 95, 0.1));
+  color: var(--law-navy, #1e3a5f);
+  flex-shrink: 0;
+}
+
+.from-case-item__content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.from-case-item__label {
+  font-size: 12px;
+  color: var(--color-text-secondary, #6b7280);
+  font-weight: 500;
+}
+
+.from-case-item__value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-heading, #111827);
+}
+
+.from-case-item__sub {
+  font-size: 13px;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.change-selection-btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary, #6b7280);
+  background: transparent;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.change-selection-btn:hover {
+  background: var(--quiet-gray-100, #f3f4f6);
+  border-color: var(--law-navy, #1e3a5f);
+  color: var(--law-navy, #1e3a5f);
+}
+
+/* === حالة التحميل === */
+.loading-case-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 20px;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.loading-case-data .spinner {
+  animation: spin 1s linear infinite;
+  color: var(--law-navy, #1e3a5f);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-case-data p {
+  font-size: 14px;
+  margin: 0;
 }

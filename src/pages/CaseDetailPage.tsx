@@ -235,11 +235,13 @@ const CaseDetailPage: React.FC = () => {
     );
   }
 
-  // Calculate fees
-  const totalFees = caseData.contract_value || 0;
-  const paidFees = (caseData as any).paid_amount || 0;
-  const remainingFees = totalFees - paidFees;
-  const paymentProgress = totalFees > 0 ? (paidFees / totalFees) * 100 : 0;
+  // Calculate fees from billing data (from contracts and invoices)
+  const billing = caseData.billing;
+  const totalFees = billing?.total_contract_value || caseData.contract_value || 0;
+  const paidFees = billing?.total_paid || 0;
+  const remainingFees = billing?.total_remaining || (totalFees - paidFees);
+  const paymentProgress = billing?.collection_percentage || (totalFees > 0 ? (paidFees / totalFees) * 100 : 0);
+  const hasOverdue = billing && billing.overdue_invoices_count > 0;
 
   return (
     <div className="case-detail-page">
@@ -630,6 +632,11 @@ const CaseDetailPage: React.FC = () => {
                 <DollarSign size={16} />
                 الرسوم والمدفوعات
               </div>
+              {billing && billing.contracts_count > 0 && (
+                <Link to={`/contracts?case_id=${caseData.id}`} className="case-card__action">
+                  العقود ({billing.contracts_count})
+                </Link>
+              )}
             </div>
             <div className="case-card__content">
               <div className="case-fees-summary">
@@ -641,14 +648,79 @@ const CaseDetailPage: React.FC = () => {
                   <div className="case-fee-item__value">{paidFees.toLocaleString()}</div>
                   <div className="case-fee-item__label">المدفوع</div>
                 </div>
-                <div className="case-fee-item case-fee-item--remaining">
+                <div className={`case-fee-item ${hasOverdue ? 'case-fee-item--overdue' : 'case-fee-item--remaining'}`}>
                   <div className="case-fee-item__value">{remainingFees.toLocaleString()}</div>
                   <div className="case-fee-item__label">المتبقي</div>
                 </div>
               </div>
               <div className="case-progress">
-                <div className="case-progress__bar" style={{ width: `${paymentProgress}%` }}></div>
+                <div className="case-progress__bar" style={{ width: `${Math.min(paymentProgress, 100)}%` }}></div>
               </div>
+              <div className="case-progress__label">
+                {paymentProgress.toFixed(0)}% تحصيل
+              </div>
+
+              {/* Billing Stats */}
+              {billing && (
+                <div className="case-billing-stats">
+                  {billing.invoices_count > 0 && (
+                    <Link to={`/billing/invoices?case_id=${caseData.id}`} className="case-billing-stat">
+                      <span className="case-billing-stat__icon case-billing-stat__icon--blue">
+                        <FileText size={12} />
+                      </span>
+                      <span className="case-billing-stat__text">
+                        {billing.invoices_count} فاتورة
+                      </span>
+                    </Link>
+                  )}
+                  {billing.overdue_invoices_count > 0 && (
+                    <Link to={`/billing/invoices?case_id=${caseData.id}&status=overdue`} className="case-billing-stat case-billing-stat--warning">
+                      <span className="case-billing-stat__icon case-billing-stat__icon--red">
+                        <AlertCircle size={12} />
+                      </span>
+                      <span className="case-billing-stat__text">
+                        {billing.overdue_invoices_count} متأخرة
+                      </span>
+                    </Link>
+                  )}
+                </div>
+              )}
+
+              {/* Recent Payments */}
+              {billing && billing.recent_payments && billing.recent_payments.length > 0 && (
+                <div className="case-recent-payments">
+                  <div className="case-recent-payments__title">آخر المدفوعات</div>
+                  {billing.recent_payments.slice(0, 3).map((payment) => (
+                    <div key={payment.id} className="case-recent-payment">
+                      <div className="case-recent-payment__info">
+                        <span className="case-recent-payment__amount">
+                          {payment.amount.toLocaleString()} ر.س
+                        </span>
+                        <span className="case-recent-payment__date">
+                          {new Date(payment.payment_date).toLocaleDateString('ar-SA')}
+                        </span>
+                      </div>
+                      <span className="case-recent-payment__method">
+                        {payment.payment_method === 'cash' ? 'نقداً' :
+                         payment.payment_method === 'bank_transfer' ? 'تحويل' :
+                         payment.payment_method === 'check' ? 'شيك' :
+                         payment.payment_method === 'card' ? 'بطاقة' : payment.payment_method}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* No billing data message */}
+              {(!billing || (billing.contracts_count === 0 && totalFees === 0)) && (
+                <div className="case-no-billing">
+                  <p>لا يوجد عقد مرتبط بهذه القضية</p>
+                  <Link to={`/contracts/new?case_id=${caseData.id}`} className="case-no-billing__link">
+                    <Plus size={14} />
+                    إنشاء عقد
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>

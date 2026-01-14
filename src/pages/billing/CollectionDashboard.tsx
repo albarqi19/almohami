@@ -146,8 +146,8 @@ const CollectionDashboardPage: React.FC = () => {
             title="إجمالي المستحقات"
             value={stats?.total_invoiced || 0}
             icon={DollarSign}
-            iconColor="#3b82f6"
-            iconBgColor="#dbeafe"
+            iconColor="var(--status-blue)"
+            iconBgColor="var(--status-blue-light)"
             format="currency"
             trend={dashboard?.growth ? {
               value: dashboard.growth.invoiced,
@@ -158,8 +158,8 @@ const CollectionDashboardPage: React.FC = () => {
             title="المحصّل هذا الشهر"
             value={dashboard?.monthly_stats?.total_collected || 0}
             icon={CheckCircle}
-            iconColor="#059669"
-            iconBgColor="#d1fae5"
+            iconColor="var(--status-green)"
+            iconBgColor="var(--status-green-light)"
             format="currency"
             trend={dashboard?.growth ? {
               value: dashboard.growth.collected,
@@ -170,8 +170,8 @@ const CollectionDashboardPage: React.FC = () => {
             title="المتأخرات"
             value={stats?.total_overdue || 0}
             icon={AlertTriangle}
-            iconColor="#dc2626"
-            iconBgColor="#fee2e2"
+            iconColor="var(--status-red)"
+            iconBgColor="var(--status-red-light)"
             format="currency"
             subtitle={`${stats?.overdue_count || 0} فاتورة متأخرة`}
           />
@@ -179,8 +179,8 @@ const CollectionDashboardPage: React.FC = () => {
             title="نسبة التحصيل"
             value={stats?.collection_rate || 0}
             icon={TrendingUp}
-            iconColor="#7c3aed"
-            iconBgColor="#ede9fe"
+            iconColor="var(--status-purple, #7c3aed)"
+            iconBgColor="var(--status-purple-light, #ede9fe)"
             format="percentage"
           />
         </BillingStatsGrid>
@@ -205,7 +205,7 @@ const CollectionDashboardPage: React.FC = () => {
             <div className="dashboard-section overdue-section">
               <div className="section-header">
                 <h3>
-                  <AlertTriangle size={18} color="#dc2626" />
+                  <AlertTriangle size={18} className="icon-danger" />
                   الفواتير المتأخرة
                 </h3>
                 <button
@@ -241,7 +241,7 @@ const CollectionDashboardPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="empty-section">
-                    <CheckCircle size={32} color="#059669" />
+                    <CheckCircle size={32} className="icon-success" />
                     <p>لا توجد فواتير متأخرة</p>
                   </div>
                 )}
@@ -252,7 +252,7 @@ const CollectionDashboardPage: React.FC = () => {
             <div className="dashboard-section due-section">
               <div className="section-header">
                 <h3>
-                  <Clock size={18} color="#d97706" />
+                  <Clock size={18} className="icon-warning" />
                   مستحقة هذا الأسبوع
                 </h3>
                 <button
@@ -289,7 +289,7 @@ const CollectionDashboardPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="empty-section">
-                    <Calendar size={32} color="#6b7280" />
+                    <Calendar size={32} className="icon-muted" />
                     <p>لا توجد فواتير مستحقة</p>
                   </div>
                 )}
@@ -304,7 +304,7 @@ const CollectionDashboardPage: React.FC = () => {
           <div className="dashboard-section payments-section">
             <div className="section-header">
               <h3>
-                <DollarSign size={18} color="#059669" />
+                <DollarSign size={18} className="icon-success" />
                 آخر المدفوعات
               </h3>
               <button
@@ -321,7 +321,7 @@ const CollectionDashboardPage: React.FC = () => {
                   {dashboard.recent_payments.map((payment: Payment) => (
                     <div key={payment.id} className="payment-item">
                       <div className="payment-icon">
-                        <ArrowUpRight size={16} color="#059669" />
+                        <ArrowUpRight size={16} className="icon-success" />
                       </div>
                       <div className="payment-info">
                         <span className="payment-number">{payment.payment_number}</span>
@@ -338,7 +338,7 @@ const CollectionDashboardPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="empty-section">
-                  <DollarSign size={32} color="#6b7280" />
+                  <DollarSign size={32} className="icon-muted" />
                   <p>لا توجد مدفوعات حديثة</p>
                 </div>
               )}
@@ -349,7 +349,7 @@ const CollectionDashboardPage: React.FC = () => {
           <div className="dashboard-section pending-section">
             <div className="section-header">
               <h3>
-                <Clock size={18} color="#d97706" />
+                <Clock size={18} className="icon-warning" />
                 دفعات بانتظار التأكيد
               </h3>
               <button
@@ -366,7 +366,7 @@ const CollectionDashboardPage: React.FC = () => {
                   {dashboard.pending_payments.map((payment: Payment) => (
                     <div key={payment.id} className="payment-item pending">
                       <div className="payment-icon">
-                        <Clock size={16} color="#d97706" />
+                        <Clock size={16} className="icon-warning" />
                       </div>
                       <div className="payment-info">
                         <span className="payment-number">{payment.payment_number}</span>
@@ -386,7 +386,7 @@ const CollectionDashboardPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="empty-section">
-                  <CheckCircle size={32} color="#059669" />
+                  <CheckCircle size={32} className="icon-success" />
                   <p>لا توجد دفعات معلقة</p>
                 </div>
               )}
@@ -397,7 +397,7 @@ const CollectionDashboardPage: React.FC = () => {
           <div className="dashboard-section contracts-section">
             <div className="section-header">
               <h3>
-                <Receipt size={18} color="#3b82f6" />
+                <Receipt size={18} className="icon-primary" />
                 العقود النشطة
               </h3>
               <button
@@ -433,7 +433,7 @@ const CollectionDashboardPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="empty-section">
-                  <Receipt size={32} color="#6b7280" />
+                  <Receipt size={32} className="icon-muted" />
                   <p>لا توجد عقود نشطة</p>
                 </div>
               )}
