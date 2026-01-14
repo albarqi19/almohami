@@ -112,6 +112,8 @@ const Settings: React.FC = () => {
   const [subscription, setSubscription] = useState<any>(null);
   const [loadingSubscription, setLoadingSubscription] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly');
+  const [showPlanModal, setShowPlanModal] = useState(false);
 
   // Invoices State
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -251,6 +253,50 @@ const Settings: React.FC = () => {
     };
     loadInvoices();
   }, []);
+
+  // Handle Online Subscription Payment
+  const handleOnlineSubscribe = async (plan: 'monthly' | 'yearly') => {
+    try {
+      setSubscribing(true);
+      const response: any = await apiClient.post('/subscription/subscribe', {
+        plan,
+        payment_method: 'online',
+        payment_gateway: 'streampay'
+      });
+
+      if (response.success && response.data?.payment_url) {
+        // Redirect to StreamPay payment page
+        window.location.href = response.data.payment_url;
+      } else {
+        alert(response.message || 'فشل في إنشاء رابط الدفع');
+      }
+    } catch (error: any) {
+      console.error('Error subscribing:', error);
+      alert(error.response?.data?.message || 'حدث خطأ أثناء إنشاء الاشتراك');
+    } finally {
+      setSubscribing(false);
+      setShowPlanModal(false);
+    }
+  };
+
+  // Handle Cancel Subscription
+  const handleCancelSubscription = async () => {
+    if (!window.confirm('هل أنت متأكد من إلغاء الاشتراك؟ سيبقى نشطاً حتى نهاية المدة المدفوعة.')) {
+      return;
+    }
+
+    try {
+      const response: any = await apiClient.post('/subscription/cancel');
+      if (response.success) {
+        alert('تم إلغاء الاشتراك بنجاح');
+        // Reload subscription data
+        window.location.reload();
+      }
+    } catch (error: any) {
+      console.error('Error canceling subscription:', error);
+      alert(error.response?.data?.message || 'فشل في إلغاء الاشتراك');
+    }
+  };
 
   // Load Policy Settings
   useEffect(() => {
@@ -1381,23 +1427,112 @@ const Settings: React.FC = () => {
                     )}
 
                     <div className="settings-subscription-card__actions">
-                      <button className="settings-btn settings-btn--primary">
-                        {isTrial || !isActive ? '🚀 اشترك الآن' : 'الترقية للسنوي (2990 ر.س)'}
+                      <button
+                        className="settings-btn settings-btn--primary"
+                        onClick={() => setShowPlanModal(true)}
+                        disabled={subscribing}
+                      >
+                        {subscribing ? (
+                          <><Loader2 className="animate-spin" size={16} /> جاري المعالجة...</>
+                        ) : (
+                          isTrial || !isActive ? '🚀 اشترك الآن' : 'تجديد الاشتراك'
+                        )}
                       </button>
                       {isActive && (
-                        <button className="settings-btn settings-btn--danger">
+                        <button
+                          className="settings-btn settings-btn--danger"
+                          onClick={handleCancelSubscription}
+                        >
                           إلغاء الاشتراك
                         </button>
                       )}
                     </div>
                   </div>
 
+                  {/* خيارات الاشتراك */}
                   <div className="settings-option-card" style={{ marginTop: '16px' }}>
-                    <div className="settings-option-card__title">خيارات الاشتراك</div>
-                    <div className="settings-option-card__desc">
-                      <strong>شهري:</strong> *** ر.س/شهر
-                      <br />
-                      <strong>سنوي:</strong> **** ر.س/سنة (وفر شهرين!)
+                    <div className="settings-option-card__title">باقات الاشتراك</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
+                      {/* الباقة الشهرية */}
+                      <div
+                        style={{
+                          border: selectedPlan === 'monthly' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                          borderRadius: '12px',
+                          padding: '20px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          background: selectedPlan === 'monthly' ? 'var(--color-primary-light)' : 'var(--color-bg-secondary)'
+                        }}
+                        onClick={() => setSelectedPlan('monthly')}
+                      >
+                        <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>الباقة الشهرية</div>
+                        <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-primary)' }}>
+                          299 <span style={{ fontSize: '14px', fontWeight: 400 }}>ر.س/شهر</span>
+                        </div>
+                        <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '8px' }}>
+                          مرونة في الإلغاء والتجديد
+                        </div>
+                      </div>
+
+                      {/* الباقة السنوية */}
+                      <div
+                        style={{
+                          border: selectedPlan === 'yearly' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                          borderRadius: '12px',
+                          padding: '20px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          background: selectedPlan === 'yearly' ? 'var(--color-primary-light)' : 'var(--color-bg-secondary)',
+                          position: 'relative'
+                        }}
+                        onClick={() => setSelectedPlan('yearly')}
+                      >
+                        <div style={{
+                          position: 'absolute',
+                          top: '-10px',
+                          right: '10px',
+                          background: 'var(--status-green)',
+                          color: 'white',
+                          padding: '4px 12px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 600
+                        }}>
+                          وفّر شهرين! 🎉
+                        </div>
+                        <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>الباقة السنوية</div>
+                        <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-primary)' }}>
+                          2,990 <span style={{ fontSize: '14px', fontWeight: 400 }}>ر.س/سنة</span>
+                        </div>
+                        <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '8px' }}>
+                          <s style={{ color: 'var(--status-red)' }}>3,588 ر.س</s> توفير 598 ر.س
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      className="settings-btn settings-btn--primary"
+                      style={{ width: '100%', marginTop: '16px', padding: '14px' }}
+                      onClick={() => handleOnlineSubscribe(selectedPlan)}
+                      disabled={subscribing}
+                    >
+                      {subscribing ? (
+                        <><Loader2 className="animate-spin" size={18} /> جاري إنشاء رابط الدفع...</>
+                      ) : (
+                        <>💳 الدفع الإلكتروني - {selectedPlan === 'yearly' ? '2,990' : '299'} ر.س</>
+                      )}
+                    </button>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      gap: '16px',
+                      marginTop: '12px',
+                      fontSize: '12px',
+                      color: 'var(--color-text-secondary)'
+                    }}>
+                      <span>🔒 دفع آمن</span>
+                      <span>💳 Visa / Mastercard / مدى</span>
+                      <span>🍎 Apple Pay</span>
                     </div>
                   </div>
                 </>

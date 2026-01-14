@@ -31,6 +31,7 @@ import LandingPage from './pages/LandingPage';
 import TenantLandingPage from './pages/TenantLandingPage';
 import Wekalat from './pages/Wekalat';
 import AccountStatus from './pages/AccountStatus';
+import SubscriptionPaymentResult from './pages/SubscriptionPaymentResult';
 import LawyerSuspended from './pages/LawyerSuspended';
 import Clients from './pages/Clients';
 import ClientDetailPage from './pages/ClientDetailPage';
@@ -82,6 +83,9 @@ function App() {
               </Route>
               {/* Account Status - For expired subscriptions */}
               <Route path="/account-status" element={<AccountStatus />} />
+              {/* Subscription Payment Result - After StreamPay redirect */}
+              <Route path="/subscription/payment/success" element={<SubscriptionPaymentResult />} />
+              <Route path="/subscription/payment/failed" element={<SubscriptionPaymentResult />} />
               {/* Lawyer Suspended - For lawyers when subscription expired - NO TIMER */}
               <Route path="/lawyer-suspended" element={
                 <ProtectedRoute allowedRoles={['lawyer', 'senior_lawyer', 'legal_assistant']}>
