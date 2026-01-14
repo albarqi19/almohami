@@ -142,146 +142,290 @@ const CollectionDashboardPage: React.FC = () => {
       <div className="dashboard-inner" style={{ padding: '20px' }}>
         {/* بطاقات الإحصائيات */}
         <BillingStatsGrid columns={4}>
-        <BillingStatsCard
-          title="إجمالي المستحقات"
-          value={stats?.total_invoiced || 0}
-          icon={DollarSign}
-          iconColor="#3b82f6"
-          iconBgColor="#dbeafe"
-          format="currency"
-          trend={dashboard?.growth ? {
-            value: dashboard.growth.invoiced,
-            label: 'مقارنة بالشهر السابق',
-          } : undefined}
-        />
-        <BillingStatsCard
-          title="المحصّل هذا الشهر"
-          value={dashboard?.monthly_stats?.total_collected || 0}
-          icon={CheckCircle}
-          iconColor="#059669"
-          iconBgColor="#d1fae5"
-          format="currency"
-          trend={dashboard?.growth ? {
-            value: dashboard.growth.collected,
-            label: 'مقارنة بالشهر السابق',
-          } : undefined}
-        />
-        <BillingStatsCard
-          title="المتأخرات"
-          value={stats?.total_overdue || 0}
-          icon={AlertTriangle}
-          iconColor="#dc2626"
-          iconBgColor="#fee2e2"
-          format="currency"
-          subtitle={`${stats?.overdue_count || 0} فاتورة متأخرة`}
-        />
-        <BillingStatsCard
-          title="نسبة التحصيل"
-          value={stats?.collection_rate || 0}
-          icon={TrendingUp}
-          iconColor="#7c3aed"
-          iconBgColor="#ede9fe"
-          format="percentage"
-        />
-      </BillingStatsGrid>
-
-      {/* المحتوى الرئيسي */}
-      <div className="dashboard-content">
-        {/* الرسم البياني */}
-        <div className="chart-section">
-          <div className="section-header">
-            <h2>التحصيل الشهري - {selectedYear}</h2>
-          </div>
-          <CollectionChart
-            data={monthlyChartData}
-            height={300}
-            showLegend={true}
+          <BillingStatsCard
+            title="إجمالي المستحقات"
+            value={stats?.total_invoiced || 0}
+            icon={DollarSign}
+            iconColor="#3b82f6"
+            iconBgColor="#dbeafe"
+            format="currency"
+            trend={dashboard?.growth ? {
+              value: dashboard.growth.invoiced,
+              label: 'مقارنة بالشهر السابق',
+            } : undefined}
           />
+          <BillingStatsCard
+            title="المحصّل هذا الشهر"
+            value={dashboard?.monthly_stats?.total_collected || 0}
+            icon={CheckCircle}
+            iconColor="#059669"
+            iconBgColor="#d1fae5"
+            format="currency"
+            trend={dashboard?.growth ? {
+              value: dashboard.growth.collected,
+              label: 'مقارنة بالشهر السابق',
+            } : undefined}
+          />
+          <BillingStatsCard
+            title="المتأخرات"
+            value={stats?.total_overdue || 0}
+            icon={AlertTriangle}
+            iconColor="#dc2626"
+            iconBgColor="#fee2e2"
+            format="currency"
+            subtitle={`${stats?.overdue_count || 0} فاتورة متأخرة`}
+          />
+          <BillingStatsCard
+            title="نسبة التحصيل"
+            value={stats?.collection_rate || 0}
+            icon={TrendingUp}
+            iconColor="#7c3aed"
+            iconBgColor="#ede9fe"
+            format="percentage"
+          />
+        </BillingStatsGrid>
+
+        {/* المحتوى الرئيسي */}
+        <div className="dashboard-content">
+          {/* الرسم البياني */}
+          <div className="chart-section">
+            <div className="section-header">
+              <h2>التحصيل الشهري - {selectedYear}</h2>
+            </div>
+            <CollectionChart
+              data={monthlyChartData}
+              height={300}
+              showLegend={true}
+            />
+          </div>
+
+          {/* القسم الجانبي */}
+          <div className="side-sections">
+            {/* الفواتير المتأخرة */}
+            <div className="dashboard-section overdue-section">
+              <div className="section-header">
+                <h3>
+                  <AlertTriangle size={18} color="#dc2626" />
+                  الفواتير المتأخرة
+                </h3>
+                <button
+                  className="view-all"
+                  onClick={() => navigate('/invoices?status=overdue')}
+                >
+                  عرض الكل
+                  <ChevronLeft size={16} />
+                </button>
+              </div>
+              <div className="section-content">
+                {dashboard?.overdue_invoices && dashboard.overdue_invoices.length > 0 ? (
+                  <div className="invoice-list">
+                    {dashboard.overdue_invoices.map((invoice: CaseInvoice) => (
+                      <motion.div
+                        key={invoice.id}
+                        className="invoice-item overdue"
+                        whileHover={{ x: -4 }}
+                        onClick={() => navigate(`/invoices/${invoice.id}`)}
+                      >
+                        <div className="item-main">
+                          <span className="invoice-number">{invoice.invoice_number}</span>
+                          <span className="client-name">{invoice.client?.name}</span>
+                        </div>
+                        <div className="item-details">
+                          <span className="amount">{formatAmount(invoice.remaining_amount)} ر.س</span>
+                          <span className="overdue-days">
+                            متأخرة {getOverdueDays(invoice.due_date)} يوم
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-section">
+                    <CheckCircle size={32} color="#059669" />
+                    <p>لا توجد فواتير متأخرة</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* المستحقة قريباً */}
+            <div className="dashboard-section due-section">
+              <div className="section-header">
+                <h3>
+                  <Clock size={18} color="#d97706" />
+                  مستحقة هذا الأسبوع
+                </h3>
+                <button
+                  className="view-all"
+                  onClick={() => navigate('/invoices?due_this_week=1')}
+                >
+                  عرض الكل
+                  <ChevronLeft size={16} />
+                </button>
+              </div>
+              <div className="section-content">
+                {dashboard?.upcoming_due && dashboard.upcoming_due.length > 0 ? (
+                  <div className="invoice-list">
+                    {dashboard.upcoming_due.map((invoice: CaseInvoice) => (
+                      <motion.div
+                        key={invoice.id}
+                        className="invoice-item upcoming"
+                        whileHover={{ x: -4 }}
+                        onClick={() => navigate(`/invoices/${invoice.id}`)}
+                      >
+                        <div className="item-main">
+                          <span className="invoice-number">{invoice.invoice_number}</span>
+                          <span className="client-name">{invoice.client?.name}</span>
+                        </div>
+                        <div className="item-details">
+                          <span className="amount">{formatAmount(invoice.remaining_amount)} ر.س</span>
+                          <span className="due-date">
+                            <Calendar size={12} />
+                            {formatDate(invoice.due_date)}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-section">
+                    <Calendar size={32} color="#6b7280" />
+                    <p>لا توجد فواتير مستحقة</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* القسم الجانبي */}
-        <div className="side-sections">
-          {/* الفواتير المتأخرة */}
-          <div className="dashboard-section overdue-section">
+        {/* القسم السفلي */}
+        <div className="dashboard-bottom">
+          {/* آخر المدفوعات */}
+          <div className="dashboard-section payments-section">
             <div className="section-header">
               <h3>
-                <AlertTriangle size={18} color="#dc2626" />
-                الفواتير المتأخرة
+                <DollarSign size={18} color="#059669" />
+                آخر المدفوعات
               </h3>
               <button
                 className="view-all"
-                onClick={() => navigate('/invoices?status=overdue')}
+                onClick={() => navigate('/payments')}
               >
                 عرض الكل
                 <ChevronLeft size={16} />
               </button>
             </div>
             <div className="section-content">
-              {dashboard?.overdue_invoices && dashboard.overdue_invoices.length > 0 ? (
-                <div className="invoice-list">
-                  {dashboard.overdue_invoices.map((invoice: CaseInvoice) => (
-                    <motion.div
-                      key={invoice.id}
-                      className="invoice-item overdue"
-                      whileHover={{ x: -4 }}
-                      onClick={() => navigate(`/invoices/${invoice.id}`)}
-                    >
-                      <div className="item-main">
-                        <span className="invoice-number">{invoice.invoice_number}</span>
-                        <span className="client-name">{invoice.client?.name}</span>
+              {dashboard?.recent_payments && dashboard.recent_payments.length > 0 ? (
+                <div className="payments-list">
+                  {dashboard.recent_payments.map((payment: Payment) => (
+                    <div key={payment.id} className="payment-item">
+                      <div className="payment-icon">
+                        <ArrowUpRight size={16} color="#059669" />
                       </div>
-                      <div className="item-details">
-                        <span className="amount">{formatAmount(invoice.remaining_amount)} ر.س</span>
-                        <span className="overdue-days">
-                          متأخرة {getOverdueDays(invoice.due_date)} يوم
-                        </span>
+                      <div className="payment-info">
+                        <span className="payment-number">{payment.payment_number}</span>
+                        <span className="client-name">{payment.client?.name}</span>
                       </div>
-                    </motion.div>
+                      <div className="payment-amount">
+                        +{formatAmount(payment.amount)} ر.س
+                      </div>
+                      <div className="payment-date">
+                        {formatDate(payment.payment_date)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-section">
+                  <DollarSign size={32} color="#6b7280" />
+                  <p>لا توجد مدفوعات حديثة</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* الدفعات المعلقة */}
+          <div className="dashboard-section pending-section">
+            <div className="section-header">
+              <h3>
+                <Clock size={18} color="#d97706" />
+                دفعات بانتظار التأكيد
+              </h3>
+              <button
+                className="view-all"
+                onClick={() => navigate('/payments?status=pending')}
+              >
+                عرض الكل
+                <ChevronLeft size={16} />
+              </button>
+            </div>
+            <div className="section-content">
+              {dashboard?.pending_payments && dashboard.pending_payments.length > 0 ? (
+                <div className="payments-list">
+                  {dashboard.pending_payments.map((payment: Payment) => (
+                    <div key={payment.id} className="payment-item pending">
+                      <div className="payment-icon">
+                        <Clock size={16} color="#d97706" />
+                      </div>
+                      <div className="payment-info">
+                        <span className="payment-number">{payment.payment_number}</span>
+                        <span className="client-name">{payment.client?.name}</span>
+                      </div>
+                      <div className="payment-amount pending">
+                        {formatAmount(payment.amount)} ر.س
+                      </div>
+                      <button
+                        className="btn-sm btn-confirm"
+                        onClick={() => navigate('/payments?status=pending')}
+                      >
+                        مراجعة
+                      </button>
+                    </div>
                   ))}
                 </div>
               ) : (
                 <div className="empty-section">
                   <CheckCircle size={32} color="#059669" />
-                  <p>لا توجد فواتير متأخرة</p>
+                  <p>لا توجد دفعات معلقة</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* المستحقة قريباً */}
-          <div className="dashboard-section due-section">
+          {/* العقود النشطة */}
+          <div className="dashboard-section contracts-section">
             <div className="section-header">
               <h3>
-                <Clock size={18} color="#d97706" />
-                مستحقة هذا الأسبوع
+                <Receipt size={18} color="#3b82f6" />
+                العقود النشطة
               </h3>
               <button
                 className="view-all"
-                onClick={() => navigate('/invoices?due_this_week=1')}
+                onClick={() => navigate('/contracts?status=active')}
               >
                 عرض الكل
                 <ChevronLeft size={16} />
               </button>
             </div>
             <div className="section-content">
-              {dashboard?.upcoming_due && dashboard.upcoming_due.length > 0 ? (
-                <div className="invoice-list">
-                  {dashboard.upcoming_due.map((invoice: CaseInvoice) => (
+              {dashboard?.active_contracts && dashboard.active_contracts.length > 0 ? (
+                <div className="contracts-list">
+                  {dashboard.active_contracts.map((contract: any) => (
                     <motion.div
-                      key={invoice.id}
-                      className="invoice-item upcoming"
+                      key={contract.id}
+                      className="contract-item"
                       whileHover={{ x: -4 }}
-                      onClick={() => navigate(`/invoices/${invoice.id}`)}
+                      onClick={() => navigate(`/contracts/${contract.id}`)}
                     >
-                      <div className="item-main">
-                        <span className="invoice-number">{invoice.invoice_number}</span>
-                        <span className="client-name">{invoice.client?.name}</span>
+                      <div className="contract-info">
+                        <span className="contract-number">{contract.contract_number}</span>
+                        <span className="client-name">{contract.client?.name}</span>
                       </div>
-                      <div className="item-details">
-                        <span className="amount">{formatAmount(invoice.remaining_amount)} ر.س</span>
-                        <span className="due-date">
-                          <Calendar size={12} />
-                          {formatDate(invoice.due_date)}
+                      <div className="contract-value">
+                        <span className="total">{formatAmount(contract.total_amount)} ر.س</span>
+                        <span className="collected">
+                          محصّل: {formatAmount(contract.paid_amount)} ر.س
                         </span>
                       </div>
                     </motion.div>
@@ -289,177 +433,33 @@ const CollectionDashboardPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="empty-section">
-                  <Calendar size={32} color="#6b7280" />
-                  <p>لا توجد فواتير مستحقة</p>
+                  <Receipt size={32} color="#6b7280" />
+                  <p>لا توجد عقود نشطة</p>
                 </div>
               )}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* القسم السفلي */}
-      <div className="dashboard-bottom">
-        {/* آخر المدفوعات */}
-        <div className="dashboard-section payments-section">
-          <div className="section-header">
-            <h3>
-              <DollarSign size={18} color="#059669" />
-              آخر المدفوعات
-            </h3>
-            <button
-              className="view-all"
-              onClick={() => navigate('/payments')}
-            >
-              عرض الكل
-              <ChevronLeft size={16} />
-            </button>
+        {/* إحصائيات سريعة */}
+        <div className="quick-stats">
+          <div className="stat-item">
+            <span className="stat-label">العقود النشطة</span>
+            <span className="stat-value">{stats?.total_contracts || 0}</span>
           </div>
-          <div className="section-content">
-            {dashboard?.recent_payments && dashboard.recent_payments.length > 0 ? (
-              <div className="payments-list">
-                {dashboard.recent_payments.map((payment: Payment) => (
-                  <div key={payment.id} className="payment-item">
-                    <div className="payment-icon">
-                      <ArrowUpRight size={16} color="#059669" />
-                    </div>
-                    <div className="payment-info">
-                      <span className="payment-number">{payment.payment_number}</span>
-                      <span className="client-name">{payment.client?.name}</span>
-                    </div>
-                    <div className="payment-amount">
-                      +{formatAmount(payment.amount)} ر.س
-                    </div>
-                    <div className="payment-date">
-                      {formatDate(payment.payment_date)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-section">
-                <DollarSign size={32} color="#6b7280" />
-                <p>لا توجد مدفوعات حديثة</p>
-              </div>
-            )}
+          <div className="stat-item">
+            <span className="stat-label">فواتير معلقة</span>
+            <span className="stat-value">{stats?.pending_count || 0}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">فواتير متأخرة</span>
+            <span className="stat-value danger">{stats?.overdue_count || 0}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">إجمالي المتبقي</span>
+            <span className="stat-value">{formatAmount(stats?.total_remaining || 0)} ر.س</span>
           </div>
         </div>
-
-        {/* الدفعات المعلقة */}
-        <div className="dashboard-section pending-section">
-          <div className="section-header">
-            <h3>
-              <Clock size={18} color="#d97706" />
-              دفعات بانتظار التأكيد
-            </h3>
-            <button
-              className="view-all"
-              onClick={() => navigate('/payments?status=pending')}
-            >
-              عرض الكل
-              <ChevronLeft size={16} />
-            </button>
-          </div>
-          <div className="section-content">
-            {dashboard?.pending_payments && dashboard.pending_payments.length > 0 ? (
-              <div className="payments-list">
-                {dashboard.pending_payments.map((payment: Payment) => (
-                  <div key={payment.id} className="payment-item pending">
-                    <div className="payment-icon">
-                      <Clock size={16} color="#d97706" />
-                    </div>
-                    <div className="payment-info">
-                      <span className="payment-number">{payment.payment_number}</span>
-                      <span className="client-name">{payment.client?.name}</span>
-                    </div>
-                    <div className="payment-amount pending">
-                      {formatAmount(payment.amount)} ر.س
-                    </div>
-                    <button
-                      className="btn-sm btn-confirm"
-                      onClick={() => navigate('/payments?status=pending')}
-                    >
-                      مراجعة
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-section">
-                <CheckCircle size={32} color="#059669" />
-                <p>لا توجد دفعات معلقة</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* العقود النشطة */}
-        <div className="dashboard-section contracts-section">
-          <div className="section-header">
-            <h3>
-              <Receipt size={18} color="#3b82f6" />
-              العقود النشطة
-            </h3>
-            <button
-              className="view-all"
-              onClick={() => navigate('/contracts?status=active')}
-            >
-              عرض الكل
-              <ChevronLeft size={16} />
-            </button>
-          </div>
-          <div className="section-content">
-            {dashboard?.active_contracts && dashboard.active_contracts.length > 0 ? (
-              <div className="contracts-list">
-                {dashboard.active_contracts.map((contract: any) => (
-                  <motion.div
-                    key={contract.id}
-                    className="contract-item"
-                    whileHover={{ x: -4 }}
-                    onClick={() => navigate(`/contracts/${contract.id}`)}
-                  >
-                    <div className="contract-info">
-                      <span className="contract-number">{contract.contract_number}</span>
-                      <span className="client-name">{contract.client?.name}</span>
-                    </div>
-                    <div className="contract-value">
-                      <span className="total">{formatAmount(contract.total_amount)} ر.س</span>
-                      <span className="collected">
-                        محصّل: {formatAmount(contract.paid_amount)} ر.س
-                      </span>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-section">
-                <Receipt size={32} color="#6b7280" />
-                <p>لا توجد عقود نشطة</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* إحصائيات سريعة */}
-      <div className="quick-stats">
-        <div className="stat-item">
-          <span className="stat-label">العقود النشطة</span>
-          <span className="stat-value">{stats?.total_contracts || 0}</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-label">فواتير معلقة</span>
-          <span className="stat-value">{stats?.pending_count || 0}</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-label">فواتير متأخرة</span>
-          <span className="stat-value danger">{stats?.overdue_count || 0}</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-label">إجمالي المتبقي</span>
-          <span className="stat-value">{formatAmount(stats?.total_remaining || 0)} ر.س</span>
-        </div>
-      </div>
       </div>
     </div>
   );

@@ -630,7 +630,9 @@ body.dark .contracts-page .requests-view-tabs {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .empty-state svg,
@@ -653,78 +655,59 @@ body.dark .contracts-page .requests-view-tabs {
   color: var(--color-text-secondary);
 }
 
-/* === شبكة القوالب === */
+/* === شبكة القوالب - Notion Style === */
 .templates-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
-  padding: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+  padding: 24px;
 }
 
-.template-card {
+/* Notion-style Template Card */
+.templates-grid .template-card {
   position: relative;
-  background-color: var(--color-surface);
-  border-radius: var(--radius-md, 16px);
+  background-color: var(--dashboard-card, var(--color-surface));
+  border-radius: 8px;
   border: 1px solid var(--color-border);
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-xs);
+  padding: 0;
+  text-align: right;
 }
 
-.template-card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
-  border-color: var(--color-primary);
-}
-
-/* خط علوي ملون */
-.template-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-accent, var(--color-primary-hover)));
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.template-card:hover::before {
-  opacity: 1;
-}
-
+/* شارة الافتراضي */
 .default-badge {
   position: absolute;
   top: 12px;
   right: 12px;
-  padding: 4px 10px;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-primary));
-  color: white;
-  font-size: var(--font-size-xs, 11px);
-  font-weight: 600;
-  border-radius: 20px;
-  box-shadow: var(--shadow-sm);
+  padding: 3px 8px;
+  background: var(--color-primary-soft, rgba(59, 130, 246, 0.15));
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 4px;
   z-index: 5;
 }
 
+/* قائمة البطاقة */
 .card-menu {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: 10px;
+  left: 10px;
   z-index: 10;
 }
 
 .menu-trigger {
-  padding: 8px;
-  background-color: var(--color-surface);
+  padding: 6px;
+  background-color: var(--dashboard-card, var(--color-surface));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs, 8px);
+  border-radius: 4px;
   cursor: pointer;
   color: var(--color-text-secondary);
-  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .menu-trigger:hover {
@@ -732,18 +715,19 @@ body.dark .contracts-page .requests-view-tabs {
   color: var(--color-text);
 }
 
-/* === إصلاح z-index للقوائم المنسدلة === */
+/* === القائمة المنسدلة === */
 .menu-dropdown {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
   min-width: 160px;
-  background-color: var(--color-surface);
-  border-radius: var(--radius-xs, 8px);
+  background-color: var(--dashboard-card, var(--color-surface));
+  border-radius: 6px;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--color-border);
   overflow: hidden;
   z-index: 9999;
+  padding: 4px 0;
 }
 
 .menu-dropdown button {
@@ -751,14 +735,13 @@ body.dark .contracts-page .requests-view-tabs {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 12px 16px;
+  padding: 8px 14px;
   border: none;
   background: none;
-  font-size: var(--font-size-sm, 14px);
+  font-size: 14px;
   color: var(--color-text);
   cursor: pointer;
   text-align: right;
-  transition: background-color 0.15s ease;
 }
 
 .menu-dropdown button:hover {
@@ -777,44 +760,41 @@ body.dark .contracts-page .requests-view-tabs {
   color: var(--color-warning);
 }
 
+/* محتوى البطاقة */
 .card-content {
-  padding: 20px;
+  padding: 16px;
   cursor: pointer;
   flex: 1;
   display: flex;
   flex-direction: column;
+  gap: 10px;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
+  align-items: flex-start;
 }
 
+/* شارة النوع */
 .type-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: var(--font-size-xs, 12px);
-  font-weight: 600;
-  transition: transform 0.2s;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.template-card:hover .type-badge {
-  transform: scale(1.02);
-}
-
+/* نقطة الحالة */
 .status-dot {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  transition: all 0.2s;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
 }
 
 .status-dot.active {
@@ -827,91 +807,86 @@ body.dark .contracts-page .requests-view-tabs {
   background-color: var(--color-error-soft, rgba(220, 38, 38, 0.1));
 }
 
+/* اسم القالب */
 .template-name {
-  font-size: var(--font-size-lg, 17px);
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--color-heading);
-  margin: 0 0 6px;
+  margin: 0;
   line-height: 1.4;
 }
 
 .template-name-ar {
-  font-size: var(--font-size-sm, 14px);
+  font-size: 13px;
   color: var(--color-text-secondary);
-  margin: 0 0 8px;
+  margin: 0;
 }
 
+/* وصف القالب */
 .template-description {
-  font-size: var(--font-size-sm, 13px);
+  font-size: 13px;
   color: var(--color-text-secondary);
-  margin: 0 0 16px;
+  margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.6;
+  line-height: 1.5;
   flex: 1;
 }
 
+/* معلومات القالب */
 .template-info {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
-  padding: 12px;
-  background: var(--color-surface-subtle);
-  border-radius: var(--radius-xs, 8px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: auto;
 }
 
 .info-item {
-  font-size: var(--font-size-sm, 13px);
+  font-size: 13px;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 6px;
 }
 
 .info-item .label {
   color: var(--color-text-secondary);
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .info-item .value {
-  color: var(--color-heading);
-  font-weight: 600;
+  color: var(--color-text);
+  font-weight: 500;
 }
 
+/* شروط الدفع */
 .payment-terms-preview {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, var(--color-primary-soft, rgba(59, 130, 246, 0.08)), var(--color-surface-subtle));
-  border-radius: var(--radius-xs, 8px);
-  font-size: var(--font-size-sm, 13px);
-  border: 1px dashed var(--color-border);
+  font-size: 13px;
 }
 
 .terms-label {
   color: var(--color-text-secondary);
+  font-size: 12px;
 }
 
 .terms-count {
   color: var(--color-primary);
-  font-weight: 700;
-  background: var(--color-surface);
-  padding: 2px 10px;
-  border-radius: 12px;
+  font-weight: 600;
+  font-size: 13px;
 }
 
+/* أزرار البطاقة */
 .card-actions {
   display: flex;
   gap: 8px;
-  padding: 14px 20px;
+  padding: 12px 16px;
+  background: var(--color-surface-subtle, rgba(0, 0, 0, 0.02));
   border-top: 1px solid var(--color-border);
-  background-color: var(--color-surface-subtle);
-  margin-top: auto;
 }
 
 .action-btn {
@@ -919,32 +894,29 @@ body.dark .contracts-page .requests-view-tabs {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 6px;
+  padding: 8px 12px;
   border: none;
-  border-radius: var(--radius-xs, 8px);
-  font-size: var(--font-size-sm, 13px);
+  border-radius: 4px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
   background-color: var(--color-primary);
   color: white;
 }
 
 .action-btn:hover {
   background-color: var(--color-primary-hover);
-  transform: translateY(-1px);
 }
 
 .action-btn.secondary {
-  background-color: var(--color-surface);
+  background-color: var(--color-surface-subtle);
   color: var(--color-text);
   border: 1px solid var(--color-border);
 }
 
 .action-btn.secondary:hover {
-  background-color: var(--color-surface-subtle);
-  border-color: var(--color-border-strong);
+  background-color: var(--color-border);
 }
 
 /* === جدول العقود === */
@@ -1190,7 +1162,7 @@ body.dark .contracts-page .requests-view-tabs {
   margin: 0 0 12px;
 }
 
-.modal-content > p {
+.modal-content>p {
   font-size: var(--font-size-sm, 14px);
   color: var(--color-text-secondary);
   margin: 0 0 20px;
@@ -1763,6 +1735,7 @@ body.dark .contracts-page .requests-view-tabs {
 }
 
 @media (max-width: 768px) {
+
   .contracts-page,
   .contract-detail-page {
     padding: 16px;

@@ -248,121 +248,68 @@ const AdminDashboard: React.FC = () => {
         <div className="dashboard-container">
             {/* Header */}
             <div className="dashboard-header">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div>
-                        <h1 className="dashboard-header__welcome">
-                            <span className="dashboard-header__welcome-emoji">👋</span>
-                            {getGreeting()}، {user?.name || 'المستخدم'}
-                        </h1>
-                        <p className="dashboard-header__subtitle">
-                            {formatDate()}
-                        </p>
-                    </div>
-
-                    <button
-                        onClick={handleRefresh}
-                        disabled={isRefreshing}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '8px 14px',
-                            borderRadius: '6px',
-                            background: 'var(--quiet-gray-100)',
-                            border: '1px solid var(--color-border)',
-                            color: 'var(--color-text)',
-                            fontSize: '13px',
-                            cursor: isRefreshing ? 'wait' : 'pointer',
-                            transition: 'background 0.1s',
-                            opacity: isRefreshing ? 0.7 : 1
-                        }}
-                    >
-                        <RefreshCw size={14} style={isRefreshing ? { animation: 'spin 1s linear infinite' } : undefined} />
-                        {isRefreshing ? 'جاري التحديث...' : 'تحديث'}
-                    </button>
+                {/* Top Row: Greeting only */}
+                <div style={{ marginBottom: '12px' }}>
+                    <h1 className="dashboard-header__welcome">
+                        <span className="dashboard-header__welcome-emoji">👋</span>
+                        {getGreeting()}، {user?.name || 'المستخدم'}
+                    </h1>
+                    <p className="dashboard-header__subtitle" style={{ fontSize: '13px', marginTop: '2px' }}>
+                        {formatDate()}
+                    </p>
                 </div>
 
-                {/* Stats + Quick Actions في سطر واحد */}
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch', flexWrap: 'wrap' }}>
+                {/* Stats Cards + Quick Actions في سطر واحد */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     {/* Stats Cards */}
                     {statsCards.map((card) => (
                         <div
                             key={card.id}
                             onClick={() => handleStatClick(card.id)}
-                            style={{
-                                flex: '1 1 160px',
-                                minWidth: '140px',
-                                padding: '14px 16px',
-                                borderRadius: '8px',
-                                background: 'var(--dashboard-card)',
-                                border: '1px solid var(--color-border)',
-                                cursor: 'pointer',
-                                transition: 'border-color 0.1s, background 0.1s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px'
-                            }}
-                            className="stat-card-hover"
+                            className="stat-card stat-card-hover"
+                            style={{ flex: '1 1 auto', minWidth: 0 }}
                         >
-                            <div style={{
-                                width: '40px',
-                                height: '40px',
-                                borderRadius: '8px',
+                            <div className="stat-card__icon" style={{
                                 background: card.bgColor,
                                 color: card.color,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0
                             }}>
                                 {card.icon}
                             </div>
-                            <div>
-                                <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-heading)', lineHeight: 1 }}>
+                            <div className="stat-card__content">
+                                <div className="stat-card__value">
                                     {card.value}
                                     {card.total !== undefined && card.total > 0 && (
                                         <span style={{ fontSize: '14px', color: 'var(--color-text-secondary)', fontWeight: 400 }}>/{card.total}</span>
                                     )}
                                 </div>
-                                <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>{card.label}</div>
+                                <div className="stat-card__label">{card.label}</div>
                             </div>
                         </div>
                     ))}
 
                     {/* Divider */}
-                    <div style={{ width: '1px', background: 'var(--color-border)', margin: '8px 4px' }} />
+                    <div style={{ width: '1px', height: '36px', background: 'var(--color-border)', flexShrink: 0 }} />
 
-                    {/* Quick Actions */}
+                    {/* Quick Actions - Compact */}
                     {quickActions.map((action) => {
                         const content = (
                             <div
                                 key={action.id}
+                                className="quick-action-hover"
                                 style={{
-                                    flex: '0 0 auto',
-                                    padding: '14px 20px',
-                                    borderRadius: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '8px 12px',
+                                    borderRadius: '6px',
                                     background: 'var(--quiet-gray-100)',
                                     border: '1px solid transparent',
                                     cursor: 'pointer',
-                                    transition: 'background 0.1s, border-color 0.1s',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    minWidth: '70px'
+                                    transition: 'all 0.1s',
+                                    whiteSpace: 'nowrap'
                                 }}
-                                className="quick-action-hover"
                             >
-                                <div style={{
-                                    width: '36px',
-                                    height: '36px',
-                                    borderRadius: '8px',
-                                    background: `${action.color}15`,
-                                    color: action.color,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}>
+                                <div style={{ color: action.color, display: 'flex' }}>
                                     {action.icon}
                                 </div>
                                 <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--color-text)' }}>{action.label}</span>
@@ -371,12 +318,12 @@ const AdminDashboard: React.FC = () => {
 
                         if (action.href) {
                             return (
-                                <Link key={action.id} to={action.href} style={{ textDecoration: 'none' }}>
+                                <Link key={action.id} to={action.href} style={{ textDecoration: 'none', flexShrink: 0 }}>
                                     {content}
                                 </Link>
                             );
                         }
-                        return content;
+                        return <div key={action.id} style={{ flexShrink: 0 }}>{content}</div>;
                     })}
                 </div>
             </div>

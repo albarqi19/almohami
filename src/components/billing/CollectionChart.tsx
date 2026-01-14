@@ -336,8 +336,8 @@ const CollectionChart: React.FC<CollectionChartProps> = ({
         {activeChartType === 'area'
           ? renderAreaChart()
           : activeChartType === 'bar'
-          ? renderBarChart()
-          : renderComposedChart()}
+            ? renderBarChart()
+            : renderComposedChart()}
       </ResponsiveContainer>
 
       {/* ملخص */}
