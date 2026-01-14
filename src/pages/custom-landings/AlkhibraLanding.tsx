@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Scale, Shield, Building2, Gavel, Award, Phone } from 'lucide-react';
@@ -7,10 +7,10 @@ import { useTenant } from '../../contexts/TenantContext';
 /**
  * صفحة هبوط مخصصة لشركة بيوت الخبرة للمحاماة
  * Alkhibra Custom Landing Page
- * Using PURE INLINE STYLES - No Tailwind dependency
+ * Full Responsive Implementation using Inline Styles
  */
 
-const styles: Record<string, React.CSSProperties> = {
+const getStyles = (isMobile: boolean): Record<string, React.CSSProperties> => ({
   // Page Container
   page: {
     minHeight: '100vh',
@@ -21,17 +21,17 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     position: 'relative',
-    overflow: 'hidden',
+    overflowX: 'hidden',
   },
 
   // Navbar
   navbar: {
     width: '100%',
-    padding: '20px 40px',
+    padding: isMobile ? '15px 20px' : '20px 40px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    background: 'rgba(255, 255, 255, 0.8)',
+    background: 'rgba(255, 255, 255, 0.9)',
     backdropFilter: 'blur(10px)',
     borderBottom: '1px solid rgba(0,0,0,0.05)',
     position: 'sticky',
@@ -48,7 +48,7 @@ const styles: Record<string, React.CSSProperties> = {
   logoIcon: {
     background: '#1B2B48',
     color: '#C5A059',
-    padding: '10px',
+    padding: '8px',
     borderRadius: '10px',
     display: 'flex',
     alignItems: 'center',
@@ -57,26 +57,27 @@ const styles: Record<string, React.CSSProperties> = {
 
   logoText: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
   },
 
   logoTitle: {
-    fontSize: '18px',
+    fontSize: isMobile ? '16px' : '18px',
     fontWeight: 700,
     color: '#1B2B48',
     lineHeight: 1.2,
   },
 
   logoSubtitle: {
-    fontSize: '10px',
+    fontSize: '9px',
     color: '#C5A059',
-    letterSpacing: '3px',
-    textTransform: 'uppercase' as const,
+    letterSpacing: '2px',
+    textTransform: 'uppercase',
     fontFamily: 'serif',
   },
 
+  // Navigation Links (Hidden on mobile)
   navLinks: {
-    display: 'flex',
+    display: isMobile ? 'none' : 'flex',
     alignItems: 'center',
     gap: '30px',
   },
@@ -92,32 +93,34 @@ const styles: Record<string, React.CSSProperties> = {
   navButton: {
     background: '#1B2B48',
     color: 'white',
-    padding: '10px 20px',
+    padding: isMobile ? '8px 16px' : '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    fontSize: '14px',
+    fontSize: isMobile ? '12px' : '14px',
     fontWeight: 600,
     cursor: 'pointer',
     boxShadow: '0 4px 15px rgba(27, 43, 72, 0.2)',
+    whiteSpace: 'nowrap',
   },
 
   // Hero Section
   hero: {
     flex: 1,
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '60px',
+    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+    gap: isMobile ? '40px' : '60px',
     maxWidth: '1400px',
     margin: '0 auto',
-    padding: '60px 40px',
+    padding: isMobile ? '40px 20px' : '60px 40px',
     alignItems: 'center',
     width: '100%',
   },
 
   heroContent: {
     display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '24px',
+    flexDirection: 'column',
+    gap: isMobile ? '20px' : '24px',
+    order: isMobile ? 1 : 0, // Ensure text is first on mobile
   },
 
   badge: {
@@ -126,46 +129,46 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '8px',
     background: 'rgba(27, 43, 72, 0.05)',
     border: '1px solid rgba(27, 43, 72, 0.1)',
-    padding: '8px 16px',
+    padding: '6px 14px',
     borderRadius: '50px',
     width: 'fit-content',
-    fontSize: '12px',
+    fontSize: '11px',
     fontWeight: 600,
   },
 
   mainTitle: {
-    fontSize: '56px',
+    fontSize: isMobile ? '36px' : '56px',
     fontWeight: 800,
     color: '#1B2B48',
-    lineHeight: 1.1,
+    lineHeight: 1.15,
     margin: 0,
   },
 
   subtitleContainer: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
+    gap: '12px',
   },
 
   goldLine: {
-    width: '50px',
+    width: isMobile ? '30px' : '50px',
     height: '3px',
     background: '#C5A059',
     borderRadius: '2px',
   },
 
   subtitle: {
-    fontSize: '24px',
+    fontSize: isMobile ? '18px' : '24px',
     color: '#C5A059',
-    letterSpacing: '4px',
-    textTransform: 'uppercase' as const,
+    letterSpacing: isMobile ? '2px' : '4px',
+    textTransform: 'uppercase',
     fontFamily: '"Cinzel", serif',
     fontWeight: 600,
     margin: 0,
   },
 
   description: {
-    fontSize: '17px',
+    fontSize: isMobile ? '15px' : '17px',
     color: '#64748B',
     lineHeight: 1.8,
     maxWidth: '500px',
@@ -173,8 +176,10 @@ const styles: Record<string, React.CSSProperties> = {
 
   buttonsContainer: {
     display: 'flex',
+    flexDirection: isMobile ? 'column' : 'row',
     gap: '16px',
     marginTop: '16px',
+    width: isMobile ? '100%' : 'auto',
   },
 
   primaryButton: {
@@ -188,9 +193,10 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: '10px',
     boxShadow: '0 10px 30px rgba(27, 43, 72, 0.25)',
-    transition: 'all 0.3s ease',
+    width: isMobile ? '100%' : 'auto',
   },
 
   secondaryButton: {
@@ -204,41 +210,48 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: '10px',
-    transition: 'all 0.3s ease',
+    width: isMobile ? '100%' : 'auto',
   },
 
   stats: {
     display: 'flex',
-    gap: '40px',
+    flexWrap: 'wrap',
+    gap: isMobile ? '20px' : '40px',
     marginTop: '40px',
     paddingTop: '30px',
     borderTop: '1px solid rgba(0,0,0,0.08)',
+    justifyContent: isMobile ? 'space-between' : 'flex-start',
   },
 
   statItem: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
+    minWidth: isMobile ? '45%' : 'auto',
   },
 
   statNumber: {
-    fontSize: '28px',
+    fontSize: isMobile ? '24px' : '28px',
     fontWeight: 800,
     color: '#1B2B48',
   },
 
   statLabel: {
-    fontSize: '11px',
+    fontSize: '10px',
     color: '#94A3B8',
-    textTransform: 'uppercase' as const,
+    textTransform: 'uppercase',
     letterSpacing: '2px',
     marginTop: '4px',
   },
 
   // Visual Card
   heroVisual: {
-    position: 'relative' as const,
-    height: '550px',
+    position: 'relative',
+    height: isMobile ? '400px' : '550px',
+    width: '100%',
+    order: isMobile ? 2 : 1, // Visual second on mobile
+    display: isMobile ? 'block' : 'block', // Keep it visible but stacked
   },
 
   visualCard: {
@@ -246,17 +259,17 @@ const styles: Record<string, React.CSSProperties> = {
     height: '100%',
     background: 'linear-gradient(145deg, #1B2B48 0%, #0F1928 100%)',
     borderRadius: '24px',
-    padding: '40px',
+    padding: isMobile ? '24px' : '40px',
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     justifyContent: 'space-between',
-    position: 'relative' as const,
+    position: 'relative',
     overflow: 'hidden',
     boxShadow: '0 30px 60px rgba(27, 43, 72, 0.3)',
   },
 
   cardGlow: {
-    position: 'absolute' as const,
+    position: 'absolute',
     top: '-100px',
     right: '-100px',
     width: '300px',
@@ -264,14 +277,14 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'rgba(197, 160, 89, 0.15)',
     borderRadius: '50%',
     filter: 'blur(80px)',
-    pointerEvents: 'none' as const,
+    pointerEvents: 'none',
   },
 
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    position: 'relative' as const,
+    position: 'relative',
     zIndex: 1,
   },
 
@@ -283,7 +296,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   cardValues: {
-    position: 'relative' as const,
+    position: 'relative',
     zIndex: 1,
   },
 
@@ -291,13 +304,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '11px',
     color: '#C5A059',
     letterSpacing: '4px',
-    textTransform: 'uppercase' as const,
+    textTransform: 'uppercase',
     marginBottom: '16px',
     display: 'block',
   },
 
   valuesText: {
-    fontSize: '32px',
+    fontSize: isMobile ? '24px' : '32px',
     color: 'white',
     lineHeight: 1.4,
     fontWeight: 300,
@@ -312,20 +325,20 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
     gap: '12px',
-    position: 'relative' as const,
+    position: 'relative',
     zIndex: 1,
   },
 
   featureCard: {
     background: 'rgba(255, 255, 255, 0.05)',
-    padding: '16px',
+    padding: isMobile ? '12px' : '16px',
     borderRadius: '12px',
     border: '1px solid rgba(255, 255, 255, 0.08)',
     transition: 'all 0.3s ease',
   },
 
   featureTitle: {
-    fontSize: '14px',
+    fontSize: isMobile ? '12px' : '14px',
     fontWeight: 700,
     color: 'white',
     marginTop: '10px',
@@ -335,7 +348,7 @@ const styles: Record<string, React.CSSProperties> = {
   featureEn: {
     fontSize: '9px',
     color: 'rgba(255, 255, 255, 0.4)',
-    textTransform: 'uppercase' as const,
+    textTransform: 'uppercase',
     letterSpacing: '2px',
     fontFamily: 'serif',
     display: 'block',
@@ -344,11 +357,11 @@ const styles: Record<string, React.CSSProperties> = {
 
   // Floating Badge
   floatingBadge: {
-    position: 'absolute' as const,
-    top: '30px',
-    left: '-20px',
+    position: 'absolute',
+    top: isMobile ? '20px' : '30px',
+    left: isMobile ? '-10px' : '-20px',
     background: 'white',
-    padding: '16px 20px',
+    padding: isMobile ? '12px 16px' : '16px 20px',
     borderRadius: '14px',
     boxShadow: '0 15px 40px rgba(0,0,0,0.12)',
     zIndex: 10,
@@ -384,12 +397,27 @@ const styles: Record<string, React.CSSProperties> = {
   footer: {
     height: '6px',
     background: 'linear-gradient(90deg, #1B2B48 0%, #C5A059 50%, #1B2B48 100%)',
+    width: '100%',
   },
-};
+});
 
 const AlkhibraLanding: React.FC = () => {
   const navigate = useNavigate();
   const { tenant } = useTenant();
+
+  // Responsive State
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const styles = getStyles(isMobile);
 
   const companyInfo = {
     nameAr: tenant?.name || 'بيوت الخبرة',
@@ -410,11 +438,11 @@ const AlkhibraLanding: React.FC = () => {
       <nav style={styles.navbar}>
         <div style={styles.logoContainer}>
           {companyInfo.logo ? (
-            <img src={companyInfo.logo} alt="Logo" style={{ height: '50px', objectFit: 'contain' }} />
+            <img src={companyInfo.logo} alt="Logo" style={{ height: isMobile ? '40px' : '50px', objectFit: 'contain' }} />
           ) : (
             <>
               <div style={styles.logoIcon}>
-                <Scale size={24} />
+                <Scale size={isMobile ? 20 : 24} />
               </div>
               <div style={styles.logoText}>
                 <span style={styles.logoTitle}>{companyInfo.nameAr}</span>
@@ -424,14 +452,21 @@ const AlkhibraLanding: React.FC = () => {
           )}
         </div>
 
-        <div style={styles.navLinks}>
-          <span style={styles.navLink}>الرئيسية</span>
-          <span style={styles.navLink}>مجالات الممارسة</span>
-          <span style={styles.navLink}>فريق العمل</span>
+        {/* Mobile Menu Icon (Visual Only for now, or works as button) */}
+        {isMobile ? (
           <button style={styles.navButton} onClick={() => navigate('/login')}>
-            بوابة العملاء
+            الدخول
           </button>
-        </div>
+        ) : (
+          <div style={styles.navLinks}>
+            <span style={styles.navLink}>الرئيسية</span>
+            <span style={styles.navLink}>مجالات الممارسة</span>
+            <span style={styles.navLink}>فريق العمل</span>
+            <button style={styles.navButton} onClick={() => navigate('/login')}>
+              بوابة العملاء
+            </button>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
