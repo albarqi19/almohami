@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import NotificationSettings from '../components/NotificationSettings';
 import TiptapEditor from '../components/TiptapEditor';
+import { downloadInvoice, InvoicePreviewModal } from '../components/InvoiceDownload';
 import { apiClient } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/settings-page.css';
@@ -115,6 +116,9 @@ const Settings: React.FC = () => {
   // Invoices State
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
 
   // Policy Settings State
   const [policySettings, setPolicySettings] = useState({
@@ -208,6 +212,15 @@ const Settings: React.FC = () => {
             trial_ends_at: response.data.tenant?.trial_ends_at,
             trial_days_remaining: response.data.trial_days_remaining,
           });
+          // حفظ معلومات الشركة للفواتير
+          if (response.data.tenant) {
+            setTenantInfo({
+              name: response.data.tenant.name,
+              email: response.data.tenant.email,
+              phone: response.data.tenant.phone,
+              address: response.data.tenant.address,
+            });
+          }
         }
       } catch (error) {
         console.error('Error loading subscription:', error);
@@ -224,8 +237,11 @@ const Settings: React.FC = () => {
       try {
         setLoadingInvoices(true);
         const response: any = await apiClient.get('/subscription/invoices');
+        console.log('Invoices API Response:', response);
         if (response.success && response.data) {
-          setInvoices(response.data.invoices || response.data);
+          // Laravel paginate يرجع البيانات في data.data
+          const invoicesData = response.data.data || response.data.invoices || response.data;
+          setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
         }
       } catch (error) {
         console.error('Error loading invoices:', error);
@@ -1413,6 +1429,8 @@ const Settings: React.FC = () => {
                         <th>رقم الفاتورة</th>
                         <th>التاريخ</th>
                         <th>المبلغ</th>
+                        <th>الضريبة</th>
+                        <th>الإجمالي</th>
                         <th>الحالة</th>
                         <th>الإجراءات</th>
                       </tr>
@@ -1420,19 +1438,40 @@ const Settings: React.FC = () => {
                     <tbody>
                       {invoices.map((invoice: any) => (
                         <tr key={invoice.id}>
-                          <td>{invoice.invoice_number}</td>
+                          <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{invoice.invoice_number}</td>
                           <td>{new Date(invoice.created_at).toLocaleDateString('ar-SA')}</td>
-                          <td>{invoice.total_amount} ر.س</td>
+                          <td>{Number(invoice.amount).toFixed(2)} ر.س</td>
+                          <td>{Number(invoice.tax_amount || 0).toFixed(2)} ر.س</td>
+                          <td style={{ fontWeight: 600 }}>{Number(invoice.total_amount).toFixed(2)} ر.س</td>
                           <td>
                             <span className={`settings-badge settings-badge--${invoice.status === 'paid' ? 'success' : invoice.status === 'pending' ? 'warning' : 'danger'}`}>
                               {invoice.status === 'paid' ? 'مدفوع' : invoice.status === 'pending' ? 'معلق' : 'فشل'}
                             </span>
                           </td>
                           <td>
-                            <button className="settings-btn settings-btn--small">
-                              <Download size={14} />
-                              تحميل
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button 
+                                className="settings-btn settings-btn--small"
+                                onClick={() => {
+                                  setSelectedInvoice(invoice);
+                                  setShowInvoicePreview(true);
+                                }}
+                                title="معاينة الفاتورة"
+                              >
+                                👁️ معاينة
+                              </button>
+                              <button 
+                                className="settings-btn settings-btn--small settings-btn--primary"
+                                onClick={() => {
+                                  const tenant = tenantInfo || { name: 'عميل', email: '', phone: '' };
+                                  downloadInvoice(invoice, tenant);
+                                }}
+                                title="تحميل الفاتورة كـ PDF"
+                              >
+                                <Download size={14} />
+                                تحميل
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1454,6 +1493,19 @@ const Settings: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Invoice Preview Modal */}
+            {selectedInvoice && (
+              <InvoicePreviewModal
+                invoice={selectedInvoice}
+                tenant={tenantInfo || { name: 'عميل', email: '', phone: '' }}
+                isOpen={showInvoicePreview}
+                onClose={() => {
+                  setShowInvoicePreview(false);
+                  setSelectedInvoice(null);
+                }}
+              />
+            )}
           </div>
         );
 

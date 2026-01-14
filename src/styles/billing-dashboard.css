@@ -1,0 +1,722 @@
+/* billing-dashboard.css - أنماط لوحة التحصيل */
+
+/* === الصفحة الرئيسية === */
+.billing-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 100vh;
+  background: var(--dashboard-bg, var(--color-background));
+}
+
+/* ==================== Header Bar (Unified Style) ==================== */
+.billing-dashboard .requests-header-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  background: var(--dashboard-card, var(--color-surface));
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.billing-dashboard .requests-header-bar__start {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.billing-dashboard .requests-header-bar__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.billing-dashboard .requests-header-bar__title svg {
+  color: var(--law-navy, var(--color-primary));
+}
+
+.billing-dashboard .requests-header-bar__stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .billing-dashboard .requests-header-bar__stats {
+    display: none;
+  }
+}
+
+/* Stats Pills */
+.billing-dashboard .request-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+
+.billing-dashboard .request-stat-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.billing-dashboard .request-stat-pill--pending {
+  background: var(--status-orange-light, #fef3c7);
+  color: var(--status-orange, #d97706);
+}
+
+.billing-dashboard .request-stat-pill--pending .request-stat-pill__dot {
+  background: var(--status-orange, #d97706);
+}
+
+.billing-dashboard .request-stat-pill--approved {
+  background: var(--status-green-light, #d1fae5);
+  color: var(--status-green, #059669);
+}
+
+.billing-dashboard .request-stat-pill--approved .request-stat-pill__dot {
+  background: var(--status-green, #059669);
+}
+
+.billing-dashboard .request-stat-pill--rejected {
+  background: var(--status-red-light, #fee2e2);
+  color: var(--status-red, #dc2626);
+}
+
+.billing-dashboard .request-stat-pill--rejected .request-stat-pill__dot {
+  background: var(--status-red, #dc2626);
+}
+
+/* Header Center */
+.billing-dashboard .requests-header-bar__center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  max-width: 400px;
+  min-width: 150px;
+}
+
+@media (max-width: 768px) {
+  .billing-dashboard .requests-header-bar__center {
+    order: 3;
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Filter Select */
+.billing-dashboard .requests-filter-select {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--dashboard-card, var(--color-surface));
+  color: var(--color-text);
+  font-size: 13px;
+  cursor: pointer;
+  min-width: 100px;
+}
+
+.billing-dashboard .requests-filter-select:focus {
+  outline: none;
+  border-color: var(--law-navy, var(--color-primary));
+}
+
+/* Icon Button */
+.billing-dashboard .requests-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border);
+  background: var(--dashboard-card, var(--color-surface));
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: all 0.15s;
+}
+
+.billing-dashboard .requests-icon-btn:hover {
+  border-color: var(--law-navy, var(--color-primary));
+  color: var(--law-navy, var(--color-primary));
+}
+
+/* Header End */
+.billing-dashboard .requests-header-bar__end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Secondary Button Updates */
+.billing-dashboard .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--quiet-gray-100, var(--color-surface-subtle));
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.billing-dashboard .btn-secondary:hover {
+  background: var(--quiet-gray-200);
+}
+
+/* === الهيدر === */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.dashboard-header .header-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dashboard-header .header-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-sm, 12px);
+  background-color: var(--color-accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dashboard-header h1 {
+  font-size: var(--font-size-2xl, 24px);
+  font-weight: 700;
+  color: var(--color-heading);
+  margin: 0;
+}
+
+.dashboard-header p {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+/* === المحتوى الرئيسي === */
+.dashboard-content {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 28px;
+  margin-top: 20px;
+}
+
+/* === قسم الرسم البياني === */
+.chart-section {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-sm, 12px);
+  padding: 28px;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xs);
+}
+
+.chart-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.chart-section h2 {
+  font-size: var(--font-size-lg, 18px);
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0;
+}
+
+.year-select {
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs, 8px);
+  font-size: var(--font-size-sm, 14px);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.year-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+  outline: none;
+}
+
+/* === الأقسام الجانبية === */
+.side-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* === قسم لوحة التحكم === */
+.dashboard-section {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-sm, 12px);
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xs);
+}
+
+.dashboard-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.dashboard-section .section-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--font-size-base, 15px);
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0;
+}
+
+.view-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm, 13px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.view-all:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+.section-content {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* === قائمة الفواتير === */
+.invoice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.invoice-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background-color: var(--color-surface-subtle);
+  border-radius: var(--radius-xs, 10px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.invoice-item:hover {
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(-4px);
+}
+
+.invoice-item.overdue {
+  background-color: var(--color-error-soft);
+  border-right: 4px solid var(--color-error);
+}
+
+.invoice-item.overdue:hover {
+  background-color: var(--color-error-soft);
+}
+
+.invoice-item.upcoming {
+  background-color: var(--color-warning-soft);
+  border-right: 4px solid var(--color-warning);
+}
+
+.invoice-item.upcoming:hover {
+  background-color: var(--color-warning-soft);
+}
+
+.item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-main .invoice-number {
+  font-size: var(--font-size-xs, 12px);
+  font-family: monospace;
+  color: var(--color-text-secondary);
+}
+
+.item-main .client-name {
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 500;
+  color: var(--color-heading);
+}
+
+.item-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.item-details .amount {
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.item-details .overdue-days {
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+.item-details .due-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-secondary);
+}
+
+/* === قائمة المدفوعات === */
+.payments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.payment-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background-color: var(--color-surface-subtle);
+  border-radius: var(--radius-xs, 10px);
+  transition: all 0.2s ease;
+}
+
+.payment-item:hover {
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.payment-item .payment-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-xs, 10px);
+  background-color: var(--color-success-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.payment-item.pending .payment-icon {
+  background-color: var(--color-warning-soft);
+}
+
+.payment-item .payment-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.payment-item .payment-number {
+  font-size: var(--font-size-xs, 12px);
+  font-family: monospace;
+  color: var(--color-text-secondary);
+}
+
+.payment-item .client-name {
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 500;
+  color: var(--color-heading);
+}
+
+.payment-item .payment-amount {
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 600;
+  color: var(--color-success);
+}
+
+.payment-item .payment-amount.pending {
+  color: var(--color-warning);
+}
+
+.payment-item .payment-date {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-secondary);
+}
+
+.btn-sm.btn-confirm {
+  padding: 8px 14px;
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-xs, 8px);
+  font-size: var(--font-size-xs, 12px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.btn-sm.btn-confirm:hover {
+  background-color: var(--color-primary-hover);
+}
+
+/* === قائمة العقود === */
+.contracts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contract-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background-color: var(--color-surface-subtle);
+  border-radius: var(--radius-xs, 10px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.contract-item:hover {
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(-4px);
+}
+
+.contract-item .contract-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.contract-item .contract-number {
+  font-size: var(--font-size-xs, 12px);
+  font-family: monospace;
+  color: var(--color-text-secondary);
+}
+
+.contract-item .client-name {
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 500;
+  color: var(--color-heading);
+}
+
+.contract-item .contract-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.contract-item .total {
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.contract-item .collected {
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-success);
+}
+
+/* === حالة فارغة === */
+.empty-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--color-text-secondary);
+}
+
+.empty-section svg {
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.empty-section p {
+  font-size: var(--font-size-sm, 13px);
+  margin: 0;
+}
+
+/* === القسم السفلي === */
+.dashboard-bottom {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 28px;
+}
+
+/* === الإحصائيات السريعة === */
+.quick-stats {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 28px;
+  padding: 24px;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-sm, 12px);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xs);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-label {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: var(--font-size-xl, 22px);
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.stat-value.danger {
+  color: var(--color-error);
+}
+
+/* === حالة التحميل === */
+.loading-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px;
+  color: var(--color-text-secondary);
+}
+
+.loading-page .spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === الأزرار === */
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs, 8px);
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-surface-subtle);
+  border-color: var(--color-border-strong);
+}
+
+/* === استجابة الشاشات === */
+@media (max-width: 1200px) {
+  .dashboard-content {
+    grid-template-columns: 1fr;
+  }
+
+  .side-sections {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .dashboard-bottom {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .billing-dashboard {
+    padding: 16px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .side-sections {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-stats {
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 20px;
+  }
+
+  .stat-item {
+    min-width: 120px;
+  }
+
+  .dashboard-section {
+    padding: 20px;
+  }
+
+  .chart-section {
+    padding: 20px;
+  }
+}

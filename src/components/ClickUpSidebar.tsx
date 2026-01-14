@@ -22,7 +22,11 @@ import {
     Scale,
     X,
     ClipboardList,
-    BookOpen
+    BookOpen,
+    Receipt,
+    CreditCard,
+    TrendingUp,
+    FileSignature
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useAuth } from '../contexts/AuthContext';
@@ -61,6 +65,11 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
         { icon: Clock, label: 'الأنشطة', path: '/activities', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
         { icon: Users, label: 'العملاء', path: '/clients', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: ClipboardList, label: 'الطلبات الإدارية', path: '/admin/requests', roles: ['admin', 'lawyer', 'legal_assistant'] },
+        { icon: FileSignature, label: 'العقود', path: '/contracts', roles: ['admin', 'lawyer', 'legal_assistant'] },
+        { icon: FileText, label: 'قوالب العقود', path: '/contract-templates', roles: ['admin', 'lawyer'] },
+        { icon: Receipt, label: 'الفواتير', path: '/invoices', roles: ['admin', 'lawyer', 'legal_assistant'] },
+        { icon: CreditCard, label: 'المدفوعات', path: '/payments', roles: ['admin', 'lawyer', 'legal_assistant'] },
+        { icon: TrendingUp, label: 'التحصيل', path: '/billing', roles: ['admin', 'lawyer'] },
     ];
 
     const settingsItems = [
