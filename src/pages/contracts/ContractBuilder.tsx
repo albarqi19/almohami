@@ -191,7 +191,7 @@ const ContractBuilder: React.FC = () => {
     values.total_amount = totalAmount.toString();
     values.vat_rate = vatRate.toString();
     values.scope_type = scopeType === 'plaintiff' ? 'مدعي' :
-                        scopeType === 'defendant' ? 'مدعى عليه' : 'مدعي/مدعى عليه';
+      scopeType === 'defendant' ? 'مدعى عليه' : 'مدعي/مدعى عليه';
 
     // التاريخ (ميلادي وهجري)
     const now = new Date();
@@ -296,10 +296,10 @@ const ContractBuilder: React.FC = () => {
   // استخراج البيانات من الاستجابة - التعامل مع بنية pagination
   const clients: Client[] = Array.isArray(clientsData?.data)
     ? clientsData.data
-    : (clientsData?.data?.data || []);
+    : ((clientsData?.data as unknown as { data: Client[] })?.data || []);
   const cases: Case[] = Array.isArray(casesData?.data)
     ? casesData.data
-    : (casesData?.data?.data || []);
+    : ((casesData?.data as unknown as { data: Case[] })?.data || []);
   const templates: ContractTemplate[] = templatesData?.data?.data || [];
 
   return (
@@ -532,7 +532,7 @@ const ContractBuilder: React.FC = () => {
                     </div>
                     <div className="editor-sidebar">
                       <ContractVariablesList
-                        onInsertVariable={() => {}}
+                        onInsertVariable={() => { }}
                         usedVariables={[]}
                       />
                     </div>
