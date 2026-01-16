@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Printer, Download, Loader2, FileText } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { useContractVariables } from '../../hooks/useContractVariables';
@@ -20,6 +20,11 @@ export interface ContractPreviewProps {
   useLetterhead?: boolean;
 }
 
+// A4 dimensions in mm
+const A4_HEIGHT_MM = 297;
+const A4_WIDTH_MM = 210;
+const MM_TO_PX = 3.7795275591; // 1mm = 3.78px at 96dpi
+
 const ContractPreview: React.FC<ContractPreviewProps> = ({
   isOpen = true,
   onClose,
@@ -37,11 +42,29 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
   const [loadingLetterhead, setLoadingLetterhead] = useState(false);
   const [letterheadEnabled, setLetterheadEnabled] = useState(useLetterhead);
   const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [pages, setPages] = useState<string[]>([]);
+  const [isCalculating, setIsCalculating] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
 
   const title = titleProp || contractTitle || 'معاينة العقد';
   const safeContent = content || '';
   const previewContent = replaceVariables(safeContent, variables || {});
+
+  // Get letterhead settings
+  const lh = letterheadEnabled && letterhead ? letterhead : null;
+
+  // Calculate dimensions based on letterhead
+  const headerHeightMM = lh?.type === 'image' ? (lh.header_height_mm || 30) : lh?.type === 'dynamic' ? 40 : 15;
+  const footerHeightMM = lh?.type === 'image' ? (lh.footer_height_mm || 25) : lh?.type === 'dynamic' ? 25 : 15;
+  const marginTopMM = lh?.margin_top_mm || 10;
+  const marginBottomMM = lh?.margin_bottom_mm || 10;
+  const marginRightMM = lh?.margin_right_mm || 20;
+  const marginLeftMM = lh?.margin_left_mm || 20;
+
+  // Content area height per page (excluding header, footer, and margins)
+  const contentAreaHeightMM = A4_HEIGHT_MM - headerHeightMM - footerHeightMM - marginTopMM - marginBottomMM;
+  const contentAreaHeightPx = contentAreaHeightMM * MM_TO_PX;
 
   // Fetch letterhead
   useEffect(() => {
@@ -103,12 +126,102 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
     });
   }, [letterhead, letterheadEnabled]);
 
-  // Get letterhead for print margins calculation
-  const lhForPrint = letterheadEnabled && letterhead ? letterhead : null;
-  const printHeaderHeight = lhForPrint?.type === 'image' ? (lhForPrint.header_height_mm || 30) : lhForPrint?.type === 'dynamic' ? 40 : 15;
-  const printFooterHeight = lhForPrint?.type === 'image' ? (lhForPrint.footer_height_mm || 25) : lhForPrint?.type === 'dynamic' ? 25 : 15;
-  const printMarginRight = lhForPrint?.margin_right_mm || 15;
-  const printMarginLeft = lhForPrint?.margin_left_mm || 15;
+  // Paginate content
+  const paginateContent = useCallback(() => {
+    if (!measureRef.current || !previewContent) {
+      setPages([previewContent || '']);
+      setIsCalculating(false);
+      return;
+    }
+
+    setIsCalculating(true);
+
+    // Create a temporary container to measure content
+    const tempContainer = document.createElement('div');
+    tempContainer.style.cssText = `
+      position: absolute;
+      visibility: hidden;
+      width: ${A4_WIDTH_MM - marginRightMM - marginLeftMM}mm;
+      font-family: 'Times New Roman', 'Traditional Arabic', serif;
+      font-size: 14px;
+      line-height: 1.8;
+      direction: rtl;
+    `;
+    tempContainer.innerHTML = previewContent;
+    document.body.appendChild(tempContainer);
+
+    const paginatedPages: string[] = [];
+    const children = Array.from(tempContainer.childNodes);
+
+    let currentPageContent = '';
+    let currentHeight = 0;
+
+    // Helper to create a measurement element
+    const measureElement = (html: string): number => {
+      const div = document.createElement('div');
+      div.style.cssText = `
+        position: absolute;
+        visibility: hidden;
+        width: ${A4_WIDTH_MM - marginRightMM - marginLeftMM}mm;
+        font-family: 'Times New Roman', 'Traditional Arabic', serif;
+        font-size: 14px;
+        line-height: 1.8;
+        direction: rtl;
+      `;
+      div.innerHTML = html;
+      document.body.appendChild(div);
+      const height = div.offsetHeight;
+      document.body.removeChild(div);
+      return height;
+    };
+
+    children.forEach((node) => {
+      const nodeHtml = node.nodeType === Node.ELEMENT_NODE
+        ? (node as Element).outerHTML
+        : node.textContent || '';
+
+      if (!nodeHtml.trim()) return;
+
+      const nodeHeight = measureElement(nodeHtml);
+
+      if (currentHeight + nodeHeight > contentAreaHeightPx) {
+        // Save current page and start new one
+        if (currentPageContent) {
+          paginatedPages.push(currentPageContent);
+        }
+        currentPageContent = nodeHtml;
+        currentHeight = nodeHeight;
+      } else {
+        currentPageContent += nodeHtml;
+        currentHeight += nodeHeight;
+      }
+    });
+
+    // Add last page
+    if (currentPageContent) {
+      paginatedPages.push(currentPageContent);
+    }
+
+    document.body.removeChild(tempContainer);
+
+    setPages(paginatedPages.length > 0 ? paginatedPages : [previewContent]);
+    setIsCalculating(false);
+  }, [previewContent, contentAreaHeightPx, marginRightMM, marginLeftMM]);
+
+  // Recalculate pages when content or letterhead changes
+  useEffect(() => {
+    if (imagesLoaded) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(paginateContent, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [imagesLoaded, previewContent, letterheadEnabled, letterhead, paginateContent]);
+
+  // Print margins
+  const printHeaderHeight = lh?.type === 'image' ? (lh.header_height_mm || 30) : lh?.type === 'dynamic' ? 40 : 15;
+  const printFooterHeight = lh?.type === 'image' ? (lh.footer_height_mm || 25) : lh?.type === 'dynamic' ? 25 : 15;
+  const printMarginRight = lh?.margin_right_mm || 15;
+  const printMarginLeft = lh?.margin_left_mm || 15;
 
   // Print handler using react-to-print
   const handlePrint = useReactToPrint({
@@ -161,22 +274,175 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
 
   if (!isOpen) return null;
 
-  // Get letterhead settings
-  const lh = letterheadEnabled && letterhead ? letterhead : null;
-  const headerHeight = lh?.type === 'image' ? (lh.header_height_mm || 30) : 0;
-  const footerHeight = lh?.type === 'image' ? (lh.footer_height_mm || 25) : 0;
+  // Render header for a page
+  const renderHeader = () => {
+    if (!lh) return null;
 
-  // Debug watermark
-  console.log('Letterhead watermark data:', {
-    watermark_enabled: lh?.watermark_enabled,
-    watermark_type: lh?.watermark_type,
-    watermark_text: lh?.watermark_text,
-    watermark_image_url: lh?.watermark_image_url,
-    watermark_position: lh?.watermark_position,
-    watermark_rotation: lh?.watermark_rotation,
-    watermark_opacity: lh?.watermark_opacity,
-    watermark_size: lh?.watermark_size,
-  });
+    if (lh.type === 'image' && lh.header_image_url) {
+      return (
+        <div
+          className="letterhead-header-img"
+          style={{ height: `${headerHeightMM}mm` }}
+        >
+          <img src={lh.header_image_url} alt="Header" />
+        </div>
+      );
+    }
+
+    if (lh.type === 'dynamic') {
+      return (
+        <div className="letterhead-header-dynamic" style={{ height: `${headerHeightMM}mm` }}>
+          <div className={`header-layout logo-${lh.logo_position || 'right'}`}>
+            {lh.logo_url && (
+              <div className="header-logo">
+                <img
+                  src={lh.logo_url}
+                  alt="Logo"
+                  style={{ width: lh.logo_width_px || 80 }}
+                />
+              </div>
+            )}
+            <div className="header-info">
+              {lh.company_name && (
+                <h1 style={{ color: lh.primary_color || '#C5A059' }}>
+                  {lh.company_name}
+                </h1>
+              )}
+              {lh.company_name_en && <p className="company-en">{lh.company_name_en}</p>}
+              {lh.header_text && <p className="header-text">{lh.header_text}</p>}
+            </div>
+          </div>
+          {lh.show_border_bottom && (
+            <div
+              className="header-border"
+              style={{ backgroundColor: lh.border_color || '#C5A059' }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  // Render footer for a page
+  const renderFooter = (pageNum: number, totalPages: number) => {
+    if (!lh) return null;
+
+    if (lh.type === 'image' && lh.footer_image_url) {
+      return (
+        <div
+          className="letterhead-footer-img"
+          style={{ height: `${footerHeightMM}mm` }}
+        >
+          <img src={lh.footer_image_url} alt="Footer" />
+          {lh.show_page_numbers && (
+            <div className="page-number-overlay">
+              صفحة {pageNum} من {totalPages}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (lh.type === 'dynamic') {
+      return (
+        <div className="letterhead-footer-dynamic" style={{ height: `${footerHeightMM}mm` }}>
+          <div
+            className="footer-border"
+            style={{ backgroundColor: lh.border_color || '#C5A059' }}
+          />
+          <div className="footer-content">
+            {lh.footer_text && <p>{lh.footer_text}</p>}
+            <div className="footer-contact">
+              {lh.footer_phone && <span>هاتف: {lh.footer_phone}</span>}
+              {lh.footer_email && <span>بريد: {lh.footer_email}</span>}
+              {lh.footer_website && <span>{lh.footer_website}</span>}
+            </div>
+            {lh.footer_address && <p>{lh.footer_address}</p>}
+          </div>
+          {lh.show_page_numbers && (
+            <div className="page-number">
+              صفحة {pageNum} من {totalPages}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  // Render watermark
+  const renderWatermark = () => {
+    if (!lh?.watermark_enabled) return null;
+
+    return (
+      <>
+        {lh.watermark_position === 'repeat' ? (
+          <div className="watermark-repeat-container">
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                className="watermark-item"
+                style={{
+                  transform: `rotate(${lh.watermark_rotation ?? 0}deg)`,
+                  opacity: (lh.watermark_opacity ?? 15) / 100,
+                  fontSize: `${(lh.watermark_font_size || 48) * (lh.watermark_size || 100) / 100}px`,
+                  color: lh.watermark_text_color || '#000000',
+                }}
+              >
+                {lh.watermark_type === 'text' ? (
+                  lh.watermark_use_lawyer_name
+                    ? (variables?.['lawyer_name'] || variables?.['اسم_المحامي'] || 'اسم المحامي')
+                    : (lh.watermark_text || '')
+                ) : lh.watermark_image_url ? (
+                  <img src={lh.watermark_image_url} alt="watermark" style={{ height: `${(lh.watermark_size || 100) * 0.5}px` }} />
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            className={`watermark-single watermark-${lh.watermark_position || 'center'}`}
+            style={{
+              transform: `translate(-50%, -50%) rotate(${lh.watermark_rotation ?? 0}deg) scale(${(lh.watermark_size || 100) / 150})`,
+              opacity: (lh.watermark_opacity ?? 15) / 100,
+              color: lh.watermark_text_color || '#000000',
+            }}
+          >
+            {lh.watermark_type === 'text' ? (
+              <span style={{ fontSize: `${lh.watermark_font_size || 48}px` }}>
+                {lh.watermark_use_lawyer_name
+                  ? (variables?.['lawyer_name'] || variables?.['اسم_المحامي'] || 'اسم المحامي')
+                  : (lh.watermark_text || '')}
+              </span>
+            ) : lh.watermark_image_url ? (
+              <img src={lh.watermark_image_url} alt="watermark" style={{ maxWidth: '300px', maxHeight: '300px' }} />
+            ) : null}
+          </div>
+        )}
+
+        {lh.watermark_secondary_enabled && (
+          <div
+            className={`watermark-secondary watermark-secondary-${lh.watermark_secondary_position || 'top'}`}
+            style={{
+              transform: `translateX(-50%) rotate(${lh.watermark_secondary_rotation || 0}deg)`,
+              opacity: (lh.watermark_secondary_opacity || 10) / 100,
+              fontSize: `${24 * (lh.watermark_secondary_size || 80) / 100}px`,
+            }}
+          >
+            {lh.watermark_secondary_type === 'text'
+              ? (lh.watermark_secondary_text || '')
+              : lh.watermark_secondary_image_url
+                ? <img src={lh.watermark_secondary_image_url} alt="watermark" style={{ height: `${(lh.watermark_secondary_size || 80) * 0.4}px` }} />
+                : null
+            }
+          </div>
+        )}
+      </>
+    );
+  };
 
   return (
     <div className="contract-preview-overlay" onClick={onClose}>
@@ -201,10 +467,10 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
                 <span>الكليشة</span>
               </label>
             )}
-            {loadingLetterhead && <Loader2 size={16} className="animate-spin" />}
+            {(loadingLetterhead || isCalculating) && <Loader2 size={16} className="animate-spin" />}
             <button
               onClick={() => handlePrint()}
-              disabled={!imagesLoaded}
+              disabled={!imagesLoaded || isCalculating}
               className="contract-preview-btn print"
             >
               <Printer size={16} />
@@ -212,7 +478,7 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
             </button>
             <button
               onClick={handleDownload}
-              disabled={!imagesLoaded}
+              disabled={!imagesLoaded || isCalculating}
               className="contract-preview-btn download"
             >
               <Download size={16} />
@@ -226,176 +492,44 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
 
         {/* Preview Area */}
         <div className="contract-preview-body">
-          <div className="contract-preview-paper-wrapper">
-            {/* A4 Paper */}
-            <div ref={printRef} className="contract-preview-paper">
-              {/* Header Image */}
-              {lh?.type === 'image' && lh.header_image_url && (
-                <div
-                  className="letterhead-header-img"
-                  style={{ height: `${headerHeight}mm` }}
-                >
-                  <img
-                    src={lh.header_image_url}
-                    alt="Header"
-                                      />
-                </div>
-              )}
+          <div className="contract-preview-pages-container" ref={printRef}>
+            {/* Hidden measurement div */}
+            <div ref={measureRef} style={{ position: 'absolute', visibility: 'hidden' }} />
 
-              {/* Dynamic Header */}
-              {lh?.type === 'dynamic' && (
-                <div className="letterhead-header-dynamic">
-                  <div className={`header-layout logo-${lh.logo_position || 'right'}`}>
-                    {lh.logo_url && (
-                      <div className="header-logo">
-                        <img
-                          src={lh.logo_url}
-                          alt="Logo"
-                          style={{ width: lh.logo_width_px || 80 }}
-                                                  />
-                      </div>
-                    )}
-                    <div className="header-info">
-                      {lh.company_name && (
-                        <h1 style={{ color: lh.primary_color || '#C5A059' }}>
-                          {lh.company_name}
-                        </h1>
-                      )}
-                      {lh.company_name_en && <p className="company-en">{lh.company_name_en}</p>}
-                      {lh.header_text && <p className="header-text">{lh.header_text}</p>}
-                    </div>
-                  </div>
-                  {lh.show_border_bottom && (
-                    <div
-                      className="header-border"
-                      style={{ backgroundColor: lh.border_color || '#C5A059' }}
-                    />
-                  )}
-                </div>
-              )}
+            {/* Render each page */}
+            {pages.map((pageContent, pageIndex) => (
+              <div key={pageIndex} className="contract-preview-page">
+                {/* A4 Paper */}
+                <div className="contract-preview-paper">
+                  {/* Header */}
+                  {renderHeader()}
 
-              {/* Content */}
-              <div
-                className="contract-content"
-                style={{
-                  paddingTop: lh?.type === 'image' ? `${headerHeight + 5}mm` : lh?.type === 'dynamic' ? '45mm' : '20mm',
-                  paddingBottom: lh?.type === 'image' ? `${footerHeight + 5}mm` : lh?.type === 'dynamic' ? '30mm' : '20mm',
-                  paddingRight: `${lh?.margin_right_mm || 20}mm`,
-                  paddingLeft: `${lh?.margin_left_mm || 20}mm`,
-                }}
-                dangerouslySetInnerHTML={{ __html: previewContent }}
-              />
-
-              {/* Footer Image */}
-              {lh?.type === 'image' && lh.footer_image_url && (
-                <div
-                  className="letterhead-footer-img"
-                  style={{ height: `${footerHeight}mm` }}
-                >
-                  <img
-                    src={lh.footer_image_url}
-                    alt="Footer"
-                                      />
-                </div>
-              )}
-
-              {/* Dynamic Footer */}
-              {lh?.type === 'dynamic' && (
-                <div className="letterhead-footer-dynamic">
+                  {/* Content */}
                   <div
-                    className="footer-border"
-                    style={{ backgroundColor: lh.border_color || '#C5A059' }}
+                    className="contract-content"
+                    style={{
+                      position: 'absolute',
+                      top: `${headerHeightMM}mm`,
+                      bottom: `${footerHeightMM}mm`,
+                      left: 0,
+                      right: 0,
+                      paddingTop: `${marginTopMM}mm`,
+                      paddingBottom: `${marginBottomMM}mm`,
+                      paddingRight: `${marginRightMM}mm`,
+                      paddingLeft: `${marginLeftMM}mm`,
+                      overflow: 'hidden',
+                    }}
+                    dangerouslySetInnerHTML={{ __html: pageContent }}
                   />
-                  <div className="footer-content">
-                    {lh.footer_text && <p>{lh.footer_text}</p>}
-                    <div className="footer-contact">
-                      {lh.footer_phone && <span>هاتف: {lh.footer_phone}</span>}
-                      {lh.footer_email && <span>بريد: {lh.footer_email}</span>}
-                      {lh.footer_website && <span>{lh.footer_website}</span>}
-                    </div>
-                    {lh.footer_address && <p>{lh.footer_address}</p>}
-                  </div>
+
+                  {/* Footer */}
+                  {renderFooter(pageIndex + 1, pages.length)}
+
+                  {/* Watermark */}
+                  {renderWatermark()}
                 </div>
-              )}
-
-              {/* Watermark */}
-              {lh?.watermark_enabled && (
-                <>
-                  {/* Primary Watermark */}
-                  {lh.watermark_position === 'repeat' ? (
-                    // Repeat pattern watermark
-                    <div className="watermark-repeat-container">
-                      {[...Array(12)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="watermark-item"
-                          style={{
-                            transform: `rotate(${lh.watermark_rotation ?? 0}deg)`,
-                            opacity: (lh.watermark_opacity ?? 15) / 100,
-                            fontSize: `${(lh.watermark_font_size || 48) * (lh.watermark_size || 100) / 100}px`,
-                            color: lh.watermark_text_color || '#000000',
-                          }}
-                        >
-                          {lh.watermark_type === 'text' ? (
-                            lh.watermark_use_lawyer_name
-                              ? (variables?.['lawyer_name'] || variables?.['اسم_المحامي'] || 'اسم المحامي')
-                              : (lh.watermark_text || '')
-                          ) : lh.watermark_image_url ? (
-                            <img src={lh.watermark_image_url} alt="watermark" style={{ height: `${(lh.watermark_size || 100) * 0.5}px` }} />
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    // Single watermark
-                    <div
-                      className={`watermark-single watermark-${lh.watermark_position || 'center'}`}
-                      style={{
-                        transform: `translate(-50%, -50%) rotate(${lh.watermark_rotation ?? 0}deg) scale(${(lh.watermark_size || 100) / 150})`,
-                        opacity: (lh.watermark_opacity ?? 15) / 100,
-                        color: lh.watermark_text_color || '#000000',
-                      }}
-                    >
-                      {lh.watermark_type === 'text' ? (
-                        <span style={{ fontSize: `${lh.watermark_font_size || 48}px` }}>
-                          {lh.watermark_use_lawyer_name
-                            ? (variables?.['lawyer_name'] || variables?.['اسم_المحامي'] || 'اسم المحامي')
-                            : (lh.watermark_text || '')}
-                        </span>
-                      ) : lh.watermark_image_url ? (
-                        <img src={lh.watermark_image_url} alt="watermark" style={{ maxWidth: '300px', maxHeight: '300px' }} />
-                      ) : null}
-                    </div>
-                  )}
-
-                  {/* Secondary Watermark */}
-                  {lh.watermark_secondary_enabled && (
-                    <div
-                      className={`watermark-secondary watermark-secondary-${lh.watermark_secondary_position || 'top'}`}
-                      style={{
-                        transform: `translateX(-50%) rotate(${lh.watermark_secondary_rotation || 0}deg)`,
-                        opacity: (lh.watermark_secondary_opacity || 10) / 100,
-                        fontSize: `${24 * (lh.watermark_secondary_size || 80) / 100}px`,
-                      }}
-                    >
-                      {lh.watermark_secondary_type === 'text'
-                        ? (lh.watermark_secondary_text || '')
-                        : lh.watermark_secondary_image_url
-                          ? <img src={lh.watermark_secondary_image_url} alt="watermark" style={{ height: `${(lh.watermark_secondary_size || 80) * 0.4}px` }} />
-                          : null
-                      }
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* Page Numbers */}
-              {lh?.show_page_numbers && (
-                <div className="page-number">
-                  صفحة <span className="page-current"></span> من <span className="page-total"></span>
-                </div>
-              )}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -403,6 +537,7 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
         <div className="contract-preview-footer">
           <div className="footer-info">
             {lh && <span><FileText size={14} /> الكليشة: {lh.name}</span>}
+            <span>عدد الصفحات: {pages.length}</span>
             {!imagesLoaded && <span className="loading">جاري تحميل الصور...</span>}
           </div>
           <span>مقاس A4</span>
@@ -525,15 +660,27 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
           justify-content: center;
         }
 
-        .contract-preview-paper-wrapper {
-          width: 210mm;
+        .contract-preview-pages-container {
+          display: flex;
+          flex-direction: column;
+          gap: 30px;
+          align-items: center;
+        }
+
+        .contract-preview-page {
+          flex-shrink: 0;
         }
 
         .contract-preview-paper {
           width: 210mm;
+          min-height: 297mm;
+          height: 297mm;
           background: white;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
           position: relative;
+          overflow: hidden;
+          page-break-after: always;
+          page-break-inside: avoid;
         }
 
         /* Header Image */
@@ -572,6 +719,15 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
           display: block;
         }
 
+        .page-number-overlay {
+          position: absolute;
+          bottom: 5mm;
+          left: 50%;
+          transform: translateX(-50%);
+          font-size: 10px;
+          color: #666;
+        }
+
         /* Dynamic Header */
         .letterhead-header-dynamic {
           position: absolute;
@@ -579,6 +735,7 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
           left: 0;
           right: 0;
           padding: 15mm 20mm 10mm;
+          box-sizing: border-box;
         }
 
         .header-layout {
@@ -640,6 +797,7 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
           padding: 10mm 20mm 15mm;
           text-align: center;
           font-size: 10px;
+          box-sizing: border-box;
         }
 
         .footer-border {
@@ -654,6 +812,12 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
           flex-wrap: wrap;
         }
 
+        .page-number {
+          margin-top: 8px;
+          font-size: 10px;
+          color: #666;
+        }
+
         /* Content */
         .contract-content {
           direction: rtl;
@@ -661,6 +825,8 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
           font-size: 14px;
           line-height: 1.8;
           color: #333;
+          box-sizing: border-box;
+          overflow: hidden;
         }
 
         /* Headings */
@@ -803,15 +969,6 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
           font-family: monospace;
         }
 
-        /* TipTap specific classes */
-        .contract-content .ProseMirror {
-          outline: none;
-        }
-
-        .contract-content .is-editor-empty:first-child::before {
-          display: none;
-        }
-
         .contract-preview-footer {
           padding: 12px 20px;
           border-top: 1px solid #e5e7eb;
@@ -919,12 +1076,51 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
             print-color-adjust: exact !important;
           }
 
+          .contract-preview-overlay {
+            position: static;
+            background: none;
+            padding: 0;
+          }
+
+          .contract-preview-modal {
+            position: static;
+            height: auto;
+            max-width: none;
+            box-shadow: none;
+            border-radius: 0;
+          }
+
+          .contract-preview-header,
+          .contract-preview-footer,
+          .contract-preview-actions {
+            display: none !important;
+          }
+
+          .contract-preview-body {
+            padding: 0;
+            background: white;
+            overflow: visible;
+          }
+
+          .contract-preview-pages-container {
+            gap: 0;
+          }
+
+          .contract-preview-page {
+            page-break-after: always;
+          }
+
+          .contract-preview-page:last-child {
+            page-break-after: auto;
+          }
+
           .contract-preview-paper {
             box-shadow: none;
-            margin: 0;
             width: 100%;
+            height: auto;
             min-height: auto;
-            overflow: visible;
+            page-break-after: always;
+            page-break-inside: avoid;
           }
 
           /* Fixed position makes header/footer repeat on every page */
