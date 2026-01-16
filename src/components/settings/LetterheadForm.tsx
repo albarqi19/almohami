@@ -139,7 +139,7 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
     label: string;
     value: string | null | undefined;
     type: 'header' | 'footer' | 'logo';
-    inputRef: React.RefObject<HTMLInputElement>;
+    inputRef: React.RefObject<HTMLInputElement | null>;
     onClear: () => void;
     hint?: string;
   }> = ({ label, value, type, inputRef, onClear, hint }) => (
