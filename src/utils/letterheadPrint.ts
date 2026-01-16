@@ -1,4 +1,4 @@
-import type { Letterhead } from '../types/letterhead';
+import type { Letterhead, WatermarkPosition, WatermarkType } from '../types/letterhead';
 
 /**
  * Generate print-ready HTML with letterhead
@@ -6,7 +6,8 @@ import type { Letterhead } from '../types/letterhead';
 export function generateLetterheadHTML(
   letterhead: Letterhead | Partial<Letterhead>,
   content: string,
-  title?: string
+  title?: string,
+  lawyerName?: string
 ): string {
   const {
     type = 'dynamic',
@@ -36,6 +37,29 @@ export function generateLetterheadHTML(
     margin_bottom_mm = 20,
     margin_right_mm = 20,
     margin_left_mm = 20,
+    // Watermark settings
+    watermark_enabled = false,
+    watermark_type = 'text' as WatermarkType,
+    watermark_text = null,
+    watermark_font_family = 'Traditional Arabic',
+    watermark_font_size = 48,
+    watermark_text_color = '#000000',
+    watermark_image_url = null,
+    watermark_opacity = 15,
+    watermark_size = 100,
+    watermark_rotation = -45,
+    watermark_position = 'center' as WatermarkPosition,
+    watermark_repeat_gap = 100,
+    watermark_use_lawyer_name = false,
+    // Secondary watermark
+    watermark_secondary_enabled = false,
+    watermark_secondary_type = 'text' as WatermarkType,
+    watermark_secondary_text = null,
+    watermark_secondary_image_url = null,
+    watermark_secondary_opacity = 10,
+    watermark_secondary_size = 80,
+    watermark_secondary_rotation = 0,
+    watermark_secondary_position = 'top',
   } = letterhead;
 
   // Calculate content margins based on header/footer
@@ -85,6 +109,106 @@ export function generateLetterheadHTML(
   `
     : '';
 
+  // Build watermark HTML
+  const watermarkText = watermark_use_lawyer_name && lawyerName ? lawyerName : watermark_text;
+  const watermarkHTML = watermark_enabled
+    ? buildWatermarkHTML({
+        type: watermark_type,
+        text: watermarkText,
+        imageUrl: watermark_image_url,
+        opacity: watermark_opacity,
+        size: watermark_size,
+        rotation: watermark_rotation,
+        position: watermark_position,
+        repeatGap: watermark_repeat_gap,
+        textColor: watermark_text_color,
+        fontSize: watermark_font_size,
+        fontFamily: watermark_font_family,
+      })
+    : '';
+
+  // Build secondary watermark HTML
+  const secondaryWatermarkHTML = watermark_enabled && watermark_secondary_enabled
+    ? buildWatermarkHTML({
+        type: watermark_secondary_type,
+        text: watermark_secondary_text,
+        imageUrl: watermark_secondary_image_url,
+        opacity: watermark_secondary_opacity,
+        size: watermark_secondary_size,
+        rotation: watermark_secondary_rotation,
+        position: watermark_secondary_position as WatermarkPosition,
+        repeatGap: 150,
+        textColor: '#666666',
+        fontSize: 36,
+        fontFamily: 'Traditional Arabic',
+        isSecondary: true,
+      })
+    : '';
+
+  // Watermark CSS
+  const watermarkCSS = watermark_enabled ? `
+    .watermark-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 50;
+      overflow: hidden;
+    }
+
+    .watermark-single {
+      position: absolute;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .watermark-single--center {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(${watermark_rotation}deg) scale(${watermark_size / 100});
+    }
+
+    .watermark-single--top {
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%) rotate(${watermark_rotation}deg) scale(${watermark_size / 100});
+    }
+
+    .watermark-single--bottom {
+      bottom: 20%;
+      left: 50%;
+      transform: translateX(-50%) rotate(${watermark_rotation}deg) scale(${watermark_size / 100});
+    }
+
+    .watermark-repeat {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-content: center;
+      gap: ${watermark_repeat_gap}px;
+    }
+
+    .watermark-repeat-item {
+      transform: rotate(${watermark_rotation}deg) scale(${(watermark_size / 100) * 0.7});
+      white-space: nowrap;
+    }
+
+    @media print {
+      .watermark-container {
+        position: fixed;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+  ` : '';
+
   return `
     <!DOCTYPE html>
     <html dir="rtl" lang="ar">
@@ -98,6 +222,8 @@ export function generateLetterheadHTML(
         }
 
         ${pageNumberCSS}
+
+        ${watermarkCSS}
 
         * {
           margin: 0;
@@ -275,6 +401,9 @@ export function generateLetterheadHTML(
     <body>
       ${headerHTML}
 
+      ${watermarkHTML}
+      ${secondaryWatermarkHTML}
+
       <div class="content">
         ${content}
       </div>
@@ -402,6 +531,83 @@ function buildDynamicFooter(config: {
           ${footer_website ? `<span>${footer_website}</span>` : ''}
         </div>
         ${footer_address ? `<p style="margin-top: 6px;">${footer_address}</p>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Build watermark HTML
+ */
+function buildWatermarkHTML(config: {
+  type: 'text' | 'image';
+  text: string | null;
+  imageUrl: string | null;
+  opacity: number;
+  size: number;
+  rotation: number;
+  position: 'center' | 'top' | 'bottom' | 'repeat';
+  repeatGap: number;
+  textColor: string;
+  fontSize: number;
+  fontFamily: string;
+  isSecondary?: boolean;
+}): string {
+  const {
+    type,
+    text,
+    imageUrl,
+    opacity,
+    size,
+    rotation,
+    position,
+    repeatGap,
+    textColor,
+    fontSize,
+    fontFamily,
+    isSecondary = false,
+  } = config;
+
+  // Don't render if no content
+  if (type === 'text' && !text) return '';
+  if (type === 'image' && !imageUrl) return '';
+
+  const contentStyle = `
+    opacity: ${opacity / 100};
+    font-family: '${fontFamily}', serif;
+    font-size: ${fontSize}px;
+    font-weight: bold;
+    color: ${textColor};
+  `;
+
+  const content = type === 'text'
+    ? `<span style="${contentStyle}">${text}</span>`
+    : `<img src="${imageUrl}" alt="watermark" style="opacity: ${opacity / 100}; max-width: ${size * 2}px; height: auto;" />`;
+
+  const containerId = isSecondary ? 'watermark-secondary' : 'watermark-primary';
+
+  if (position === 'repeat') {
+    // Generate repeated pattern
+    const repeatCount = 12;
+    const items = Array(repeatCount)
+      .fill(null)
+      .map(() => `<span class="watermark-repeat-item" style="${contentStyle}">${type === 'text' ? text : `<img src="${imageUrl}" alt="wm" style="height: 40px;" />`}</span>`)
+      .join('');
+
+    return `
+      <div class="watermark-container" id="${containerId}">
+        <div class="watermark-repeat" style="gap: ${repeatGap}px;">
+          ${items}
+        </div>
+      </div>
+    `;
+  }
+
+  // Single watermark with position class
+  return `
+    <div class="watermark-container" id="${containerId}">
+      <div class="watermark-single watermark-single--${position}">
+        ${content}
       </div>
     </div>
   `;

@@ -7,6 +7,29 @@ export type LetterheadType = 'image' | 'dynamic';
 export type LogoPosition = 'right' | 'center' | 'left';
 export type PageNumberFormat = 'arabic' | 'english';
 
+// Watermark Types
+export type WatermarkType = 'text' | 'image';
+export type WatermarkPosition = 'center' | 'top' | 'bottom' | 'repeat';
+export type WatermarkRotation = 0 | -45 | 45 | 90;
+
+// Watermark Presets
+export interface WatermarkPreset {
+  id: string;
+  label: string;
+  text: string;
+  rotation: WatermarkRotation;
+  opacity: number;
+  position: WatermarkPosition;
+}
+
+export const WATERMARK_PRESETS: WatermarkPreset[] = [
+  { id: 'secret', label: 'سري', text: 'سري', rotation: -45, opacity: 10, position: 'center' },
+  { id: 'draft', label: 'مسودة', text: 'مسودة', rotation: -45, opacity: 15, position: 'center' },
+  { id: 'copy', label: 'نسخة', text: 'نسخة', rotation: 0, opacity: 20, position: 'center' },
+  { id: 'review', label: 'للمراجعة', text: 'للمراجعة الداخلية فقط', rotation: -45, opacity: 12, position: 'center' },
+  { id: 'top_secret', label: 'سري للغاية', text: 'سري للغاية', rotation: -45, opacity: 8, position: 'repeat' },
+];
+
 export interface Letterhead {
   id: number;
   tenant_id: number;
@@ -50,6 +73,36 @@ export interface Letterhead {
   margin_bottom_mm: number;
   margin_right_mm: number;
   margin_left_mm: number;
+
+  // Watermark - Primary
+  watermark_enabled: boolean;
+  watermark_type: WatermarkType;
+  watermark_text: string | null;
+  watermark_font_family: string;
+  watermark_font_size: number;
+  watermark_text_color: string;
+  watermark_image_url: string | null;
+  watermark_opacity: number;
+  watermark_size: number;
+  watermark_rotation: WatermarkRotation;
+  watermark_position: WatermarkPosition;
+  watermark_repeat_gap: number;
+  watermark_use_lawyer_name: boolean;
+
+  // Watermark - Secondary
+  watermark_secondary_enabled: boolean;
+  watermark_secondary_type: WatermarkType;
+  watermark_secondary_text: string | null;
+  watermark_secondary_image_url: string | null;
+  watermark_secondary_opacity: number;
+  watermark_secondary_size: number;
+  watermark_secondary_rotation: WatermarkRotation;
+  watermark_secondary_position: 'center' | 'top' | 'bottom';
+
+  // Watermark - Document Types
+  watermark_apply_to_contracts: boolean;
+  watermark_apply_to_memos: boolean;
+  watermark_apply_to_letters: boolean;
 
   created_at: string;
   updated_at: string;
@@ -97,6 +150,36 @@ export interface LetterheadFormData {
   margin_bottom_mm?: number;
   margin_right_mm?: number;
   margin_left_mm?: number;
+
+  // Watermark - Primary
+  watermark_enabled?: boolean;
+  watermark_type?: WatermarkType;
+  watermark_text?: string | null;
+  watermark_font_family?: string;
+  watermark_font_size?: number;
+  watermark_text_color?: string;
+  watermark_image_url?: string | null;
+  watermark_opacity?: number;
+  watermark_size?: number;
+  watermark_rotation?: WatermarkRotation;
+  watermark_position?: WatermarkPosition;
+  watermark_repeat_gap?: number;
+  watermark_use_lawyer_name?: boolean;
+
+  // Watermark - Secondary
+  watermark_secondary_enabled?: boolean;
+  watermark_secondary_type?: WatermarkType;
+  watermark_secondary_text?: string | null;
+  watermark_secondary_image_url?: string | null;
+  watermark_secondary_opacity?: number;
+  watermark_secondary_size?: number;
+  watermark_secondary_rotation?: WatermarkRotation;
+  watermark_secondary_position?: 'center' | 'top' | 'bottom';
+
+  // Watermark - Document Types
+  watermark_apply_to_contracts?: boolean;
+  watermark_apply_to_memos?: boolean;
+  watermark_apply_to_letters?: boolean;
 }
 
 export interface LetterheadResponse {
@@ -141,4 +224,31 @@ export const DEFAULT_LETTERHEAD: Partial<LetterheadFormData> = {
   margin_bottom_mm: 20,
   margin_right_mm: 20,
   margin_left_mm: 20,
+  // Watermark defaults
+  watermark_enabled: false,
+  watermark_type: 'text',
+  watermark_text: null,
+  watermark_font_family: 'Traditional Arabic',
+  watermark_font_size: 48,
+  watermark_text_color: '#000000',
+  watermark_image_url: null,
+  watermark_opacity: 15,
+  watermark_size: 100,
+  watermark_rotation: -45,
+  watermark_position: 'center',
+  watermark_repeat_gap: 100,
+  watermark_use_lawyer_name: false,
+  // Secondary watermark defaults
+  watermark_secondary_enabled: false,
+  watermark_secondary_type: 'text',
+  watermark_secondary_text: null,
+  watermark_secondary_image_url: null,
+  watermark_secondary_opacity: 10,
+  watermark_secondary_size: 80,
+  watermark_secondary_rotation: 0,
+  watermark_secondary_position: 'top',
+  // Document types defaults
+  watermark_apply_to_contracts: true,
+  watermark_apply_to_memos: true,
+  watermark_apply_to_letters: false,
 };

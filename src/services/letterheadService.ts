@@ -76,11 +76,11 @@ export class LetterheadService {
   }
 
   /**
-   * رفع صورة للكليشة (Header/Footer/Logo)
+   * رفع صورة للكليشة (Header/Footer/Logo/Watermark)
    */
   static async uploadImage(
     file: File,
-    type: 'header' | 'footer' | 'logo'
+    type: 'header' | 'footer' | 'logo' | 'watermark'
   ): Promise<ImageUploadResponse> {
     const formData = new FormData();
     formData.append('image', file);

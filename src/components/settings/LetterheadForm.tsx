@@ -6,6 +6,13 @@ import {
   Settings2,
   Loader2,
   Trash2,
+  Type,
+  Droplets,
+  Info,
+  Check,
+  FileText,
+  Mail,
+  ScrollText,
 } from 'lucide-react';
 import { LetterheadService } from '../../services/letterheadService';
 import type {
@@ -13,8 +20,11 @@ import type {
   LetterheadFormData,
   LogoPosition,
   PageNumberFormat,
+  WatermarkType,
+  WatermarkPosition,
+  WatermarkRotation,
 } from '../../types/letterhead';
-import { DEFAULT_LETTERHEAD } from '../../types/letterhead';
+import { DEFAULT_LETTERHEAD, WATERMARK_PRESETS } from '../../types/letterhead';
 
 interface LetterheadFormProps {
   letterhead: Letterhead | null;
@@ -30,7 +40,7 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
   const isEditing = !!letterhead;
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'header' | 'footer' | 'margins'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'header' | 'footer' | 'margins' | 'watermark'>('general');
 
   // Form state
   const [formData, setFormData] = useState<LetterheadFormData>({
@@ -69,26 +79,55 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
     margin_bottom_mm: letterhead?.margin_bottom_mm || DEFAULT_LETTERHEAD.margin_bottom_mm,
     margin_right_mm: letterhead?.margin_right_mm || DEFAULT_LETTERHEAD.margin_right_mm,
     margin_left_mm: letterhead?.margin_left_mm || DEFAULT_LETTERHEAD.margin_left_mm,
+    // Watermark - Primary
+    watermark_enabled: letterhead?.watermark_enabled ?? DEFAULT_LETTERHEAD.watermark_enabled,
+    watermark_type: letterhead?.watermark_type || DEFAULT_LETTERHEAD.watermark_type,
+    watermark_text: letterhead?.watermark_text || DEFAULT_LETTERHEAD.watermark_text,
+    watermark_font_family: letterhead?.watermark_font_family || DEFAULT_LETTERHEAD.watermark_font_family,
+    watermark_font_size: letterhead?.watermark_font_size || DEFAULT_LETTERHEAD.watermark_font_size,
+    watermark_text_color: letterhead?.watermark_text_color || DEFAULT_LETTERHEAD.watermark_text_color,
+    watermark_image_url: letterhead?.watermark_image_url || DEFAULT_LETTERHEAD.watermark_image_url,
+    watermark_opacity: letterhead?.watermark_opacity || DEFAULT_LETTERHEAD.watermark_opacity,
+    watermark_size: letterhead?.watermark_size || DEFAULT_LETTERHEAD.watermark_size,
+    watermark_rotation: letterhead?.watermark_rotation || DEFAULT_LETTERHEAD.watermark_rotation,
+    watermark_position: letterhead?.watermark_position || DEFAULT_LETTERHEAD.watermark_position,
+    watermark_repeat_gap: letterhead?.watermark_repeat_gap || DEFAULT_LETTERHEAD.watermark_repeat_gap,
+    watermark_use_lawyer_name: letterhead?.watermark_use_lawyer_name ?? DEFAULT_LETTERHEAD.watermark_use_lawyer_name,
+    // Watermark - Secondary
+    watermark_secondary_enabled: letterhead?.watermark_secondary_enabled ?? DEFAULT_LETTERHEAD.watermark_secondary_enabled,
+    watermark_secondary_type: letterhead?.watermark_secondary_type || DEFAULT_LETTERHEAD.watermark_secondary_type,
+    watermark_secondary_text: letterhead?.watermark_secondary_text || DEFAULT_LETTERHEAD.watermark_secondary_text,
+    watermark_secondary_image_url: letterhead?.watermark_secondary_image_url || DEFAULT_LETTERHEAD.watermark_secondary_image_url,
+    watermark_secondary_opacity: letterhead?.watermark_secondary_opacity || DEFAULT_LETTERHEAD.watermark_secondary_opacity,
+    watermark_secondary_size: letterhead?.watermark_secondary_size || DEFAULT_LETTERHEAD.watermark_secondary_size,
+    watermark_secondary_rotation: letterhead?.watermark_secondary_rotation || DEFAULT_LETTERHEAD.watermark_secondary_rotation,
+    watermark_secondary_position: letterhead?.watermark_secondary_position || DEFAULT_LETTERHEAD.watermark_secondary_position,
+    // Watermark - Document Types
+    watermark_apply_to_contracts: letterhead?.watermark_apply_to_contracts ?? DEFAULT_LETTERHEAD.watermark_apply_to_contracts,
+    watermark_apply_to_memos: letterhead?.watermark_apply_to_memos ?? DEFAULT_LETTERHEAD.watermark_apply_to_memos,
+    watermark_apply_to_letters: letterhead?.watermark_apply_to_letters ?? DEFAULT_LETTERHEAD.watermark_apply_to_letters,
   });
 
   // File input refs
   const headerImageRef = useRef<HTMLInputElement>(null);
   const footerImageRef = useRef<HTMLInputElement>(null);
   const logoRef = useRef<HTMLInputElement>(null);
+  const watermarkImageRef = useRef<HTMLInputElement>(null);
 
   // Handle image upload
   const handleImageUpload = async (
     file: File,
-    type: 'header' | 'footer' | 'logo'
+    type: 'header' | 'footer' | 'logo' | 'watermark'
   ) => {
     try {
       setUploadingImage(type);
       const response = await LetterheadService.uploadImage(file, type);
       if (response.success) {
-        const fieldMap = {
+        const fieldMap: Record<string, string> = {
           header: 'header_image_url',
           footer: 'footer_image_url',
           logo: 'logo_url',
+          watermark: 'watermark_image_url',
         };
         setFormData((prev) => ({
           ...prev,
@@ -100,6 +139,22 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
       alert('فشل في رفع الصورة');
     } finally {
       setUploadingImage(null);
+    }
+  };
+
+  // Apply watermark preset
+  const applyWatermarkPreset = (presetId: string) => {
+    const preset = WATERMARK_PRESETS.find(p => p.id === presetId);
+    if (preset) {
+      setFormData((prev) => ({
+        ...prev,
+        watermark_enabled: true,
+        watermark_type: 'text',
+        watermark_text: preset.text,
+        watermark_rotation: preset.rotation,
+        watermark_opacity: preset.opacity,
+        watermark_position: preset.position,
+      }));
     }
   };
 
@@ -244,7 +299,7 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
 
           {/* Tabs */}
           <div className="letterhead-tabs">
-            {(['general', 'header', 'footer', 'margins'] as const).map((tab) => (
+            {(['general', 'header', 'footer', 'margins', 'watermark'] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -255,6 +310,7 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
                 {tab === 'header' && 'الرأس'}
                 {tab === 'footer' && 'التذييل'}
                 {tab === 'margins' && 'الهوامش'}
+                {tab === 'watermark' && 'العلامة المائية'}
               </button>
             ))}
           </div>
@@ -658,6 +714,540 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
                     <span className="letterhead-margin-preview__label">المحتوى</span>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Watermark Tab */}
+            {activeTab === 'watermark' && (
+              <div className="letterhead-form-section">
+                {/* Info Box */}
+                <div className="letterhead-watermark-info">
+                  <Info />
+                  <p>
+                    العلامة المائية تظهر على المستندات عند الطباعة أو التصدير كـ PDF.
+                    يمكنك استخدام نص أو صورة شفافة.
+                  </p>
+                </div>
+
+                {/* Enable/Disable Toggle */}
+                <div className="letterhead-checkbox-group" style={{ marginBottom: 20 }}>
+                  <label className="letterhead-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={formData.watermark_enabled}
+                      onChange={(e) => setFormData((prev) => ({
+                        ...prev,
+                        watermark_enabled: e.target.checked
+                      }))}
+                    />
+                    <span className="letterhead-checkbox__label" style={{ fontWeight: 600, fontSize: 15 }}>
+                      <Droplets style={{ width: 18, height: 18, marginLeft: 6, verticalAlign: 'middle' }} />
+                      تفعيل العلامة المائية
+                    </span>
+                  </label>
+                </div>
+
+                {formData.watermark_enabled && (
+                  <>
+                    {/* Presets */}
+                    <div className="letterhead-field" style={{ marginBottom: 20 }}>
+                      <label className="letterhead-field__label">قوالب جاهزة</label>
+                      <div className="letterhead-presets">
+                        {WATERMARK_PRESETS.map((preset) => (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => applyWatermarkPreset(preset.id)}
+                            className="letterhead-preset-btn"
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Watermark Type Selection */}
+                    <div className="letterhead-type-options" style={{ marginBottom: 20 }}>
+                      <label
+                        className={`letterhead-type-option ${formData.watermark_type === 'text' ? 'letterhead-type-option--active' : ''}`}
+                      >
+                        <input
+                          type="radio"
+                          name="watermark_type"
+                          value="text"
+                          checked={formData.watermark_type === 'text'}
+                          onChange={() => setFormData((prev) => ({ ...prev, watermark_type: 'text' }))}
+                          style={{ display: 'none' }}
+                        />
+                        <Type className="letterhead-type-option__icon" />
+                        <div>
+                          <div className="letterhead-type-option__title">نص</div>
+                          <div className="letterhead-type-option__desc">علامة مائية نصية</div>
+                        </div>
+                      </label>
+                      <label
+                        className={`letterhead-type-option ${formData.watermark_type === 'image' ? 'letterhead-type-option--active' : ''}`}
+                      >
+                        <input
+                          type="radio"
+                          name="watermark_type"
+                          value="image"
+                          checked={formData.watermark_type === 'image'}
+                          onChange={() => setFormData((prev) => ({ ...prev, watermark_type: 'image' }))}
+                          style={{ display: 'none' }}
+                        />
+                        <ImageIcon className="letterhead-type-option__icon" />
+                        <div>
+                          <div className="letterhead-type-option__title">صورة</div>
+                          <div className="letterhead-type-option__desc">شعار أو صورة</div>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Text Watermark Settings */}
+                    {formData.watermark_type === 'text' && (
+                      <>
+                        <div className="letterhead-field">
+                          <label className="letterhead-field__label">نص العلامة المائية</label>
+                          <input
+                            type="text"
+                            value={formData.watermark_text || ''}
+                            onChange={(e) => setFormData((prev) => ({
+                              ...prev,
+                              watermark_text: e.target.value || null
+                            }))}
+                            placeholder="مثال: سري، مسودة، نسخة"
+                            className="letterhead-field__input"
+                            disabled={formData.watermark_use_lawyer_name}
+                          />
+                        </div>
+
+                        <div className="letterhead-checkbox-group" style={{ marginTop: 12, marginBottom: 16 }}>
+                          <label className="letterhead-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={formData.watermark_use_lawyer_name}
+                              onChange={(e) => setFormData((prev) => ({
+                                ...prev,
+                                watermark_use_lawyer_name: e.target.checked,
+                                watermark_text: e.target.checked ? null : prev.watermark_text
+                              }))}
+                            />
+                            <span className="letterhead-checkbox__label">
+                              استخدام اسم المحامي تلقائياً عند الطباعة
+                            </span>
+                          </label>
+                        </div>
+
+                        <div className="letterhead-form-grid" style={{ marginTop: 16 }}>
+                          <div className="letterhead-field">
+                            <label className="letterhead-field__label">حجم الخط (بكسل)</label>
+                            <input
+                              type="number"
+                              min={12}
+                              max={200}
+                              value={formData.watermark_font_size}
+                              onChange={(e) => setFormData((prev) => ({
+                                ...prev,
+                                watermark_font_size: Number(e.target.value)
+                              }))}
+                              className="letterhead-field__input"
+                            />
+                          </div>
+                          <div className="letterhead-field">
+                            <label className="letterhead-field__label">لون النص</label>
+                            <div className="letterhead-color-picker">
+                              <input
+                                type="color"
+                                value={formData.watermark_text_color}
+                                onChange={(e) => setFormData((prev) => ({
+                                  ...prev,
+                                  watermark_text_color: e.target.value
+                                }))}
+                                className="letterhead-color-picker__input"
+                              />
+                              <input
+                                type="text"
+                                value={formData.watermark_text_color}
+                                onChange={(e) => setFormData((prev) => ({
+                                  ...prev,
+                                  watermark_text_color: e.target.value
+                                }))}
+                                className="letterhead-color-picker__text"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Image Watermark Settings */}
+                    {formData.watermark_type === 'image' && (
+                      <ImageUploadField
+                        label="صورة العلامة المائية"
+                        value={formData.watermark_image_url}
+                        type="watermark"
+                        inputRef={watermarkImageRef}
+                        onClear={() => setFormData((prev) => ({ ...prev, watermark_image_url: null }))}
+                        hint="PNG بخلفية شفافة للنتائج الأفضل"
+                      />
+                    )}
+
+                    {/* Display Settings */}
+                    <div className="letterhead-separator" style={{ marginTop: 24 }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: 'var(--color-heading)' }}>
+                        إعدادات العرض
+                      </h4>
+
+                      {/* Opacity Slider */}
+                      <div className="letterhead-field">
+                        <label className="letterhead-field__label">
+                          الشفافية: {formData.watermark_opacity}%
+                        </label>
+                        <input
+                          type="range"
+                          min={5}
+                          max={50}
+                          value={formData.watermark_opacity}
+                          onChange={(e) => setFormData((prev) => ({
+                            ...prev,
+                            watermark_opacity: Number(e.target.value)
+                          }))}
+                          className="letterhead-slider"
+                        />
+                      </div>
+
+                      {/* Size Slider */}
+                      <div className="letterhead-field" style={{ marginTop: 16 }}>
+                        <label className="letterhead-field__label">
+                          الحجم: {formData.watermark_size}%
+                        </label>
+                        <input
+                          type="range"
+                          min={20}
+                          max={200}
+                          value={formData.watermark_size}
+                          onChange={(e) => setFormData((prev) => ({
+                            ...prev,
+                            watermark_size: Number(e.target.value)
+                          }))}
+                          className="letterhead-slider"
+                        />
+                      </div>
+
+                      {/* Rotation */}
+                      <div className="letterhead-field" style={{ marginTop: 16 }}>
+                        <label className="letterhead-field__label">زاوية الدوران</label>
+                        <div className="letterhead-rotation-options">
+                          {([0, -45, 45, 90] as const).map((angle) => (
+                            <button
+                              key={angle}
+                              type="button"
+                              onClick={() => setFormData((prev) => ({
+                                ...prev,
+                                watermark_rotation: angle
+                              }))}
+                              className={`letterhead-rotation-btn ${
+                                formData.watermark_rotation === angle ? 'letterhead-rotation-btn--active' : ''
+                              }`}
+                            >
+                              {angle}°
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Position */}
+                      <div className="letterhead-field" style={{ marginTop: 16 }}>
+                        <label className="letterhead-field__label">موضع العلامة</label>
+                        <select
+                          value={formData.watermark_position}
+                          onChange={(e) => setFormData((prev) => ({
+                            ...prev,
+                            watermark_position: e.target.value as WatermarkPosition
+                          }))}
+                          className="letterhead-field__select"
+                        >
+                          <option value="center">وسط الصفحة</option>
+                          <option value="top">أعلى الصفحة</option>
+                          <option value="bottom">أسفل الصفحة</option>
+                          <option value="repeat">تكرار على كامل الصفحة</option>
+                        </select>
+                      </div>
+
+                      {/* Repeat Gap */}
+                      {formData.watermark_position === 'repeat' && (
+                        <div className="letterhead-field" style={{ marginTop: 16 }}>
+                          <label className="letterhead-field__label">
+                            المسافة بين التكرارات: {formData.watermark_repeat_gap}px
+                          </label>
+                          <input
+                            type="range"
+                            min={50}
+                            max={300}
+                            value={formData.watermark_repeat_gap}
+                            onChange={(e) => setFormData((prev) => ({
+                              ...prev,
+                              watermark_repeat_gap: Number(e.target.value)
+                            }))}
+                            className="letterhead-slider"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Secondary Watermark */}
+                    <div className="letterhead-secondary-section">
+                      <label className="letterhead-checkbox letterhead-secondary-toggle">
+                        <input
+                          type="checkbox"
+                          checked={formData.watermark_secondary_enabled}
+                          onChange={(e) => setFormData((prev) => ({
+                            ...prev,
+                            watermark_secondary_enabled: e.target.checked
+                          }))}
+                        />
+                        <span className="letterhead-checkbox__label" style={{ fontWeight: 500 }}>
+                          إضافة علامة مائية ثانية
+                        </span>
+                      </label>
+
+                      {formData.watermark_secondary_enabled && (
+                        <div style={{ marginTop: 16, paddingRight: 8 }}>
+                          <div className="letterhead-form-grid">
+                            <div className="letterhead-field">
+                              <label className="letterhead-field__label">نوع العلامة الثانية</label>
+                              <select
+                                value={formData.watermark_secondary_type}
+                                onChange={(e) => setFormData((prev) => ({
+                                  ...prev,
+                                  watermark_secondary_type: e.target.value as WatermarkType
+                                }))}
+                                className="letterhead-field__select"
+                              >
+                                <option value="text">نص</option>
+                                <option value="image">صورة</option>
+                              </select>
+                            </div>
+                            <div className="letterhead-field">
+                              <label className="letterhead-field__label">الموضع</label>
+                              <select
+                                value={formData.watermark_secondary_position}
+                                onChange={(e) => setFormData((prev) => ({
+                                  ...prev,
+                                  watermark_secondary_position: e.target.value as 'center' | 'top' | 'bottom'
+                                }))}
+                                className="letterhead-field__select"
+                              >
+                                <option value="center">وسط</option>
+                                <option value="top">أعلى</option>
+                                <option value="bottom">أسفل</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {formData.watermark_secondary_type === 'text' && (
+                            <div className="letterhead-field" style={{ marginTop: 12 }}>
+                              <label className="letterhead-field__label">النص</label>
+                              <input
+                                type="text"
+                                value={formData.watermark_secondary_text || ''}
+                                onChange={(e) => setFormData((prev) => ({
+                                  ...prev,
+                                  watermark_secondary_text: e.target.value || null
+                                }))}
+                                placeholder="نص العلامة الثانية"
+                                className="letterhead-field__input"
+                              />
+                            </div>
+                          )}
+
+                          <div className="letterhead-form-grid" style={{ marginTop: 12 }}>
+                            <div className="letterhead-field">
+                              <label className="letterhead-field__label">
+                                الشفافية: {formData.watermark_secondary_opacity}%
+                              </label>
+                              <input
+                                type="range"
+                                min={5}
+                                max={50}
+                                value={formData.watermark_secondary_opacity}
+                                onChange={(e) => setFormData((prev) => ({
+                                  ...prev,
+                                  watermark_secondary_opacity: Number(e.target.value)
+                                }))}
+                                className="letterhead-slider"
+                              />
+                            </div>
+                            <div className="letterhead-field">
+                              <label className="letterhead-field__label">
+                                الحجم: {formData.watermark_secondary_size}%
+                              </label>
+                              <input
+                                type="range"
+                                min={20}
+                                max={200}
+                                value={formData.watermark_secondary_size}
+                                onChange={(e) => setFormData((prev) => ({
+                                  ...prev,
+                                  watermark_secondary_size: Number(e.target.value)
+                                }))}
+                                className="letterhead-slider"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Document Types */}
+                    <div className="letterhead-separator" style={{ marginTop: 24 }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: 'var(--color-heading)' }}>
+                        تطبيق على أنواع المستندات
+                      </h4>
+                      <div className="letterhead-doc-types">
+                        <label className={`letterhead-doc-type ${formData.watermark_apply_to_contracts ? 'letterhead-doc-type--active' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={formData.watermark_apply_to_contracts}
+                            onChange={(e) => setFormData((prev) => ({
+                              ...prev,
+                              watermark_apply_to_contracts: e.target.checked
+                            }))}
+                          />
+                          <span className="letterhead-doc-type__icon">
+                            {formData.watermark_apply_to_contracts && <Check />}
+                          </span>
+                          <FileText style={{ width: 16, height: 16 }} />
+                          <span>العقود</span>
+                        </label>
+                        <label className={`letterhead-doc-type ${formData.watermark_apply_to_memos ? 'letterhead-doc-type--active' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={formData.watermark_apply_to_memos}
+                            onChange={(e) => setFormData((prev) => ({
+                              ...prev,
+                              watermark_apply_to_memos: e.target.checked
+                            }))}
+                          />
+                          <span className="letterhead-doc-type__icon">
+                            {formData.watermark_apply_to_memos && <Check />}
+                          </span>
+                          <ScrollText style={{ width: 16, height: 16 }} />
+                          <span>المذكرات</span>
+                        </label>
+                        <label className={`letterhead-doc-type ${formData.watermark_apply_to_letters ? 'letterhead-doc-type--active' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={formData.watermark_apply_to_letters}
+                            onChange={(e) => setFormData((prev) => ({
+                              ...prev,
+                              watermark_apply_to_letters: e.target.checked
+                            }))}
+                          />
+                          <span className="letterhead-doc-type__icon">
+                            {formData.watermark_apply_to_letters && <Check />}
+                          </span>
+                          <Mail style={{ width: 16, height: 16 }} />
+                          <span>الخطابات</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Live Preview */}
+                    <div className="letterhead-separator" style={{ marginTop: 24 }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: 'var(--color-heading)' }}>
+                        معاينة العلامة المائية
+                      </h4>
+                      <div className="letterhead-watermark-preview">
+                        <div className="letterhead-watermark-preview__page">
+                          {/* Simulated content lines */}
+                          <div className="letterhead-watermark-preview__content">
+                            {[...Array(8)].map((_, i) => (
+                              <div
+                                key={i}
+                                className="letterhead-watermark-preview__line"
+                                style={{ width: `${70 + Math.random() * 30}%` }}
+                              />
+                            ))}
+                          </div>
+
+                          {/* Primary Watermark Preview */}
+                          {formData.watermark_position === 'repeat' ? (
+                            // Repeat pattern
+                            <>
+                              {[...Array(6)].map((_, i) => (
+                                <div
+                                  key={i}
+                                  style={{
+                                    position: 'absolute',
+                                    top: `${15 + (i % 3) * 30}%`,
+                                    left: `${20 + Math.floor(i / 3) * 50}%`,
+                                    transform: `rotate(${formData.watermark_rotation}deg) scale(${(formData.watermark_size || 100) / 200})`,
+                                    opacity: (formData.watermark_opacity || 15) / 100,
+                                    fontSize: `${(formData.watermark_font_size || 48) * 0.25}px`,
+                                    color: formData.watermark_text_color,
+                                    fontFamily: 'Traditional Arabic, serif',
+                                    fontWeight: 'bold',
+                                    whiteSpace: 'nowrap',
+                                    pointerEvents: 'none',
+                                  }}
+                                >
+                                  {formData.watermark_type === 'text'
+                                    ? (formData.watermark_use_lawyer_name ? 'اسم المحامي' : formData.watermark_text || 'نص العلامة')
+                                    : (formData.watermark_image_url ? <img src={formData.watermark_image_url} alt="wm" style={{ height: 15 }} /> : 'صورة')
+                                  }
+                                </div>
+                              ))}
+                            </>
+                          ) : (
+                            // Single watermark
+                            <div
+                              style={{
+                                position: 'absolute',
+                                ...(formData.watermark_position === 'center' && { top: '50%', left: '50%', transform: `translate(-50%, -50%) rotate(${formData.watermark_rotation}deg) scale(${(formData.watermark_size || 100) / 150})` }),
+                                ...(formData.watermark_position === 'top' && { top: '20%', left: '50%', transform: `translateX(-50%) rotate(${formData.watermark_rotation}deg) scale(${(formData.watermark_size || 100) / 150})` }),
+                                ...(formData.watermark_position === 'bottom' && { bottom: '20%', left: '50%', transform: `translateX(-50%) rotate(${formData.watermark_rotation}deg) scale(${(formData.watermark_size || 100) / 150})` }),
+                                opacity: (formData.watermark_opacity || 15) / 100,
+                                fontSize: `${(formData.watermark_font_size || 48) * 0.35}px`,
+                                color: formData.watermark_text_color,
+                                fontFamily: 'Traditional Arabic, serif',
+                                fontWeight: 'bold',
+                                whiteSpace: 'nowrap',
+                                pointerEvents: 'none',
+                              }}
+                            >
+                              {formData.watermark_type === 'text'
+                                ? (formData.watermark_use_lawyer_name ? 'اسم المحامي' : formData.watermark_text || 'نص العلامة')
+                                : (formData.watermark_image_url ? <img src={formData.watermark_image_url} alt="wm" style={{ height: 30 }} /> : 'صورة')
+                              }
+                            </div>
+                          )}
+
+                          {/* Secondary Watermark Preview */}
+                          {formData.watermark_secondary_enabled && (
+                            <div
+                              style={{
+                                position: 'absolute',
+                                ...(formData.watermark_secondary_position === 'center' && { top: '50%', left: '50%', transform: `translate(-50%, -50%) rotate(${formData.watermark_secondary_rotation}deg)` }),
+                                ...(formData.watermark_secondary_position === 'top' && { top: '10%', left: '50%', transform: `translateX(-50%) rotate(${formData.watermark_secondary_rotation}deg)` }),
+                                ...(formData.watermark_secondary_position === 'bottom' && { bottom: '10%', left: '50%', transform: `translateX(-50%) rotate(${formData.watermark_secondary_rotation}deg)` }),
+                                opacity: (formData.watermark_secondary_opacity || 10) / 100,
+                                fontSize: `${12 * ((formData.watermark_secondary_size || 80) / 100)}px`,
+                                color: '#666',
+                                fontWeight: 'bold',
+                                whiteSpace: 'nowrap',
+                                pointerEvents: 'none',
+                              }}
+                            >
+                              {formData.watermark_secondary_text || 'علامة ثانية'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
