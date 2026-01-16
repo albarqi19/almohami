@@ -193,7 +193,7 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
   const ImageUploadField: React.FC<{
     label: string;
     value: string | null | undefined;
-    type: 'header' | 'footer' | 'logo';
+    type: 'header' | 'footer' | 'logo' | 'watermark';
     inputRef: React.RefObject<HTMLInputElement | null>;
     onClear: () => void;
     hint?: string;
