@@ -576,22 +576,153 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
           color: #333;
         }
 
-        .contract-content h1,
-        .contract-content h2,
-        .contract-content h3 {
-          margin-bottom: 16px;
+        /* Headings */
+        .contract-content h1 {
+          font-size: 24px;
           font-weight: bold;
+          margin: 24px 0 16px;
+          color: #1a1a1a;
+          text-align: center;
         }
 
+        .contract-content h2 {
+          font-size: 20px;
+          font-weight: bold;
+          margin: 20px 0 12px;
+          color: #1a1a1a;
+          border-bottom: 1px solid #e5e7eb;
+          padding-bottom: 8px;
+        }
+
+        .contract-content h3 {
+          font-size: 17px;
+          font-weight: bold;
+          margin: 16px 0 10px;
+          color: #333;
+        }
+
+        .contract-content h4 {
+          font-size: 15px;
+          font-weight: bold;
+          margin: 14px 0 8px;
+          color: #444;
+        }
+
+        /* Paragraphs */
         .contract-content p {
           margin-bottom: 12px;
           text-align: justify;
         }
 
+        /* Text alignment */
+        .contract-content [style*="text-align: center"],
+        .contract-content .text-center,
+        .contract-content [align="center"] {
+          text-align: center !important;
+        }
+
+        .contract-content [style*="text-align: right"],
+        .contract-content .text-right,
+        .contract-content [align="right"] {
+          text-align: right !important;
+        }
+
+        .contract-content [style*="text-align: left"],
+        .contract-content .text-left,
+        .contract-content [align="left"] {
+          text-align: left !important;
+        }
+
+        /* Bold & Italic */
+        .contract-content strong,
+        .contract-content b {
+          font-weight: bold;
+        }
+
+        .contract-content em,
+        .contract-content i {
+          font-style: italic;
+        }
+
+        .contract-content u {
+          text-decoration: underline;
+        }
+
+        /* Lists */
         .contract-content ul,
         .contract-content ol {
           margin-bottom: 12px;
-          padding-right: 24px;
+          padding-right: 30px;
+        }
+
+        .contract-content ul {
+          list-style-type: disc;
+        }
+
+        .contract-content ol {
+          list-style-type: decimal;
+        }
+
+        .contract-content li {
+          margin-bottom: 6px;
+        }
+
+        /* Tables */
+        .contract-content table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 16px 0;
+        }
+
+        .contract-content th,
+        .contract-content td {
+          border: 1px solid #ddd;
+          padding: 10px;
+          text-align: right;
+        }
+
+        .contract-content th {
+          background-color: #f5f5f5;
+          font-weight: bold;
+        }
+
+        /* Blockquote */
+        .contract-content blockquote {
+          border-right: 4px solid #C5A059;
+          padding-right: 16px;
+          margin: 16px 0;
+          color: #555;
+          font-style: italic;
+        }
+
+        /* Horizontal rule */
+        .contract-content hr {
+          border: none;
+          border-top: 1px solid #ddd;
+          margin: 20px 0;
+        }
+
+        /* Links */
+        .contract-content a {
+          color: #1d4ed8;
+          text-decoration: underline;
+        }
+
+        /* Code */
+        .contract-content code {
+          background: #f3f4f6;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-family: monospace;
+        }
+
+        /* TipTap specific classes */
+        .contract-content .ProseMirror {
+          outline: none;
+        }
+
+        .contract-content .is-editor-empty:first-child::before {
+          display: none;
         }
 
         .contract-preview-footer {

@@ -7,6 +7,7 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { Highlight } from '@tiptap/extension-highlight';
 import { VariableMention } from './VariableMentionExtension';
+import { FontSize } from './FontSizeExtension';
 import {
   Bold,
   Italic,
@@ -20,6 +21,7 @@ import {
   Undo,
   Redo,
   Eye,
+  Type,
 } from 'lucide-react';
 
 interface ContractTemplateEditorProps {
@@ -79,6 +81,7 @@ const ContractTemplateEditor = forwardRef<
         Underline,
         TextStyle,
         Color,
+        FontSize,
         Highlight.configure({
           multicolor: true,
         }),
@@ -253,6 +256,40 @@ const ContractTemplateEditor = forwardRef<
               <option value="h1">عنوان رئيسي</option>
               <option value="h2">عنوان فرعي</option>
               <option value="h3">عنوان صغير</option>
+            </select>
+
+            {/* حجم الخط */}
+            <select
+              onChange={(e) => {
+                const size = e.target.value;
+                if (size === 'default') {
+                  editor.chain().focus().unsetFontSize().run();
+                } else {
+                  editor.chain().focus().setFontSize(size).run();
+                }
+              }}
+              style={{
+                padding: '6px 8px',
+                border: '1px solid var(--color-border, #e5e7eb)',
+                borderRadius: '4px',
+                backgroundColor: 'transparent',
+                fontSize: '14px',
+                minWidth: '80px',
+              }}
+              title="حجم الخط"
+            >
+              <option value="default">حجم الخط</option>
+              <option value="10px">10</option>
+              <option value="12px">12</option>
+              <option value="14px">14</option>
+              <option value="16px">16</option>
+              <option value="18px">18</option>
+              <option value="20px">20</option>
+              <option value="24px">24</option>
+              <option value="28px">28</option>
+              <option value="32px">32</option>
+              <option value="36px">36</option>
+              <option value="48px">48</option>
             </select>
 
             <div
