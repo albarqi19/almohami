@@ -219,8 +219,7 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
                   <img
                     src={lh.header_image_url}
                     alt="Header"
-                    crossOrigin="anonymous"
-                  />
+                                      />
                 </div>
               )}
 
@@ -234,8 +233,7 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
                           src={lh.logo_url}
                           alt="Logo"
                           style={{ width: lh.logo_width_px || 80 }}
-                          crossOrigin="anonymous"
-                        />
+                                                  />
                       </div>
                     )}
                     <div className="header-info">
@@ -278,8 +276,7 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
                   <img
                     src={lh.footer_image_url}
                     alt="Footer"
-                    crossOrigin="anonymous"
-                  />
+                                      />
                 </div>
               )}
 
