@@ -299,6 +299,76 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
                 </div>
               )}
 
+              {/* Watermark */}
+              {lh?.watermark_enabled && (
+                <>
+                  {/* Primary Watermark */}
+                  {lh.watermark_position === 'repeat' ? (
+                    // Repeat pattern watermark
+                    <div className="watermark-repeat-container">
+                      {[...Array(12)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="watermark-item"
+                          style={{
+                            transform: `rotate(${lh.watermark_rotation || -45}deg)`,
+                            opacity: (lh.watermark_opacity || 15) / 100,
+                            fontSize: `${(lh.watermark_font_size || 48) * (lh.watermark_size || 100) / 100}px`,
+                            color: lh.watermark_text_color || '#000000',
+                          }}
+                        >
+                          {lh.watermark_type === 'text' ? (
+                            lh.watermark_use_lawyer_name
+                              ? (variables?.['lawyer_name'] || variables?.['اسم_المحامي'] || 'اسم المحامي')
+                              : (lh.watermark_text || '')
+                          ) : lh.watermark_image_url ? (
+                            <img src={lh.watermark_image_url} alt="watermark" style={{ height: `${(lh.watermark_size || 100) * 0.5}px` }} />
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    // Single watermark
+                    <div
+                      className={`watermark-single watermark-${lh.watermark_position || 'center'}`}
+                      style={{
+                        transform: `translate(-50%, -50%) rotate(${lh.watermark_rotation || -45}deg)`,
+                        opacity: (lh.watermark_opacity || 15) / 100,
+                        fontSize: `${(lh.watermark_font_size || 48) * (lh.watermark_size || 100) / 100}px`,
+                        color: lh.watermark_text_color || '#000000',
+                      }}
+                    >
+                      {lh.watermark_type === 'text' ? (
+                        lh.watermark_use_lawyer_name
+                          ? (variables?.['lawyer_name'] || variables?.['اسم_المحامي'] || 'اسم المحامي')
+                          : (lh.watermark_text || '')
+                      ) : lh.watermark_image_url ? (
+                        <img src={lh.watermark_image_url} alt="watermark" style={{ height: `${(lh.watermark_size || 100) * 0.8}px` }} />
+                      ) : null}
+                    </div>
+                  )}
+
+                  {/* Secondary Watermark */}
+                  {lh.watermark_secondary_enabled && (
+                    <div
+                      className={`watermark-secondary watermark-secondary-${lh.watermark_secondary_position || 'top'}`}
+                      style={{
+                        transform: `translateX(-50%) rotate(${lh.watermark_secondary_rotation || 0}deg)`,
+                        opacity: (lh.watermark_secondary_opacity || 10) / 100,
+                        fontSize: `${24 * (lh.watermark_secondary_size || 80) / 100}px`,
+                      }}
+                    >
+                      {lh.watermark_secondary_type === 'text'
+                        ? (lh.watermark_secondary_text || '')
+                        : lh.watermark_secondary_image_url
+                          ? <img src={lh.watermark_secondary_image_url} alt="watermark" style={{ height: `${(lh.watermark_secondary_size || 80) * 0.4}px` }} />
+                          : null
+                      }
+                    </div>
+                  )}
+                </>
+              )}
+
               {/* Page Numbers */}
               {lh?.show_page_numbers && (
                 <div className="page-number">
@@ -752,6 +822,79 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
           color: #d97706;
         }
 
+        /* Watermark Styles */
+        .watermark-repeat-container {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          grid-template-rows: repeat(4, 1fr);
+          gap: 20px;
+          padding: 40px;
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .watermark-item {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'Traditional Arabic', serif;
+          font-weight: bold;
+          white-space: nowrap;
+          pointer-events: none;
+        }
+
+        .watermark-single {
+          position: absolute;
+          font-family: 'Traditional Arabic', serif;
+          font-weight: bold;
+          white-space: nowrap;
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .watermark-center {
+          top: 50%;
+          left: 50%;
+        }
+
+        .watermark-top {
+          top: 25%;
+          left: 50%;
+        }
+
+        .watermark-bottom {
+          top: 75%;
+          left: 50%;
+        }
+
+        .watermark-secondary {
+          position: absolute;
+          left: 50%;
+          font-family: 'Traditional Arabic', serif;
+          font-weight: bold;
+          white-space: nowrap;
+          pointer-events: none;
+          z-index: 1;
+          color: #666;
+        }
+
+        .watermark-secondary-top {
+          top: 15%;
+        }
+
+        .watermark-secondary-center {
+          top: 50%;
+        }
+
+        .watermark-secondary-bottom {
+          bottom: 15%;
+        }
+
         /* Print Styles */
         @media print {
           .contract-preview-paper {
@@ -769,6 +912,21 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
 
           .letterhead-header-img img,
           .letterhead-footer-img img {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          /* Watermark print styles */
+          .watermark-repeat-container,
+          .watermark-single,
+          .watermark-secondary {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          .watermark-item,
+          .watermark-single,
+          .watermark-secondary {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
