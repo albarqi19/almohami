@@ -103,6 +103,13 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
     });
   }, [letterhead, letterheadEnabled]);
 
+  // Get letterhead for print margins calculation
+  const lhForPrint = letterheadEnabled && letterhead ? letterhead : null;
+  const printHeaderHeight = lhForPrint?.type === 'image' ? (lhForPrint.header_height_mm || 30) : lhForPrint?.type === 'dynamic' ? 40 : 15;
+  const printFooterHeight = lhForPrint?.type === 'image' ? (lhForPrint.footer_height_mm || 25) : lhForPrint?.type === 'dynamic' ? 25 : 15;
+  const printMarginRight = lhForPrint?.margin_right_mm || 15;
+  const printMarginLeft = lhForPrint?.margin_left_mm || 15;
+
   // Print handler using react-to-print
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -110,7 +117,7 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
     pageStyle: `
       @page {
         size: A4;
-        margin: 0;
+        margin: ${printHeaderHeight}mm ${printMarginLeft}mm ${printFooterHeight}mm ${printMarginRight}mm;
       }
       @media print {
         html, body {
@@ -158,6 +165,15 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
   const lh = letterheadEnabled && letterhead ? letterhead : null;
   const headerHeight = lh?.type === 'image' ? (lh.header_height_mm || 30) : 0;
   const footerHeight = lh?.type === 'image' ? (lh.footer_height_mm || 25) : 0;
+
+  // Debug watermark
+  console.log('Letterhead watermark data:', {
+    watermark_enabled: lh?.watermark_enabled,
+    watermark_type: lh?.watermark_type,
+    watermark_text: lh?.watermark_text,
+    watermark_position: lh?.watermark_position,
+    watermark_opacity: lh?.watermark_opacity,
+  });
 
   return (
     <div className="contract-preview-overlay" onClick={onClose}>
@@ -507,16 +523,13 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
 
         .contract-preview-paper-wrapper {
           width: 210mm;
-          min-height: 297mm;
         }
 
         .contract-preview-paper {
           width: 210mm;
-          min-height: 297mm;
           background: white;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
           position: relative;
-          overflow: hidden;
         }
 
         /* Header Image */
@@ -897,38 +910,70 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
 
         /* Print Styles */
         @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
           .contract-preview-paper {
             box-shadow: none;
             margin: 0;
-            width: 210mm;
-            height: 297mm;
+            width: 100%;
+            min-height: auto;
+            overflow: visible;
           }
 
-          .letterhead-header-img,
+          /* Fixed position makes header/footer repeat on every page */
+          .letterhead-header-img {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+          }
+
           .letterhead-footer-img {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
           }
 
           .letterhead-header-img img,
           .letterhead-footer-img img {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
           }
 
-          /* Watermark print styles */
+          .letterhead-header-dynamic {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+          }
+
+          .letterhead-footer-dynamic {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+          }
+
+          /* Watermark fixed on each page */
           .watermark-repeat-container,
           .watermark-single,
-          .watermark-secondary {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+          .watermark-secondary,
+          .watermark-item {
+            position: fixed !important;
           }
 
-          .watermark-item,
-          .watermark-single,
-          .watermark-secondary {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+          .watermark-repeat-container {
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
           }
         }
       `}</style>
