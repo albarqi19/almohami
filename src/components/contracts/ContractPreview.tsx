@@ -171,8 +171,11 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
     watermark_enabled: lh?.watermark_enabled,
     watermark_type: lh?.watermark_type,
     watermark_text: lh?.watermark_text,
+    watermark_image_url: lh?.watermark_image_url,
     watermark_position: lh?.watermark_position,
+    watermark_rotation: lh?.watermark_rotation,
     watermark_opacity: lh?.watermark_opacity,
+    watermark_size: lh?.watermark_size,
   });
 
   return (
@@ -327,8 +330,8 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
                           key={i}
                           className="watermark-item"
                           style={{
-                            transform: `rotate(${lh.watermark_rotation || -45}deg)`,
-                            opacity: (lh.watermark_opacity || 15) / 100,
+                            transform: `rotate(${lh.watermark_rotation ?? 0}deg)`,
+                            opacity: (lh.watermark_opacity ?? 15) / 100,
                             fontSize: `${(lh.watermark_font_size || 48) * (lh.watermark_size || 100) / 100}px`,
                             color: lh.watermark_text_color || '#000000',
                           }}
@@ -348,18 +351,19 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
                     <div
                       className={`watermark-single watermark-${lh.watermark_position || 'center'}`}
                       style={{
-                        transform: `translate(-50%, -50%) rotate(${lh.watermark_rotation || -45}deg)`,
-                        opacity: (lh.watermark_opacity || 15) / 100,
-                        fontSize: `${(lh.watermark_font_size || 48) * (lh.watermark_size || 100) / 100}px`,
+                        transform: `translate(-50%, -50%) rotate(${lh.watermark_rotation ?? 0}deg) scale(${(lh.watermark_size || 100) / 150})`,
+                        opacity: (lh.watermark_opacity ?? 15) / 100,
                         color: lh.watermark_text_color || '#000000',
                       }}
                     >
                       {lh.watermark_type === 'text' ? (
-                        lh.watermark_use_lawyer_name
-                          ? (variables?.['lawyer_name'] || variables?.['اسم_المحامي'] || 'اسم المحامي')
-                          : (lh.watermark_text || '')
+                        <span style={{ fontSize: `${lh.watermark_font_size || 48}px` }}>
+                          {lh.watermark_use_lawyer_name
+                            ? (variables?.['lawyer_name'] || variables?.['اسم_المحامي'] || 'اسم المحامي')
+                            : (lh.watermark_text || '')}
+                        </span>
                       ) : lh.watermark_image_url ? (
-                        <img src={lh.watermark_image_url} alt="watermark" style={{ height: `${(lh.watermark_size || 100) * 0.8}px` }} />
+                        <img src={lh.watermark_image_url} alt="watermark" style={{ maxWidth: '300px', maxHeight: '300px' }} />
                       ) : null}
                     </div>
                   )}
