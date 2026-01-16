@@ -25,11 +25,13 @@ import {
   XCircle,
   Image,
   Upload,
-  ShieldCheck
+  ShieldCheck,
+  FileText
 } from 'lucide-react';
 import NotificationSettings from '../components/NotificationSettings';
 import TiptapEditor from '../components/TiptapEditor';
 import { downloadInvoice, InvoicePreviewModal } from '../components/InvoiceDownload';
+import LetterheadManager from '../components/settings/LetterheadManager';
 import { apiClient } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/settings-page.css';
@@ -69,6 +71,7 @@ const Settings: React.FC = () => {
     { id: 'system', label: 'النظام', icon: Database, roles: ['admin'] },
     { id: 'company', label: 'إعدادات الشركة', icon: Building2, roles: ['admin'] },
     { id: 'branding', label: 'هوية الشركة', icon: Image, roles: ['admin'] },
+    { id: 'letterheads', label: 'الكليشات', icon: FileText, roles: ['admin'] },
     { id: 'company_policy', label: 'سياسة الشركة', icon: ShieldCheck, roles: ['admin'] },
     { id: 'subscription', label: 'الاشتراك', icon: CreditCard, roles: ['admin'] },
     { id: 'invoices', label: 'الفواتير', icon: Receipt, roles: ['admin'] },
@@ -1749,6 +1752,9 @@ const Settings: React.FC = () => {
             )}
           </div>
         );
+
+      case 'letterheads':
+        return <LetterheadManager />;
 
       default:
         return <div>التبويب غير موجود</div>;

@@ -29,6 +29,10 @@
     border-top: 4px solid var(--status-red);
 }
 
+.payment-result-card--pending {
+    border-top: 4px solid var(--status-warning, #f59e0b);
+}
+
 .payment-result-icon {
     margin-bottom: 24px;
 }
@@ -43,6 +47,16 @@
 
 .payment-result-icon--loading {
     color: var(--color-primary);
+}
+
+.payment-result-icon--pending {
+    color: var(--status-warning, #f59e0b);
+}
+
+.retry-count {
+    font-size: 13px;
+    color: var(--color-text-tertiary);
+    margin-top: 8px;
 }
 
 .payment-result-title {

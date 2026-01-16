@@ -5,6 +5,7 @@
 @import './styles/dashboard-theme.css';
 @import './styles/cases-page.css';
 @import './styles/case-detail.css';
+@import './styles/letterhead-settings.css';
 
 :root {
   /* === الخلفيات === */
