@@ -121,18 +121,20 @@ export function generateLetterheadHTML(
 
         .letterhead-header {
           position: fixed;
-          top: 0;
-          left: ${margin_left_mm}mm;
-          right: ${margin_right_mm}mm;
+          top: -${margin_top_mm}mm;
+          left: -${margin_left_mm}mm;
+          right: -${margin_right_mm}mm;
+          width: 210mm;
           height: ${type === 'image' ? header_height_mm : 40}mm;
           z-index: 100;
         }
 
         .letterhead-footer {
           position: fixed;
-          bottom: 0;
-          left: ${margin_left_mm}mm;
-          right: ${margin_right_mm}mm;
+          bottom: -${margin_bottom_mm}mm;
+          left: -${margin_left_mm}mm;
+          right: -${margin_right_mm}mm;
+          width: 210mm;
           height: ${type === 'image' ? footer_height_mm : 25}mm;
           z-index: 100;
         }
@@ -140,6 +142,10 @@ export function generateLetterheadHTML(
         .content {
           padding-top: ${contentMarginTop}mm;
           padding-bottom: ${contentMarginBottom}mm;
+          padding-right: ${margin_right_mm}mm;
+          padding-left: ${margin_left_mm}mm;
+          margin-right: -${margin_right_mm}mm;
+          margin-left: -${margin_left_mm}mm;
         }
 
         /* Content styles */
@@ -290,7 +296,7 @@ function buildImageHeader(imageUrl: string | null | undefined, height: number): 
       <img
         src="${imageUrl}"
         alt="Header"
-        style="width: 100%; height: ${height}mm; object-fit: contain;"
+        style="width: 210mm; height: ${height}mm; object-fit: fill; display: block;"
       />
     </div>
   `;
@@ -307,7 +313,7 @@ function buildImageFooter(imageUrl: string | null | undefined, height: number): 
       <img
         src="${imageUrl}"
         alt="Footer"
-        style="width: 100%; height: ${height}mm; object-fit: contain;"
+        style="width: 210mm; height: ${height}mm; object-fit: fill; display: block;"
       />
     </div>
   `;
