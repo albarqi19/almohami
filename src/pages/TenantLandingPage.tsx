@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogIn, Scale, Shield, ArrowLeft } from 'lucide-react';
 import { useTenant } from '../contexts/TenantContext';
 import { hasCustomLanding, getCustomLanding } from './custom-landings';
+import useSEO from '../hooks/useSEO';
 
 const TenantLandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -11,6 +12,18 @@ const TenantLandingPage: React.FC = () => {
 
   // Check for custom landing page
   const CustomLanding = getCustomLanding(subdomain);
+
+  // Dynamic SEO based on tenant (must be called before any early returns)
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const tenantLogo = tenant?.logo_url || tenant?.logo;
+  useSEO({
+    title: tenant?.name ? `${tenant.name} | مكتب محاماة` : undefined,
+    description: tenant?.tagline || (tenant?.name ? `${tenant.name} - مكتب محاماة متخصص` : undefined),
+    image: tenantLogo || undefined,
+    url: currentUrl,
+    siteName: tenant?.name || undefined,
+    author: tenant?.name || undefined,
+  });
 
   // Loading state
   if (isLoading) {

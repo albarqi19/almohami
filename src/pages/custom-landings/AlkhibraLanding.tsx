@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Scale, Shield, Building2, Gavel, Award, Phone } from 'lucide-react';
 import { useTenant } from '../../contexts/TenantContext';
+import useSEO from '../../hooks/useSEO';
 
 /**
  * صفحة هبوط مخصصة لشركة بيوت الخبرة للمحاماة
@@ -424,6 +425,17 @@ const AlkhibraLanding: React.FC = () => {
     nameEn: 'HOUSE OF EXPERTISE',
     logo: tenant?.logo_url || tenant?.logo,
   };
+
+  // Dynamic SEO for this tenant
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  useSEO({
+    title: `${companyInfo.nameAr} | ${companyInfo.nameEn}`,
+    description: `${companyInfo.nameAr} - مكتب محاماة متخصص في الحماية والتقاضي والشركات والاستشارات القانونية`,
+    image: companyInfo.logo || undefined,
+    url: currentUrl,
+    siteName: companyInfo.nameAr,
+    author: companyInfo.nameAr,
+  });
 
   const features = [
     { icon: Shield, title: 'الحماية', en: 'Protection' },
