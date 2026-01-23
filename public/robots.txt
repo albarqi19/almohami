@@ -1,0 +1,21 @@
+# robots.txt for alraedlaw.com
+# نظام الرائد لإدارة المحاماة
+
+User-agent: *
+Allow: /
+
+# Disallow private routes
+Disallow: /dashboard/
+Disallow: /settings/
+Disallow: /api/
+
+# Allow important files
+Allow: /favicon.ico
+Allow: /robots.txt
+Allow: /sitemap.xml
+Allow: /manifest.json
+Allow: /og-image.png
+Allow: /icons/
+
+# Sitemap location
+Sitemap: https://alraedlaw.com/sitemap.xml

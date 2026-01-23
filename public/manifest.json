@@ -1,23 +1,35 @@
 {
-  "name": "نظام إدارة المحاماة",
-  "short_name": "نظام المحاماة", 
-  "description": "نظام شامل لإدارة مكاتب المحاماة والقضايا",
+  "name": "الرائد لإدارة المحاماة",
+  "short_name": "الرائد للمحاماة",
+  "description": "نظام سحابي متكامل لإدارة مكاتب المحاماة والقضايا في السعودية - متوافق مع منصة ناجز",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#33a381",
+  "background_color": "#11233a",
+  "theme_color": "#11233a",
   "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/icons/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "maskable any"
     },
     {
-      "src": "/vite.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icons/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable any"
     }
   ],
