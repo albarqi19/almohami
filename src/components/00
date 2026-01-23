@@ -1,0 +1,468 @@
+/* Notion-Style Lawyers Report */
+:root {
+  --notion-bg: #FFFFFF;
+  --notion-text: #37352F;
+  --notion-gray: #9B9A97;
+  --notion-border: #E9E9E7;
+  --notion-hover: #F7F7F5;
+  --notion-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+
+  /* Status Colors (Notion Palette) */
+  --notion-green-bg: #ddfade;
+  --notion-green-text: #0b6e29;
+  --notion-yellow-bg: #fdf5d3;
+  --notion-yellow-text: #896b12;
+  --notion-red-bg: #ffe2dd;
+  --notion-red-text: #d44c47;
+  --notion-blue-bg: #e0ebfd;
+  --notion-blue-text: #174291;
+  --notion-gray-bg: #f1f1ef;
+  --notion-gray-text: #787774;
+  --notion-orange-bg: #faebd7;
+  /* approximate for away */
+  --notion-orange-text: #d9730d;
+}
+
+.lawyers-report-page {
+  background-color: var(--notion-bg);
+  color: var(--notion-text);
+  font-family: var(--notion-font);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.lawyers-report-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding: 36px 48px 12px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--notion-border);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.header-title-area h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--notion-text);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.header-title-area p {
+  display: none;
+  /* Notion headers usually don't have subtitles like this */
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Notion Property-style Filters */
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.filter-group label {
+  color: var(--notion-gray);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filter-select,
+.filter-input {
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--notion-text);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: none;
+}
+
+.filter-select:hover,
+.filter-input:hover {
+  background: var(--notion-hover);
+  border-radius: 3px;
+}
+
+/* Content Area */
+.lawyers-report-content {
+  flex: 1;
+  padding: 24px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Gallery View Grid */
+.lawyers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.lawyer-card {
+  background: #ffffff;
+  border: 1px solid var(--notion-border);
+  border-radius: 3px;
+  /* Slightly rounded, almost square */
+  padding: 0;
+  /* Gallery view has image on top, content below */
+  cursor: pointer;
+  transition: background 0.1s ease, box-shadow 0.1s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.lawyer-card:hover {
+  background: var(--notion-hover);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+/* Card Content Layout */
+.lawyer-card-cover {
+  height: 60px;
+  background: #F7F7F5;
+  /* Default cover pattern */
+  position: relative;
+}
+
+.lawyer-avatar-container {
+  margin-top: -30px;
+  margin-left: 16px;
+  /* RTL aware? */
+  margin-right: 16px;
+  width: 60px;
+  height: 60px;
+  position: relative;
+}
+
+.lawyer-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+  /* Notion icons are often square-ish in some views, but circle is fine too. Let's go circle per common UI */
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid white;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.lawyer-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--notion-hover);
+  color: var(--notion-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-family: serif;
+  /* Differentiator */
+}
+
+/* Card Body */
+.lawyer-card-body {
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lawyer-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--notion-text);
+  margin: 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid transparent;
+}
+
+.lawyer-role {
+  font-size: 14px;
+  color: var(--notion-gray);
+  margin: 0;
+}
+
+/* Property Rows in Card */
+.card-property-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  height: 24px;
+}
+
+.card-property-label {
+  color: var(--notion-gray);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 80px;
+  /* Align columns slightly */
+}
+
+.card-property-value {
+  color: var(--notion-text);
+  font-weight: 500;
+}
+
+/* Progress Bar (Simple) */
+.mini-progress-bar {
+  width: 60px;
+  height: 6px;
+  background: var(--notion-hover);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.mini-progress-fill {
+  height: 100%;
+  background: var(--notion-blue-text);
+  /* Use a notion color */
+  border-radius: 3px;
+}
+
+/* Modal / Page View */
+.lawyer-detail-content {
+  color: var(--notion-text);
+  font-family: var(--notion-font);
+}
+
+/* Summary Properties Block */
+.detail-properties {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--notion-border);
+}
+
+.property-item {
+  display: flex;
+  align-items: flex-start;
+  /* Properties often top aligned */
+  padding: 4px 0;
+  font-size: 14px;
+}
+
+.property-label {
+  width: 140px;
+  color: var(--notion-gray);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.property-value {
+  color: var(--notion-text);
+  flex: 1;
+}
+
+/* Tabs */
+.detail-tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--notion-border);
+  margin-bottom: 16px;
+}
+
+.tab {
+  padding: 8px 0;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  color: var(--notion-gray);
+  cursor: pointer;
+  position: relative;
+}
+
+.tab:hover {
+  color: var(--notion-text);
+}
+
+.tab.active {
+  color: var(--notion-text);
+  font-weight: 600;
+  box-shadow: 0 1px 0 0 var(--notion-text);
+  /* Underline */
+}
+
+/* DataBase Table */
+.cases-table-container {
+  overflow-x: auto;
+}
+
+.cases-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.cases-table th {
+  text-align: right;
+  font-weight: 400;
+  color: var(--notion-gray);
+  border-bottom: 1px solid var(--notion-border);
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.cases-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--notion-border);
+  color: var(--notion-text);
+}
+
+.cases-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Notion Badges */
+.notion-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  height: 20px;
+  border-radius: 3px;
+  font-size: 13px;
+  white-space: nowrap;
+  line-height: 20px;
+}
+
+.badge-green {
+  background: var(--notion-green-bg);
+  color: var(--notion-green-text);
+}
+
+.badge-yellow {
+  background: var(--notion-yellow-bg);
+  color: var(--notion-yellow-text);
+}
+
+.badge-red {
+  background: var(--notion-red-bg);
+  color: var(--notion-red-text);
+}
+
+.badge-blue {
+  background: var(--notion-blue-bg);
+  color: var(--notion-blue-text);
+}
+
+.badge-gray {
+  background: var(--notion-gray-bg);
+  color: var(--notion-gray-text);
+}
+
+.badge-orange {
+  background: var(--notion-orange-bg);
+  color: var(--notion-orange-text);
+}
+
+/* Performance Chart */
+.monthly-performance {
+  padding: 20px 0;
+}
+
+.chart-container {
+  height: 240px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--notion-border);
+}
+
+.chart-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  height: 100%;
+}
+
+.chart-bar {
+  width: 100%;
+  background: var(--notion-blue-bg);
+  border-radius: 2px;
+  min-height: 2px;
+  transition: height 0.3s;
+  position: relative;
+}
+
+.chart-bar:hover {
+  background: var(--notion-blue-text);
+}
+
+/* Presence Section in Detail */
+.presence-log-section {
+  font-size: 14px;
+}
+
+.presence-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.presence-metric-box {
+  border: 1px solid var(--notion-border);
+  border-radius: 3px;
+  padding: 12px;
+}
+
+.presence-metric-label {
+  color: var(--notion-gray);
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.presence-metric-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Modifiers */
+.text-green {
+  color: var(--notion-green-text);
+}
+
+.text-yellow {
+  color: var(--notion-orange-text);
+}
+
+.text-blue {
+  color: var(--notion-blue-text);
+}

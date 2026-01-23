@@ -3,14 +3,10 @@ import { motion } from 'framer-motion';
 import Modal from '../components/Modal';
 import {
   MessageSquare,
-  Settings,
   Save,
   RefreshCw,
   Send,
   Clock,
-  Globe,
-  Phone,
-  Key,
   Bell,
   FileText,
   AlertCircle,
@@ -107,7 +103,7 @@ const WhatsappSettings: React.FC = () => {
   const [settings, setSettings] = useState<WhatsappSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState('instances');
   const [testMessage, setTestMessage] = useState({ phone: '', message: '' });
   const [sendingTest, setSendingTest] = useState(false);
 
@@ -412,29 +408,6 @@ const WhatsappSettings: React.FC = () => {
     }
   };
 
-  // تجربة الاتصال مع Evolution API
-  const testEvolutionAPI = async () => {
-    try {
-      console.log('🧪 اختبار الاتصال مع Evolution API...');
-      const response = await fetch('http://localhost:8080/', {
-        headers: {
-          'apikey': '429683C4C977415CAAFCCE10F7D57E11'
-        }
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Evolution API متاح:', result);
-        alert('✅ Evolution API يعمل بشكل صحيح!');
-      } else {
-        throw new Error(`HTTP ${response.status}`);
-      }
-    } catch (error) {
-      console.error('❌ Evolution API غير متاح:', error);
-      alert('❌ Evolution API غير متاح. تأكد من تشغيله على localhost:8080');
-    }
-  };
-
   // تحميل instances عند تحميل الصفحة
   useEffect(() => {
     if (activeTab === 'instances') {
@@ -462,7 +435,6 @@ const WhatsappSettings: React.FC = () => {
   }
 
   const tabs = [
-    { id: 'general', name: 'الإعدادات العامة', icon: Settings },
     { id: 'instances', name: 'أرقام الواتساب', icon: Smartphone },
     { id: 'notifications', name: 'التنبيهات', icon: Bell },
     { id: 'templates', name: 'قوالب الرسائل', icon: FileText },
@@ -523,113 +495,6 @@ const WhatsappSettings: React.FC = () => {
       <div className="whatsapp-content">
         <div className="whatsapp-section">
           <div className="whatsapp-section__content">
-            {activeTab === 'general' && (
-              <>
-                <div className="whatsapp-section__header">
-                  <div className="whatsapp-section__title">
-                    <div className="whatsapp-section__title-icon">
-                      <Settings size={14} />
-                    </div>
-                    الإعدادات العامة
-                  </div>
-                </div>
-                <div className="whatsapp-section__content">
-                  <div className="whatsapp-form-grid">
-                    <div className="whatsapp-field">
-                      <label className="whatsapp-field__label">
-                        <Globe size={14} />
-                        رابط الـ Webhook
-                      </label>
-                      <input
-                        type="url"
-                        className="whatsapp-field__input"
-                        value={settings.webhook_url || ''}
-                        onChange={(e) => setSettings({ ...settings, webhook_url: e.target.value })}
-                        placeholder="https://example.com/webhook"
-                      />
-                    </div>
-
-                    <div className="whatsapp-field">
-                      <label className="whatsapp-field__label">
-                        <Phone size={14} />
-                        معرف رقم الهاتف
-                      </label>
-                      <input
-                        type="text"
-                        className="whatsapp-field__input"
-                        value={settings.phone_number_id || ''}
-                        onChange={(e) => setSettings({ ...settings, phone_number_id: e.target.value })}
-                        placeholder="Phone Number ID"
-                      />
-                    </div>
-
-                    <div className="whatsapp-field">
-                      <label className="whatsapp-field__label">
-                        <Key size={14} />
-                        رمز الوصول
-                      </label>
-                      <input
-                        type="password"
-                        className="whatsapp-field__input"
-                        value={settings.access_token || ''}
-                        onChange={(e) => setSettings({ ...settings, access_token: e.target.value })}
-                        placeholder="Access Token"
-                      />
-                    </div>
-
-                    <div className="whatsapp-field">
-                      <label className="whatsapp-field__label">
-                        <Key size={14} />
-                        رمز التحقق
-                      </label>
-                      <input
-                        type="text"
-                        className="whatsapp-field__input"
-                        value={settings.verify_token || ''}
-                        onChange={(e) => setSettings({ ...settings, verify_token: e.target.value })}
-                        placeholder="Verify Token"
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
-                    <label className="whatsapp-toggle">
-                      <input
-                        type="checkbox"
-                        className="whatsapp-toggle__checkbox"
-                        checked={settings.notifications_enabled}
-                        onChange={(e) => setSettings({ ...settings, notifications_enabled: e.target.checked })}
-                      />
-                      <span className="whatsapp-toggle__text">تفعيل التنبيهات</span>
-                    </label>
-
-                    <label className="whatsapp-toggle">
-                      <input
-                        type="checkbox"
-                        className="whatsapp-toggle__checkbox"
-                        checked={settings.daily_report_enabled}
-                        onChange={(e) => setSettings({ ...settings, daily_report_enabled: e.target.checked })}
-                      />
-                      <span className="whatsapp-toggle__text">تفعيل التقرير اليومي</span>
-                    </label>
-
-                    {settings.daily_report_enabled && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>في تمام الساعة:</span>
-                        <input
-                          type="time"
-                          className="whatsapp-field__input"
-                          style={{ width: 'auto' }}
-                          value={settings.daily_report_time}
-                          onChange={(e) => setSettings({ ...settings, daily_report_time: e.target.value })}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-
             {activeTab === 'instances' && (
               <>
                 <div className="whatsapp-section__header">
@@ -639,17 +504,29 @@ const WhatsappSettings: React.FC = () => {
                     </div>
                     إدارة أرقام الواتساب
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="whatsapp-header__btn" onClick={testEvolutionAPI}>
-                      🧪 اختبار API
-                    </button>
+                  {instances.length === 0 && (
                     <button className="whatsapp-header__btn whatsapp-header__btn--success" onClick={() => setShowAddInstance(true)}>
                       <Plus size={16} />
                       إضافة رقم جديد
                     </button>
-                  </div>
+                  )}
                 </div>
                 <div className="whatsapp-section__content">
+                  {instances.length === 0 ? (
+                    <div className="whatsapp-empty">
+                      <Smartphone size={48} className="whatsapp-empty__icon" />
+                      <h3 className="whatsapp-empty__title">لا يوجد رقم واتساب متصل</h3>
+                      <p className="whatsapp-empty__desc">قم بإضافة رقم واتساب لبدء إرسال التنبيهات للعملاء</p>
+                      <button
+                        className="whatsapp-header__btn whatsapp-header__btn--success"
+                        style={{ marginTop: '16px' }}
+                        onClick={() => setShowAddInstance(true)}
+                      >
+                        <Plus size={16} />
+                        إضافة رقم واتساب
+                      </button>
+                    </div>
+                  ) : (
                   <div className="whatsapp-instances-grid">
                     {instances.map((instance) => (
                       <div key={instance.id} className="whatsapp-instance-card">
@@ -707,6 +584,7 @@ const WhatsappSettings: React.FC = () => {
                       </div>
                     ))}
                   </div>
+                  )}
                 </div>
               </>
             )}

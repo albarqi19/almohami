@@ -14,7 +14,7 @@ const LawyerSuspended: React.FC = () => {
                 </div>
 
                 <h1 className="lawyer-suspended__title">
-                    الحساب معلق مؤقتاً
+                     الحساب معلق مؤقتاً
                 </h1>
 
                 <p className="lawyer-suspended__message">

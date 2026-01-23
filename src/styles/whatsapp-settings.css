@@ -275,18 +275,20 @@ body.dark .whatsapp-field__input {
 
 /* === Instance Cards Grid === */
 .whatsapp-instances-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 12px;
+    max-width: 500px;
 }
 
 /* === Instance Card === */
 .whatsapp-instance-card {
-    padding: 14px;
+    padding: 20px;
     border: 1px solid var(--color-border);
-    border-radius: 6px;
+    border-radius: 10px;
     background: var(--quiet-gray-100);
     transition: all var(--transition-fast);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 body.dark .whatsapp-instance-card {
@@ -294,37 +296,51 @@ body.dark .whatsapp-instance-card {
 }
 
 .whatsapp-instance-card:hover {
-    border-color: var(--law-navy);
+    border-color: var(--status-green);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.1);
 }
 
 .whatsapp-instance-card__header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .whatsapp-instance-card__name {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--color-heading);
-    margin: 0 0 2px 0;
+    margin: 0 0 4px 0;
 }
 
 .whatsapp-instance-card__dept {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.whatsapp-instance-card__dept::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--status-green);
 }
 
 .whatsapp-instance-card__status {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
 }
 
 .whatsapp-instance-card__status-icon {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
 }
 
 .whatsapp-instance-card__status--connected {
@@ -340,41 +356,51 @@ body.dark .whatsapp-instance-card {
 }
 
 .whatsapp-instance-card__delete {
-    padding: 4px;
+    padding: 6px;
     background: none;
     border: none;
-    color: var(--status-red);
+    color: var(--color-text-secondary);
     cursor: pointer;
-    border-radius: 4px;
-    transition: background var(--transition-fast);
+    border-radius: 6px;
+    transition: all var(--transition-fast);
 }
 
 .whatsapp-instance-card__delete:hover {
     background: var(--status-red-light);
+    color: var(--status-red);
 }
 
 .whatsapp-instance-card__info {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    font-size: 12px;
-    margin-bottom: 12px;
+    gap: 10px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: var(--dashboard-bg);
+    border-radius: 8px;
+}
+
+body.dark .whatsapp-instance-card__info {
+    background: var(--quiet-gray-300);
 }
 
 .whatsapp-instance-card__row {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     color: var(--color-text-secondary);
 }
 
 .whatsapp-instance-card__value {
-    font-weight: 500;
+    font-weight: 600;
     color: var(--color-text);
+    font-family: 'SF Mono', 'Consolas', monospace;
 }
 
 .whatsapp-instance-card__actions {
     display: flex;
-    gap: 8px;
+    gap: 10px;
 }
 
 .whatsapp-instance-card__btn {
@@ -382,10 +408,10 @@ body.dark .whatsapp-instance-card {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     transition: all var(--transition-fast);
@@ -399,6 +425,7 @@ body.dark .whatsapp-instance-card {
 
 .whatsapp-instance-card__btn--primary:hover {
     background: var(--law-navy-dark);
+    transform: translateY(-1px);
 }
 
 .whatsapp-instance-card__btn--warning {
@@ -407,6 +434,7 @@ body.dark .whatsapp-instance-card {
 
 .whatsapp-instance-card__btn--warning:hover {
     opacity: 0.9;
+    transform: translateY(-1px);
 }
 
 /* === Empty State === */
