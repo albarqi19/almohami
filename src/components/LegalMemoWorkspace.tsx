@@ -11,14 +11,14 @@ import {
     Clock, Cloud, CloudOff, Sparkles, Settings,
     FileUp, Trash2, Eye, Download, Link2, Zap, Info
 } from 'lucide-react';
-import YooptaNotebookEditor, { textToYooptaContent } from './YooptaNotebookEditor';
-import type { YooptaNotebookEditorRef } from './YooptaNotebookEditor';
+import TiptapEditor from './TiptapEditor';
+import type { TiptapEditorRef } from './TiptapEditor';
 import LegalAIToolbarButton from './LegalAIToolbarButton';
 import NotebookAssistantWidget from './NotebookAssistantWidget';
 import AnalysisProgress from './AnalysisProgress';
 import { LegalMemoService, type AnalysisStep } from '../services/legalMemoService';
 import { runSingleAnalysis, ANALYSIS_ENGINES, type AnalysisEngineType, type MemoAnalysisResult } from '../services/memoAnalysisService';
-import type { YooptaContentValue } from '@yoopta/editor';
+import { convertToHTML, detectContentType } from '../utils/contentConverter';
 import type { TextAnnotation } from '../types/textAnnotations';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -257,7 +257,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
 
     // بيانات المذكرة
     const [title, setTitle] = useState<string>('');
-    const [content, setContent] = useState<YooptaContentValue | undefined>(undefined);
+    const [content, setContent] = useState<string>('');
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
     // حالة الحفظ
@@ -285,7 +285,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
     const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
 
     // المراجع
-    const editorRef = useRef<YooptaNotebookEditorRef>(null);
+    const editorRef = useRef<TiptapEditorRef>(null);
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
     const pendingChangesRef = useRef(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -393,7 +393,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
         setSelectedCategory('');
         setSelectedMemoType('');
         setTitle('');
-        setContent(undefined);
+        setContent('');
         setUploadedFiles([]);
         setSavedMemoId(null);
         setLastSaved(null);
@@ -406,44 +406,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
         setEditorKey(prev => prev + 1);
     };
 
-    // تنظيف محتوى Yoopta من القيم الفارغة (null text) التي تسبب خطأ Slate
-    const sanitizeYooptaContent = (content: any): YooptaContentValue | undefined => {
-        if (!content || typeof content !== 'object') return undefined;
-
-        const sanitizedContent: any = {};
-
-        for (const [blockId, block] of Object.entries(content as Record<string, any>)) {
-            if (!block || typeof block !== 'object') continue;
-
-            const sanitizedBlock = { ...block };
-
-            // تنظيف children من null text
-            if (Array.isArray(sanitizedBlock.value)) {
-                sanitizedBlock.value = sanitizedBlock.value.map((element: any) => {
-                    if (!element) return { id: crypto.randomUUID?.() || Date.now().toString(), type: 'paragraph', children: [{ text: '' }] };
-
-                    if (Array.isArray(element.children)) {
-                        element.children = element.children.map((child: any) => {
-                            if (!child) return { text: '' };
-                            if (child.text === null || child.text === undefined) {
-                                return { ...child, text: '' };
-                            }
-                            return child;
-                        });
-                    } else {
-                        element.children = [{ text: '' }];
-                    }
-                    return element;
-                });
-            }
-
-            sanitizedContent[blockId] = sanitizedBlock;
-        }
-
-        return Object.keys(sanitizedContent).length > 0 ? sanitizedContent : undefined;
-    };
-
-    // تحميل مذكرة للتعديل
+    // تحميل مذكرة للتعديل - مع دعم المحتوى القديم (Yoopta) والجديد (HTML)
     const loadMemoForEditing = (memo: any) => {
         setSelectedCategory(memo.category);
         setSelectedMemoType(memo.memo_type);
@@ -451,23 +414,48 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
         setSavedMemoId(memo.id);
         setLastSaved(memo.updated_at ? new Date(memo.updated_at) : null);
 
-        // تحليل وتنظيف المحتوى
-        let parsedContent: YooptaContentValue | undefined;
+        // تحويل المحتوى - يدعم Yoopta القديم و HTML الجديد
+        let htmlContent = '';
         try {
+            // أولاً: حاول استخدام formatting_data (قد يكون Yoopta JSON قديم)
             if (memo.formatting_data) {
                 const rawContent = typeof memo.formatting_data === 'string'
-                    ? JSON.parse(memo.formatting_data)
-                    : memo.formatting_data;
-                parsedContent = sanitizeYooptaContent(rawContent);
+                    ? memo.formatting_data
+                    : JSON.stringify(memo.formatting_data);
+
+                const contentType = detectContentType(rawContent);
+                console.log('[LegalMemoWorkspace] formatting_data content type:', contentType);
+
+                if (contentType === 'yoopta') {
+                    htmlContent = convertToHTML(rawContent);
+                    console.log('[LegalMemoWorkspace] Converted from Yoopta formatting_data to HTML');
+                } else if (contentType === 'html') {
+                    htmlContent = rawContent;
+                } else {
+                    // fallback to content field
+                    htmlContent = convertToHTML(memo.content || '');
+                }
             } else if (memo.content) {
-                parsedContent = textToYooptaContent(memo.content);
+                // استخدم content field مباشرة
+                const contentType = detectContentType(memo.content);
+                console.log('[LegalMemoWorkspace] content field type:', contentType);
+
+                if (contentType === 'yoopta') {
+                    htmlContent = convertToHTML(memo.content);
+                    console.log('[LegalMemoWorkspace] Converted from Yoopta content to HTML');
+                } else if (contentType === 'html') {
+                    htmlContent = memo.content;
+                } else {
+                    // نص عادي
+                    htmlContent = `<p dir="rtl" style="text-align: right">${memo.content}</p>`;
+                }
             }
         } catch (e) {
-            console.error('Error parsing memo content:', e);
-            parsedContent = textToYooptaContent(memo.content || '');
+            console.error('[LegalMemoWorkspace] Error parsing memo content:', e);
+            htmlContent = `<p dir="rtl" style="text-align: right">${memo.content || ''}</p>`;
         }
 
-        setContent(parsedContent);
+        setContent(htmlContent);
         setEditorKey(prev => prev + 1);
         setTextAnnotations([]);
         setIsAssistantVisible(true);
@@ -667,8 +655,8 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
         setHasUnsavedChanges(true);
     };
 
-    // تغيير المحتوى
-    const handleContentChange = (value: YooptaContentValue) => {
+    // تغيير المحتوى - الآن يستقبل HTML string
+    const handleContentChange = (value: string) => {
         setContent(value);
         triggerAutoSave();
     };
@@ -1050,24 +1038,16 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                         onChange={e => handleTitleChange(e.target.value)}
                                     />
 
-                                    {/* المحرر */}
+                                    {/* المحرر - TiptapEditor */}
                                     <div className="lmw-editor-container">
-                                        <YooptaNotebookEditor
+                                        <TiptapEditor
                                             key={editorKey}
                                             ref={editorRef}
-                                            initialContent={content}
+                                            content={content}
                                             onChange={handleContentChange}
                                             autoFocus={true}
-                                            textAnnotations={textAnnotations}
-                                            onAnnotationApplied={(annotation) => {
-                                                setTextAnnotations((prev) => prev.filter((a) => a.id !== annotation.id));
-                                            }}
-                                            onAnnotationsMatched={({ provided, matched }) => {
-                                                if (provided > 0 && matched === 0) {
-                                                    setError('تم استلام ملاحظات التدقيق، لكن لم يتمكن النظام من تحديد مواضعها داخل النص. السبب الأكثر شيوعاً أن original_text لا يطابق النص حرفياً (مسافات/رموز RTL/اختلاف بسيط). جرّب إعادة التدقيق أو قلّل النص المراد تدقيقه.');
-                                                    setTextAnnotations([]);
-                                                }
-                                            }}
+                                            placeholder="اكتب محتوى المذكرة هنا..."
+                                            minHeight="calc(100vh - 300px)"
                                         />
                                     </div>
 

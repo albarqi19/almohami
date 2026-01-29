@@ -7,13 +7,11 @@ import {
 import { notebookService } from '../services/notebookService';
 import type { PersonalNote, NoteStatistics, CreateNoteData } from '../services/notebookService';
 import { CaseService } from '../services/caseService';
-import YooptaNotebookEditor, {
-    textToYooptaContent
-} from '../components/YooptaNotebookEditor';
-import type { YooptaNotebookEditorRef } from '../components/YooptaNotebookEditor';
+import TiptapEditor from '../components/TiptapEditor';
+import type { TiptapEditorRef } from '../components/TiptapEditor';
 import LegalAIToolbarButton from '../components/LegalAIToolbarButton';
 import NotebookAssistantWidget from '../components/NotebookAssistantWidget';
-import type { YooptaContentValue } from '@yoopta/editor';
+import { convertToHTML, detectContentType } from '../utils/contentConverter';
 import type { TextAnnotation } from '../types/textAnnotations';
 import '../styles/notebook-workspace-notion.css';
 import '../styles/legal-ai-tools.css';
@@ -41,10 +39,10 @@ const NotebookWorkspace: React.FC = () => {
     const [showReminderPicker, setShowReminderPicker] = useState(false);
     const [newNoteMode, setNewNoteMode] = useState(false);
 
-    // Form state for new/editing note
+    // Form state for new/editing note - المحتوى الآن HTML string
     const [noteTitle, setNoteTitle] = useState('');
     const [noteCategory, setNoteCategory] = useState<CreateNoteData['category']>('quick_brief');
-    const [noteContent, setNoteContent] = useState<YooptaContentValue | undefined>(undefined);
+    const [noteContent, setNoteContent] = useState<string>('');
     const [noteCaseId, setNoteCaseId] = useState<number | null>(null);
     const [noteReminder, setNoteReminder] = useState<string | null>(null);
 
@@ -68,8 +66,9 @@ const NotebookWorkspace: React.FC = () => {
     const noteReminderRef = useRef(noteReminder);
     const selectedNoteIdRef = useRef(selectedNoteId);
     const newNoteModeRef = useRef(newNoteMode);
+    const noteContentRef = useRef(noteContent);
 
-    const editorRef = useRef<YooptaNotebookEditorRef>(null);
+    const editorRef = useRef<TiptapEditorRef>(null);
     const actionsMenuRef = useRef<HTMLDivElement>(null);
 
     const categories = [
@@ -108,7 +107,6 @@ const NotebookWorkspace: React.FC = () => {
     const fetchCases = async () => {
         try {
             const response = await CaseService.getCases();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const mappedCases = (response.data || []).map((c: any) => ({
                 id: Number(c.id),
                 file_number: c.file_number || '',
@@ -140,6 +138,7 @@ const NotebookWorkspace: React.FC = () => {
     useEffect(() => { noteReminderRef.current = noteReminder; }, [noteReminder]);
     useEffect(() => { selectedNoteIdRef.current = selectedNoteId; }, [selectedNoteId]);
     useEffect(() => { newNoteModeRef.current = newNoteMode; }, [newNoteMode]);
+    useEffect(() => { noteContentRef.current = noteContent; }, [noteContent]);
 
     // Close menus when clicking outside
     useEffect(() => {
@@ -162,19 +161,19 @@ const NotebookWorkspace: React.FC = () => {
     }, []);
 
     // Auto-save function - uses refs to get current values
-    // Optimistic updates: update local state immediately, then sync with server
+    // الآن يحفظ HTML مباشرة
     const performAutoSave = useCallback(async () => {
         if (!pendingChangesRef.current) return;
 
-        const content = editorRef.current?.getContent();
+        const content = editorRef.current?.getHTML() || noteContentRef.current;
         if (!content || editorRef.current?.isEmpty()) return;
 
         setSaving(true);
         try {
-            const contentJson = JSON.stringify(content);
+            // نحفظ HTML مباشرة - لا نحتاج JSON.stringify
             const data: CreateNoteData = {
                 title: noteTitleRef.current || undefined,
-                content: contentJson,
+                content: content,
                 category: noteCategoryRef.current,
                 case_id: noteCaseIdRef.current,
                 reminder_at: noteReminderRef.current,
@@ -191,7 +190,7 @@ const NotebookWorkspace: React.FC = () => {
                             category: noteCategoryRef.current,
                             case_id: noteCaseIdRef.current,
                             reminder_at: noteReminderRef.current,
-                            content: contentJson,
+                            content: content,
                             updated_at: new Date().toISOString()
                         }
                         : note
@@ -237,7 +236,7 @@ const NotebookWorkspace: React.FC = () => {
         }, 1500); // 1.5 second debounce
     }, [performAutoSave]);
 
-    // Select a note
+    // Select a note - مع دعم المحتوى القديم (Yoopta)
     const selectNote = useCallback((note: PersonalNote) => {
         // Save current note first if there are pending changes
         if (pendingChangesRef.current) {
@@ -251,20 +250,29 @@ const NotebookWorkspace: React.FC = () => {
         setNoteCaseId(note.case_id);
         setNoteReminder(note.reminder_at ? note.reminder_at.slice(0, 16) : null);
 
-        // Parse content
-        let parsedContent: YooptaContentValue | undefined;
+        // تحويل المحتوى - يدعم Yoopta القديم و HTML الجديد
+        let htmlContent = '';
         try {
-            const parsed = typeof note.content === 'string' ? JSON.parse(note.content) : note.content;
-            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                parsedContent = parsed;
+            const contentType = detectContentType(note.content);
+            console.log('[NotebookWorkspace] Content type detected:', contentType);
+
+            if (contentType === 'yoopta') {
+                // تحويل من Yoopta إلى HTML
+                htmlContent = convertToHTML(note.content);
+                console.log('[NotebookWorkspace] Converted from Yoopta to HTML');
+            } else if (contentType === 'html') {
+                // المحتوى HTML بالفعل
+                htmlContent = note.content;
             } else {
-                parsedContent = textToYooptaContent(note.content);
+                // نص عادي
+                htmlContent = `<p dir="rtl" style="text-align: right">${note.content}</p>`;
             }
-        } catch {
-            parsedContent = textToYooptaContent(note.content);
+        } catch (error) {
+            console.error('[NotebookWorkspace] Error parsing content:', error);
+            htmlContent = `<p dir="rtl" style="text-align: right">${note.content || ''}</p>`;
         }
 
-        setNoteContent(parsedContent);
+        setNoteContent(htmlContent);
         setTextAnnotations([]);
         setIsAssistantVisible(true);
         // Force editor re-render with new content
@@ -284,7 +292,7 @@ const NotebookWorkspace: React.FC = () => {
         setNewNoteMode(true);
         setNoteTitle('');
         setNoteCategory('quick_brief');
-        setNoteContent(undefined);
+        setNoteContent('');
         setNoteCaseId(null);
         setNoteReminder(null);
         setTextAnnotations([]);
@@ -306,7 +314,7 @@ const NotebookWorkspace: React.FC = () => {
             setNotes(prevNotes => prevNotes.filter(note => note.id !== deletedNoteId));
             setSelectedNoteId(null);
             setNewNoteMode(false);
-            setNoteContent(undefined);
+            setNoteContent('');
             setEditorKey(prev => prev + 1);
             setTextAnnotations([]);
             setIsAssistantVisible(true);
@@ -381,8 +389,8 @@ const NotebookWorkspace: React.FC = () => {
         triggerAutoSave();
     };
 
-    // Handle content change
-    const handleContentChange = (value: YooptaContentValue) => {
+    // Handle content change - الآن يستقبل HTML string
+    const handleContentChange = (value: string) => {
         setNoteContent(value);
         triggerAutoSave();
     };
@@ -555,7 +563,7 @@ const NotebookWorkspace: React.FC = () => {
                                             if (selection && selection.toString().trim()) {
                                                 return selection.toString().trim();
                                             }
-                                            return null;
+                                            return editorRef.current?.getSelectedText?.() || null;
                                         }}
                                         onGetAllText={() => {
                                             // Get all text from editor
@@ -565,7 +573,6 @@ const NotebookWorkspace: React.FC = () => {
                                             editorRef.current?.replaceSelectedText?.(newText);
                                         }}
                                         onReplaceAllText={(newText: string) => {
-                                            // استبدال كل المحتوى
                                             editorRef.current?.replaceAllText?.(newText);
                                         }}
                                         onSetTextAnnotations={(annotations) => {
@@ -721,19 +728,16 @@ const NotebookWorkspace: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Editor */}
+                        {/* Editor - TiptapEditor بدلاً من YooptaNotebookEditor */}
                         <div className="editor-container">
-                            <YooptaNotebookEditor
+                            <TiptapEditor
                                 key={editorKey}
                                 ref={editorRef}
-                                initialContent={noteContent}
+                                content={noteContent}
                                 onChange={handleContentChange}
+                                placeholder="اكتب ملاحظتك هنا..."
                                 autoFocus={true}
-                                textAnnotations={textAnnotations}
-                                onAnnotationApplied={(annotation) => {
-                                    console.log('[NotebookWorkspace] Annotation applied:', annotation);
-                                    setTextAnnotations(prev => prev.filter(a => a.id !== annotation.id));
-                                }}
+                                minHeight="calc(100vh - 200px)"
                             />
                         </div>
 
@@ -761,9 +765,9 @@ const NotebookWorkspace: React.FC = () => {
                         <div className="tips">
                             <h4>نصائح سريعة:</h4>
                             <ul>
-                                <li>اكتب <code>/</code> لإضافة قائمة أو عنوان أو اقتباس</li>
-                                <li>اسحب وأفلت العناصر لإعادة ترتيبها</li>
-                                <li>ظلل النص لتنسيقه (غامق، مائل، تسطير)</li>
+                                <li>استخدم شريط الأدوات لتنسيق النص</li>
+                                <li>أضف جداول وروابط واقتباسات بسهولة</li>
+                                <li>يمكنك النسخ من المحرر إلى الوورد مباشرة</li>
                                 <li>الحفظ تلقائي - لا تقلق!</li>
                             </ul>
                         </div>
