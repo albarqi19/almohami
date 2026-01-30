@@ -149,6 +149,11 @@ const RegisterTenantContent: React.FC = () => {
         if (formData.owner_pin !== formData.owner_pin_confirmation) {
             newErrors.owner_pin_confirmation = 'الرقم السري غير متطابق';
         }
+        if (!formData.owner_phone.trim()) {
+            newErrors.owner_phone = 'رقم الجوال مطلوب';
+        } else if (!/^05\d{8}$/.test(formData.owner_phone)) {
+            newErrors.owner_phone = 'رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام';
+        }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -379,11 +384,12 @@ const RegisterTenantContent: React.FC = () => {
                         </div>
 
                         <div className="form-field">
-                            <label className="form-label" htmlFor="owner_phone">رقم الجوال <span className="form-optional">(اختياري)</span></label>
+                            <label className="form-label" htmlFor="owner_phone">رقم الجوال <span className="form-required">*</span></label>
                             <div className="auth-field">
                                 <span className="auth-field__icon"><Phone size={18} /></span>
-                                <input id="owner_phone" name="owner_phone" type="tel" className="input auth-field__input--with-icon" placeholder="05xxxxxxxx" value={formData.owner_phone} onChange={handleInputChange} dir="ltr" />
+                                <input id="owner_phone" name="owner_phone" type="tel" className={`input auth-field__input--with-icon ${errors.owner_phone ? 'input--error' : ''}`} placeholder="05xxxxxxxx" value={formData.owner_phone} onChange={handleInputChange} dir="ltr" maxLength={10} inputMode="numeric" />
                             </div>
+                            {errors.owner_phone && <span className="form-error">{errors.owner_phone}</span>}
                         </div>
 
                         <div className="auth-form__actions">
@@ -410,7 +416,7 @@ const RegisterTenantContent: React.FC = () => {
                                 <div className="auth-summary__item"><span className="auth-summary__label">الاسم</span><span className="auth-summary__value">{formData.owner_name}</span></div>
                                 <div className="auth-summary__item"><span className="auth-summary__label">رقم الهوية</span><span className="auth-summary__value" dir="ltr">{formData.owner_national_id}</span></div>
                                 <div className="auth-summary__item"><span className="auth-summary__label">البريد الإلكتروني</span><span className="auth-summary__value" dir="ltr">{formData.owner_email}</span></div>
-                                {formData.owner_phone && <div className="auth-summary__item"><span className="auth-summary__label">رقم الجوال</span><span className="auth-summary__value" dir="ltr">{formData.owner_phone}</span></div>}
+                                <div className="auth-summary__item"><span className="auth-summary__label">رقم الجوال</span><span className="auth-summary__value" dir="ltr">{formData.owner_phone}</span></div>
                             </div>
                         </div>
 

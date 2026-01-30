@@ -13,17 +13,20 @@ import {
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import '../../styles/dashboard-theme.css';
+import '../../styles/welcome-modal.css';
 
 // Import Widgets
 import DashboardWidget from './DashboardWidget';
 import CasesListWidget from './widgets/CasesListWidget';
 import SessionsWidget from './widgets/SessionsWidget';
 import ActivityFeedWidget from './widgets/ActivityFeedWidget';
+import WelcomeModal from '../WelcomeModal';
 
 // Import Dashboard Service
 import { DashboardService } from '../../services/dashboardService';
 import type { DashboardStats, RecentCase, UpcomingSession, RecentActivity } from '../../services/dashboardService';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
+import { apiClient } from '../../utils/api';
 
 // Cache keys
 const CACHE_KEYS = {
@@ -46,6 +49,7 @@ const AdminDashboard: React.FC = () => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
     // Dashboard data state
     const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => {
@@ -109,6 +113,41 @@ const AdminDashboard: React.FC = () => {
     useEffect(() => {
         loadDashboardData();
     }, []);
+
+    // Check if we should show welcome modal for tenant owner
+    useEffect(() => {
+        if (user?.is_tenant_owner) {
+            // Check both API (welcome_shown_at) and localStorage as fallback
+            const hasSeenWelcomeInDB = !!user.welcome_shown_at;
+            const hasSeenWelcomeLocally = localStorage.getItem(`welcome_modal_shown_${user.id}`);
+
+            if (!hasSeenWelcomeInDB && !hasSeenWelcomeLocally) {
+                // Delay showing modal to let dashboard load first
+                const timer = setTimeout(() => {
+                    setShowWelcomeModal(true);
+                }, 500);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [user]);
+
+    // Handle welcome modal close
+    const handleWelcomeModalClose = async () => {
+        setShowWelcomeModal(false);
+
+        if (user?.id) {
+            // Save locally first for immediate effect
+            localStorage.setItem(`welcome_modal_shown_${user.id}`, 'true');
+
+            // Then save to API
+            try {
+                await apiClient.post('/auth/welcome-shown');
+            } catch (error) {
+                console.error('Failed to mark welcome as shown:', error);
+                // Local storage already saved, so user won't see modal again on this device
+            }
+        }
+    };
 
     // تحديث تلقائي عند العودة للصفحة وكل دقيقة
     useAutoRefresh({
@@ -379,6 +418,12 @@ const AdminDashboard: React.FC = () => {
           border-color: var(--law-navy) !important;
         }
       `}</style>
+
+            {/* Welcome Modal for new tenant owners */}
+            <WelcomeModal
+                isOpen={showWelcomeModal}
+                onClose={handleWelcomeModalClose}
+            />
         </div>
     );
 };

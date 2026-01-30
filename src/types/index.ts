@@ -12,6 +12,7 @@ export interface User {
   lastLoginAt?: Date;
   // Subscription fields
   is_tenant_owner?: boolean;
+  welcome_shown_at?: string | null;
   subscription_active?: boolean;
   is_trial?: boolean;
   trial_ends_at?: string | null;
