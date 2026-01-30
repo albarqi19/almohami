@@ -1,4 +1,4 @@
-import React, { useEffect, useImperativeHandle, forwardRef, useState, useCallback } from 'react';
+import React, { useEffect, useImperativeHandle, forwardRef, useState, useCallback, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
@@ -38,6 +38,7 @@ import {
   Columns,
   Code
 } from 'lucide-react';
+import type { TextAnnotation } from '../types/textAnnotations';
 
 // Extension for Font Size
 import { Extension } from '@tiptap/core';
@@ -82,6 +83,21 @@ const FontSize = Extension.create({
   },
 });
 
+// Types for annotation overlay
+interface OverlayRect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+interface OverlayHit {
+  annotationId: string;
+  annotationIndex: number;
+  rects: OverlayRect[];
+  anchorRect: DOMRect;
+}
+
 interface TiptapEditorProps {
   content: string;
   onChange: (content: string) => void;
@@ -90,6 +106,8 @@ interface TiptapEditorProps {
   editable?: boolean;
   minHeight?: string;
   autoFocus?: boolean;
+  textAnnotations?: TextAnnotation[];
+  onApplyAnnotation?: (annotationId: string, newText: string) => void;
 }
 
 export interface TiptapEditorRef {
@@ -112,13 +130,21 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
   className = '',
   editable = true,
   minHeight = '300px',
-  autoFocus = false
+  autoFocus = false,
+  textAnnotations = [],
+  onApplyAnnotation
 }, ref) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [showTableMenu, setShowTableMenu] = useState(false);
+
+  // Annotation overlay state
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [overlayHits, setOverlayHits] = useState<OverlayHit[]>([]);
+  const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -228,6 +254,209 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
     if (!editor) return;
     editor.commands.setContent(newText);
   }, [editor]);
+
+  // Normalize text for matching (remove diacritics, normalize whitespace)
+  const normalizeText = useCallback((text: string): string => {
+    return text
+      .replace(/[\u064B-\u065F\u0670]/g, '') // Remove Arabic diacritics
+      .replace(/[\u200B-\u200F\u202A-\u202E\uFEFF]/g, '') // Remove zero-width chars
+      .replace(/\s+/g, ' ')
+      .trim();
+  }, []);
+
+  // Compute annotation overlays
+  const recomputeAnnotationOverlays = useCallback(() => {
+    const container = containerRef.current;
+    if (!container || !editor) {
+      setOverlayHits([]);
+      return;
+    }
+
+    const annotations = (textAnnotations || []).filter(
+      (a) => a && a.original_text && a.original_text.trim()
+    );
+
+    if (annotations.length === 0) {
+      setOverlayHits([]);
+      return;
+    }
+
+    const editorElement = container.querySelector('.ProseMirror') as HTMLElement;
+    if (!editorElement) {
+      setOverlayHits([]);
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const nextHits: OverlayHit[] = [];
+
+    // Get all text nodes from the editor
+    const walker = document.createTreeWalker(
+      editorElement,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+
+    const textNodes: { node: Text; start: number; text: string }[] = [];
+    let fullText = '';
+    let node: Text | null;
+
+    while ((node = walker.nextNode() as Text)) {
+      textNodes.push({
+        node,
+        start: fullText.length,
+        text: node.textContent || ''
+      });
+      fullText += node.textContent || '';
+    }
+
+    const normalizedFullText = normalizeText(fullText);
+
+    annotations.forEach((annotation, idx) => {
+      const normalizedNeedle = normalizeText(annotation.original_text);
+      if (!normalizedNeedle) return;
+
+      // Find match in normalized text
+      const matchIndex = normalizedFullText.indexOf(normalizedNeedle);
+      if (matchIndex < 0) return;
+
+      // Map back to original text position (approximate)
+      let currentNormPos = 0;
+      let startNode: Text | null = null;
+      let startOffset = 0;
+      let endNode: Text | null = null;
+      let endOffset = 0;
+
+      for (const tn of textNodes) {
+        const nodeNormText = normalizeText(tn.text);
+        const nodeNormStart = currentNormPos;
+        const nodeNormEnd = currentNormPos + nodeNormText.length;
+
+        // Find start
+        if (!startNode && matchIndex >= nodeNormStart && matchIndex < nodeNormEnd) {
+          startNode = tn.node;
+          // Approximate offset
+          const offsetInNorm = matchIndex - nodeNormStart;
+          startOffset = Math.min(offsetInNorm, tn.text.length);
+        }
+
+        // Find end
+        const endMatchIndex = matchIndex + normalizedNeedle.length;
+        if (!endNode && endMatchIndex > nodeNormStart && endMatchIndex <= nodeNormEnd) {
+          endNode = tn.node;
+          const offsetInNorm = endMatchIndex - nodeNormStart;
+          endOffset = Math.min(offsetInNorm, tn.text.length);
+        }
+
+        currentNormPos = nodeNormEnd;
+
+        if (startNode && endNode) break;
+      }
+
+      if (!startNode || !endNode) return;
+
+      try {
+        const range = document.createRange();
+        range.setStart(startNode, Math.max(0, Math.min(startOffset, startNode.length)));
+        range.setEnd(endNode, Math.max(0, Math.min(endOffset, endNode.length)));
+
+        const clientRects = Array.from(range.getClientRects());
+        if (clientRects.length === 0) return;
+
+        const rects: OverlayRect[] = clientRects.map((rect) => ({
+          top: rect.top - containerRect.top + container.scrollTop,
+          left: rect.left - containerRect.left + container.scrollLeft,
+          width: rect.width,
+          height: rect.height,
+        }));
+
+        nextHits.push({
+          annotationId: annotation.id,
+          annotationIndex: idx,
+          rects,
+          anchorRect: clientRects[0],
+        });
+      } catch (e) {
+        console.error('Error creating range for annotation:', e);
+      }
+    });
+
+    setOverlayHits(nextHits);
+  }, [editor, textAnnotations, normalizeText]);
+
+  // Recompute overlays when annotations change
+  useEffect(() => {
+    if (textAnnotations && textAnnotations.length > 0) {
+      // Delay to let DOM settle
+      const timer = setTimeout(() => {
+        recomputeAnnotationOverlays();
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setOverlayHits([]);
+    }
+  }, [textAnnotations, recomputeAnnotationOverlays]);
+
+  // Also recompute on content changes
+  useEffect(() => {
+    if (textAnnotations && textAnnotations.length > 0) {
+      const timer = setTimeout(() => {
+        recomputeAnnotationOverlays();
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [content, recomputeAnnotationOverlays, textAnnotations]);
+
+  // Handle applying annotation
+  const handleApplyAnnotation = useCallback(() => {
+    if (!activeAnnotationId || !editor) return;
+
+    const annotation = (textAnnotations || []).find((a) => a.id === activeAnnotationId);
+    if (!annotation || !annotation.suggested_text) return;
+
+    // Call the callback if provided
+    if (onApplyAnnotation) {
+      onApplyAnnotation(annotation.id, annotation.suggested_text);
+    }
+
+    // Find and replace the text in the editor
+    const fullText = editor.getText();
+    const searchText = annotation.original_text;
+    const replaceText = annotation.suggested_text;
+
+    const index = fullText.indexOf(searchText);
+    if (index >= 0) {
+      // Get the position in the document
+      let pos = 0;
+      editor.state.doc.descendants((node, nodePos) => {
+        if (node.isText) {
+          const nodeText = node.text || '';
+          const matchIndex = nodeText.indexOf(searchText);
+          if (matchIndex >= 0 && pos === 0) {
+            pos = nodePos + matchIndex;
+            return false;
+          }
+        }
+        return true;
+      });
+
+      if (pos > 0) {
+        editor
+          .chain()
+          .focus()
+          .setTextSelection({ from: pos, to: pos + searchText.length })
+          .deleteSelection()
+          .insertContent(replaceText)
+          .run();
+      }
+    }
+
+    setActiveAnnotationId(null);
+    setTooltipPos(null);
+
+    // Recompute overlays after replacement
+    setTimeout(() => recomputeAnnotationOverlays(), 100);
+  }, [activeAnnotationId, editor, textAnnotations, onApplyAnnotation, recomputeAnnotationOverlays]);
 
   useImperativeHandle(ref, () => ({
     getHTML: () => editor?.getHTML() || '',
@@ -345,7 +574,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
   const fontSizes = ['12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'];
 
   return (
-    <div className={`tiptap-editor ${className}`} style={{ direction: 'rtl' }}>
+    <div ref={containerRef} className={`tiptap-editor ${className}`} style={{ direction: 'rtl', position: 'relative' }}>
       {editable && (
         <div className="tiptap-toolbar">
           {/* Text Formatting */}
@@ -996,7 +1225,179 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
             border: none !important;
           }
         }
+
+        /* Annotation overlay styles */
+        .tiptap-annotations-layer {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          pointer-events: none;
+          z-index: 5;
+        }
+
+        .tiptap-annotation-hit {
+          position: absolute;
+          pointer-events: auto;
+          cursor: pointer;
+          border-radius: 2px;
+          transition: opacity 0.15s;
+        }
+
+        .tiptap-annotation-high {
+          background: rgba(239, 68, 68, 0.25);
+          border-bottom: 2px solid #ef4444;
+        }
+
+        .tiptap-annotation-medium {
+          background: rgba(245, 158, 11, 0.25);
+          border-bottom: 2px solid #f59e0b;
+        }
+
+        .tiptap-annotation-low {
+          background: rgba(59, 130, 246, 0.25);
+          border-bottom: 2px solid #3b82f6;
+        }
+
+        .tiptap-annotation-hit:hover {
+          opacity: 0.8;
+        }
+
+        .tiptap-annotation-tooltip {
+          position: fixed;
+          z-index: 9999;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 12px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          max-width: 300px;
+          direction: rtl;
+          text-align: right;
+        }
+
+        .tiptap-annotation-tooltip-title {
+          font-weight: 600;
+          font-size: 14px;
+          color: #1e293b;
+          margin-bottom: 8px;
+        }
+
+        .tiptap-annotation-tooltip-text {
+          font-size: 13px;
+          color: #475569;
+          line-height: 1.5;
+          margin-bottom: 8px;
+        }
+
+        .tiptap-annotation-tooltip-ref {
+          font-size: 12px;
+          color: #64748b;
+          padding: 6px 8px;
+          background: #f1f5f9;
+          border-radius: 4px;
+          margin-bottom: 8px;
+        }
+
+        .tiptap-annotation-tooltip-actions {
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .tiptap-annotation-apply-btn {
+          padding: 6px 12px;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .tiptap-annotation-apply-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+        }
       `}</style>
+
+      {/* Annotation Overlay Layer */}
+      {overlayHits.length > 0 && (
+        <div className="tiptap-annotations-layer" aria-hidden="true">
+          {overlayHits.flatMap((hit) => {
+            const annotation = (textAnnotations || [])[hit.annotationIndex];
+            const severity = annotation?.severity || 'medium';
+            return hit.rects.map((rect, rectIdx) => (
+              <div
+                key={`${hit.annotationId}-${rectIdx}`}
+                className={`tiptap-annotation-hit tiptap-annotation-${severity}`}
+                style={{
+                  top: `${rect.top}px`,
+                  left: `${rect.left}px`,
+                  width: `${rect.width}px`,
+                  height: `${rect.height}px`,
+                }}
+                onMouseEnter={() => {
+                  setActiveAnnotationId(hit.annotationId);
+                  const top = Math.max(8, hit.anchorRect.top - 8);
+                  const left = Math.min(window.innerWidth - 320, Math.max(8, hit.anchorRect.left));
+                  setTooltipPos({ top, left });
+                }}
+                onMouseLeave={() => {
+                  // Tooltip manages its own hover
+                }}
+              />
+            ));
+          })}
+        </div>
+      )}
+
+      {/* Annotation Tooltip */}
+      {activeAnnotationId && tooltipPos && (
+        <div
+          className="tiptap-annotation-tooltip"
+          style={{ top: `${tooltipPos.top}px`, left: `${tooltipPos.left}px` }}
+          onMouseEnter={() => {
+            // Keep tooltip open
+          }}
+          onMouseLeave={() => {
+            setActiveAnnotationId(null);
+            setTooltipPos(null);
+          }}
+        >
+          {(() => {
+            const annotation = (textAnnotations || []).find((a) => a.id === activeAnnotationId);
+            if (!annotation) return null;
+            const hasRealSuggestion =
+              Boolean(annotation.suggested_text) &&
+              annotation.suggested_text.trim() !== annotation.original_text.trim();
+            return (
+              <>
+                <div className="tiptap-annotation-tooltip-title">ملاحظة</div>
+                {annotation.reason && (
+                  <div className="tiptap-annotation-tooltip-text">{annotation.reason}</div>
+                )}
+                {annotation.legal_reference && (
+                  <div className="tiptap-annotation-tooltip-ref">{annotation.legal_reference}</div>
+                )}
+                {hasRealSuggestion && (
+                  <div className="tiptap-annotation-tooltip-actions">
+                    <button
+                      type="button"
+                      className="tiptap-annotation-apply-btn"
+                      onClick={handleApplyAnnotation}
+                    >
+                      تطبيق التصحيح
+                    </button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 });

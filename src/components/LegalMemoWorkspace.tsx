@@ -1048,6 +1048,11 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                             autoFocus={true}
                                             placeholder="اكتب محتوى المذكرة هنا..."
                                             minHeight="calc(100vh - 300px)"
+                                            textAnnotations={textAnnotations}
+                                            onApplyAnnotation={(annotationId) => {
+                                                // Remove the applied annotation from the list
+                                                setTextAnnotations(prev => prev.filter(a => a.id !== annotationId));
+                                            }}
                                         />
                                     </div>
 
