@@ -1036,7 +1036,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
           border: 1px solid var(--color-border, #e5e7eb);
           border-radius: 8px;
           background: white;
-          overflow: hidden;
+          overflow: visible;
         }
 
         .tiptap-toolbar {
@@ -1047,6 +1047,10 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
           border-bottom: 1px solid var(--color-border, #e5e7eb);
           background: var(--color-background, #f9fafb);
           align-items: center;
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          border-radius: 8px 8px 0 0;
         }
 
         .tiptap-menu-btn {
@@ -1096,14 +1100,13 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
 
         .tiptap-dropdown {
           position: absolute;
-          top: 100%;
+          top: calc(100% + 4px);
           right: 0;
-          margin-top: 4px;
           background: white;
           border: 1px solid var(--color-border, #e5e7eb);
           border-radius: 8px;
           box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-          z-index: 1000;
+          z-index: 9999;
           min-width: 160px;
           padding: 8px;
         }
@@ -1203,6 +1206,11 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
         .tiptap-link-btn.danger {
           background: var(--color-error-light, #fee2e2);
           color: var(--color-error, #dc2626);
+        }
+
+        .tiptap-editor-area {
+          position: relative;
+          overflow: visible;
         }
 
         .tiptap-content-wrapper {

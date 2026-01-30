@@ -738,6 +738,11 @@ const NotebookWorkspace: React.FC = () => {
                                 placeholder="اكتب ملاحظتك هنا..."
                                 autoFocus={true}
                                 minHeight="calc(100vh - 200px)"
+                                textAnnotations={textAnnotations}
+                                onApplyAnnotation={(annotationId) => {
+                                    // إزالة التعليق المطبق من القائمة
+                                    setTextAnnotations(prev => prev.filter(a => a.id !== annotationId));
+                                }}
                             />
                         </div>
 

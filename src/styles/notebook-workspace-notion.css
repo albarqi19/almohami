@@ -321,7 +321,7 @@ body.classic .notebook-workspace {
     display: flex;
     flex-direction: column;
     background: var(--bg);
-    overflow: hidden;
+    overflow: visible;
     position: relative;
 }
 

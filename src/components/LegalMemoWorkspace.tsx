@@ -336,6 +336,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
 
         const editorContent = editorRef.current?.getContent();
         const contentText = editorRef.current?.getAllText?.() || '';
+        const contentHtml = editorRef.current?.getHTML?.() || '';
 
         // لا نحفظ إذا المحتوى فارغ تماماً
         if (!contentText.trim() && !title.trim()) return;
@@ -345,14 +346,14 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
             if (savedMemoId) {
                 // تحديث مذكرة موجودة - الحفظ التلقائي يحفظ المحتوى فقط
                 await LegalMemoService.autoSaveMemo(savedMemoId.toString(), {
-                    content: contentText,
+                    content: contentHtml,
                     formatting_data: editorContent
                 });
             } else {
                 // إنشاء مسودة جديدة تلقائياً
                 const memoData = {
                     title: title.trim() || `مسودة - ${getMemoTypeName()}`,
-                    content: contentText,
+                    content: contentHtml,
                     memo_type: selectedMemoType,
                     category: selectedCategory,
                     case_id: caseId || undefined,
@@ -507,7 +508,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
 
         try {
             const editorContent = editorRef.current?.getContent();
-            const contentHtml = editorRef.current?.getAllText() || '';
+            const contentHtml = editorRef.current?.getHTML() || '';
 
             let memo;
 
