@@ -142,6 +142,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
 
   // Annotation overlay state
   const containerRef = useRef<HTMLDivElement>(null);
+  const editorAreaRef = useRef<HTMLDivElement>(null);
   const [overlayHits, setOverlayHits] = useState<OverlayHit[]>([]);
   const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
@@ -266,8 +267,9 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
 
   // Compute annotation overlays
   const recomputeAnnotationOverlays = useCallback(() => {
-    const container = containerRef.current;
-    if (!container || !editor) {
+    // Use editorAreaRef instead of containerRef for accurate positioning
+    const editorArea = editorAreaRef.current;
+    if (!editorArea || !editor) {
       setOverlayHits([]);
       return;
     }
@@ -276,18 +278,22 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
       (a) => a && a.original_text && a.original_text.trim()
     );
 
+    console.log('[TiptapEditor] recomputeAnnotationOverlays called, annotations:', annotations.length);
+
     if (annotations.length === 0) {
       setOverlayHits([]);
       return;
     }
 
-    const editorElement = container.querySelector('.ProseMirror') as HTMLElement;
+    const editorElement = editorArea.querySelector('.ProseMirror') as HTMLElement;
     if (!editorElement) {
+      console.log('[TiptapEditor] No ProseMirror element found');
       setOverlayHits([]);
       return;
     }
 
-    const containerRect = container.getBoundingClientRect();
+    // Use editorArea rect for proper offset calculation (excludes toolbar)
+    const editorAreaRect = editorArea.getBoundingClientRect();
     const nextHits: OverlayHit[] = [];
 
     // Get all text nodes from the editor
@@ -353,7 +359,10 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
         if (startNode && endNode) break;
       }
 
-      if (!startNode || !endNode) return;
+      if (!startNode || !endNode) {
+        console.log('[TiptapEditor] Could not find start/end node for annotation:', annotation.id, annotation.original_text.substring(0, 30));
+        return;
+      }
 
       try {
         const range = document.createRange();
@@ -361,11 +370,14 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
         range.setEnd(endNode, Math.max(0, Math.min(endOffset, endNode.length)));
 
         const clientRects = Array.from(range.getClientRects());
-        if (clientRects.length === 0) return;
+        if (clientRects.length === 0) {
+          console.log('[TiptapEditor] No client rects for annotation:', annotation.id);
+          return;
+        }
 
         const rects: OverlayRect[] = clientRects.map((rect) => ({
-          top: rect.top - containerRect.top + container.scrollTop,
-          left: rect.left - containerRect.left + container.scrollLeft,
+          top: rect.top - editorAreaRect.top + editorArea.scrollTop,
+          left: rect.left - editorAreaRect.left + editorArea.scrollLeft,
           width: rect.width,
           height: rect.height,
         }));
@@ -381,6 +393,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
       }
     });
 
+    console.log('[TiptapEditor] Computed overlays:', nextHits.length, 'hits from', annotations.length, 'annotations');
     setOverlayHits(nextHits);
   }, [editor, textAnnotations, normalizeText]);
 
@@ -406,6 +419,32 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
       return () => clearTimeout(timer);
     }
   }, [content, recomputeAnnotationOverlays, textAnnotations]);
+
+  // Keep overlays in sync with scrolling/resizing
+  useEffect(() => {
+    if (!textAnnotations || textAnnotations.length === 0) return;
+
+    let rafId: number | null = null;
+    const schedule = () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        recomputeAnnotationOverlays();
+      });
+    };
+
+    const onScroll = () => schedule();
+    const onResize = () => schedule();
+
+    document.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      document.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [recomputeAnnotationOverlays, textAnnotations]);
 
   // Handle applying annotation
   const handleApplyAnnotation = useCallback(() => {
@@ -944,7 +983,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
         </div>
       )}
 
-      <div className="tiptap-editor-area" style={{ position: 'relative' }}>
+      <div ref={editorAreaRef} className="tiptap-editor-area" style={{ position: 'relative' }}>
         <EditorContent
           editor={editor}
           className="tiptap-content-wrapper"
@@ -1063,7 +1102,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
           background: white;
           border: 1px solid var(--color-border, #e5e7eb);
           border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
           z-index: 1000;
           min-width: 160px;
           padding: 8px;
@@ -1259,59 +1298,66 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
           }
         }
 
-        /* Annotation overlay styles */
+        /* Annotation overlay styles - matching Yoopta style */
         .tiptap-annotations-layer {
           position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
+          inset: 0;
           pointer-events: none;
-          z-index: 1;
+          z-index: 5;
+          overflow: visible;
         }
 
         .tiptap-annotation-hit {
           position: absolute;
           pointer-events: auto;
           cursor: pointer;
-          border-radius: 2px;
-          transition: opacity 0.15s;
+          border-radius: 3px;
+          transition: all 0.15s ease;
         }
 
         .tiptap-annotation-high {
-          background: rgba(239, 68, 68, 0.25);
-          border-bottom: 2px solid #ef4444;
+          background: rgba(220, 38, 38, 0.18);
+          border-bottom: 2px solid #dc2626;
+        }
+
+        .tiptap-annotation-high:hover {
+          background: rgba(220, 38, 38, 0.28);
         }
 
         .tiptap-annotation-medium {
-          background: rgba(245, 158, 11, 0.25);
-          border-bottom: 2px solid #f59e0b;
+          background: rgba(250, 204, 21, 0.28);
+          border-bottom: 2px solid #facc15;
+        }
+
+        .tiptap-annotation-medium:hover {
+          background: rgba(250, 204, 21, 0.4);
         }
 
         .tiptap-annotation-low {
-          background: rgba(59, 130, 246, 0.25);
+          background: rgba(59, 130, 246, 0.18);
           border-bottom: 2px solid #3b82f6;
         }
 
-        .tiptap-annotation-hit:hover {
-          opacity: 0.8;
+        .tiptap-annotation-low:hover {
+          background: rgba(59, 130, 246, 0.28);
         }
 
         .tiptap-annotation-tooltip {
           position: fixed;
-          z-index: 1001;
+          z-index: 9999;
+          width: 280px;
+          transform: translateY(-100%);
           background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 12px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          max-width: 300px;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 12px 14px;
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
           direction: rtl;
           text-align: right;
         }
 
         .tiptap-annotation-tooltip-title {
-          font-weight: 600;
+          font-weight: 700;
           font-size: 14px;
           color: #1e293b;
           margin-bottom: 8px;
@@ -1320,39 +1366,41 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
         .tiptap-annotation-tooltip-text {
           font-size: 13px;
           color: #475569;
-          line-height: 1.5;
-          margin-bottom: 8px;
+          line-height: 1.6;
+          margin-bottom: 10px;
         }
 
         .tiptap-annotation-tooltip-ref {
           font-size: 12px;
           color: #64748b;
-          padding: 6px 8px;
+          padding: 8px 10px;
           background: #f1f5f9;
-          border-radius: 4px;
-          margin-bottom: 8px;
+          border-radius: 6px;
+          margin-bottom: 12px;
+          border-right: 3px solid #3b82f6;
         }
 
         .tiptap-annotation-tooltip-actions {
           display: flex;
-          justify-content: flex-end;
+          justify-content: flex-start;
         }
 
         .tiptap-annotation-apply-btn {
-          padding: 6px 12px;
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          padding: 8px 14px;
+          background: #3b82f6;
           color: white;
           border: none;
-          border-radius: 6px;
-          font-size: 12px;
+          border-radius: 8px;
+          font-size: 13px;
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s;
         }
 
         .tiptap-annotation-apply-btn:hover {
+          background: #2563eb;
           transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
       `}</style>
 
