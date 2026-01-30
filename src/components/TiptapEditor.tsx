@@ -944,19 +944,52 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
         </div>
       )}
 
-      <EditorContent
-        editor={editor}
-        className="tiptap-content-wrapper"
-        style={{
-          minHeight: editable ? minHeight : 'auto',
-        }}
-      />
+      <div className="tiptap-editor-area" style={{ position: 'relative' }}>
+        <EditorContent
+          editor={editor}
+          className="tiptap-content-wrapper"
+          style={{
+            minHeight: editable ? minHeight : 'auto',
+          }}
+        />
 
-      {placeholder && editable && editor.isEmpty && (
-        <div className="tiptap-placeholder">
-          {placeholder}
-        </div>
-      )}
+        {/* Annotation Overlay Layer - inside editor area only */}
+        {overlayHits.length > 0 && (
+          <div className="tiptap-annotations-layer" aria-hidden="true">
+            {overlayHits.flatMap((hit) => {
+              const annotation = (textAnnotations || [])[hit.annotationIndex];
+              const severity = annotation?.severity || 'medium';
+              return hit.rects.map((rect, rectIdx) => (
+                <div
+                  key={`${hit.annotationId}-${rectIdx}`}
+                  className={`tiptap-annotation-hit tiptap-annotation-${severity}`}
+                  style={{
+                    top: `${rect.top}px`,
+                    left: `${rect.left}px`,
+                    width: `${rect.width}px`,
+                    height: `${rect.height}px`,
+                  }}
+                  onMouseEnter={() => {
+                    setActiveAnnotationId(hit.annotationId);
+                    const top = Math.max(8, hit.anchorRect.top - 8);
+                    const left = Math.min(window.innerWidth - 320, Math.max(8, hit.anchorRect.left));
+                    setTooltipPos({ top, left });
+                  }}
+                  onMouseLeave={() => {
+                    // Tooltip manages its own hover
+                  }}
+                />
+              ));
+            })}
+          </div>
+        )}
+
+        {placeholder && editable && editor.isEmpty && (
+          <div className="tiptap-placeholder">
+            {placeholder}
+          </div>
+        )}
+      </div>
 
       <style>{`
         .tiptap-editor {
@@ -1234,7 +1267,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
           right: 0;
           bottom: 0;
           pointer-events: none;
-          z-index: 5;
+          z-index: 1;
         }
 
         .tiptap-annotation-hit {
@@ -1266,7 +1299,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
 
         .tiptap-annotation-tooltip {
           position: fixed;
-          z-index: 9999;
+          z-index: 1001;
           background: white;
           border: 1px solid #e5e7eb;
           border-radius: 8px;
@@ -1323,38 +1356,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
         }
       `}</style>
 
-      {/* Annotation Overlay Layer */}
-      {overlayHits.length > 0 && (
-        <div className="tiptap-annotations-layer" aria-hidden="true">
-          {overlayHits.flatMap((hit) => {
-            const annotation = (textAnnotations || [])[hit.annotationIndex];
-            const severity = annotation?.severity || 'medium';
-            return hit.rects.map((rect, rectIdx) => (
-              <div
-                key={`${hit.annotationId}-${rectIdx}`}
-                className={`tiptap-annotation-hit tiptap-annotation-${severity}`}
-                style={{
-                  top: `${rect.top}px`,
-                  left: `${rect.left}px`,
-                  width: `${rect.width}px`,
-                  height: `${rect.height}px`,
-                }}
-                onMouseEnter={() => {
-                  setActiveAnnotationId(hit.annotationId);
-                  const top = Math.max(8, hit.anchorRect.top - 8);
-                  const left = Math.min(window.innerWidth - 320, Math.max(8, hit.anchorRect.left));
-                  setTooltipPos({ top, left });
-                }}
-                onMouseLeave={() => {
-                  // Tooltip manages its own hover
-                }}
-              />
-            ));
-          })}
-        </div>
-      )}
-
-      {/* Annotation Tooltip */}
+      {/* Annotation Tooltip - outside editor area for fixed positioning */}
       {activeAnnotationId && tooltipPos && (
         <div
           className="tiptap-annotation-tooltip"
