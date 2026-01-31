@@ -46,6 +46,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    flex: 1;
 }
 
 .lmw-header-left {
@@ -99,6 +100,31 @@
 .lmw-breadcrumb-current {
     color: var(--color-text, #1f2937);
     font-weight: 600;
+}
+
+/* حقل العنوان في الـ Header */
+.lmw-title-input-header {
+    flex: 1;
+    max-width: 400px;
+    padding: 8px 14px;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text, #1f2937);
+    background: var(--color-background, #ffffff);
+    outline: none;
+    transition: all 0.2s;
+}
+
+.lmw-title-input-header:focus {
+    border-color: var(--color-primary, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.lmw-title-input-header::placeholder {
+    color: var(--color-text-muted, #9ca3af);
+    font-weight: 400;
 }
 
 /* Save Status */
@@ -195,6 +221,7 @@
     flex: 1;
     overflow: hidden;
     display: flex;
+    position: relative;
 }
 
 /* ===== Type Selector ===== */
@@ -561,13 +588,20 @@
 }
 
 /* ===== Main Editor ===== */
+.lmw-main-editor-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
 .lmw-main-editor {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
     background: var(--color-background, #ffffff);
-    position: relative;
 }
 
 .lmw-error-banner {
@@ -611,8 +645,9 @@
 
 .lmw-editor-container {
     flex: 1;
-    overflow-y: auto;
-    padding: 0 48px 48px;
+    display: flex;
+    flex-direction: column;
+    padding: 0 32px 48px;
 }
 
 /* Floating assistant widget (smaller + centered) */
@@ -620,14 +655,31 @@
     padding-bottom: 140px;
 }
 
+/* TiptapEditor داخل صحف الدعوى */
+.legal-memo-workspace .tiptap-editor {
+    flex: 1;
+    border: none;
+    border-radius: 0;
+}
+
+.legal-memo-workspace .tiptap-toolbar {
+    position: sticky;
+    top: 0;
+    border-radius: 0;
+    margin: 0 -32px;
+    padding: 8px 32px;
+}
+
 .legal-memo-workspace .notebook-ai-widget {
-    left: 24px;
-    right: 24px;
+    position: absolute;
+    left: 32px;
+    right: 32px;
     margin: 0 auto;
-    width: min(560px, 100%);
+    width: min(560px, calc(100% - 64px));
     bottom: 16px;
     border-radius: 12px;
     padding: 7px;
+    z-index: 100;
 }
 
 /* ===== Analysis Panel ===== */
@@ -785,13 +837,18 @@
         box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
     }
 
-    .lmw-title-input {
-        padding: 20px 24px;
-        font-size: 22px;
+    .lmw-title-input-header {
+        max-width: 200px;
+        font-size: 13px;
     }
 
     .lmw-editor-container {
-        padding: 0 24px 24px;
+        padding: 0 16px 24px;
+    }
+
+    .legal-memo-workspace .tiptap-toolbar {
+        margin: 0 -16px;
+        padding: 8px 16px;
     }
 }
 
@@ -815,7 +872,20 @@
 
 [data-theme="dark"] .lmw-main-editor,
 .dark .lmw-main-editor {
-    background: #1f2937;
+    background: #1a1a1a;
+}
+
+/* توحيد لون الخلفية مع المحرر في Dark Mode */
+[data-theme="dark"] .legal-memo-workspace .tiptap-editor,
+.dark .legal-memo-workspace .tiptap-editor {
+    background: #1a1a1a;
+}
+
+[data-theme="dark"] .lmw-title-input-header,
+.dark .lmw-title-input-header {
+    background: #252525;
+    border-color: #333;
+    color: #e0e0e0;
 }
 
 [data-theme="dark"] .lmw-title-input,

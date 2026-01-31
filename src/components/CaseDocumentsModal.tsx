@@ -851,7 +851,11 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                                 overflow: 'hidden',
                                 marginTop: '8px'
                               }}>
-                                {memo.content.substring(0, 150)}{memo.content.length > 150 ? '...' : ''}
+                                {(() => {
+                                  // إزالة تاجات HTML للعرض المختصر
+                                  const plainText = memo.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+                                  return plainText.substring(0, 150) + (plainText.length > 150 ? '...' : '');
+                                })()}
                               </div>
                             )}
                           </motion.div>

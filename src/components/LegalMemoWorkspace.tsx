@@ -717,6 +717,15 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                     {editingMemo ? 'تعديل مذكرة' : 'إنشاء مذكرة'}
                                 </span>
                             </div>
+                            {step === 'editor' && (
+                                <input
+                                    type="text"
+                                    className="lmw-title-input-header"
+                                    placeholder="عنوان المذكرة..."
+                                    value={title}
+                                    onChange={e => handleTitleChange(e.target.value)}
+                                />
+                            )}
                         </div>
 
                         <div className="lmw-header-left">
@@ -1018,45 +1027,39 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                 </aside>
 
                                 {/* منطقة المحرر */}
-                                <main className="lmw-main-editor">
-                                    {/* رسائل الخطأ */}
-                                    {error && (
-                                        <div className="lmw-error-banner">
-                                            <AlertCircle size={16} />
-                                            <span>{error}</span>
-                                            <button onClick={() => setError(null)}>
-                                                <X size={14} />
-                                            </button>
+                                <div className="lmw-main-editor-wrapper">
+                                    <main className="lmw-main-editor">
+                                        {/* رسائل الخطأ */}
+                                        {error && (
+                                            <div className="lmw-error-banner">
+                                                <AlertCircle size={16} />
+                                                <span>{error}</span>
+                                                <button onClick={() => setError(null)}>
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* المحرر - TiptapEditor */}
+                                        <div className="lmw-editor-container">
+                                            <TiptapEditor
+                                                key={editorKey}
+                                                ref={editorRef}
+                                                content={content}
+                                                onChange={handleContentChange}
+                                                autoFocus={true}
+                                                placeholder="اكتب محتوى المذكرة هنا..."
+                                                minHeight="calc(100vh - 300px)"
+                                                textAnnotations={textAnnotations}
+                                                onApplyAnnotation={(annotationId) => {
+                                                    // Remove the applied annotation from the list
+                                                    setTextAnnotations(prev => prev.filter(a => a.id !== annotationId));
+                                                }}
+                                            />
                                         </div>
-                                    )}
+                                    </main>
 
-                                    {/* العنوان */}
-                                    <input
-                                        type="text"
-                                        className="lmw-title-input"
-                                        placeholder="عنوان المذكرة..."
-                                        value={title}
-                                        onChange={e => handleTitleChange(e.target.value)}
-                                    />
-
-                                    {/* المحرر - TiptapEditor */}
-                                    <div className="lmw-editor-container">
-                                        <TiptapEditor
-                                            key={editorKey}
-                                            ref={editorRef}
-                                            content={content}
-                                            onChange={handleContentChange}
-                                            autoFocus={true}
-                                            placeholder="اكتب محتوى المذكرة هنا..."
-                                            minHeight="calc(100vh - 300px)"
-                                            textAnnotations={textAnnotations}
-                                            onApplyAnnotation={(annotationId) => {
-                                                // Remove the applied annotation from the list
-                                                setTextAnnotations(prev => prev.filter(a => a.id !== annotationId));
-                                            }}
-                                        />
-                                    </div>
-
+                                    {/* شريط اسألني - ثابت أسفل المحرر */}
                                     <NotebookAssistantWidget
                                         isVisible={isAssistantVisible}
                                         getDocumentText={() => editorRef.current?.getAllText?.() || null}
@@ -1066,7 +1069,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                         }}
                                         onRequestClose={() => setIsAssistantVisible(false)}
                                     />
-                                </main>
+                                </div>
 
                                 {/* لوحة التحليل الكامل */}
                                 <AnimatePresence>

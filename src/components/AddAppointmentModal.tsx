@@ -1,15 +1,22 @@
-﻿import React, { useState } from 'react';
-import { 
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  X,
+  Calendar,
   Clock,
   MapPin,
   Users,
   FileText,
-  AlertTriangle,
-  Save
+  AlertCircle,
+  Loader2,
+  Bell,
+  Flag,
+  StickyNote,
+  Tag
 } from 'lucide-react';
-import Modal from './Modal';
 import { appointmentService } from '../services/appointmentService';
 import type { AppointmentType, Case } from '../types';
+import '../styles/add-appointment-modal.css';
 
 interface AddAppointmentModalProps {
   isOpen: boolean;
@@ -34,59 +41,68 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
     attendees: '',
     priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
     notes: '',
-    reminders: '15' // minutes before
+    reminders: '60'
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // أنواع المواعيد
-  const appointmentTypes: { value: AppointmentType; label: string }[] = [
-    { value: 'court_hearing', label: 'جلسة محكمة' },
-    { value: 'client_meeting', label: 'موعد عميل' },
-    { value: 'team_meeting', label: 'اجتماع فريق' },
-    { value: 'document_filing', label: 'تقديم وثائق' },
-    { value: 'arbitration', label: 'تحكيم' },
-    { value: 'consultation', label: 'استشارة' },
-    { value: 'mediation', label: 'وساطة' },
-    { value: 'settlement', label: 'صلح' },
-    { value: 'other', label: 'أخرى' }
+  const appointmentTypes: { value: AppointmentType; label: string; icon: string }[] = [
+    { value: 'court_hearing', label: 'جلسة محكمة', icon: '⚖️' },
+    { value: 'client_meeting', label: 'موعد عميل', icon: '👤' },
+    { value: 'team_meeting', label: 'اجتماع فريق', icon: '👥' },
+    { value: 'document_filing', label: 'تقديم وثائق', icon: '📄' },
+    { value: 'arbitration', label: 'تحكيم', icon: '🏛️' },
+    { value: 'consultation', label: 'استشارة', icon: '💬' },
+    { value: 'mediation', label: 'وساطة', icon: '🤝' },
+    { value: 'settlement', label: 'صلح', icon: '✅' },
+    { value: 'other', label: 'أخرى', icon: '📌' }
   ];
 
   // خيارات الأولوية
   const priorityOptions = [
-    { value: 'low', label: '🟢 منخفضة', color: 'text-gray-600' },
-    { value: 'medium', label: '🔵 متوسطة', color: 'text-blue-600' },
-    { value: 'high', label: '🟠 عالية', color: 'text-orange-600' },
-    { value: 'urgent', label: '🔴 عاجل', color: 'text-red-600' }
+    { value: 'low', label: 'منخفضة', color: '#6b7280', bg: '#f3f4f6' },
+    { value: 'medium', label: 'متوسطة', color: '#3b82f6', bg: '#eff6ff' },
+    { value: 'high', label: 'عالية', color: '#f97316', bg: '#fff7ed' },
+    { value: 'urgent', label: 'عاجل', color: '#ef4444', bg: '#fef2f2' }
+  ];
+
+  // خيارات المدة
+  const durationOptions = [
+    { value: 15, label: '15 دقيقة' },
+    { value: 30, label: '30 دقيقة' },
+    { value: 45, label: '45 دقيقة' },
+    { value: 60, label: 'ساعة' },
+    { value: 90, label: 'ساعة ونصف' },
+    { value: 120, label: 'ساعتين' },
+    { value: 180, label: '3 ساعات' },
+    { value: 240, label: '4 ساعات' }
   ];
 
   // خيارات التذكير
   const reminderOptions = [
-    { value: '15', label: '15 دقيقة قبل الموعد' },
-    { value: '30', label: '30 دقيقة قبل الموعد' },
-    { value: '60', label: 'ساعة قبل الموعد' },
-    { value: '1440', label: 'يوم قبل الموعد' },
-    { value: '2880', label: 'يومين قبل الموعد' }
+    { value: '', label: 'بدون تذكير' },
+    { value: '15', label: 'قبل 15 دقيقة' },
+    { value: '30', label: 'قبل 30 دقيقة' },
+    { value: '60', label: 'قبل ساعة' },
+    { value: '1440', label: 'قبل يوم' },
+    { value: '2880', label: 'قبل يومين' }
   ];
 
-  // إرسال النموذج
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-      // التحقق من صحة البيانات
       if (!formData.title.trim()) {
         throw new Error('عنوان الموعد مطلوب');
       }
-
       if (!formData.scheduled_at) {
         throw new Error('تاريخ ووقت الموعد مطلوب');
       }
 
-      // إعداد البيانات للإرسال
       const appointmentData = {
         case_id: parseInt(caseData.id),
         title: formData.title.trim(),
@@ -95,7 +111,7 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
         scheduled_at: formData.scheduled_at,
         duration_minutes: formData.duration_minutes,
         location: formData.location.trim() || undefined,
-        attendees: formData.attendees.trim() 
+        attendees: formData.attendees.trim()
           ? formData.attendees.split(',').map(name => name.trim()).filter(name => name)
           : undefined,
         priority: formData.priority,
@@ -104,8 +120,7 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
       };
 
       await appointmentService.createAppointment(appointmentData);
-      
-      // إعادة تعيين النموذج
+
       setFormData({
         title: '',
         description: '',
@@ -116,7 +131,7 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
         attendees: '',
         priority: 'medium',
         notes: '',
-        reminders: '15'
+        reminders: '60'
       });
 
       onAppointmentAdded();
@@ -129,7 +144,6 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
     }
   };
 
-  // إلغاء النموذج
   const handleCancel = () => {
     setFormData({
       title: '',
@@ -141,243 +155,243 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
       attendees: '',
       priority: 'medium',
       notes: '',
-      reminders: '15'
+      reminders: '60'
     });
     setError(null);
     onClose();
   };
 
-  // تحديث حقل في النموذج
   const updateField = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (error) setError(null);
   };
 
+  if (!isOpen) return null;
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleCancel}
-      title="إضافة موعد جديد"
-      size="lg"
-    >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Error Message */}
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-3 space-x-reverse">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-            <span className="text-red-700">{error}</span>
-          </div>
-        )}
-
-        {/* عنوان الموعد */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            عنوان الموعد *
-          </label>
-          <input
-            type="text"
-            value={formData.title}
-            onChange={(e) => updateField('title', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="أدخل عنوان الموعد"
-            required
-          />
-        </div>
-
-        {/* نوع الموعد والأولوية */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              نوع الموعد
-            </label>
-            <select
-              value={formData.type}
-              onChange={(e) => updateField('type', e.target.value as AppointmentType)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {appointmentTypes.map(type => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
+    <AnimatePresence>
+      <div className="add-appointment-modal-overlay" onClick={handleCancel}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
+          transition={{ duration: 0.2 }}
+          className="add-appointment-modal"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="modal-header">
+            <div className="modal-header-icon">
+              <Calendar size={20} />
+            </div>
+            <div className="modal-header-title">
+              <h2>إضافة موعد جديد</h2>
+              <span className="modal-header-subtitle">{caseData.title}</span>
+            </div>
+            <button className="modal-close-btn" onClick={handleCancel}>
+              <X size={18} />
+            </button>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              الأولوية
-            </label>
-            <select
-              value={formData.priority}
-              onChange={(e) => updateField('priority', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {priorityOptions.map(priority => (
-                <option key={priority.value} value={priority.value}>
-                  {priority.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+          {/* Body */}
+          <div className="modal-body">
+            {error && (
+              <div className="modal-error">
+                <AlertCircle size={16} />
+                <span>{error}</span>
+              </div>
+            )}
 
-        {/* التاريخ والوقت والمدة */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              التاريخ والوقت *
-            </label>
-            <div className="relative">
-              <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="datetime-local"
-                value={formData.scheduled_at}
-                onChange={(e) => updateField('scheduled_at', e.target.value)}
-                className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
+            {/* Large Title Input */}
+            <input
+              type="text"
+              className="modal-title-input"
+              placeholder="بدون عنوان"
+              value={formData.title}
+              onChange={(e) => updateField('title', e.target.value)}
+              autoFocus
+            />
+
+            {/* Properties List - Notion Style */}
+            <div className="notion-properties-grid">
+
+              {/* Type */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <Tag size={14} />
+                  <span>النوع</span>
+                </div>
+                <div className="notion-property-value">
+                  <select
+                    value={formData.type}
+                    onChange={(e) => updateField('type', e.target.value)}
+                  >
+                    {appointmentTypes.map(type => (
+                      <option key={type.value} value={type.value}>
+                        {type.icon} {type.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Priority */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <Flag size={14} />
+                  <span>الأولوية</span>
+                </div>
+                <div className="notion-property-value">
+                  <div className="priority-selector">
+                    {priorityOptions.map(p => (
+                      <span
+                        key={p.value}
+                        className={`priority-pill ${formData.priority === p.value ? 'selected' : ''}`}
+                        style={{ backgroundColor: p.bg, color: p.color }}
+                        onClick={() => updateField('priority', p.value)}
+                      >
+                        {p.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Date & Time */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <Calendar size={14} />
+                  <span>التاريخ والوقت</span>
+                </div>
+                <div className="notion-property-value">
+                  <input
+                    type="datetime-local"
+                    value={formData.scheduled_at}
+                    onChange={(e) => updateField('scheduled_at', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <Clock size={14} />
+                  <span>المدة</span>
+                </div>
+                <div className="notion-property-value">
+                  <select
+                    value={formData.duration_minutes}
+                    onChange={(e) => updateField('duration_minutes', parseInt(e.target.value))}
+                  >
+                    {durationOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <MapPin size={14} />
+                  <span>الموقع</span>
+                </div>
+                <div className="notion-property-value">
+                  <input
+                    type="text"
+                    placeholder="أضف موقعاً..."
+                    value={formData.location}
+                    onChange={(e) => updateField('location', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Attendees */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <Users size={14} />
+                  <span>المشاركون</span>
+                </div>
+                <div className="notion-property-value">
+                  <input
+                    type="text"
+                    placeholder="أحمد، محمد..."
+                    value={formData.attendees}
+                    onChange={(e) => updateField('attendees', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Reminders */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <Bell size={14} />
+                  <span>التذكير</span>
+                </div>
+                <div className="notion-property-value">
+                  <select
+                    value={formData.reminders}
+                    onChange={(e) => updateField('reminders', e.target.value)}
+                  >
+                    {reminderOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <StickyNote size={14} />
+                  <span>ملاحظات سريعة</span>
+                </div>
+                <div className="notion-property-value">
+                  <input
+                    type="text"
+                    placeholder="ملاحظة مختصرة..."
+                    value={formData.notes}
+                    onChange={(e) => updateField('notes', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="notion-section-divider"></div>
+
+            {/* Description Area */}
+            <div className="notion-content-area">
+              <div className="notion-content-label">الوصف التفصيلي</div>
+              <textarea
+                className="notion-textarea"
+                placeholder="أضف وصفاً تفصيلياً للموعد هنا..."
+                rows={6}
+                value={formData.description}
+                onChange={(e) => updateField('description', e.target.value)}
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              المدة (بالدقائق)
-            </label>
-            <input
-              type="number"
-              min="15"
-              max="480"
-              value={formData.duration_minutes}
-              onChange={(e) => updateField('duration_minutes', parseInt(e.target.value))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+          {/* Footer */}
+          <div className="modal-footer">
+            <button className="notion-btn notion-btn-secondary" onClick={handleCancel}>
+              إلغاء
+            </button>
+            <button
+              className="notion-btn notion-btn-primary"
+              disabled={loading || !formData.title.trim() || !formData.scheduled_at}
+              onClick={handleSubmit}
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" style={{ marginLeft: '8px', display: 'inline' }} />
+                  تحميل...
+                </>
+              ) : 'حفظ الموعد'}
+            </button>
           </div>
-        </div>
-
-        {/* الموقع */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            الموقع
-          </label>
-          <div className="relative">
-            <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              value={formData.location}
-              onChange={(e) => updateField('location', e.target.value)}
-              className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="أدخل موقع الموعد"
-            />
-          </div>
-        </div>
-
-        {/* المشاركون */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            المشاركون
-          </label>
-          <div className="relative">
-            <Users className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              value={formData.attendees}
-              onChange={(e) => updateField('attendees', e.target.value)}
-              className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="أدخل أسماء المشاركين مفصولة بفاصلة"
-            />
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            اكتب أسماء المشاركين مفصولة بفاصلة (مثال: أحمد، محمد)
-          </p>
-        </div>
-
-        {/* التذكير */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            التذكير
-          </label>
-          <select
-            value={formData.reminders}
-            onChange={(e) => updateField('reminders', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">بدون تذكير</option>
-            {reminderOptions.map(reminder => (
-              <option key={reminder.value} value={reminder.value}>
-                {reminder.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* الوصف */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            الوصف
-          </label>
-          <div className="relative">
-            <FileText className="absolute right-3 top-3 text-gray-400 w-5 h-5" />
-            <textarea
-              rows={3}
-              value={formData.description}
-              onChange={(e) => updateField('description', e.target.value)}
-              className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              placeholder="أدخل وصف الموعد"
-            />
-          </div>
-        </div>
-
-        {/* الملاحظات */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            ملاحظات إضافية
-          </label>
-          <textarea
-            rows={2}
-            value={formData.notes}
-            onChange={(e) => updateField('notes', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            placeholder="أي ملاحظات إضافية"
-          />
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end space-x-3 space-x-reverse pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-            disabled={loading}
-          >
-            إلغاء
-          </button>
-          <button
-            type="submit"
-            disabled={loading || !formData.title.trim() || !formData.scheduled_at}
-            style={{
-              padding: '8px 24px',
-              backgroundColor: loading || !formData.title.trim() || !formData.scheduled_at ? 'var(--color-secondary)' : 'var(--color-primary)',
-              color: 'white',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: loading || !formData.title.trim() || !formData.scheduled_at ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'opacity 0.2s'
-            }}
-            onMouseEnter={(e) => !loading && formData.title.trim() && formData.scheduled_at && (e.currentTarget.style.opacity = '0.9')}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-          >
-            {loading ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            <span>{loading ? 'جاري الحفظ...' : 'حفظ الموعد'}</span>
-          </button>
-        </div>
-      </form>
-    </Modal>
+        </motion.div>
+      </div>
+    </AnimatePresence>
   );
 };

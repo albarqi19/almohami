@@ -1,0 +1,611 @@
+/* ========================================
+   Case Appointments Modal - Notion Style
+   ======================================== */
+
+.cam-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.cam-modal {
+  background-color: var(--dashboard-card, #ffffff);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  direction: rtl;
+}
+
+/* Header */
+.cam-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cam-header-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cam-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--color-primary, #3b82f6), #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.cam-title-text h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  margin: 0;
+}
+
+.cam-title-text p {
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+  margin: 4px 0 0 0;
+}
+
+.cam-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, #6b7280);
+  transition: all 0.2s;
+}
+
+.cam-close-btn:hover {
+  background: var(--bg-secondary, #f3f4f6);
+  color: var(--text-primary, #111827);
+}
+
+/* Tabs */
+.cam-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-secondary, #f9fafb);
+}
+
+.cam-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.cam-tab:hover {
+  color: var(--text-primary, #111827);
+}
+
+.cam-tab.active {
+  color: var(--color-primary, #3b82f6);
+}
+
+.cam-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-primary, #3b82f6);
+  border-radius: 2px 2px 0 0;
+}
+
+.cam-tab-badge {
+  background: var(--color-primary, #3b82f6);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.cam-tab:not(.active) .cam-tab-badge {
+  background: var(--text-light, #9ca3af);
+}
+
+/* Content */
+.cam-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.cam-tab-content {
+  min-height: 300px;
+}
+
+/* Empty State */
+.cam-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.cam-empty-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--bg-secondary, #f3f4f6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light, #9ca3af);
+  margin-bottom: 20px;
+}
+
+.cam-empty-state h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  margin: 0 0 8px 0;
+}
+
+.cam-empty-state p {
+  font-size: 14px;
+  color: var(--text-secondary, #6b7280);
+  margin: 0 0 20px 0;
+}
+
+.cam-najiz-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #0f766e;
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.cam-najiz-link:hover {
+  background: #0d6460;
+}
+
+.cam-add-first-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: var(--color-primary, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cam-add-first-btn:hover {
+  background: var(--color-primary-dark, #2563eb);
+}
+
+/* Add Section */
+.cam-add-section {
+  margin-bottom: 20px;
+}
+
+.cam-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--color-primary, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cam-add-btn:hover {
+  background: var(--color-primary-dark, #2563eb);
+  transform: translateY(-1px);
+}
+
+/* Loading */
+.cam-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  gap: 16px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.cam-spinner {
+  animation: spin 1s linear infinite;
+  color: var(--color-primary, #3b82f6);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Error */
+.cam-error {
+  text-align: center;
+  padding: 32px;
+  color: #dc2626;
+}
+
+.cam-retry-btn {
+  margin-top: 12px;
+  padding: 8px 20px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.cam-retry-btn:hover {
+  background: #b91c1c;
+}
+
+/* Sessions List */
+.cam-sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cam-session-card {
+  background: var(--bg-secondary, #f9fafb);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 18px;
+  transition: all 0.2s;
+}
+
+.cam-session-card:hover {
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.cam-session-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.cam-session-type {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
+.cam-icon-video {
+  color: #0891b2;
+}
+
+.cam-status-badge {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cam-session-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cam-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.cam-detail-row svg {
+  color: var(--text-light, #9ca3af);
+  flex-shrink: 0;
+}
+
+.cam-dept {
+  color: var(--text-light, #9ca3af);
+}
+
+.cam-method {
+  background: var(--bg-tertiary, #f3f4f6);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+.cam-method-value {
+  font-weight: 500;
+  color: var(--text-primary, #111827);
+}
+
+.cam-session-notes,
+.cam-session-result {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.cam-notes-label,
+.cam-result-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-light, #9ca3af);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.cam-session-notes p,
+.cam-session-result p {
+  font-size: 13px;
+  color: var(--text-primary, #111827);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.cam-session-result {
+  background: #ecfdf5;
+  margin: 14px -18px -18px -18px;
+  padding: 14px 18px;
+  border-radius: 0 0 12px 12px;
+  border-top: none;
+}
+
+.cam-session-result .cam-result-label {
+  color: #059669;
+}
+
+.cam-video-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 16px;
+  background: #0891b2;
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.cam-video-link:hover {
+  background: #0e7490;
+}
+
+/* Appointments List */
+.cam-appointments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cam-appointment-card {
+  background: var(--bg-secondary, #f9fafb);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 18px;
+  transition: all 0.2s;
+}
+
+.cam-appointment-card:hover {
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.cam-appointment-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.cam-appointment-title h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  margin: 0 0 4px 0;
+}
+
+.cam-appointment-type {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.cam-appointment-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.cam-duration {
+  color: var(--text-light, #9ca3af);
+  font-size: 12px;
+}
+
+.cam-appointment-desc {
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+  margin: 0 0 14px 0;
+  line-height: 1.6;
+}
+
+.cam-appointment-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.cam-action-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.cam-action-btn.confirm {
+  color: #059669;
+}
+
+.cam-action-btn.confirm:hover {
+  background: #ecfdf5;
+  border-color: #059669;
+}
+
+.cam-action-btn.cancel {
+  color: #dc2626;
+}
+
+.cam-action-btn.cancel:hover {
+  background: #fef2f2;
+  border-color: #dc2626;
+}
+
+.cam-action-btn.start {
+  color: #3b82f6;
+}
+
+.cam-action-btn.start:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.cam-action-btn.complete {
+  color: #059669;
+}
+
+.cam-action-btn.complete:hover {
+  background: #ecfdf5;
+  border-color: #059669;
+}
+
+.cam-action-btn.edit {
+  color: var(--text-secondary, #6b7280);
+}
+
+.cam-action-btn.edit:hover {
+  background: var(--bg-secondary, #f3f4f6);
+  color: var(--text-primary, #111827);
+}
+
+/* Dark Mode */
+body.dark .cam-modal {
+  background: var(--dashboard-card, #1f2937);
+}
+
+body.dark .cam-header {
+  border-color: var(--border-color, #374151);
+}
+
+body.dark .cam-tabs {
+  background: var(--bg-tertiary, #111827);
+  border-color: var(--border-color, #374151);
+}
+
+body.dark .cam-session-card,
+body.dark .cam-appointment-card {
+  background: var(--bg-tertiary, #111827);
+  border-color: var(--border-color, #374151);
+}
+
+body.dark .cam-action-btn {
+  background: var(--bg-tertiary, #111827);
+  border-color: var(--border-color, #374151);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .cam-modal {
+    max-height: 95vh;
+    margin: 10px;
+  }
+
+  .cam-header {
+    padding: 16px;
+  }
+
+  .cam-tabs {
+    padding: 0 16px;
+    overflow-x: auto;
+  }
+
+  .cam-tab {
+    padding: 12px 16px;
+    white-space: nowrap;
+  }
+
+  .cam-content {
+    padding: 16px;
+  }
+
+  .cam-session-card,
+  .cam-appointment-card {
+    padding: 14px;
+  }
+}

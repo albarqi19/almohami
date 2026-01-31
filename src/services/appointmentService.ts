@@ -4,7 +4,7 @@ const API_BASE_URL = 'https://api.alraedlaw.com/api/v1';
 
 // دالة مساعدة لإجراء الطلبات
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('authToken');
 
   const config: RequestInit = {
     headers: {
@@ -57,7 +57,7 @@ export interface UpdateAppointmentData {
 export const appointmentService = {
   // جلب جميع المواعيد للقضية
   async getCaseAppointments(caseId: number): Promise<Appointment[]> {
-    const response = await apiRequest<{ data: Appointment[] }>(`/appointments/case/${caseId}`);
+    const response = await apiRequest<{ data: Appointment[] }>(`/cases/${caseId}/appointments`);
     return response.data;
   },
 

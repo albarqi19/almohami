@@ -1410,6 +1410,81 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
+
+        /* Dark Mode Support */
+        body.dark .tiptap-editor {
+          background: #1a1a1a;
+          border-color: #333;
+        }
+
+        body.dark .tiptap-toolbar {
+          background: #252525;
+          border-color: #333;
+        }
+
+        body.dark .tiptap-menu-btn {
+          color: #e0e0e0;
+        }
+
+        body.dark .tiptap-menu-btn:hover:not(.disabled) {
+          background: #333;
+        }
+
+        body.dark .tiptap-menu-btn.active {
+          background: rgba(59, 130, 246, 0.2);
+        }
+
+        body.dark .tiptap-select {
+          background: #1a1a1a;
+          color: #e0e0e0;
+          border-color: #333;
+        }
+
+        body.dark .tiptap-dropdown {
+          background: #252525;
+          border-color: #333;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        body.dark .tiptap-dropdown-item {
+          color: #e0e0e0;
+        }
+
+        body.dark .tiptap-dropdown-item:hover {
+          background: #333;
+        }
+
+        body.dark .tiptap-link-input {
+          background: #1a1a1a;
+          color: #e0e0e0;
+          border-color: #333;
+        }
+
+        body.dark .tiptap-content-wrapper {
+          color: #e0e0e0;
+        }
+
+        body.dark .tiptap-content-wrapper .ProseMirror {
+          color: #e0e0e0;
+        }
+
+        body.dark .tiptap-annotation-tooltip {
+          background: #252525;
+          border-color: #333;
+        }
+
+        body.dark .tiptap-annotation-tooltip-title {
+          color: #e0e0e0;
+        }
+
+        body.dark .tiptap-annotation-tooltip-text {
+          color: #9b9b9b;
+        }
+
+        body.dark .tiptap-annotation-tooltip-ref {
+          background: #1a1a1a;
+          color: #9b9b9b;
+        }
       `}</style>
 
       {/* Annotation Tooltip - outside editor area for fixed positioning */}

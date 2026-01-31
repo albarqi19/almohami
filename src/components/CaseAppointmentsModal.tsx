@@ -1,5 +1,7 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
+  X,
   Calendar,
   Clock,
   MapPin,
@@ -9,12 +11,18 @@ import {
   CheckCircle,
   XCircle,
   Play,
-  FileText
+  FileText,
+  Video,
+  Building2,
+  Gavel,
+  ExternalLink,
+  RefreshCw,
+  CalendarClock
 } from 'lucide-react';
-import Modal from './Modal';
 import { appointmentService } from '../services/appointmentService';
 import { AddAppointmentModal } from './AddAppointmentModal';
-import type { Appointment, AppointmentType, AppointmentStatus, Case } from '../types';
+import type { Appointment, AppointmentType, AppointmentStatus, Case, CaseSession } from '../types';
+import '../styles/case-appointments-modal.css';
 
 interface CaseAppointmentsModalProps {
   isOpen: boolean;
@@ -22,16 +30,21 @@ interface CaseAppointmentsModalProps {
   caseData: Case;
 }
 
+type TabType = 'sessions' | 'appointments';
+
 export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
   isOpen,
   onClose,
   caseData
 }) => {
+  const [activeTab, setActiveTab] = useState<TabType>('sessions');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // جلسات ناجز من بيانات القضية
+  const sessions = caseData.sessions || [];
 
   // جلب المواعيد عند فتح النافذة
   useEffect(() => {
@@ -60,10 +73,7 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
     const date = dateTime instanceof Date ? dateTime : new Date(dateTime);
     return {
       date: date.toLocaleDateString('ar-SA'),
-      time: date.toLocaleTimeString('ar-SA', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
+      time: date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })
     };
   };
 
@@ -105,29 +115,38 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
     return statuses[status];
   };
 
-  // لون الحالة
-  const getStatusColor = (status: AppointmentStatus): string => {
-    const colors: Record<AppointmentStatus, string> = {
-      scheduled: 'text-blue-600 bg-blue-50',
-      confirmed: 'text-green-600 bg-green-50',
-      in_progress: 'text-yellow-600 bg-yellow-50',
-      completed: 'text-emerald-600 bg-emerald-50',
-      cancelled: 'text-red-600 bg-red-50',
-      postponed: 'text-orange-600 bg-orange-50',
-      no_show: 'text-gray-600 bg-gray-50'
-    };
-    return colors[status];
+  // لون حالة الجلسة
+  const getSessionStatusStyle = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'scheduled':
+      case 'مجدولة':
+        return { bg: '#eff6ff', color: '#2563eb', label: 'مجدولة' };
+      case 'completed':
+      case 'مكتملة':
+        return { bg: '#ecfdf5', color: '#059669', label: 'مكتملة' };
+      case 'postponed':
+      case 'مؤجلة':
+        return { bg: '#fff7ed', color: '#ea580c', label: 'مؤجلة' };
+      case 'cancelled':
+      case 'ملغية':
+        return { bg: '#fef2f2', color: '#dc2626', label: 'ملغية' };
+      default:
+        return { bg: '#f3f4f6', color: '#6b7280', label: status || 'غير محدد' };
+    }
   };
 
-  // لون الأولوية
-  const getPriorityColor = (priority: string): string => {
-    const colors: Record<string, string> = {
-      low: 'text-gray-600',
-      medium: 'text-blue-600',
-      high: 'text-orange-600',
-      urgent: 'text-red-600'
+  // لون حالة الموعد
+  const getAppointmentStatusStyle = (status: AppointmentStatus) => {
+    const styles: Record<AppointmentStatus, { bg: string; color: string }> = {
+      scheduled: { bg: '#eff6ff', color: '#2563eb' },
+      confirmed: { bg: '#ecfdf5', color: '#059669' },
+      in_progress: { bg: '#fef9c3', color: '#ca8a04' },
+      completed: { bg: '#ecfdf5', color: '#059669' },
+      cancelled: { bg: '#fef2f2', color: '#dc2626' },
+      postponed: { bg: '#fff7ed', color: '#ea580c' },
+      no_show: { bg: '#f3f4f6', color: '#6b7280' }
     };
-    return colors[priority] || 'text-gray-600';
+    return styles[status];
   };
 
   // تأكيد موعد
@@ -141,9 +160,9 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
   };
 
   // إلغاء موعد
-  const handleCancelAppointment = async (appointmentId: string, reason?: string) => {
+  const handleCancelAppointment = async (appointmentId: string) => {
     try {
-      await appointmentService.cancelAppointment(parseInt(appointmentId), reason);
+      await appointmentService.cancelAppointment(parseInt(appointmentId), 'تم الإلغاء');
       fetchAppointments();
     } catch (error) {
       console.error('Error cancelling appointment:', error);
@@ -161,258 +180,329 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
   };
 
   // إكمال موعد
-  const handleCompleteAppointment = async (appointmentId: string, outcome?: string) => {
+  const handleCompleteAppointment = async (appointmentId: string) => {
     try {
-      await appointmentService.completeAppointment(parseInt(appointmentId), outcome);
+      await appointmentService.completeAppointment(parseInt(appointmentId));
       fetchAppointments();
     } catch (error) {
       console.error('Error completing appointment:', error);
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="مواعيد القضية"
-      size="xl"
-    >
-      <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3 space-x-reverse">
-            <Calendar className="w-5 h-5 text-blue-600" />
-            <span className="text-sm text-gray-600">{caseData.title}</span>
-          </div>
-          <button
-            onClick={() => {
-              setShowAddForm(true);
-              console.log('إضافة موعد جديد');
-            }}
-            style={{
-              backgroundColor: 'var(--color-primary)',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'opacity 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-          >
-            <Plus className="w-4 h-4" />
-            <span>إضافة موعد</span>
-          </button>
-        </div>
-
-        {/* Content */}
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="mr-3 text-gray-600">جاري تحميل المواعيد...</span>
-          </div>
-        ) : error ? (
-          <div className="text-center py-12">
-            <div className="text-red-600 mb-4">⚠️</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">خطأ في التحميل</h3>
-            <p className="text-gray-500 mb-4">{error}</p>
-            <button
-              onClick={fetchAppointments}
-              style={{
-                backgroundColor: 'var(--color-primary)',
-                color: 'white',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'opacity 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-            >
-              إعادة المحاولة
+    <AnimatePresence>
+      <motion.div
+        className="cam-overlay"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      >
+        <motion.div
+          className="cam-modal"
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="cam-header">
+            <div className="cam-header-title">
+              <div className="cam-icon-wrapper">
+                <CalendarClock size={22} />
+              </div>
+              <div className="cam-title-text">
+                <h2>الجلسات والمواعيد</h2>
+                <p>{caseData.title}</p>
+              </div>
+            </div>
+            <button className="cam-close-btn" onClick={onClose}>
+              <X size={20} />
             </button>
           </div>
-        ) : appointments.length === 0 ? (
-          <div className="text-center py-12">
-            <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              لا توجد مواعيد
-            </h3>
-            <p className="text-gray-500 mb-4">
-              لم يتم إضافة أي مواعيد لهذه القضية بعد
-            </p>
+
+          {/* Tabs */}
+          <div className="cam-tabs">
             <button
-              onClick={() => {
-                setShowAddForm(true);
-                console.log('إضافة أول موعد');
-              }}
-              style={{
-                backgroundColor: 'var(--color-primary)',
-                color: 'white',
-                padding: '8px 24px',
-                borderRadius: '8px',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'opacity 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+              className={`cam-tab ${activeTab === 'sessions' ? 'active' : ''}`}
+              onClick={() => setActiveTab('sessions')}
             >
-              إضافة أول موعد
+              <Gavel size={16} />
+              <span>جلسات ناجز</span>
+              {sessions.length > 0 && (
+                <span className="cam-tab-badge">{sessions.length}</span>
+              )}
+            </button>
+            <button
+              className={`cam-tab ${activeTab === 'appointments' ? 'active' : ''}`}
+              onClick={() => setActiveTab('appointments')}
+            >
+              <Calendar size={16} />
+              <span>المواعيد</span>
+              {appointments.length > 0 && (
+                <span className="cam-tab-badge">{appointments.length}</span>
+              )}
             </button>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {appointments.map((appointment) => {
-              const { date, time } = formatDateTime(appointment.scheduled_at);
 
-              return (
-                <div
-                  key={appointment.id}
-                  className="bg-gray-50 rounded-lg p-6 hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 space-x-reverse mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {appointment.title}
-                        </h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
-                          {getAppointmentStatusLabel(appointment.status)}
-                        </span>
-                        <span className={`text-xs font-medium ${getPriorityColor(appointment.priority)}`}>
-                          {appointment.priority === 'urgent' && '🔥'}
-                          {appointment.priority === 'high' && '⚡'}
-                          {appointment.priority === 'medium' && '📋'}
-                          {appointment.priority === 'low' && '📝'}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-                        <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
-                          <Calendar className="w-4 h-4" />
-                          <span className="text-sm">{date}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
-                          <Clock className="w-4 h-4" />
-                          <span className="text-sm">{time}</span>
-                          <span className="text-xs text-gray-400">
-                            ({formatDuration(appointment.duration_minutes)})
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
-                          <FileText className="w-4 h-4" />
-                          <span className="text-sm">{getAppointmentTypeLabel(appointment.type)}</span>
-                        </div>
-                      </div>
-
-                      {appointment.location && (
-                        <div className="flex items-center space-x-2 space-x-reverse text-gray-600 mb-2">
-                          <MapPin className="w-4 h-4" />
-                          <span className="text-sm">{appointment.location}</span>
-                        </div>
-                      )}
-
-                      {appointment.description && (
-                        <p className="text-gray-700 text-sm mb-3">
-                          {appointment.description}
-                        </p>
-                      )}
-
-                      {appointment.attendees && appointment.attendees.length > 0 && (
-                        <div className="flex items-center space-x-2 space-x-reverse text-gray-600 mb-3">
-                          <Users className="w-4 h-4" />
-                          <span className="text-sm">
-                            المشاركون: {Array.isArray(appointment.attendees)
-                              ? appointment.attendees.join('، ')
-                              : appointment.attendees}
-                          </span>
-                        </div>
-                      )}
+          {/* Content */}
+          <div className="cam-content">
+            {/* Sessions Tab */}
+            {activeTab === 'sessions' && (
+              <div className="cam-tab-content">
+                {sessions.length === 0 ? (
+                  <div className="cam-empty-state">
+                    <div className="cam-empty-icon">
+                      <Gavel size={48} />
                     </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center space-x-2 space-x-reverse">
-                      {appointment.status === 'scheduled' && (
-                        <>
-                          <button
-                            onClick={() => handleConfirmAppointment(appointment.id)}
-                            className="text-green-600 hover:bg-green-50 p-2 rounded-lg transition-colors"
-                            title="تأكيد الموعد"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleCancelAppointment(appointment.id)}
-                            className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                            title="إلغاء الموعد"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-
-                      {appointment.status === 'confirmed' && (
-                        <button
-                          onClick={() => handleStartAppointment(appointment.id)}
-                          className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
-                          title="بدء الموعد"
-                        >
-                          <Play className="w-4 h-4" />
-                        </button>
-                      )}
-
-                      {appointment.status === 'in_progress' && (
-                        <button
-                          onClick={() => handleCompleteAppointment(appointment.id)}
-                          className="text-emerald-600 hover:bg-emerald-50 p-2 rounded-lg transition-colors"
-                          title="إكمال الموعد"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => {
-                          setSelectedAppointment(appointment);
-                          console.log('تعديل الموعد:', appointment.id);
-                          // سيتم إضافة نموذج التعديل لاحقاً
-                        }}
-                        className="text-gray-600 hover:bg-gray-50 p-2 rounded-lg transition-colors"
-                        title="تعديل"
+                    <h3>لا توجد جلسات</h3>
+                    <p>لم يتم استيراد أي جلسات من ناجز لهذه القضية</p>
+                    {caseData.najiz_url && (
+                      <a
+                        href={caseData.najiz_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="cam-najiz-link"
                       >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                    </div>
+                        <ExternalLink size={16} />
+                        <span>فتح في ناجز</span>
+                      </a>
+                    )}
                   </div>
+                ) : (
+                  <div className="cam-sessions-list">
+                    {sessions.map((session, index) => {
+                      const statusStyle = getSessionStatusStyle(session.status);
+                      return (
+                        <div key={session.id || index} className="cam-session-card">
+                          <div className="cam-session-header">
+                            <div className="cam-session-type">
+                              {session.is_video_conference ? (
+                                <Video size={18} className="cam-icon-video" />
+                              ) : (
+                                <Building2 size={18} />
+                              )}
+                              <span>{session.session_type || 'جلسة'}</span>
+                            </div>
+                            <span
+                              className="cam-status-badge"
+                              style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}
+                            >
+                              {statusStyle.label}
+                            </span>
+                          </div>
 
-                  {/* Additional Info */}
-                  {(appointment.notes || appointment.outcome) && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      {appointment.notes && (
-                        <div className="mb-2">
-                          <span className="text-xs font-medium text-gray-500">ملاحظات:</span>
-                          <p className="text-sm text-gray-700 mt-1">{appointment.notes}</p>
+                          <div className="cam-session-details">
+                            <div className="cam-detail-row">
+                              <Calendar size={14} />
+                              <span>{session.session_date || 'غير محدد'}</span>
+                              {session.session_time && (
+                                <>
+                                  <Clock size={14} />
+                                  <span>{session.session_time}</span>
+                                </>
+                              )}
+                            </div>
+
+                            {session.court && (
+                              <div className="cam-detail-row">
+                                <Building2 size={14} />
+                                <span>{session.court}</span>
+                                {session.department && <span className="cam-dept">- {session.department}</span>}
+                              </div>
+                            )}
+
+                            {session.location && (
+                              <div className="cam-detail-row">
+                                <MapPin size={14} />
+                                <span>{session.location}</span>
+                              </div>
+                            )}
+
+                            {session.method && (
+                              <div className="cam-detail-row cam-method">
+                                <span>طريقة الحضور:</span>
+                                <span className="cam-method-value">{session.method}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {session.notes && (
+                            <div className="cam-session-notes">
+                              <span className="cam-notes-label">ملاحظات:</span>
+                              <p>{session.notes}</p>
+                            </div>
+                          )}
+
+                          {session.result && (
+                            <div className="cam-session-result">
+                              <span className="cam-result-label">النتيجة:</span>
+                              <p>{session.result}</p>
+                            </div>
+                          )}
+
+                          {session.video_conference_url && (
+                            <a
+                              href={session.video_conference_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="cam-video-link"
+                            >
+                              <Video size={16} />
+                              <span>انضمام للجلسة المرئية</span>
+                            </a>
+                          )}
                         </div>
-                      )}
-                      {appointment.outcome && (
-                        <div>
-                          <span className="text-xs font-medium text-gray-500">النتيجة:</span>
-                          <p className="text-sm text-gray-700 mt-1">{appointment.outcome}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Appointments Tab */}
+            {activeTab === 'appointments' && (
+              <div className="cam-tab-content">
+                {/* Add Button */}
+                <div className="cam-add-section">
+                  <button className="cam-add-btn" onClick={() => setShowAddForm(true)}>
+                    <Plus size={18} />
+                    <span>إضافة موعد جديد</span>
+                  </button>
                 </div>
-              );
-            })}
+
+                {loading ? (
+                  <div className="cam-loading">
+                    <RefreshCw size={24} className="cam-spinner" />
+                    <span>جاري تحميل المواعيد...</span>
+                  </div>
+                ) : error ? (
+                  <div className="cam-error">
+                    <p>{error}</p>
+                    <button onClick={fetchAppointments} className="cam-retry-btn">
+                      إعادة المحاولة
+                    </button>
+                  </div>
+                ) : appointments.length === 0 ? (
+                  <div className="cam-empty-state">
+                    <div className="cam-empty-icon">
+                      <Calendar size={48} />
+                    </div>
+                    <h3>لا توجد مواعيد</h3>
+                    <p>لم يتم إضافة أي مواعيد لهذه القضية بعد</p>
+                    <button className="cam-add-first-btn" onClick={() => setShowAddForm(true)}>
+                      <Plus size={18} />
+                      <span>إضافة أول موعد</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="cam-appointments-list">
+                    {appointments.map((appointment) => {
+                      const { date, time } = formatDateTime(appointment.scheduled_at);
+                      const statusStyle = getAppointmentStatusStyle(appointment.status);
+
+                      return (
+                        <div key={appointment.id} className="cam-appointment-card">
+                          <div className="cam-appointment-header">
+                            <div className="cam-appointment-title">
+                              <h4>{appointment.title}</h4>
+                              <span className="cam-appointment-type">
+                                {getAppointmentTypeLabel(appointment.type)}
+                              </span>
+                            </div>
+                            <span
+                              className="cam-status-badge"
+                              style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}
+                            >
+                              {getAppointmentStatusLabel(appointment.status)}
+                            </span>
+                          </div>
+
+                          <div className="cam-appointment-details">
+                            <div className="cam-detail-row">
+                              <Calendar size={14} />
+                              <span>{date}</span>
+                              <Clock size={14} />
+                              <span>{time}</span>
+                              <span className="cam-duration">({formatDuration(appointment.duration_minutes)})</span>
+                            </div>
+
+                            {appointment.location && (
+                              <div className="cam-detail-row">
+                                <MapPin size={14} />
+                                <span>{appointment.location}</span>
+                              </div>
+                            )}
+
+                            {appointment.attendees && appointment.attendees.length > 0 && (
+                              <div className="cam-detail-row">
+                                <Users size={14} />
+                                <span>
+                                  {Array.isArray(appointment.attendees)
+                                    ? appointment.attendees.join('، ')
+                                    : appointment.attendees}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {appointment.description && (
+                            <p className="cam-appointment-desc">{appointment.description}</p>
+                          )}
+
+                          <div className="cam-appointment-actions">
+                            {appointment.status === 'scheduled' && (
+                              <>
+                                <button
+                                  className="cam-action-btn confirm"
+                                  onClick={() => handleConfirmAppointment(appointment.id)}
+                                  title="تأكيد"
+                                >
+                                  <CheckCircle size={16} />
+                                </button>
+                                <button
+                                  className="cam-action-btn cancel"
+                                  onClick={() => handleCancelAppointment(appointment.id)}
+                                  title="إلغاء"
+                                >
+                                  <XCircle size={16} />
+                                </button>
+                              </>
+                            )}
+                            {appointment.status === 'confirmed' && (
+                              <button
+                                className="cam-action-btn start"
+                                onClick={() => handleStartAppointment(appointment.id)}
+                                title="بدء"
+                              >
+                                <Play size={16} />
+                              </button>
+                            )}
+                            {appointment.status === 'in_progress' && (
+                              <button
+                                className="cam-action-btn complete"
+                                onClick={() => handleCompleteAppointment(appointment.id)}
+                                title="إكمال"
+                              >
+                                <CheckCircle size={16} />
+                              </button>
+                            )}
+                            <button className="cam-action-btn edit" title="تعديل">
+                              <Edit3 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        )}
+        </motion.div>
 
         {/* Add Appointment Modal */}
         <AddAppointmentModal
@@ -421,7 +511,7 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
           caseData={caseData}
           onAppointmentAdded={fetchAppointments}
         />
-      </div>
-    </Modal>
+      </motion.div>
+    </AnimatePresence>
   );
 };
