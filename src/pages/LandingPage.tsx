@@ -101,7 +101,7 @@ const LandingPage: React.FC = () => {
       const timer1 = setTimeout(() => setPrivacyScene(1), 3500);
       const timer2 = setTimeout(() => setPrivacyScene(2), 7000);
       const timer3 = setTimeout(() => setPrivacyScene(3), 11000);
-      
+
       // Canvas grid effect
       const canvas = document.getElementById('privacyCanvas') as HTMLCanvasElement;
       if (canvas) {
@@ -112,19 +112,19 @@ const LandingPage: React.FC = () => {
             canvas.height = window.innerHeight;
             drawGrid();
           };
-          
+
           const drawGrid = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.strokeStyle = 'rgba(197, 160, 89, 0.03)';
             ctx.lineWidth = 1;
-            
+
             for (let i = 0; i < canvas.width; i += 60) {
               ctx.beginPath();
               ctx.moveTo(i, 0);
               ctx.lineTo(i, canvas.height);
               ctx.stroke();
             }
-            
+
             for (let i = 0; i < canvas.height; i += 60) {
               ctx.beginPath();
               ctx.moveTo(0, i);
@@ -132,16 +132,16 @@ const LandingPage: React.FC = () => {
               ctx.stroke();
             }
           };
-          
+
           window.addEventListener('resize', resize);
           resize();
-          
+
           return () => {
             window.removeEventListener('resize', resize);
           };
         }
       }
-      
+
       return () => {
         clearTimeout(timer1);
         clearTimeout(timer2);
@@ -178,9 +178,9 @@ const LandingPage: React.FC = () => {
   const scrollToNextScene = () => {
     if (privacyContainerRef.current) {
       const sceneHeight = privacyContainerRef.current.scrollHeight / 4;
-      privacyContainerRef.current.scrollBy({ 
-        top: sceneHeight, 
-        behavior: 'smooth' 
+      privacyContainerRef.current.scrollBy({
+        top: sceneHeight,
+        behavior: 'smooth'
       });
     }
   };
@@ -202,7 +202,7 @@ const LandingPage: React.FC = () => {
               <p className="landing__brand-title">كل ما يحتاجه مكتبك القانوني</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={handlePrivacyClick}
             className="landing__privacy-btn"
           >
@@ -215,14 +215,14 @@ const LandingPage: React.FC = () => {
       <main className="landing__main">
         <section className="landing-hero">
           <div className="landing-hero__bg" aria-hidden />
-          
+
           {/* Animated Background Elements */}
           <div className="landing-hero__animated-bg">
             <div className="shooting-star"></div>
             <div className="shooting-star"></div>
             <div className="shooting-star"></div>
             <div className="shooting-star"></div>
-            
+
             <div className="floating-icon floating-icon--1">
               <Scale size={120} strokeWidth={1} />
             </div>
@@ -263,7 +263,7 @@ const LandingPage: React.FC = () => {
             </motion.div>
           </div>
 
-          <motion.div 
+          <motion.div
             className="landing-scroll-indicator"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -340,7 +340,7 @@ const LandingPage: React.FC = () => {
             <div className="shooting-star"></div>
             <div className="shooting-star"></div>
             <div className="shooting-star"></div>
-            
+
             <div className="floating-icon floating-icon--1">
               <Scale size={100} strokeWidth={1} />
             </div>
@@ -373,13 +373,16 @@ const LandingPage: React.FC = () => {
             <span>نظام إدارة المحاماة</span>
           </div>
           <p>© {new Date().getFullYear()} جميع الحقوق محفوظة</p>
+          <p className="landing__footer-registration" style={{ fontSize: '11px', marginTop: '4px', opacity: 0.7 }}>
+            مؤسسة رائد الحلول الرقمية سجل تجاري 7052657371
+          </p>
         </div>
       </footer>
 
       {/* Privacy Overlay */}
       <AnimatePresence>
         {showPrivacy && (
-          <motion.div 
+          <motion.div
             className="privacy-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -392,7 +395,7 @@ const LandingPage: React.FC = () => {
 
             <canvas id="privacyCanvas" className="privacy-canvas"></canvas>
 
-            <div 
+            <div
               className={`privacy-container ${isManualMode ? 'privacy-container--manual' : ''}`}
               ref={privacyContainerRef}
             >
@@ -400,9 +403,9 @@ const LandingPage: React.FC = () => {
               <motion.div
                 className={`privacy-scene ${!isManualMode && privacyScene === 0 ? 'active' : ''} ${isManualMode ? 'privacy-scene--manual' : ''}`}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ 
+                animate={{
                   opacity: !isManualMode && privacyScene === 0 ? 1 : isManualMode ? 1 : 0,
-                  y: !isManualMode && privacyScene === 0 ? 0 : isManualMode ? 0 : 20 
+                  y: !isManualMode && privacyScene === 0 ? 0 : isManualMode ? 0 : 20
                 }}
               >
                 <h1 className="privacy-title">
@@ -417,9 +420,9 @@ const LandingPage: React.FC = () => {
               <motion.div
                 className={`privacy-scene ${!isManualMode && privacyScene === 1 ? 'active' : ''} ${isManualMode ? 'privacy-scene--manual' : ''}`}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ 
+                animate={{
                   opacity: !isManualMode && privacyScene === 1 ? 1 : isManualMode ? 1 : 0,
-                  y: !isManualMode && privacyScene === 1 ? 0 : isManualMode ? 0 : 20 
+                  y: !isManualMode && privacyScene === 1 ? 0 : isManualMode ? 0 : 20
                 }}
               >
                 <h2 className="privacy-heading">سيادة كاملة على مستنداتك</h2>
@@ -433,9 +436,9 @@ const LandingPage: React.FC = () => {
               <motion.div
                 className={`privacy-scene ${!isManualMode && privacyScene === 2 ? 'active' : ''} ${isManualMode ? 'privacy-scene--manual' : ''}`}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ 
+                animate={{
                   opacity: !isManualMode && privacyScene === 2 ? 1 : isManualMode ? 1 : 0,
-                  y: !isManualMode && privacyScene === 2 ? 0 : isManualMode ? 0 : 20 
+                  y: !isManualMode && privacyScene === 2 ? 0 : isManualMode ? 0 : 20
                 }}
               >
                 <div className="privacy-architecture">
@@ -483,9 +486,9 @@ const LandingPage: React.FC = () => {
               <motion.div
                 className={`privacy-scene ${!isManualMode && privacyScene === 3 ? 'active' : ''} ${isManualMode ? 'privacy-scene--manual' : ''}`}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ 
+                animate={{
                   opacity: !isManualMode && privacyScene === 3 ? 1 : isManualMode ? 1 : 0,
-                  y: !isManualMode && privacyScene === 3 ? 0 : isManualMode ? 0 : 20 
+                  y: !isManualMode && privacyScene === 3 ? 0 : isManualMode ? 0 : 20
                 }}
               >
                 <h3 className="privacy-final-title">إدارة قانونية ذكية بخصوصية تامة</h3>
@@ -502,7 +505,7 @@ const LandingPage: React.FC = () => {
 
               {/* Scroll Indicator for Manual Mode */}
               {isManualMode && (
-                <motion.div 
+                <motion.div
                   className="privacy-scroll-indicator"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
