@@ -1528,7 +1528,7 @@ const Settings: React.FC = () => {
                               </div>
                             )}
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginTop: '12px' }}>
                               {/* الباقة الشهرية */}
                               <div
                                 style={{
@@ -1606,6 +1606,51 @@ const Settings: React.FC = () => {
                                     <s style={{ color: 'var(--status-red)' }}>{(plansData.plans.monthly.price * 12).toLocaleString('ar-SA')} ر.س</s> توفير {plansData.plans.yearly.savings.toLocaleString('ar-SA')} ر.س
                                   </div>
                                 )}
+                              </div>
+
+                              {/* الباقة الخاصة */}
+                              <div
+                                style={{
+                                  border: '1px solid var(--color-border)',
+                                  borderRadius: '12px',
+                                  padding: '20px',
+                                  transition: 'all 0.2s',
+                                  background: 'linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-surface-subtle) 100%)',
+                                  position: 'relative',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                  textAlign: 'center'
+                                }}
+                              >
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '-10px',
+                                  right: '10px',
+                                  background: 'var(--color-primary)',
+                                  color: 'white',
+                                  padding: '4px 12px',
+                                  borderRadius: '12px',
+                                  fontSize: '12px',
+                                  fontWeight: 600
+                                }}>
+                                  مخصصة
+                                </div>
+                                <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>الباقة الخاصة</div>
+                                <div style={{ fontSize: '14px', color: 'var(--color-text-secondary)', marginBottom: '16px' }}>
+                                  باقة مصممة خصيصاً لاحتياجات شركتك
+                                </div>
+                                <div style={{
+                                  fontSize: '13px',
+                                  color: 'var(--color-primary)',
+                                  fontWeight: 500,
+                                  padding: '10px 16px',
+                                  background: 'var(--color-primary-light)',
+                                  borderRadius: '8px'
+                                }}>
+                                  تواصل مع الدعم الفني للتفاصيل
+                                </div>
                               </div>
                             </div>
 
