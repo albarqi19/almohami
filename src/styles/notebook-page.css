@@ -65,6 +65,16 @@
     transform: translateY(-1px);
 }
 
+/* Dark mode: النص يجب أن يكون داكن لأن الخلفية فاتحة */
+body.dark .notebook-add-btn {
+    color: var(--color-background);
+}
+
+/* Classic mode: استخدام اللون الذهبي */
+body.classic .notebook-add-btn {
+    background: var(--color-accent);
+}
+
 .notebook-add-btn svg {
     width: 18px;
     height: 18px;
@@ -138,6 +148,15 @@
     background: var(--color-primary);
     color: #fff;
     border-color: var(--color-primary);
+}
+
+body.dark .notebook-tab.active {
+    color: var(--color-background);
+}
+
+body.classic .notebook-tab.active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
 }
 
 .notebook-tab .tab-icon {
@@ -571,6 +590,14 @@
     background: var(--color-primary);
     border: none;
     color: #fff;
+}
+
+body.dark .modal-btn.primary {
+    color: var(--color-background);
+}
+
+body.classic .modal-btn.primary {
+    background: var(--color-accent);
 }
 
 .modal-btn.primary:hover {

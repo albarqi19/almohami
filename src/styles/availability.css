@@ -1,0 +1,824 @@
+/* ====================================================
+   Availability Page - Theme-Aware Styles
+   ==================================================== */
+
+.availability-page {
+    padding: 0;
+    min-height: 100vh;
+    background: var(--color-surface-subtle);
+    color: var(--color-text);
+    display: flex;
+    flex-direction: column;
+    font-family: var(--font-family-base);
+}
+
+/* Notion Style Header */
+.availability-page .notion-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 20px 32px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.availability-page .notion-header__title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.availability-page .notion-header__icon {
+    font-size: 24px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.availability-page .notion-header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--color-heading);
+    margin: 0;
+}
+
+.availability-page .notion-header__subtitle {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    margin: 0;
+    padding-right: 16px;
+    border-right: 1px solid var(--color-border);
+}
+
+.availability-page .notion-header__actions {
+    display: flex;
+    gap: 8px;
+    margin-right: auto;
+}
+
+.availability-page .notion-icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    transition: all 0.15s;
+}
+
+.availability-page .notion-icon-btn:hover {
+    background: var(--color-surface-subtle);
+    color: var(--color-text);
+}
+
+.availability-page .notion-icon-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.availability-page .notion-primary-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: none;
+    background: var(--color-primary);
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+body.classic .availability-page .notion-primary-btn {
+    background: var(--color-accent);
+}
+
+body.dark .availability-page .notion-primary-btn {
+    color: var(--color-background);
+}
+
+.availability-page .notion-primary-btn:hover {
+    opacity: 0.9;
+}
+
+.availability-page .notion-primary-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Buttons - Theme Aware */
+.availability-page .primary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    background: var(--color-primary);
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    height: 32px;
+}
+
+body.dark .availability-page .primary-btn {
+    background: var(--color-primary);
+    color: var(--color-background);
+}
+
+body.classic .availability-page .primary-btn {
+    background: var(--color-accent);
+    color: white;
+}
+
+.availability-page .primary-btn:hover {
+    background: var(--color-primary-hover);
+}
+
+body.classic .availability-page .primary-btn:hover {
+    background: var(--color-accent-hover);
+}
+
+.availability-page .primary-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.availability-page .secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    height: 28px;
+}
+
+.availability-page .secondary-btn:hover {
+    background: var(--color-surface-subtle);
+    color: var(--color-text);
+}
+
+/* Layout Grid */
+.availability-page .content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 32px;
+    padding: 24px 32px 60px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* Cards - Notion Style (transparent) */
+.availability-page .card {
+    background: transparent;
+    border-radius: 0;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+    margin-bottom: 0;
+}
+
+.availability-page .card:first-child {
+    grid-column: 1 / 2;
+}
+
+.availability-page .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.availability-page .card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-heading);
+    margin: 0;
+}
+
+/* Weekly Schedule - Database View Look */
+.availability-page .schedule-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.availability-page .day-row {
+    padding: 16px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    transition: background 0.1s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.availability-page .day-row:last-child {
+    border-bottom: none;
+}
+
+.availability-page .day-row--disabled {
+    background: var(--color-surface-subtle);
+}
+
+.availability-page .day-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 28px;
+}
+
+.availability-page .day-name {
+    font-weight: 500;
+    font-size: 15px;
+    color: var(--color-text);
+    width: 80px;
+}
+
+/* Toggle Switch - Minimalist */
+.availability-page .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    flex: 1;
+}
+
+.availability-page .toggle-label input {
+    display: none;
+}
+
+.availability-page .toggle-switch {
+    width: 36px;
+    height: 20px;
+    background: var(--color-border-strong);
+    border-radius: 14px;
+    position: relative;
+    transition: background 0.2s ease;
+}
+
+.availability-page .toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.availability-page .toggle-label input:checked+.toggle-switch {
+    background: var(--color-primary);
+}
+
+body.classic .availability-page .toggle-label input:checked+.toggle-switch {
+    background: var(--color-accent);
+}
+
+.availability-page .toggle-label input:checked+.toggle-switch::after {
+    transform: translateX(16px);
+}
+
+.availability-page .day-status {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-secondary);
+}
+
+.availability-page .toggle-label input:checked~.day-status {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+
+/* Slots */
+.availability-page .day-slots {
+    margin-left: 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.availability-page .slot-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.availability-page .slot-row input[type="time"] {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background: var(--color-surface-subtle);
+    color: var(--color-text);
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.availability-page .slot-row input[type="time"]:hover {
+    background: var(--color-border);
+}
+
+body.dark .availability-page .slot-row input[type="time"]:hover {
+    background: var(--color-gray-300);
+}
+
+.availability-page .slot-row input[type="time"]:focus {
+    outline: none;
+    background: var(--color-surface);
+    box-shadow: 0 0 0 2px var(--color-primary-soft);
+    border: 1px solid var(--color-primary);
+}
+
+body.classic .availability-page .slot-row input[type="time"]:focus {
+    box-shadow: 0 0 0 2px var(--color-accent-soft);
+    border: 1px solid var(--color-accent);
+}
+
+.availability-page .slot-separator {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+}
+
+.availability-page .remove-slot-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s;
+}
+
+.availability-page .remove-slot-btn:hover {
+    background: var(--color-error-soft);
+    color: var(--color-error);
+}
+
+.availability-page .add-slot-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    width: fit-content;
+    transition: color 0.1s;
+}
+
+.availability-page .add-slot-btn:hover {
+    background: var(--color-surface-subtle);
+    color: var(--color-text);
+}
+
+/* Settings Form - Vertical Property List */
+.availability-page .settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.availability-page .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.availability-page .form-group label {
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.availability-page .form-group input[type="text"],
+.availability-page .form-group input[type="date"],
+.availability-page .form-group select {
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 14px;
+    box-shadow: var(--shadow-xs);
+    transition: border-color 0.1s;
+}
+
+.availability-page .form-group input:focus,
+.availability-page .form-group select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-soft);
+}
+
+body.classic .availability-page .form-group input:focus,
+body.classic .availability-page .form-group select:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-accent-soft);
+}
+
+/* Duration Tags */
+.availability-page .durations-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.availability-page .duration-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.1s;
+}
+
+.availability-page .duration-option:hover {
+    background: var(--color-surface-subtle);
+}
+
+.availability-page .duration-option--selected {
+    background: var(--color-primary-soft);
+    border-color: transparent;
+    color: var(--color-primary);
+}
+
+body.classic .availability-page .duration-option--selected {
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+}
+
+body.dark .availability-page .duration-option--selected {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+/* Exceptions List */
+.availability-page .exceptions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.availability-page .exception-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    transition: all 0.1s;
+}
+
+.availability-page .exception-item:hover {
+    background: var(--color-surface-subtle);
+}
+
+.availability-page .exception-date {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--color-text);
+}
+
+.availability-page .exception-reason {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-right: 8px;
+}
+
+.availability-page .exception-type {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-secondary);
+}
+
+.availability-page .exception-type--blocked {
+    background: var(--color-error-soft);
+    color: var(--color-error);
+}
+
+.availability-page .delete-exception-btn {
+    margin-right: auto;
+    opacity: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.1s;
+}
+
+.availability-page .exception-item:hover .delete-exception-btn {
+    opacity: 1;
+}
+
+.availability-page .delete-exception-btn:hover {
+    background: var(--color-error-soft);
+    color: var(--color-error);
+}
+
+.availability-page .empty-exceptions {
+    padding: 32px;
+    text-align: center;
+    border: 1px dashed var(--color-border);
+    border-radius: 4px;
+    color: var(--color-text-secondary);
+}
+
+.availability-page .empty-exceptions p {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.availability-page .empty-exceptions span {
+    font-size: 12px;
+}
+
+/* Messages */
+.availability-page .message {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    margin: 16px 32px 0;
+    border-radius: 8px;
+    font-size: 14px;
+    max-width: 1200px;
+}
+
+.availability-page .message--error {
+    background: var(--color-error-soft);
+    color: var(--color-text);
+    border: 1px solid var(--color-error);
+}
+
+body.dark .availability-page .message--error {
+    border-color: rgba(255, 123, 138, 0.3);
+}
+
+.availability-page .message--success {
+    background: var(--color-success-soft);
+    color: var(--color-text);
+    border: 1px solid var(--color-success);
+}
+
+body.dark .availability-page .message--success {
+    border-color: rgba(70, 194, 179, 0.3);
+}
+
+.availability-page .message--info {
+    background: var(--color-info-soft);
+    color: var(--color-info);
+    border: 1px solid transparent;
+}
+
+/* Modal - Theme Aware */
+.availability-page .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+body.dark .availability-page .modal-overlay {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.availability-page .modal-content {
+    background: var(--color-surface);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--color-border);
+    width: 90%;
+    max-width: 480px;
+}
+
+.availability-page .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border);
+    padding: 16px 24px;
+}
+
+.availability-page .modal-header h3 {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--color-heading);
+    margin: 0;
+}
+
+.availability-page .close-btn {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.1s;
+}
+
+.availability-page .close-btn:hover {
+    background: var(--color-surface-subtle);
+    color: var(--color-text);
+}
+
+.availability-page .modal-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.availability-page .modal-footer {
+    background: var(--color-surface-subtle);
+    border-top: 1px solid var(--color-border);
+    padding: 16px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.availability-page .btn-secondary {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.1s;
+}
+
+.availability-page .btn-secondary:hover {
+    background: var(--color-surface-subtle);
+}
+
+.availability-page .btn-primary {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    background: var(--color-primary);
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.1s;
+}
+
+body.classic .availability-page .btn-primary {
+    background: var(--color-accent);
+}
+
+body.dark .availability-page .btn-primary {
+    color: var(--color-background);
+}
+
+.availability-page .btn-primary:hover {
+    background: var(--color-primary-hover);
+}
+
+body.classic .availability-page .btn-primary:hover {
+    background: var(--color-accent-hover);
+}
+
+/* Text Color Classes */
+.availability-page .text-law-navy {
+    color: var(--color-primary);
+}
+
+body.classic .availability-page .text-law-navy {
+    color: var(--color-accent);
+}
+
+/* Animation */
+.availability-page .animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .availability-page .content-grid {
+        grid-template-columns: 1fr;
+        padding: 24px;
+    }
+
+    .availability-page .notion-header {
+        padding: 16px 24px;
+    }
+
+    .availability-page .card:first-child {
+        grid-column: 1;
+    }
+
+    .availability-page .message {
+        margin: 16px 24px 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .availability-page .notion-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .availability-page .notion-header__subtitle {
+        border-right: none;
+        padding-right: 0;
+    }
+
+    .availability-page .notion-header__actions {
+        margin-right: 0;
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .availability-page .content-grid {
+        padding: 16px;
+        gap: 24px;
+    }
+
+    .availability-page .day-header {
+        height: auto;
+    }
+
+    .availability-page .day-slots {
+        margin-left: 0;
+        margin-top: 16px;
+    }
+
+    .availability-page .message {
+        margin: 12px 16px 0;
+    }
+}

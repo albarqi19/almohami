@@ -208,7 +208,19 @@ body.classic .notebook-workspace {
 }
 
 .new-note-btn.large {
-    padding: 10px 20px;
+    padding: 8px 12px;
+    margin: 0;
+}
+
+/* تحسين التباين في الـ Classic theme */
+body.classic .notebook-workspace .new-note-btn {
+    background: #4A2C1A !important;
+    color: #ffffff !important;
+}
+
+body.classic .notebook-workspace .new-note-btn span,
+body.classic .notebook-workspace .new-note-btn svg {
+    color: #ffffff !important;
 }
 
 /* قائمة الملاحظات */

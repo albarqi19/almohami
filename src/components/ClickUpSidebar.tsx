@@ -61,15 +61,15 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
         { icon: BookOpen, label: 'المفكرة الشخصية', path: '/notebook', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: FileText, label: 'قضاياي', path: '/my-cases', roles: ['client'] },
         { icon: MessageSquare, label: 'الرسائل', path: '/my-messages', roles: ['client'] },
-        { icon: Upload, label: 'الوثائق', path: '/documents', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
+        { icon: Upload, label: 'الوثائق', path: '/documents', roles: ['admin', 'legal_assistant'] },
         { icon: Clock, label: 'الأنشطة', path: '/activities', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
         { icon: Users, label: 'العملاء', path: '/clients', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: ClipboardList, label: 'الطلبات الإدارية', path: '/admin/requests', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: FileSignature, label: 'العقود', path: '/contracts', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: FileText, label: 'قوالب العقود', path: '/contract-templates', roles: ['admin', 'lawyer'] },
-        { icon: Receipt, label: 'الفواتير', path: '/invoices', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: CreditCard, label: 'المدفوعات', path: '/payments', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: TrendingUp, label: 'التحصيل', path: '/billing', roles: ['admin', 'lawyer'] },
+        { icon: FileSignature, label: 'العقود', path: '/contracts', roles: ['admin', 'legal_assistant'] },
+        { icon: FileText, label: 'قوالب العقود', path: '/contract-templates', roles: ['admin'] },
+        { icon: Receipt, label: 'الفواتير', path: '/invoices', roles: ['admin', 'legal_assistant'] },
+        { icon: CreditCard, label: 'المدفوعات', path: '/payments', roles: ['admin', 'legal_assistant'] },
+        { icon: TrendingUp, label: 'التحصيل', path: '/billing', roles: ['admin'] },
     ];
 
     const settingsItems = [

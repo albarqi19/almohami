@@ -764,7 +764,6 @@ const NotebookWorkspace: React.FC = () => {
                         <h2>مرحباً بك في المفكرة الشخصية</h2>
                         <p>اختر ملاحظة من القائمة أو أنشئ ملاحظة جديدة للبدء</p>
                         <button className="new-note-btn large" onClick={startNewNote}>
-                            <Plus size={20} />
                             <span>ملاحظة جديدة</span>
                         </button>
                         <div className="tips">

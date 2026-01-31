@@ -172,7 +172,11 @@ function App() {
                   <TaskDetail />
                 </ProtectedRoute>
               } />
-              <Route path="documents" element={<Documents />} />
+              <Route path="documents" element={
+                <ProtectedRoute allowedRoles={['admin', 'legal_assistant']}>
+                  <Documents />
+                </ProtectedRoute>
+              } />
               <Route path="activities" element={<Activities />} />
               <Route path="reports" element={
                 <ProtectedRoute allowedRoles={['admin', 'lawyer']}>
@@ -220,54 +224,54 @@ function App() {
 
               {/* Contracts routes */}
               <Route path="contract-templates" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <ContractTemplates />
                 </ProtectedRoute>
               } />
               <Route path="contract-templates/new" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <ContractTemplateEditorPage />
                 </ProtectedRoute>
               } />
               <Route path="contract-templates/:id" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <ContractTemplateEditorPage />
                 </ProtectedRoute>
               } />
               <Route path="contracts" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'legal_assistant']}>
                   <Contracts />
                 </ProtectedRoute>
               } />
               <Route path="contracts/new" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <ContractBuilder />
                 </ProtectedRoute>
               } />
               <Route path="contracts/:id" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'legal_assistant']}>
                   <ContractDetail />
                 </ProtectedRoute>
               } />
 
               {/* Billing routes */}
               <Route path="invoices" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'legal_assistant']}>
                   <Invoices />
                 </ProtectedRoute>
               } />
               <Route path="invoices/:id" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'legal_assistant']}>
                   <InvoiceDetail />
                 </ProtectedRoute>
               } />
               <Route path="payments" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'legal_assistant']}>
                   <Payments />
                 </ProtectedRoute>
               } />
               <Route path="billing" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <CollectionDashboard />
                 </ProtectedRoute>
               } />

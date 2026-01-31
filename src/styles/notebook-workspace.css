@@ -248,6 +248,15 @@ body.classic .notebook-workspace {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
+/* Dark mode: النص يجب أن يكون داكن لأن الخلفية فاتحة */
+body.dark .new-note-btn {
+    color: #0f172a;
+}
+
+body.dark .empty-state .new-note-btn {
+    color: #0f172a;
+}
+
 /* Classic theme hover shadow fix */
 body.classic .new-note-btn:hover {
     box-shadow: 0 4px 12px rgba(139, 115, 85, 0.35);

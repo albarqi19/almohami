@@ -10,18 +10,21 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  MapPin
+  MapPin,
+  CalendarDays,
+  Timer,
+  Info
 } from 'lucide-react';
 import {
   availabilityService,
   availabilityHelpers,
   type LawyerAvailability,
   type WeeklySchedule,
-  type DaySchedule,
   type TimeSlot,
   type AvailabilityException,
   DEFAULT_WEEKLY_SCHEDULE
 } from '../../services/availabilityService';
+import '../../styles/availability.css';
 
 type DayKey = keyof WeeklySchedule;
 
@@ -203,35 +206,46 @@ const MyAvailability: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="loading-state">
-        <RefreshCw size={32} className="animate-spin" />
-        <p>جاري تحميل إعدادات التوفر...</p>
+      <div className="availability-page" style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', color: 'var(--color-text-secondary)' }}>
+          <RefreshCw size={32} className="animate-spin" />
+          <p>جاري تحميل إعدادات التوفر...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="availability-page">
-      {/* Header */}
-      <header className="page-header">
-        <div className="page-header__start">
-          <div className="page-header__title">
-            <Clock size={22} />
-            <span>إعدادات التوفر</span>
-          </div>
-          <p className="page-header__subtitle">
-            حدد أوقات توفرك لاستقبال مواعيد العملاء
-          </p>
+      {/* Header - Notion Style */}
+      <header className="notion-header">
+        <div className="notion-header__title">
+          <div className="notion-header__icon">⏰</div>
+          <h1>إعدادات التوفر</h1>
         </div>
 
-        <button
-          className="primary-btn"
-          onClick={handleSave}
-          disabled={saving}
-        >
-          <Save size={18} />
-          {saving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
-        </button>
+        <p className="notion-header__subtitle">
+          إدارة أوقاتك المتاحة لحجوزات العملاء
+        </p>
+
+        <div className="notion-header__actions">
+          <button
+            className="notion-icon-btn"
+            onClick={fetchData}
+            disabled={loading}
+            title="تحديث"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          </button>
+          <button
+            className="notion-primary-btn"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+            {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+          </button>
+        </div>
       </header>
 
       {/* Messages */}
@@ -239,7 +253,7 @@ const MyAvailability: React.FC = () => {
         <div className="message message--error">
           <AlertCircle size={18} />
           {error}
-          <button onClick={() => setError(null)}><XCircle size={16} /></button>
+          <button onClick={() => setError(null)} style={{ marginRight: 'auto', border: 'none', background: 'none', cursor: 'pointer', color: 'inherit' }}><XCircle size={16} /></button>
         </div>
       )}
       {success && (
@@ -252,10 +266,12 @@ const MyAvailability: React.FC = () => {
       <div className="content-grid">
         {/* Weekly Schedule */}
         <div className="card">
-          <h3 className="card-title">
-            <Calendar size={18} />
-            الجدول الأسبوعي
-          </h3>
+          <div className="card-header">
+            <h3 className="card-title">
+              <CalendarDays size={20} className="text-law-navy" />
+              الجدول الأسبوعي المعتاد
+            </h3>
+          </div>
 
           <div className="schedule-grid">
             {DAYS_ORDER.map(day => (
@@ -267,9 +283,12 @@ const MyAvailability: React.FC = () => {
                       checked={weeklySchedule[day].enabled}
                       onChange={() => toggleDayEnabled(day)}
                     />
-                    <span className="toggle-switch" />
+                    <div className="toggle-switch" />
                     <span className="day-name">{availabilityHelpers.getDayNameArabic(day)}</span>
                   </label>
+                  <span className="day-status">
+                    {weeklySchedule[day].enabled ? 'متاح' : 'غير متاح'}
+                  </span>
                 </div>
 
                 {weeklySchedule[day].enabled && (
@@ -291,8 +310,9 @@ const MyAvailability: React.FC = () => {
                           <button
                             className="remove-slot-btn"
                             onClick={() => removeSlot(day, idx)}
+                            title="حذف الفترة"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={16} />
                           </button>
                         )}
                       </div>
@@ -302,7 +322,7 @@ const MyAvailability: React.FC = () => {
                       onClick={() => addSlot(day)}
                     >
                       <Plus size={14} />
-                      إضافة فترة
+                      إضافة فترة أخرى
                     </button>
                   </div>
                 )}
@@ -311,143 +331,158 @@ const MyAvailability: React.FC = () => {
           </div>
         </div>
 
-        {/* Settings */}
-        <div className="card">
-          <h3 className="card-title">
-            <Settings size={18} />
-            إعدادات الحجز
-          </h3>
+        {/* Sidebar: Settings & Exceptions */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-          <div className="settings-form">
-            <div className="form-group">
-              <label>
-                <MapPin size={14} />
-                الموقع الافتراضي
-              </label>
-              <input
-                type="text"
-                value={defaultLocation}
-                onChange={(e) => setDefaultLocation(e.target.value)}
-                placeholder="مثال: مكتب المحاماة - شارع الملك فهد"
-              />
+          {/* Booking Settings */}
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">
+                <Settings size={20} className="text-law-navy" />
+                قواعد الحجز
+              </h3>
             </div>
 
-            <div className="form-group">
-              <label>الفاصل الزمني بين المواعيد (بالدقائق)</label>
-              <select
-                value={bufferMinutes}
-                onChange={(e) => setBufferMinutes(Number(e.target.value))}
+            <div className="settings-form">
+              <div className="form-group">
+                <label>
+                  <MapPin size={16} />
+                  الموقع الافتراضي
+                </label>
+                <input
+                  type="text"
+                  value={defaultLocation}
+                  onChange={(e) => setDefaultLocation(e.target.value)}
+                  placeholder="مثال: Google Meet أو عنوان المكتب"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>
+                  <Timer size={16} />
+                  المدة الفاصلة بين المواعيد
+                </label>
+                <select
+                  value={bufferMinutes}
+                  onChange={(e) => setBufferMinutes(Number(e.target.value))}
+                >
+                  <option value={0}>بدون فاصل</option>
+                  <option value={5}>5 دقائق</option>
+                  <option value={10}>10 دقائق</option>
+                  <option value={15}>15 دقيقة</option>
+                  <option value={30}>30 دقيقة</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>
+                  <Calendar size={16} />
+                  نطاق الحجز المسموح
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>الحد الأدنى (قبل الموعد)</span>
+                    <select
+                      value={minBookingHours}
+                      onChange={(e) => setMinBookingHours(Number(e.target.value))}
+                    >
+                      <option value={1}>ساعة واحدة</option>
+                      <option value={2}>ساعتين</option>
+                      <option value={4}>4 ساعات</option>
+                      <option value={24}>24 ساعة</option>
+                      <option value={48}>48 ساعة</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>الحد الأقصى (مستقبلاً)</span>
+                    <select
+                      value={maxBookingDays}
+                      onChange={(e) => setMaxBookingDays(Number(e.target.value))}
+                    >
+                      <option value={7}>أسبوع</option>
+                      <option value={14}>أسبوعين</option>
+                      <option value={30}>شهر</option>
+                      <option value={60}>شهرين</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>مدد الاجتماعات المتاحة</label>
+                <div className="durations-grid">
+                  {[15, 30, 45, 60].map(duration => (
+                    <label
+                      key={duration}
+                      className={`duration-option ${allowedDurations.includes(duration) ? 'duration-option--selected' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={allowedDurations.includes(duration)}
+                        onChange={() => toggleDuration(duration)}
+                      />
+                      {duration} دقيقة
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Exceptions Card */}
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">
+                <AlertCircle size={20} className="text-law-navy" />
+                الاستثناءات والإجازات
+              </h3>
+              <button
+                className="secondary-btn"
+                onClick={() => setShowExceptionModal(true)}
+                style={{ padding: '6px 12px', fontSize: '12px' }}
               >
-                <option value={0}>بدون فاصل</option>
-                <option value={5}>5 دقائق</option>
-                <option value={10}>10 دقائق</option>
-                <option value={15}>15 دقيقة</option>
-                <option value={30}>30 دقيقة</option>
-              </select>
+                <Plus size={14} />
+                جديد
+              </button>
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label>الحد الأدنى للحجز المسبق</label>
-                <select
-                  value={minBookingHours}
-                  onChange={(e) => setMinBookingHours(Number(e.target.value))}
-                >
-                  <option value={1}>ساعة واحدة</option>
-                  <option value={2}>ساعتين</option>
-                  <option value={4}>4 ساعات</option>
-                  <option value={12}>12 ساعة</option>
-                  <option value={24}>24 ساعة</option>
-                  <option value={48}>48 ساعة</option>
-                </select>
+            {exceptions.length === 0 ? (
+              <div className="empty-exceptions">
+                <Calendar size={32} style={{ opacity: 0.2, marginBottom: '8px' }} />
+                <p>لا توجد استثناءات</p>
+                <span>أضف أيام إجازة أو تغييرات خاصة</span>
               </div>
-
-              <div className="form-group">
-                <label>الحد الأقصى للحجز المسبق</label>
-                <select
-                  value={maxBookingDays}
-                  onChange={(e) => setMaxBookingDays(Number(e.target.value))}
-                >
-                  <option value={7}>أسبوع</option>
-                  <option value={14}>أسبوعين</option>
-                  <option value={30}>شهر</option>
-                  <option value={60}>شهرين</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>مدد الاجتماعات المتاحة</label>
-              <div className="durations-grid">
-                {[15, 30, 45, 60, 90, 120].map(duration => (
-                  <label
-                    key={duration}
-                    className={`duration-option ${allowedDurations.includes(duration) ? 'duration-option--selected' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={allowedDurations.includes(duration)}
-                      onChange={() => toggleDuration(duration)}
-                    />
-                    {availabilityHelpers.formatDuration(duration)}
-                  </label>
+            ) : (
+              <div className="exceptions-list">
+                {exceptions.map(exception => (
+                  <div key={exception.id} className="exception-item">
+                    <div className="exception-info">
+                      <span className="exception-date">
+                        {new Date(exception.date).toLocaleDateString('ar-SA', {
+                          month: 'short',
+                          day: 'numeric',
+                          weekday: 'short'
+                        })}
+                      </span>
+                      {exception.reason && (
+                        <span className="exception-reason">{exception.reason}</span>
+                      )}
+                    </div>
+                    <span className={`exception-type ${exception.is_blocked ? 'exception-type--blocked' : ''}`}>
+                      {exception.is_blocked ? 'مغلق' : 'معدل'}
+                    </span>
+                    <button
+                      className="delete-exception-btn"
+                      onClick={() => handleDeleteException(exception.id)}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 ))}
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Exceptions */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">
-              <AlertCircle size={18} />
-              الاستثناءات
-            </h3>
-            <button
-              className="secondary-btn"
-              onClick={() => setShowExceptionModal(true)}
-            >
-              <Plus size={16} />
-              إضافة استثناء
-            </button>
+            )}
           </div>
 
-          {exceptions.length === 0 ? (
-            <div className="empty-exceptions">
-              <p>لا توجد استثناءات</p>
-              <span>أضف أيام إجازة أو تغييرات مؤقتة في الجدول</span>
-            </div>
-          ) : (
-            <div className="exceptions-list">
-              {exceptions.map(exception => (
-                <div key={exception.id} className="exception-item">
-                  <div className="exception-info">
-                    <span className="exception-date">
-                      {new Date(exception.date).toLocaleDateString('ar-SA', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </span>
-                    {exception.reason && (
-                      <span className="exception-reason">{exception.reason}</span>
-                    )}
-                  </div>
-                  <span className={`exception-type ${exception.is_blocked ? 'exception-type--blocked' : ''}`}>
-                    {exception.is_blocked ? 'مغلق' : 'أوقات مخصصة'}
-                  </span>
-                  <button
-                    className="delete-exception-btn"
-                    onClick={() => handleDeleteException(exception.id)}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
@@ -458,13 +493,18 @@ const MyAvailability: React.FC = () => {
             <div className="modal-header">
               <h3>إضافة استثناء</h3>
               <button className="close-btn" onClick={() => setShowExceptionModal(false)}>
-                <XCircle size={20} />
+                <XCircle size={24} />
               </button>
             </div>
 
             <div className="modal-body">
+              <div className="message message--info" style={{ margin: 0, padding: '10px 16px', fontSize: '13px', background: 'var(--color-info-soft)', color: 'var(--color-info)', border: 'none' }}>
+                <Info size={16} />
+                سيؤدي هذا إلى تجاوز الجدول الأسبوعي لهذا اليوم المحدد.
+              </div>
+
               <div className="form-group">
-                <label>التاريخ</label>
+                <label>تاريخ الاستثناء</label>
                 <input
                   type="date"
                   value={exceptionDate}
@@ -473,34 +513,34 @@ const MyAvailability: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>نوع الاستثناء</label>
-                <div className="radio-group">
-                  <label className={`radio-option ${exceptionIsBlocked ? 'radio-option--selected' : ''}`}>
+                <label>حالة التوفر</label>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <label className={`duration-option ${exceptionIsBlocked ? 'duration-option--selected' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
                     <input
                       type="radio"
                       checked={exceptionIsBlocked}
                       onChange={() => setExceptionIsBlocked(true)}
                     />
-                    يوم مغلق بالكامل
+                    غير متاح (مغلق)
                   </label>
-                  <label className={`radio-option ${!exceptionIsBlocked ? 'radio-option--selected' : ''}`}>
+                  <label className={`duration-option ${!exceptionIsBlocked ? 'duration-option--selected' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
                     <input
                       type="radio"
                       checked={!exceptionIsBlocked}
                       onChange={() => setExceptionIsBlocked(false)}
                     />
-                    أوقات مخصصة
+                    متاح (أوقات مخصصة)
                   </label>
                 </div>
               </div>
 
               <div className="form-group">
-                <label>السبب (اختياري)</label>
+                <label>السبب / الملاحظة</label>
                 <input
                   type="text"
                   value={exceptionReason}
                   onChange={(e) => setExceptionReason(e.target.value)}
-                  placeholder="مثال: إجازة، موعد خارجي..."
+                  placeholder="مثال: إجازة عيد، سفر عمل..."
                 />
               </div>
             </div>
@@ -510,551 +550,12 @@ const MyAvailability: React.FC = () => {
                 إلغاء
               </button>
               <button className="btn-primary" onClick={handleAddException}>
-                إضافة
+                حفظ الاستثناء
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <style>{`
-        .availability-page {
-          padding: 0;
-          min-height: 100vh;
-          background: var(--color-bg-secondary, #f9fafb);
-        }
-
-        .page-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          padding: 20px 24px;
-          background: white;
-          border-bottom: 1px solid var(--color-border, #e5e7eb);
-        }
-
-        .page-header__title {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-size: 18px;
-          font-weight: 600;
-          margin-bottom: 4px;
-        }
-
-        .page-header__subtitle {
-          font-size: 14px;
-          color: var(--color-text-secondary, #6b7280);
-          margin: 0;
-        }
-
-        .primary-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 10px 20px;
-          border-radius: 8px;
-          border: none;
-          background: var(--law-navy, #1E3A5F);
-          color: white;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-        }
-
-        .primary-btn:hover {
-          background: #2d4a6f;
-        }
-
-        .primary-btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .secondary-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 14px;
-          border-radius: 8px;
-          border: 1px solid var(--color-border, #e5e7eb);
-          background: white;
-          font-size: 13px;
-          cursor: pointer;
-        }
-
-        .secondary-btn:hover {
-          background: var(--color-bg-tertiary, #f3f4f6);
-        }
-
-        .message {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 12px 20px;
-          margin: 0 24px;
-          margin-top: 16px;
-          border-radius: 8px;
-          font-size: 14px;
-        }
-
-        .message--error {
-          background: #FEF2F2;
-          color: #DC2626;
-        }
-
-        .message--success {
-          background: #ECFDF5;
-          color: #059669;
-        }
-
-        .message button {
-          margin-right: auto;
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: inherit;
-          opacity: 0.7;
-        }
-
-        .content-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          padding: 24px;
-        }
-
-        .card {
-          background: white;
-          border-radius: 12px;
-          border: 1px solid var(--color-border, #e5e7eb);
-          padding: 20px;
-        }
-
-        .card:first-child {
-          grid-column: 1 / -1;
-        }
-
-        .card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-        }
-
-        .card-title {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 16px;
-          font-weight: 600;
-          margin: 0 0 16px;
-        }
-
-        .card-header .card-title {
-          margin: 0;
-        }
-
-        .schedule-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .day-row {
-          padding: 12px;
-          border-radius: 8px;
-          border: 1px solid var(--color-border, #e5e7eb);
-        }
-
-        .day-row--disabled {
-          background: var(--color-bg-secondary, #f9fafb);
-        }
-
-        .day-header {
-          display: flex;
-          align-items: center;
-        }
-
-        .toggle-label {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          cursor: pointer;
-        }
-
-        .toggle-label input {
-          display: none;
-        }
-
-        .toggle-switch {
-          width: 40px;
-          height: 22px;
-          background: var(--color-bg-tertiary, #e5e7eb);
-          border-radius: 11px;
-          position: relative;
-          transition: background 0.2s;
-        }
-
-        .toggle-switch::after {
-          content: '';
-          position: absolute;
-          top: 2px;
-          left: 2px;
-          width: 18px;
-          height: 18px;
-          background: white;
-          border-radius: 50%;
-          transition: transform 0.2s;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-
-        .toggle-label input:checked + .toggle-switch {
-          background: var(--law-navy, #1E3A5F);
-        }
-
-        .toggle-label input:checked + .toggle-switch::after {
-          transform: translateX(18px);
-        }
-
-        .day-name {
-          font-weight: 500;
-        }
-
-        .day-slots {
-          margin-top: 12px;
-          padding-top: 12px;
-          border-top: 1px solid var(--color-border, #e5e7eb);
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .slot-row {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .slot-row input[type="time"] {
-          padding: 8px 12px;
-          border-radius: 6px;
-          border: 1px solid var(--color-border, #e5e7eb);
-          font-size: 14px;
-        }
-
-        .slot-separator {
-          color: var(--color-text-secondary, #6b7280);
-          font-size: 13px;
-        }
-
-        .remove-slot-btn {
-          width: 28px;
-          height: 28px;
-          border-radius: 6px;
-          border: none;
-          background: transparent;
-          color: var(--color-text-secondary, #6b7280);
-          cursor: pointer;
-        }
-
-        .remove-slot-btn:hover {
-          background: #FEF2F2;
-          color: #DC2626;
-        }
-
-        .add-slot-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 12px;
-          border-radius: 6px;
-          border: 1px dashed var(--color-border, #e5e7eb);
-          background: transparent;
-          font-size: 13px;
-          color: var(--color-text-secondary, #6b7280);
-          cursor: pointer;
-          width: fit-content;
-        }
-
-        .add-slot-btn:hover {
-          border-color: var(--law-navy, #1E3A5F);
-          color: var(--law-navy, #1E3A5F);
-        }
-
-        .settings-form {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .form-group {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .form-group label {
-          font-size: 13px;
-          font-weight: 500;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .form-group input,
-        .form-group select {
-          padding: 10px 12px;
-          border-radius: 8px;
-          border: 1px solid var(--color-border, #e5e7eb);
-          font-size: 14px;
-        }
-
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-        }
-
-        .durations-grid {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .duration-option {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 14px;
-          border-radius: 8px;
-          border: 1px solid var(--color-border, #e5e7eb);
-          font-size: 13px;
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-
-        .duration-option:hover {
-          border-color: var(--law-navy, #1E3A5F);
-        }
-
-        .duration-option--selected {
-          background: rgba(30, 58, 95, 0.08);
-          border-color: var(--law-navy, #1E3A5F);
-        }
-
-        .duration-option input {
-          display: none;
-        }
-
-        .empty-exceptions {
-          text-align: center;
-          padding: 30px;
-          color: var(--color-text-secondary, #6b7280);
-        }
-
-        .empty-exceptions p {
-          margin: 0;
-          font-weight: 500;
-        }
-
-        .empty-exceptions span {
-          font-size: 13px;
-        }
-
-        .exceptions-list {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .exception-item {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px;
-          border-radius: 8px;
-          border: 1px solid var(--color-border, #e5e7eb);
-        }
-
-        .exception-info {
-          flex: 1;
-        }
-
-        .exception-date {
-          font-weight: 500;
-          display: block;
-        }
-
-        .exception-reason {
-          font-size: 12px;
-          color: var(--color-text-secondary, #6b7280);
-        }
-
-        .exception-type {
-          padding: 4px 10px;
-          border-radius: 12px;
-          font-size: 12px;
-          background: #EFF6FF;
-          color: #3B82F6;
-        }
-
-        .exception-type--blocked {
-          background: #FEF2F2;
-          color: #EF4444;
-        }
-
-        .delete-exception-btn {
-          width: 28px;
-          height: 28px;
-          border-radius: 6px;
-          border: none;
-          background: transparent;
-          color: var(--color-text-secondary, #6b7280);
-          cursor: pointer;
-        }
-
-        .delete-exception-btn:hover {
-          background: #FEF2F2;
-          color: #DC2626;
-        }
-
-        .loading-state {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          min-height: 400px;
-          color: var(--color-text-secondary, #6b7280);
-        }
-
-        .animate-spin {
-          animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-        }
-
-        .modal-content {
-          background: white;
-          border-radius: 12px;
-          width: 100%;
-          max-width: 400px;
-          overflow: hidden;
-        }
-
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 16px 20px;
-          border-bottom: 1px solid var(--color-border, #e5e7eb);
-        }
-
-        .modal-header h3 {
-          margin: 0;
-          font-size: 16px;
-        }
-
-        .close-btn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: var(--color-text-secondary, #6b7280);
-        }
-
-        .modal-body {
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .radio-group {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .radio-option {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 10px 12px;
-          border-radius: 6px;
-          border: 1px solid var(--color-border, #e5e7eb);
-          cursor: pointer;
-        }
-
-        .radio-option--selected {
-          border-color: var(--law-navy, #1E3A5F);
-          background: rgba(30, 58, 95, 0.05);
-        }
-
-        .modal-footer {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          padding: 16px 20px;
-          border-top: 1px solid var(--color-border, #e5e7eb);
-        }
-
-        .btn-secondary,
-        .btn-primary {
-          padding: 10px 20px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-        }
-
-        .btn-secondary {
-          border: 1px solid var(--color-border, #e5e7eb);
-          background: white;
-        }
-
-        .btn-primary {
-          border: none;
-          background: var(--law-navy, #1E3A5F);
-          color: white;
-        }
-
-        @media (max-width: 900px) {
-          .content-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .card:first-child {
-            grid-column: 1;
-          }
-        }
-
-        @media (max-width: 640px) {
-          .page-header {
-            flex-direction: column;
-            gap: 16px;
-          }
-
-          .form-row {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
     </div>
   );
 };
