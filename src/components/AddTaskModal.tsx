@@ -10,12 +10,15 @@ import {
   Calendar,
   Clock,
   User,
-  Briefcase
+  Briefcase,
+  Loader2,
+  CheckCircle2,
+  Tag
 } from 'lucide-react';
 import { UserService, type User as ServiceUser } from '../services/UserService';
 import { TaskService } from '../services/taskService';
 import type { CreateTaskForm } from '../types';
-import '../styles/task-modal.css';
+import '../styles/add-appointment-modal.css'; // Leverage existing Notion styles
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -84,37 +87,28 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  const updateField = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (error) setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.title.trim()) {
+      setError('عنوان المهمة مطلوب');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      // Validation
-      if (!formData.title.trim()) {
-        setError('عنوان المهمة مطلوب');
-        return;
-      }
-
-      if (!formData.due_date) {
-        setError('يجب تحديد الموعد النهائي');
-        return;
-      }
-
       // Prepare payload
       const taskData: CreateTaskForm = {
         title: formData.title.trim(),
         description: formData.description?.trim() || '',
         type: formData.type || 'other',
-        caseId: caseId || undefined, // Allow tasks without a case
+        caseId: caseId || undefined,
         assignedTo: formData.assigned_to || undefined,
         priority: formData.priority as any,
         dueDate: new Date(formData.due_date),
@@ -131,228 +125,210 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
     <AnimatePresence>
-      {isOpen && (
-        <div className="task-modal-overlay" onClick={onClose}>
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            transition={{ duration: 0.2 }}
-            className="task-modal"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="task-modal-header">
-              <div>
-                <h2 className="task-modal-title">
-                  <div style={{ background: 'var(--law-navy)', color: 'white', padding: '6px', borderRadius: '6px' }}>
-                    <Plus size={18} />
-                  </div>
-                  إضافة مهمة جديدة
-                </h2>
-                {(caseTitle || clientName) && (
-                  <p className="task-modal-subtitle">
-                    {caseTitle ? `القضية: ${caseTitle}` : ''} {clientName ? `• العميل: ${clientName}` : ''}
-                  </p>
-                )}
-              </div>
-              <button className="task-modal-close" onClick={onClose}>
-                <X size={20} />
-              </button>
+      <div className="add-appointment-modal-overlay" onClick={onClose}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.98, y: 10 }}
+          transition={{ duration: 0.15 }}
+          className="add-appointment-modal"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '750px' }}
+        >
+          {/* Header */}
+          <div className="modal-header">
+            <div className="modal-header-icon" style={{ backgroundColor: 'var(--law-navy)', color: 'white' }}>
+              <CheckCircle2 size={20} />
             </div>
+            <div className="modal-header-title">
+              <h2>إضافة مهمة جديدة</h2>
+              <span className="modal-header-subtitle">
+                {caseTitle ? `القضية: ${caseTitle}` : 'مهمة عامة'}
+              </span>
+            </div>
+            <button className="modal-close-btn" onClick={onClose}>
+              <X size={18} />
+            </button>
+          </div>
 
-            {/* Content */}
-            <form onSubmit={handleSubmit} className="task-modal-content">
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 14px',
-                    backgroundColor: '#FEF2F2',
-                    border: '1px solid #FECACA',
-                    borderRadius: '8px',
-                    color: '#DC2626',
-                    fontSize: '13px'
-                  }}
-                >
-                  <AlertCircle size={16} />
-                  {error}
-                </motion.div>
-              )}
-
-              {/* Title Input */}
-              <div className="form-group">
-                <input
-                  type="text"
-                  name="title"
-                  className="form-input"
-                  style={{ fontSize: '16px', fontWeight: 500, padding: '12px 14px' }}
-                  placeholder="ما الذي يجب إنجازه؟ (عنوان المهمة)"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  autoFocus
-                  required
-                />
+          {/* Body */}
+          <div className="modal-body" style={{ padding: '0 32px 32px' }}>
+            {error && (
+              <div className="modal-error" style={{ margin: '20px 0' }}>
+                <AlertCircle size={16} />
+                <span>{error}</span>
               </div>
+            )}
 
-              {/* Description */}
-              <div className="form-group">
-                <div className="form-label">
-                  <AlignLeft size={14} />
-                  الوصف
-                </div>
-                <textarea
-                  name="description"
-                  className="form-textarea"
-                  rows={3}
-                  placeholder="أضف تفاصيل، ملاحظات، أو روابط..."
-                  value={formData.description}
-                  onChange={handleInputChange}
-                />
-              </div>
+            {/* Large Title Input */}
+            <input
+              type="text"
+              className="modal-title-input"
+              placeholder="ما الذي يجب إنجازه؟"
+              value={formData.title}
+              onChange={(e) => updateField('title', e.target.value)}
+              autoFocus
+              style={{ marginTop: '20px' }}
+            />
 
-              <div className="form-row">
-                {/* Type */}
-                <div className="form-group">
-                  <label className="form-label">
-                    <Type size={14} />
-                    نوع المهمة
-                  </label>
-                  <select
-                    name="type"
-                    className="form-select"
-                    value={formData.type}
-                    onChange={handleInputChange}
-                  >
-                    <option value="other">عامة</option>
-                    <option value="review">مراجعة</option>
-                    <option value="research">بحث قانوني</option>
-                    <option value="consultation">استشارة</option>
-                    <option value="court">جلسة محكمة</option>
-                    <option value="document">إعداد وثائق</option>
-                    <option value="meeting">اجتماع</option>
-                  </select>
-                </div>
-
-                {/* Priority */}
-                <div className="form-group">
-                  <label className="form-label">
-                    <Flag size={14} />
-                    الأولوية
-                  </label>
-                  <select
-                    name="priority"
-                    className="form-select"
-                    value={formData.priority}
-                    onChange={handleInputChange}
-                  >
-                    <option value="low">منخفضة</option>
-                    <option value="medium">متوسطة</option>
-                    <option value="high">عالية</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-row">
-                {/* Due Date */}
-                <div className="form-group">
-                  <label className="form-label">
-                    <Calendar size={14} />
-                    تاريخ الاستحقاق
-                  </label>
-                  <input
-                    type="datetime-local"
-                    name="due_date"
-                    className="form-input"
-                    value={formData.due_date}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                {/* Estimated Hours */}
-                <div className="form-group">
-                  <label className="form-label">
-                    <Clock size={14} />
-                    المدة المقدرة (ساعات)
-                  </label>
-                  <input
-                    type="number"
-                    name="estimated_hours"
-                    className="form-input"
-                    placeholder="0.0"
-                    step="0.5"
-                    min="0"
-                    value={formData.estimated_hours}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
+            {/* Properties List */}
+            <div className="notion-properties-grid">
 
               {/* Assignee */}
-              <div className="form-group">
-                <label className="form-label">
+              <div className="notion-property">
+                <div className="notion-property-label">
                   <User size={14} />
-                  تعيين إلى
-                </label>
-                <div style={{ position: 'relative' }}>
+                  <span>تعيين إلى</span>
+                </div>
+                <div className="notion-property-value">
                   <select
-                    name="assigned_to"
-                    className="form-select"
                     value={formData.assigned_to}
-                    onChange={handleInputChange}
+                    onChange={(e) => updateField('assigned_to', e.target.value)}
                     disabled={loadingLawyers}
                   >
-                    <option value="">(بدون تعيين)</option>
+                    <option value="">👤 (بدون تعيين)</option>
                     {lawyers.map(lawyer => (
                       <option key={lawyer.id} value={lawyer.id}>
                         {lawyer.name}
                       </option>
                     ))}
                   </select>
-                  {loadingLawyers && (
-                    <div style={{ position: 'absolute', left: '30px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: 'var(--color-text-secondary)' }}>
-                      جاري التحميل...
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* Footer */}
-              <div className="task-modal-footer">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={onClose}
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    'جاري الحفظ...'
-                  ) : (
-                    <>
-                      <Plus size={16} />
-                      إنشاء المهمة
-                    </>
-                  )}
-                </button>
+              {/* Due Date */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <Calendar size={14} />
+                  <span>الموعد النهائي</span>
+                </div>
+                <div className="notion-property-value">
+                  <input
+                    type="datetime-local"
+                    value={formData.due_date}
+                    onChange={(e) => updateField('due_date', e.target.value)}
+                  />
+                </div>
               </div>
 
-            </form>
-          </motion.div>
-        </div>
-      )}
+              {/* Priority */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <Flag size={14} />
+                  <span>الأولوية</span>
+                </div>
+                <div className="notion-property-value">
+                  <select
+                    value={formData.priority}
+                    onChange={(e) => updateField('priority', e.target.value)}
+                  >
+                    <option value="low">🏳️ منخفضة</option>
+                    <option value="medium">🏴 متوسطة</option>
+                    <option value="high">🚩 عالية</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Type */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <Tag size={14} />
+                  <span>نوع المهمة</span>
+                </div>
+                <div className="notion-property-value">
+                  <select
+                    value={formData.type}
+                    onChange={(e) => updateField('type', e.target.value)}
+                  >
+                    <option value="other">📦 عامة</option>
+                    <option value="review">🔍 مراجعة</option>
+                    <option value="research">📚 بحث قانوني</option>
+                    <option value="consultation">💬 استشارة</option>
+                    <option value="court">⚖️ جلسة محكمة</option>
+                    <option value="document">📄 إعداد وثائق</option>
+                    <option value="meeting">👥 اجتماع</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Estimated Hours */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <Clock size={14} />
+                  <span>الوقت المقدر</span>
+                </div>
+                <div className="notion-property-value">
+                  <input
+                    type="number"
+                    placeholder="ساعات..."
+                    step="0.5"
+                    min="0"
+                    value={formData.estimated_hours}
+                    onChange={(e) => updateField('estimated_hours', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Related Case (Ready Only) */}
+              {caseTitle && (
+                <div className="notion-property">
+                  <div className="notion-property-label">
+                    <Briefcase size={14} />
+                    <span>القضية</span>
+                  </div>
+                  <div className="notion-property-value">
+                    <span style={{ fontSize: '13px', color: 'var(--color-text)', opacity: 0.8 }}>
+                      {caseTitle}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="notion-section-divider"></div>
+
+            {/* Description Area */}
+            <div className="notion-content-area">
+              <div className="notion-content-label">الوصف والملاحظات</div>
+              <textarea
+                className="notion-textarea"
+                placeholder="أضف وصفاً، روابط، أو تفاصيل المهمة هنا..."
+                rows={8}
+                value={formData.description}
+                onChange={(e) => updateField('description', e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="modal-footer">
+            <button className="notion-btn notion-btn-secondary" onClick={onClose} disabled={loading}>
+              إلغاء
+            </button>
+            <button
+              className="notion-btn notion-btn-primary"
+              disabled={loading || !formData.title.trim()}
+              onClick={handleSubmit}
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" style={{ marginLeft: '8px', display: 'inline' }} />
+                  جاري الحفظ...
+                </>
+              ) : (
+                <>
+                  <Plus size={14} style={{ marginLeft: '8px' }} />
+                  إنشاء المهمة
+                </>
+              )}
+            </button>
+          </div>
+        </motion.div>
+      </div>
     </AnimatePresence>
   );
 };

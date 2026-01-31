@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronRight,
   ChevronDown,
@@ -15,11 +15,14 @@ import {
   MoreHorizontal,
   Plus,
   Paperclip,
-  CheckSquare,
-  List,
   Activity,
   Briefcase,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft,
+  Layout,
+  ListTodo,
+  FileText,
+  SendHorizontal
 } from 'lucide-react';
 import { TaskService } from '../services/taskService';
 import { UserService } from '../services/UserService';
@@ -103,18 +106,13 @@ const TaskDetail: React.FC = () => {
   const handleStatusChange = async (newStatus: TaskStatus) => {
     if (!task) return;
     const updatedTask = { ...task, status: newStatus };
-
-    // Optimistic update
     setTask(updatedTask);
-
-    // تحديث الكاش المركزي لصفحة المهام
     TasksCache.updateTask(updatedTask);
-
     try {
       await TaskService.updateTaskStatus(taskId!, newStatus);
     } catch (error) {
       console.error("Status update failed", error);
-      loadTask(); // Revert
+      loadTask();
     }
   };
 
@@ -129,8 +127,8 @@ const TaskDetail: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-gray-500">جاري التحميل...</div>;
-  if (!task) return <div className="p-8 text-center text-red-500">لم يتم العثور على المهمة</div>;
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--color-text-secondary)' }}>جاري تحميل تفاصيل المهمة...</div>;
+  if (!task) return <div style={{ padding: '40px', textAlign: 'center', color: '#ef4444' }}>لم يتم العثور على المهمة</div>;
 
   const currentStatus = STATUS_CONFIG[task.status] || STATUS_CONFIG.todo;
   const currentPriority = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
@@ -145,25 +143,19 @@ const TaskDetail: React.FC = () => {
             <ChevronRight size={16} />
             المهام
           </button>
-          <span className="task-id-badge">#{taskId?.slice(0, 6)}</span>
+          <span className="task-breadcrumb-separator" style={{ color: 'var(--color-text-tertiary)' }}>/</span>
+          <span className="task-id-badge">TASK-{taskId?.slice(0, 4)}</span>
+        </div>
 
-          {/* Status Dropdown */}
-          <div style={{ position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Status Selector */}
+          <div className="status-select-wrapper">
             <button
               className="status-select-btn"
               onClick={() => setShowStatusDropdown(!showStatusDropdown)}
               style={{
-                backgroundColor: currentStatus.color + '20',
+                backgroundColor: currentStatus.color + '15',
                 color: currentStatus.color,
-                cursor: 'pointer',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 12px',
-                borderRadius: 6,
-                fontSize: 13,
-                fontWeight: 500
               }}
             >
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: currentStatus.color }}></span>
@@ -171,316 +163,222 @@ const TaskDetail: React.FC = () => {
               <ChevronDown size={14} />
             </button>
 
-            {showStatusDropdown && (
-              <>
-                {/* Backdrop */}
-                <div
-                  style={{
-                    position: 'fixed',
-                    inset: 0,
-                    zIndex: 99
-                  }}
-                  onClick={() => setShowStatusDropdown(false)}
-                />
-                {/* Dropdown */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: 0,
-                    marginTop: 4,
-                    background: 'var(--color-surface, #fff)',
-                    border: '1px solid var(--color-border, #e5e5e5)',
-                    borderRadius: 8,
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
-                    zIndex: 100,
-                    minWidth: 160,
-                    overflow: 'hidden'
-                  }}
-                >
-                  {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                    <button
-                      key={key}
-                      onClick={() => {
-                        handleStatusChange(key as TaskStatus);
-                        setShowStatusDropdown(false);
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        width: '100%',
-                        padding: '10px 14px',
-                        background: task?.status === key ? 'var(--color-surface-subtle, #f8f9fa)' : 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: 13,
-                        color: config.color,
-                        textAlign: 'right',
-                        transition: 'background 0.15s ease'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-surface-subtle, #f8f9fa)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = task?.status === key ? 'var(--color-surface-subtle, #f8f9fa)' : 'transparent'}
-                    >
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: config.color }}></span>
-                      {config.label}
-                      {task?.status === key && <CheckCircle size={14} style={{ marginRight: 'auto' }} />}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+            <AnimatePresence>
+              {showStatusDropdown && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="status-dropdown"
+                  >
+                    {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                      <button
+                        key={key}
+                        className="status-option"
+                        onClick={() => {
+                          handleStatusChange(key as TaskStatus);
+                          setShowStatusDropdown(false);
+                        }}
+                        style={{ color: task.status === key ? config.color : 'inherit' }}
+                      >
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: config.color }}></span>
+                        {config.label}
+                        {task.status === key && <CheckCircle size={14} style={{ marginRight: 'auto' }} />}
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
-        </div>
 
-        <div className="task-header-actions">
-          <button className="task-breadcrumb-btn" onClick={handleDeleteTask} title="حذف المهمة">
+          <button className="task-breadcrumb-btn" onClick={handleDeleteTask} title="حذف">
             <Trash2 size={16} />
           </button>
-          <button className="task-breadcrumb-btn" title="مشاركة">
-            <Share2 size={16} />
-          </button>
-          <button className="task-breadcrumb-btn">
+          <button className="task-breadcrumb-btn" title="خيارات إضافية">
             <MoreHorizontal size={16} />
           </button>
         </div>
       </div>
 
       <div className="task-content-wrapper">
-        {/* Main Content Column */}
+
+        {/* Main Content Area (Left) */}
         <div className="task-main-col">
-          <div className="task-title-section">
+          <div className="task-main-inner">
+            {/* Task Title */}
             <input
               className="task-title-input"
               defaultValue={task.title}
               placeholder="عنوان المهمة"
+              spellCheck={false}
             />
-          </div>
 
-          <div className="task-desc-section">
-            <textarea
-              className="task-desc-editor"
-              placeholder="أضف وصفاً، اكتب / للأوامر..."
-              defaultValue={task.description}
-            />
-          </div>
-
-          {/* Subtasks */}
-          <div className="task-section">
-            <SubtasksList
-              taskId={taskId!}
-              onProgressChange={(progress) => {
-                console.log('Subtasks progress:', progress);
-              }}
-            />
-          </div>
-
-          {/* Attachments (Mockup) */}
-          <div className="task-section">
-            <div className="task-section-header">
-              <Paperclip size={16} />
-              المرفقات
-            </div>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, padding: 12, width: 150, textAlign: 'center' }}>
-                <div style={{ background: '#F1F5F9', height: 80, borderRadius: 4, marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontWeight: 700, color: '#94A3B8' }}>PDF</span>
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 500 }}>ملف القضية.pdf</div>
+            {/* Description */}
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FileText size={16} /> الوصف
               </div>
-            </div>
-          </div>
-
-          {/* Activity Stream */}
-          <div className="activity-section">
-            <div className="activity-tabs">
-              <div className="activity-tab active">التعليقات</div>
-              <div className="activity-tab">السجل</div>
+              <textarea
+                className="task-desc-editor"
+                placeholder="أضف وصفاً تفصيلياً، اضغط / للأوامر..."
+                defaultValue={task.description}
+              />
             </div>
 
-            <div className="comment-box-wrapper">
-              <div className="user-avatar">أ</div>
-              <div className="comment-input-area">
+            {/* Subtasks */}
+            <div className="task-subtasks-wrapper">
+              <div className="section-header">
+                <ListTodo size={20} />
+                المهام الفرعية
+              </div>
+              <SubtasksList
+                taskId={taskId!}
+                onProgressChange={() => { }}
+              />
+            </div>
+
+            {/* Activity Feed */}
+            <div className="task-activity-wrapper">
+              <div className="section-header">
+                <Activity size={20} />
+                النشاط والتعليقات
+              </div>
+
+              {/* Comment Input */}
+              <div className="comment-input-box">
                 <MentionInput
                   value={newComment}
                   onChange={setNewComment}
                   onMentionsChange={setMentions}
-                  placeholder="اكتب تعليقاً... استخدم @ للإشارة"
-                  onSubmit={async () => {
-                    if (!newComment.trim() || submittingComment) return;
-                    try {
-                      setSubmittingComment(true);
-                      await TaskCommentService.createTaskComment(taskId!, {
-                        comment: newComment.trim(),
-                        mentions: mentions
-                      });
-                      setNewComment('');
-                      setMentions([]);
-                      loadComments();
-                    } catch (error) {
-                      console.error('Error adding comment:', error);
-                    } finally {
-                      setSubmittingComment(false);
-                    }
-                  }}
+                  placeholder="اكتب تعليقاً... يمكنك الإشارة للزملاء باستخدام @"
                 />
-                <div className="comment-actions">
+                <div className="comment-footer">
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}><Paperclip size={18} /></button>
+                  </div>
                   <button
+                    className="send-btn"
+                    disabled={!newComment.trim() || submittingComment}
                     onClick={async () => {
-                      if (!newComment.trim() || submittingComment) return;
-                      try {
-                        setSubmittingComment(true);
-                        await TaskCommentService.createTaskComment(taskId!, {
-                          comment: newComment.trim(),
-                          mentions: mentions
-                        });
-                        setNewComment('');
-                        setMentions([]);
-                        loadComments();
-                      } catch (error) {
-                        console.error('Error adding comment:', error);
-                      } finally {
-                        setSubmittingComment(false);
-                      }
-                    }}
-                    disabled={submittingComment || !newComment.trim()}
-                    style={{
-                      background: submittingComment ? '#94a3b8' : 'var(--law-navy)',
-                      color: 'white',
-                      border: 'none',
-                      padding: '6px 14px',
-                      borderRadius: 6,
-                      fontSize: 13,
-                      cursor: submittingComment ? 'not-allowed' : 'pointer'
+                      if (!newComment.trim()) return;
+                      setSubmittingComment(true);
+                      await TaskCommentService.createTaskComment(taskId!, { comment: newComment, mentions });
+                      setNewComment('');
+                      loadComments();
+                      setSubmittingComment(false);
                     }}
                   >
-                    {submittingComment ? 'جاري الإرسال...' : 'إرسال'}
+                    {submittingComment ? (
+                      'جاري الإرسال...'
+                    ) : (
+                      <>
+                        إرسال <SendHorizontal size={14} />
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
+
+              {/* Comments List */}
+              <div>
+                {taskComments.length > 0 ? (
+                  taskComments.map(comment => (
+                    <div key={comment.id} className="activity-item">
+                      <div className="activity-avatar">
+                        {comment.userId ? 'م' : 'U'}
+                      </div>
+                      <div className="activity-content">
+                        <div className="activity-header">
+                          <span className="activity-author">مستخدم النظام</span>
+                          <span className="activity-time">منذ ساعتين</span>
+                        </div>
+                        <div className="activity-text">{comment.comment}</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '20px', color: 'var(--color-text-tertiary)' }}>
+                    لا توجد أنشطة مسجلة لهذه المهمة حتى الآن
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar Properties (Right) */}
+        <div className="task-sidebar">
+
+          {/* Section 1: Core Info */}
+          <div className="sidebar-section">
+            <div className="sidebar-title">معلومات أساسية</div>
+
+            <div className="sidebar-row">
+              <div className="property-icon"><User size={16} /></div>
+              <div className="property-content">
+                <span className="property-label">المسؤول</span>
+                <span className="property-value">{assigneeName}</span>
+              </div>
             </div>
 
-            {/* Comments List */}
-            {taskComments.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                {taskComments.map(comment => (
-                  <div key={comment.id} style={{ display: 'flex', gap: 12 }}>
-                    <div className="user-avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
-                      {comment.userId ? 'U' : 'A'}
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontWeight: 600, fontSize: 13 }}>مستخدم</span>
-                        <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>منذ ساعة</span>
-                      </div>
-                      <div style={{ fontSize: 13, lineHeight: 1.5 }}>{comment.comment}</div>
-                    </div>
-                  </div>
-                ))}
+            <div className="sidebar-row">
+              <div className="property-icon"><Calendar size={16} /></div>
+              <div className="property-content">
+                <span className="property-label">تاريخ الاستحقاق</span>
+                <span className="property-value">
+                  {task.dueDate ? new Date(task.dueDate).toLocaleDateString('ar-SA') : 'غير محدد'}
+                </span>
               </div>
+            </div>
+
+            <div className="sidebar-row">
+              <div className="property-icon"><Flag size={16} /></div>
+              <div className="property-content">
+                <span className="property-label">الأولوية</span>
+                <span className="property-value" style={{ color: currentPriority.color }}>
+                  {currentPriority.label}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Time Tracking */}
+          <div className="sidebar-section">
+            <div className="sidebar-title">تتبع الوقت</div>
+            <div style={{ background: 'var(--dashboard-card)', padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+              <TaskTimer taskId={taskId!} taskTitle={task.title} caseTitle={(task as any).case?.title || ''} />
+            </div>
+          </div>
+
+          {/* Section 3: Related */}
+          <div className="sidebar-section">
+            <div className="sidebar-title">الارتباطات</div>
+            {(task as any).case ? (
+              <Link to={`/cases/${(task as any).case.id}`} className="sidebar-row" style={{ textDecoration: 'none' }}>
+                <div className="property-icon" style={{ color: 'var(--law-navy)' }}><Briefcase size={16} /></div>
+                <div className="property-content">
+                  <span className="property-label">تابع للقضية</span>
+                  <span className="property-value" style={{ fontSize: '12px', lineHeight: 1.4 }}>
+                    {(task as any).case.title}
+                  </span>
+                </div>
+                <ExternalLink size={12} style={{ opacity: 0.5 }} />
+              </Link>
             ) : (
-              <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13, padding: 20 }}>
-                لا توجد تعليقات حتى الآن
-              </div>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>غير مرتبطة بقضية</div>
             )}
           </div>
+
+          {/* Meta Info */}
+          <div style={{ marginTop: 'auto', fontSize: '11px', color: 'var(--color-text-tertiary)', textAlign: 'center' }}>
+            تم الإنشاء: {new Date(task.createdAt || Date.now()).toLocaleDateString('ar-SA')}
+          </div>
+
         </div>
 
-        {/* Sidebar Column */}
-        <div className="task-sidebar">
-          <div className="sidebar-card">
-            <div className="sidebar-row">
-              <div className="sidebar-label">
-                <User size={14} /> المسؤول
-              </div>
-              <div className="sidebar-value-btn">
-                <div className="user-avatar" style={{ width: 20, height: 20, fontSize: 10, background: '#3b82f6' }}>
-                  {assigneeName.charAt(0)}
-                </div>
-                {assigneeName}
-              </div>
-            </div>
-
-            <div className="sidebar-row">
-              <div className="sidebar-label">
-                <Calendar size={14} /> تاريخ الاستحقاق
-              </div>
-              <div className="sidebar-value-btn">
-                {task.dueDate ? new Date(task.dueDate).toLocaleDateString('ar-SA') : 'غير محدد'}
-              </div>
-            </div>
-
-            <div className="sidebar-row">
-              <div className="sidebar-label">
-                <Flag size={14} /> الأولوية
-              </div>
-              <div className="sidebar-value-btn" style={{ color: currentPriority.color }}>
-                <Flag size={14} fill={currentPriority.color} />
-                {currentPriority.label}
-              </div>
-            </div>
-
-            <div className="sidebar-row">
-              <div className="sidebar-label">
-                <Clock size={14} /> تتبع الوقت
-              </div>
-              <TaskTimer
-                taskId={taskId!}
-                taskTitle={task.title}
-                caseTitle={(task as any).case?.title || task.caseId || ''}
-              />
-            </div>
-          </div>
-
-          <div className="sidebar-card">
-            <div className="sidebar-label">
-              <Activity size={14} /> الخصائص
-            </div>
-            <div className="sidebar-row">
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>القضية المرتبطة</div>
-              {(task as any).case ? (
-                <Link
-                  to={`/cases/${(task as any).case.id}`}
-                  className="linked-case-card"
-                >
-                  <div className="linked-case-icon">
-                    <Briefcase size={16} />
-                  </div>
-                  <div className="linked-case-info">
-                    <div className="linked-case-number">{(task as any).case.file_number}</div>
-                    <div className="linked-case-title">{(task as any).case.title}</div>
-                  </div>
-                  <ExternalLink size={14} className="linked-case-arrow" />
-                </Link>
-              ) : task.caseId ? (
-                <Link
-                  to={`/cases/${task.caseId}`}
-                  style={{ fontSize: 13, fontWeight: 500, color: 'var(--law-navy)', textDecoration: 'underline' }}
-                >
-                  {task.caseId}
-                </Link>
-              ) : (
-                <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-                  غير مرتبطة بقضية
-                </div>
-              )}
-            </div>
-            <div className="sidebar-row">
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>الوسوم (Tags)</div>
-              <div className="tags-list">
-                <div className="tag-badge">إداري</div>
-                <div className="tag-badge">عاجل</div>
-                <button style={{ background: 'none', border: '1px dashed var(--color-border)', borderRadius: 4, padding: '2px 6px', fontSize: 11, cursor: 'pointer' }}>+ إضافة</button>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
-            تم الإنشاء في {new Date(task.createdAt || Date.now()).toLocaleDateString('ar-SA')}
-            <br />
-            آخر تحديث منذ يومين
-          </div>
-        </div>
       </div>
     </div>
   );

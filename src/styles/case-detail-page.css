@@ -211,6 +211,10 @@ body.dark .case-header-tab {
     color: #8b5cf6;
 }
 
+.case-header-tab__icon--teal {
+    color: #0d9488;
+}
+
 .case-header-tab__count {
     font-weight: 600;
     color: var(--color-heading);
@@ -869,37 +873,39 @@ body.dark .case-subject-content {
     border: 1px solid var(--color-border);
 }
 
-/* === Timeline Section === */
+/* === Timeline Section - Notion Refined === */
 .case-timeline-section {
     background: var(--dashboard-card);
     border: 1px solid var(--color-border);
     border-radius: 8px;
-    margin-top: 4px;
+    margin-top: 8px;
+    overflow: hidden;
 }
 
 .case-timeline-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
+    padding: 16px 20px 12px;
     border-bottom: 1px solid var(--color-border);
 }
 
 .case-timeline-header__title {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 14px;
+    gap: 10px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--color-heading);
 }
 
 .case-timeline-header__title svg {
     color: var(--law-navy);
+    opacity: 0.8;
 }
 
 .case-timeline-content {
-    padding: 16px;
+    padding: 8px 12px 20px;
 }
 
 /* === Najiz Link === */

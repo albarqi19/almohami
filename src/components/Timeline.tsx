@@ -1,17 +1,21 @@
 ﻿import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Clock, 
-  FileText, 
-  Calendar, 
-  User, 
-  MessageSquare, 
+import {
+  Clock,
+  FileText,
+  Calendar,
+  User,
+  MessageSquare,
   AlertCircle,
   CheckCircle,
   Phone,
   Mail,
-  Scale
+  Scale,
+  PlusCircle,
+  History,
+  Activity
 } from 'lucide-react';
+import '../styles/timeline.css';
 
 export interface TimelineEvent {
   id: string;
@@ -38,53 +42,44 @@ interface TimelineProps {
 const Timeline: React.FC<TimelineProps> = ({ events }) => {
   const getEventIcon = (type: TimelineEvent['type']) => {
     switch (type) {
-      case 'case_created': return Scale;
+      case 'case_created': return PlusCircle;
       case 'document_added': return FileText;
       case 'hearing_scheduled': return Calendar;
       case 'task_completed': return CheckCircle;
       case 'note_added': return MessageSquare;
-      case 'status_changed': return AlertCircle;
+      case 'status_changed': return History;
       case 'call_made': return Phone;
       case 'email_sent': return Mail;
       case 'meeting_held': return User;
-      default: return Clock;
+      default: return Activity;
     }
   };
 
-  const getEventColor = (type: TimelineEvent['type']) => {
+  const getActionText = (type: TimelineEvent['type']) => {
     switch (type) {
-      case 'case_created': return 'var(--color-primary)';
-      case 'document_added': return 'var(--color-info)';
-      case 'hearing_scheduled': return 'var(--color-warning)';
-      case 'task_completed': return 'var(--color-success)';
-      case 'note_added': return 'var(--color-purple-500)';
-      case 'status_changed': return 'var(--color-orange-500)';
-      case 'call_made': return 'var(--color-blue-500)';
-      case 'email_sent': return 'var(--color-teal-500)';
-      case 'meeting_held': return 'var(--color-indigo-500)';
-      default: return 'var(--color-secondary)';
+      case 'case_created': return 'قام بإنشاء القضية';
+      case 'document_added': return 'أضاف وثيقة جديدة';
+      case 'hearing_scheduled': return 'قام بجدولة جلسة';
+      case 'task_completed': return 'أتمّ المهمة';
+      case 'note_added': return 'أضاف ملاحظة';
+      case 'status_changed': return 'قام بتغيير الحالة إلى';
+      case 'call_made': return 'أجرى مكالمة هاتفية مع';
+      case 'email_sent': return 'أرسل بريداً إلكترونياً إلى';
+      case 'meeting_held': return 'عقد اجتماعاً';
+      default: return 'قام بإجراء';
     }
   };
 
-  const getEventTypeLabel = (type: TimelineEvent['type']) => {
-    switch (type) {
-      case 'case_created': return 'إنشاء القضية';
-      case 'document_added': return 'إضافة وثيقة';
-      case 'hearing_scheduled': return 'جدولة جلسة';
-      case 'task_completed': return 'إنجاز مهمة';
-      case 'note_added': return 'إضافة ملاحظة';
-      case 'status_changed': return 'تغيير الحالة';
-      case 'call_made': return 'مكالمة هاتفية';
-      case 'email_sent': return 'إرسال بريد إلكتروني';
-      case 'meeting_held': return 'اجتماع';
-      default: return 'حدث';
-    }
-  };
+  const formatRelativeDate = (date: Date) => {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  const formatDate = (date: Date) => {
+    if (diffInSeconds < 60) return 'الآن';
+    if (diffInSeconds < 3600) return `منذ ${Math.floor(diffInSeconds / 60)} دقيقة`;
+    if (diffInSeconds < 86400) return `منذ ${Math.floor(diffInSeconds / 3600)} ساعة`;
+
     return new Intl.DateTimeFormat('ar-SA', {
-      year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -95,233 +90,89 @@ const Timeline: React.FC<TimelineProps> = ({ events }) => {
 
   if (events.length === 0) {
     return (
-      <div style={{
-        padding: '40px',
-        textAlign: 'center',
-        backgroundColor: 'var(--color-surface)',
-        borderRadius: '12px',
-        border: '1px solid var(--color-border)'
-      }}>
-        <Clock size={48} style={{ color: 'var(--color-text-secondary)', marginBottom: '16px' }} />
-        <h3 style={{
-          fontSize: 'var(--font-size-lg)',
-          color: 'var(--color-text)',
-          marginBottom: '8px'
-        }}>
-          لا توجد أحداث بعد
-        </h3>
-        <p style={{
-          color: 'var(--color-text-secondary)',
-          fontSize: 'var(--font-size-sm)',
-          margin: 0
-        }}>
-          ستظهر جميع الأحداث والإجراءات المتعلقة بهذه القضية هنا
-        </p>
+      <div className="notion-timeline--empty">
+        <Clock size={40} style={{ opacity: 0.2, marginBottom: '16px' }} />
+        <h3>لا توجد أحداث بعد</h3>
+        <p>سيتم تسجيل جميع النشاطات هنا تلقائياً</p>
       </div>
     );
   }
 
   return (
-    <div style={{
-      backgroundColor: 'var(--color-surface)',
-      borderRadius: '12px',
-      border: '1px solid var(--color-border)',
-      padding: '24px'
-    }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        marginBottom: '24px'
-      }}>
-        <Clock size={24} style={{ color: 'var(--color-primary)' }} />
-        <h2 style={{
-          fontSize: 'var(--font-size-lg)',
-          fontWeight: 'var(--font-weight-semibold)',
-          color: 'var(--color-text)',
-          margin: 0
-        }}>
-          الجدول الزمني للقضية
-        </h2>
-      </div>
+    <div className="notion-timeline">
+      <div className="notion-timeline__container">
+        <div className="notion-timeline__line"></div>
 
-      <div style={{ position: 'relative' }}>
-        {/* Timeline line */}
-        <div style={{
-          position: 'absolute',
-          right: '24px',
-          top: '0',
-          bottom: '0',
-          width: '2px',
-          backgroundColor: 'var(--color-border)',
-          zIndex: 1
-        }} />
+        {sortedEvents.map((event, index) => {
+          const Icon = getEventIcon(event.type);
+          const actionText = getActionText(event.type);
 
-        {/* Timeline events */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {sortedEvents.map((event, index) => {
-            const Icon = getEventIcon(event.type);
-            const eventColor = getEventColor(event.type);
+          return (
+            <motion.div
+              key={event.id}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="notion-timeline__event"
+            >
+              <div className="notion-timeline__marker">
+                <div className="notion-timeline__icon-wrapper">
+                  <Icon size={14} />
+                </div>
+              </div>
 
-            return (
-              <motion.div
-                key={event.id}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                style={{
-                  position: 'relative',
-                  paddingRight: '60px'
-                }}
-              >
-                {/* Timeline dot */}
-                <div style={{
-                  position: 'absolute',
-                  right: '15px',
-                  top: '4px',
-                  width: '18px',
-                  height: '18px',
-                  backgroundColor: eventColor,
-                  borderRadius: '50%',
-                  border: '3px solid var(--color-surface)',
-                  zIndex: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <Icon size={10} style={{ color: 'white' }} />
+              <div className="notion-timeline__content">
+                <div className="notion-timeline__event-header">
+                  <div className="notion-timeline__title-row">
+                    <span className="notion-timeline__user">{event.user}</span>
+                    <span className="notion-timeline__action-text">{actionText}</span>
+                    <span className="notion-timeline__object">
+                      {event.type === 'status_changed' ? event.metadata?.newStatus : event.title}
+                    </span>
+                  </div>
+                  <span className="notion-timeline__date">
+                    {formatRelativeDate(event.date)}
+                  </span>
                 </div>
 
-                {/* Event content */}
-                <div style={{
-                  backgroundColor: 'var(--color-background)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  padding: '16px',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateX(-4px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateX(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-                >
-                  {/* Event header */}
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    marginBottom: '8px',
-                    gap: '12px'
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        marginBottom: '4px'
-                      }}>
-                        <span style={{
-                          fontSize: 'var(--font-size-xs)',
-                          fontWeight: 'var(--font-weight-medium)',
-                          color: eventColor,
-                          backgroundColor: `${eventColor}15`,
-                          padding: '2px 8px',
-                          borderRadius: '4px'
-                        }}>
-                          {getEventTypeLabel(event.type)}
-                        </span>
-                      </div>
-                      <h3 style={{
-                        fontSize: 'var(--font-size-sm)',
-                        fontWeight: 'var(--font-weight-medium)',
-                        color: 'var(--color-text)',
-                        margin: 0,
-                        lineHeight: 1.4
-                      }}>
-                        {event.title}
-                      </h3>
-                    </div>
-                    
-                    <div style={{
-                      textAlign: 'left',
-                      flexShrink: 0
-                    }}>
-                      <div style={{
-                        fontSize: 'var(--font-size-xs)',
-                        color: 'var(--color-text-secondary)',
-                        marginBottom: '2px'
-                      }}>
-                        {formatDate(event.date)}
-                      </div>
-                      <div style={{
-                        fontSize: 'var(--font-size-xs)',
-                        color: 'var(--color-text-secondary)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
-                        <User size={12} />
-                        {event.user}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Event description */}
-                  <p style={{
-                    fontSize: 'var(--font-size-sm)',
-                    color: 'var(--color-text-secondary)',
-                    lineHeight: 1.5,
-                    margin: 0,
-                    marginBottom: event.metadata ? '12px' : '0'
-                  }}>
+                {event.description && (
+                  <p className="notion-timeline__description">
                     {event.description}
                   </p>
+                )}
 
-                  {/* Event metadata */}
-                  {event.metadata && (
-                    <div style={{
-                      backgroundColor: 'var(--color-surface)',
-                      padding: '12px',
-                      borderRadius: '6px',
-                      fontSize: 'var(--font-size-xs)',
-                      color: 'var(--color-text-secondary)'
-                    }}>
-                      {event.metadata.documentName && (
-                        <div style={{ marginBottom: '4px' }}>
-                          <strong>اسم الوثيقة:</strong> {event.metadata.documentName}
-                        </div>
-                      )}
-                      {event.metadata.oldStatus && event.metadata.newStatus && (
-                        <div style={{ marginBottom: '4px' }}>
-                          <strong>تغيير الحالة:</strong> من "{event.metadata.oldStatus}" إلى "{event.metadata.newStatus}"
-                        </div>
-                      )}
-                      {event.metadata.taskTitle && (
-                        <div style={{ marginBottom: '4px' }}>
-                          <strong>المهمة:</strong> {event.metadata.taskTitle}
-                        </div>
-                      )}
-                      {event.metadata.hearingDate && (
-                        <div style={{ marginBottom: '4px' }}>
-                          <strong>موعد الجلسة:</strong> {formatDate(event.metadata.hearingDate)}
-                        </div>
-                      )}
-                      {event.metadata.contactInfo && (
-                        <div>
-                          <strong>معلومات الاتصال:</strong> {event.metadata.contactInfo}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+                {event.metadata && (Object.keys(event.metadata).length > 0) && (
+                  <div className="notion-timeline__details">
+                    {event.metadata.documentName && (
+                      <div className="notion-timeline__detail-item">
+                        <span className="notion-timeline__detail-label">الوثيقة:</span>
+                        {event.metadata.documentName}
+                      </div>
+                    )}
+                    {event.metadata.oldStatus && (
+                      <div className="notion-timeline__detail-item">
+                        <span className="notion-timeline__detail-label">الحالة السابقة:</span>
+                        {event.metadata.oldStatus}
+                      </div>
+                    )}
+                    {event.metadata.hearingDate && (
+                      <div className="notion-timeline__detail-item">
+                        <span className="notion-timeline__detail-label">موعد الجلسة:</span>
+                        {new Intl.DateTimeFormat('ar-SA', { dateStyle: 'full' }).format(new Date(event.metadata.hearingDate))}
+                      </div>
+                    )}
+                    {event.metadata.contactInfo && (
+                      <div className="notion-timeline__detail-item">
+                        <span className="notion-timeline__detail-label">تواصل مع:</span>
+                        {event.metadata.contactInfo}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );

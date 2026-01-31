@@ -23,7 +23,8 @@ import {
   Hash,
   Scale,
   Activity,
-  MessageSquare
+  MessageSquare,
+  PenTool
 } from 'lucide-react';
 import Timeline from '../components/Timeline';
 import EditCaseModal from '../components/EditCaseModal';
@@ -35,6 +36,7 @@ import QuickActionsModal from '../components/QuickActionsModal';
 import ClientPhoneModal from '../components/ClientPhoneModal';
 import CaseMessagesModal from '../components/CaseMessagesModal';
 import ShareCaseModal from '../components/ShareCaseModal';
+import LegalMemoWorkspace from '../components/LegalMemoWorkspace';
 import type { TimelineEvent } from '../components/Timeline';
 import { CaseService } from '../services/caseService';
 import { ActivityService } from '../services/activityService';
@@ -52,6 +54,7 @@ const CaseDetailPage: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showDocumentsModal, setShowDocumentsModal] = useState(false);
+  const [showMemoWorkspace, setShowMemoWorkspace] = useState(false);
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
   const [showQuickActionsModal, setShowQuickActionsModal] = useState(false);
@@ -280,6 +283,15 @@ const CaseDetailPage: React.FC = () => {
 
           {/* Quick Tabs */}
           <div className="case-header-tabs">
+            <button
+              className="case-header-tab"
+              onClick={() => setShowMemoWorkspace(true)}
+            >
+              <span className="case-header-tab__icon case-header-tab__icon--teal">
+                <PenTool size={14} />
+              </span>
+              إنشاء مذكرة
+            </button>
             <button className="case-header-tab" onClick={() => setShowDocumentsModal(true)}>
               <span className="case-header-tab__icon case-header-tab__icon--blue">
                 <FileText size={14} />
@@ -748,6 +760,14 @@ const CaseDetailPage: React.FC = () => {
         onClose={() => setShowDocumentsModal(false)}
         caseId={caseData.id}
         caseTitle={caseData.title}
+      />
+
+      <LegalMemoWorkspace
+        isOpen={showMemoWorkspace}
+        onClose={() => setShowMemoWorkspace(false)}
+        caseId={caseData.id}
+        caseTitle={caseData.title}
+        onMemoCreated={() => setShowMemoWorkspace(false)}
       />
 
       <CaseTasksModal
