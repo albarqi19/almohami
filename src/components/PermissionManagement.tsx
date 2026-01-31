@@ -35,12 +35,18 @@ interface User extends ApiUser {
 
 interface PermissionManagementProps {
   className?: string;
+  autoOpenAddUser?: boolean;
+  onAddUserModalChange?: (isOpen: boolean) => void;
 }
 
 const USERS_CACHE_KEY = 'users_data';
 const USERS_CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
-const PermissionManagement: React.FC<PermissionManagementProps> = ({ className = "" }) => {
+const PermissionManagement: React.FC<PermissionManagementProps> = ({
+  className = "",
+  autoOpenAddUser = false,
+  onAddUserModalChange
+}) => {
   const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'permissions'>('users');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');
@@ -203,6 +209,14 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({ className =
     loadRoles();
     loadPermissions();
   }, []);
+
+  // Auto open add user modal when prop is true
+  useEffect(() => {
+    if (autoOpenAddUser) {
+      setShowAddUserModal(true);
+      onAddUserModalChange?.(false); // Reset the prop
+    }
+  }, [autoOpenAddUser, onAddUserModalChange]);
 
   // Handle user creation
   const handleCreateUser = async (userData: CreateUserForm) => {

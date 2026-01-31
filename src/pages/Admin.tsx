@@ -57,6 +57,7 @@ const Admin: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [roleFilter, setRoleFilter] = useState('');
+  const [triggerAddUser, setTriggerAddUser] = useState(false);
 
   // Role options for filter
   const roleOptions = [
@@ -207,7 +208,10 @@ const Admin: React.FC = () => {
           <p>إدارة النظام والمستخدمين والإعدادات العامة</p>
         </div>
         <div className="admin-header__actions">
-          <button className="admin-header__btn admin-header__btn--primary">
+          <button
+            className="admin-header__btn admin-header__btn--primary"
+            onClick={() => setTriggerAddUser(true)}
+          >
             <Plus size={16} />
             مستخدم جديد
           </button>
@@ -395,7 +399,10 @@ const Admin: React.FC = () => {
             </div>
           </div>
           <div className="admin-section__content">
-            <PermissionManagement />
+            <PermissionManagement
+              autoOpenAddUser={triggerAddUser}
+              onAddUserModalChange={(isOpen) => !isOpen && setTriggerAddUser(false)}
+            />
           </div>
         </div>
 
