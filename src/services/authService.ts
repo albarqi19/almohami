@@ -67,7 +67,9 @@ export class AuthService {
 
     if (response.success && response.data) {
       // Set token in API client
-      apiClient.setToken(response.data.token);
+      if (response.data.token) {
+        apiClient.setToken(response.data.token);
+      }
       return response.data;
     } else {
       throw new Error(response.message || 'فشل في التسجيل');
