@@ -10,6 +10,8 @@ export interface User {
   isActive: boolean;
   createdAt: Date;
   lastLoginAt?: Date;
+  // Two-Factor Authentication
+  two_factor_enabled?: boolean;
   // Subscription fields
   is_tenant_owner?: boolean;
   welcome_shown_at?: string | null;
@@ -603,4 +605,51 @@ export interface WekalaFilters {
   search?: string;
   page?: number;
   limit?: number;
+}
+
+// ==================== Two-Factor Authentication Types ====================
+
+// استجابة إعداد المصادقة الثنائية
+export interface TwoFactorSetupResponse {
+  secret: string;
+  qr_code: string; // base64 data URI
+}
+
+// استجابة تأكيد المصادقة الثنائية
+export interface TwoFactorConfirmResponse {
+  recovery_codes: string[];
+}
+
+// استجابة حالة المصادقة الثنائية
+export interface TwoFactorStatusResponse {
+  two_factor_enabled: boolean;
+  two_factor_confirmed_at: string | null;
+}
+
+// استجابة تسجيل الدخول مع 2FA
+export interface LoginWith2FAResponse {
+  requires_2fa: boolean;
+  temp_token?: string;
+  user?: User;
+  token?: string;
+}
+
+// استجابة التحقق من 2FA
+export interface Verify2FAResponse {
+  user: User;
+  token: string;
+  tenant?: any;
+  is_trial?: boolean;
+  trial_ends_at?: string | null;
+  trial_days_remaining?: number | null;
+  subscription_active?: boolean;
+  subscription_status?: {
+    has_access: boolean;
+    status: string;
+    subscription_active: boolean;
+    is_trial: boolean;
+    trial_expired: boolean;
+    trial_ends_at: string | null;
+    requires_renewal: boolean;
+  };
 }

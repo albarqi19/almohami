@@ -8,11 +8,14 @@ interface LoginResult {
   success: boolean;
   error?: string;
   code?: 'subscription_expired' | 'account_suspended' | 'auth_failed';
+  requires_2fa?: boolean;
+  temp_token?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   login: (nationalId: string, pin: string) => Promise<LoginResult>;
+  verify2FA: (tempToken: string, code: string) => Promise<LoginResult>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -60,11 +63,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (nationalId: string, pin: string): Promise<{
-    success: boolean;
-    error?: string;
-    code?: 'subscription_expired' | 'account_suspended' | 'auth_failed';
-  }> => {
+  const login = async (nationalId: string, pin: string): Promise<LoginResult> => {
+    console.log('🔐 AuthContext: login() called');
     setIsLoading(true);
 
     // Preserve theme preference before clearing cache
@@ -82,8 +82,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      console.log('🔐 AuthContext: Calling AuthService.login()...');
       const loginResponse = await AuthService.login({ nationalId, pin });
-      setUser(loginResponse.user);
+      console.log('🔐 AuthContext: loginResponse:', JSON.stringify(loginResponse, null, 2));
+
+      // Check if 2FA is required
+      if (loginResponse.requires_2fa && loginResponse.temp_token) {
+        console.log('🔐 AuthContext: 2FA required! Returning result...');
+        setIsLoading(false);
+        return {
+          success: true,
+          requires_2fa: true,
+          temp_token: loginResponse.temp_token,
+        };
+      }
+
+      // No 2FA required - set user
+      if (loginResponse.user) {
+        setUser(loginResponse.user);
+      }
       setIsLoading(false);
       return { success: true };
     } catch (error: any) {
@@ -96,6 +113,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         error: error.message || 'حدث خطأ أثناء تسجيل الدخول',
         code: error.subscriptionExpired ? 'subscription_expired' :
               error.accountSuspended ? 'account_suspended' : 'auth_failed'
+      };
+    }
+  };
+
+  const verify2FA = async (tempToken: string, code: string): Promise<LoginResult> => {
+    setIsLoading(true);
+
+    try {
+      const response = await AuthService.verify2FA(tempToken, code);
+      if (response.user) {
+        setUser(response.user);
+      }
+      setIsLoading(false);
+      return { success: true };
+    } catch (error: any) {
+      console.error('2FA verification failed:', error);
+      setIsLoading(false);
+      return {
+        success: false,
+        error: error.message || 'رمز التحقق غير صحيح',
       };
     }
   };
@@ -131,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, verify2FA, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Scale,
     IdCard,
@@ -7,6 +7,8 @@ import {
     Eye,
     EyeOff,
     LogIn,
+    ShieldCheck,
+    ArrowRight,
 } from 'lucide-react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -42,8 +44,14 @@ function isLightColor(color: string): boolean {
  * LoginContent - محتوى صفحة تسجيل الدخول
  * يُستخدم داخل AuthLayout
  */
+interface TwoFactorState {
+    required: boolean;
+    tempToken: string;
+    code: string;
+}
+
 const LoginContent: React.FC = () => {
-    const { user, login, isLoading: authLoading } = useAuth();
+    const { user, login, verify2FA, isLoading: authLoading } = useAuth();
     const { tenant, isSubdomain } = useTenant();
     const location = useLocation();
     const rememberKey = useMemo(() => 'law-firm:remember', []);
@@ -57,6 +65,12 @@ const LoginContent: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    const [twoFactor, setTwoFactor] = useState<TwoFactorState>({
+        required: false,
+        tempToken: '',
+        code: '',
+    });
+    const codeInputRef = useRef<HTMLInputElement>(null);
 
     // Check if user just registered
     useEffect(() => {
@@ -96,6 +110,13 @@ const LoginContent: React.FC = () => {
             }));
         }
     }, [rememberKey, rememberValueKey]);
+
+    // Focus on 2FA code input when required
+    useEffect(() => {
+        if (twoFactor.required && codeInputRef.current) {
+            codeInputRef.current.focus();
+        }
+    }, [twoFactor.required]);
 
     // Calculate text color based on background color - MUST be before any early returns
     const textColor = useMemo(() => {
@@ -153,6 +174,16 @@ const LoginContent: React.FC = () => {
                 return;
             }
 
+            // Check if 2FA is required
+            if (result.requires_2fa && result.temp_token) {
+                setTwoFactor({
+                    required: true,
+                    tempToken: result.temp_token,
+                    code: '',
+                });
+                return;
+            }
+
             // Login successful - save remember me preference
             if (formData.rememberMe) {
                 localStorage.setItem(rememberKey, 'true');
@@ -166,6 +197,43 @@ const LoginContent: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handle2FASubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const result = await verify2FA(twoFactor.tempToken, twoFactor.code);
+
+            if (!result.success) {
+                setError(result.error || 'رمز التحقق غير صحيح');
+                return;
+            }
+
+            // 2FA successful - save remember me preference
+            if (formData.rememberMe) {
+                localStorage.setItem(rememberKey, 'true');
+                localStorage.setItem(rememberValueKey, formData.nationalId.trim());
+            } else {
+                localStorage.removeItem(rememberKey);
+                localStorage.removeItem(rememberValueKey);
+            }
+        } catch (error) {
+            setError('حدث خطأ أثناء التحقق من الرمز');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleBack = () => {
+        setTwoFactor({
+            required: false,
+            tempToken: '',
+            code: '',
+        });
+        setError('');
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -240,98 +308,202 @@ const LoginContent: React.FC = () => {
                 </motion.div>
             )}
 
-            <form className="auth-form" onSubmit={handleSubmit} aria-describedby="login-title">
-                <div className="form-field">
-                    <label className="form-label" htmlFor="nationalId">رقم الهوية</label>
-                    <div className="auth-field">
-                        <span className="auth-field__icon" aria-hidden="true">
-                            <IdCard size={18} />
-                        </span>
-                        <input
-                            id="nationalId"
-                            name="nationalId"
-                            type="text"
-                            className="input auth-field__input--with-icon"
-                            placeholder="أدخل رقم الهوية الوطنية"
-                            autoComplete="username"
-                            inputMode="numeric"
-                            required
-                            value={formData.nationalId}
-                            onChange={handleInputChange}
-                        />
-                    </div>
-                </div>
+            <AnimatePresence mode="wait">
+                {!twoFactor.required ? (
+                    <motion.form
+                        key="login-form"
+                        className="auth-form"
+                        onSubmit={handleSubmit}
+                        aria-describedby="login-title"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        <div className="form-field">
+                            <label className="form-label" htmlFor="nationalId">رقم الهوية</label>
+                            <div className="auth-field">
+                                <span className="auth-field__icon" aria-hidden="true">
+                                    <IdCard size={18} />
+                                </span>
+                                <input
+                                    id="nationalId"
+                                    name="nationalId"
+                                    type="text"
+                                    className="input auth-field__input--with-icon"
+                                    placeholder="أدخل رقم الهوية الوطنية"
+                                    autoComplete="username"
+                                    inputMode="numeric"
+                                    required
+                                    value={formData.nationalId}
+                                    onChange={handleInputChange}
+                                />
+                            </div>
+                        </div>
 
-                <div className="form-field">
-                    <label className="form-label" htmlFor="pin">الرقم السري</label>
-                    <div className="auth-field">
-                        <span className="auth-field__icon" aria-hidden="true">
-                            <Lock size={18} />
-                        </span>
-                        <input
-                            id="pin"
-                            name="pin"
-                            type={showPin ? 'text' : 'password'}
-                            className="input auth-field__input--with-icon auth-field__input--with-toggle"
-                            placeholder="أدخل الرقم السري"
-                            autoComplete="current-password"
-                            required
-                            value={formData.pin}
-                            onChange={handleInputChange}
-                        />
+                        <div className="form-field">
+                            <label className="form-label" htmlFor="pin">الرقم السري</label>
+                            <div className="auth-field">
+                                <span className="auth-field__icon" aria-hidden="true">
+                                    <Lock size={18} />
+                                </span>
+                                <input
+                                    id="pin"
+                                    name="pin"
+                                    type={showPin ? 'text' : 'password'}
+                                    className="input auth-field__input--with-icon auth-field__input--with-toggle"
+                                    placeholder="أدخل الرقم السري"
+                                    autoComplete="current-password"
+                                    required
+                                    value={formData.pin}
+                                    onChange={handleInputChange}
+                                />
+                                <button
+                                    type="button"
+                                    className="auth-field__toggle"
+                                    onClick={() => setShowPin((prev) => !prev)}
+                                    aria-label={showPin ? 'إخفاء الرقم السري' : 'إظهار الرقم السري'}
+                                >
+                                    {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="auth-form__options">
+                            <label htmlFor="rememberMe" className="auth-checkbox">
+                                <input
+                                    id="rememberMe"
+                                    name="rememberMe"
+                                    type="checkbox"
+                                    checked={formData.rememberMe}
+                                    onChange={handleInputChange}
+                                />
+                                تذكرني لاحقًا
+                            </label>
+                            <button type="button" className="auth-link">
+                                نسيت الرقم السري؟
+                            </button>
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="button button--primary auth-submit"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <>
+                                    <div className="auth-spinner" aria-hidden="true" />
+                                    جاري تسجيل الدخول...
+                                </>
+                            ) : (
+                                <>
+                                    <LogIn size={18} />
+                                    تسجيل الدخول
+                                </>
+                            )}
+                        </button>
+
+                        {/* Hide register link on tenant subdomain */}
+                        {!isSubdomain && (
+                            <div className="auth-register-prompt">
+                                <span>ليس لديك حساب؟</span>
+                                <Link to="/register">إنشاء حساب جديد</Link>
+                            </div>
+                        )}
+                    </motion.form>
+                ) : (
+                    <motion.form
+                        key="2fa-form"
+                        className="auth-form"
+                        onSubmit={handle2FASubmit}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        <div className="auth-2fa-header" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                            <div style={{
+                                width: '64px',
+                                height: '64px',
+                                borderRadius: '50%',
+                                background: 'var(--primary-lighter, #e8f4fd)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 1rem'
+                            }}>
+                                <ShieldCheck size={32} style={{ color: 'var(--primary, #2563eb)' }} />
+                            </div>
+                            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                المصادقة الثنائية
+                            </h2>
+                            <p style={{ color: 'var(--text-secondary, #6b7280)', fontSize: '0.875rem' }}>
+                                أدخل رمز التحقق من تطبيق Google Authenticator
+                            </p>
+                        </div>
+
+                        <div className="form-field">
+                            <label className="form-label" htmlFor="2fa-code">رمز التحقق</label>
+                            <div className="auth-field">
+                                <span className="auth-field__icon" aria-hidden="true">
+                                    <ShieldCheck size={18} />
+                                </span>
+                                <input
+                                    ref={codeInputRef}
+                                    id="2fa-code"
+                                    type="text"
+                                    className="input auth-field__input--with-icon"
+                                    placeholder="أدخل الرمز المكون من 6 أرقام"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    maxLength={6}
+                                    autoComplete="one-time-code"
+                                    required
+                                    value={twoFactor.code}
+                                    onChange={(e) => setTwoFactor(prev => ({
+                                        ...prev,
+                                        code: e.target.value.replace(/\D/g, '').slice(0, 6)
+                                    }))}
+                                    style={{
+                                        textAlign: 'center',
+                                        letterSpacing: '0.5em',
+                                        fontSize: '1.25rem',
+                                        fontWeight: '600'
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="button button--primary auth-submit"
+                            disabled={isLoading || twoFactor.code.length !== 6}
+                        >
+                            {isLoading ? (
+                                <>
+                                    <div className="auth-spinner" aria-hidden="true" />
+                                    جاري التحقق...
+                                </>
+                            ) : (
+                                <>
+                                    <ShieldCheck size={18} />
+                                    تأكيد الرمز
+                                </>
+                            )}
+                        </button>
+
                         <button
                             type="button"
-                            className="auth-field__toggle"
-                            onClick={() => setShowPin((prev) => !prev)}
-                            aria-label={showPin ? 'إخفاء الرقم السري' : 'إظهار الرقم السري'}
+                            className="button button--ghost auth-submit"
+                            onClick={handleBack}
+                            style={{ marginTop: '0.5rem' }}
                         >
-                            {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
+                            <ArrowRight size={18} />
+                            العودة لتسجيل الدخول
                         </button>
-                    </div>
-                </div>
-
-                <div className="auth-form__options">
-                    <label htmlFor="rememberMe" className="auth-checkbox">
-                        <input
-                            id="rememberMe"
-                            name="rememberMe"
-                            type="checkbox"
-                            checked={formData.rememberMe}
-                            onChange={handleInputChange}
-                        />
-                        تذكرني لاحقًا
-                    </label>
-                    <button type="button" className="auth-link">
-                        نسيت الرقم السري؟
-                    </button>
-                </div>
-
-                <button
-                    type="submit"
-                    className="button button--primary auth-submit"
-                    disabled={isLoading}
-                >
-                    {isLoading ? (
-                        <>
-                            <div className="auth-spinner" aria-hidden="true" />
-                            جاري تسجيل الدخول...
-                        </>
-                    ) : (
-                        <>
-                            <LogIn size={18} />
-                            تسجيل الدخول
-                        </>
-                    )}
-                </button>
-
-                {/* Hide register link on tenant subdomain */}
-                {!isSubdomain && (
-                    <div className="auth-register-prompt">
-                        <span>ليس لديك حساب؟</span>
-                        <Link to="/register">إنشاء حساب جديد</Link>
-                    </div>
+                    </motion.form>
                 )}
-            </form>
+            </AnimatePresence>
         </motion.div>
     );
 };

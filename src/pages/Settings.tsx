@@ -32,6 +32,7 @@ import NotificationSettings from '../components/NotificationSettings';
 import TiptapEditor from '../components/TiptapEditor';
 import { downloadInvoice, InvoicePreviewModal } from '../components/InvoiceDownload';
 import LetterheadManager from '../components/settings/LetterheadManager';
+import TwoFactorSettings from '../components/settings/TwoFactorSettings';
 import { apiClient } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/settings-page.css';
@@ -829,23 +830,7 @@ const Settings: React.FC = () => {
 
             {/* Two-Factor Auth - For Non-Clients */}
             {userRole !== 'client' && (
-              <div className="settings-section">
-                <div className="settings-section__header">
-                  <div className="settings-section__icon">
-                    <Shield size={14} />
-                  </div>
-                  <span className="settings-section__title">المصادقة الثنائية</span>
-                </div>
-                <div className="settings-section__content">
-                  <div className="settings-option-card">
-                    <div className="settings-option-card__title">حماية إضافية لحسابك</div>
-                    <div className="settings-option-card__desc">أضف طبقة أمان إضافية باستخدام رمز التحقق</div>
-                    <div className="settings-option-card__actions">
-                      <button className="settings-btn settings-btn--primary">تفعيل المصادقة الثنائية</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <TwoFactorSettings />
             )}
           </>
         );
