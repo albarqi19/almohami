@@ -131,6 +131,17 @@
     color: var(--law-gold-dark);
 }
 
+.case-header-btn--link {
+    background: linear-gradient(135deg, #0066cc 0%, #004999 100%);
+    border-color: #0066cc;
+    color: white;
+}
+
+.case-header-btn--link:hover {
+    background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%);
+    border-color: #0052a3;
+}
+
 /* === Back Button === */
 .back-btn {
     display: flex;

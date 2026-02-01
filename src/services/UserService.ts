@@ -165,17 +165,11 @@ export class UserService {
         return cached;
       }
 
-      const response = await apiClient.get<ApiResponse<User[]>>('/users?role=lawyer');
+      // استخدام endpoint خاص يجلب كل المحامين بدون pagination
+      const response = await apiClient.get<ApiResponse<User[]>>('/auth/lawyers');
 
       if (response.success && response.data) {
-        // إذا كانت البيانات في format pagination
-        let lawyers: User[];
-        if (typeof response.data === 'object' && 'data' in response.data) {
-          lawyers = (response.data as any).data;
-        } else {
-          lawyers = response.data;
-        }
-
+        const lawyers = Array.isArray(response.data) ? response.data : [];
         // Cache the result
         cacheManager.set(cacheKey, lawyers);
         return lawyers;
@@ -198,17 +192,11 @@ export class UserService {
         return cached;
       }
 
-      const response = await apiClient.get<ApiResponse<User[]>>('/users?role=client');
+      // استخدام endpoint خاص يجلب كل العملاء بدون pagination
+      const response = await apiClient.get<ApiResponse<User[]>>('/auth/clients');
 
       if (response.success && response.data) {
-        // إذا كانت البيانات في format pagination
-        let clients: User[];
-        if (typeof response.data === 'object' && 'data' in response.data) {
-          clients = (response.data as any).data;
-        } else {
-          clients = response.data;
-        }
-
+        const clients = Array.isArray(response.data) ? response.data : [];
         // Cache the result
         cacheManager.set(cacheKey, clients);
         return clients;

@@ -208,4 +208,54 @@ export class CaseService {
       throw new Error(response.message || 'فشل في إزالة المشاركة');
     }
   }
+
+  // ========== Najiz Linking Methods - ربط القضايا بناجز ==========
+
+  /**
+   * التحقق من إمكانية ربط القضية بقضية ناجز
+   */
+  static async canLinkToNajiz(caseId: string | number): Promise<{
+    can_link: boolean;
+    source: string;
+    najiz_id: string | null;
+    reason: string | null;
+  }> {
+    const response = await apiClient.get<ApiResponse<any>>(`/cases/${caseId}/can-link-najiz`);
+
+    if (response.success && response.data) {
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في التحقق');
+    }
+  }
+
+  /**
+   * الحصول على قضايا ناجز المتاحة للربط
+   */
+  static async getAvailableNajizCases(caseId: string | number): Promise<Case[]> {
+    const response = await apiClient.get<ApiResponse<Case[]>>(`/cases/${caseId}/available-najiz-cases`);
+
+    if (response.success && response.data) {
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في جلب قضايا ناجز');
+    }
+  }
+
+  /**
+   * ربط القضية المحلية بقضية ناجز
+   */
+  static async linkToNajiz(caseId: string | number, najizCaseId: number): Promise<Case> {
+    const response = await apiClient.post<ApiResponse<Case>>(`/cases/${caseId}/link-najiz`, {
+      najiz_case_id: najizCaseId
+    });
+
+    if (response.success && response.data) {
+      // Invalidate cache after linking
+      cacheManager.invalidate(CACHE_KEYS.CASES);
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في ربط القضية');
+    }
+  }
 }

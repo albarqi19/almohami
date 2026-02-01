@@ -24,7 +24,8 @@ import {
   Scale,
   Activity,
   MessageSquare,
-  PenTool
+  PenTool,
+  Link2
 } from 'lucide-react';
 import Timeline from '../components/Timeline';
 import EditCaseModal from '../components/EditCaseModal';
@@ -36,6 +37,7 @@ import QuickActionsModal from '../components/QuickActionsModal';
 import ClientPhoneModal from '../components/ClientPhoneModal';
 import CaseMessagesModal from '../components/CaseMessagesModal';
 import ShareCaseModal from '../components/ShareCaseModal';
+import LinkToNajizModal from '../components/LinkToNajizModal';
 import LegalMemoWorkspace from '../components/LegalMemoWorkspace';
 import type { TimelineEvent } from '../components/Timeline';
 import { CaseService } from '../services/caseService';
@@ -61,6 +63,8 @@ const CaseDetailPage: React.FC = () => {
   const [showClientPhoneModal, setShowClientPhoneModal] = useState(false);
   const [showMessagesModal, setShowMessagesModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showLinkNajizModal, setShowLinkNajizModal] = useState(false);
+  const [canLinkToNajiz, setCanLinkToNajiz] = useState(false);
   const [documentsCount, setDocumentsCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
 
@@ -113,6 +117,21 @@ const CaseDetailPage: React.FC = () => {
 
     fetchData();
   }, [caseId]);
+
+  // Check if case can be linked to Najiz
+  useEffect(() => {
+    const checkCanLink = async () => {
+      if (caseId && caseData) {
+        try {
+          const result = await CaseService.canLinkToNajiz(caseId);
+          setCanLinkToNajiz(result.can_link);
+        } catch (err) {
+          setCanLinkToNajiz(false);
+        }
+      }
+    };
+    checkCanLink();
+  }, [caseId, caseData]);
 
   // Separate function for force refresh
   const refreshCaseData = async () => {
@@ -331,6 +350,16 @@ const CaseDetailPage: React.FC = () => {
               <Plus size={16} />
               <span>إجراءات</span>
             </button>
+            {canLinkToNajiz && (
+              <button
+                onClick={() => setShowLinkNajizModal(true)}
+                className="case-header-btn case-header-btn--link"
+                title="ربط مع قضية ناجز"
+              >
+                <Link2 size={16} />
+                <span>ربط</span>
+              </button>
+            )}
             <button
               onClick={() => setShowShareModal(true)}
               className="case-header-btn case-header-btn--share"
@@ -810,6 +839,17 @@ const CaseDetailPage: React.FC = () => {
         onClose={() => setShowShareModal(false)}
         caseId={caseData.id}
         caseTitle={caseData.title}
+      />
+
+      <LinkToNajizModal
+        isOpen={showLinkNajizModal}
+        onClose={() => setShowLinkNajizModal(false)}
+        caseId={caseData.id}
+        caseTitle={caseData.title}
+        onSuccess={() => {
+          setShowLinkNajizModal(false);
+          refreshCaseData();
+        }}
       />
     </div>
   );

@@ -1,7 +1,27 @@
 ﻿import React, { useState } from 'react';
-import Modal from './Modal';
-import { Save, X, UserPlus, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
+import {
+  Search,
+  Check,
+  ChevronDown,
+  X,
+  Save,
+  Hash,
+  Briefcase,
+  AlignLeft,
+  Flag,
+  Activity,
+  User,
+  Phone,
+  Mail,
+  CreditCard,
+  Calendar,
+  Gavel,
+  FileText,
+  UserPlus,
+  Users
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import '../styles/add-case-modal.css';
 
 interface User {
   id: string;
@@ -40,12 +60,12 @@ interface AddCaseModalProps {
   clients?: User[];
 }
 
-const AddCaseModal: React.FC<AddCaseModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  lawyers: lawyersFromProps = [], 
-  clients: clientsFromProps = [] 
+const AddCaseModal: React.FC<AddCaseModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  lawyers: lawyersFromProps = [],
+  clients: clientsFromProps = []
 }) => {
   const [formData, setFormData] = useState<CaseFormData>({
     caseNumber: '',
@@ -54,7 +74,7 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     clientPhone: '',
     clientEmail: '',
     clientNationalId: '',
-    isNewClient: true, // افتراضياً عميل جديد
+    isNewClient: true,
     opponentName: '',
     opponentLawyer: '',
     court: '',
@@ -71,6 +91,15 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
   });
 
   const [errors, setErrors] = useState<Partial<CaseFormData>>({});
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [showClientSearch, setShowClientSearch] = useState(false);
+
+  const filteredClients = clientsFromProps.filter(client =>
+    client.name.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
+    (client.phone && client.phone.includes(clientSearchTerm))
+  );
+
+  const selectedClient = clientsFromProps.find(c => c.id.toString() === formData.clientId.toString());
 
   const caseTypes = [
     { value: 'civil', label: 'قضايا مدنية' },
@@ -94,37 +123,32 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     'محكمة التنفيذ'
   ];
 
-  // استخدام البيانات من props أو fallback للبيانات الثابتة
-  const lawyers = lawyersFromProps.length > 0 
+  const lawyers = lawyersFromProps.length > 0
     ? lawyersFromProps.map(lawyer => ({ value: lawyer.id, label: lawyer.name }))
     : [
-        { value: '1', label: 'أحمد محامي' },
-        { value: '2', label: 'سارة محامية' }, 
-        { value: '3', label: 'محمد محامي' },
-        { value: '4', label: 'خالد محامية' },
-        { value: '5', label: 'عبدالله محامي' }
-      ];
+      { value: '1', label: 'أحمد محامي' },
+      { value: '2', label: 'سارة محامية' },
+      { value: '3', label: 'محمد محامي' },
+      { value: '4', label: 'خالد محامية' },
+      { value: '5', label: 'عبدالله محامي' }
+    ];
 
-  const handleInputChange = (field: keyof CaseFormData, value: string) => {
+  const handleInputChange = (field: keyof CaseFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
+    if (errors[field as keyof CaseFormData]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
   };
 
   const validateForm = (): boolean => {
     const newErrors: Partial<CaseFormData> = {};
-
     if (!formData.caseNumber.trim()) newErrors.caseNumber = 'رقم الملف مطلوب';
-
-    // التحقق من بيانات العميل حسب النوع
     if (formData.isNewClient) {
       if (!formData.clientName.trim()) newErrors.clientName = 'اسم العميل مطلوب';
       if (!formData.clientPhone.trim()) newErrors.clientPhone = 'رقم هاتف العميل مطلوب';
     } else {
       if (!formData.clientId) newErrors.clientId = 'يرجى اختيار العميل';
     }
-
     if (!formData.caseType) newErrors.caseType = 'نوع القضية مطلوب';
     if (!formData.court) newErrors.court = 'المحكمة مطلوبة';
     if (!formData.assignedLawyer) newErrors.assignedLawyer = 'المحامي المسؤول مطلوب';
@@ -137,15 +161,10 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted with data:', formData);
-    
     if (validateForm()) {
-      console.log('Form validation passed, calling onSave...');
       onSave(formData);
       handleReset();
       onClose();
-    } else {
-      console.log('Form validation failed:', errors);
     }
   };
 
@@ -175,621 +194,435 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     setErrors({});
   };
 
-  const formSections = [
-    {
-      title: 'بيانات القضية الأساسية',
-      fields: [
-        { name: 'caseNumber', label: 'رقم الملف', type: 'text', required: true },
-        { name: 'caseType', label: 'نوع القضية', type: 'select', options: caseTypes, required: true },
-        { name: 'caseCategory', label: 'تصنيف القضية', type: 'text' },
-        { name: 'court', label: 'المحكمة', type: 'select', options: courts, required: true },
-        { name: 'priority', label: 'الأولوية', type: 'select', options: [
-          { value: 'low', label: 'منخفضة' },
-          { value: 'medium', label: 'متوسطة' },
-          { value: 'high', label: 'عالية' }
-        ], required: true },
-        { name: 'status', label: 'الحالة', type: 'select', options: [
-          { value: 'active', label: 'نشطة' },
-          { value: 'pending', label: 'معلقة' },
-          { value: 'closed', label: 'مغلقة' },
-          { value: 'appealed', label: 'مستأنفة' },
-          { value: 'settled', label: 'مسوية' },
-          { value: 'dismissed', label: 'مرفوضة' }
-        ], required: true }
-      ]
-    },
-    {
-      title: 'بيانات العميل',
-      fields: [] // سيتم عرضها يدوياً لدعم التبديل بين عميل جديد/موجود
-    },
-    {
-      title: 'بيانات الخصم',
-      fields: [
-        { name: 'opponentName', label: 'اسم الخصم', type: 'text' },
-        { name: 'opponentLawyer', label: 'محامي الخصم', type: 'text' }
-      ]
-    },
-    {
-      title: 'التفاصيل الإضافية',
-      fields: [
-        { name: 'assignedLawyer', label: 'المحامي المسؤول', type: 'select', options: lawyers, required: true },
-        { name: 'contractValue', label: 'قيمة العقد/النزاع', type: 'text' },
-        { name: 'filingDate', label: 'تاريخ رفع الدعوى', type: 'date', required: true },
-        { name: 'hearingDate', label: 'تاريخ الجلسة القادمة', type: 'date' }
-      ]
-    }
-  ];
+  if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="إضافة قضية جديدة" size="lg">
-      <form onSubmit={handleSubmit}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-          {formSections.map((section, sectionIndex) => (
-            <motion.div
-              key={section.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: sectionIndex * 0.1 }}
-              style={{
-                padding: '24px',
-                backgroundColor: 'var(--color-background)',
-                borderRadius: '12px',
-                border: '1px solid var(--color-border)'
-              }}
-            >
-              <h3 style={{
-                fontSize: 'var(--font-size-lg)',
-                fontWeight: 'var(--font-weight-semibold)',
-                color: 'var(--color-text)',
-                marginBottom: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <div style={{
-                  width: '4px',
-                  height: '20px',
-                  backgroundColor: 'var(--color-primary)',
-                  borderRadius: '2px'
-                }} />
-                {section.title}
-              </h3>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                gap: '20px'
-              }}>
-                {section.fields.map((field) => (
-                  <div key={field.name} style={{ display: 'flex', flexDirection: 'column' }}>
-                    <label style={{
-                      fontSize: 'var(--font-size-sm)',
-                      fontWeight: 'var(--font-weight-medium)',
-                      color: 'var(--color-text)',
-                      marginBottom: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      {field.label}
-                      {field.required && (
-                        <span style={{ color: 'var(--color-error)' }}>*</span>
-                      )}
-                    </label>
-
-                    {field.type === 'select' ? (
-                      <select
-                        value={formData[field.name as keyof CaseFormData] as string}
-                        onChange={(e) => handleInputChange(field.name as keyof CaseFormData, e.target.value)}
-                        style={{
-                          padding: '12px 16px',
-                          borderRadius: '8px',
-                          border: `1px solid ${errors[field.name as keyof CaseFormData] ? 'var(--color-error)' : 'var(--color-border)'}`,
-                          backgroundColor: 'var(--color-surface)',
-                          color: 'var(--color-text)',
-                          fontSize: 'var(--font-size-sm)',
-                          transition: 'border-color 0.2s ease',
-                          outline: 'none'
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = 'var(--color-primary)';
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = errors[field.name as keyof CaseFormData] ? 'var(--color-error)' : 'var(--color-border)';
-                        }}
-                      >
-                        <option value="">اختر {field.label}</option>
-                        {(field.options as any[])?.map((option) => (
-                          <option
-                            key={typeof option === 'string' ? option : option.value}
-                            value={typeof option === 'string' ? option : option.value}
-                          >
-                            {typeof option === 'string' ? option : option.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : field.type === 'textarea' ? (
-                      <textarea
-                        value={formData[field.name as keyof CaseFormData] as string}
-                        onChange={(e) => handleInputChange(field.name as keyof CaseFormData, e.target.value)}
-                        rows={4}
-                        style={{
-                          padding: '12px 16px',
-                          borderRadius: '8px',
-                          border: `1px solid ${errors[field.name as keyof CaseFormData] ? 'var(--color-error)' : 'var(--color-border)'}`,
-                          backgroundColor: 'var(--color-surface)',
-                          color: 'var(--color-text)',
-                          fontSize: 'var(--font-size-sm)',
-                          transition: 'border-color 0.2s ease',
-                          outline: 'none',
-                          resize: 'vertical',
-                          minHeight: '100px'
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = 'var(--color-primary)';
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = errors[field.name as keyof CaseFormData] ? 'var(--color-error)' : 'var(--color-border)';
-                        }}
-                      />
-                    ) : (
-                      <input
-                        type={field.type}
-                        value={formData[field.name as keyof CaseFormData] as string}
-                        onChange={(e) => handleInputChange(field.name as keyof CaseFormData, e.target.value)}
-                        style={{
-                          padding: '12px 16px',
-                          borderRadius: '8px',
-                          border: `1px solid ${errors[field.name as keyof CaseFormData] ? 'var(--color-error)' : 'var(--color-border)'}`,
-                          backgroundColor: 'var(--color-surface)',
-                          color: 'var(--color-text)',
-                          fontSize: 'var(--font-size-sm)',
-                          transition: 'border-color 0.2s ease',
-                          outline: 'none'
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = 'var(--color-primary)';
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = errors[field.name as keyof CaseFormData] ? 'var(--color-error)' : 'var(--color-border)';
-                        }}
-                      />
-                    )}
-
-                    {errors[field.name as keyof CaseFormData] && (
-                      <span style={{
-                        fontSize: 'var(--font-size-xs)',
-                        color: 'var(--color-error)',
-                        marginTop: '4px'
-                      }}>
-                        {errors[field.name as keyof CaseFormData]}
-                      </span>
-                    )}
-                  </div>
-                ))}
+    <AnimatePresence>
+      <motion.div
+        className="notion-modal-overlay"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      >
+        <motion.div
+          className="notion-modal"
+          initial={{ opacity: 0, y: 20, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.98 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="notion-modal-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="notion-header-icon-container">
+                <Briefcase size={20} className="notion-header-icon" />
               </div>
-
-              {/* قسم بيانات العميل المخصص */}
-              {section.title === 'بيانات العميل' && (
-                <div style={{ marginTop: '16px' }}>
-                  {/* أزرار التبديل بين عميل جديد/موجود */}
-                  <div style={{
-                    display: 'flex',
-                    gap: '12px',
-                    marginBottom: '20px'
-                  }}>
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, isNewClient: true, clientId: '' }))}
-                      style={{
-                        flex: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        padding: '12px 16px',
-                        borderRadius: '8px',
-                        border: `2px solid ${formData.isNewClient ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                        backgroundColor: formData.isNewClient ? 'var(--color-primary-light, rgba(59, 130, 246, 0.1))' : 'transparent',
-                        color: formData.isNewClient ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                        fontSize: 'var(--font-size-sm)',
-                        fontWeight: 'var(--font-weight-medium)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      <UserPlus size={18} />
-                      عميل جديد
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, isNewClient: false, clientName: '', clientPhone: '', clientEmail: '' }))}
-                      style={{
-                        flex: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        padding: '12px 16px',
-                        borderRadius: '8px',
-                        border: `2px solid ${!formData.isNewClient ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                        backgroundColor: !formData.isNewClient ? 'var(--color-primary-light, rgba(59, 130, 246, 0.1))' : 'transparent',
-                        color: !formData.isNewClient ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                        fontSize: 'var(--font-size-sm)',
-                        fontWeight: 'var(--font-weight-medium)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      <Users size={18} />
-                      عميل موجود
-                    </button>
-                  </div>
-
-                  {/* حقول العميل */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                    gap: '20px'
-                  }}>
-                    {formData.isNewClient ? (
-                      <>
-                        {/* حقول عميل جديد */}
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <label style={{
-                            fontSize: 'var(--font-size-sm)',
-                            fontWeight: 'var(--font-weight-medium)',
-                            color: 'var(--color-text)',
-                            marginBottom: '8px'
-                          }}>
-                            اسم العميل <span style={{ color: 'var(--color-error)' }}>*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.clientName}
-                            onChange={(e) => handleInputChange('clientName', e.target.value)}
-                            placeholder="أدخل اسم العميل"
-                            style={{
-                              padding: '12px 16px',
-                              borderRadius: '8px',
-                              border: `1px solid ${errors.clientName ? 'var(--color-error)' : 'var(--color-border)'}`,
-                              backgroundColor: 'var(--color-surface)',
-                              color: 'var(--color-text)',
-                              fontSize: 'var(--font-size-sm)',
-                              outline: 'none'
-                            }}
-                          />
-                          {errors.clientName && (
-                            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-error)', marginTop: '4px' }}>
-                              {errors.clientName}
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <label style={{
-                            fontSize: 'var(--font-size-sm)',
-                            fontWeight: 'var(--font-weight-medium)',
-                            color: 'var(--color-text)',
-                            marginBottom: '8px'
-                          }}>
-                            رقم الهاتف <span style={{ color: 'var(--color-error)' }}>*</span>
-                          </label>
-                          <input
-                            type="tel"
-                            value={formData.clientPhone}
-                            onChange={(e) => handleInputChange('clientPhone', e.target.value)}
-                            placeholder="05xxxxxxxx"
-                            style={{
-                              padding: '12px 16px',
-                              borderRadius: '8px',
-                              border: `1px solid ${errors.clientPhone ? 'var(--color-error)' : 'var(--color-border)'}`,
-                              backgroundColor: 'var(--color-surface)',
-                              color: 'var(--color-text)',
-                              fontSize: 'var(--font-size-sm)',
-                              outline: 'none'
-                            }}
-                          />
-                          {errors.clientPhone && (
-                            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-error)', marginTop: '4px' }}>
-                              {errors.clientPhone}
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <label style={{
-                            fontSize: 'var(--font-size-sm)',
-                            fontWeight: 'var(--font-weight-medium)',
-                            color: 'var(--color-text)',
-                            marginBottom: '8px'
-                          }}>
-                            البريد الإلكتروني
-                          </label>
-                          <input
-                            type="email"
-                            value={formData.clientEmail}
-                            onChange={(e) => handleInputChange('clientEmail', e.target.value)}
-                            placeholder="example@email.com"
-                            style={{
-                              padding: '12px 16px',
-                              borderRadius: '8px',
-                              border: '1px solid var(--color-border)',
-                              backgroundColor: 'var(--color-surface)',
-                              color: 'var(--color-text)',
-                              fontSize: 'var(--font-size-sm)',
-                              outline: 'none'
-                            }}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <label style={{
-                            fontSize: 'var(--font-size-sm)',
-                            fontWeight: 'var(--font-weight-medium)',
-                            color: 'var(--color-text)',
-                            marginBottom: '8px'
-                          }}>
-                            رقم الهوية
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.clientNationalId}
-                            onChange={(e) => handleInputChange('clientNationalId', e.target.value)}
-                            placeholder="رقم الهوية الوطنية"
-                            style={{
-                              padding: '12px 16px',
-                              borderRadius: '8px',
-                              border: '1px solid var(--color-border)',
-                              backgroundColor: 'var(--color-surface)',
-                              color: 'var(--color-text)',
-                              fontSize: 'var(--font-size-sm)',
-                              outline: 'none'
-                            }}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      /* اختيار عميل موجود */
-                      <div style={{ display: 'flex', flexDirection: 'column', gridColumn: '1 / -1' }}>
-                        <label style={{
-                          fontSize: 'var(--font-size-sm)',
-                          fontWeight: 'var(--font-weight-medium)',
-                          color: 'var(--color-text)',
-                          marginBottom: '8px'
-                        }}>
-                          اختر العميل <span style={{ color: 'var(--color-error)' }}>*</span>
-                        </label>
-                        <select
-                          value={formData.clientId}
-                          onChange={(e) => handleInputChange('clientId', e.target.value)}
-                          style={{
-                            padding: '12px 16px',
-                            borderRadius: '8px',
-                            border: `1px solid ${errors.clientId ? 'var(--color-error)' : 'var(--color-border)'}`,
-                            backgroundColor: 'var(--color-surface)',
-                            color: 'var(--color-text)',
-                            fontSize: 'var(--font-size-sm)',
-                            outline: 'none'
-                          }}
-                        >
-                          <option value="">اختر العميل</option>
-                          {clientsFromProps.map((client) => (
-                            <option key={client.id} value={client.id}>
-                              {client.name}
-                            </option>
-                          ))}
-                        </select>
-                        {errors.clientId && (
-                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-error)', marginTop: '4px' }}>
-                            {errors.clientId}
-                          </span>
-                        )}
-                        {clientsFromProps.length === 0 && (
-                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: '8px' }}>
-                            لا يوجد عملاء مسجلين. يرجى اختيار "عميل جديد" لإضافة عميل.
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          ))}
-
-          {/* Description and Notes */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            style={{
-              padding: '24px',
-              backgroundColor: 'var(--color-background)',
-              borderRadius: '12px',
-              border: '1px solid var(--color-border)'
-            }}
-          >
-            <h3 style={{
-              fontSize: 'var(--font-size-lg)',
-              fontWeight: 'var(--font-weight-semibold)',
-              color: 'var(--color-text)',
-              marginBottom: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <div style={{
-                width: '4px',
-                height: '20px',
-                backgroundColor: 'var(--color-primary)',
-                borderRadius: '2px'
-              }} />
-              وصف القضية والملاحظات
-            </h3>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div>
-                <label style={{
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  color: 'var(--color-text)',
-                  marginBottom: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}>
-                  وصف القضية <span style={{ color: 'var(--color-error)' }}>*</span>
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  rows={4}
-                  placeholder="اكتب وصفاً مفصلاً للقضية..."
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    border: `1px solid ${errors.description ? 'var(--color-error)' : 'var(--color-border)'}`,
-                    backgroundColor: 'var(--color-surface)',
-                    color: 'var(--color-text)',
-                    fontSize: 'var(--font-size-sm)',
-                    transition: 'border-color 0.2s ease',
-                    outline: 'none',
-                    resize: 'vertical',
-                    minHeight: '120px'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-primary)';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = errors.description ? 'var(--color-error)' : 'var(--color-border)';
-                  }}
-                />
-                {errors.description && (
-                  <span style={{
-                    fontSize: 'var(--font-size-xs)',
-                    color: 'var(--color-error)',
-                    marginTop: '4px',
-                    display: 'block'
-                  }}>
-                    {errors.description}
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <label style={{
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  color: 'var(--color-text)',
-                  marginBottom: '8px',
-                  display: 'block'
-                }}>
-                  ملاحظات إضافية
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  rows={3}
-                  placeholder="أي ملاحظات إضافية..."
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--color-border)',
-                    backgroundColor: 'var(--color-surface)',
-                    color: 'var(--color-text)',
-                    fontSize: 'var(--font-size-sm)',
-                    transition: 'border-color 0.2s ease',
-                    outline: 'none',
-                    resize: 'vertical',
-                    minHeight: '100px'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-primary)';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-border)';
-                  }}
-                />
+              <div className="notion-modal-title">
+                <div style={{ fontSize: '12px', opacity: 0.5, lineHeight: 1 }}>إضافة إلى</div>
+                <div style={{ fontSize: '16px', fontWeight: 600 }}>القضايا</div>
               </div>
             </div>
-          </motion.div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="notion-modal-close" onClick={onClose}>
+                <X size={18} />
+              </button>
+            </div>
+          </div>
 
-          {/* Form Actions */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '12px',
-              paddingTop: '20px',
-              borderTop: '1px solid var(--color-border)'
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                handleReset();
-                onClose();
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px 24px',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                backgroundColor: 'transparent',
-                color: 'var(--color-text-secondary)',
-                fontSize: 'var(--font-size-sm)',
-                fontWeight: 'var(--font-weight-medium)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-secondary)';
-                e.currentTarget.style.color = 'var(--color-text)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = 'var(--color-text-secondary)';
-              }}
-            >
-              <X size={16} />
-              إلغاء
-            </button>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-            <button
-              type="submit"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px 24px',
-                border: 'none',
-                borderRadius: '8px',
-                backgroundColor: 'var(--color-primary)',
-                color: 'white',
-                fontSize: 'var(--font-size-sm)',
-                fontWeight: 'var(--font-weight-medium)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-primary-hover)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-primary)';
-              }}
-            >
-              <Save size={16} />
-              حفظ القضية
-            </button>
-          </motion.div>
-        </div>
-      </form>
-    </Modal>
+            <div className="notion-modal-body">
+              {/* Icon & Title */}
+              <input
+                type="text"
+                className="notion-page-title-input"
+                placeholder="رقم القضية أو اسم الملف..."
+                value={formData.caseNumber}
+                onChange={(e) => handleInputChange('caseNumber', e.target.value)}
+                autoFocus
+              />
+              {errors.caseNumber && <span style={{ color: '#EB5757', fontSize: '12px', display: 'block', marginTop: '-16px', marginBottom: '16px' }}>{errors.caseNumber}</span>}
+
+              {/* Properties Grid */}
+              <div className="notion-properties">
+
+                {/* Status */}
+                <div className="notion-property-row">
+                  <div className="notion-property-label">
+                    <Activity className="notion-property-icon" />
+                    <span>الحالة</span>
+                  </div>
+                  <div className="notion-property-value">
+                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+                      <select
+                        className="notion-select"
+                        value={formData.status}
+                        onChange={(e) => handleInputChange('status', e.target.value)}
+                        style={{ paddingLeft: '28px' }}
+                      >
+                        <option value="active">نشطة</option>
+                        <option value="pending">معلقة</option>
+                        <option value="closed">مغلقة</option>
+                        <option value="appealed">مستأنفة</option>
+                        <option value="settled">مسوية</option>
+                        <option value="dismissed">مرفوضة</option>
+                      </select>
+                      <ChevronDown size={14} style={{ position: 'absolute', left: '8px', opacity: 0.4, pointerEvents: 'none' }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Priority */}
+                <div className="notion-property-row">
+                  <div className="notion-property-label">
+                    <Flag className="notion-property-icon" />
+                    <span>الأولوية</span>
+                  </div>
+                  <div className="notion-property-value">
+                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+                      <select
+                        className="notion-select"
+                        value={formData.priority}
+                        onChange={(e) => handleInputChange('priority', e.target.value)}
+                        style={{ paddingLeft: '28px' }}
+                      >
+                        <option value="low">منخفضة</option>
+                        <option value="medium">متوسطة</option>
+                        <option value="high">عالية</option>
+                      </select>
+                      <ChevronDown size={14} style={{ position: 'absolute', left: '8px', opacity: 0.4, pointerEvents: 'none' }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Assigned Lawyer */}
+                <div className="notion-property-row">
+                  <div className="notion-property-label">
+                    <User className="notion-property-icon" />
+                    <span>المحامي المسؤول</span>
+                  </div>
+                  <div className="notion-property-value">
+                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+                      <select
+                        className="notion-select"
+                        value={formData.assignedLawyer}
+                        onChange={(e) => handleInputChange('assignedLawyer', e.target.value)}
+                        style={{ paddingLeft: '28px' }}
+                      >
+                        <option value="">اختر المحامي</option>
+                        {lawyers.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                      </select>
+                      <ChevronDown size={14} style={{ position: 'absolute', left: '8px', opacity: 0.4, pointerEvents: 'none' }} />
+                    </div>
+                    {errors.assignedLawyer && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
+                  </div>
+                </div>
+
+                {/* Court */}
+                <div className="notion-property-row">
+                  <div className="notion-property-label">
+                    <Gavel className="notion-property-icon" />
+                    <span>المحكمة</span>
+                  </div>
+                  <div className="notion-property-value">
+                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+                      <select
+                        className="notion-select"
+                        value={formData.court}
+                        onChange={(e) => handleInputChange('court', e.target.value)}
+                        style={{ paddingLeft: '28px' }}
+                      >
+                        <option value="">اختر المحكمة</option>
+                        {courts.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <ChevronDown size={14} style={{ position: 'absolute', left: '8px', opacity: 0.4, pointerEvents: 'none' }} />
+                    </div>
+                    {errors.court && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
+                  </div>
+                </div>
+
+                {/* Case Type */}
+                <div className="notion-property-row">
+                  <div className="notion-property-label">
+                    <Briefcase className="notion-property-icon" />
+                    <span>نوع القضية</span>
+                  </div>
+                  <div className="notion-property-value">
+                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+                      <select
+                        className="notion-select"
+                        value={formData.caseType}
+                        onChange={(e) => handleInputChange('caseType', e.target.value)}
+                        style={{ paddingLeft: '28px' }}
+                      >
+                        <option value="">اختر النوع</option>
+                        {caseTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                      <ChevronDown size={14} style={{ position: 'absolute', left: '8px', opacity: 0.4, pointerEvents: 'none' }} />
+                    </div>
+                    {errors.caseType && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
+                  </div>
+                </div>
+
+                {/* Filing Date */}
+                <div className="notion-property-row">
+                  <div className="notion-property-label">
+                    <Calendar className="notion-property-icon" />
+                    <span>تاريخ رفع الدعوى</span>
+                  </div>
+                  <div className="notion-property-value">
+                    <input
+                      type="date"
+                      className="notion-input"
+                      value={formData.filingDate}
+                      onChange={(e) => handleInputChange('filingDate', e.target.value)}
+                    />
+                    {errors.filingDate && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
+                  </div>
+                </div>
+
+                {/* Opponent Info */}
+                <div className="notion-property-row span-full">
+                  <div className="notion-property-label">
+                    <Users className="notion-property-icon" />
+                    <span>الخصم</span>
+                  </div>
+                  <div className="notion-property-value" style={{ gap: '8px' }}>
+                    <input
+                      type="text"
+                      className="notion-input"
+                      placeholder="اسم الخصم"
+                      value={formData.opponentName}
+                      onChange={(e) => handleInputChange('opponentName', e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      className="notion-input"
+                      placeholder="محامي الخصم"
+                      value={formData.opponentLawyer}
+                      onChange={(e) => handleInputChange('opponentLawyer', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="notion-divider"></div>
+
+                {/* Client Section Header/Toggle */}
+                <div className="notion-property-row span-full" style={{ padding: '8px 0' }}>
+                  <div className="notion-property-label">
+                    <UserPlus className="notion-property-icon" />
+                    <span>بيانات العميل</span>
+                  </div>
+                  <div className="notion-property-value">
+                    <div className="notion-segmented-control">
+                      <button
+                        type="button"
+                        className={`notion-segment-btn ${formData.isNewClient ? 'active' : ''}`}
+                        onClick={() => handleInputChange('isNewClient', true)}
+                      >
+                        جديد
+                      </button>
+                      <button
+                        type="button"
+                        className={`notion-segment-btn ${!formData.isNewClient ? 'active' : ''}`}
+                        onClick={() => {
+                          handleInputChange('isNewClient', false);
+                        }}
+                      >
+                        موجود
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Client Form Fields based on Toggle */}
+                {formData.isNewClient ? (
+                  <>
+                    <div className="notion-property-row">
+                      <div className="notion-property-label">
+                        <User className="notion-property-icon" size={14} />
+                        <span>الاسم</span>
+                      </div>
+                      <div className="notion-property-value">
+                        <input
+                          type="text"
+                          className="notion-input"
+                          placeholder="اسم العميل الكامل"
+                          value={formData.clientName}
+                          onChange={(e) => handleInputChange('clientName', e.target.value)}
+                        />
+                        {errors.clientName && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
+                      </div>
+                    </div>
+                    <div className="notion-property-row">
+                      <div className="notion-property-label">
+                        <Phone className="notion-property-icon" size={14} />
+                        <span>الهاتف</span>
+                      </div>
+                      <div className="notion-property-value">
+                        <input
+                          type="tel"
+                          className="notion-input"
+                          placeholder="05..."
+                          value={formData.clientPhone}
+                          onChange={(e) => handleInputChange('clientPhone', e.target.value)}
+                        />
+                        {errors.clientPhone && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
+                      </div>
+                    </div>
+                    <div className="notion-property-row">
+                      <div className="notion-property-label">
+                        <Mail className="notion-property-icon" size={14} />
+                        <span>البريد الإلكتروني</span>
+                      </div>
+                      <div className="notion-property-value">
+                        <input
+                          type="email"
+                          className="notion-input"
+                          placeholder="example@mail.com"
+                          value={formData.clientEmail}
+                          onChange={(e) => handleInputChange('clientEmail', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="notion-property-row">
+                      <div className="notion-property-label">
+                        <CreditCard className="notion-property-icon" size={14} />
+                        <span>رقم الهوية</span>
+                      </div>
+                      <div className="notion-property-value">
+                        <input
+                          type="text"
+                          className="notion-input"
+                          placeholder="رقم الهوية الوطنية"
+                          value={formData.clientNationalId}
+                          onChange={(e) => handleInputChange('clientNationalId', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="notion-property-row span-full">
+                    <div className="notion-property-label">
+                      <span>اختر العميل</span>
+                    </div>
+                    <div className="notion-property-value">
+                      <div className="notion-search-container">
+                        <div
+                          className="notion-input"
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                          onClick={() => setShowClientSearch(!showClientSearch)}
+                        >
+                          <span style={{ opacity: selectedClient ? 1 : 0.4 }}>
+                            {selectedClient ? selectedClient.name : 'ابحث عن عميل...'}
+                          </span>
+                          <ChevronDown size={14} style={{ opacity: 0.5 }} />
+                        </div>
+
+                        {showClientSearch && (
+                          <div className="notion-search-dropdown">
+                            <div className="notion-search-input-wrapper">
+                              <Search size={14} style={{ opacity: 0.4 }} />
+                              <input
+                                type="text"
+                                className="notion-search-field"
+                                placeholder="ابحث بالاسم أو الرقم..."
+                                value={clientSearchTerm}
+                                onChange={(e) => setClientSearchTerm(e.target.value)}
+                                autoFocus
+                              />
+                            </div>
+
+                            <div style={{ padding: '4px 0' }}>
+                              {filteredClients.length > 0 ? (
+                                filteredClients.map(client => (
+                                  <div
+                                    key={client.id}
+                                    className={`notion-search-item ${formData.clientId.toString() === client.id.toString() ? 'selected' : ''}`}
+                                    onClick={() => {
+                                      handleInputChange('clientId', client.id.toString());
+                                      setShowClientSearch(false);
+                                      setClientSearchTerm('');
+                                    }}
+                                  >
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ fontWeight: 500 }}>{client.name}</div>
+                                      {client.phone && <div style={{ fontSize: '11px', opacity: 0.6 }}>{client.phone}</div>}
+                                    </div>
+                                    {formData.clientId.toString() === client.id.toString() && <Check size={14} />}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="notion-search-no-results">
+                                  لا يوجد نتائج للبحث
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Overlay to close dropdown when clicking outside */}
+                        {showClientSearch && (
+                          <div
+                            style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+                            onClick={() => setShowClientSearch(false)}
+                          />
+                        )}
+                      </div>
+                      {errors.clientId && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              <div className="notion-divider"></div>
+
+              {/* Description (Page Content) */}
+              <div className="notion-content-area">
+                <div className="notion-section-header">
+                  <AlignLeft size={18} />
+                  وصف القضية
+                </div>
+                <textarea
+                  className="notion-textarea"
+                  placeholder="اكتب تفاصيل القضية هنا، الحقائق، والطلبات..."
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                />
+                {errors.description && <span style={{ color: '#EB5757', fontSize: '12px' }}>هذا الحقل مطلوب</span>}
+
+                <div className="notion-section-header">
+                  <FileText size={18} />
+                  ملاحظات إضافية
+                </div>
+                <textarea
+                  className="notion-textarea"
+                  style={{ minHeight: '80px' }}
+                  placeholder="أي ملاحظات أخرى..."
+                  value={formData.notes}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                />
+              </div>
+
+            </div>
+
+            {/* Footer Actions */}
+            <div className="notion-modal-footer">
+              <button type="button" className="notion-btn-secondary" onClick={onClose}>
+                إلغاء
+              </button>
+              <button type="submit" className="notion-btn-primary">
+                <Save size={16} />
+                حفظ القضية
+              </button>
+            </div>
+
+          </form>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 
