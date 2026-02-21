@@ -146,24 +146,26 @@ const LawyerDetailContent: React.FC<{ lawyerId: number; dateFilter: any }> = ({ 
 
   // --- Notion Badge Helpers ---
   const getOutcomeBadge = (outcome: string | null) => {
-    const badges: Record<string, string> = {
-      won: 'badge-green',
-      lost: 'badge-red',
-      settled: 'badge-blue',
-      appealed: 'badge-orange',
-      dismissed: 'badge-gray',
+    const outcomes: Record<string, { label: string; badge: string }> = {
+      won: { label: 'كسب', badge: 'badge-green' },
+      lost: { label: 'خسارة', badge: 'badge-red' },
+      settled: { label: 'تسوية', badge: 'badge-blue' },
+      appealed: { label: 'مستأنفة', badge: 'badge-orange' },
+      dismissed: { label: 'مرفوضة', badge: 'badge-gray' },
     };
     if (!outcome) return <span className="notion-badge badge-gray">نشطة</span>;
-    return <span className={`notion-badge ${badges[outcome] || 'badge-gray'}`}>{outcome}</span>;
+    const config = outcomes[outcome];
+    return <span className={`notion-badge ${config?.badge || 'badge-gray'}`}>{config?.label || outcome}</span>;
   };
 
   const getStatusBadge = (status: string) => {
-    const badges: Record<string, string> = {
-      active: 'badge-blue',
-      pending: 'badge-orange',
-      closed: 'badge-gray',
+    const statuses: Record<string, { label: string; badge: string }> = {
+      active: { label: 'نشطة', badge: 'badge-blue' },
+      pending: { label: 'قيد النظر', badge: 'badge-orange' },
+      closed: { label: 'مغلقة', badge: 'badge-gray' },
     };
-    return <span className={`notion-badge ${badges[status] || 'badge-gray'}`}>{status}</span>;
+    const config = statuses[status];
+    return <span className={`notion-badge ${config?.badge || 'badge-gray'}`}>{config?.label || status}</span>;
   };
 
   return (
