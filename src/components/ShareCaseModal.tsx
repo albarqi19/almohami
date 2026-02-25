@@ -78,27 +78,18 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
 
       // إذا كان يمكنه المشاركة، نجلب باقي البيانات
       if (permissionData.can_share) {
-        const [usersResponse, sharesData] = await Promise.all([
-          UserService.getAllUsers({ limit: 100 }),
+        const [usersData, sharesData] = await Promise.all([
+          UserService.getLawyers(),
           CaseService.getCaseShares(caseId)
         ]);
 
-        const usersData = usersResponse.data || [];
-
-        console.log('ShareCaseModal - usersResponse:', usersResponse);
-        console.log('ShareCaseModal - usersData:', usersData);
-        console.log('ShareCaseModal - user roles:', usersData.map((u: any) => ({ name: u.name, role: u.role })));
-
-        const filteredUsers: SelectableUser[] = usersData
-          .filter((user: any) => ['lawyer', 'senior_lawyer', 'partner', 'legal_assistant', 'admin'].includes(user.role))
+        const filteredUsers: SelectableUser[] = (usersData || [])
           .map((user: any) => ({
             id: Number(user.id),
             name: user.name || '',
             email: user.email || '',
             role: user.role || ''
           }));
-
-        console.log('ShareCaseModal - filteredUsers:', filteredUsers);
 
         setAllUsers(filteredUsers);
         setSharedUsers(sharesData);

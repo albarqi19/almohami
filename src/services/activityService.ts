@@ -107,13 +107,25 @@ export class ActivityService {
   }
 
   // Client-specific methods
-  static async getClientTimeline(caseId: string): Promise<Activity[]> {
-    const response = await apiClient.get<ApiResponse<Activity[]>>(`/client/cases/${caseId}/timeline`);
-    
+  static async getClientTimeline(caseId: string): Promise<TimelineItem[]> {
+    const response = await apiClient.get<ApiResponse<{ timeline: TimelineItem[] }>>(`/client/cases/${caseId}/timeline`);
+
     if (response.success && response.data) {
-      return response.data;
+      return (response.data as any).timeline || [];
     } else {
       throw new Error(response.message || 'فشل في جلب الخط الزمني');
     }
   }
+}
+
+export interface TimelineItem {
+  id: number;
+  type: 'activity' | 'task' | 'document';
+  title: string;
+  description?: string;
+  date: string;
+  user?: string;
+  status?: string;
+  priority?: string;
+  file_name?: string;
 }

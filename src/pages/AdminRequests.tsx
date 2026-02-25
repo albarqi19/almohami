@@ -42,6 +42,15 @@ const formatDate = (value?: string | null): string => {
     } catch { return value; }
 };
 
+const formatDateTime = (value?: string | null): string => {
+    if (!value) return '-';
+    try {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch { return value; }
+};
+
 // Request Modal Component
 const RequestModal: React.FC<{
     isOpen: boolean;
@@ -208,6 +217,19 @@ const ReviewModal: React.FC<{
                     {request.reason && (
                         <div className="modal-reason-box">
                             <strong>السبب:</strong> {request.reason}
+                        </div>
+                    )}
+                    {request.status !== 'pending' && request.reviewer && (
+                        <div className="modal-reason-box" style={{ marginTop: '8px' }}>
+                            <strong>{request.status === 'approved' ? 'وافق على الطلب' : 'رفض الطلب'}:</strong> {request.reviewer.name}
+                            <span style={{ marginRight: '8px', fontSize: '12px', color: 'var(--color-text-secondary, #888)' }}>
+                                ({formatDateTime(request.reviewed_at)})
+                            </span>
+                            {request.manager_notes && (
+                                <div style={{ marginTop: '4px' }}>
+                                    <strong>ملاحظات المراجع:</strong> {request.manager_notes}
+                                </div>
+                            )}
                         </div>
                     )}
                     <div className="modal-form-group" style={{ marginTop: '16px' }}>
@@ -507,6 +529,7 @@ const AdminRequests: React.FC = () => {
                         <th>الفترة</th>
                         <th>تاريخ الإرسال</th>
                         <th>الحالة</th>
+                        <th>المراجع</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -535,6 +558,16 @@ const AdminRequests: React.FC = () => {
                                         <span className="request-status-badge__dot" />
                                         {statusConfig.label}
                                     </span>
+                                </td>
+                                <td className="request-reviewer-cell">
+                                    {req.status !== 'pending' && req.reviewer ? (
+                                        <div>
+                                            <div style={{ fontWeight: 500, fontSize: '13px' }}>{req.reviewer.name}</div>
+                                            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary, #888)' }}>{formatDateTime(req.reviewed_at)}</div>
+                                        </div>
+                                    ) : req.status !== 'pending' ? (
+                                        <span style={{ fontSize: '12px', color: 'var(--color-text-secondary, #888)' }}>-</span>
+                                    ) : null}
                                 </td>
                                 <td>
                                     <div className="request-actions-cell">
@@ -579,6 +612,18 @@ const AdminRequests: React.FC = () => {
                             </div>
                         )}
                         {req.reason && <p className="request-card__reason">{req.reason}</p>}
+                        {req.status !== 'pending' && req.reviewer && (
+                            <div className="request-card__reviewer" style={{ fontSize: '12px', color: 'var(--color-text-secondary, #888)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <User size={12} />
+                                <span>{req.status === 'approved' ? 'وافق' : 'رفض'}: <strong>{req.reviewer.name}</strong></span>
+                                <span style={{ marginRight: '4px' }}>- {formatDateTime(req.reviewed_at)}</span>
+                            </div>
+                        )}
+                        {req.manager_notes && req.status !== 'pending' && (
+                            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary, #888)', marginTop: '4px', fontStyle: 'italic' }}>
+                                "{req.manager_notes}"
+                            </div>
+                        )}
                         <div className="request-card__footer">
                             <span className="request-card__date"><Calendar size={12} /> {formatDate(req.start_date) || formatDate(req.created_at)}</span>
                             {req.end_date && req.end_date !== req.start_date && (

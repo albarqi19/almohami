@@ -21,7 +21,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { CaseService } from '../services/caseService';
 import { DocumentService } from '../services/documentService';
 import { MessageService } from '../services/messageService';
-import type { Case, Document, Activity } from '../types';
+import { ActivityService } from '../services/activityService';
+import type { TimelineItem } from '../services/activityService';
+import type { Case, Document } from '../types';
 import '../styles/client-case-detail.css';
 
 const ClientCaseDetail: React.FC = () => {
@@ -29,7 +31,7 @@ const ClientCaseDetail: React.FC = () => {
   useAuth(); // for authentication check
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activities, setActivities] = useState<TimelineItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
@@ -71,19 +73,13 @@ const ClientCaseDetail: React.FC = () => {
           console.error('Error loading recipients:', e);
         }
 
-        // Mock activities
-        setActivities([
-          {
-            id: '1',
-            type: 'case_created',
-            title: 'إنشاء القضية',
-            description: 'تم إنشاء القضية',
-            performedBy: '2',
-            performedAt: new Date(caseData.created_at),
-            caseId: caseId,
-            metadata: { status: 'active' }
-          }
-        ]);
+        // Load timeline activities
+        try {
+          const timelineData = await ActivityService.getClientTimeline(caseId);
+          setActivities(timelineData);
+        } catch (e) {
+          console.error('Error loading timeline:', e);
+        }
 
       } catch (error) {
         console.error('Error loading case data:', error);
@@ -238,14 +234,11 @@ const ClientCaseDetail: React.FC = () => {
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case 'document_uploaded':
-        return <Upload size={14} />;
-      case 'hearing_scheduled':
-        return <Calendar size={14} />;
-      case 'message_sent':
-        return <MessageSquare size={14} />;
-      case 'case_created':
+      case 'document':
+        return <FileText size={14} />;
+      case 'task':
         return <CheckCircle size={14} />;
+      case 'activity':
       default:
         return <Clock size={14} />;
     }
@@ -253,12 +246,10 @@ const ClientCaseDetail: React.FC = () => {
 
   const getActivityIconClass = (type: string) => {
     switch (type) {
-      case 'document_uploaded':
+      case 'document':
         return 'timeline-item__icon--document';
-      case 'hearing_scheduled':
+      case 'task':
         return 'timeline-item__icon--hearing';
-      case 'message_sent':
-        return 'timeline-item__icon--message';
       default:
         return '';
     }
@@ -503,14 +494,17 @@ const ClientCaseDetail: React.FC = () => {
             </div>
             <div className="detail-card__body">
               <div className="timeline">
-                {activities.map((activity) => (
-                  <div key={activity.id} className="timeline-item">
+                {activities.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: '#999', padding: '1rem 0' }}>لا توجد أنشطة بعد</p>
+                ) : activities.map((activity) => (
+                  <div key={`${activity.type}-${activity.id}`} className="timeline-item">
                     <div className={`timeline-item__icon ${getActivityIconClass(activity.type)}`}>
                       {getActivityIcon(activity.type)}
                     </div>
                     <div className="timeline-item__content">
-                      <p className="timeline-item__title">{activity.description}</p>
-                      <span className="timeline-item__date">{formatDate(activity.performedAt)}</span>
+                      <p className="timeline-item__title">{activity.title}</p>
+                      {activity.user && <span className="timeline-item__user">{activity.user}</span>}
+                      <span className="timeline-item__date">{formatDate(activity.date)}</span>
                     </div>
                   </div>
                 ))}

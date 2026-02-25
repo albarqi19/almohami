@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Briefcase, Target, CheckSquare, Calendar, FileText, ChevronRight } from 'lucide-react';
 import { apiClient } from '../utils/api';
 
@@ -66,6 +67,7 @@ interface PresenceLogData {
 }
 
 const LawyerDetailContent: React.FC<{ lawyerId: number; dateFilter: any }> = ({ lawyerId, dateFilter }) => {
+  const navigate = useNavigate();
   const [data, setData] = useState<LawyerDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'performance' | 'presence'>('all');
@@ -258,9 +260,9 @@ const LawyerDetailContent: React.FC<{ lawyerId: number; dateFilter: any }> = ({ 
               </thead>
               <tbody>
                 {data.cases.map((caseItem) => (
-                  <tr key={caseItem.id}>
+                  <tr key={caseItem.id} onClick={() => navigate(`/cases/${caseItem.id}`)} style={{ cursor: 'pointer' }} title="اضغط لفتح القضية">
                     <td style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{caseItem.file_number}</td>
-                    <td style={{ fontWeight: 500 }}>{caseItem.title}</td>
+                    <td style={{ fontWeight: 500, color: 'var(--color-primary, #2563eb)' }}>{caseItem.title}</td>
                     <td>{caseItem.client_name}</td>
                     <td><span className="notion-badge badge-gray">{caseItem.case_type}</span></td>
                     <td>{getStatusBadge(caseItem.status)}</td>
