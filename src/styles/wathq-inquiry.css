@@ -1,0 +1,939 @@
+/* ====================================================
+   Wathq Inquiry Page - ClickUp Minimal Style
+   Uses project theme variables from index.css & dashboard-theme.css
+   Supports: Light (default), Dark (body.dark), Classic (body.classic)
+   ==================================================== */
+
+/* Base page */
+.wathq-page {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    direction: rtl;
+    background: var(--dashboard-bg);
+    min-height: 100vh;
+}
+
+/* ==================== Header ==================== */
+.wathq-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.wathq-header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.wathq-header-title svg {
+    color: var(--law-navy);
+}
+
+.wathq-header-title h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-heading);
+    margin: 0;
+}
+
+.wathq-header-title p {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    margin: 2px 0 0;
+}
+
+.wathq-btn-history {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--quiet-gray-100);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    color: var(--color-text);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.wathq-btn-history:hover {
+    background: var(--law-navy);
+    color: white;
+    border-color: var(--law-navy);
+}
+
+/* ==================== Service Groups ==================== */
+.wathq-groups {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.wathq-group-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 24px;
+    background: var(--dashboard-card);
+    border: 2px solid var(--color-border);
+    border-radius: 12px;
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+    min-width: 140px;
+    justify-content: center;
+}
+
+.wathq-group-btn:hover {
+    border-color: var(--law-navy);
+    color: var(--law-navy);
+    background: var(--law-navy-light);
+}
+
+.wathq-group-btn.active {
+    border-color: var(--law-navy);
+    background: var(--law-navy);
+    color: white;
+}
+
+/* ==================== Service Tabs ==================== */
+.wathq-services {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.wathq-service-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.wathq-service-btn:hover {
+    border-color: var(--law-navy);
+    color: var(--law-navy);
+}
+
+.wathq-service-btn.active {
+    border-color: var(--law-navy);
+    background: var(--law-navy-light);
+    color: var(--law-navy);
+    font-weight: 600;
+}
+
+/* ==================== Form Section ==================== */
+.wathq-form-section {
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm, 12px);
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-xs);
+}
+
+.wathq-service-forms {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.wathq-form h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin: 0 0 12px;
+}
+
+.wathq-form-secondary {
+    padding-top: 20px;
+    border-top: 1px solid var(--color-border);
+}
+
+.wathq-form-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.wathq-form-group {
+    flex: 1;
+    min-width: 180px;
+}
+
+.wathq-form-group label {
+    display: block;
+    font-size: var(--font-size-xs, 12px);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    margin-bottom: 6px;
+}
+
+.wathq-form-group input,
+.wathq-form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: var(--font-size-sm, 13px);
+    color: var(--color-text);
+    background: var(--color-surface);
+    transition: border-color var(--transition-fast, 100ms ease);
+    direction: rtl;
+    font-family: var(--font-family-base);
+}
+
+.wathq-form-group input:focus,
+.wathq-form-group select:focus {
+    outline: none;
+    border-color: var(--law-navy);
+    box-shadow: 0 0 0 3px var(--law-navy-light);
+}
+
+.wathq-form-group input::placeholder {
+    color: var(--quiet-gray-500);
+}
+
+.wathq-btn-submit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    background: var(--law-navy);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast, 100ms ease);
+    white-space: nowrap;
+    height: fit-content;
+    font-family: var(--font-family-base);
+}
+
+.wathq-btn-submit:hover:not(:disabled) {
+    background: var(--law-navy-dark);
+    transform: translateY(-1px);
+}
+
+.wathq-btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ==================== Results Section ==================== */
+.wathq-results-section {
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm, 12px);
+    overflow: hidden;
+    box-shadow: var(--shadow-xs);
+}
+
+.wathq-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--quiet-gray-100);
+}
+
+.wathq-results-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--color-heading);
+}
+
+.wathq-results-body {
+    padding: 20px 24px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+/* ==================== Result Viewer - Simple Tables ==================== */
+.wathq-result-viewer {
+    font-size: var(--font-size-sm, 13px);
+}
+
+.wathq-table-section {
+    margin-bottom: 12px;
+}
+
+.wathq-table-title {
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 700;
+    color: white;
+    background: var(--law-navy);
+    padding: 6px 14px;
+    border-radius: 4px 4px 0 0;
+    margin-top: 12px;
+}
+
+.wathq-table-section > .wathq-table-section .wathq-table-title {
+    background: var(--quiet-gray-300);
+    color: var(--color-heading);
+}
+
+/* Simple table - like Excel/Word */
+.wathq-simple-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--color-border);
+    margin-bottom: 2px;
+}
+
+.wathq-simple-table th {
+    padding: 7px 12px;
+    text-align: right;
+    font-size: var(--font-size-xs, 12px);
+    font-weight: 600;
+    color: var(--color-heading);
+    background: var(--quiet-gray-100);
+    border: 1px solid var(--color-border);
+    white-space: nowrap;
+}
+
+.wathq-simple-table td {
+    padding: 7px 12px;
+    font-size: var(--font-size-sm, 13px);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+}
+
+.wathq-simple-table tbody tr:hover td {
+    background: var(--quiet-gray-100);
+}
+
+/* Key-Value table (2 columns: label | value) */
+.wathq-kv-table th {
+    width: 180px;
+    min-width: 140px;
+}
+
+.wathq-kv-table td {
+    font-weight: 500;
+}
+
+/* ==================== Loading & Error ==================== */
+.wathq-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px;
+    color: var(--color-text-secondary);
+}
+
+.wathq-error-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--color-error-soft, rgba(209, 73, 91, 0.12));
+    border: 1px solid var(--color-error);
+    border-radius: 10px;
+    color: var(--color-error);
+}
+
+.wathq-error-box p {
+    margin: 0;
+}
+
+/* ==================== Spin Animation ==================== */
+.spin {
+    animation: wathq-spin 1s linear infinite;
+}
+
+@keyframes wathq-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ==================== Button Icon ==================== */
+.wathq-btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all var(--transition-fast, 100ms ease);
+}
+
+.wathq-btn-icon:hover {
+    background: var(--quiet-gray-100);
+    color: var(--color-heading);
+}
+
+/* ==================== Modal ==================== */
+.wathq-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 24px;
+}
+
+.wathq-modal {
+    background: var(--dashboard-card);
+    border-radius: var(--radius-md, 16px);
+    width: 100%;
+    max-width: 900px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    direction: rtl;
+    box-shadow: var(--shadow-lg);
+}
+
+.wathq-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--quiet-gray-100);
+}
+
+.wathq-modal-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    flex: 1;
+    color: var(--color-heading);
+}
+
+.wathq-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+}
+
+/* ==================== History Filters ==================== */
+.wathq-history-filters {
+    margin-bottom: 16px;
+}
+
+.wathq-filter-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.wathq-filter-group svg {
+    color: var(--quiet-gray-500);
+}
+
+.wathq-filter-group select {
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: var(--font-size-xs, 12px);
+    color: var(--color-text);
+    background: var(--color-surface);
+    min-width: 140px;
+    font-family: var(--font-family-base);
+}
+
+/* ==================== History Table ==================== */
+.wathq-history-table {
+    overflow-x: auto;
+}
+
+.wathq-history-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.wathq-history-table th {
+    padding: 10px 14px;
+    text-align: right;
+    font-size: var(--font-size-xs, 12px);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    border-bottom: 2px solid var(--color-border);
+    white-space: nowrap;
+}
+
+.wathq-history-table td {
+    padding: 10px 14px;
+    font-size: var(--font-size-sm, 13px);
+    color: var(--color-text);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.wathq-history-table tr:hover td {
+    background: var(--quiet-gray-100);
+}
+
+.wathq-params-cell {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--font-size-xs, 12px);
+    color: var(--color-text-secondary);
+}
+
+/* ==================== Status Badge ==================== */
+.wathq-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.wathq-status-badge.success {
+    background: var(--color-success-soft, rgba(27, 153, 139, 0.12));
+    color: var(--color-success);
+}
+
+.wathq-status-badge.failed,
+.wathq-status-badge.error {
+    background: var(--color-error-soft, rgba(209, 73, 91, 0.12));
+    color: var(--color-error);
+}
+
+/* ==================== Pagination ==================== */
+.wathq-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 0 4px;
+}
+
+.wathq-pagination button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--dashboard-card);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all var(--transition-fast, 100ms ease);
+}
+
+.wathq-pagination button:hover:not(:disabled) {
+    background: var(--law-navy);
+    color: white;
+    border-color: var(--law-navy);
+}
+
+.wathq-pagination button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.wathq-pagination span {
+    font-size: var(--font-size-xs, 12px);
+    color: var(--color-text-secondary);
+}
+
+/* ==================== Detail View - Improved ==================== */
+.wathq-detail-card {
+    background: var(--quiet-gray-100);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+}
+
+.wathq-detail-header-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.wathq-detail-service-badge {
+    display: inline-flex;
+    padding: 4px 14px;
+    background: var(--law-navy);
+    color: white;
+    border-radius: 20px;
+    font-size: var(--font-size-xs, 12px);
+    font-weight: 600;
+}
+
+.wathq-detail-endpoint {
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.wathq-detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs, 12px);
+}
+
+.wathq-detail-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.wathq-detail-params-section {
+    margin-bottom: 16px;
+}
+
+.wathq-detail-params-section h4 {
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 600;
+    color: var(--color-heading);
+    margin: 0 0 10px;
+}
+
+.wathq-detail-params-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.wathq-detail-param-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--quiet-gray-100);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    min-width: 140px;
+}
+
+.wathq-detail-param-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.wathq-detail-param-value {
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 600;
+    color: var(--color-heading);
+    direction: ltr;
+    text-align: right;
+}
+
+.wathq-detail-result {
+    margin-top: 16px;
+}
+
+.wathq-detail-result h4,
+.wathq-detail-error h4 {
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 600;
+    margin: 0 0 12px;
+    color: var(--color-heading);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.wathq-detail-error {
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--color-error-soft, rgba(209, 73, 91, 0.12));
+    border: 1px solid var(--color-error);
+    border-radius: 10px;
+}
+
+.wathq-detail-error p {
+    margin: 0;
+    color: var(--color-error);
+}
+
+.wathq-empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--quiet-gray-500);
+    font-size: var(--font-size-sm, 13px);
+}
+
+/* ==================== Dark Theme Overrides ==================== */
+body.dark .wathq-error-box {
+    background: rgba(255, 123, 138, 0.15);
+    border-color: rgba(255, 123, 138, 0.3);
+}
+
+body.dark .wathq-modal-overlay {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+body.dark .wathq-status-badge.success {
+    background: rgba(70, 194, 179, 0.18);
+}
+
+body.dark .wathq-status-badge.failed,
+body.dark .wathq-status-badge.error {
+    background: rgba(255, 123, 138, 0.18);
+}
+
+body.dark .wathq-table-title {
+    background: var(--law-navy);
+}
+
+body.dark .wathq-table-section > .wathq-table-section .wathq-table-title {
+    background: var(--quiet-gray-200);
+    color: var(--color-heading);
+}
+
+/* ==================== Classic Theme Overrides ==================== */
+body.classic .wathq-group-btn.active {
+    background: var(--law-navy);
+    border-color: var(--law-navy);
+}
+
+body.classic .wathq-btn-submit {
+    background: var(--law-navy);
+}
+
+body.classic .wathq-btn-submit:hover:not(:disabled) {
+    background: var(--law-navy-dark);
+}
+
+body.classic .wathq-error-box {
+    background: rgba(155, 44, 44, 0.08);
+    border-color: rgba(155, 44, 44, 0.25);
+}
+
+body.classic .wathq-table-title {
+    background: var(--law-navy);
+}
+
+/* ==================== Header Actions ==================== */
+.wathq-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wathq-btn-settings {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--quiet-gray-100);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.wathq-btn-settings:hover {
+    background: var(--law-navy);
+    color: white;
+    border-color: var(--law-navy);
+}
+
+/* ==================== Warning Alert ==================== */
+.wathq-alert-warning {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    background: var(--color-warning-soft, rgba(244, 162, 89, 0.15));
+    border: 1px solid var(--color-warning);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    font-size: var(--font-size-sm, 13px);
+    color: var(--color-text);
+}
+
+.wathq-alert-warning svg {
+    color: var(--color-warning);
+    flex-shrink: 0;
+}
+
+.wathq-alert-warning span {
+    flex: 1;
+}
+
+.wathq-alert-warning button {
+    padding: 5px 14px;
+    background: var(--color-warning);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: var(--font-size-xs, 12px);
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: var(--font-family-base);
+}
+
+.wathq-alert-warning button:hover {
+    opacity: 0.9;
+}
+
+/* ==================== Settings Modal ==================== */
+.wathq-settings-modal {
+    max-width: 500px;
+}
+
+.wathq-settings-desc {
+    font-size: var(--font-size-sm, 13px);
+    color: var(--color-text-secondary);
+    margin: 0 0 16px;
+    line-height: 1.6;
+}
+
+.wathq-settings-desc a {
+    color: var(--law-navy);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.wathq-settings-desc a:hover {
+    text-decoration: underline;
+}
+
+.wathq-settings-current {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--quiet-gray-100);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: var(--font-size-sm, 13px);
+}
+
+.wathq-settings-current span {
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.wathq-settings-current code {
+    direction: ltr;
+    font-family: monospace;
+    color: var(--color-heading);
+    letter-spacing: 1px;
+}
+
+.wathq-settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.wathq-settings-msg {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: var(--font-size-sm, 13px);
+    margin-bottom: 12px;
+}
+
+.wathq-settings-msg.success {
+    background: var(--color-success-soft, rgba(27, 153, 139, 0.12));
+    color: var(--color-success);
+}
+
+.wathq-settings-msg.error {
+    background: var(--color-error-soft, rgba(209, 73, 91, 0.12));
+    color: var(--color-error);
+}
+
+.wathq-btn-save {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 768px) {
+    .wathq-page {
+        padding: 16px;
+    }
+
+    .wathq-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .wathq-form-row {
+        flex-direction: column;
+    }
+
+    .wathq-form-group {
+        min-width: 100%;
+    }
+
+    .wathq-btn-submit {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .wathq-group-btn {
+        min-width: 0;
+        padding: 10px 16px;
+        font-size: var(--font-size-xs, 12px);
+    }
+
+    .wathq-modal {
+        max-height: 95vh;
+    }
+
+    .wathq-result-key {
+        min-width: 100px;
+    }
+}

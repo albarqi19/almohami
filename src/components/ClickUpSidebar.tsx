@@ -26,7 +26,8 @@ import {
     Receipt,
     CreditCard,
     TrendingUp,
-    FileSignature
+    FileSignature,
+    ShieldCheck
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useAuth } from '../contexts/AuthContext';
@@ -65,6 +66,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
         { icon: Clock, label: 'الأنشطة', path: '/activities', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
         { icon: Users, label: 'العملاء', path: '/clients', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: ClipboardList, label: 'الطلبات الإدارية', path: '/admin/requests', roles: ['admin', 'lawyer', 'legal_assistant'] },
+        { icon: ShieldCheck, label: 'الاستعلام والتحقق', path: '/wathq', roles: ['admin', 'owner', 'partner', 'senior_lawyer', 'lawyer'] },
         { icon: FileSignature, label: 'العقود', path: '/contracts', roles: ['admin', 'legal_assistant'] },
         { icon: FileText, label: 'قوالب العقود', path: '/contract-templates', roles: ['admin'] },
         { icon: Receipt, label: 'الفواتير', path: '/invoices', roles: ['admin', 'legal_assistant'] },
