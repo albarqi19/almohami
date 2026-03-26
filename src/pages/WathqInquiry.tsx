@@ -165,14 +165,53 @@ const ResultViewer: React.FC<{ data: Record<string, unknown> | unknown[] }> = ({
         const objects = arr.filter(item => typeof item === 'object' && item !== null) as Record<string, unknown>[];
         if (objects.length === 0) return null;
 
-        // Get all keys across all objects, filter hidden/empty
+        // Get all keys across all objects
         const allKeys = Array.from(new Set(objects.flatMap(obj => Object.keys(obj))))
             .filter(key => !HIDDEN_FIELDS.has(key) && objects.some(obj => !isEmptyValue(obj[key])));
 
-        // Separate simple keys (for table columns) and complex keys (for sub-sections)
         const simpleKeys = allKeys.filter(key => objects.every(obj => isSimpleValue(obj[key]) || isEmptyValue(obj[key])));
         const complexKeys = allKeys.filter(key => !simpleKeys.includes(key));
 
+        // If items have complex sub-fields AND there's more than 1 item, render each item as its own section
+        if (complexKeys.length > 0 && objects.length > 1) {
+            return (
+                <div className="wathq-table-section">
+                    {title && <div className="wathq-table-title">{title}</div>}
+                    {objects.map((obj, i) => {
+                        // Use name or first simple value as item label
+                        const itemName = String(obj['name'] || obj['Name'] || obj['ownerName'] || `#${i + 1}`);
+                        return (
+                            <div key={i} className="wathq-table-section">
+                                <div className="wathq-table-subtitle">{itemName}</div>
+                                {simpleKeys.length > 0 && (
+                                    <table className="wathq-simple-table wathq-kv-table">
+                                        <tbody>
+                                            {simpleKeys.map(key => !isEmptyValue(obj[key]) && (
+                                                <tr key={key}>
+                                                    <th>{getLabel(key)}</th>
+                                                    <td>{formatValue(obj[key])}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                                {complexKeys.map(key => !isEmptyValue(obj[key]) && (
+                                    <div key={key}>
+                                        {Array.isArray(obj[key])
+                                            ? renderArrayTable(obj[key] as unknown[], getLabel(key))
+                                            : typeof obj[key] === 'object'
+                                                ? renderObjectTable(obj[key] as Record<string, unknown>, getLabel(key))
+                                                : null}
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        // Single item or no complex fields - render as normal table
         return (
             <div className="wathq-table-section">
                 {title && <div className="wathq-table-title">{title}</div>}
@@ -196,7 +235,7 @@ const ResultViewer: React.FC<{ data: Record<string, unknown> | unknown[] }> = ({
                         </tbody>
                     </table>
                 )}
-                {/* Render complex sub-fields for each item */}
+                {/* Single item - render complex sub-fields */}
                 {complexKeys.length > 0 && objects.map((obj, i) => (
                     <div key={i}>
                         {complexKeys.map(key => !isEmptyValue(obj[key]) && (
