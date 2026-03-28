@@ -1,6 +1,7 @@
 ﻿import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthService } from '../services';
 import { apiClient } from '../utils/api';
+import { destroyEcho } from '../lib/echo';
 import { queryClient } from '../main';
 import type { User } from '../types';
 
@@ -142,6 +143,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Preserve theme preference before clearing cache
     const savedTheme = localStorage.getItem('theme');
+
+    // إنهاء جلسة الحضور وقطع اتصال Reverb
+    apiClient.post('/presence/end-session').catch(() => {});
+    destroyEcho();
 
     try {
       await AuthService.logout();
