@@ -4,6 +4,10 @@
 
 /* === Page Container === */
 .cases-page {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 100vh;
     background: var(--dashboard-bg);
 }
 
@@ -240,6 +244,7 @@
 /* === Content Area === */
 .cases-content {
     padding: 0;
+    flex: 1;
 }
 
 /* === Loading State === */

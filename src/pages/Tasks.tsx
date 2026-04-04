@@ -589,6 +589,7 @@ const Tasks: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         onTaskAdded={loadTasks}
       />
+
     </div>
   );
 };

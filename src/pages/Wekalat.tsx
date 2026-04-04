@@ -139,177 +139,137 @@ interface WekalaModalProps {
 }
 
 
-const WekalaModal: React.FC<WekalaModalProps> = ({ wekala, isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'info' | 'clients' | 'agents' | 'permissions'>('info');
+// Remaining days helper - tries multiple date field names
+function getRemainingDays(wekala: Wekala): { text: string; urgent: boolean; expired: boolean } | null {
+  // Try all possible date fields
+  const dateStr = (wekala as any).expiry_date_gregorian || wekala.expiry_date || null;
+  if (!dateStr) return null;
+  try {
+    const exp = new Date(dateStr);
+    if (isNaN(exp.getTime())) return null;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const diff = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff < 0) return { text: `منتهية منذ ${Math.abs(diff)} يوم`, urgent: true, expired: true };
+    if (diff === 0) return { text: 'تنتهي اليوم', urgent: true, expired: false };
+    if (diff <= 30) return { text: `${diff} يوم متبقي`, urgent: true, expired: false };
+    if (diff <= 90) return { text: `${diff} يوم متبقي`, urgent: false, expired: false };
+    return { text: `${diff} يوم متبقي`, urgent: false, expired: false };
+  } catch { return null; }
+}
 
+const WekalaModal: React.FC<WekalaModalProps> = ({ wekala, isOpen, onClose }) => {
   if (!wekala || !isOpen) return null;
 
   const statusConfig = STATUS_CONFIG[wekala.status] || STATUS_CONFIG['معتمدة'];
   const agents = wekala.agents || [];
   const clients = wekala.clients || [];
   const permissions = wekala.permissions || [];
+  const remaining = getRemainingDays(wekala);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content modal-content--lg" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="modal-header">
-          <div>
-            <h2 className="modal-title">
-              <FileCheck size={24} />
-              وكالة رقم: {wekala.number}
-            </h2>
-            {wekala.type && (
-              <p className="modal-subtitle">
-                <Briefcase size={14} />
-                {wekala.type}
-              </p>
-            )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span className={`wekala-status-badge ${statusConfig.class}`}>
-              <span className="wekala-status-badge__dot" />
-              {statusConfig.label}
+    <div className="wk-overlay" onClick={onClose}>
+      <div className="wk-modal" onClick={e => e.stopPropagation()}>
+        {/* Compact Header */}
+        <div className="wk-header">
+          <FileCheck size={16} className="wk-header__icon" />
+          <span className="wk-header__num">{wekala.number}</span>
+          {wekala.type && <span className="wk-header__type">{wekala.type}</span>}
+          <div className="wk-header__spacer" />
+          <span className={`wekala-status-badge ${statusConfig.class}`}>
+            <span className="wekala-status-badge__dot" />{statusConfig.label}
+          </span>
+          {remaining && (
+            <span className={`wk-remaining ${remaining.expired ? 'wk-remaining--expired' : ''} ${remaining.urgent && !remaining.expired ? 'wk-remaining--urgent' : ''}`}>
+              <Clock size={11} />{remaining.text}
             </span>
-            <button className="modal-close" onClick={onClose}>
-              <X size={20} />
-            </button>
-          </div>
+          )}
+          <button className="wk-close" onClick={onClose}><X size={15} /></button>
         </div>
 
-        {/* Tabs */}
-        <div className="modal-tabs">
-          <button
-            className={`modal-tab ${activeTab === 'info' ? 'modal-tab--active' : ''}`}
-            onClick={() => setActiveTab('info')}
-          >
-            <FileText size={16} />
-            معلومات عامة
-          </button>
-          <button
-            className={`modal-tab ${activeTab === 'clients' ? 'modal-tab--active' : ''}`}
-            onClick={() => setActiveTab('clients')}
-          >
-            <User size={16} />
-            الموكلين ({clients.length})
-          </button>
-          <button
-            className={`modal-tab ${activeTab === 'agents' ? 'modal-tab--active' : ''}`}
-            onClick={() => setActiveTab('agents')}
-          >
-            <Shield size={16} />
-            الوكلاء ({agents.length})
-          </button>
-          <button
-            className={`modal-tab ${activeTab === 'permissions' ? 'modal-tab--active' : ''}`}
-            onClick={() => setActiveTab('permissions')}
-          >
-            <ScrollText size={16} />
-            الصلاحيات ({permissions.length})
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="modal-body">
-          {activeTab === 'info' && (
-            <div className="modal-info-grid">
-              <div className="modal-info-card">
-                <Calendar size={18} className="modal-info-card__icon" />
-                <div>
-                  <div className="modal-info-card__label">تاريخ الإصدار</div>
-                  <div className="modal-info-card__value">
-                    {wekala.issue_date_hijri || formatDate(wekala.issue_date)}
-                  </div>
-                </div>
-              </div>
-              <div className="modal-info-card">
-                <Clock size={18} className="modal-info-card__icon" />
-                <div>
-                  <div className="modal-info-card__label">تاريخ الانتهاء</div>
-                  <div className="modal-info-card__value">
-                    {wekala.expiry_date_hijri || formatDate(wekala.expiry_date)}
-                  </div>
-                </div>
-              </div>
+        {/* Body */}
+        <div className="wk-body">
+          {/* Dense property table */}
+          <table className="wk-table">
+            <tbody>
+              <tr>
+                <td className="wk-table__label">تاريخ الإصدار</td>
+                <td>{wekala.issue_date_hijri || formatDate((wekala as any).issue_date_gregorian || wekala.issue_date)}</td>
+                <td className="wk-table__label">تاريخ الانتهاء</td>
+                <td>
+                  {wekala.expiry_date_hijri || formatDate((wekala as any).expiry_date_gregorian || wekala.expiry_date)}
+                </td>
+              </tr>
               {wekala.issue_location && (
-                <div className="modal-info-card">
-                  <Building size={18} className="modal-info-card__icon" />
-                  <div>
-                    <div className="modal-info-card__label">مكان الإصدار</div>
-                    <div className="modal-info-card__value">{wekala.issue_location}</div>
-                  </div>
-                </div>
+                <tr>
+                  <td className="wk-table__label">مكان الإصدار</td>
+                  <td colSpan={3}>{wekala.issue_location}</td>
+                </tr>
               )}
-              <div className="modal-info-card">
-                <Users size={18} className="modal-info-card__icon" />
-                <div>
-                  <div className="modal-info-card__label">عدد الأطراف</div>
-                  <div className="modal-info-card__value">{clients.length + agents.length} طرف</div>
-                </div>
+            </tbody>
+          </table>
+
+          {/* 3-column grid: Clients | Agents | Permissions */}
+          <div className="wk-grid3">
+            {/* Clients */}
+            <div className="wk-panel">
+              <div className="wk-panel__head">
+                <User size={13} /> الموكلين
+                <span className="wk-badge">{clients.length}</span>
               </div>
-
-              {wekala.agency_text && (
-                <div className="modal-info-text" style={{ gridColumn: '1 / -1' }}>
-                  <h4><ScrollText size={16} /> نص الوكالة</h4>
-                  <p>{wekala.agency_text}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'clients' && (
-            <div className="modal-party-list">
-              {clients.length === 0 ? (
-                <div className="modal-empty">لا يوجد موكلين</div>
-              ) : (
-                clients.map((client, idx) => (
-                  <div key={idx} className="modal-party-card modal-party-card--client">
-                    <div className="modal-party-card__icon">
-                      <User size={18} />
-                    </div>
-                    <div>
-                      <div className="modal-party-card__name">{client.name}</div>
-                      {(client as any).national_id && (
-                        <div className="modal-party-card__id">هوية: {(client as any).national_id}</div>
-                      )}
-                    </div>
+              <div className="wk-panel__body">
+                {clients.length === 0 ? (
+                  <div className="wk-panel__empty">-</div>
+                ) : clients.map((c, i) => (
+                  <div key={i} className="wk-row">
+                    <span className="wk-dot wk-dot--blue" />
+                    <span className="wk-row__name">{c.name}</span>
+                    {(c as any).national_id && <span className="wk-row__sub">{(c as any).national_id}</span>}
                   </div>
-                ))
-              )}
+                ))}
+              </div>
             </div>
-          )}
 
-          {activeTab === 'agents' && (
-            <div className="modal-party-list">
-              {agents.length === 0 ? (
-                <div className="modal-empty">لا يوجد وكلاء</div>
-              ) : (
-                agents.map((agent, idx) => (
-                  <div key={idx} className="modal-party-card modal-party-card--agent">
-                    <div className="modal-party-card__icon">
-                      <Shield size={18} />
-                    </div>
-                    <div>
-                      <div className="modal-party-card__name">{agent.name}</div>
-                      {agent.adjective && (
-                        <div className="modal-party-card__role">{agent.adjective}</div>
-                      )}
-                    </div>
+            {/* Agents */}
+            <div className="wk-panel">
+              <div className="wk-panel__head">
+                <Shield size={13} /> الوكلاء
+                <span className="wk-badge">{agents.length}</span>
+              </div>
+              <div className="wk-panel__body">
+                {agents.length === 0 ? (
+                  <div className="wk-panel__empty">-</div>
+                ) : agents.map((a, i) => (
+                  <div key={i} className="wk-row">
+                    <span className="wk-dot wk-dot--green" />
+                    <span className="wk-row__name">{a.name}</span>
+                    {a.adjective && <span className="wk-row__sub">{a.adjective}</span>}
                   </div>
-                ))
-              )}
+                ))}
+              </div>
             </div>
-          )}
 
-          {activeTab === 'permissions' && (
-            <div className="modal-permissions-list">
-              {permissions.length === 0 ? (
-                <div className="modal-empty">لا توجد صلاحيات</div>
-              ) : (
-                permissions.map((permission, idx) => (
-                  <PermissionAccordion key={idx} permission={permission} index={idx} />
-                ))
-              )}
+            {/* Permissions */}
+            <div className="wk-panel">
+              <div className="wk-panel__head">
+                <CheckCircle size={13} /> الصلاحيات
+                <span className="wk-badge">{permissions.length}</span>
+              </div>
+              <div className="wk-panel__body">
+                {permissions.length === 0 ? (
+                  <div className="wk-panel__empty">-</div>
+                ) : permissions.map((p, i) => (
+                  <PermissionAccordion key={i} permission={p} index={i} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Agency text */}
+          {wekala.agency_text && (
+            <div className="wk-text-section">
+              <div className="wk-panel__head"><ScrollText size={13} /> نص الوكالة</div>
+              <p className="wk-text-block">{wekala.agency_text}</p>
             </div>
           )}
         </div>

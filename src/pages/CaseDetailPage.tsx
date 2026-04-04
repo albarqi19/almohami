@@ -851,6 +851,7 @@ const CaseDetailPage: React.FC = () => {
           refreshCaseData();
         }}
       />
+
     </div>
   );
 };

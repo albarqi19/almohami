@@ -21,6 +21,7 @@ export interface CreateActivityData {
   description?: string;
   case_id?: string;
   task_id?: string;
+  notify_client?: boolean;
   metadata?: Record<string, any>;
 }
 

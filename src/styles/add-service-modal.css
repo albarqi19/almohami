@@ -1,0 +1,991 @@
+/* ====================================================
+   Add Service Modal - Notion Style (asm- prefix)
+   Reuses --notion-* variables defined in add-case-modal.css.
+   These are NOT redefined here.
+   ==================================================== */
+
+/* ── Map --notion-* to --asm-* shorthand aliases (no theme overrides needed,
+      the --notion-* vars already handle light / dark / classic) ── */
+.asm-overlay {
+  --asm-bg:       var(--notion-bg);
+  --asm-bg-subtle:var(--notion-gray);
+  --asm-text:     var(--notion-text);
+  --asm-text-muted: rgba(55, 53, 47, 0.55);
+  --asm-border:   var(--notion-border);
+  --asm-blue:     var(--notion-blue);
+  --asm-blue-bg:  var(--notion-blue-bg);
+  --asm-green:    var(--color-success, #44B960);
+  --asm-green-bg: var(--color-success-soft, #EDFDF0);
+  --asm-red:      var(--notion-red, var(--color-error, #EB5757));
+  --asm-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --asm-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --asm-shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.08);
+  --asm-radius: 8px;
+  --asm-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+/* Dark: --notion-* already provides correct values via add-case-modal.css */
+/* Classic: same — no duplicate overrides needed here */
+
+/* ── Overlay ── */
+.asm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+/* ── Modal Container ── */
+.asm-modal {
+  background: var(--asm-bg);
+  color: var(--asm-text);
+  width: 100%;
+  max-width: 860px;
+  max-height: 92vh;
+  border-radius: var(--asm-radius);
+  border: 1px solid var(--asm-border);
+  box-shadow: var(--asm-shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  font-family: var(--asm-font);
+  direction: rtl;
+}
+
+/* ── Header ── */
+.asm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: var(--asm-bg-subtle);
+  border-bottom: 1px solid var(--asm-border);
+  flex-shrink: 0;
+}
+
+.asm-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.asm-header-icon {
+  width: 34px;
+  height: 34px;
+  background: var(--asm-bg);
+  border: 1px solid var(--asm-border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--asm-blue);
+  box-shadow: var(--asm-shadow-sm);
+  flex-shrink: 0;
+}
+
+.asm-header-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--asm-text);
+  line-height: 1.2;
+}
+
+.asm-header-subtitle {
+  font-size: 12px;
+  color: var(--asm-text-muted);
+  margin-top: 2px;
+}
+
+.asm-header-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--asm-text);
+  opacity: 0.45;
+  padding: 5px;
+  border-radius: 5px;
+  transition: background 0.1s, opacity 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.asm-header-close:hover {
+  background: var(--asm-border);
+  opacity: 1;
+}
+
+/* ── Step Indicator ── */
+.asm-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 24px 0;
+  background: var(--asm-bg);
+  flex-shrink: 0;
+  gap: 0;
+}
+
+.asm-step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  flex: 1;
+  max-width: 160px;
+}
+
+.asm-step-connector {
+  flex: 1;
+  height: 1px;
+  background: var(--asm-border);
+  margin-bottom: 20px;
+  transition: background 0.3s;
+  max-width: 60px;
+}
+
+.asm-step-connector.completed {
+  background: var(--asm-blue);
+}
+
+.asm-step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--asm-border);
+  background: var(--asm-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--asm-text-muted);
+  transition: all 0.25s;
+  position: relative;
+  z-index: 1;
+}
+
+.asm-step-dot.active {
+  border-color: var(--asm-blue);
+  background: var(--asm-blue);
+  color: #fff;
+  box-shadow: 0 0 0 3px var(--asm-blue-bg);
+}
+
+.asm-step-dot.completed {
+  border-color: var(--asm-green);
+  background: var(--asm-green);
+  color: #fff;
+}
+
+.asm-step-label {
+  font-size: 11px;
+  color: var(--asm-text-muted);
+  white-space: nowrap;
+  text-align: center;
+  transition: color 0.2s;
+}
+
+.asm-step-label.active {
+  color: var(--asm-blue);
+  font-weight: 600;
+}
+
+.asm-step-label.completed {
+  color: var(--asm-green);
+}
+
+/* ── Body ── */
+.asm-body {
+  padding: 28px 40px 24px;
+  flex: 1 0 auto;
+  background: var(--asm-bg);
+}
+
+/* ── Step Content ── */
+.asm-step-content {
+  width: 100%;
+}
+
+/* ── Step 1: Service Type Grid ── */
+.asm-step-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--asm-text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.asm-type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.asm-type-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--asm-border);
+  border-radius: var(--asm-radius);
+  background: var(--asm-bg);
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  text-align: right;
+  min-height: 80px;
+}
+
+.asm-type-card:hover:not(.disabled) {
+  background: var(--asm-bg-subtle);
+  border-color: var(--asm-blue);
+}
+
+.asm-type-card.selected {
+  border-color: var(--asm-blue);
+  background: var(--asm-blue-bg);
+}
+
+.asm-type-card.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.asm-type-card-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--asm-bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--asm-text-muted);
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.asm-type-card.selected .asm-type-card-icon {
+  background: var(--asm-blue);
+  color: #fff;
+}
+
+.asm-type-card.disabled .asm-type-card-icon {
+  background: var(--asm-bg-subtle);
+}
+
+.asm-type-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.asm-type-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--asm-text);
+  margin-bottom: 3px;
+}
+
+.asm-type-card-desc {
+  font-size: 12px;
+  color: var(--asm-text-muted);
+  line-height: 1.4;
+}
+
+.asm-type-card.selected .asm-type-card-name {
+  color: var(--asm-blue);
+}
+
+.asm-soon-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--asm-bg-subtle);
+  border: 1px solid var(--asm-border);
+  color: var(--asm-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+}
+
+.asm-selected-check {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--asm-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+/* ── Step 2: Properties ── */
+.asm-page-title-input {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--asm-text);
+  border: none;
+  width: 100%;
+  margin-bottom: 28px;
+  outline: none;
+  background: transparent;
+  line-height: 1.25;
+  font-family: var(--asm-font);
+  direction: rtl;
+}
+
+.asm-page-title-input::placeholder {
+  color: var(--asm-text);
+  opacity: 0.2;
+}
+
+.asm-properties {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 28px;
+  row-gap: 4px;
+  margin-bottom: 24px;
+}
+
+.asm-property-row {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  border-radius: 4px;
+  padding: 2px 4px;
+  transition: background 0.1s;
+}
+
+.asm-property-row:hover {
+  background: var(--asm-bg-subtle);
+}
+
+.asm-property-row.span-full {
+  grid-column: 1 / -1;
+}
+
+.asm-divider {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: var(--asm-border);
+  margin: 10px 0 6px;
+}
+
+.asm-property-label {
+  width: 136px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--asm-text-muted);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.asm-property-icon {
+  width: 15px;
+  height: 15px;
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+
+.asm-property-value {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* ── Notion-style Inputs ── */
+.asm-input,
+.asm-select {
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--asm-text);
+  font-size: 14px;
+  font-family: var(--asm-font);
+  transition: all 0.12s;
+  line-height: 1.4;
+  direction: rtl;
+}
+
+.asm-input:hover,
+.asm-select:hover {
+  background: var(--asm-bg-subtle);
+  border-color: var(--asm-border);
+}
+
+.asm-input:focus,
+.asm-select:focus {
+  outline: none;
+  background: var(--asm-bg);
+  border-color: var(--asm-blue);
+  box-shadow: 0 0 0 2px var(--asm-blue-bg);
+}
+
+.asm-input::placeholder {
+  color: var(--asm-text-muted);
+  opacity: 0.7;
+}
+
+.asm-select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-left: 24px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='rgba(55, 53, 47, 0.45)'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd' /%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 6px center;
+  background-size: 16px;
+}
+
+.dark .asm-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='rgba(255, 255, 255, 0.45)'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd' /%3E%3C/svg%3E");
+}
+
+.asm-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  resize: vertical;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--asm-text);
+  background: transparent;
+  font-family: var(--asm-font);
+  transition: all 0.12s;
+  direction: rtl;
+}
+
+.asm-textarea:hover {
+  background: var(--asm-bg-subtle);
+  border-color: var(--asm-border);
+}
+
+.asm-textarea:focus {
+  outline: none;
+  background: var(--asm-bg);
+  border-color: var(--asm-blue);
+  box-shadow: 0 0 0 2px var(--asm-blue-bg);
+}
+
+.asm-textarea::placeholder {
+  color: var(--asm-text-muted);
+  opacity: 0.7;
+}
+
+/* ── Number input with currency ── */
+.asm-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.asm-input-group .asm-input {
+  flex: 1;
+}
+
+.asm-currency-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--asm-text-muted);
+  padding: 4px 8px;
+  background: var(--asm-bg-subtle);
+  border: 1px solid var(--asm-border);
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Searchable Dropdown ── */
+.asm-dropdown-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.asm-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--asm-text);
+  font-size: 14px;
+  font-family: var(--asm-font);
+  cursor: pointer;
+  transition: all 0.12s;
+  text-align: right;
+  direction: rtl;
+}
+
+.asm-dropdown-trigger:hover {
+  background: var(--asm-bg-subtle);
+  border-color: var(--asm-border);
+}
+
+.asm-dropdown-trigger.open {
+  background: var(--asm-bg);
+  border-color: var(--asm-blue);
+  box-shadow: 0 0 0 2px var(--asm-blue-bg);
+}
+
+.asm-dropdown-trigger-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asm-dropdown-trigger-text.placeholder {
+  color: var(--asm-text-muted);
+  opacity: 0.7;
+}
+
+.asm-dropdown-chevron {
+  flex-shrink: 0;
+  color: var(--asm-text-muted);
+  transition: transform 0.2s;
+}
+
+.asm-dropdown-chevron.open {
+  transform: rotate(180deg);
+}
+
+.asm-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  background: var(--asm-bg);
+  border: 1px solid var(--asm-border);
+  border-radius: 6px;
+  box-shadow: var(--asm-shadow-md);
+  z-index: 200;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+}
+
+.asm-dropdown-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--asm-border);
+  background: var(--asm-bg-subtle);
+  flex-shrink: 0;
+}
+
+.asm-dropdown-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--asm-text);
+  outline: none;
+  font-family: var(--asm-font);
+  direction: rtl;
+}
+
+.asm-dropdown-search-input::placeholder {
+  color: var(--asm-text-muted);
+}
+
+.asm-dropdown-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 4px;
+}
+
+.asm-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--asm-text);
+  transition: background 0.1s;
+  direction: rtl;
+}
+
+.asm-dropdown-item:hover {
+  background: var(--asm-bg-subtle);
+}
+
+.asm-dropdown-item.active {
+  background: var(--asm-blue-bg);
+  color: var(--asm-blue);
+  font-weight: 500;
+}
+
+.asm-dropdown-item-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--asm-blue-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--asm-blue);
+  flex-shrink: 0;
+}
+
+.asm-dropdown-empty {
+  padding: 20px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--asm-text-muted);
+}
+
+/* ── Toggle / Switch ── */
+.asm-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.asm-toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.asm-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.asm-toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: var(--asm-border);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.asm-toggle input:checked + .asm-toggle-track {
+  background: var(--asm-blue);
+}
+
+.asm-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+}
+
+.asm-toggle input:checked + .asm-toggle-track::after {
+  transform: translateX(-16px);
+}
+
+.asm-toggle-label {
+  font-size: 13px;
+  color: var(--asm-text);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* ── Segmented Control (Billing) ── */
+.asm-segment-group {
+  display: flex;
+  background: var(--asm-bg-subtle);
+  border: 1px solid var(--asm-border);
+  border-radius: 6px;
+  padding: 3px;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.asm-segment-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--asm-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  font-family: var(--asm-font);
+}
+
+.asm-segment-btn:hover:not(.active) {
+  background: var(--asm-bg);
+  color: var(--asm-text);
+}
+
+.asm-segment-btn.active {
+  background: var(--asm-bg);
+  color: var(--asm-blue);
+  font-weight: 600;
+  box-shadow: var(--asm-shadow-sm);
+}
+
+/* ── Section Headers (Steps 3-4) ── */
+.asm-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--asm-text);
+  margin-bottom: 16px;
+  margin-top: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--asm-border);
+}
+
+.asm-section-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--asm-blue);
+  flex-shrink: 0;
+}
+
+.asm-field-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 24px;
+  margin-bottom: 16px;
+}
+
+.asm-field-group.single {
+  grid-template-columns: 1fr;
+}
+
+.asm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.asm-field.span-full {
+  grid-column: 1 / -1;
+}
+
+.asm-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--asm-text-muted);
+  letter-spacing: 0.04em;
+}
+
+/* ── Error State ── */
+.asm-error-msg {
+  font-size: 12px;
+  color: var(--asm-red);
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Footer (sticky bottom like Wekalat pagination) ── */
+.asm-modal .notion-modal-footer {
+  padding: 12px 20px;
+  background: var(--asm-bg, #fff);
+  border-top: 1px solid var(--asm-border, #E9E9E7);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  flex-shrink: 0;
+}
+
+.asm-modal .notion-btn-primary {
+  background: var(--asm-blue, #2383E2);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--asm-font);
+  transition: background 0.1s;
+}
+
+.asm-modal .notion-btn-primary:hover:not(:disabled) {
+  background: #0060BF;
+}
+
+.asm-modal .notion-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.asm-modal .notion-btn-secondary {
+  background: transparent;
+  color: var(--asm-text);
+  opacity: 0.65;
+  border: 1px solid var(--asm-border, #E9E9E7);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--asm-font);
+  transition: background 0.1s, opacity 0.1s;
+}
+
+.asm-modal .notion-btn-secondary:hover {
+  background: rgba(0,0,0,0.04);
+  opacity: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .asm-modal .notion-modal-footer {
+    background: var(--asm-bg-subtle, #1e1e1e);
+  }
+  .asm-modal .notion-btn-secondary:hover {
+    background: rgba(255,255,255,0.06);
+  }
+}
+
+/* ── Navigation Buttons (step wizard) ── */
+/* asm-btn-next: advance to next step */
+.asm-btn-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border: none;
+  border-radius: 5px;
+  background: var(--asm-blue);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--asm-font);
+  transition: opacity 0.12s;
+}
+
+.asm-btn-next:hover:not(:disabled) { opacity: 0.88; }
+.asm-btn-next:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* asm-btn-back: return to previous step */
+.asm-btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--asm-border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--asm-text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--asm-font);
+  opacity: 0.7;
+  transition: background 0.12s, opacity 0.12s;
+}
+
+.asm-btn-back:hover { background: var(--asm-bg); opacity: 1; }
+
+/* spinning loader on save */
+@keyframes asm-spin {
+  to { transform: rotate(360deg); }
+}
+
+.asm-spinner {
+  animation: asm-spin 0.75s linear infinite;
+}
+
+/* ── Validation hint on step 1 ── */
+.asm-validation-hint {
+  text-align: center;
+  color: var(--asm-text-muted);
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+/* ── Loading state for dropdowns ── */
+.asm-dropdown-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--asm-text-muted);
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .asm-body {
+    padding: 20px 20px 16px;
+  }
+
+  .asm-type-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .asm-properties,
+  .asm-field-group {
+    grid-template-columns: 1fr;
+  }
+
+  .asm-property-row.span-full,
+  .asm-field.span-full {
+    grid-column: 1;
+  }
+
+  .asm-segment-group {
+    flex-wrap: wrap;
+  }
+
+  .asm-steps {
+    padding: 12px 12px 0;
+  }
+
+  .asm-step-label {
+    font-size: 9px;
+  }
+}

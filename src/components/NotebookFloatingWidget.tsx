@@ -75,7 +75,7 @@ const NotebookFloatingWidget: React.FC<FloatingWidgetProps> = ({ defaultCaseId, 
                 onClick={() => setIsOpen(!isOpen)}
                 title="المفكرة الشخصية"
             >
-                {isOpen ? <X size={24} /> : <BookOpen size={24} />}
+                {isOpen ? <X size={15} /> : <><BookOpen size={15} /><span>المفكرة الشخصية</span></>}
             </button>
 
             {/* Quick Add Panel */}

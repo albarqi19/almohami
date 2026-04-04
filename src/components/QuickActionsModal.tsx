@@ -20,7 +20,8 @@ import {
   X,
   ChevronRight,
   Sparkles,
-  Check
+  Check,
+  Send
 } from 'lucide-react';
 import { ActivityService } from '../services/activityService';
 
@@ -53,6 +54,13 @@ const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
   const [selectedAction, setSelectedAction] = useState<QuickAction | null>(null);
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notifyClient, setNotifyClient] = useState(true);
+
+  // الإجراءات التي يمكن إرسال إشعار للعميل عنها
+  const NOTIFIABLE_ACTIONS = [
+    'court_hearing', 'hearing_postponed', 'submit_document', 'receive_judgment',
+    'update_status', 'request_documents', 'external_followup', 'update_notes',
+  ];
 
   const quickActions: QuickAction[] = [
     // التواصل
@@ -242,6 +250,7 @@ const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
   const handleActionClick = (action: QuickAction) => {
     setSelectedAction(action);
     setDescription('');
+    setNotifyClient(true);
   };
 
   const handleSubmit = async () => {
@@ -250,11 +259,13 @@ const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
 
     setIsSubmitting(true);
     try {
+      const isNotifiable = NOTIFIABLE_ACTIONS.includes(selectedAction.id);
       await ActivityService.createActivity({
         title: selectedAction.title,
         action: selectedAction.id,
         description: description.trim() || selectedAction.title,
         case_id: caseId,
+        notify_client: isNotifiable && notifyClient,
         metadata: {
           action_type: 'quick_action',
           action_title: selectedAction.title,
@@ -520,9 +531,59 @@ const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
             borderTop: '1px solid var(--color-border)',
             background: 'var(--quiet-gray-50)',
             display: 'flex',
-            justifyContent: 'flex-end',
+            alignItems: 'center',
             gap: '12px'
           }}>
+            {/* Toggle إرسال للعميل - يظهر فقط للإجراءات القابلة للإشعار */}
+            {selectedAction && NOTIFIABLE_ACTIONS.includes(selectedAction.id) && (
+              <button
+                onClick={() => setNotifyClient(!notifyClient)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: `1px solid ${notifyClient ? '#10b981' : 'var(--color-border)'}`,
+                  background: notifyClient ? '#10b98115' : 'transparent',
+                  color: notifyClient ? '#10b981' : 'var(--color-text-secondary)',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  marginLeft: 'auto'
+                }}
+              >
+                <Send size={14} />
+                إرسال للعميل
+                <div style={{
+                  width: '34px',
+                  height: '18px',
+                  borderRadius: '9px',
+                  backgroundColor: notifyClient ? '#10b981' : '#d1d5db',
+                  position: 'relative',
+                  transition: 'all 0.2s',
+                  flexShrink: 0
+                }}>
+                  <div style={{
+                    width: '14px',
+                    height: '14px',
+                    borderRadius: '50%',
+                    backgroundColor: 'white',
+                    position: 'absolute',
+                    top: '2px',
+                    transition: 'all 0.2s',
+                    ...(notifyClient ? { left: '2px' } : { right: '2px' })
+                  }} />
+                </div>
+              </button>
+            )}
+
+            {/* Spacer when no toggle */}
+            {(!selectedAction || !NOTIFIABLE_ACTIONS.includes(selectedAction.id)) && (
+              <div style={{ flex: 1 }} />
+            )}
+
             <button
               onClick={selectedAction ? () => setSelectedAction(null) : onClose}
               style={{

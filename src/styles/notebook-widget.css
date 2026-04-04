@@ -3,44 +3,75 @@
    ==================================================== */
 
 /* Floating Action Button */
-.notebook-fab {
+.floating-widgets-group {
     position: fixed;
-    bottom: 24px;
+    bottom: 42px;
     left: 24px;
     z-index: 900;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    direction: ltr;
+}
+
+.notebook-fab {
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--color-primary, #0A192F);
     color: #fff;
     border: none;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
     cursor: pointer;
     display: flex;
     align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
+    gap: 0;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: all 0.25s ease;
+}
+
+.notebook-fab span {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-width 0.25s ease, opacity 0.2s ease;
+    margin-right: 0;
 }
 
 .notebook-fab:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+    padding: 6px 12px;
+    gap: 6px;
+    background: var(--color-primary-hover, #142840);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.notebook-fab:hover span {
+    max-width: 120px;
+    opacity: 1;
 }
 
 .notebook-fab.open {
     background: var(--color-text-secondary);
-    transform: rotate(90deg);
+    padding: 6px 8px;
+    gap: 0;
+}
+
+.notebook-fab.open span {
+    max-width: 0;
+    opacity: 0;
 }
 
 .notebook-fab svg {
-    width: 24px;
-    height: 24px;
+    flex-shrink: 0;
 }
 
 /* Quick Add Panel */
 .notebook-quick-panel {
     position: fixed;
-    bottom: 92px;
+    bottom: 80px;
     left: 24px;
     z-index: 899;
     width: 320px;

@@ -4,6 +4,7 @@ import { ChevronLeft } from 'lucide-react';
 import ClickUpSidebar from './ClickUpSidebar';
 import FloatingTimer from './FloatingTimer';
 import NotebookFloatingWidget from './NotebookFloatingWidget';
+import LawSearchFab from './LawSearchFab';
 import ClickUpHeader from './ClickUpHeader';
 import PresenceTracker from './PresenceTracker';
 import CompanyPolicyModal from './CompanyPolicyModal';
@@ -135,8 +136,13 @@ const Layout: React.FC = () => {
           {/* Floating Timer Widget */}
           <FloatingTimer />
 
-          {/* Notebook Floating Widget - Quick notes from any page */}
-          {user && user.role !== 'client' && <NotebookFloatingWidget />}
+          {/* Floating Widgets Container */}
+          {user && user.role !== 'client' && (
+            <div className="floating-widgets-group">
+              <NotebookFloatingWidget />
+              <LawSearchFab />
+            </div>
+          )}
 
           {/* Presence Tracker - Invisible component for tracking lawyer activity */}
           <PresenceTracker />

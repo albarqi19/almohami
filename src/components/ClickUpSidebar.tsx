@@ -27,7 +27,8 @@ import {
     CreditCard,
     TrendingUp,
     FileSignature,
-    ShieldCheck
+    ShieldCheck,
+    Briefcase
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useAuth } from '../contexts/AuthContext';
@@ -55,6 +56,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
         { icon: FileText, label: 'القضايا', path: '/cases', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: FileCheck, label: 'الوكالات', path: '/wekalat', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: Calendar, label: 'الجلسات', path: '/sessions', roles: ['admin', 'lawyer', 'legal_assistant'] },
+        { icon: Briefcase, label: 'الخدمات القانونية', path: '/legal-services', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: Users, label: 'الاجتماعات', path: '/meetings/internal', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: Calendar, label: 'مواعيد العملاء', path: '/meetings/client', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: Clock, label: 'إعدادات التوفر', path: '/meetings/availability', roles: ['lawyer'] },

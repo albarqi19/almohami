@@ -1,0 +1,998 @@
+/* ====================================================
+   Legal Services Page - ClickUp Minimal Style
+   ==================================================== */
+
+/* === Page Container === */
+.ls-page {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 100vh;
+    background: var(--dashboard-bg);
+}
+
+/* === Compact Header Bar === */
+.ls-header-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    background: var(--dashboard-card);
+    border-bottom: 1px solid var(--color-border);
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+}
+
+/* --- Start: Title + Stat Pills --- */
+.ls-header-bar__start {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+}
+
+.ls-header-bar__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.ls-header-bar__title svg {
+    color: var(--law-navy);
+    flex-shrink: 0;
+}
+
+.ls-header-bar__count {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    background: var(--quiet-gray-100);
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.ls-header-bar__stats {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* --- Center: Search + Filters --- */
+.ls-header-bar__center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 200px;
+}
+
+/* --- End: View Tabs + Add Button --- */
+.ls-header-bar__end {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+/* === Stat Pills === */
+.ls-stat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    padding: 4px 10px;
+    border-radius: 16px;
+    background: var(--quiet-gray-100);
+    border: 1px solid transparent;
+    transition: border-color 0.15s;
+    white-space: nowrap;
+}
+
+.ls-stat-pill__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Active / in-progress */
+.ls-stat-pill--active .ls-stat-pill__dot {
+    background: var(--status-green);
+}
+
+.ls-stat-pill--active {
+    color: var(--status-green);
+    background: var(--status-green-light);
+}
+
+/* Consultation */
+.ls-stat-pill--consultation .ls-stat-pill__dot {
+    background: var(--status-blue);
+}
+
+.ls-stat-pill--consultation {
+    color: var(--status-blue);
+    background: var(--status-blue-light);
+}
+
+/* Contract Drafting */
+.ls-stat-pill--contract_drafting .ls-stat-pill__dot {
+    background: var(--status-purple);
+}
+
+.ls-stat-pill--contract_drafting {
+    color: var(--status-purple);
+    background: var(--status-purple-light);
+}
+
+/* Generic pending */
+.ls-stat-pill--pending .ls-stat-pill__dot {
+    background: var(--status-orange);
+}
+
+.ls-stat-pill--pending {
+    color: var(--status-orange);
+    background: var(--status-orange-light);
+}
+
+/* === Search Box === */
+.ls-search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--quiet-gray-100);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    flex: 1;
+    max-width: 300px;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.ls-search-box:focus-within {
+    background: var(--dashboard-card);
+    border-color: var(--law-navy);
+}
+
+.ls-search-box svg {
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+}
+
+.ls-search-box input {
+    flex: 1;
+    border: none;
+    background: none;
+    outline: none;
+    font-size: 14px;
+    color: var(--color-text);
+    min-width: 0;
+}
+
+.ls-search-box input::placeholder {
+    color: var(--color-text-secondary);
+}
+
+.ls-search-box__clear {
+    padding: 2px;
+    border-radius: 4px;
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    opacity: 0.6;
+    transition: opacity 0.1s, background 0.1s;
+}
+
+.ls-search-box__clear:hover {
+    background: var(--quiet-gray-200);
+    opacity: 1;
+}
+
+/* === Filter Selects === */
+.ls-filter-select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+    font-size: 13px;
+    color: var(--color-text);
+    cursor: pointer;
+    min-width: 110px;
+    transition: border-color 0.15s;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.ls-filter-select:focus,
+.ls-filter-select:hover {
+    border-color: var(--law-navy);
+}
+
+/* === View Tabs === */
+.ls-view-tabs {
+    display: flex;
+    background: var(--quiet-gray-100);
+    border-radius: 8px;
+    padding: 4px;
+    gap: 2px;
+}
+
+.ls-view-tab {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.ls-view-tab:hover {
+    color: var(--color-text);
+}
+
+.ls-view-tab--active {
+    background: var(--dashboard-card);
+    color: var(--law-navy);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* === Primary Button === */
+.ls-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: var(--law-navy);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+    white-space: nowrap;
+}
+
+.ls-btn-primary:hover {
+    background: var(--law-navy-dark, #152A45);
+}
+
+.ls-btn-primary:active {
+    opacity: 0.9;
+}
+
+/* === Content Area === */
+.ls-content {
+    padding: 0;
+    flex: 1;
+}
+
+/* ======================================================
+   LOADING SKELETONS
+   ====================================================== */
+.ls-skeleton {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ls-skeleton__row {
+    height: 52px;
+    border-radius: 8px;
+    background: linear-gradient(
+        90deg,
+        var(--quiet-gray-200) 25%,
+        var(--quiet-gray-100) 50%,
+        var(--quiet-gray-200) 75%
+    );
+    background-size: 200% 100%;
+    animation: ls-skeleton-loading 1.5s infinite;
+}
+
+.ls-skeleton__card {
+    height: 160px;
+    border-radius: 8px;
+    background: linear-gradient(
+        90deg,
+        var(--quiet-gray-200) 25%,
+        var(--quiet-gray-100) 50%,
+        var(--quiet-gray-200) 75%
+    );
+    background-size: 200% 100%;
+    animation: ls-skeleton-loading 1.5s infinite;
+}
+
+@keyframes ls-skeleton-loading {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.ls-skeleton--grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    padding: 16px 20px;
+}
+
+/* ======================================================
+   EMPTY STATE
+   ====================================================== */
+.ls-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px;
+    text-align: center;
+}
+
+.ls-empty__icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    background: var(--quiet-gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
+    opacity: 0.5;
+    margin-bottom: 16px;
+}
+
+body.dark .ls-empty__icon {
+    background: var(--quiet-gray-200);
+}
+
+.ls-empty__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 6px;
+}
+
+.ls-empty__desc {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    max-width: 320px;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+/* ======================================================
+   TABLE VIEW
+   ====================================================== */
+.ls-table-wrapper {
+    padding: 16px 20px 0;
+    overflow-x: auto;
+}
+
+.ls-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    font-size: 13px;
+}
+
+.ls-table th {
+    text-align: right;
+    padding: 11px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    background: var(--quiet-gray-50);
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
+    user-select: none;
+}
+
+body.dark .ls-table th {
+    background: var(--quiet-gray-100);
+}
+
+.ls-table th:first-child {
+    border-top-right-radius: 8px;
+}
+
+.ls-table th:last-child {
+    border-top-left-radius: 8px;
+}
+
+.ls-table th.sortable {
+    cursor: pointer;
+    transition: color 0.1s;
+}
+
+.ls-table th.sortable:hover {
+    color: var(--law-navy);
+}
+
+.ls-table td {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--color-text);
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+
+.ls-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.ls-table tbody tr:last-child td:first-child {
+    border-bottom-right-radius: 8px;
+}
+
+.ls-table tbody tr:last-child td:last-child {
+    border-bottom-left-radius: 8px;
+}
+
+.ls-table tbody tr {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.ls-table tbody tr:hover {
+    background: var(--law-navy-light);
+}
+
+.ls-table tbody tr:hover td {
+    background: transparent;
+}
+
+/* Service title cell */
+.ls-table__title-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ls-table__type-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 15px;
+}
+
+.ls-table__service-name {
+    font-weight: 600;
+    color: var(--color-heading);
+    margin-bottom: 2px;
+}
+
+.ls-table__service-number {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
+/* Client cell */
+.ls-table__client {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    background: var(--status-blue-light);
+    color: var(--status-blue);
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Date cell */
+.ls-table__date {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+/* Assignee cell */
+.ls-table__assignee {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ls-table__avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--law-navy);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+/* Row actions (reveal on hover) */
+.ls-table__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.ls-table tbody tr:hover .ls-table__actions {
+    opacity: 1;
+}
+
+.ls-table__action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.ls-table__action-btn:hover {
+    background: var(--quiet-gray-100);
+    color: var(--law-navy);
+}
+
+.ls-table__action-btn--danger:hover {
+    background: var(--status-red-light);
+    color: var(--status-red);
+}
+
+/* ======================================================
+   STATUS BADGES
+   ====================================================== */
+.ls-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.ls-status-badge__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* new → blue */
+.ls-status-badge--new {
+    background: var(--status-blue-light);
+    color: var(--status-blue);
+}
+.ls-status-badge--new .ls-status-badge__dot { background: var(--status-blue); }
+
+/* in_progress → orange */
+.ls-status-badge--in_progress {
+    background: var(--status-orange-light);
+    color: var(--status-orange);
+}
+.ls-status-badge--in_progress .ls-status-badge__dot { background: var(--status-orange); }
+
+/* completed / delivered → green */
+.ls-status-badge--completed,
+.ls-status-badge--delivered {
+    background: var(--status-green-light);
+    color: var(--status-green);
+}
+.ls-status-badge--completed .ls-status-badge__dot,
+.ls-status-badge--delivered .ls-status-badge__dot { background: var(--status-green); }
+
+/* closed → gray */
+.ls-status-badge--closed {
+    background: var(--quiet-gray-200);
+    color: var(--quiet-gray-600);
+}
+.ls-status-badge--closed .ls-status-badge__dot { background: var(--quiet-gray-500); }
+
+/* cancelled → red */
+.ls-status-badge--cancelled {
+    background: var(--status-red-light);
+    color: var(--status-red);
+}
+.ls-status-badge--cancelled .ls-status-badge__dot { background: var(--status-red); }
+
+/* drafting → orange (alias) */
+.ls-status-badge--drafting {
+    background: var(--status-orange-light);
+    color: var(--status-orange);
+}
+.ls-status-badge--drafting .ls-status-badge__dot { background: var(--status-orange); }
+
+/* under_review → purple */
+.ls-status-badge--under_review {
+    background: var(--status-purple-light);
+    color: var(--status-purple);
+}
+.ls-status-badge--under_review .ls-status-badge__dot { background: var(--status-purple); }
+
+/* ======================================================
+   PRIORITY BADGES
+   ====================================================== */
+.ls-priority-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* urgent */
+.ls-priority-badge--urgent {
+    background: var(--status-red-light);
+    color: var(--status-red);
+}
+
+/* high */
+.ls-priority-badge--high {
+    background: var(--status-orange-light);
+    color: var(--status-orange);
+}
+
+/* medium */
+.ls-priority-badge--medium {
+    background: var(--status-blue-light);
+    color: var(--status-blue);
+}
+
+/* low */
+.ls-priority-badge--low {
+    background: var(--quiet-gray-100);
+    color: var(--quiet-gray-600);
+}
+
+/* ======================================================
+   SERVICE TYPE PILLS
+   ====================================================== */
+.ls-type-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.ls-type-pill--consultation {
+    background: rgba(2, 132, 199, 0.12);
+    color: var(--status-blue);
+}
+
+.ls-type-pill--contract_drafting {
+    background: rgba(124, 58, 237, 0.12);
+    color: var(--status-purple);
+}
+
+.ls-type-pill--legal_memo {
+    background: rgba(5, 150, 105, 0.12);
+    color: var(--status-green);
+}
+
+.ls-type-pill--representation {
+    background: rgba(30, 58, 95, 0.12);
+    color: var(--law-navy);
+}
+
+.ls-type-pill--review {
+    background: rgba(217, 119, 6, 0.12);
+    color: var(--status-orange);
+}
+
+.ls-type-pill--notarization {
+    background: rgba(184, 134, 11, 0.12);
+    color: var(--law-gold, #B8860B);
+}
+
+.ls-type-pill--research {
+    background: rgba(220, 38, 38, 0.08);
+    color: var(--status-red);
+}
+
+.ls-type-pill--other {
+    background: var(--quiet-gray-100);
+    color: var(--quiet-gray-600);
+}
+
+/* ======================================================
+   GRID VIEW
+   ====================================================== */
+.ls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+    gap: 12px;
+    padding: 16px 20px;
+}
+
+.ls-card {
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ls-card:hover {
+    border-color: var(--law-navy);
+    box-shadow: 0 4px 12px rgba(30, 58, 95, 0.1);
+    transform: translateY(-1px);
+}
+
+/* Card header */
+.ls-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.ls-card__type-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    background: var(--quiet-gray-100);
+}
+
+body.dark .ls-card__type-icon {
+    background: var(--quiet-gray-200);
+}
+
+.ls-card__type-icon--consultation  { background: rgba(2, 132, 199, 0.12); }
+.ls-card__type-icon--contract      { background: rgba(124, 58, 237, 0.12); }
+.ls-card__type-icon--legal_memo    { background: rgba(5, 150, 105, 0.12); }
+.ls-card__type-icon--representation{ background: rgba(30, 58, 95, 0.1); }
+.ls-card__type-icon--review        { background: rgba(217, 119, 6, 0.12); }
+
+.ls-card__meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.ls-card__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-heading);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.ls-card__number {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
+/* Card body */
+.ls-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ls-card__row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+.ls-card__row svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+/* Card footer */
+.ls-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border);
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ======================================================
+   PAGINATION
+   ====================================================== */
+.ls-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: var(--dashboard-card);
+    border-top: 1px solid var(--color-border);
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+}
+
+.ls-pagination__info {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+}
+
+.ls-pagination__controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ls-pagination__btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+    color: var(--color-text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.ls-pagination__btn:hover:not(:disabled) {
+    border-color: var(--law-navy);
+    background: var(--law-navy-light);
+}
+
+.ls-pagination__btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.ls-pagination__pages {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ls-pagination__page {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s;
+}
+
+.ls-pagination__page:hover {
+    background: var(--quiet-gray-100);
+}
+
+.ls-pagination__page--active {
+    background: var(--law-navy);
+    color: #fff;
+}
+
+.ls-pagination__page--active:hover {
+    background: var(--law-navy);
+}
+
+.ls-pagination__ellipsis {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    user-select: none;
+}
+
+/* ======================================================
+   RESPONSIVE
+   ====================================================== */
+@media (max-width: 1024px) {
+    .ls-header-bar {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .ls-header-bar__start {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .ls-header-bar__center {
+        order: 3;
+        width: 100%;
+    }
+
+    .ls-header-bar__stats {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .ls-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+
+    .ls-table-wrapper {
+        padding: 12px 16px 0;
+    }
+
+    .ls-pagination {
+        padding: 10px 16px;
+    }
+}
+
+@media (max-width: 640px) {
+    .ls-header-bar {
+        padding: 10px 16px;
+    }
+
+    .ls-btn-primary span {
+        display: none;
+    }
+
+    .ls-filter-select {
+        min-width: 80px;
+    }
+
+    .ls-grid {
+        grid-template-columns: 1fr;
+    }
+}

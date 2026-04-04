@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import UpdateBanner from './components/UpdateBanner';
 import { AuthProvider } from './contexts/AuthContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
@@ -39,6 +41,10 @@ import AdminRequests from './pages/AdminRequests';
 import WathqInquiryPage from './pages/WathqInquiry';
 import ClientMessages from './pages/ClientMessages';
 import PersonalNotebook from './pages/NotebookWorkspace';
+
+// Legal Services Pages
+import LegalServices from './pages/legal-services/LegalServices';
+import LegalServiceDetail from './pages/legal-services/LegalServiceDetail';
 
 // Contracts Pages
 import ContractTemplates from './pages/contracts/ContractTemplates';
@@ -281,12 +287,25 @@ function App() {
                   <CollectionDashboard />
                 </ProtectedRoute>
               } />
+
+              {/* Legal Services routes */}
+              <Route path="legal-services" element={
+                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                  <LegalServices />
+                </ProtectedRoute>
+              } />
+              <Route path="legal-services/:id" element={
+                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                  <LegalServiceDetail />
+                </ProtectedRoute>
+              } />
             </Route>
                   </Routes>
                 </TimerProvider>
               } />
             </Routes>
           </Router>
+          <ToastContainer position="bottom-left" rtl autoClose={3000} hideProgressBar={false} closeOnClick pauseOnHover theme="light" />
         </SubscriptionProvider>
       </AuthProvider>
     </TenantProvider>
