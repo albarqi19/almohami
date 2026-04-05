@@ -315,14 +315,14 @@ const Cases: React.FC = () => {
 			<table className="cases-table">
 				<thead>
 					<tr>
-						<th style={{ width: '25%' }}>القضية</th>
-						<th>الحالة</th>
-						<th>النوع</th>
-						<th>العميل</th>
-						<th>المحامي</th>
-						<th>تاريخ الإنشاء</th>
-						<th>الجلسة القادمة</th>
-						<th style={{ width: '80px' }}></th>
+						<th style={{ width: '22%' }}>القضية</th>
+						<th style={{ width: '9%' }}>الحالة</th>
+						<th style={{ width: '10%' }}>النوع</th>
+						<th style={{ width: '15%' }}>العميل</th>
+						<th style={{ width: '13%' }}>المحامي</th>
+						<th style={{ width: '12%' }}>تاريخ الإنشاء</th>
+						<th style={{ width: '13%' }}>الجلسة القادمة</th>
+						<th style={{ width: '6%' }}></th>
 					</tr>
 				</thead>
 				<tbody>

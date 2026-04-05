@@ -312,6 +312,7 @@
 
 .cases-table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: separate;
     border-spacing: 0;
     background: var(--dashboard-card);
@@ -351,6 +352,8 @@ body.dark .cases-table th {
     color: var(--color-text);
     border-bottom: 1px solid var(--color-border);
     vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .cases-table tbody tr:last-child td {
@@ -388,6 +391,13 @@ body.dark .cases-table th {
 .case-title {
     font-weight: 600;
     color: var(--color-heading);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.4;
+    word-break: break-word;
 }
 
 /* Client Cell */
