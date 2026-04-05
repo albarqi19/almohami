@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
 	Plus,
@@ -124,6 +124,8 @@ const Cases: React.FC = () => {
 		total: pagination.total
 	}), [cases, pagination.total]);
 
+	const [softRefreshing, setSoftRefreshing] = useState(false);
+
 	const fetchCases = async (page = 1, forceRefresh = false) => {
 		try {
 			// Only use cache for first page without filters (and not forcing refresh)
@@ -143,7 +145,12 @@ const Cases: React.FC = () => {
 				}
 			}
 
-			setLoading(true);
+			// تحديث ذكي: لو فيه بيانات حالية، حدّث بالخلفية بدون إعادة تحميل
+			if (cases.length > 0 && forceRefresh) {
+				setSoftRefreshing(true);
+			} else {
+				setLoading(true);
+			}
 			setError(null);
 			const filters = {
 				page,
@@ -174,6 +181,7 @@ const Cases: React.FC = () => {
 			setError(err instanceof Error ? err.message : 'خطأ في جلب القضايا');
 		} finally {
 			setLoading(false);
+			setSoftRefreshing(false);
 		}
 	};
 
@@ -309,20 +317,64 @@ const Cases: React.FC = () => {
 		setTypeFilter('all');
 	};
 
+	// ── Column Resize ──
+	const columns = [
+		{ key: 'case', label: 'القضية', defaultWidth: 44 },
+		{ key: 'parties', label: 'العميل / المحامي', defaultWidth: 18 },
+		{ key: 'dates', label: 'الإنشاء / الجلسة', defaultWidth: 17 },
+		{ key: 'status', label: 'الحالة', defaultWidth: 10 },
+		{ key: 'file', label: 'رقم الملف', defaultWidth: 11 },
+	];
+
+	const [colWidths, setColWidths] = useState<number[]>(() => columns.map(c => c.defaultWidth));
+	const resizingRef = useRef<{ col: number; startX: number; startWidth: number } | null>(null);
+	const tableRef = useRef<HTMLTableElement>(null);
+
+	const handleResizeStart = (e: React.MouseEvent, colIndex: number) => {
+		e.preventDefault();
+		e.stopPropagation();
+		const tableWidth = tableRef.current?.offsetWidth || 1000;
+		const startWidthPx = (colWidths[colIndex] / 100) * tableWidth;
+		resizingRef.current = { col: colIndex, startX: e.clientX, startWidth: startWidthPx };
+
+		const handleMove = (ev: MouseEvent) => {
+			const ref = resizingRef.current;
+			if (!ref) return;
+			const diff = ref.startX - ev.clientX; // RTL
+			const newWidthPx = Math.max(60, ref.startWidth + diff);
+			const newPct = (newWidthPx / (tableRef.current?.offsetWidth || 1000)) * 100;
+			const col = ref.col;
+			setColWidths(prev => {
+				const next = [...prev];
+				next[col] = Math.min(70, Math.max(5, newPct));
+				return next;
+			});
+		};
+		const handleUp = () => {
+			resizingRef.current = null;
+			document.removeEventListener('mousemove', handleMove);
+			document.removeEventListener('mouseup', handleUp);
+			document.body.style.cursor = '';
+			document.body.style.userSelect = '';
+		};
+		document.body.style.cursor = 'col-resize';
+		document.body.style.userSelect = 'none';
+		document.addEventListener('mousemove', handleMove);
+		document.addEventListener('mouseup', handleUp);
+	};
+
 	// Render Table View
 	const renderTable = () => (
 		<div className="cases-table-wrapper">
-			<table className="cases-table">
+			<table className="cases-table" ref={tableRef}>
 				<thead>
 					<tr>
-						<th style={{ width: '22%' }}>القضية</th>
-						<th style={{ width: '9%' }}>الحالة</th>
-						<th style={{ width: '10%' }}>النوع</th>
-						<th style={{ width: '15%' }}>العميل</th>
-						<th style={{ width: '13%' }}>المحامي</th>
-						<th style={{ width: '12%' }}>تاريخ الإنشاء</th>
-						<th style={{ width: '13%' }}>الجلسة القادمة</th>
-						<th style={{ width: '6%' }}></th>
+						{columns.map((col, i) => (
+							<th key={col.key} style={{ width: `${colWidths[i]}%`, position: 'relative' }}>
+								{col.label}
+								<span className="col-resize-handle" onMouseDown={e => handleResizeStart(e, i)} />
+							</th>
+						))}
 					</tr>
 				</thead>
 				<tbody>
@@ -332,63 +384,66 @@ const Cases: React.FC = () => {
 
 						return (
 							<tr key={c.id} onClick={() => navigate(`/cases/${c.id}`)}>
+								{/* العمود 1: القضية (عنوان + رقم + نوع) */}
 								<td>
-									<div className="case-title-cell">
-										<Folder size={18} className="text-gray-400" />
-										<div className="case-title">{c.title}</div>
+									<div className="erp-cell">
+										<div className="erp-cell__primary">{c.title}</div>
+										<div className="erp-cell__secondary">
+											<span className="erp-cell__tag">{typeLabel}</span>
+										</div>
 									</div>
 								</td>
+
+								{/* العمود 2: الأطراف (عميل + محامي) */}
+								<td>
+									<div className="erp-cell">
+										<div className="erp-cell__row">
+											<User size={12} className="erp-cell__icon" />
+											<span className="erp-cell__text">{c.client_name || '—'}</span>
+										</div>
+										<div className="erp-cell__row erp-cell__row--sub">
+											<Scale size={11} className="erp-cell__icon" />
+											<span>{getLawyerName(c.lawyers)}</span>
+										</div>
+									</div>
+								</td>
+
+								{/* العمود 3: التواريخ (إنشاء + جلسة) */}
+								<td>
+									<div className="erp-cell">
+										<div className="erp-cell__row">
+											<Clock size={12} className="erp-cell__icon" />
+											<span>{formatDate((c as any).filing_date || c.created_at)}</span>
+										</div>
+										{c.next_hearing ? (
+											<div className="erp-cell__row erp-cell__row--highlight">
+												<Calendar size={11} className="erp-cell__icon" />
+												<span>{formatDate(c.next_hearing)}</span>
+												{(c as any).next_hearing_time && <span className="erp-cell__time">{(c as any).next_hearing_time}</span>}
+											</div>
+										) : (
+											<div className="erp-cell__row erp-cell__row--sub">
+												<Calendar size={11} className="erp-cell__icon" />
+												<span>لا توجد جلسة</span>
+											</div>
+										)}
+									</div>
+								</td>
+
+								{/* العمود 4: الحالة */}
 								<td>
 									<span className={`status-badge ${statusConfig.class}`}>
 										<span className="status-badge__dot" />
 										{statusConfig.label}
 									</span>
 								</td>
+
+								{/* العمود 5: رقم الملف + حذف */}
 								<td>
-									<span className="case-type-badge">{typeLabel}</span>
-								</td>
-								<td>
-									<div className="case-client">
-										<span>{c.client_name || '-'}</span>
-									</div>
-								</td>
-								<td>
-									<div className="assignee-cell">
-										<span className="assignee-name">{getLawyerName(c.lawyers)}</span>
-									</div>
-								</td>
-								<td className="case-date-cell">
-									<Clock size={14} style={{ display: 'inline', marginLeft: '6px' }} />
-									{formatDate((c as any).filing_date || c.created_at)}
-								</td>
-								<td className="case-date-cell">
-									{c.next_hearing ? (
-										<>
-											<Calendar size={14} style={{ display: 'inline', marginLeft: '6px' }} />
-											{formatDate(c.next_hearing)}
-											{(c as any).next_hearing_time && (
-												<span style={{ marginRight: '6px', color: 'var(--color-text-secondary)' }}>
-													- {(c as any).next_hearing_time}
-												</span>
-											)}
-										</>
-									) : '-'}
-								</td>
-								<td>
-									<div className="actions-cell">
-										<button
-											className="action-btn"
-											onClick={(e) => { e.stopPropagation(); navigate(`/cases/${c.id}`); }}
-											title="عرض"
-										>
-											<Eye size={16} />
-										</button>
-										<button
-											className="action-btn action-btn--danger"
-											onClick={(e) => handleDeleteCase(e, c.id)}
-											title="حذف"
-										>
-											<Trash2 size={16} />
+									<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+										<span className="erp-cell__tag erp-cell__tag--id" style={{ fontSize: 11 }}>{(c as any).file_number || '—'}</span>
+										<button className="case-delete-btn" onClick={(e) => handleDeleteCase(e, c.id)} title="حذف">
+											<Trash2 size={14} />
 										</button>
 									</div>
 								</td>
@@ -544,10 +599,11 @@ const Cases: React.FC = () => {
 
 					<button
 						className="icon-btn"
-						onClick={() => fetchCases(pagination.currentPage)}
+						onClick={() => fetchCases(pagination.currentPage, true)}
 						title="تحديث"
+						disabled={softRefreshing}
 					>
-						<RefreshCw size={16} />
+						<RefreshCw size={16} className={softRefreshing ? 'spin-slow' : ''} />
 					</button>
 				</div>
 
