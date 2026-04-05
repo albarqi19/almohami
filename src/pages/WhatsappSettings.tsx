@@ -208,6 +208,7 @@ const WhatsappSettings: React.FC = () => {
 
   // Instances
   const [instances, setInstances] = useState<WhatsappInstance[]>([]);
+  const [todayStats, setTodayStats] = useState({ total: 0, sent_ok: 0, failed: 0 });
   const [showAddInstance, setShowAddInstance] = useState(false);
   const [newInstanceDepartment, setNewInstanceDepartment] = useState('');
   const [selectedQRCode, setSelectedQRCode] = useState<string | null>(null);
@@ -319,6 +320,7 @@ const WhatsappSettings: React.FC = () => {
           id: String(inst.id), instance_name: inst.instance_name, phone_number: inst.phone_number,
           status: inst.status || 'disconnected', token: inst.token, department: inst.department, created_at: inst.created_at
         })));
+        if (response.data.today_stats) setTodayStats(response.data.today_stats);
       } else { setInstances([]); }
     } catch { setInstances([]); }
   };
@@ -569,51 +571,71 @@ const WhatsappSettings: React.FC = () => {
                         const isConnecting = instance.status === 'connecting';
                         return (
                           <div key={instance.id} className={`wa-inst ${isConnected ? 'wa-inst--connected' : isConnecting ? 'wa-inst--connecting' : 'wa-inst--off'}`}>
-                            {/* Status indicator bar */}
-                            <div className="wa-inst__bar" />
+                            {/* Header */}
+                            <div className={`wa-inst__header ${isConnected ? 'wa-inst__header--on' : isConnecting ? 'wa-inst__header--wait' : 'wa-inst__header--off'}`}>
+                              <div className="wa-inst__header-right">
+                                <div className="wa-inst__logo">
+                                  <MessageSquare size={18} />
+                                </div>
+                                <div>
+                                  <h3 className="wa-inst__title">{instance.department || 'الرقم الرسمي'}</h3>
+                                  {instance.phone_number && (
+                                    <span className="wa-inst__phone-sm" dir="ltr">{formatPhone(instance.phone_number)}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="wa-inst__header-left">
+                                <span className={`wa-inst__badge ${isConnected ? 'wa-inst__badge--on' : isConnecting ? 'wa-inst__badge--wait' : 'wa-inst__badge--off'}`}>
+                                  {isConnected ? <><span className="wa-inst__dot" />متصل</> : isConnecting ? <><Loader2 size={10} className="wa-spin" />جاري الربط</> : <><span className="wa-inst__dot wa-inst__dot--off" />غير متصل</>}
+                                </span>
+                              </div>
+                            </div>
 
+                            {/* Body */}
                             <div className="wa-inst__body">
-                              {/* Top: Icon + Status + Delete */}
-                              <div className="wa-inst__top">
-                                <div className={`wa-inst__icon ${isConnected ? 'wa-inst__icon--on' : ''}`}>
-                                  <MessageSquare size={20} />
+                              {/* Stats Row */}
+                              {isConnected && (
+                                <div className="wa-inst__stats">
+                                  <div className="wa-inst__stat">
+                                    <Send size={12} />
+                                    <span className="wa-inst__stat-val">{todayStats.total}</span>
+                                    <span className="wa-inst__stat-lbl">اليوم</span>
+                                  </div>
+                                  <div className="wa-inst__stat wa-inst__stat--green">
+                                    <CheckCircle size={12} />
+                                    <span className="wa-inst__stat-val">{todayStats.sent_ok}</span>
+                                    <span className="wa-inst__stat-lbl">ناجحة</span>
+                                  </div>
+                                  <div className="wa-inst__stat wa-inst__stat--red">
+                                    <XCircle size={12} />
+                                    <span className="wa-inst__stat-val">{todayStats.failed}</span>
+                                    <span className="wa-inst__stat-lbl">فاشلة</span>
+                                  </div>
                                 </div>
-                                <div className="wa-inst__top-actions">
-                                  <span className={`wa-inst__badge ${isConnected ? 'wa-inst__badge--on' : isConnecting ? 'wa-inst__badge--wait' : 'wa-inst__badge--off'}`}>
-                                    {isConnected ? <><span className="wa-inst__dot" />متصل</> : isConnecting ? <><Loader2 size={11} className="wa-spin" />جاري الاتصال</> : <><span className="wa-inst__dot wa-inst__dot--off" />غير متصل</>}
-                                  </span>
-                                  <button className="wa-inst__del" onClick={() => deleteInstance(instance.id)} title="حذف"><Trash2 size={13} /></button>
-                                </div>
-                              </div>
-
-                              {/* Department as title */}
-                              <h3 className="wa-inst__title">{instance.department || 'الرقم الرسمي'}</h3>
-
-                              {/* Phone number */}
-                              {instance.phone_number ? (
-                                <div className="wa-inst__phone">
-                                  <Phone size={13} />
-                                  <span dir="ltr">{formatPhone(instance.phone_number)}</span>
-                                </div>
-                              ) : !isConnected ? (
-                                <div className="wa-inst__phone wa-inst__phone--empty">
-                                  <Phone size={13} />
-                                  <span>لم يتم الربط بعد</span>
-                                </div>
-                              ) : null}
-
-                              {/* Meta row */}
-                              <div className="wa-inst__meta">
-                                <span><Clock size={11} /> {instance.created_at ? new Date(instance.created_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</span>
-                              </div>
-
-                              {/* Action */}
-                              {!isConnected && (
-                                <button className="wa-inst__qr-btn" onClick={() => getQRCode(instance.id)}>
-                                  <QrCode size={14} />
-                                  {isConnecting ? 'إعادة عرض QR' : 'ربط الواتساب'}
-                                </button>
                               )}
+
+                              {/* Not connected message */}
+                              {!isConnected && !isConnecting && (
+                                <div className="wa-inst__offline">
+                                  <Smartphone size={20} />
+                                  <span>الرقم غير متصل حالياً</span>
+                                </div>
+                              )}
+
+                              {/* Footer actions */}
+                              <div className="wa-inst__footer">
+                                <div className="wa-inst__date"><Clock size={11} />{instance.created_at ? new Date(instance.created_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' }) : ''}</div>
+                                <div className="wa-inst__actions">
+                                  {!isConnected && (
+                                    <button className="wa-inst__action-btn wa-inst__action-btn--primary" onClick={() => getQRCode(instance.id)}>
+                                      <QrCode size={13} />{isConnecting ? 'عرض QR' : 'ربط'}
+                                    </button>
+                                  )}
+                                  <button className="wa-inst__action-btn wa-inst__action-btn--danger" onClick={() => deleteInstance(instance.id)} title="حذف">
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         );
