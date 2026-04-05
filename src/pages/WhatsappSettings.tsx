@@ -209,7 +209,6 @@ const WhatsappSettings: React.FC = () => {
   // Instances
   const [instances, setInstances] = useState<WhatsappInstance[]>([]);
   const [showAddInstance, setShowAddInstance] = useState(false);
-  const [newInstanceName, setNewInstanceName] = useState('');
   const [newInstanceDepartment, setNewInstanceDepartment] = useState('');
   const [selectedQRCode, setSelectedQRCode] = useState<string | null>(null);
 
@@ -325,9 +324,9 @@ const WhatsappSettings: React.FC = () => {
   };
 
   const createInstance = async () => {
-    if (!newInstanceName.trim() || !newInstanceDepartment.trim()) return;
+    if (!newInstanceDepartment.trim()) return;
     try {
-      const response = await api.post('/v1/whatsapp/instances', { instance_name: newInstanceName, department: newInstanceDepartment });
+      const response = await api.post('/v1/whatsapp/instances', { instance_name: newInstanceDepartment, department: newInstanceDepartment });
       if (response.data.success && response.data.data) {
         const result = response.data.data;
         const newInst: WhatsappInstance = {
@@ -335,7 +334,7 @@ const WhatsappSettings: React.FC = () => {
           token: result.token, department: result.department, created_at: result.created_at
         };
         setInstances(prev => [...prev, newInst]);
-        setNewInstanceName(''); setNewInstanceDepartment(''); setShowAddInstance(false);
+        setNewInstanceDepartment(''); setShowAddInstance(false);
         if (result.qr_code) { setSelectedQRCode(result.qr_code); }
         else { setTimeout(() => getQRCode(String(result.id)), 2000); }
 
@@ -564,41 +563,61 @@ const WhatsappSettings: React.FC = () => {
                       </button>
                     </div>
                   ) : (
-                    <div className="whatsapp-instances-grid">
-                      {instances.map(instance => (
-                        <div key={instance.id} className="whatsapp-instance-card">
-                          <div className="whatsapp-instance-card__header">
-                            <div>
-                              <h4 className="whatsapp-instance-card__name">{instance.instance_name}</h4>
-                              <p className="whatsapp-instance-card__dept">{instance.department}</p>
-                            </div>
-                            <div className="whatsapp-instance-card__status">
-                              {instance.status === 'connected' && <CheckCircle size={18} style={{ color: 'var(--status-green)' }} />}
-                              {instance.status === 'connecting' && <Loader2 size={18} className="wa-spin" style={{ color: 'var(--status-orange)' }} />}
-                              {instance.status === 'disconnected' && <XCircle size={18} style={{ color: 'var(--status-red)' }} />}
-                              <button className="whatsapp-instance-card__delete" onClick={() => deleteInstance(instance.id)}><Trash2 size={14} /></button>
+                    <div className="wa-instance-grid">
+                      {instances.map(instance => {
+                        const isConnected = instance.status === 'connected';
+                        const isConnecting = instance.status === 'connecting';
+                        return (
+                          <div key={instance.id} className={`wa-inst ${isConnected ? 'wa-inst--connected' : isConnecting ? 'wa-inst--connecting' : 'wa-inst--off'}`}>
+                            {/* Status indicator bar */}
+                            <div className="wa-inst__bar" />
+
+                            <div className="wa-inst__body">
+                              {/* Top: Icon + Status + Delete */}
+                              <div className="wa-inst__top">
+                                <div className={`wa-inst__icon ${isConnected ? 'wa-inst__icon--on' : ''}`}>
+                                  <MessageSquare size={20} />
+                                </div>
+                                <div className="wa-inst__top-actions">
+                                  <span className={`wa-inst__badge ${isConnected ? 'wa-inst__badge--on' : isConnecting ? 'wa-inst__badge--wait' : 'wa-inst__badge--off'}`}>
+                                    {isConnected ? <><span className="wa-inst__dot" />متصل</> : isConnecting ? <><Loader2 size={11} className="wa-spin" />جاري الاتصال</> : <><span className="wa-inst__dot wa-inst__dot--off" />غير متصل</>}
+                                  </span>
+                                  <button className="wa-inst__del" onClick={() => deleteInstance(instance.id)} title="حذف"><Trash2 size={13} /></button>
+                                </div>
+                              </div>
+
+                              {/* Department as title */}
+                              <h3 className="wa-inst__title">{instance.department || 'الرقم الرسمي'}</h3>
+
+                              {/* Phone number */}
+                              {instance.phone_number ? (
+                                <div className="wa-inst__phone">
+                                  <Phone size={13} />
+                                  <span dir="ltr">{formatPhone(instance.phone_number)}</span>
+                                </div>
+                              ) : !isConnected ? (
+                                <div className="wa-inst__phone wa-inst__phone--empty">
+                                  <Phone size={13} />
+                                  <span>لم يتم الربط بعد</span>
+                                </div>
+                              ) : null}
+
+                              {/* Meta row */}
+                              <div className="wa-inst__meta">
+                                <span><Clock size={11} /> {instance.created_at ? new Date(instance.created_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</span>
+                              </div>
+
+                              {/* Action */}
+                              {!isConnected && (
+                                <button className="wa-inst__qr-btn" onClick={() => getQRCode(instance.id)}>
+                                  <QrCode size={14} />
+                                  {isConnecting ? 'إعادة عرض QR' : 'ربط الواتساب'}
+                                </button>
+                              )}
                             </div>
                           </div>
-                          <div className="whatsapp-instance-card__info">
-                            <div className="whatsapp-instance-card__row">
-                              <span>الحالة:</span>
-                              <span style={{ color: instance.status === 'connected' ? 'var(--status-green)' : instance.status === 'connecting' ? 'var(--status-orange)' : 'var(--status-red)', fontWeight: 600 }}>
-                                {instance.status === 'connected' ? 'متصل' : instance.status === 'connecting' ? 'جاري الاتصال' : 'غير متصل'}
-                              </span>
-                            </div>
-                            {instance.phone_number && (
-                              <div className="whatsapp-instance-card__row"><span>الرقم:</span><span style={{ direction: 'ltr' }}>{instance.phone_number}</span></div>
-                            )}
-                          </div>
-                          <div className="whatsapp-instance-card__actions">
-                            {instance.status === 'disconnected' && (
-                              <button className="whatsapp-instance-card__btn whatsapp-instance-card__btn--primary" onClick={() => getQRCode(instance.id)}>
-                                <QrCode size={14} />عرض رمز QR
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -917,26 +936,30 @@ const WhatsappSettings: React.FC = () => {
           {/* ── Modals ── */}
           <Modal isOpen={showAddInstance} onClose={() => setShowAddInstance(false)} title="إضافة رقم واتساب جديد" size="sm">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div>
-                <label className="wa-label">اسم المثيل</label>
-                <input type="text" value={newInstanceName} onChange={e => setNewInstanceName(e.target.value)}
-                  placeholder="مثال: reception_whatsapp" className="wa-input" />
+              <div style={{ padding: 12, borderRadius: 8, background: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <MessageSquare size={18} style={{ color: '#25d366', flexShrink: 0, marginTop: 2 }} />
+                <div style={{ fontSize: 12, color: '#15803d', lineHeight: 1.6 }}>
+                  سيتم إنشاء اتصال جديد بالواتساب. ستحتاج لمسح رمز QR من تطبيق الواتساب على هاتفك.
+                </div>
               </div>
               <div>
-                <label className="wa-label">القسم</label>
+                <label className="wa-label">اسم القسم / الغرض</label>
                 <select value={newInstanceDepartment} onChange={e => setNewInstanceDepartment(e.target.value)} className="wa-select" style={{ width: '100%' }}>
                   <option value="">اختر القسم</option>
+                  <option value="الرقم الرسمي">الرقم الرسمي</option>
                   <option value="الاستقبال">الاستقبال</option>
                   <option value="المحاسبة">المحاسبة</option>
-                  <option value="القانونية">الشؤون القانونية</option>
+                  <option value="الشؤون القانونية">الشؤون القانونية</option>
                   <option value="الإدارة">الإدارة</option>
-                  <option value="المتابعة">المتابعة</option>
+                  <option value="خدمة العملاء">خدمة العملاء</option>
                 </select>
               </div>
               <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
                 <button className="wa-btn wa-btn--ghost" style={{ flex: 1 }} onClick={() => setShowAddInstance(false)}>إلغاء</button>
                 <button className="wa-btn wa-btn--primary" style={{ flex: 1 }} onClick={createInstance}
-                  disabled={!newInstanceName.trim() || !newInstanceDepartment.trim()}>إنشاء</button>
+                  disabled={!newInstanceDepartment.trim()}>
+                  ربط الواتساب
+                </button>
               </div>
             </div>
           </Modal>

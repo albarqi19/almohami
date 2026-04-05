@@ -1090,3 +1090,179 @@ body.dark .whatsapp-schedule-row__time {
 }
 .wa-pagination button:hover:not(:disabled) { background: var(--quiet-gray-100); }
 .wa-pagination button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════════════
+   WhatsApp Instance Card - Professional ERP Style
+   ═══════════════════════════════════════════════ */
+
+.wa-instance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+.wa-inst {
+    position: relative;
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+.wa-inst:hover { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06); }
+.wa-inst--connected { border-color: #bbf7d0; }
+.wa-inst--connecting { border-color: #fed7aa; }
+.wa-inst--off { border-color: #fecaca; }
+
+/* Top colored bar */
+.wa-inst__bar {
+    height: 3px;
+    width: 100%;
+}
+.wa-inst--connected .wa-inst__bar { background: linear-gradient(90deg, #22c55e, #16a34a); }
+.wa-inst--connecting .wa-inst__bar { background: linear-gradient(90deg, #f59e0b, #d97706); }
+.wa-inst--off .wa-inst__bar { background: linear-gradient(90deg, #ef4444, #dc2626); }
+
+.wa-inst__body {
+    padding: 16px 18px;
+}
+
+/* Top row: icon + status + delete */
+.wa-inst__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+.wa-inst__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--quiet-gray-100);
+    color: var(--color-text-secondary);
+}
+.wa-inst__icon--on {
+    background: #dcfce7;
+    color: #16a34a;
+}
+.wa-inst__top-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Status badge */
+.wa-inst__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.wa-inst__badge--on { background: #dcfce7; color: #15803d; }
+.wa-inst__badge--wait { background: #fff7ed; color: #c2410c; }
+.wa-inst__badge--off { background: #fef2f2; color: #dc2626; }
+
+.wa-inst__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    animation: wa-pulse 2s infinite;
+}
+.wa-inst__dot--off {
+    background: #ef4444;
+    animation: none;
+}
+@keyframes wa-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* Delete button */
+.wa-inst__del {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.wa-inst__del:hover { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
+
+/* Title (department) */
+.wa-inst__title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-heading);
+    margin: 0 0 8px 0;
+}
+
+/* Phone number */
+.wa-inst__phone {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+    font-family: 'SF Mono', 'Consolas', monospace;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+.wa-inst__phone > svg { color: #25d366; }
+.wa-inst__phone--empty {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-text-secondary);
+    font-family: inherit;
+    letter-spacing: 0;
+}
+.wa-inst__phone--empty > svg { color: var(--color-text-secondary); }
+
+/* Meta */
+.wa-inst__meta {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    margin-bottom: 12px;
+}
+.wa-inst__meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* QR Button */
+.wa-inst__qr-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 9px;
+    border-radius: 7px;
+    border: 1px dashed var(--color-border);
+    background: var(--quiet-gray-50);
+    color: var(--color-text);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.wa-inst__qr-btn:hover {
+    background: var(--dashboard-card);
+    border-color: #25d366;
+    color: #16a34a;
+}
