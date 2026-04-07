@@ -115,39 +115,39 @@ function App() {
 
               {/* Routes for all users except clients */}
               <Route path="cases" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <Cases />
                 </ProtectedRoute>
               } />
               <Route path="cases/:caseId" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <CaseDetailPage />
                 </ProtectedRoute>
               } />
               <Route path="sessions" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <UpcomingSessions />
                 </ProtectedRoute>
               } />
               <Route path="wekalat" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <Wekalat />
                 </ProtectedRoute>
               } />
 
               {/* Meetings routes */}
               <Route path="meetings/internal" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <InternalMeetings />
                 </ProtectedRoute>
               } />
               <Route path="meetings/client" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <ClientMeetings />
                 </ProtectedRoute>
               } />
               <Route path="meetings/availability" element={
-                <ProtectedRoute allowedRoles={['lawyer']}>
+                <ProtectedRoute allowedRoles={['lawyer', 'senior_lawyer']}>
                   <MyAvailability />
                 </ProtectedRoute>
               } />
@@ -170,12 +170,12 @@ function App() {
               } />
 
               <Route path="tasks" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <Tasks />
                 </ProtectedRoute>
               } />
               <Route path="tasks/:taskId" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <TaskDetail />
                 </ProtectedRoute>
               } />
@@ -186,7 +186,7 @@ function App() {
               } />
               <Route path="activities" element={<Activities />} />
               <Route path="reports" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer']}>
                   <Reports />
                 </ProtectedRoute>
               } />
@@ -209,17 +209,17 @@ function App() {
               <Route path="settings" element={<Settings />} />
               <Route path="whatsapp-settings" element={<WhatsappSettings />} />
               <Route path="clients" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <Clients />
                 </ProtectedRoute>
               } />
               <Route path="clients/:clientId" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <ClientDetailPage />
                 </ProtectedRoute>
               } />
               <Route path="admin/requests" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <AdminRequests />
                 </ProtectedRoute>
               } />
@@ -229,7 +229,7 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="notebook" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <PersonalNotebook />
                 </ProtectedRoute>
               } />
@@ -290,12 +290,12 @@ function App() {
 
               {/* Legal Services routes */}
               <Route path="legal-services" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <LegalServices />
                 </ProtectedRoute>
               } />
               <Route path="legal-services/:id" element={
-                <ProtectedRoute allowedRoles={['admin', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <LegalServiceDetail />
                 </ProtectedRoute>
               } />
