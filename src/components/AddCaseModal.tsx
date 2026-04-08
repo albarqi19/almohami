@@ -44,7 +44,7 @@ interface CaseFormData {
   caseType: string;
   caseCategory: string;
   priority: 'low' | 'medium' | 'high';
-  status: 'active' | 'pending' | 'closed' | 'appealed' | 'settled' | 'dismissed';
+  status: 'draft' | 'preparation' | 'filed' | 'active' | 'pending' | 'closed' | 'appealed' | 'settled' | 'dismissed';
   description: string;
   contractValue: string;
   filingDate: string;
@@ -154,7 +154,8 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     if (!formData.court) newErrors.court = 'المحكمة مطلوبة';
     if (!formData.assignedLawyer) newErrors.assignedLawyer = 'المحامي المسؤول مطلوب';
     if (!formData.description.trim()) newErrors.description = 'وصف القضية مطلوب';
-    if (!formData.filingDate) newErrors.filingDate = 'تاريخ رفع الدعوى مطلوب';
+    const isPrepMode = ['draft', 'preparation', 'filed'].includes(formData.status);
+    if (!isPrepMode && !formData.filingDate) newErrors.filingDate = 'تاريخ رفع الدعوى مطلوب';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -262,12 +263,19 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                         onChange={(e) => handleInputChange('status', e.target.value)}
                         style={{ paddingLeft: '28px' }}
                       >
-                        <option value="active">نشطة</option>
-                        <option value="pending">معلقة</option>
-                        <option value="closed">مغلقة</option>
-                        <option value="appealed">مستأنفة</option>
-                        <option value="settled">مسوية</option>
-                        <option value="dismissed">مرفوضة</option>
+                        <optgroup label="مرحلة التجهيز">
+                          <option value="draft">مسودة</option>
+                          <option value="preparation">جاري التجهيز</option>
+                          <option value="filed">تم الرفع على ناجز</option>
+                        </optgroup>
+                        <optgroup label="قضية نشطة">
+                          <option value="active">نشطة</option>
+                          <option value="pending">معلقة</option>
+                          <option value="appealed">مستأنفة</option>
+                          <option value="settled">مسوية</option>
+                          <option value="dismissed">مرفوضة</option>
+                          <option value="closed">مغلقة</option>
+                        </optgroup>
                       </select>
                       <ChevronDown size={14} style={{ position: 'absolute', left: '8px', opacity: 0.4, pointerEvents: 'none' }} />
                     </div>
@@ -366,22 +374,24 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                   </div>
                 </div>
 
-                {/* Filing Date */}
-                <div className="notion-property-row">
-                  <div className="notion-property-label">
-                    <Calendar className="notion-property-icon" />
-                    <span>تاريخ رفع الدعوى</span>
+                {/* Filing Date — مخفي لقضايا التجهيز */}
+                {!['draft', 'preparation', 'filed'].includes(formData.status) && (
+                  <div className="notion-property-row">
+                    <div className="notion-property-label">
+                      <Calendar className="notion-property-icon" />
+                      <span>تاريخ رفع الدعوى</span>
+                    </div>
+                    <div className="notion-property-value">
+                      <input
+                        type="date"
+                        className="notion-input"
+                        value={formData.filingDate}
+                        onChange={(e) => handleInputChange('filingDate', e.target.value)}
+                      />
+                      {errors.filingDate && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
+                    </div>
                   </div>
-                  <div className="notion-property-value">
-                    <input
-                      type="date"
-                      className="notion-input"
-                      value={formData.filingDate}
-                      onChange={(e) => handleInputChange('filingDate', e.target.value)}
-                    />
-                    {errors.filingDate && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
-                  </div>
-                </div>
+                )}
 
                 {/* Opponent Info */}
                 <div className="notion-property-row span-full">

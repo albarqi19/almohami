@@ -32,6 +32,7 @@ import RegisterTenantContent from './pages/RegisterTenantContent';
 import LandingPage from './pages/LandingPage';
 import TenantLandingPage from './pages/TenantLandingPage';
 import Wekalat from './pages/Wekalat';
+import ExecutionRequests from './pages/ExecutionRequests';
 import AccountStatus from './pages/AccountStatus';
 import SubscriptionPaymentResult from './pages/SubscriptionPaymentResult';
 import LawyerSuspended from './pages/LawyerSuspended';
@@ -132,6 +133,11 @@ function App() {
               <Route path="wekalat" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <Wekalat />
+                </ProtectedRoute>
+              } />
+              <Route path="execution-requests" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                  <ExecutionRequests />
                 </ProtectedRoute>
               } />
 

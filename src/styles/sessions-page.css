@@ -493,3 +493,221 @@
         right: 0;
     }
 }
+
+/* ===== ضبط الجلسة - Dabt Styles ===== */
+
+.session-dabt-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #1E3A5F, #2d4a6f);
+    color: white;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.session-dabt-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(30, 58, 95, 0.3);
+}
+
+.session-dabt-sent-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: #ecfdf5;
+    color: #059669;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.session-notify-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.session-notify-btn:hover {
+    background: #2563eb;
+}
+
+.session-notify-btn--active {
+    background: #059669;
+}
+
+.session-notify-btn--active:hover {
+    background: #dc2626;
+}
+
+.session-notify-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Dabt Modal */
+.dabt-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.dabt-modal {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 700px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.dabt-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.dabt-modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1E3A5F;
+}
+
+.dabt-modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #6b7280;
+    border-radius: 4px;
+}
+
+.dabt-modal-close:hover {
+    background: #f3f4f6;
+}
+
+.dabt-modal-info {
+    padding: 16px 20px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+}
+
+.dabt-modal-info-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.dabt-modal-info-row span {
+    color: #6b7280;
+}
+
+.dabt-modal-info-row strong {
+    color: #111827;
+}
+
+.dabt-modal-summary {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.dabt-modal-summary h4 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #059669;
+}
+
+.dabt-modal-summary-text {
+    font-size: 13px;
+    line-height: 1.7;
+    color: #374151;
+    background: #ecfdf5;
+    padding: 12px;
+    border-radius: 8px;
+    white-space: pre-wrap;
+}
+
+.dabt-modal-text-container {
+    padding: 16px 20px;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.dabt-modal-text-container h4 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.dabt-modal-text {
+    font-size: 12px;
+    line-height: 1.8;
+    color: #4b5563;
+    overflow-y: auto;
+    flex: 1;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    white-space: pre-wrap;
+    max-height: 350px;
+}
+
+.dabt-processing-spinner {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #3b82f6;
+    font-weight: 500;
+}
+
+.dabt-processing-spinner::before {
+    content: '';
+    width: 12px;
+    height: 12px;
+    border: 2px solid #3b82f6;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: dabt-spin 0.8s linear infinite;
+}
+
+@keyframes dabt-spin {
+    to { transform: rotate(360deg); }
+}

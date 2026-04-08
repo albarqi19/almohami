@@ -490,9 +490,8 @@ body.dark .header__icon-button:focus-visible {
 
 .header__popover {
 	position: absolute;
-	inset-inline-end: 0;
-	inset-block-start: calc(100% + 12px);
-	z-index: var(--layer-dropdown);
+	top: calc(100% + 8px);
+	z-index: 9999;
 }
 
 .header__badge {

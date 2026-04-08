@@ -989,3 +989,104 @@ body.dark .wk-text-block { background: rgba(255,255,255,.02); }
     .wk-header__type { display: none; }
     .wk-remaining { display: none; }
 }
+
+/* ==================== Sort & Remaining Badges ==================== */
+.wekalat-icon-btn--active {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+  border-color: #93c5fd !important;
+}
+
+/* Settings Dropdown */
+.wekala-settings-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  background: var(--dashboard-card, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 12px;
+  min-width: 220px;
+  direction: rtl;
+}
+.wekala-settings-dropdown__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-primary, #1f2937);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border, #f3f4f6);
+}
+.wekala-settings-dropdown__option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.wekala-settings-dropdown__option:hover {
+  background: #f9fafb;
+}
+.wekala-settings-dropdown__option input[type="radio"] {
+  margin-top: 3px;
+  accent-color: #2563eb;
+}
+.wekala-settings-dropdown__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary, #374151);
+}
+.wekala-settings-dropdown__desc {
+  font-size: 10px;
+  color: var(--color-text-secondary, #9ca3af);
+  margin-top: 1px;
+}
+.wekala-settings-dropdown__saving {
+  font-size: 11px;
+  color: #2563eb;
+  text-align: center;
+  padding-top: 6px;
+}
+
+.wekalat-th--sortable {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.wekalat-th--sortable:hover {
+  color: #2563eb;
+}
+
+.wekala-type-sub {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 1px;
+}
+
+.wekala-remaining-badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 600;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+.wekala-remaining-badge--ok {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+.wekala-remaining-badge--urgent {
+  background: #fff7ed;
+  color: #ea580c;
+}
+.wekala-remaining-badge--expired {
+  background: #fef2f2;
+  color: #dc2626;
+}

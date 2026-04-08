@@ -42,6 +42,15 @@ interface SharingPermission {
   allow_lawyer_sharing: boolean;
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  'admin': 'مدير',
+  'partner': 'شريك',
+  'senior_lawyer': 'محامي أول',
+  'lawyer': 'محامي',
+  'legal_assistant': 'مساعد قانوني',
+  'assistant': 'مساعد'
+};
+
 const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
   isOpen,
   onClose,
@@ -53,7 +62,6 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
   const [permission, setPermission] = useState<SharingPermission | null>(null);
   const [allUsers, setAllUsers] = useState<SelectableUser[]>([]);
   const [sharedUsers, setSharedUsers] = useState<SharedUser[]>([]);
@@ -62,36 +70,24 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
   const [allowLawyerSharing, setAllowLawyerSharing] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
+    if (isOpen) loadData();
   }, [isOpen, caseId]);
 
   const loadData = async () => {
     setLoading(true);
     setError('');
     try {
-      // أولاً نتحقق من الصلاحيات
       const permissionData = await CaseService.canShare(caseId);
       setPermission(permissionData);
       setAllowLawyerSharing(permissionData.allow_lawyer_sharing);
-
-      // إذا كان يمكنه المشاركة، نجلب باقي البيانات
       if (permissionData.can_share) {
         const [usersData, sharesData] = await Promise.all([
           UserService.getLawyers(),
           CaseService.getCaseShares(caseId)
         ]);
-
-        const filteredUsers: SelectableUser[] = (usersData || [])
-          .map((user: any) => ({
-            id: Number(user.id),
-            name: user.name || '',
-            email: user.email || '',
-            role: user.role || ''
-          }));
-
-        setAllUsers(filteredUsers);
+        setAllUsers((usersData || []).map((u: any) => ({
+          id: Number(u.id), name: u.name || '', email: u.email || '', role: u.role || ''
+        })));
         setSharedUsers(sharesData);
       }
     } catch (err: any) {
@@ -102,113 +98,66 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
   };
 
   const handleShare = async () => {
-    if (selectedUserIds.length === 0) {
-      setError('الرجاء اختيار مستخدم واحد على الأقل');
-      return;
-    }
-
-    setSubmitting(true);
-    setError('');
-    setSuccess('');
-
+    if (selectedUserIds.length === 0) { setError('اختر مستخدم واحد على الأقل'); return; }
+    setSubmitting(true); setError(''); setSuccess('');
     try {
       await CaseService.shareCase(caseId, selectedUserIds);
-      setSuccess('تمت مشاركة القضية بنجاح');
+      setSuccess('تمت المشاركة بنجاح');
       setSelectedUserIds([]);
-
-      const sharesData = await CaseService.getCaseShares(caseId);
-      setSharedUsers(sharesData);
-
+      setSharedUsers(await CaseService.getCaseShares(caseId));
       onSuccess?.();
     } catch (err: any) {
-      setError(err.message || 'فشل في مشاركة القضية');
+      setError(err.message || 'فشل في المشاركة');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleRemoveShare = async (userId: number) => {
+  const handleRemove = async (userId: number) => {
     try {
       await CaseService.removeShare(caseId, userId);
       setSharedUsers(prev => prev.filter(u => u.id !== userId));
       setSuccess('تم إزالة المشاركة');
       onSuccess?.();
-    } catch (err: any) {
-      setError(err.message || 'فشل في إزالة المشاركة');
-    }
+    } catch (err: any) { setError(err.message || 'فشل في الإزالة'); }
   };
 
-  const handleToggleLawyerSharing = async () => {
+  const handleToggle = async () => {
     try {
-      const newValue = !allowLawyerSharing;
-      await CaseService.updateSharingPermission(caseId, newValue);
-      setAllowLawyerSharing(newValue);
-      setSuccess(newValue ? 'تم السماح للمحامين بالمشاركة' : 'تم إلغاء السماح للمحامين بالمشاركة');
-    } catch (err: any) {
-      setError(err.message || 'فشل في تحديث الإعداد');
-    }
+      const v = !allowLawyerSharing;
+      await CaseService.updateSharingPermission(caseId, v);
+      setAllowLawyerSharing(v);
+      setSuccess(v ? 'تم السماح للمحامين بالمشاركة' : 'تم إلغاء السماح');
+    } catch (err: any) { setError(err.message || 'فشل في التحديث'); }
   };
 
-  const toggleUserSelection = (userId: number) => {
-    setSelectedUserIds(prev =>
-      prev.includes(userId)
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
-    );
+  const toggle = (id: number) => {
+    setSelectedUserIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
     setError('');
   };
 
-  const getRoleLabel = (role: string) => {
-    const roles: Record<string, string> = {
-      'admin': 'مدير',
-      'partner': 'شريك',
-      'senior_lawyer': 'محامي أول',
-      'lawyer': 'محامي',
-      'legal_assistant': 'مساعد قانوني',
-      'assistant': 'مساعد'
-    };
-    return roles[role] || role;
-  };
-
-  const availableUsers = allUsers.filter(user =>
-    !sharedUsers.some(shared => shared.id === user.id) &&
-    user.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const available = allUsers.filter(u =>
+    !sharedUsers.some(s => s.id === u.id) &&
+    u.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (!isOpen) return null;
 
-  // إذا لم يكن مسموح له بالمشاركة
+  // No permission state
   if (!loading && permission && !permission.can_share) {
     return (
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-content modal-content--md" onClick={e => e.stopPropagation()}>
-          <div className="modal-header">
-            <h2 className="modal-title">
-              <Lock size={20} /> مشاركة القضية
-            </h2>
-            <button className="modal-close" onClick={onClose}>
-              <X size={18} />
-            </button>
+      <div className="sc-overlay" onClick={onClose}>
+        <div className="sc-modal sc-modal--sm" onClick={e => e.stopPropagation()}>
+          <div className="sc-header">
+            <Lock size={14} className="sc-header__icon" />
+            <span className="sc-header__title">مشاركة القضية</span>
+            <div className="sc-header__spacer" />
+            <button className="sc-close" onClick={onClose}><X size={15} /></button>
           </div>
-
-          <div className="modal-body">
-            <div className="share-case-no-permission">
-              <div className="share-case-no-permission__icon">
-                <Shield size={48} />
-              </div>
-              <h3>غير مصرح لك بمشاركة هذه القضية</h3>
-              <p>
-                صلاحية مشاركة القضايا متاحة لمدير المكتب فقط.
-                <br />
-                للحصول على صلاحية المشاركة، يرجى التواصل مع مدير المكتب.
-              </p>
-            </div>
-          </div>
-
-          <div className="modal-footer">
-            <button className="btn-secondary" onClick={onClose}>
-              إغلاق
-            </button>
+          <div className="sc-body" style={{ textAlign: 'center', padding: '32px 20px' }}>
+            <Shield size={36} style={{ color: 'var(--color-text-secondary)', marginBottom: 12 }} />
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-heading)', marginBottom: 6 }}>غير مصرح لك</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>صلاحية المشاركة متاحة للمدير فقط</div>
           </div>
         </div>
       </div>
@@ -216,147 +165,113 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content modal-content--md" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2 className="modal-title">
-            <UserPlus size={20} /> مشاركة القضية
-          </h2>
-          <button className="modal-close" onClick={onClose}>
-            <X size={18} />
-          </button>
+    <div className="sc-overlay" onClick={onClose}>
+      <div className="sc-modal" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="sc-header">
+          <UserPlus size={14} className="sc-header__icon" />
+          <span className="sc-header__title">مشاركة القضية</span>
+          <span className="sc-header__case">{caseTitle}</span>
+          <div className="sc-header__spacer" />
+          {selectedUserIds.length > 0 && (
+            <button className="sc-share-btn" onClick={handleShare} disabled={submitting}>
+              <UserPlus size={13} />
+              {submitting ? 'جاري...' : `مشاركة (${selectedUserIds.length})`}
+            </button>
+          )}
+          <button className="sc-close" onClick={onClose}><X size={15} /></button>
         </div>
 
-        <div className="modal-body">
-          <div className="share-case-subtitle">
-            مشاركة: <strong>{caseTitle}</strong>
+        {/* Alerts */}
+        {(error || success) && (
+          <div className={`sc-alert ${error ? 'sc-alert--error' : 'sc-alert--success'}`}>
+            {error ? <AlertCircle size={13} /> : <CheckCircle size={13} />}
+            {error || success}
           </div>
+        )}
 
-          {error && (
-            <div className="modal-error">
-              <AlertCircle size={14} /> {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="modal-success">
-              <CheckCircle size={14} /> {success}
-            </div>
-          )}
-
+        {/* Body */}
+        <div className="sc-body">
           {loading ? (
-            <div className="share-case-loading">جاري التحميل...</div>
+            <div className="sc-loading">جاري التحميل...</div>
           ) : (
-            <>
-              {/* خيار السماح للمحامين - يظهر فقط للمدير */}
-              {permission?.is_admin && (
-                <div className="share-case-admin-option">
-                  <label className="share-case-toggle">
-                    <input
-                      type="checkbox"
-                      checked={allowLawyerSharing}
-                      onChange={handleToggleLawyerSharing}
-                    />
-                    <span className="share-case-toggle__slider"></span>
-                    <span className="share-case-toggle__label">
-                      السماح للمحامين المكلفين بمشاركة هذه القضية
-                    </span>
-                  </label>
+            <div className="sc-grid">
+              {/* Left: Current shares */}
+              <div className="sc-panel">
+                <div className="sc-panel__head">
+                  <Users size={13} /> المشاركين الحاليين
+                  <span className="sc-badge">{sharedUsers.length}</span>
                 </div>
-              )}
-
-              {/* Currently shared users */}
-              {sharedUsers.length > 0 && (
-                <div className="share-case-section">
-                  <h3 className="share-case-section__title">
-                    <Users size={16} /> المشاركين الحاليين ({sharedUsers.length})
-                  </h3>
-                  <div className="share-case-list">
-                    {sharedUsers.map(user => (
-                      <div key={user.id} className="share-user-item share-user-item--shared">
-                        <div className="share-user-item__avatar">
-                          {user.name?.charAt(0) || '?'}
-                        </div>
-                        <div className="share-user-item__info">
-                          <div className="share-user-item__name">{user.name}</div>
-                          <div className="share-user-item__role">{getRoleLabel(user.role)}</div>
-                        </div>
-                        <button
-                          className="share-user-item__remove"
-                          onClick={() => handleRemoveShare(user.id)}
-                          title="إزالة المشاركة"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                <div className="sc-panel__body">
+                  {sharedUsers.length === 0 ? (
+                    <div className="sc-empty">لم تتم مشاركة القضية</div>
+                  ) : sharedUsers.map(u => (
+                    <div key={u.id} className="sc-user sc-user--shared">
+                      <span className="sc-avatar">{u.name?.charAt(0)}</span>
+                      <div className="sc-user__info">
+                        <span className="sc-user__name">{u.name}</span>
+                        <span className="sc-user__role">{ROLE_LABELS[u.role] || u.role}</span>
                       </div>
-                    ))}
-                  </div>
+                      <button className="sc-remove" onClick={() => handleRemove(u.id)} title="إزالة">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Admin toggle */}
+                  {permission?.is_admin && (
+                    <div className="sc-toggle-row">
+                      <label className="sc-toggle">
+                        <input type="checkbox" checked={allowLawyerSharing} onChange={handleToggle} />
+                        <span className="sc-toggle__track" />
+                      </label>
+                      <span className="sc-toggle__text">السماح للمحامين بالمشاركة</span>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
 
-              {/* Add new users */}
-              <div className="share-case-section">
-                <h3 className="share-case-section__title">
-                  <UserPlus size={16} /> إضافة مشاركين
-                </h3>
-
-                <div className="share-case-search">
-                  <Search size={16} />
+              {/* Right: Add users */}
+              <div className="sc-panel">
+                <div className="sc-panel__head">
+                  <UserPlus size={13} /> إضافة مشاركين
+                  <span className="sc-badge">{available.length}</span>
+                </div>
+                <div className="sc-search">
+                  <Search size={13} />
                   <input
                     type="text"
-                    placeholder="البحث عن مستخدم..."
+                    placeholder="بحث..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                   />
                 </div>
-
-                <div className="share-case-list share-case-list--selectable">
-                  {availableUsers.length === 0 ? (
-                    <div className="share-case-empty">
-                      {searchTerm ? 'لا يوجد نتائج' : 'لا يوجد مستخدمين متاحين'}
-                    </div>
-                  ) : (
-                    availableUsers.map(user => (
-                      <div
-                        key={user.id}
-                        className={`share-user-item ${selectedUserIds.includes(user.id) ? 'share-user-item--selected' : ''}`}
-                        onClick={() => toggleUserSelection(user.id)}
-                      >
-                        <div className="share-user-item__checkbox">
-                          <input
-                            type="checkbox"
-                            checked={selectedUserIds.includes(user.id)}
-                            onChange={() => {}}
-                          />
-                        </div>
-                        <div className="share-user-item__avatar">
-                          {user.name?.charAt(0) || '?'}
-                        </div>
-                        <div className="share-user-item__info">
-                          <div className="share-user-item__name">{user.name}</div>
-                          <div className="share-user-item__role">{getRoleLabel(user.role)}</div>
-                        </div>
+                <div className="sc-panel__body">
+                  {available.length === 0 ? (
+                    <div className="sc-empty">{searchTerm ? 'لا نتائج' : 'لا يوجد مستخدمين'}</div>
+                  ) : available.map(u => (
+                    <div
+                      key={u.id}
+                      className={`sc-user sc-user--selectable ${selectedUserIds.includes(u.id) ? 'sc-user--selected' : ''}`}
+                      onClick={() => toggle(u.id)}
+                    >
+                      <input
+                        type="checkbox"
+                        className="sc-checkbox"
+                        checked={selectedUserIds.includes(u.id)}
+                        onChange={() => {}}
+                      />
+                      <span className="sc-avatar">{u.name?.charAt(0)}</span>
+                      <div className="sc-user__info">
+                        <span className="sc-user__name">{u.name}</span>
+                        <span className="sc-user__role">{ROLE_LABELS[u.role] || u.role}</span>
                       </div>
-                    ))
-                  )}
+                    </div>
+                  ))}
                 </div>
               </div>
-            </>
+            </div>
           )}
-        </div>
-
-        <div className="modal-footer">
-          <button className="btn-secondary" onClick={onClose} disabled={submitting}>
-            إغلاق
-          </button>
-          <button
-            className="btn-primary"
-            onClick={handleShare}
-            disabled={submitting || loading || selectedUserIds.length === 0}
-          >
-            <UserPlus size={16} />
-            {submitting ? 'جاري المشاركة...' : `مشاركة (${selectedUserIds.length})`}
-          </button>
         </div>
       </div>
     </div>

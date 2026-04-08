@@ -92,7 +92,7 @@ const BillingStatsCard: React.FC<BillingStatsCardProps> = ({
             color: iconColor,
           }}
         >
-          <Icon size={24} />
+          <Icon size={20} />
         </div>
 
         {/* مؤشر الاتجاه */}

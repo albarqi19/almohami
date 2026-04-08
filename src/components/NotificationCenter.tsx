@@ -199,136 +199,78 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="notification-center-overlay" onClick={onClose}>
-      <div className="notification-center" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="notification-center__header">
-          <div className="notification-center__title-row">
-            <h2 className="notification-center__title">
-              <Bell size={20} />
-              الإشعارات
-              {unreadCount > 0 && (
-                <span className="notification-center__badge">{unreadCount}</span>
-              )}
-            </h2>
-            <div className="notification-center__actions">
-              <button
-                className="notification-center__icon-btn"
-                title="تحديث"
-                onClick={loadNotifications}
-                disabled={isLoading}
-              >
-                <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-              </button>
-              <button
-                className="notification-center__icon-btn notification-center__icon-btn--close"
-                onClick={onClose}
-                title="إغلاق"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div className="notification-center__tabs">
-              <button
-                className={`notification-center__tab ${filter === 'all' ? 'notification-center__tab--active' : ''}`}
-                onClick={() => setFilter('all')}
-              >
-                الكل
-                <span className="notification-center__tab-count">{stats.total}</span>
-              </button>
-              <button
-                className={`notification-center__tab ${filter === 'unread' ? 'notification-center__tab--active' : ''}`}
-                onClick={() => setFilter('unread')}
-              >
-                غير مقروءة
-                <span className="notification-center__tab-count">{unreadCount}</span>
-              </button>
-              <button
-                className={`notification-center__tab ${filter === 'important' ? 'notification-center__tab--active' : ''}`}
-                onClick={() => setFilter('important')}
-              >
-                مهمة
-                <span className="notification-center__tab-count">{importantCount}</span>
-              </button>
-            </div>
-
-            {unreadCount > 0 && (
-              <button className="notification-center__quick-action" onClick={markAllAsRead}>
-                <CheckCheck size={14} />
-                قراءة الكل
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* List */}
-        <div className="notification-center__list">
-          {isLoading && notifications.length === 0 ? (
-            <div className="notification-center__loading">
-              <Loader2 size={24} className="animate-spin" />
-              <span>جاري تحميل الإشعارات...</span>
-            </div>
-          ) : filteredNotifications.length > 0 ? (
-            filteredNotifications.map(notification => (
-              <div
-                key={notification.id}
-                className={`nc-item ${!notification.is_read ? 'nc-item--unread' : ''}`}
-                onClick={() => handleNotificationClick(notification)}
-              >
-                <div className={getIconClass(notification.type)}>
-                  {getTypeIcon(notification.type)}
-                </div>
-
-                <div className="nc-item__content">
-                  <div className="nc-item__header">
-                    <h4 className="nc-item__title">
-                      {notification.title}
-                      {!notification.is_read && <span className="nc-item__dot nc-item__dot--unread" />}
-                      {isImportantType(notification.type) && <span className="nc-item__dot nc-item__dot--important" />}
-                    </h4>
-                  </div>
-
-                  <p className="nc-item__message">{notification.message}</p>
-
-                  <div className="nc-item__footer">
-                    <span className="nc-item__time">
-                      <Clock size={12} />
-                      {formatTimestamp(notification.created_at)}
-                    </span>
-                    <button
-                      className="nc-item__delete"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteNotification(notification.id);
-                      }}
-                      title="حذف"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="notification-center__empty">
-              <Bell className="notification-center__empty-icon" />
-              <h3 className="notification-center__empty-title">لا توجد إشعارات</h3>
-              <p className="notification-center__empty-desc">ستظهر الإشعارات الجديدة هنا</p>
-            </div>
+    <div className="nc-dropdown" onClick={e => e.stopPropagation()}>
+      {/* Header */}
+      <div className="nc-dropdown__header">
+        <span className="nc-dropdown__title">
+          الإشعارات
+          {unreadCount > 0 && <span className="nc-dropdown__badge">{unreadCount}</span>}
+        </span>
+        <div className="nc-dropdown__header-actions">
+          {unreadCount > 0 && (
+            <button className="nc-dropdown__btn" onClick={markAllAsRead} title="قراءة الكل">
+              <CheckCheck size={13} />
+            </button>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="notification-center__footer">
-          <Link to="/notifications" className="notification-center__link" onClick={onClose}>
-            عرض جميع الإشعارات
-          </Link>
+          <button className="nc-dropdown__btn" onClick={loadNotifications} disabled={isLoading} title="تحديث">
+            <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
+          </button>
         </div>
       </div>
+
+      {/* Tabs */}
+      <div className="nc-dropdown__tabs">
+        {([['all', 'الكل', stats.total], ['unread', 'جديدة', unreadCount], ['important', 'مهمة', importantCount]] as const).map(([key, label, count]) => (
+          <button key={key}
+            className={`nc-dropdown__tab ${filter === key ? 'nc-dropdown__tab--active' : ''}`}
+            onClick={() => setFilter(key as any)}
+          >
+            {label}{count > 0 && <span className="nc-dropdown__tab-count">{count}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* List */}
+      <div className="nc-dropdown__list">
+        {isLoading && notifications.length === 0 ? (
+          <div className="nc-dropdown__loading">
+            <Loader2 size={18} className="animate-spin" />
+          </div>
+        ) : filteredNotifications.length > 0 ? (
+          filteredNotifications.map(notification => (
+            <div
+              key={notification.id}
+              className={`nc-row ${!notification.is_read ? 'nc-row--unread' : ''}`}
+              onClick={() => handleNotificationClick(notification)}
+            >
+              <div className={getIconClass(notification.type)}>
+                {getTypeIcon(notification.type)}
+              </div>
+              <div className="nc-row__body">
+                <div className="nc-row__top">
+                  <span className="nc-row__title">{notification.title}</span>
+                  <span className="nc-row__time">{formatTimestamp(notification.created_at)}</span>
+                </div>
+                <p className="nc-row__msg">{notification.message}</p>
+              </div>
+              <button
+                className="nc-row__del"
+                onClick={(e) => { e.stopPropagation(); deleteNotification(notification.id); }}
+                title="حذف"
+              >
+                <Trash2 size={11} />
+              </button>
+            </div>
+          ))
+        ) : (
+          <div className="nc-dropdown__empty">لا توجد إشعارات</div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <Link to="/notifications" className="nc-dropdown__footer" onClick={onClose}>
+        عرض الكل
+      </Link>
     </div>
   );
 };

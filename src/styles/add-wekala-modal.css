@@ -1,0 +1,240 @@
+/* AddWekalaModal - Smart Compact */
+.add-wekala-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.add-wekala-modal {
+  background: var(--dashboard-card, #fff);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+  border: 1px solid var(--color-border, #e5e7eb);
+  direction: rtl;
+}
+
+/* Header */
+.awm-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border, #f0f0f0);
+}
+.awm-header__icon {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #16a34a;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.awm-header__title {
+  font-size: 14px; font-weight: 600;
+  color: var(--color-text, #111); margin: 0;
+}
+.awm-manual-badge {
+  font-size: 10px; padding: 2px 8px;
+  border-radius: 4px; background: #fef3c7;
+  color: #92400e; font-weight: 600;
+}
+.awm-close-btn {
+  margin-right: auto;
+  background: none; border: none; cursor: pointer;
+  color: #9ca3af; padding: 4px; border-radius: 4px;
+}
+.awm-close-btn:hover { background: #f3f4f6; color: #374151; }
+
+/* Error */
+.awm-error {
+  display: flex; align-items: center; gap: 6px;
+  margin: 8px 16px 0;
+  padding: 6px 10px;
+  background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: 6px; color: #dc2626; font-size: 12px;
+}
+
+/* Form */
+.awm-form {
+  padding: 12px 16px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+/* Rows */
+.awm-row { display: flex; gap: 8px; align-items: flex-end; }
+
+/* Fields */
+.awm-field { display: flex; flex-direction: column; gap: 3px; }
+.awm-field--grow { flex: 1; }
+.awm-field label {
+  font-size: 11px; color: #6b7280; font-weight: 500;
+  display: flex; align-items: center; gap: 3px;
+}
+.awm-field input,
+.awm-field select,
+.awm-field textarea {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--dashboard-card, #fff);
+  color: var(--color-text, #111);
+  font-family: inherit;
+  height: 34px;
+}
+.awm-field textarea { height: auto; min-height: 50px; resize: vertical; }
+.awm-field input:focus,
+.awm-field select:focus,
+.awm-field textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+}
+
+/* Type pills */
+.awm-type-row, .awm-status-row {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.awm-type-row label, .awm-status-row label {
+  font-size: 11px; color: #6b7280; font-weight: 500;
+}
+.awm-type-pills, .awm-status-pills {
+  display: flex; flex-wrap: wrap; gap: 4px;
+}
+.awm-type-pill {
+  padding: 4px 10px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 20px;
+  background: var(--dashboard-card, #fff);
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 11px; cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+.awm-type-pill:hover { border-color: #86efac; color: #16a34a; }
+.awm-type-pill--active {
+  background: #f0fdf4; color: #16a34a;
+  border-color: #16a34a; font-weight: 600;
+}
+.awm-status-pill {
+  padding: 4px 10px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 20px;
+  background: var(--dashboard-card, #fff);
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 11px; cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+.awm-status-pill:hover { opacity: 0.8; }
+.awm-status-pill--active { font-weight: 600; border-width: 1.5px; }
+
+/* Party section */
+.awm-party-section {
+  border: 1px solid #f3f4f6;
+  border-radius: 8px;
+  padding: 8px;
+}
+.awm-party-section__head {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: #6b7280; font-weight: 600;
+  margin-bottom: 6px;
+}
+.awm-add-btn {
+  margin-right: auto;
+  background: none; border: 1px dashed #d1d5db;
+  cursor: pointer; color: #3b82f6;
+  width: 22px; height: 22px;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+}
+.awm-add-btn:hover { background: #eff6ff; border-color: #93c5fd; }
+
+/* Party rows */
+.awm-party-row {
+  display: flex; gap: 6px; align-items: center;
+  margin-bottom: 4px;
+}
+.awm-party-row__name { flex: 2; }
+.awm-party-row__id { flex: 1; }
+.awm-party-row__name,
+.awm-party-row__id {
+  padding: 5px 8px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--dashboard-card, #fff);
+  color: var(--color-text, #111);
+  font-family: inherit;
+  height: 30px;
+}
+.awm-party-row__name:focus,
+.awm-party-row__id:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+}
+.awm-party-row__remove {
+  background: none; border: none; cursor: pointer;
+  color: #ef4444; padding: 3px; border-radius: 4px;
+  flex-shrink: 0;
+}
+.awm-party-row__remove:hover { background: #fef2f2; }
+
+/* Toggle extra */
+.awm-toggle-extra {
+  background: none; border: none;
+  color: #3b82f6; font-size: 11px;
+  cursor: pointer; text-align: right;
+  font-family: inherit; padding: 0;
+}
+.awm-toggle-extra:hover { text-decoration: underline; }
+
+/* Extra section */
+.awm-extra {
+  display: flex; flex-direction: column; gap: 8px;
+  overflow: hidden;
+}
+
+/* Actions */
+.awm-actions {
+  display: flex; justify-content: flex-end; gap: 6px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid #f3f4f6;
+}
+.awm-btn {
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  border: none;
+  font-family: inherit;
+}
+.awm-btn--cancel {
+  background: var(--dashboard-card, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  color: var(--color-text, #374151);
+}
+.awm-btn--cancel:hover { background: #f9fafb; }
+.awm-btn--submit { background: #16a34a; color: #fff; }
+.awm-btn--submit:hover { background: #15803d; }
+.awm-btn--submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Source badge */
+.wekala-source-badge {
+  font-size: 10px; padding: 2px 6px;
+  border-radius: 4px; font-weight: 500;
+}
+.wekala-source-badge--manual { background: #fef3c7; color: #92400e; }
+.wekala-source-badge--najiz { background: #dbeafe; color: #1e40af; }

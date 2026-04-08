@@ -1,6 +1,6 @@
 ﻿import { apiClient } from '../utils/api';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
-import type { Case, CreateCaseForm } from '../types';
+import type { Case } from '../types';
 import { cacheManager, CACHE_KEYS } from '../utils/cacheManager';
 
 export interface CaseFilters {
@@ -74,7 +74,7 @@ export class CaseService {
     }
   }
 
-  static async updateCase(id: string, caseData: Partial<CreateCaseForm>): Promise<Case> {
+  static async updateCase(id: string, caseData: Partial<Case>): Promise<Case> {
     const response = await apiClient.put<ApiResponse<Case>>(`/cases/${id}`, caseData);
 
     if (response.success && response.data) {
@@ -257,5 +257,43 @@ export class CaseService {
     } else {
       throw new Error(response.message || 'فشل في ربط القضية');
     }
+  }
+
+  // =================== مطبخ التجهيز ===================
+
+  static async getPrepTasks(caseId: string | number) {
+    return apiClient.get(`/cases/${caseId}/prep-tasks`);
+  }
+
+  static async initDefaultPrepTasks(caseId: string | number) {
+    return apiClient.post(`/cases/${caseId}/prep-tasks/init`);
+  }
+
+  static async addPrepTask(caseId: string | number, title: string) {
+    return apiClient.post(`/cases/${caseId}/prep-tasks`, { title });
+  }
+
+  static async updatePrepTask(caseId: string | number, taskId: number, title: string) {
+    return apiClient.put(`/cases/${caseId}/prep-tasks/${taskId}`, { title });
+  }
+
+  static async togglePrepTask(caseId: string | number, taskId: number) {
+    return apiClient.patch(`/cases/${caseId}/prep-tasks/${taskId}/toggle`);
+  }
+
+  static async reorderPrepTasks(caseId: string | number, order: number[]) {
+    return apiClient.post(`/cases/${caseId}/prep-tasks/reorder`, { order });
+  }
+
+  static async deletePrepTask(caseId: string | number, taskId: number) {
+    return apiClient.delete(`/cases/${caseId}/prep-tasks/${taskId}`);
+  }
+
+  static async activateCase(caseId: string | number, filingDate?: string) {
+    return apiClient.post(`/cases/${caseId}/activate`, filingDate ? { filing_date: filingDate } : {});
+  }
+
+  static async updatePrepStatus(caseId: string | number, status: 'draft' | 'preparation' | 'filed') {
+    return apiClient.patch(`/cases/${caseId}/prep-status`, { status });
   }
 }

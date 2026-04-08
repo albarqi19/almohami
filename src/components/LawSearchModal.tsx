@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, Scale, ExternalLink, BookOpen, Loader2, FileText, Hash, ChevronLeft, ArrowRight } from 'lucide-react';
+import { X, Search, Scale, ExternalLink, BookOpen, Loader2, FileText, Hash, ChevronLeft, ArrowRight, ChevronDown, Navigation } from 'lucide-react';
 import '../styles/law-search-modal.css';
 
 interface LawSearchModalProps {
@@ -29,6 +29,18 @@ interface SearchResponse {
     systems?: SystemResult[];
     has_more: boolean;
   };
+}
+
+interface NezamSystem {
+  id: string;
+  text: string;
+  link?: string;
+}
+
+interface NezamArticle {
+  value: string;
+  text: string;
+  data_id: string;
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1';
@@ -60,6 +72,15 @@ const LawSearchModal: React.FC<LawSearchModalProps> = ({ isOpen, onClose }) => {
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const [viewTitle, setViewTitle] = useState('');
   const [iframeLoading, setIframeLoading] = useState(false);
+  // Fast navigation state
+  const [allSystems, setAllSystems] = useState<NezamSystem[]>([]);
+  const [systemArticles, setSystemArticles] = useState<NezamArticle[]>([]);
+  const [selectedSystem, setSelectedSystem] = useState('');
+  const [selectedArticle, setSelectedArticle] = useState('');
+  const [selectedArticleDataId, setSelectedArticleDataId] = useState('');
+  const [loadingSystems, setLoadingSystems] = useState(false);
+  const [loadingArticles, setLoadingArticles] = useState(false);
+  const [showFastNav, setShowFastNav] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -156,6 +177,87 @@ const LawSearchModal: React.FC<LawSearchModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  // Fast navigation: load all systems
+  const loadAllSystems = useCallback(async () => {
+    if (allSystems.length > 0) return; // already loaded
+    setLoadingSystems(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const resp = await fetch(`${API_BASE}/law-systems`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
+      const data = await resp.json();
+      if (data.success && Array.isArray(data.data)) {
+        setAllSystems(data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load systems', err);
+    } finally {
+      setLoadingSystems(false);
+    }
+  }, [allSystems.length]);
+
+  // Fast navigation: load articles for selected system
+  const loadSystemArticles = useCallback(async (systemId: string) => {
+    if (!systemId) {
+      setSystemArticles([]);
+      setSelectedArticle('');
+      setSelectedArticleDataId('');
+      return;
+    }
+    setLoadingArticles(true);
+    setSystemArticles([]);
+    setSelectedArticle('');
+    setSelectedArticleDataId('');
+    try {
+      const token = localStorage.getItem('authToken');
+      const resp = await fetch(`${API_BASE}/law-system-articles?system_id=${encodeURIComponent(systemId)}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
+      const data = await resp.json();
+      if (data.success && Array.isArray(data.data)) {
+        setSystemArticles(data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load articles', err);
+    } finally {
+      setLoadingArticles(false);
+    }
+  }, []);
+
+  const handleSystemChange = (systemId: string) => {
+    setSelectedSystem(systemId);
+    loadSystemArticles(systemId);
+  };
+
+  const handleArticleChange = (value: string) => {
+    setSelectedArticle(value);
+    const article = systemArticles.find(a => a.value === value);
+    setSelectedArticleDataId(article?.data_id || '');
+  };
+
+  const handleFastNavGo = () => {
+    if (!selectedSystem) return;
+    // Find system link
+    const system = allSystems.find(s => s.id === selectedSystem);
+    if (!system?.link) return;
+
+    if (selectedArticle) {
+      // Open system page at specific article
+      const url = `${system.link}#subject-${selectedArticle}`;
+      handleOpenArticle(url, `${system.text} - المادة ${selectedArticle}`);
+    } else {
+      // Open system page
+      handleOpenArticle(system.link, system.text);
+    }
+  };
+
+  const handleToggleFastNav = () => {
+    const next = !showFastNav;
+    setShowFastNav(next);
+    if (next) loadAllSystems();
+  };
+
   const handleOpenArticle = (link: string, title: string) => {
     const proxyUrl = `${API_BASE}/law-page?url=${encodeURIComponent(link)}`;
     setViewUrl(proxyUrl);
@@ -180,6 +282,11 @@ const LawSearchModal: React.FC<LawSearchModalProps> = ({ isOpen, onClose }) => {
     setViewUrl(null);
     setViewTitle('');
     setIframeLoading(false);
+    setSelectedSystem('');
+    setSelectedArticle('');
+    setSelectedArticleDataId('');
+    setSystemArticles([]);
+    setShowFastNav(false);
     if (abortControllerRef.current) abortControllerRef.current.abort();
     onClose();
   };
@@ -299,6 +406,82 @@ const LawSearchModal: React.FC<LawSearchModalProps> = ({ isOpen, onClose }) => {
                   {loading ? <Loader2 size={15} className="law-search-modal__spinner" /> : <Search size={15} />}
                   بحث
                 </button>
+              </div>
+            )}
+
+            {/* Fast Navigation - الانتقال السريع */}
+            {!viewUrl && (
+              <div className="law-search-modal__fast-nav-section">
+                <button
+                  className="law-search-modal__fast-nav-toggle"
+                  onClick={handleToggleFastNav}
+                >
+                  <Navigation size={14} />
+                  <span>الانتقال السريع — اختر النظام والمادة</span>
+                  <ChevronDown
+                    size={14}
+                    className={`law-search-modal__fast-nav-arrow ${showFastNav ? 'law-search-modal__fast-nav-arrow--open' : ''}`}
+                  />
+                </button>
+
+                {showFastNav && (
+                  <div className="law-search-modal__fast-nav-body">
+                    <div className="law-search-modal__fast-nav-row">
+                      <div className="law-search-modal__fast-nav-field">
+                        <label className="law-search-modal__fast-nav-label">النظام</label>
+                        <div className="law-search-modal__fast-nav-select-wrapper">
+                          <select
+                            className="law-search-modal__fast-nav-select"
+                            value={selectedSystem}
+                            onChange={(e) => handleSystemChange(e.target.value)}
+                            disabled={loadingSystems}
+                          >
+                            <option value="">
+                              {loadingSystems ? 'جاري التحميل...' : 'اختر النظام'}
+                            </option>
+                            {allSystems.map((sys) => (
+                              <option key={sys.id} value={sys.id}>
+                                {sys.text}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown size={14} className="law-search-modal__fast-nav-select-icon" />
+                        </div>
+                      </div>
+
+                      <div className="law-search-modal__fast-nav-field">
+                        <label className="law-search-modal__fast-nav-label">رقم المادة</label>
+                        <div className="law-search-modal__fast-nav-select-wrapper">
+                          <select
+                            className="law-search-modal__fast-nav-select"
+                            value={selectedArticle}
+                            onChange={(e) => handleArticleChange(e.target.value)}
+                            disabled={!selectedSystem || loadingArticles}
+                          >
+                            <option value="">
+                              {loadingArticles ? 'جاري التحميل...' : 'اختر رقم المادة'}
+                            </option>
+                            {systemArticles.map((art, i) => (
+                              <option key={`${art.value}-${i}`} value={art.value}>
+                                {art.text}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown size={14} className="law-search-modal__fast-nav-select-icon" />
+                        </div>
+                      </div>
+
+                      <button
+                        className="law-search-modal__fast-nav-go"
+                        onClick={handleFastNavGo}
+                        disabled={!selectedSystem}
+                      >
+                        <Navigation size={14} />
+                        انتقال
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

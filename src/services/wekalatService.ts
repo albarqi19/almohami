@@ -60,6 +60,79 @@ export class WekalatService {
   }
 
   /**
+   * إنشاء وكالة يدوياً
+   */
+  static async createWekala(data: {
+    number: string;
+    type?: string;
+    status?: string;
+    issue_date_hijri?: string;
+    issue_date_gregorian?: string;
+    expiry_date_hijri?: string;
+    expiry_date_gregorian?: string;
+    notary_name?: string;
+    issuer?: string;
+    agency_text?: string;
+    agents?: { name: string; id_number?: string; id_type?: string; nationality?: string }[];
+    clients?: { name: string; id_number?: string; id_type?: string; nationality?: string }[];
+  }): Promise<Wekala> {
+    const response = await apiClient.post<ApiResponse<Wekala>>('/wekalat', data);
+
+    if (response.success && response.data) {
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في إنشاء الوكالة');
+    }
+  }
+
+  /**
+   * تعديل وكالة
+   */
+  static async updateWekala(id: number, data: Record<string, unknown>): Promise<Wekala> {
+    const response = await apiClient.put<ApiResponse<Wekala>>(`/wekalat/${id}`, data);
+
+    if (response.success && response.data) {
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في تعديل الوكالة');
+    }
+  }
+
+  /**
+   * حذف وكالة يدوية
+   */
+  static async deleteWekala(id: number): Promise<void> {
+    const response = await apiClient.delete<ApiResponse<void>>(`/wekalat/${id}`);
+
+    if (!response.success) {
+      throw new Error(response.message || 'فشل في حذف الوكالة');
+    }
+  }
+
+  /**
+   * الحصول على إعداد خصوصية الوكالات
+   */
+  static async getVisibilitySetting(): Promise<string> {
+    try {
+      const response = await apiClient.get<ApiResponse<{ key: string; value: string }>>('/advanced-settings/wekala_visibility');
+      return response.success && response.data ? response.data.value : 'all';
+    } catch {
+      return 'all';
+    }
+  }
+
+  /**
+   * تحديث إعداد خصوصية الوكالات
+   */
+  static async updateVisibilitySetting(value: 'all' | 'assigned'): Promise<boolean> {
+    const response = await apiClient.put<ApiResponse<void>>('/advanced-settings/wekala_visibility', { value });
+    if (!response.success) {
+      throw new Error(response.message || 'فشل في تحديث الإعداد');
+    }
+    return true;
+  }
+
+  /**
    * إحصائيات الوكالات
    */
   static async getWekalatStats(): Promise<{

@@ -3,7 +3,7 @@
 /* === الشبكة === */
 .billing-stats-grid {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 @media (max-width: 1024px) {
@@ -21,9 +21,9 @@
 /* === البطاقة الرئيسية === */
 .billing-stats-card {
   background-color: var(--dashboard-card, var(--color-surface));
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: var(--shadow-xs, 0 1px 3px rgba(0, 0, 0, 0.1));
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--shadow-xs, 0 1px 3px rgba(0, 0, 0, 0.06));
   border: 1px solid var(--color-border);
   direction: rtl;
   transition: all 0.2s ease;
@@ -48,14 +48,14 @@ body.dark .billing-stats-card {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 /* === الأيقونة === */
 .billing-stats-card__icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -101,14 +101,14 @@ body.dark .billing-stats-card__trend--neutral {
 
 /* === العنوان === */
 .billing-stats-card__title {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text-secondary, #6b7280);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 /* === القيمة === */
 .billing-stats-card__value {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--color-heading, #111827);
   line-height: 1.2;

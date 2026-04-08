@@ -126,6 +126,11 @@ export interface Case {
   billing?: CaseBilling;
   contracts?: any[];
   case_invoices?: any[];
+  // مطبخ التجهيز
+  prep_tasks?: CasePrepTask[];
+  preparation_progress?: number;
+  is_prep_mode?: boolean;
+  status_arabic?: string;
 }
 
 // Case Party - طرف القضية
@@ -160,6 +165,8 @@ export interface CaseSession {
   location?: string;
   video_conference_url?: string;
   is_video_conference?: boolean;
+  source?: string;
+  notify_client?: boolean;
 }
 
 export const CaseType = {
@@ -177,6 +184,9 @@ export const CaseType = {
 export type CaseType = typeof CaseType[keyof typeof CaseType];
 
 export const CaseStatus = {
+  DRAFT: 'draft',
+  PREPARATION: 'preparation',
+  FILED: 'filed',
   ACTIVE: 'active',
   PENDING: 'pending',
   CLOSED: 'closed',
@@ -186,6 +196,23 @@ export const CaseStatus = {
 } as const;
 
 export type CaseStatus = typeof CaseStatus[keyof typeof CaseStatus];
+
+export const PREP_STATUSES: CaseStatus[] = ['draft', 'preparation', 'filed'];
+
+// مهام التجهيز
+export interface CasePrepTask {
+  id: number;
+  case_id: number;
+  tenant_id: number;
+  title: string;
+  is_completed: boolean;
+  sort_order: number;
+  completed_by?: number;
+  completed_at?: string;
+  completed_by_user?: { id: number; name: string };
+  created_at?: string;
+  updated_at?: string;
+}
 
 // Task Types
 export const TaskType = {
@@ -607,6 +634,67 @@ export interface WekalaFilters {
   search?: string;
   page?: number;
   limit?: number;
+}
+
+// ==================== Execution Request Types ====================
+
+export interface ExecutionRequestParty {
+  name: string;
+  role: string;
+  id_number?: string | null;
+  nationality?: string | null;
+}
+
+export interface ExecutionRequest {
+  id: number;
+  tenant_id: number;
+  request_number: string;
+  request_id?: string | null;
+  request_code?: string | null;
+  party_role?: string | null;
+  party_role_id?: number | null;
+  main_document_type?: string | null;
+  sub_document_type?: string | null;
+  document_type_id?: number | null;
+  court?: string | null;
+  department?: string | null;
+  filing_date_hijri?: string | null;
+  filing_date_gregorian?: string | null;
+  status: string;
+  status_id?: number | null;
+  total_amount?: number | null;
+  paid_amount?: number | null;
+  remaining_amount?: number | null;
+  currency?: string;
+  case_id?: number | null;
+  parties?: ExecutionRequestParty[] | null;
+  decisions?: any[] | null;
+  steps?: any[] | null;
+  attorneys?: any[] | null;
+  financial_amounts?: any[] | null;
+  attachments?: any[] | null;
+  source?: string;
+  najiz_synced_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExecutionRequestFilters {
+  status?: string;
+  party_role_id?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ExecutionRequestStats {
+  total: number;
+  total_amount: number;
+  paid_amount: number;
+  remaining_amount: number;
+  by_status: { status: string; count: number; total: number }[];
+  by_party_role: { party_role: string; count: number }[];
+  by_court: { court: string; count: number; remaining_total: number }[];
 }
 
 // ==================== Two-Factor Authentication Types ====================

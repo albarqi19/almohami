@@ -19,10 +19,13 @@ import {
 	ExternalLink,
 	Download,
 	FileImage,
-	FileSpreadsheet
+	FileSpreadsheet,
+	Plus,
 } from 'lucide-react';
 import { apiClient } from '../utils/api';
+import { AddSessionModal } from '../components/AddSessionModal';
 import '../styles/sessions-page.css';
+import '../styles/add-session-modal.css';
 
 interface Session {
 	id: number;
@@ -30,6 +33,7 @@ interface Session {
 	session_type: string | null;
 	session_number: string | null;
 	session_date: string | null;
+	session_date_gregorian?: string | null;
 	session_time: string | null;
 	status: string;
 	najiz_status: string | null;
@@ -41,6 +45,13 @@ interface Session {
 	result: string | null;
 	video_conference_url?: string | null;
 	is_video_conference?: boolean;
+	session_text?: string | null;
+	session_text_summary?: string | null;
+	notify_client?: boolean;
+	notify_client_by?: number | null;
+	dabt_sent_to_client?: boolean;
+	dabt_sent_at?: string | null;
+	source?: string | null;
 	case?: {
 		id: number;
 		title: string;
@@ -49,6 +60,7 @@ interface Session {
 		client_name: string | null;
 		court: string | null;
 		najiz_status: string | null;
+		client_id?: number | null;
 	};
 }
 
@@ -66,8 +78,8 @@ const UpcomingSessions: React.FC = () => {
 	const [searchTerm, setSearchTerm] = useState('');
 	const [showExportMenu, setShowExportMenu] = useState(false);
 	const [exportPeriod, setExportPeriod] = useState<'today' | 'tomorrow' | 'week'>('today');
+	const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
 	const exportMenuRef = useRef<HTMLDivElement>(null);
-
 	const fetchSessions = async () => {
 		try {
 			if (sessions.length === 0) setLoading(true);
@@ -118,6 +130,11 @@ const UpcomingSessions: React.FC = () => {
 		};
 	}, [showExportMenu]);
 
+	// Helper: get effective date (hijri or gregorian fallback)
+	const getEffectiveDate = (session: Session): string | null => {
+		return session.session_date || session.session_date_gregorian || null;
+	};
+
 	// Filter Logic
 	const filteredSessions = sessions.filter(session => {
 		// Search
@@ -130,9 +147,10 @@ const UpcomingSessions: React.FC = () => {
 			if (!matchesSearch) return false;
 		}
 
-		if (!session.session_date) return filter === 'all';
+		const effectiveDate = getEffectiveDate(session);
+		if (!effectiveDate) return filter === 'all';
 
-		const sessionDate = new Date(session.session_date);
+		const sessionDate = new Date(effectiveDate);
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 
@@ -153,8 +171,8 @@ const UpcomingSessions: React.FC = () => {
 
 	// Sort
 	const sortedSessions = [...filteredSessions].sort((a, b) => {
-		const dateA = a.session_date ? new Date(a.session_date).getTime() : Infinity;
-		const dateB = b.session_date ? new Date(b.session_date).getTime() : Infinity;
+		const dateA = getEffectiveDate(a) ? new Date(getEffectiveDate(a)!).getTime() : Infinity;
+		const dateB = getEffectiveDate(b) ? new Date(getEffectiveDate(b)!).getTime() : Infinity;
 		return dateA - dateB;
 	});
 
@@ -216,8 +234,9 @@ const UpcomingSessions: React.FC = () => {
 		}
 
 		return sessions.filter(session => {
-			if (!session.session_date) return false;
-			const sessionDate = new Date(session.session_date);
+			const ed = getEffectiveDate(session);
+			if (!ed) return false;
+			const sessionDate = new Date(ed);
 			return sessionDate >= startDate && sessionDate <= endDate;
 		});
 	};
@@ -539,7 +558,7 @@ const UpcomingSessions: React.FC = () => {
 							<td>
 								<div className="session-date">
 									<CalendarIcon size={14} className="text-gray-400" />
-									<span>{formatDate(session.session_date)}</span>
+									<span>{formatDate(getEffectiveDate(session))}</span>
 									{session.session_time && (
 										<span className="session-time">
 											<Clock size={12} className="ml-1" />
@@ -552,11 +571,11 @@ const UpcomingSessions: React.FC = () => {
 								<span
 									className="urgency-badge"
 									style={{
-										backgroundColor: `${getUrgencyColor(session.session_date)}20`,
-										color: getUrgencyColor(session.session_date)
+										backgroundColor: `${getUrgencyColor(getEffectiveDate(session))}20`,
+										color: getUrgencyColor(getEffectiveDate(session))
 									}}
 								>
-									{getDaysUntil(session.session_date)}
+									{getDaysUntil(getEffectiveDate(session))}
 								</span>
 							</td>
 							<td>
@@ -575,6 +594,9 @@ const UpcomingSessions: React.FC = () => {
 								>
 									{session.najiz_status || session.status || 'مجدولة'}
 								</span>
+								{session.source === 'manual' && (
+									<span className="session-source-badge session-source-badge--manual" style={{ marginRight: 4 }}>يدوية</span>
+								)}
 							</td>
 							<td>
 								{(() => {
@@ -647,7 +669,7 @@ const UpcomingSessions: React.FC = () => {
 					{sortedSessions.map((session, idx) => (
 						<div key={session.id} className="calendar-day">
 							<div className="calendar-date">
-								{session.session_date ? new Date(session.session_date).getDate() : '-'}
+								{(() => { const ed = getEffectiveDate(session); return ed ? new Date(ed).getDate() : '-'; })()}
 							</div>
 							<div className="calendar-session" onClick={() => session.case_id && navigate(`/cases/${session.case_id}`)}>
 								<div className="calendar-session__title">{session.case?.title}</div>
@@ -681,12 +703,13 @@ const UpcomingSessions: React.FC = () => {
 					</div>
 					<div className="sessions-header-bar__stats">
 						<span className="stat-badge stat-badge--today">
-							{sessions.filter(s => s.session_date && new Date(s.session_date).toDateString() === new Date().toDateString()).length} اليوم
+							{sessions.filter(s => { const d = getEffectiveDate(s); return d && new Date(d).toDateString() === new Date().toDateString(); }).length} اليوم
 						</span>
 						<span className="stat-badge stat-badge--week">
 							{sessions.filter(s => {
-								if (!s.session_date) return false;
-								const d = new Date(s.session_date);
+								const ed = getEffectiveDate(s);
+								if (!ed) return false;
+								const d = new Date(ed);
 								const now = new Date();
 								const nextWeek = new Date();
 								nextWeek.setDate(now.getDate() + 7);
@@ -759,6 +782,13 @@ const UpcomingSessions: React.FC = () => {
 					>
 						<RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
 					</button>
+					<button
+						className="icon-btn"
+						onClick={() => setIsAddSessionOpen(true)}
+						title="إضافة جلسة يدوياً"
+					>
+						<Plus size={18} />
+					</button>
 				</div>
 			</header>
 
@@ -828,6 +858,13 @@ const UpcomingSessions: React.FC = () => {
 					{viewMode === 'table' ? renderTable() : renderCalendar()}
 				</>
 			)}
+
+			{/* Add Session Modal */}
+			<AddSessionModal
+				isOpen={isAddSessionOpen}
+				onClose={() => setIsAddSessionOpen(false)}
+				onSessionAdded={() => fetchSessions()}
+			/>
 		</div>
 	);
 };

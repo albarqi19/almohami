@@ -795,4 +795,172 @@ body.dark .law-search-modal__back-btn {
   .law-search-modal__article-action {
     opacity: 1;
   }
+
+  .law-search-modal__fast-nav-row {
+    flex-direction: column;
+  }
+
+  .law-search-modal__fast-nav-field {
+    min-width: 100%;
+  }
+
+  .law-search-modal__fast-nav-go {
+    width: 100%;
+  }
+}
+
+/* ===== Fast Navigation Section ===== */
+.law-search-modal__fast-nav-section {
+  border-bottom: 1px solid var(--law-border, #e5e7eb);
+  background: var(--law-surface, #f9fafb);
+}
+
+.law-search-modal__fast-nav-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  color: var(--law-text-secondary, #6b7280);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+
+.law-search-modal__fast-nav-toggle:hover {
+  color: var(--law-primary, #1a6080);
+  background: var(--law-bg-hover, rgba(26, 96, 128, 0.04));
+}
+
+.law-search-modal__fast-nav-arrow {
+  margin-right: auto;
+  transition: transform 0.2s ease;
+}
+
+.law-search-modal__fast-nav-arrow--open {
+  transform: rotate(180deg);
+}
+
+.law-search-modal__fast-nav-body {
+  padding: 0 20px 14px;
+  animation: lawFastNavSlide 0.15s ease-out;
+}
+
+@keyframes lawFastNavSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.law-search-modal__fast-nav-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.law-search-modal__fast-nav-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.law-search-modal__fast-nav-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--law-text-secondary, #6b7280);
+  margin-bottom: 4px;
+  padding-right: 2px;
+}
+
+.law-search-modal__fast-nav-select-wrapper {
+  position: relative;
+}
+
+.law-search-modal__fast-nav-select {
+  width: 100%;
+  padding: 8px 32px 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid var(--law-border, #d1d5db);
+  border-radius: 8px;
+  background: var(--law-bg, #fff);
+  color: var(--law-text, #1f2937);
+  appearance: none;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  direction: rtl;
+}
+
+.law-search-modal__fast-nav-select:focus {
+  outline: none;
+  border-color: var(--law-primary, #1a6080);
+  box-shadow: 0 0 0 3px rgba(26, 96, 128, 0.1);
+}
+
+.law-search-modal__fast-nav-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--law-surface, #f3f4f6);
+}
+
+.law-search-modal__fast-nav-select-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--law-text-secondary, #9ca3af);
+  pointer-events: none;
+}
+
+.law-search-modal__fast-nav-go {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: var(--law-primary, #1a6080);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.law-search-modal__fast-nav-go:hover:not(:disabled) {
+  background: var(--law-primary-dark, #154360);
+}
+
+.law-search-modal__fast-nav-go:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Dark mode support for fast nav */
+@media (prefers-color-scheme: dark) {
+  .law-search-modal__fast-nav-section {
+    background: var(--law-surface, #1e293b);
+    border-color: var(--law-border, #334155);
+  }
+
+  .law-search-modal__fast-nav-select {
+    background: var(--law-bg, #0f172a);
+    border-color: var(--law-border, #334155);
+    color: var(--law-text, #e2e8f0);
+  }
+
+  .law-search-modal__fast-nav-select:disabled {
+    background: var(--law-surface, #1e293b);
+  }
 }

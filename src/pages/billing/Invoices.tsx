@@ -23,9 +23,11 @@ import {
   LayoutGrid,
   List,
   X,
+  Plus,
 } from 'lucide-react';
 import { invoiceService } from '../../services/invoiceService';
 import InvoiceView from '../../components/billing/InvoiceView';
+import CreateInvoiceModal from '../../components/billing/CreateInvoiceModal';
 import type { CaseInvoice, InvoiceStatus } from '../../types/billing';
 import '../../styles/billing-page.css';
 
@@ -69,6 +71,7 @@ const Invoices: React.FC = () => {
   const [sendChannel, setSendChannel] = useState<'email' | 'whatsapp'>('email');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [firmInfo, setFirmInfo] = useState<FirmInfo | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // جلب الفواتير
   const { data: invoicesData, isLoading, refetch } = useQuery({
@@ -235,6 +238,13 @@ const Invoices: React.FC = () => {
         </div>
 
         <div className="requests-header-bar__end">
+          <button
+            className="requests-icon-btn"
+            onClick={() => setShowCreateModal(true)}
+            title="إنشاء فاتورة جديدة"
+          >
+            <Plus size={16} />
+          </button>
           <div className="requests-view-tabs">
             <button
               className={`requests-view-tab ${viewMode === 'table' ? 'requests-view-tab--active' : ''}`}
@@ -574,6 +584,16 @@ const Invoices: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* مودال إنشاء فاتورة جديدة */}
+      <CreateInvoiceModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSave={async (data) => {
+          await invoiceService.createInvoice(data);
+          queryClient.invalidateQueries({ queryKey: ['invoices'] });
+        }}
+      />
     </div>
   );
 };

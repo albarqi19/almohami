@@ -340,7 +340,9 @@ export interface BillingDashboardResponse {
 
 // === إنشاء فاتورة ===
 export interface CreateInvoiceData {
-  contract_id: number;
+  contract_id?: number;
+  client_id?: number;
+  case_id?: number;
   payment_term_id?: number;
   title: string;
   description?: string;

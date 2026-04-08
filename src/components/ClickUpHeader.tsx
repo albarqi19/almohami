@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import {
   Menu,
   Search,
@@ -12,11 +12,21 @@ import {
   Command,
   Settings,
   ChevronDown,
-  Palette
+  Palette,
+  Briefcase,
+  Calendar,
+  FileText,
+  Scale,
+  CheckSquare,
+  Clock
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationCenter from './NotificationCenter';
+import { AddSessionModal } from './AddSessionModal';
+import { AddWekalaModal } from './AddWekalaModal';
+import AddTaskModal from './AddTaskModal';
+import AddServiceModal from './legal-services/AddServiceModal';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -31,9 +41,20 @@ const THEMES: { id: ThemeMode; label: string; icon: React.ReactNode }[] = [
   { id: 'classic', label: 'كلاسيكي', icon: <Palette size={18} /> },
 ];
 
+type QuickAddModal = 'session' | 'wekala' | 'task' | 'service' | null;
+
+const QUICK_ADD_ITEMS: { id: QuickAddModal | 'case'; label: string; icon: React.ReactNode; color: string }[] = [
+  { id: 'case', label: 'قضية جديدة', icon: <Briefcase size={16} />, color: '#6366f1' },
+  { id: 'session', label: 'جلسة جديدة', icon: <Calendar size={16} />, color: '#0ea5e9' },
+  { id: 'wekala', label: 'وكالة جديدة', icon: <FileText size={16} />, color: '#8b5cf6' },
+  { id: 'service', label: 'خدمة قانونية', icon: <Scale size={16} />, color: '#10b981' },
+  { id: 'task', label: 'مهمة جديدة', icon: <CheckSquare size={16} />, color: '#f59e0b' },
+];
+
 const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [theme, setTheme] = React.useState<ThemeMode>(() => {
     const savedTheme = localStorage.getItem('theme') as ThemeMode;
     return savedTheme && ['light', 'dark', 'classic'].includes(savedTheme) ? savedTheme : 'classic';
@@ -42,9 +63,12 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [showSearch, setShowSearch] = React.useState(false);
+  const [showQuickAdd, setShowQuickAdd] = React.useState(false);
+  const [activeModal, setActiveModal] = React.useState<QuickAddModal>(null);
 
   const profileMenuRef = React.useRef<HTMLDivElement | null>(null);
   const notificationsRef = React.useRef<HTMLDivElement | null>(null);
+  const quickAddRef = React.useRef<HTMLDivElement | null>(null);
 
   // Apply theme on mount and change
   React.useEffect(() => {
@@ -97,6 +121,15 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
     return roles[role] || role;
   };
 
+  const handleQuickAdd = (id: QuickAddModal | 'case') => {
+    setShowQuickAdd(false);
+    if (id === 'case') {
+      navigate('/cases?action=add');
+    } else {
+      setActiveModal(id);
+    }
+  };
+
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -105,6 +138,9 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
       }
       if (notificationsRef.current && !notificationsRef.current.contains(target)) {
         setShowNotifications(false);
+      }
+      if (quickAddRef.current && !quickAddRef.current.contains(target)) {
+        setShowQuickAdd(false);
       }
     };
 
@@ -177,13 +213,43 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
           {/* Right: Actions */}
           <div className="clickup-header__end">
             {/* Quick Add */}
-            <button
-              type="button"
-              className="clickup-header__add-btn"
-            >
-              <Plus size={16} />
-              <span>إضافة</span>
-            </button>
+            <div className="clickup-header__icon-wrapper" ref={quickAddRef}>
+              <button
+                type="button"
+                className="clickup-header__add-btn"
+                onClick={() => setShowQuickAdd(!showQuickAdd)}
+              >
+                <Plus size={16} className={showQuickAdd ? 'clickup-header__add-icon--active' : ''} />
+                <span>إضافة</span>
+              </button>
+
+              <AnimatePresence>
+                {showQuickAdd && (
+                  <motion.div
+                    className="clickup-header__dropdown clickup-header__dropdown--quickadd"
+                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <div className="quickadd-title">إنشاء جديد</div>
+                    {QUICK_ADD_ITEMS.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="quickadd-item"
+                        onClick={() => handleQuickAdd(item.id)}
+                      >
+                        <span className="quickadd-item__icon" style={{ color: item.color }}>
+                          {item.icon}
+                        </span>
+                        <span className="quickadd-item__label">{item.label}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Notifications */}
             <div className="clickup-header__icon-wrapper" ref={notificationsRef}>
@@ -320,6 +386,28 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
         )}
       </AnimatePresence>
 
+      {/* Quick Add Modals */}
+      <AddSessionModal
+        isOpen={activeModal === 'session'}
+        onClose={() => setActiveModal(null)}
+        onSessionAdded={() => setActiveModal(null)}
+      />
+      <AddWekalaModal
+        isOpen={activeModal === 'wekala'}
+        onClose={() => setActiveModal(null)}
+        onWekalaAdded={() => setActiveModal(null)}
+      />
+      <AddTaskModal
+        isOpen={activeModal === 'task'}
+        onClose={() => setActiveModal(null)}
+        onTaskAdded={() => setActiveModal(null)}
+      />
+      <AddServiceModal
+        isOpen={activeModal === 'service'}
+        onClose={() => setActiveModal(null)}
+        onSuccess={() => setActiveModal(null)}
+      />
+
       <style>{`
         .clickup-header {
           height: 52px;
@@ -452,6 +540,69 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
         .clickup-header__add-btn:hover {
           background: var(--law-navy-dark);
+        }
+
+        .clickup-header__add-icon--active {
+          transform: rotate(45deg);
+          transition: transform 0.2s ease;
+        }
+
+        .clickup-header__dropdown--quickadd {
+          width: auto;
+          min-width: fit-content;
+          white-space: nowrap;
+          padding: 6px 0;
+          left: auto;
+          right: 0;
+        }
+
+        .quickadd-title {
+          padding: 8px 12px 6px;
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--color-text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .quickadd-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          padding: 8px 12px;
+          font-size: 13px;
+          color: var(--color-text);
+          transition: background 0.1s;
+          text-align: right;
+          border-bottom: 1px solid var(--color-border);
+        }
+
+        .quickadd-item:last-child {
+          border-bottom: none;
+        }
+
+        .quickadd-item:hover {
+          background: var(--quiet-gray-100);
+        }
+
+        .dark .quickadd-item:hover {
+          background: rgba(255, 255, 255, 0.08);
+        }
+
+        .quickadd-item__icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 26px;
+          height: 26px;
+          border-radius: 6px;
+          background: var(--quiet-gray-100);
+          flex-shrink: 0;
+        }
+
+        .quickadd-item__label {
+          font-weight: 500;
         }
 
         .clickup-header__icon-wrapper,

@@ -39,13 +39,16 @@ import CaseMessagesModal from '../components/CaseMessagesModal';
 import ShareCaseModal from '../components/ShareCaseModal';
 import LinkToNajizModal from '../components/LinkToNajizModal';
 import LegalMemoWorkspace from '../components/LegalMemoWorkspace';
+import CasePrepKitchen from '../components/CasePrepKitchen';
 import type { TimelineEvent } from '../components/Timeline';
+import { apiClient } from '../utils/api';
 import { CaseService } from '../services/caseService';
 import { ActivityService } from '../services/activityService';
 import { DocumentService } from '../services/documentService';
 import { TaskService } from '../services/taskService';
 import type { Case } from '../types';
 import '../styles/case-detail-page.css';
+import '../styles/case-prep-kitchen.css';
 
 const CaseDetailPage: React.FC = () => {
   const { caseId } = useParams<{ caseId: string }>();
@@ -53,6 +56,8 @@ const CaseDetailPage: React.FC = () => {
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [togglingNotify, setTogglingNotify] = useState<number | null>(null);
+  const [selectedDabtSession, setSelectedDabtSession] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showDocumentsModal, setShowDocumentsModal] = useState(false);
@@ -134,6 +139,26 @@ const CaseDetailPage: React.FC = () => {
   }, [caseId, caseData]);
 
   // Separate function for force refresh
+  const handleToggleNotify = async (sessionId: number) => {
+    if (togglingNotify) return;
+    setTogglingNotify(sessionId);
+    try {
+      const response = await apiClient.post<{ success: boolean; notify_client: boolean }>(`/sessions/${sessionId}/toggle-notify`);
+      if (response.success && caseData) {
+        setCaseData({
+          ...caseData,
+          sessions: caseData.sessions?.map((s: any) =>
+            s.id === sessionId ? { ...s, notify_client: response.notify_client } : s
+          )
+        });
+      }
+    } catch (err) {
+      console.error('Error toggling notify:', err);
+    } finally {
+      setTogglingNotify(null);
+    }
+  };
+
   const refreshCaseData = async () => {
     if (!caseId) return;
 
@@ -264,6 +289,62 @@ const CaseDetailPage: React.FC = () => {
   const remainingFees = billing?.total_remaining || (totalFees - paidFees);
   const paymentProgress = billing?.collection_percentage || (totalFees > 0 ? (paidFees / totalFees) * 100 : 0);
   const hasOverdue = billing && billing.overdue_invoices_count > 0;
+
+  // مطبخ التجهيز — يظهر بدلاً من الصفحة الكاملة للقضايا في مرحلة الإعداد
+  const isPrepMode = caseData.is_prep_mode || ['draft', 'preparation', 'filed'].includes(caseData.status);
+
+  if (isPrepMode) {
+    return (
+      <div className="case-detail-page">
+        {/* Header مبسط للمطبخ */}
+        <div className="case-detail-header">
+          <div className="case-detail-header__top">
+            <Link to="/cases" className="back-btn">
+              <ArrowRight size={16} />
+              القضايا
+            </Link>
+            <div className="case-detail-header__title-section">
+              <div className="case-detail-header__title">
+                <FileText size={18} />
+                {caseData.title}
+              </div>
+              <div className="case-detail-header__subtitle">
+                رقم الملف: {caseData.file_number}
+              </div>
+            </div>
+            <div className="case-detail-header__badges">
+              <span className="case-badge" style={{ background: '#FEF3C7', color: '#92400E' }}>
+                <span className="case-badge__dot" style={{ background: '#D97706' }} />
+                {caseData.status_arabic || caseData.status}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <CasePrepKitchen
+          caseData={caseData}
+          onActivate={() => refreshCaseData()}
+          onLinkNajiz={() => setShowLinkNajizModal(true)}
+          onRefresh={() => refreshCaseData()}
+          onEditCase={() => setShowEditModal(true)}
+        />
+
+        <EditCaseModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          caseData={caseData}
+          onSave={async (updated) => { await handleUpdateCase(updated); refreshCaseData(); }}
+        />
+        <LinkToNajizModal
+          isOpen={showLinkNajizModal}
+          onClose={() => setShowLinkNajizModal(false)}
+          caseId={caseData.id}
+          caseTitle={caseData.title}
+          onSuccess={() => { setShowLinkNajizModal(false); refreshCaseData(); }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="case-detail-page">
@@ -517,6 +598,9 @@ const CaseDetailPage: React.FC = () => {
                             <span className={`case-session-item__status ${isUpcoming ? 'case-session-item__status--upcoming' : 'case-session-item__status--completed'}`}>
                               {isUpcoming ? 'قادمة' : session.status}
                             </span>
+                            {session.source === 'manual' && (
+                              <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', fontWeight: 500 }}>يدوية</span>
+                            )}
                           </div>
                           <div className="case-session-item__meta">
                             {session.session_time && (
@@ -538,20 +622,44 @@ const CaseDetailPage: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          {/* زر الدخول للجلسة الافتراضية - فقط للجلسات القادمة */}
-                          {session.video_conference_url && isUpcoming && (
-                            <a
-                              href={session.video_conference_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="case-session-item__join-btn"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Video size={14} />
-                              الدخول للجلسة
-                              <ExternalLink size={12} />
-                            </a>
-                          )}
+                          {/* أزرار الجلسة */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
+                            {/* زر الدخول للجلسة الافتراضية */}
+                            {session.video_conference_url && isUpcoming && (
+                              <a
+                                href={session.video_conference_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="case-session-item__join-btn"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Video size={14} />
+                                الدخول للجلسة
+                                <ExternalLink size={12} />
+                              </a>
+                            )}
+                            {/* زر تفعيل/إلغاء إرسال الإفادة - للجلسات القادمة */}
+                            {isUpcoming && (
+                              <button
+                                className={`case-session-item__notify-btn ${session.notify_client ? 'case-session-item__notify-btn--active' : ''}`}
+                                onClick={(e) => { e.stopPropagation(); handleToggleNotify(session.id); }}
+                                disabled={togglingNotify === session.id}
+                              >
+                                <FileText size={12} />
+                                {togglingNotify === session.id ? '...' : session.notify_client ? 'سيتم ارسال الافادة ✓' : 'ارسال الافادة'}
+                              </button>
+                            )}
+                            {/* زر ضبط الجلسة - للجلسات المنتهية مع ضبط */}
+                            {!isUpcoming && session.session_text && (
+                              <button
+                                className="case-session-item__join-btn"
+                                onClick={(e) => { e.stopPropagation(); setSelectedDabtSession(session); }}
+                              >
+                                <FileText size={14} />
+                                ضبط الجلسة
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -772,7 +880,7 @@ const CaseDetailPage: React.FC = () => {
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         caseData={caseData}
-        onSave={handleUpdateCase}
+        onSave={async (updated) => { await handleUpdateCase(updated); refreshCaseData(); }}
       />
 
       <AddTaskModal
@@ -851,6 +959,48 @@ const CaseDetailPage: React.FC = () => {
           refreshCaseData();
         }}
       />
+
+      {/* Modal ضبط الجلسة */}
+      {selectedDabtSession && (
+        <div className="dabt-modal-overlay" onClick={() => setSelectedDabtSession(null)}>
+          <div className="dabt-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="dabt-modal-header">
+              <h3>ضبط الجلسة</h3>
+              <button className="dabt-modal-close" onClick={() => setSelectedDabtSession(null)}>✕</button>
+            </div>
+            <div className="dabt-modal-info">
+              <div className="dabt-modal-info-row">
+                <span>القضية:</span>
+                <strong>{caseData?.title || '-'}</strong>
+              </div>
+              <div className="dabt-modal-info-row">
+                <span>التاريخ:</span>
+                <strong>{selectedDabtSession.session_date || '-'}</strong>
+              </div>
+              <div className="dabt-modal-info-row">
+                <span>المحكمة:</span>
+                <strong>{selectedDabtSession.court || '-'}</strong>
+              </div>
+              {selectedDabtSession.dabt_sent_to_client && (
+                <div className="dabt-modal-info-row">
+                  <span>حالة الإرسال:</span>
+                  <span style={{ color: '#059669', fontWeight: 500, fontSize: '11px' }}>تم الإرسال ✓</span>
+                </div>
+              )}
+            </div>
+            {selectedDabtSession.session_text_summary && (
+              <div className="dabt-modal-summary">
+                <h4>ملخص الإفادة المرسلة</h4>
+                <div className="dabt-modal-summary-text">{selectedDabtSession.session_text_summary}</div>
+              </div>
+            )}
+            <div className="dabt-modal-text-container">
+              <h4>نص الضبط الكامل</h4>
+              <div className="dabt-modal-text">{selectedDabtSession.session_text}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

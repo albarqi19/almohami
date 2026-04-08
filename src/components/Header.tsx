@@ -1,4 +1,5 @@
 ﻿import React from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { Menu, Search, Bell, Moon, Sun, User, LogOut, Palette } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -216,22 +217,24 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               {notifications > 0 && <span className="header__badge">{notifications}</span>}
             </motion.button>
 
-            <AnimatePresence>
-              {showNotifications && (
+            {showNotifications && createPortal(
+              <AnimatePresence>
+                <div className="nc-backdrop" onClick={() => setShowNotifications(false)} />
                 <motion.div
-                  className="header__popover"
-                  initial={{ opacity: 0, y: -10 }}
+                  style={{ position: 'fixed', top: 52, zIndex: 10000, direction: 'ltr', right: 12 }}
+                  initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.18 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  transition={{ duration: 0.12 }}
                 >
                   <NotificationCenter
                     isOpen={showNotifications}
                     onClose={() => setShowNotifications(false)}
                   />
                 </motion.div>
-              )}
-            </AnimatePresence>
+              </AnimatePresence>,
+              document.body
+            )}
           </div>
 
           <motion.button

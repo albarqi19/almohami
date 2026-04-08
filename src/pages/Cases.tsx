@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
 	Plus,
 	Search,
@@ -73,6 +73,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 const Cases: React.FC = () => {
 	const navigate = useNavigate();
+	const [searchParams, setSearchParams] = useSearchParams();
 	const [cases, setCases] = useState<Case[]>(() => {
 		try {
 			const cached = localStorage.getItem(CACHE_KEY);
@@ -115,6 +116,15 @@ const Cases: React.FC = () => {
 		} catch (e) { }
 		return { currentPage: 1, totalPages: 1, total: 0 };
 	});
+
+	// Open add modal from query param (header quick-add)
+	useEffect(() => {
+		if (searchParams.get('action') === 'add') {
+			setIsAddModalOpen(true);
+			searchParams.delete('action');
+			setSearchParams(searchParams, { replace: true });
+		}
+	}, [searchParams, setSearchParams]);
 
 	// Stats
 	const stats = useMemo(() => ({
@@ -244,7 +254,9 @@ const Cases: React.FC = () => {
 				return;
 			}
 
-			if (!caseData.filingDate) {
+			const isPrepMode = ['draft', 'preparation', 'filed'].includes(caseData.status);
+
+			if (!isPrepMode && !caseData.filingDate) {
 				setError('يرجى تحديد تاريخ رفع الدعوى');
 				return;
 			}
@@ -256,11 +268,11 @@ const Cases: React.FC = () => {
 				type: caseData.caseType || 'civil',
 				priority: caseData.priority || 'medium',
 				primary_lawyer_id: lawyerId,
-				start_date: caseData.filingDate,
+				start_date: caseData.filingDate || null,
 				court_name: caseData.court || null,
 				court_reference: caseData.caseNumber || null,
 				opposing_party: caseData.opponentName || null,
-				status: 'active'
+				status: caseData.status || 'active'
 			};
 
 			// إذا كان عميل جديد

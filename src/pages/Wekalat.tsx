@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Search,
   RefreshCw,
@@ -22,10 +22,18 @@ import {
   ScrollText,
   Building,
   Users,
+  Plus,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Settings,
 } from 'lucide-react';
 import { WekalatService } from '../services/wekalatService';
+import { AddWekalaModal } from '../components/AddWekalaModal';
+import { useAuth } from '../contexts/AuthContext';
 import type { Wekala, WekalaParty, WekalaPermission } from '../types';
 import '../styles/wekalat-page.css';
+import '../styles/add-wekala-modal.css';
 
 // ==================== Types ====================
 
@@ -179,6 +187,9 @@ const WekalaModal: React.FC<WekalaModalProps> = ({ wekala, isOpen, onClose }) =>
           <span className={`wekala-status-badge ${statusConfig.class}`}>
             <span className="wekala-status-badge__dot" />{statusConfig.label}
           </span>
+          {(wekala as any).source === 'manual' && (
+            <span className="wekala-source-badge wekala-source-badge--manual">يدوية</span>
+          )}
           {remaining && (
             <span className={`wk-remaining ${remaining.expired ? 'wk-remaining--expired' : ''} ${remaining.urgent && !remaining.expired ? 'wk-remaining--urgent' : ''}`}>
               <Clock size={11} />{remaining.text}
@@ -281,6 +292,14 @@ const WekalaModal: React.FC<WekalaModalProps> = ({ wekala, isOpen, onClose }) =>
 // ==================== Main Component ====================
 
 const Wekalat: React.FC = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+
+  // Settings state
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [wekalaVisibility, setWekalaVisibility] = useState<'all' | 'assigned'>('all');
+  const [savingVisibility, setSavingVisibility] = useState(false);
+
   // State with local storage initialization
   const [wekalat, setWekalat] = useState<Wekala[]>(() => {
     try {
@@ -310,8 +329,10 @@ const Wekalat: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('معتمدة');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [sortByExpiry, setSortByExpiry] = useState<'asc' | 'desc' | null>(null);
   const [selectedWekala, setSelectedWekala] = useState<Wekala | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const [pagination, setPagination] = useState(() => {
     try {
@@ -385,6 +406,27 @@ const Wekalat: React.FC = () => {
     }
   };
 
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  // جلب إعداد الخصوصية (للأدمن فقط)
+  useEffect(() => {
+    if (isAdmin) {
+      WekalatService.getVisibilitySetting().then(v => setWekalaVisibility(v as 'all' | 'assigned'));
+    }
+  }, [isAdmin]);
+
+  // إغلاق dropdown الإعدادات عند الضغط خارجها
+  useEffect(() => {
+    if (!showSettingsMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setShowSettingsMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showSettingsMenu]);
+
   useEffect(() => {
     // Only fetch if no cached data exists
     const cached = localStorage.getItem(CACHE_KEY);
@@ -407,7 +449,32 @@ const Wekalat: React.FC = () => {
     return () => clearTimeout(timeout);
   }, [searchTerm, statusFilter]);
 
-  // Client-side filtered data (as fallback if API doesn't filter)
+  // حفظ إعداد الخصوصية
+  const handleVisibilityChange = async (value: 'all' | 'assigned') => {
+    setSavingVisibility(true);
+    try {
+      await WekalatService.updateVisibilitySetting(value);
+      setWekalaVisibility(value);
+      setShowSettingsMenu(false);
+      // مسح الكاش وإعادة جلب البيانات لأن الفلترة تغيرت على السيرفر
+      localStorage.removeItem(CACHE_KEY);
+      fetchWekalat(1, true);
+    } catch (e) {
+      console.error('Failed to update visibility:', e);
+    } finally {
+      setSavingVisibility(false);
+    }
+  };
+
+  // Helper: get expiry timestamp for sorting
+  const getExpiryTime = (w: Wekala): number => {
+    const dateStr = (w as any).expiry_date_gregorian || w.expiry_date || null;
+    if (!dateStr) return Infinity; // no date = push to end
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? Infinity : d.getTime();
+  };
+
+  // Client-side filtered + sorted data
   const filteredWekalat = useMemo(() => {
     let result = wekalat;
 
@@ -427,8 +494,17 @@ const Wekalat: React.FC = () => {
       );
     }
 
+    // Sort by expiry
+    if (sortByExpiry) {
+      result = [...result].sort((a, b) => {
+        const tA = getExpiryTime(a);
+        const tB = getExpiryTime(b);
+        return sortByExpiry === 'asc' ? tA - tB : tB - tA;
+      });
+    }
+
     return result;
-  }, [wekalat, statusFilter, searchTerm]);
+  }, [wekalat, statusFilter, searchTerm, sortByExpiry]);
 
   const handleViewWekala = (wekala: Wekala) => {
     setSelectedWekala(wekala);
@@ -441,13 +517,20 @@ const Wekalat: React.FC = () => {
       <table className="wekalat-table">
         <thead>
           <tr>
-            <th>رقم الوكالة</th>
-            <th>النوع</th>
+            <th>الوكالة</th>
             <th>الحالة</th>
             <th>الموكلين</th>
             <th>الوكلاء</th>
             <th>تاريخ الإصدار</th>
-            <th>تاريخ الانتهاء</th>
+            <th
+              className="wekalat-th--sortable"
+              onClick={() => setSortByExpiry(prev => prev === null ? 'asc' : prev === 'asc' ? 'desc' : null)}
+              title="ترتيب حسب الانتهاء"
+            >
+              تاريخ الانتهاء
+              {sortByExpiry && (sortByExpiry === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+            </th>
+            <th>المتبقي</th>
             <th></th>
           </tr>
         </thead>
@@ -461,15 +544,16 @@ const Wekalat: React.FC = () => {
               <tr key={w.id} onClick={() => handleViewWekala(w)}>
                 <td>
                   <div className="wekala-number">{w.number}</div>
-                </td>
-                <td>
-                  <span className="wekala-type">{w.type || '-'}</span>
+                  {w.type && <div className="wekala-type-sub">{w.type}</div>}
                 </td>
                 <td>
                   <span className={`wekala-status-badge ${statusConfig.class}`}>
                     <span className="wekala-status-badge__dot" />
                     {statusConfig.label}
                   </span>
+                  {(w as any).source === 'manual' && (
+                    <span className="wekala-source-badge wekala-source-badge--manual" style={{ marginRight: 4 }}>يدوية</span>
+                  )}
                 </td>
                 <td>
                   <div className="wekala-parties">
@@ -500,6 +584,17 @@ const Wekalat: React.FC = () => {
                 </td>
                 <td className="wekala-date-cell">
                   {w.expiry_date_hijri || formatDate(w.expiry_date)}
+                </td>
+                <td>
+                  {(() => {
+                    const rem = getRemainingDays(w);
+                    if (!rem) return <span style={{ color: '#9ca3af', fontSize: 11 }}>—</span>;
+                    return (
+                      <span className={`wekala-remaining-badge ${rem.expired ? 'wekala-remaining-badge--expired' : rem.urgent ? 'wekala-remaining-badge--urgent' : 'wekala-remaining-badge--ok'}`}>
+                        {rem.text}
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td>
                   <div className="wekala-actions-cell">
@@ -591,6 +686,15 @@ const Wekalat: React.FC = () => {
                 <Clock size={12} />
                 {w.expiry_date_hijri || formatDate(w.expiry_date)}
               </span>
+              {(() => {
+                const rem = getRemainingDays(w);
+                if (!rem) return null;
+                return (
+                  <span className={`wekala-remaining-badge ${rem.expired ? 'wekala-remaining-badge--expired' : rem.urgent ? 'wekala-remaining-badge--urgent' : 'wekala-remaining-badge--ok'}`}>
+                    {rem.text}
+                  </span>
+                );
+              })()}
             </div>
           </div>
         );
@@ -658,12 +762,69 @@ const Wekalat: React.FC = () => {
           </select>
 
           <button
+            className={`wekalat-icon-btn ${sortByExpiry ? 'wekalat-icon-btn--active' : ''}`}
+            onClick={() => setSortByExpiry(prev => prev === null ? 'asc' : prev === 'asc' ? 'desc' : null)}
+            title={sortByExpiry === 'asc' ? 'الأقرب انتهاءً أولاً' : sortByExpiry === 'desc' ? 'الأبعد انتهاءً أولاً' : 'ترتيب حسب الانتهاء'}
+          >
+            {sortByExpiry === 'asc' ? <ArrowUp size={16} /> : sortByExpiry === 'desc' ? <ArrowDown size={16} /> : <ArrowUpDown size={16} />}
+          </button>
+          <button
             className="wekalat-icon-btn"
             onClick={() => fetchWekalat(pagination.currentPage, true)}
             title="تحديث"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
+          <button
+            className="wekalat-icon-btn"
+            onClick={() => setIsAddModalOpen(true)}
+            title="إضافة وكالة يدوياً"
+          >
+            <Plus size={16} />
+          </button>
+          {isAdmin && (
+            <div ref={settingsRef} style={{ position: 'relative' }}>
+              <button
+                className={`wekalat-icon-btn ${showSettingsMenu ? 'wekalat-icon-btn--active' : ''}`}
+                onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                title="إعدادات الخصوصية"
+              >
+                <Settings size={16} />
+              </button>
+              {showSettingsMenu && (
+                <div className="wekala-settings-dropdown">
+                  <div className="wekala-settings-dropdown__title">خصوصية الوكالات</div>
+                  <label className="wekala-settings-dropdown__option">
+                    <input
+                      type="radio"
+                      name="visibility"
+                      checked={wekalaVisibility === 'all'}
+                      onChange={() => handleVisibilityChange('all')}
+                      disabled={savingVisibility}
+                    />
+                    <div>
+                      <div className="wekala-settings-dropdown__label">عامة للجميع</div>
+                      <div className="wekala-settings-dropdown__desc">كل المحامين يشوفون كل الوكالات</div>
+                    </div>
+                  </label>
+                  <label className="wekala-settings-dropdown__option">
+                    <input
+                      type="radio"
+                      name="visibility"
+                      checked={wekalaVisibility === 'assigned'}
+                      onChange={() => handleVisibilityChange('assigned')}
+                      disabled={savingVisibility}
+                    />
+                    <div>
+                      <div className="wekala-settings-dropdown__label">المختصين فقط</div>
+                      <div className="wekala-settings-dropdown__desc">كل محامي يشوف وكالاته فقط</div>
+                    </div>
+                  </label>
+                  {savingVisibility && <div className="wekala-settings-dropdown__saving">جاري الحفظ...</div>}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* End: View Switcher */}
@@ -750,7 +911,7 @@ const Wekalat: React.FC = () => {
         </div>
       )}
 
-      {/* Modal */}
+      {/* View Modal */}
       <WekalaModal
         wekala={selectedWekala}
         isOpen={isModalOpen}
@@ -758,6 +919,13 @@ const Wekalat: React.FC = () => {
           setIsModalOpen(false);
           setSelectedWekala(null);
         }}
+      />
+
+      {/* Add Wekala Modal */}
+      <AddWekalaModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onWekalaAdded={() => fetchWekalat(1, true)}
       />
 
       {/* Animation Styles */}

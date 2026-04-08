@@ -19,7 +19,9 @@ import {
     Trash2,
     Edit3,
     ToggleLeft,
-    ToggleRight
+    ToggleRight,
+    FileText,
+    MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { AdminRequestService, RequestTypeService } from '../services/adminRequestService';
@@ -145,7 +147,7 @@ const RequestModal: React.FC<{
     );
 };
 
-// Review Modal (for managers)
+// Review Modal (for managers) - Dense ERP style
 const ReviewModal: React.FC<{
     request: AdminRequest | null;
     onClose: () => void;
@@ -170,79 +172,102 @@ const ReviewModal: React.FC<{
 
     if (!request) return null;
 
+    const statusBadge = request.status === 'pending' ? 'request-status-badge--pending'
+        : request.status === 'approved' ? 'request-status-badge--approved' : 'request-status-badge--rejected';
+    const statusLabel = request.status === 'pending' ? 'قيد المراجعة'
+        : request.status === 'approved' ? 'مقبول' : 'مرفوض';
+
+    // Calculate days since submission
+    const daysSince = Math.floor((Date.now() - new Date(request.created_at).getTime()) / 86400000);
+    const daysText = daysSince === 0 ? 'اليوم' : daysSince === 1 ? 'أمس' : `منذ ${daysSince} يوم`;
+
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content modal-content--lg" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <h2 className="modal-title"><Eye size={20} /> مراجعة الطلب</h2>
-                    <button className="modal-close" onClick={onClose}><X size={18} /></button>
-                </div>
-                <div className="modal-body">
-                    {error && <div className="modal-error"><AlertCircle size={14} />{error}</div>}
-                    <div className="modal-info-grid">
-                        <div className="modal-info-card">
-                            <User size={16} className="modal-info-card__icon" />
-                            <div>
-                                <div className="modal-info-card__label">مقدم الطلب</div>
-                                <div className="modal-info-card__value">{request.user?.name}</div>
-                            </div>
-                        </div>
-                        <div className="modal-info-card">
-                            <ClipboardList size={16} className="modal-info-card__icon" />
-                            <div>
-                                <div className="modal-info-card__label">نوع الطلب</div>
-                                <div className="modal-info-card__value">{request.request_type?.name}</div>
-                            </div>
-                        </div>
-                        {request.start_date && (
-                            <div className="modal-info-card">
-                                <Calendar size={16} className="modal-info-card__icon" />
-                                <div>
-                                    <div className="modal-info-card__label">الفترة</div>
-                                    <div className="modal-info-card__value">
-                                        {formatDate(request.start_date)}
-                                        {request.end_date && request.end_date !== request.start_date && <> إلى {formatDate(request.end_date)}</>}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        <div className="modal-info-card">
-                            <Clock size={16} className="modal-info-card__icon" />
-                            <div>
-                                <div className="modal-info-card__label">تاريخ الإرسال</div>
-                                <div className="modal-info-card__value">{formatDate(request.created_at)}</div>
-                            </div>
-                        </div>
-                    </div>
-                    {request.reason && (
-                        <div className="modal-reason-box">
-                            <strong>السبب:</strong> {request.reason}
-                        </div>
+        <div className="rv-overlay" onClick={onClose}>
+            <div className="rv-modal" onClick={e => e.stopPropagation()}>
+                {/* Header */}
+                <div className="rv-header">
+                    <Eye size={14} className="rv-header__icon" />
+                    <span className="rv-header__title">مراجعة طلب</span>
+                    <span className="rv-header__type">{request.request_type?.name}</span>
+                    <div className="rv-header__spacer" />
+                    <span className={`request-status-badge ${statusBadge}`}>
+                        <span className="request-status-badge__dot" />{statusLabel}
+                    </span>
+                    <span className="rv-days">{daysText}</span>
+                    {request.status === 'pending' && (
+                        <>
+                            <button className="rv-btn rv-btn--reject" onClick={() => handleAction('reject')} disabled={loading}>
+                                <XCircle size={13} />{loading && action === 'reject' ? '...' : 'رفض'}
+                            </button>
+                            <button className="rv-btn rv-btn--approve" onClick={() => handleAction('approve')} disabled={loading}>
+                                <CheckCircle size={13} />{loading && action === 'approve' ? '...' : 'قبول'}
+                            </button>
+                        </>
                     )}
-                    {request.status !== 'pending' && request.reviewer && (
-                        <div className="modal-reason-box" style={{ marginTop: '8px' }}>
-                            <strong>{request.status === 'approved' ? 'وافق على الطلب' : 'رفض الطلب'}:</strong> {request.reviewer.name}
-                            <span style={{ marginRight: '8px', fontSize: '12px', color: 'var(--color-text-secondary, #888)' }}>
-                                ({formatDateTime(request.reviewed_at)})
-                            </span>
-                            {request.manager_notes && (
-                                <div style={{ marginTop: '4px' }}>
-                                    <strong>ملاحظات المراجع:</strong> {request.manager_notes}
+                    <button className="rv-close" onClick={onClose}><X size={15} /></button>
+                </div>
+
+                {/* Alert */}
+                {error && <div className="rv-alert"><AlertCircle size={13} />{error}</div>}
+
+                {/* Body */}
+                <div className="rv-body">
+                    {/* Properties table */}
+                    <table className="rv-table">
+                        <tbody>
+                            <tr>
+                                <td className="rv-table__label">مقدم الطلب</td>
+                                <td>{request.user?.name}</td>
+                                <td className="rv-table__label">تاريخ الإرسال</td>
+                                <td>{formatDate(request.created_at)}</td>
+                            </tr>
+                            {request.start_date && (
+                                <tr>
+                                    <td className="rv-table__label">من تاريخ</td>
+                                    <td>{formatDate(request.start_date)}</td>
+                                    <td className="rv-table__label">إلى تاريخ</td>
+                                    <td>{request.end_date ? formatDate(request.end_date) : '-'}</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+
+                    {/* Two columns: Reason + Notes */}
+                    <div className="rv-grid">
+                        {/* Reason */}
+                        <div className="rv-panel">
+                            <div className="rv-panel__head"><FileText size={13} /> السبب</div>
+                            <div className="rv-panel__content">
+                                {request.reason || <span className="rv-muted">لم يُذكر سبب</span>}
+                            </div>
+                        </div>
+
+                        {/* Notes / Review */}
+                        <div className="rv-panel">
+                            <div className="rv-panel__head"><MessageSquare size={13} /> ملاحظات المراجعة</div>
+                            {request.status !== 'pending' && request.reviewer ? (
+                                <div className="rv-panel__content">
+                                    <div className="rv-reviewer">
+                                        <span className="rv-reviewer__name">
+                                            {request.status === 'approved' ? <CheckCircle size={12} style={{color:'#059669'}} /> : <XCircle size={12} style={{color:'#dc2626'}} />}
+                                            {request.reviewer.name}
+                                        </span>
+                                        <span className="rv-reviewer__date">{formatDateTime(request.reviewed_at)}</span>
+                                    </div>
+                                    {request.manager_notes && <p className="rv-notes-text">{request.manager_notes}</p>}
+                                </div>
+                            ) : (
+                                <div className="rv-panel__content rv-panel__content--input">
+                                    <textarea
+                                        className="rv-textarea"
+                                        value={notes}
+                                        onChange={e => setNotes(e.target.value)}
+                                        rows={3}
+                                        placeholder="أضف ملاحظاتك... (مطلوب عند الرفض)"
+                                    />
                                 </div>
                             )}
                         </div>
-                    )}
-                    <div className="modal-form-group" style={{ marginTop: '16px' }}>
-                        <label>ملاحظات {action === 'reject' ? '*' : '(اختياري)'}</label>
-                        <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="أضف ملاحظاتك هنا..." />
-                    </div>
-                    <div className="modal-actions">
-                        <button type="button" className="btn-reject" onClick={() => handleAction('reject')} disabled={loading}>
-                            <XCircle size={16} /> {loading && action === 'reject' ? 'جاري...' : 'رفض'}
-                        </button>
-                        <button type="button" className="btn-approve" onClick={() => handleAction('approve')} disabled={loading}>
-                            <CheckCircle size={16} /> {loading && action === 'approve' ? 'جاري...' : 'قبول'}
-                        </button>
                     </div>
                 </div>
             </div>
