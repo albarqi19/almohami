@@ -831,32 +831,35 @@ body.dark .case-session-item {
     flex-shrink: 0;
 }
 
-/* زر إرسال الإفادة */
+/* زر إرسال الإفادة للعميل */
 .case-session-item__notify-btn {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     padding: 5px 10px;
-    background: #3b82f6;
+    background: var(--law-navy);
     color: white;
     border-radius: 4px;
     font-size: 11px;
     font-weight: 500;
-    border: none;
+    border: 1px solid var(--law-navy);
     cursor: pointer;
     transition: all var(--transition-fast);
 }
 
 .case-session-item__notify-btn:hover {
-    background: #2563eb;
+    background: var(--law-navy-dark);
+    border-color: var(--law-navy-dark);
 }
 
 .case-session-item__notify-btn--active {
-    background: #059669;
+    background: var(--status-green);
+    border-color: var(--status-green);
 }
 
 .case-session-item__notify-btn--active:hover {
     background: #dc2626;
+    border-color: #dc2626;
 }
 
 .case-session-item__notify-btn:disabled {

@@ -646,7 +646,7 @@ const CaseDetailPage: React.FC = () => {
                                 disabled={togglingNotify === session.id}
                               >
                                 <FileText size={12} />
-                                {togglingNotify === session.id ? '...' : session.notify_client ? 'سيتم ارسال الافادة ✓' : 'ارسال الافادة'}
+                                {togglingNotify === session.id ? '...' : session.notify_client ? 'سيتم ارسال الافادة للعميل ✓' : 'ارسال الافادة للعميل'}
                               </button>
                             )}
                             {/* زر ضبط الجلسة - للجلسات المنتهية مع ضبط */}
