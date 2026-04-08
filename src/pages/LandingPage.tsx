@@ -374,7 +374,7 @@ const LandingPage: React.FC = () => {
           </div>
           <p>© {new Date().getFullYear()} جميع الحقوق محفوظة</p>
           <p className="landing__footer-registration" style={{ fontSize: '11px', marginTop: '4px', opacity: 0.7 }}>
-            مؤسسة رائد الحلول الرقمية سجل تجاري 7052657371
+            مؤسسة رائد الحلول الرقمية سجل تجاري: 7052657371
           </p>
         </div>
       </footer>
