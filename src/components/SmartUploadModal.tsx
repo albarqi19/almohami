@@ -361,12 +361,12 @@ const SmartUploadModal: React.FC<SmartUploadModalProps> = ({
                 setSelectedFile(files[0]);
               }
             }}>
-              <Brain size={48} style={{ color: 'var(--color-primary)', marginBottom: '16px' }} />
+              <Upload size={36} style={{ color: 'var(--color-primary)', marginBottom: '12px' }} />
               <h3 style={{ margin: '0 0 8px 0', color: 'var(--color-text)' }}>
-                رفع الوثيقة للتحليل الذكي
+                رفع الوثيقة للتحليل
               </h3>
               <p style={{ color: 'var(--color-text-secondary)', marginBottom: '20px' }}>
-                سيتم تحليل الوثيقة باستخدام الذكاء الاصطناعي لاستخراج العنوان والتفاصيل تلقائياً
+                سيتم تحليل الوثيقة لاستخراج العنوان والتفاصيل تلقائياً
               </p>
               
               <input
@@ -442,7 +442,7 @@ const SmartUploadModal: React.FC<SmartUploadModalProps> = ({
                 }}
               >
                 <Brain size={16} />
-                تحليل بالذكاء الاصطناعي
+                تحليل ذكي
               </button>
             </div>
           </div>

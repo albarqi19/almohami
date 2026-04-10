@@ -364,8 +364,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
               ` : ''}
               
               <div style="padding: 15px; background: #f8fafc; text-align: center; border-top: 1px solid #e2e8f0;">
-                <small style="color: #64748b;">✨ تم إجراء التحليل بواسطة Gemini AI</small>
-                <br><button onclick="this.parentElement.parentElement.parentElement.parentElement.style.display='none'" style="margin-top: 10px; padding: 8px 16px; background: #218092; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;" onmouseover="this.style.background='#1a6b79'" onmouseout="this.style.background='#218092'">إغلاق التحليل</button>
+                <button onclick="this.parentElement.parentElement.parentElement.parentElement.style.display='none'" style="margin-top: 10px; padding: 8px 16px; background: #218092; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;" onmouseover="this.style.background='#1a6b79'" onmouseout="this.style.background='#218092'">إغلاق التحليل</button>
               </div>
             </div>
           </div>
@@ -968,15 +967,14 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                                   alignItems: 'center',
                                   gap: '4px',
                                   padding: '2px 8px',
-                                  backgroundColor: '#8b5cf620',
-                                  color: '#7c3aed',
+                                  backgroundColor: 'var(--color-primary-soft)',
+                                  color: 'var(--color-primary)',
                                   borderRadius: '12px',
                                   fontSize: '11px',
                                   fontWeight: '600',
                                   flexShrink: 0
                                 }}>
-                                  <Sparkles size={10} />
-                                  محلّل
+                                  يوجد تحليل
                                 </span>
                               )}
                             </div>
@@ -1063,34 +1061,33 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                               disabled={loadingAnalysis === doc.id}
                               style={{
                                 background: 'none',
-                                border: '1px solid #7c3aed',
-                                padding: '6px',
+                                border: '1px solid var(--color-primary)',
+                                padding: '4px 10px',
                                 borderRadius: '4px',
                                 cursor: loadingAnalysis === doc.id ? 'wait' : 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#7c3aed',
+                                gap: '4px',
+                                color: 'var(--color-primary)',
+                                fontSize: '12px',
+                                fontWeight: '500',
                                 transition: 'all 0.2s ease',
                                 opacity: loadingAnalysis === doc.id ? 0.6 : 1
                               }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#7c3aed';
+                                e.currentTarget.style.backgroundColor = 'var(--color-primary)';
                                 e.currentTarget.style.color = 'white';
-                                e.currentTarget.style.borderColor = '#7c3aed';
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.backgroundColor = 'transparent';
-                                e.currentTarget.style.color = '#7c3aed';
-                                e.currentTarget.style.borderColor = '#7c3aed';
+                                e.currentTarget.style.color = 'var(--color-primary)';
                               }}
-                              title="عرض التحليل الذكي"
+                              title="التحليل"
                             >
                               {loadingAnalysis === doc.id ? (
-                                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                              ) : (
-                                <Sparkles size={14} />
-                              )}
+                                <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                              ) : null}
+                              التحليل
                             </button>
                             )}
                             <button
@@ -1393,173 +1390,84 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
         <div
           onClick={() => setViewingAnalysis(null)}
           style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.6)',
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.45)',
             zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '20px'
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: 'white',
-              borderRadius: '16px',
+              backgroundColor: 'var(--color-surface)',
+              borderRadius: '6px',
               width: '100%',
-              maxWidth: '600px',
+              maxWidth: '560px',
               maxHeight: '80vh',
               overflow: 'auto',
-              boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
-              direction: 'rtl'
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+              direction: 'rtl',
+              border: '1px solid var(--color-border)'
             }}
           >
             {/* Header */}
             <div style={{
-              background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
-              color: 'white',
-              padding: '24px',
-              borderRadius: '16px 16px 0 0',
-              position: 'sticky',
-              top: 0,
-              zIndex: 1
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '12px 16px',
+              borderBottom: '1px solid var(--color-border)',
+              backgroundColor: 'var(--color-surface)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Sparkles size={24} />
-                  <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>نتيجة التحليل الذكي</h2>
-                </div>
-                <button
-                  onClick={() => setViewingAnalysis(null)}
-                  style={{
-                    background: 'rgba(255,255,255,0.2)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '6px',
-                    cursor: 'pointer',
-                    color: 'white',
-                    display: 'flex'
-                  }}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-              {viewingAnalysis.analyzedAt && (
-                <p style={{ margin: '8px 0 0', opacity: 0.85, fontSize: '13px' }}>
-                  {viewingAnalysis.analyzedBy && `بواسطة: ${viewingAnalysis.analyzedBy} • `}
-                  {new Date(viewingAnalysis.analyzedAt).toLocaleDateString('ar-SA', {
-                    year: 'numeric', month: 'long', day: 'numeric',
-                    hour: '2-digit', minute: '2-digit'
-                  })}
-                </p>
-              )}
+              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)' }}>تحليل الوثيقة</span>
+              <button onClick={() => setViewingAnalysis(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', padding: '2px' }}>
+                <X size={16} />
+              </button>
             </div>
 
-            {/* Content */}
-            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Document Type & Priority */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {viewingAnalysis.analysis.document_type && (
+            {/* ERP-style table rows */}
+            <div style={{ fontSize: '13px' }}>
+              {[[
+                'نوع الوثيقة', viewingAnalysis.analysis.document_type
+              ],[
+                'الأهمية', viewingAnalysis.analysis.priority
+              ],[
+                'العنوان المقترح', viewingAnalysis.analysis.suggested_title
+              ],[
+                'الملخص', viewingAnalysis.analysis.summary
+              ],[
+                'الوصف', viewingAnalysis.analysis.description
+              ]].filter(([, v]) => v).map(([label, value], i) => (
+                <div key={i} style={{
+                  display: 'grid', gridTemplateColumns: '120px 1fr',
+                  borderBottom: '1px solid var(--color-border)',
+                  minHeight: '36px'
+                }}>
                   <div style={{
-                    padding: '12px 16px',
-                    backgroundColor: '#f0f9ff',
-                    borderRadius: '10px',
-                    borderRight: '4px solid #0284c7'
-                  }}>
-                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>نوع الوثيقة</div>
-                    <div style={{ fontSize: '15px', fontWeight: '600', color: '#0c4a6e' }}>
-                      {viewingAnalysis.analysis.document_type}
-                    </div>
-                  </div>
-                )}
-                {viewingAnalysis.analysis.priority && (
+                    padding: '8px 12px',
+                    backgroundColor: 'var(--color-surface-subtle)',
+                    color: 'var(--color-text-secondary)',
+                    fontWeight: '500',
+                    fontSize: '12px',
+                    display: 'flex', alignItems: 'flex-start', paddingTop: '10px',
+                    borderLeft: '1px solid var(--color-border)'
+                  }}>{label}</div>
                   <div style={{
-                    padding: '12px 16px',
-                    backgroundColor: viewingAnalysis.analysis.priority === 'عالية' ? '#fef2f2' : '#f0fdf4',
-                    borderRadius: '10px',
-                    borderRight: `4px solid ${viewingAnalysis.analysis.priority === 'عالية' ? '#dc2626' : '#16a34a'}`
-                  }}>
-                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>الأهمية</div>
-                    <div style={{
-                      fontSize: '15px',
-                      fontWeight: '600',
-                      color: viewingAnalysis.analysis.priority === 'عالية' ? '#991b1b' : '#166534'
-                    }}>
-                      {viewingAnalysis.analysis.priority}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Title */}
-              {viewingAnalysis.analysis.suggested_title && (
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#faf5ff',
-                  borderRadius: '10px',
-                  borderRight: '4px solid #7c3aed'
-                }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>العنوان المقترح</div>
-                  <div style={{ fontSize: '15px', fontWeight: '600', color: '#4c1d95' }}>
-                    {viewingAnalysis.analysis.suggested_title}
-                  </div>
+                    padding: '8px 12px',
+                    color: 'var(--color-text)',
+                    lineHeight: 1.6,
+                    display: 'flex', alignItems: 'flex-start', paddingTop: '9px'
+                  }}>{value}</div>
                 </div>
-              )}
-
-              {/* Description */}
-              {viewingAnalysis.analysis.description && (
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#f8fafc',
-                  borderRadius: '10px',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>الوصف</div>
-                  <div style={{ fontSize: '14px', color: '#334155', lineHeight: 1.7 }}>
-                    {viewingAnalysis.analysis.description}
-                  </div>
-                </div>
-              )}
-
-              {/* Summary */}
-              {viewingAnalysis.analysis.summary && (
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#fefce8',
-                  borderRadius: '10px',
-                  borderRight: '4px solid #ca8a04'
-                }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>الملخص</div>
-                  <div style={{ fontSize: '14px', color: '#713f12', lineHeight: 1.7 }}>
-                    {viewingAnalysis.analysis.summary}
-                  </div>
-                </div>
-              )}
+              ))}
 
               {/* Parties */}
               {viewingAnalysis.analysis.parties?.length > 0 && (
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#f8fafc',
-                  borderRadius: '10px',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>الأطراف المذكورة</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {viewingAnalysis.analysis.parties.map((party: string, i: number) => (
-                      <span key={i} style={{
-                        padding: '4px 10px',
-                        backgroundColor: '#dbeafe',
-                        color: '#1e40af',
-                        borderRadius: '16px',
-                        fontSize: '13px',
-                        fontWeight: '500'
-                      }}>{party}</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', borderBottom: '1px solid var(--color-border)', minHeight: '36px' }}>
+                  <div style={{ padding: '8px 12px', backgroundColor: 'var(--color-surface-subtle)', color: 'var(--color-text-secondary)', fontWeight: '500', fontSize: '12px', borderLeft: '1px solid var(--color-border)', paddingTop: '10px' }}>الأطراف</div>
+                  <div style={{ padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: '4px', alignContent: 'flex-start' }}>
+                    {viewingAnalysis.analysis.parties.map((p: string, i: number) => (
+                      <span key={i} style={{ padding: '1px 8px', border: '1px solid var(--color-border)', borderRadius: '3px', fontSize: '12px', color: 'var(--color-text)' }}>{p}</span>
                     ))}
                   </div>
                 </div>
@@ -1567,23 +1475,11 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
 
               {/* Keywords */}
               {viewingAnalysis.analysis.keywords?.length > 0 && (
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#f8fafc',
-                  borderRadius: '10px',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>الكلمات المفتاحية</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {viewingAnalysis.analysis.keywords.map((kw: string, i: number) => (
-                      <span key={i} style={{
-                        padding: '4px 10px',
-                        backgroundColor: '#ede9fe',
-                        color: '#5b21b6',
-                        borderRadius: '16px',
-                        fontSize: '13px',
-                        fontWeight: '500'
-                      }}>{kw}</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', borderBottom: '1px solid var(--color-border)', minHeight: '36px' }}>
+                  <div style={{ padding: '8px 12px', backgroundColor: 'var(--color-surface-subtle)', color: 'var(--color-text-secondary)', fontWeight: '500', fontSize: '12px', borderLeft: '1px solid var(--color-border)', paddingTop: '10px' }}>الكلمات المفتاحية</div>
+                  <div style={{ padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: '4px', alignContent: 'flex-start' }}>
+                    {viewingAnalysis.analysis.keywords.map((k: string, i: number) => (
+                      <span key={i} style={{ padding: '1px 8px', border: '1px solid var(--color-border)', borderRadius: '3px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>{k}</span>
                     ))}
                   </div>
                 </div>
@@ -1591,54 +1487,47 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
 
               {/* Important Dates */}
               {viewingAnalysis.analysis.important_dates?.length > 0 && (
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#f8fafc',
-                  borderRadius: '10px',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>التواريخ المهمة</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {viewingAnalysis.analysis.important_dates.map((date: string, i: number) => (
-                      <span key={i} style={{
-                        padding: '4px 10px',
-                        backgroundColor: '#fef3c7',
-                        color: '#92400e',
-                        borderRadius: '16px',
-                        fontSize: '13px',
-                        fontWeight: '500'
-                      }}>{date}</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', borderBottom: '1px solid var(--color-border)', minHeight: '36px' }}>
+                  <div style={{ padding: '8px 12px', backgroundColor: 'var(--color-surface-subtle)', color: 'var(--color-text-secondary)', fontWeight: '500', fontSize: '12px', borderLeft: '1px solid var(--color-border)', paddingTop: '10px' }}>التواريخ المهمة</div>
+                  <div style={{ padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: '4px', alignContent: 'flex-start' }}>
+                    {viewingAnalysis.analysis.important_dates.map((d: string, i: number) => (
+                      <span key={i} style={{ padding: '1px 8px', border: '1px solid var(--color-border)', borderRadius: '3px', fontSize: '12px', color: 'var(--color-text)' }}>{d}</span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Case Relation (if exists) */}
-              {viewingAnalysis.analysis.case_relation && (
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#ecfdf5',
-                  borderRadius: '10px',
-                  borderRight: '4px solid #059669'
-                }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>علاقة الوثيقة بالقضية</div>
-                  <div style={{ fontSize: '14px', color: '#064e3b', lineHeight: 1.7 }}>
+              {/* Case Relation */}
+              {viewingAnalysis.analysis.case_relation?.case_summary && (
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', borderBottom: '1px solid var(--color-border)', minHeight: '36px' }}>
+                  <div style={{ padding: '8px 12px', backgroundColor: 'var(--color-surface-subtle)', color: 'var(--color-text-secondary)', fontWeight: '500', fontSize: '12px', borderLeft: '1px solid var(--color-border)', paddingTop: '10px' }}>علاقة بالقضية</div>
+                  <div style={{ padding: '8px 12px', color: 'var(--color-text)', lineHeight: 1.6, fontSize: '13px' }}>
                     {viewingAnalysis.analysis.case_relation.case_summary}
+                    {viewingAnalysis.analysis.case_relation.client_role && (
+                      <div style={{ marginTop: '4px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                        دور العميل: <strong style={{ color: 'var(--color-text)' }}>{viewingAnalysis.analysis.case_relation.client_role}</strong>
+                        {' • '}
+                        الصلة: <strong style={{ color: 'var(--color-text)' }}>{viewingAnalysis.analysis.case_relation.relevance}</strong>
+                      </div>
+                    )}
                   </div>
-                  {viewingAnalysis.analysis.case_relation.client_role && (
-                    <div style={{ marginTop: '8px', fontSize: '13px', color: '#047857' }}>
-                      دور العميل: <strong>{viewingAnalysis.analysis.case_relation.client_role}</strong>
-                      {' • '}
-                      الصلة: <strong>{viewingAnalysis.analysis.case_relation.relevance}</strong>
-                    </div>
-                  )}
                 </div>
               )}
+            </div>
 
-              {/* Footer */}
-              <div style={{ textAlign: 'center', paddingTop: '8px' }}>
-                <small style={{ color: '#94a3b8' }}>✨ تم التحليل بواسطة Gemini AI</small>
-              </div>
+            {/* Footer */}
+            <div style={{ padding: '10px 16px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--color-border)' }}>
+              <button
+                onClick={() => setViewingAnalysis(null)}
+                style={{
+                  padding: '6px 18px',
+                  backgroundColor: 'var(--color-primary)', color: 'white',
+                  border: 'none', borderRadius: '4px', cursor: 'pointer',
+                  fontSize: '13px'
+                }}
+              >
+                إغلاق
+              </button>
             </div>
           </div>
         </div>
