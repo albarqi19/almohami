@@ -40,6 +40,7 @@ import ShareCaseModal from '../components/ShareCaseModal';
 import LinkToNajizModal from '../components/LinkToNajizModal';
 import LegalMemoWorkspace from '../components/LegalMemoWorkspace';
 import CasePrepKitchen from '../components/CasePrepKitchen';
+import LawSearchModal from '../components/LawSearchModal';
 import type { TimelineEvent } from '../components/Timeline';
 import { apiClient } from '../utils/api';
 import { CaseService } from '../services/caseService';
@@ -70,6 +71,7 @@ const CaseDetailPage: React.FC = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showLinkNajizModal, setShowLinkNajizModal] = useState(false);
   const [canLinkToNajiz, setCanLinkToNajiz] = useState(false);
+  const [showLawSearch, setShowLawSearch] = useState(false);
   const [documentsCount, setDocumentsCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
 
@@ -689,6 +691,7 @@ const CaseDetailPage: React.FC = () => {
 
         {/* Sidebar */}
         <div className="case-sidebar">
+
           {/* Quick Overview */}
           <div className="case-card">
             <div className="case-card__header">
@@ -875,6 +878,13 @@ const CaseDetailPage: React.FC = () => {
         </div>
       </div>
 
+      {/* باحث الأنظمة */}
+      <LawSearchModal
+        isOpen={showLawSearch}
+        onClose={() => setShowLawSearch(false)}
+        caseId={Number(caseData.id)}
+      />
+
       {/* Modals */}
       <EditCaseModal
         isOpen={showEditModal}
@@ -897,6 +907,10 @@ const CaseDetailPage: React.FC = () => {
         onClose={() => setShowDocumentsModal(false)}
         caseId={caseData.id}
         caseTitle={caseData.title}
+        clientName={caseData.client_name}
+        caseNumber={caseData.file_number}
+        caseType={caseData.case_type}
+        parties={caseData.parties}
       />
 
       <LegalMemoWorkspace

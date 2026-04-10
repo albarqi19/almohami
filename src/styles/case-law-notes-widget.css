@@ -1,0 +1,241 @@
+/* ====================================================
+   Case Law Notes Widget — ويدجت الأنظمة والمواد
+   ==================================================== */
+
+/* === Trigger Button — matches FAB style === */
+.clnw-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--law-navy, #1E3A5F);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  box-shadow: 0 2px 12px rgba(30, 58, 95, 0.3);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.clnw-trigger:hover {
+  background: var(--law-navy-dark, #152A45);
+  box-shadow: 0 4px 16px rgba(30, 58, 95, 0.4);
+}
+
+.clnw-trigger svg {
+  flex-shrink: 0;
+}
+
+.clnw-trigger__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* === Modal Overlay === */
+.clnw-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: clnw-fade-in 0.18s ease;
+}
+
+@keyframes clnw-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* === Modal Box === */
+.clnw-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 70vh;
+  background: var(--dashboard-card, #ffffff);
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  direction: rtl;
+  overflow: hidden;
+  animation: clnw-slide-in 0.2s ease;
+}
+
+body.dark .clnw-modal {
+  background: var(--dashboard-card, #1a1f2e);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.07);
+}
+
+@keyframes clnw-slide-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* === Header === */
+.clnw-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--color-surface-subtle, #f7f5f0);
+  border-bottom: 1px solid var(--color-border, #e0e0e0);
+  flex-shrink: 0;
+}
+
+body.dark .clnw-modal__header {
+  background: rgba(255,255,255,0.04);
+}
+
+.clnw-modal__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-heading, #0A192F);
+}
+
+.clnw-modal__title svg {
+  color: var(--law-navy, #1E3A5F);
+}
+
+.clnw-modal__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--law-navy, #1E3A5F);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.clnw-modal__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: var(--color-text-secondary, #888);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.clnw-modal__close:hover {
+  background: var(--color-error-soft, rgba(209,73,91,0.12));
+  color: var(--color-error, #d1495b);
+}
+
+/* === Body === */
+.clnw-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 120px;
+}
+
+.clnw-modal__body::-webkit-scrollbar { width: 4px; }
+.clnw-modal__body::-webkit-scrollbar-track { background: transparent; }
+.clnw-modal__body::-webkit-scrollbar-thumb { background: var(--color-border, #ddd); border-radius: 4px; }
+
+/* Empty State */
+.clnw-modal__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--color-text-secondary, #aaa);
+  font-size: 14px;
+  gap: 4px;
+}
+
+.clnw-modal__empty p {
+  margin: 0;
+}
+
+/* Notes List */
+.clnw-modal__list {
+  padding: 8px 0;
+}
+
+.clnw-modal__item {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--color-border, #f0f0f0);
+}
+
+.clnw-modal__item:last-child {
+  border-bottom: none;
+}
+
+.clnw-modal__item-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--law-navy, #1E3A5F);
+  margin-bottom: 4px;
+}
+
+.clnw-modal__item-text {
+  font-size: 13px;
+  color: var(--color-text, #333);
+  line-height: 1.6;
+}
+
+/* === Footer === */
+.clnw-modal__footer {
+  padding: 12px 18px;
+  border-top: 1px solid var(--color-border, #e0e0e0);
+  background: var(--color-surface-subtle, #f7f5f0);
+  flex-shrink: 0;
+}
+
+body.dark .clnw-modal__footer {
+  background: rgba(255,255,255,0.03);
+}
+
+.clnw-modal__search-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  border: 1.5px dashed var(--law-navy, #1E3A5F);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--law-navy, #1E3A5F);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clnw-modal__search-btn:hover {
+  background: rgba(30, 58, 95, 0.07);
+}

@@ -1,11 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, Scale, ExternalLink, BookOpen, Loader2, FileText, Hash, ChevronLeft, ArrowRight, ChevronDown, Navigation } from 'lucide-react';
+import { X, Search, Scale, ExternalLink, BookOpen, Loader2, FileText, Hash, ChevronLeft, ArrowRight, ChevronDown, Navigation, BookMarked, Check } from 'lucide-react';
+import { notebookService } from '../services/notebookService';
 import '../styles/law-search-modal.css';
 
 interface LawSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
+  caseId?: number | null;
 }
 
 interface ArticleResult {
@@ -60,7 +62,7 @@ function highlightText(html: string, query: string): string {
   return stripped.replace(pattern, '<mark class="law-search-highlight">$1</mark>');
 }
 
-const LawSearchModal: React.FC<LawSearchModalProps> = ({ isOpen, onClose }) => {
+const LawSearchModal: React.FC<LawSearchModalProps> = ({ isOpen, onClose, caseId }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<ArticleResult[]>([]);
   const [systems, setSystems] = useState<SystemResult[]>([]);
@@ -81,6 +83,11 @@ const LawSearchModal: React.FC<LawSearchModalProps> = ({ isOpen, onClose }) => {
   const [loadingSystems, setLoadingSystems] = useState(false);
   const [loadingArticles, setLoadingArticles] = useState(false);
   const [showFastNav, setShowFastNav] = useState(false);
+  // Selection bubble state
+  const [selectedText, setSelectedText] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  const [noteSaved, setNoteSaved] = useState<'notebook' | 'case' | null>(null);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -299,6 +306,46 @@ const LawSearchModal: React.FC<LawSearchModalProps> = ({ isOpen, onClose }) => {
     };
   }, []);
 
+  // استقبال النص المحدد من الـ iframe
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'law-text-selected') {
+        setSelectedText(e.data.text);
+        setNoteSaved(null);
+      } else if (e.data?.type === 'law-text-cleared') {
+        setSelectedText('');
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // مسح النص المحدد عند الخروج من عرض المادة
+  useEffect(() => {
+    if (!viewUrl) setSelectedText('');
+  }, [viewUrl]);
+
+  const handleSaveNote = async (target: 'notebook' | 'case') => {
+    if (!selectedText || savingNote) return;
+    setSavingNote(true);
+    try {
+      await notebookService.createNote({
+        title: viewTitle || 'اقتباس من الأنظمة',
+        content: selectedText,
+        category: 'legal_quote',
+        case_id: target === 'case' ? (caseId || null) : null,
+      });
+      setNoteSaved(target);
+      setSelectedText('');
+      window.dispatchEvent(new CustomEvent('notebook-updated'));
+      setTimeout(() => setNoteSaved(null), 2000);
+    } catch {
+      // silent fail
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
   const totalResults = results.length + systems.length;
 
   return (
@@ -502,6 +549,51 @@ const LawSearchModal: React.FC<LawSearchModalProps> = ({ isOpen, onClose }) => {
                     title={viewTitle}
                     onLoad={() => setIframeLoading(false)}
                   />
+
+                  {/* فقاعة تحديد النص */}
+                  <AnimatePresence>
+                    {(selectedText || noteSaved) && (
+                      <motion.div
+                        className="law-search-modal__selection-bubble"
+                        initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        {noteSaved ? (
+                          <>
+                            <Check size={14} className="law-search-modal__bubble-check" />
+                            <span>
+                              {noteSaved === 'case' ? 'تم الإضافة للقضية' : 'تم الحفظ في المفكرة'}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <BookMarked size={14} />
+                            <span className="law-search-modal__bubble-preview">
+                              {selectedText.length > 35 ? selectedText.slice(0, 35) + '…' : selectedText}
+                            </span>
+                            {caseId && (
+                              <button
+                                className="law-search-modal__bubble-btn law-search-modal__bubble-btn--case"
+                                onClick={() => handleSaveNote('case')}
+                                disabled={savingNote}
+                              >
+                                {savingNote ? <Loader2 size={13} className="law-search-modal__spinner" /> : 'أضف للقضية'}
+                              </button>
+                            )}
+                            <button
+                              className="law-search-modal__bubble-btn"
+                              onClick={() => handleSaveNote('notebook')}
+                              disabled={savingNote}
+                            >
+                              {savingNote ? <Loader2 size={13} className="law-search-modal__spinner" /> : 'أضف للمفكرة'}
+                            </button>
+                          </>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
 

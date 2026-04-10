@@ -45,11 +45,21 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(style);
 }
 
+interface CaseParty {
+  name: string;
+  side: 'plaintiff' | 'defendant' | 'lawyer' | string;
+  role?: string;
+}
+
 interface CaseDocumentsModalProps {
   isOpen: boolean;
   onClose: () => void;
   caseId: string;
   caseTitle: string;
+  clientName?: string;
+  caseNumber?: string;
+  caseType?: string;
+  parties?: CaseParty[];
 }
 
 interface DocumentComment {
@@ -68,7 +78,11 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   isOpen,
   onClose,
   caseId,
-  caseTitle
+  caseTitle,
+  clientName,
+  caseNumber,
+  caseType,
+  parties
 }) => {
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [memos, setMemos] = useState<LegalMemo[]>([]);
@@ -1243,6 +1257,10 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
         onClose={() => setShowSmartUpload(false)}
         caseId={caseId}
         caseTitle={caseTitle}
+        clientName={clientName}
+        caseNumber={caseNumber}
+        caseType={caseType}
+        parties={parties}
         onDocumentAdded={() => {
           loadDocuments();
           setShowSmartUpload(false);

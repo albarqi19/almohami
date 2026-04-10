@@ -5,6 +5,7 @@ import ClickUpSidebar from './ClickUpSidebar';
 import FloatingTimer from './FloatingTimer';
 import NotebookFloatingWidget from './NotebookFloatingWidget';
 import LawSearchFab from './LawSearchFab';
+import CaseLawNotesWidget from './CaseLawNotesWidget';
 import ClickUpHeader from './ClickUpHeader';
 import PresenceTracker from './PresenceTracker';
 import CompanyPolicyModal from './CompanyPolicyModal';
@@ -139,8 +140,11 @@ const Layout: React.FC = () => {
           {/* Floating Widgets Container */}
           {user && user.role !== 'client' && (
             <div className="floating-widgets-group">
-              <NotebookFloatingWidget />
-              <LawSearchFab />
+              <div className="floating-widgets-row">
+                <CaseLawNotesWidget />
+                <NotebookFloatingWidget />
+                <LawSearchFab />
+              </div>
             </div>
           )}
 

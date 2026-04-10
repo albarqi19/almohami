@@ -17,12 +17,30 @@ import { CloudStorageService } from '../services/cloudStorageService';
 import type { CloudStorageStatus } from '../services/cloudStorageService';
 import OneDriveRequiredAlert from './OneDriveRequiredAlert';
 
+interface CaseParty {
+  name: string;
+  side: 'plaintiff' | 'defendant' | 'lawyer' | string;
+  role?: string;
+}
+
 interface SmartUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   caseId: string;
   caseTitle: string;
+  clientName?: string;
+  caseNumber?: string;
+  caseType?: string;
+  parties?: CaseParty[];
   onDocumentAdded?: () => void;
+}
+
+interface CaseRelation {
+  client_role: string;
+  client_mentioned: boolean;
+  relevance: string;
+  new_parties: string[];
+  case_summary: string;
 }
 
 interface AnalysisResult {
@@ -34,6 +52,7 @@ interface AnalysisResult {
   keywords: string[];
   priority: string;
   summary: string;
+  case_relation?: CaseRelation;
 }
 
 interface FileInfo {
@@ -48,6 +67,10 @@ const SmartUploadModal: React.FC<SmartUploadModalProps> = ({
   onClose,
   caseId,
   caseTitle,
+  clientName,
+  caseNumber,
+  caseType,
+  parties,
   onDocumentAdded
 }) => {
   const [currentStep, setCurrentStep] = useState<'upload' | 'analyzing' | 'review' | 'saving'>('upload');
@@ -116,6 +139,10 @@ const SmartUploadModal: React.FC<SmartUploadModalProps> = ({
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('case_id', caseId);
+      if (clientName) formData.append('client_name', clientName);
+      if (caseNumber) formData.append('case_number', caseNumber);
+      if (caseType)   formData.append('case_type', caseType);
+      if (parties && parties.length > 0) formData.append('parties', JSON.stringify(parties));
 
       const response = await DocumentService.analyzeSmartDocument(formData);
       
@@ -555,6 +582,53 @@ const SmartUploadModal: React.FC<SmartUploadModalProps> = ({
                     fontSize: 'var(--font-size-sm)'
                   }}>
                     {analysis.parties.join('، ')}
+                  </div>
+                </div>
+              )}
+
+              {/* علاقة الوثيقة بالقضية */}
+              {analysis.case_relation && (
+                <div style={{
+                  padding: '14px 16px',
+                  backgroundColor: 'var(--color-primary-light, rgba(10,25,47,0.05))',
+                  border: '1px solid var(--color-primary, #0A192F)',
+                  borderRadius: '8px',
+                  direction: 'rtl'
+                }}>
+                  <div style={{
+                    fontSize: 'var(--font-size-sm)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--color-primary)',
+                    marginBottom: '10px'
+                  }}>
+                    ⚖️ تحليل العلاقة بالقضية
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: 'var(--font-size-xs)' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <span style={{ color: 'var(--color-text-secondary)', minWidth: 90 }}>دور الموكل:</span>
+                      <span style={{ fontWeight: 'var(--font-weight-medium)', color: 'var(--color-text)' }}>
+                        {analysis.case_relation.client_role}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <span style={{ color: 'var(--color-text-secondary)', minWidth: 90 }}>صلة الوثيقة:</span>
+                      <span style={{ fontWeight: 'var(--font-weight-medium)', color: 'var(--color-text)' }}>
+                        {analysis.case_relation.relevance}
+                      </span>
+                    </div>
+                    {analysis.case_relation.case_summary && (
+                      <div style={{ marginTop: '4px', color: 'var(--color-text)', lineHeight: 1.5 }}>
+                        {analysis.case_relation.case_summary}
+                      </div>
+                    )}
+                    {analysis.case_relation.new_parties && analysis.case_relation.new_parties.length > 0 && (
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                        <span style={{ color: 'var(--color-warning, #f59e0b)', minWidth: 90 }}>⚠️ أطراف جديدة:</span>
+                        <span style={{ color: 'var(--color-text)' }}>
+                          {analysis.case_relation.new_parties.join('، ')}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

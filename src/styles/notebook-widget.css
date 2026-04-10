@@ -14,6 +14,12 @@
     direction: ltr;
 }
 
+.floating-widgets-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .notebook-fab {
     padding: 6px 8px;
     border-radius: 6px;

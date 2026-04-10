@@ -258,10 +258,12 @@ export class DocumentService {
   // Smart Document Analysis methods
   static async analyzeSmartDocument(formData: FormData): Promise<ApiResponse<any>> {
     try {
+      const token = localStorage.getItem('authToken');
       const response = await fetch('https://api.alraedlaw.com/api/v1/smart-documents/analyze', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: formData
       });
