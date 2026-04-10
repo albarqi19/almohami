@@ -124,7 +124,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
               {/* Content */}
               <div style={{
                 overflowY: 'auto',
-                maxHeight: 'calc(90vh - 45px)'
+                maxHeight: 'calc(90vh - 45px)',
+                padding: '16px 20px'
               }}>
                 {children}
               </div>

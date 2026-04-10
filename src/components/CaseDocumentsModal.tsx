@@ -520,28 +520,28 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'flex-end',
-            padding: '8px 16px',
+            justifyContent: 'center',
+            padding: '10px 16px',
             borderBottom: '1px solid var(--color-border)',
-            gap: '6px'
+            gap: '8px'
           }}>
-            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-              <button onClick={() => setShowCloudPicker(true)} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', backgroundColor: 'transparent', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button onClick={() => setShowCloudPicker(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'transparent', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.color = 'var(--color-primary)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 ملف سحابي
               </button>
-              <button onClick={() => setShowSmartUpload(true)} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', backgroundColor: 'var(--color-primary)', color: 'white', border: '1px solid var(--color-primary)', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
+              <button onClick={() => setShowSmartUpload(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'var(--color-primary)', color: 'white', border: '1px solid var(--color-primary)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
                 onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}>
-                <Upload size={13} />
+                <Upload size={14} />
                 رفع وثيقة ذكي
               </button>
-              <button onClick={() => { setEditingMemo(null); setShowCreateMemo(true); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', backgroundColor: 'transparent', color: 'var(--color-success)', border: '1px solid var(--color-success)', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
+              <button onClick={() => { setEditingMemo(null); setShowCreateMemo(true); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'transparent', color: 'var(--color-success)', border: '1px solid var(--color-success)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-success)'; e.currentTarget.style.color = 'white'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-success)'; }}>
-                <FileText size={13} />
+                <FileText size={14} />
                 مذكرة
               </button>
             </div>
