@@ -51,8 +51,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
             style={{
               position: 'fixed',
               inset: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              backdropFilter: 'blur(4px)',
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+              backdropFilter: 'blur(3px)',
               zIndex: 50,
               display: 'flex',
               alignItems: 'center',
@@ -62,16 +62,18 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
           >
             {/* Modal */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.15 }}
               style={{
                 width: '100%',
                 ...currentSizeStyle,
                 maxHeight: '90vh',
                 backgroundColor: 'var(--color-surface)',
-                borderRadius: '12px',
-                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                borderRadius: '4px',
+                border: '1px solid var(--color-border)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
                 overflow: 'hidden',
                 margin: '0 auto'
               }}
@@ -82,49 +84,47 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '20px 24px',
+                padding: '10px 16px',
                 borderBottom: '1px solid var(--color-border)',
+                backgroundColor: 'var(--color-surface-subtle)'
               }}>
                 <h2 style={{
-                  fontSize: 'var(--font-size-lg)',
-                  fontWeight: 'var(--font-weight-semibold)',
+                  fontSize: '13px',
+                  fontWeight: '600',
                   color: 'var(--color-text)',
-                  margin: 0
+                  margin: 0,
+                  letterSpacing: '0.2px'
                 }}>
                   {title}
                 </h2>
                 <button
                   onClick={onClose}
                   style={{
-                    padding: '8px',
+                    padding: '4px',
                     border: 'none',
                     backgroundColor: 'transparent',
                     color: 'var(--color-text-secondary)',
-                    borderRadius: '6px',
+                    borderRadius: '3px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s ease'
+                    justifyContent: 'center'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--color-secondary)';
-                    e.currentTarget.style.color = 'var(--color-text)';
+                    e.currentTarget.style.color = 'var(--color-error)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
                     e.currentTarget.style.color = 'var(--color-text-secondary)';
                   }}
                 >
-                  <X size={20} />
+                  <X size={15} />
                 </button>
               </div>
 
               {/* Content */}
               <div style={{
-                padding: '24px',
                 overflowY: 'auto',
-                maxHeight: 'calc(90vh - 80px)'
+                maxHeight: 'calc(90vh - 45px)'
               }}>
                 {children}
               </div>

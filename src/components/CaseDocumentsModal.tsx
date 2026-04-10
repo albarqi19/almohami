@@ -5,7 +5,7 @@ import {
   FileText,
   Download,
   Eye,
-  MessageSquare,
+  Upload,
   Send,
   File,
   Image,
@@ -509,161 +509,42 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   return (
     <>
       {console.log('CaseDocumentsModal render:', { isOpen, caseId, caseTitle })} {/* للتشخيص */}
-      <Modal isOpen={isOpen} onClose={onClose} size="xl" title="وثائق القضية">
+      <Modal isOpen={isOpen} onClose={onClose} size="xl" title={`وثائق القضية${caseTitle ? ' — ' + caseTitle : ''}`}>
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           height: '80vh',
           maxHeight: '600px'
         }}>
-          {/* Header */}
+                        {/* Header toolbar - no title since Modal has one */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '20px',
-            borderBottom: '1px solid var(--color-border)'
+            justifyContent: 'flex-end',
+            padding: '8px 16px',
+            borderBottom: '1px solid var(--color-border)',
+            gap: '6px'
           }}>
-            <div>
-              <h2 style={{
-                fontSize: 'var(--font-size-xl)',
-                fontWeight: 'var(--font-weight-bold)',
-                color: 'var(--color-text)',
-                margin: 0
-              }}>
-                وثائق القضية
-              </h2>
-              <p style={{
-                fontSize: 'var(--font-size-sm)',
-                color: 'var(--color-text-secondary)',
-                margin: '4px 0 0 0'
-              }}>
-                {caseTitle}
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px', marginLeft: '12px' }}>
-              {/* Cloud File Picker Button */}
-              <button
-                onClick={() => setShowCloudPicker(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 16px',
-                  backgroundColor: '#0078d4',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#106ebe';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#0078d4';
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                تعيين ملف سحابي
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <button onClick={() => setShowCloudPicker(true)} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', backgroundColor: 'transparent', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.color = 'var(--color-primary)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                ملف سحابي
               </button>
-
-              {/* Smart Upload Button */}
-              <button
-                onClick={() => setShowSmartUpload(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 16px',
-                  backgroundColor: 'var(--color-primary)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#1d4ed8';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-primary)';
-                }}
-              >
-                <Brain size={16} />
-                رفع الوثيقة الذكي
+              <button onClick={() => setShowSmartUpload(true)} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', backgroundColor: 'var(--color-primary)', color: 'white', border: '1px solid var(--color-primary)', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}>
+                <Upload size={13} />
+                رفع وثيقة ذكي
               </button>
-
-              {/* Create Legal Memo Button */}
-              <button
-                onClick={() => {
-                  setEditingMemo(null); // تأكد من مسح أي مذكرة محددة للتعديل
-                  setShowCreateMemo(true);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 16px',
-                  backgroundColor: 'var(--color-success)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#15803d';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-success)';
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  <polyline points="10,9 9,9 8,9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                إنشاء مذكرة
+              <button onClick={() => { setEditingMemo(null); setShowCreateMemo(true); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', backgroundColor: 'transparent', color: 'var(--color-success)', border: '1px solid var(--color-success)', borderRadius: '3px', fontSize: '13px', cursor: 'pointer' }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-success)'; e.currentTarget.style.color = 'white'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-success)'; }}>
+                <FileText size={13} />
+                مذكرة
               </button>
             </div>
-
-            <button
-              onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: '8px',
-                cursor: 'pointer',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--color-text-secondary)',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-error)20';
-                e.currentTarget.style.color = 'var(--color-error)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = 'var(--color-text-secondary)';
-              }}
-            >
-              <X size={20} />
-            </button>
           </div>
 
           {/* Content */}
@@ -737,428 +618,173 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                 <div style={{
                   flex: 1,
                   overflow: 'auto',
-                  padding: '20px'
+                  padding: '0'
                 }}>
-                  <div style={{
-                    display: 'grid',
-                    gap: '12px'
-                  }}>
-                    {/* المذكرات القانونية */}
+                  <div>
+                    {/* المذكرات القانونية - ERP rows */}
                     {memos.length > 0 && (
-                      <div style={{ marginBottom: '24px' }}>
+                      <div>
                         <div style={{
-                          fontSize: 'var(--font-size-lg)',
-                          fontWeight: 'var(--font-weight-semibold)',
-                          color: 'var(--color-text)',
-                          marginBottom: '16px',
-                          paddingBottom: '8px',
-                          borderBottom: '2px solid var(--color-primary)'
+                          display: 'grid',
+                          gridTemplateColumns: '1fr auto',
+                          padding: '6px 12px',
+                          backgroundColor: 'var(--color-surface-subtle)',
+                          borderBottom: '1px solid var(--color-border)',
+                          borderTop: '1px solid var(--color-border)',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: 'var(--color-text-secondary)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
                         }}>
-                          📋 المذكرات القانونية ({memos.length})
+                          <span>المذكرات القانونية</span>
+                          <span>{memos.length}</span>
                         </div>
-
                         {memos.map((memo) => (
-                          <motion.div
+                          <div
                             key={`memo-${memo.id}`}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            onClick={() => handleEditMemo(memo)}
                             style={{
-                              padding: '16px',
-                              border: '1px solid var(--color-success)',
-                              borderRadius: '8px',
-                              backgroundColor: 'var(--color-success)10',
-                              marginBottom: '12px',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.borderColor = 'var(--color-success)';
-                              e.currentTarget.style.backgroundColor = 'var(--color-success)20';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.borderColor = 'var(--color-success)';
-                              e.currentTarget.style.backgroundColor = 'var(--color-success)10';
-                            }}
-                          >
-                            <div style={{
                               display: 'flex',
-                              alignItems: 'center',
-                              gap: '12px',
-                              marginBottom: '12px'
-                            }}>
-                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <polyline points="14,2 14,8 20,8" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <line x1="16" y1="13" x2="8" y2="13" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <line x1="16" y1="17" x2="8" y2="17" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-
-                              <div style={{ flex: 1 }}>
-                                <h3 style={{
-                                  margin: '0 0 4px 0',
-                                  fontSize: 'var(--font-size-md)',
-                                  fontWeight: 'var(--font-weight-semibold)',
-                                  color: 'var(--color-text)'
-                                }}>
-                                  {memo.title}
-                                </h3>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                                  <span>نوع: {(LegalMemoService.getMemoCategories() as any)[memo.category]?.types?.[memo.memo_type] || memo.memo_type}</span>
-                                  <span>الحالة: {(LegalMemoService.getStatusOptions() as any)[memo.status] || memo.status}</span>
-                                  <span>تاريخ الإنشاء: {new Date(memo.created_at).toLocaleDateString('ar')}</span>
-                                </div>
+                              alignItems: 'flex-start',
+                              gap: '8px',
+                              padding: '9px 12px',
+                              borderBottom: '1px solid var(--color-border)',
+                              cursor: 'pointer',
+                              transition: 'background 0.1s'
+                            }}
+                            onClick={() => handleEditMemo(memo)}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-surface-subtle)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                          >
+                            <FileText size={15} style={{ color: 'var(--color-success)', flexShrink: 0, marginTop: '2px' }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '14px', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{memo.title}</span>
+                                <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>{(LegalMemoService.getStatusOptions() as any)[memo.status] || memo.status}</span>
+                                <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>{new Date(memo.created_at).toLocaleDateString('ar')}</span>
                               </div>
-
-                              <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditMemo(memo);
-                                  }}
-                                  style={{
-                                    padding: '6px',
-                                    border: '1px solid var(--color-success)',
-                                    borderRadius: '4px',
-                                    backgroundColor: 'transparent',
-                                    cursor: 'pointer',
-                                    color: 'var(--color-success)'
-                                  }}
-                                  title="تحرير المذكرة"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                  </svg>
-                                </button>
-
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSmartAnalysisMemo(memo.id, memo.title);
-                                  }}
-                                  style={{
-                                    padding: '6px',
-                                    border: '1px solid var(--color-primary)',
-                                    borderRadius: '4px',
-                                    backgroundColor: 'transparent',
-                                    cursor: 'pointer',
-                                    color: 'var(--color-primary)'
-                                  }}
-                                  title="تحليل ذكي"
-                                >
-                                  <Brain size={16} />
-                                </button>
-
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteMemo(memo.id, memo.title);
-                                  }}
-                                  style={{
-                                    padding: '6px',
-                                    border: '1px solid var(--color-border)',
-                                    borderRadius: '4px',
-                                    backgroundColor: 'transparent',
-                                    cursor: 'pointer',
-                                    color: 'var(--color-text-secondary)',
-                                    transition: 'all 0.2s ease'
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'var(--color-error)';
-                                    e.currentTarget.style.color = 'white';
-                                    e.currentTarget.style.borderColor = 'var(--color-error)';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                    e.currentTarget.style.color = 'var(--color-text-secondary)';
-                                    e.currentTarget.style.borderColor = 'var(--color-border)';
-                                  }}
-                                  title="حذف المذكرة"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
+                              {memo.content && (
+                                <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {memo.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()}
+                                </p>
+                              )}
                             </div>
-
-                            {memo.content && (
-                              <div style={{
-                                fontSize: 'var(--font-size-sm)',
-                                color: 'var(--color-text-secondary)',
-                                lineHeight: '1.5',
-                                maxHeight: '60px',
-                                overflow: 'hidden',
-                                marginTop: '8px'
-                              }}>
-                                {(() => {
-                                  // إزالة تاجات HTML للعرض المختصر
-                                  const plainText = memo.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-                                  return plainText.substring(0, 150) + (plainText.length > 150 ? '...' : '');
-                                })()}
-                              </div>
-                            )}
-                          </motion.div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                              <button onClick={(e) => { e.stopPropagation(); handleSmartAnalysisMemo(memo.id, memo.title); }}
+                                style={{ background: 'none', border: 'none', padding: '5px 7px', cursor: 'pointer', fontSize: '12px', color: 'var(--color-primary)', borderRadius: '2px' }}
+                                title="تحليل ذكي">تحليل</button>
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteMemo(memo.id, memo.title); }}
+                                style={{ background: 'none', border: 'none', padding: '5px', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', borderRadius: '2px' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-error)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
+                                title="حذف"><Trash2 size={13} /></button>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     )}
 
-                    {/* الوثائق العادية */}
+                    {/* الوثائق - ERP rows */}
                     {documents.length > 0 && (
                       <div>
+                        {/* Group header */}
                         <div style={{
-                          fontSize: 'var(--font-size-lg)',
-                          fontWeight: 'var(--font-weight-semibold)',
-                          color: 'var(--color-text)',
-                          marginBottom: '16px',
-                          paddingBottom: '8px',
-                          borderBottom: '2px solid var(--color-primary)'
+                          display: 'grid',
+                          gridTemplateColumns: '1fr auto',
+                          padding: '6px 12px',
+                          backgroundColor: 'var(--color-surface-subtle)',
+                          borderBottom: '1px solid var(--color-border)',
+                          borderTop: memos.length > 0 ? '1px solid var(--color-border)' : 'none',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: 'var(--color-text-secondary)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
                         }}>
-                          📄 الوثائق ({documents.length})
+                          <span>الوثائق</span>
+                          <span>{documents.length}</span>
                         </div>
                       </div>
                     )}
 
                     {documents.map((doc) => (
-                      <motion.div
+                      <div
                         key={doc.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
                         style={{
-                          padding: '16px',
-                          border: `1px solid ${selectedDocument?.id === doc.id ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                          borderRadius: '8px',
-                          backgroundColor: selectedDocument?.id === doc.id ? 'var(--color-primary)10' : 'var(--color-background)',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '8px',
+                          padding: '9px 12px',
+                          borderBottom: '1px solid var(--color-border)',
                           cursor: 'pointer',
-                          transition: 'all 0.2s ease'
+                          backgroundColor: selectedDocument?.id === doc.id ? 'var(--color-primary-soft)' : 'transparent',
+                          transition: 'background 0.1s'
                         }}
                         onClick={() => setSelectedDocument(doc)}
-                        onMouseEnter={(e) => {
-                          if (selectedDocument?.id !== doc.id) {
-                            e.currentTarget.style.borderColor = 'var(--color-primary)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (selectedDocument?.id !== doc.id) {
-                            e.currentTarget.style.borderColor = 'var(--color-border)';
-                          }
-                        }}
+                        onMouseEnter={(e) => { if (selectedDocument?.id !== doc.id) e.currentTarget.style.backgroundColor = 'var(--color-surface-subtle)'; }}
+                        onMouseLeave={(e) => { if (selectedDocument?.id !== doc.id) e.currentTarget.style.backgroundColor = 'transparent'; }}
                       >
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          marginBottom: '12px'
-                        }}>
-                          {getFileIcon(doc)}
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <h4 style={{
-                                fontSize: 'var(--font-size-md)',
-                                fontWeight: 'var(--font-weight-medium)',
-                                color: 'var(--color-text)',
-                                margin: '0 0 4px 0'
-                              }}>
-                                {doc.title}
-                              </h4>
-                              {(doc as any).ai_analysis && (
-                                <span style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  padding: '2px 8px',
-                                  backgroundColor: 'var(--color-primary-soft)',
-                                  color: 'var(--color-primary)',
-                                  borderRadius: '12px',
-                                  fontSize: '11px',
-                                  fontWeight: '600',
-                                  flexShrink: 0
-                                }}>
-                                  يوجد تحليل
-                                </span>
-                              )}
-                            </div>
-                            <p style={{
-                              fontSize: 'var(--font-size-sm)',
-                              color: 'var(--color-text-secondary)',
-                              margin: 0
-                            }}>
-                              {doc.file_name || doc.fileName} • {formatFileSize(doc)}
-                            </p>
-                          </div>
-                          <div style={{
-                            display: 'flex',
-                            gap: '8px'
-                          }}>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handlePreview(doc);
-                              }}
-                              style={{
-                                background: 'none',
-                                border: '1px solid var(--color-border)',
-                                padding: '6px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'var(--color-text-secondary)',
-                                transition: 'all 0.2s ease'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'var(--color-primary)';
-                                e.currentTarget.style.color = 'white';
-                                e.currentTarget.style.borderColor = 'var(--color-primary)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                                e.currentTarget.style.color = 'var(--color-text-secondary)';
-                                e.currentTarget.style.borderColor = 'var(--color-border)';
-                              }}
-                              title="معاينة"
-                            >
-                              <Eye size={14} />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownload(doc.id, doc.file_name || doc.fileName || 'document');
-                              }}
-                              style={{
-                                background: 'none',
-                                border: '1px solid var(--color-border)',
-                                padding: '6px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'var(--color-text-secondary)',
-                                transition: 'all 0.2s ease'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'var(--color-success)';
-                                e.currentTarget.style.color = 'white';
-                                e.currentTarget.style.borderColor = 'var(--color-success)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                                e.currentTarget.style.color = 'var(--color-text-secondary)';
-                                e.currentTarget.style.borderColor = 'var(--color-border)';
-                              }}
-                              title="تحميل"
-                            >
-                              <Download size={14} />
-                            </button>
+                        {/* Icon */}
+                        <span style={{ display: 'flex', alignItems: 'center', paddingTop: '1px', flexShrink: 0 }}>{getFileIcon(doc)}</span>
+
+                        {/* Name + details */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '14px', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                              {doc.title || doc.file_name || doc.fileName}
+                            </span>
                             {(doc as any).ai_analysis && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewAnalysis(doc);
-                              }}
-                              disabled={loadingAnalysis === doc.id}
-                              style={{
-                                background: 'none',
-                                border: '1px solid var(--color-primary)',
-                                padding: '4px 10px',
-                                borderRadius: '4px',
-                                cursor: loadingAnalysis === doc.id ? 'wait' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                color: 'var(--color-primary)',
-                                fontSize: '12px',
-                                fontWeight: '500',
-                                transition: 'all 0.2s ease',
-                                opacity: loadingAnalysis === doc.id ? 0.6 : 1
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'var(--color-primary)';
-                                e.currentTarget.style.color = 'white';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                                e.currentTarget.style.color = 'var(--color-primary)';
-                              }}
-                              title="التحليل"
-                            >
-                              {loadingAnalysis === doc.id ? (
-                                <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
-                              ) : null}
+                              <span style={{ fontSize: '11px', color: 'var(--color-primary)', border: '1px solid var(--color-primary)', borderRadius: '2px', padding: '0 5px', flexShrink: 0, lineHeight: '17px' }}>يوجد تحليل</span>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                            {(doc.file_name || doc.fileName) && (
+                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>{doc.file_name || doc.fileName}</span>
+                            )}
+                            <span style={{ whiteSpace: 'nowrap' }}>{formatFileSize(doc)}</span>
+                            {doc.uploader?.name && <span style={{ whiteSpace: 'nowrap' }}>↑ {doc.uploader.name}</span>}
+                            <span style={{ whiteSpace: 'nowrap' }}>{formatDate((doc.uploaded_at || doc.uploadedAt || new Date()).toString())}</span>
+                            {doc.category && <span style={{ whiteSpace: 'nowrap' }}>{doc.category}</span>}
+                          </div>
+                          {doc.description && (
+                            <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {doc.description}
+                            </p>
+                          )}
+                          {(doc as any).ai_analysis?.description && (
+                            <p style={{ margin: '3px 0 0', fontSize: '12px', color: 'var(--color-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {(doc as any).ai_analysis.description}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                          <button onClick={(e) => { e.stopPropagation(); handlePreview(doc); }}
+                            style={{ background: 'none', border: 'none', padding: '5px', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', borderRadius: '2px' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-primary)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
+                            title="معاينة"><Eye size={13} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDownload(doc.id, doc.file_name || doc.fileName || 'document'); }}
+                            style={{ background: 'none', border: 'none', padding: '5px', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', borderRadius: '2px' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-success)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
+                            title="تحميل"><Download size={13} /></button>
+                          {(doc as any).ai_analysis && (
+                            <button onClick={(e) => { e.stopPropagation(); handleViewAnalysis(doc); }} disabled={loadingAnalysis === doc.id}
+                              style={{ background: 'none', border: 'none', padding: '5px 7px', cursor: loadingAnalysis === doc.id ? 'wait' : 'pointer', fontSize: '12px', color: 'var(--color-primary)', borderRadius: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}
+                              title="عرض التحليل">
+                              {loadingAnalysis === doc.id ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : null}
                               التحليل
                             </button>
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteDocument(doc.id, doc.file_name || doc.fileName || 'الوثيقة');
-                              }}
-                              style={{
-                                background: 'none',
-                                border: '1px solid var(--color-border)',
-                                padding: '6px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'var(--color-text-secondary)',
-                                transition: 'all 0.2s ease'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'var(--color-error)';
-                                e.currentTarget.style.color = 'white';
-                                e.currentTarget.style.borderColor = 'var(--color-error)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                                e.currentTarget.style.color = 'var(--color-text-secondary)';
-                                e.currentTarget.style.borderColor = 'var(--color-border)';
-                              }}
-                              title="حذف الوثيقة"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
-
-                        {doc.description && (
-                          <p style={{
-                            fontSize: 'var(--font-size-sm)',
-                            color: 'var(--color-text-secondary)',
-                            margin: '0 0 8px 0'
-                          }}>
-                            {doc.description}
-                          </p>
-                        )}
-
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          fontSize: 'var(--font-size-xs)',
-                          color: 'var(--color-text-tertiary)'
-                        }}>
-                          {doc.uploader?.name && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <User size={12} />
-                              <span>{doc.uploader.name}</span>
-                            </div>
                           )}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Calendar size={12} />
-                            <span>{formatDate((doc.uploaded_at || doc.uploadedAt || new Date()).toString())}</span>
-                          </div>
-                          {doc.category && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Tag size={12} />
-                              <span>{doc.category}</span>
-                            </div>
-                          )}
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc.id, doc.file_name || doc.fileName || 'الوثيقة'); }}
+                            style={{ background: 'none', border: 'none', padding: '5px', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', borderRadius: '2px' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-error)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
+                            title="حذف"><Trash2 size={14} /></button>
                         </div>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -1174,24 +800,26 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                 backgroundColor: 'var(--color-surface)'
               }}>
                 <div style={{
-                  padding: '20px',
-                  borderBottom: '1px solid var(--color-border)'
+                  padding: '6px 12px',
+                  borderBottom: '1px solid var(--color-border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '8px'
                 }}>
-                  <h3 style={{
-                    fontSize: 'var(--font-size-lg)',
-                    fontWeight: 'var(--font-weight-semibold)',
-                    color: 'var(--color-text)',
-                    margin: '0 0 8px 0'
-                  }}>
-                    التعليقات
-                  </h3>
-                  <p style={{
-                    fontSize: 'var(--font-size-sm)',
-                    color: 'var(--color-text-secondary)',
-                    margin: 0
-                  }}>
-                    {selectedDocument.title}
-                  </p>
+                  <div style={{ minWidth: 0 }}>
+                    <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--color-text)' }}>التعليقات</span>
+                    <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginRight: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}> — {selectedDocument.title}</span>
+                  </div>
+                  <button
+                    onClick={() => setSelectedDocument(null)}
+                    style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', borderRadius: '3px', flexShrink: 0 }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-error)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
+                    title="إغلاق التعليقات"
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
 
                 <div style={{
