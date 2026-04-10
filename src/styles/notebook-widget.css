@@ -23,10 +23,10 @@
 .notebook-fab {
     padding: 6px 8px;
     border-radius: 6px;
-    background: var(--color-primary, #0A192F);
+    background: var(--law-navy, #1E3A5F);
     color: #fff;
     border: none;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 12px rgba(30, 58, 95, 0.3);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -43,15 +43,15 @@
     max-width: 0;
     opacity: 0;
     overflow: hidden;
-    transition: max-width 0.25s ease, opacity 0.2s ease;
+    transition: max-width 0.25s ease, opacity 0.2s ease, margin 0.25s ease;
     margin-right: 0;
 }
 
 .notebook-fab:hover {
     padding: 6px 12px;
     gap: 6px;
-    background: var(--color-primary-hover, #142840);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    background: var(--law-navy-dark, #152A45);
+    box-shadow: 0 4px 16px rgba(30, 58, 95, 0.4);
 }
 
 .notebook-fab:hover span {
@@ -60,7 +60,7 @@
 }
 
 .notebook-fab.open {
-    background: var(--color-text-secondary);
+    background: var(--law-navy-dark, #152A45);
     padding: 6px 8px;
     gap: 0;
 }
@@ -226,13 +226,6 @@
 
 /* Responsive */
 @media (max-width: 480px) {
-    .notebook-fab {
-        bottom: 16px;
-        left: 16px;
-        width: 48px;
-        height: 48px;
-    }
-
     .notebook-quick-panel {
         left: 16px;
         right: 16px;
