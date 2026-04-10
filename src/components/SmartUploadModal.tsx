@@ -187,6 +187,17 @@ const SmartUploadModal: React.FC<SmartUploadModalProps> = ({
         throw new Error(uploadResult.error || 'فشل في رفع الملف إلى OneDrive');
       }
 
+      // حفظ نتيجة التحليل في الوثيقة المنشأة حديثاً
+      const newDoc = uploadResult.document as any;
+      if (newDoc?.id && analysis) {
+        try {
+          await DocumentService.saveAnalysisToDocument(String(newDoc.id), analysis);
+          console.log('AI analysis saved to document', newDoc.id);
+        } catch (e) {
+          console.warn('Could not save analysis to document:', e);
+        }
+      }
+
       // Delete temp file from server
       try {
         await DocumentService.deleteTempFile(fileInfo.temp_path);

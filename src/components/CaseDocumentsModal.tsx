@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   X,
@@ -17,7 +17,8 @@ import {
   Loader2,
   AlertCircle,
   Brain,
-  Trash2
+  Trash2,
+  Sparkles
 } from 'lucide-react';
 import Modal from './Modal';
 import DocumentPreviewModal from './DocumentPreviewModal';
@@ -108,6 +109,10 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   const [newComment, setNewComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
   const [addingComment, setAddingComment] = useState(false);
+
+  // AI Analysis viewer
+  const [viewingAnalysis, setViewingAnalysis] = useState<{docId: string; analysis: any; analyzedAt?: string; analyzedBy?: string} | null>(null);
+  const [loadingAnalysis, setLoadingAnalysis] = useState<string | null>(null);
 
   // متغيرات واجهة الخطوات للتحليل الذكي
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([]);
@@ -407,6 +412,28 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
       alert('حدث خطأ أثناء التحليل الذكي. تأكد من الاتصال بالإنترنت وحاول مرة أخرى.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleViewAnalysis = async (doc: DocumentType) => {
+    try {
+      setLoadingAnalysis(doc.id);
+      const response = await DocumentService.getDocumentAnalysis(doc.id);
+      if (response.success && response.data?.has_analysis) {
+        setViewingAnalysis({
+          docId: doc.id,
+          analysis: response.data.analysis,
+          analyzedAt: response.data.analyzed_at,
+          analyzedBy: response.data.analyzed_by,
+        });
+      } else {
+        alert('لم يتم تحليل هذه الوثيقة بعد');
+      }
+    } catch (err) {
+      console.error('Error fetching analysis:', err);
+      alert('حدث خطأ في جلب نتيجة التحليل');
+    } finally {
+      setLoadingAnalysis(null);
     }
   };
 
@@ -926,14 +953,33 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                         }}>
                           {getFileIcon(doc)}
                           <div style={{ flex: 1 }}>
-                            <h4 style={{
-                              fontSize: 'var(--font-size-md)',
-                              fontWeight: 'var(--font-weight-medium)',
-                              color: 'var(--color-text)',
-                              margin: '0 0 4px 0'
-                            }}>
-                              {doc.title}
-                            </h4>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <h4 style={{
+                                fontSize: 'var(--font-size-md)',
+                                fontWeight: 'var(--font-weight-medium)',
+                                color: 'var(--color-text)',
+                                margin: '0 0 4px 0'
+                              }}>
+                                {doc.title}
+                              </h4>
+                              {(doc as any).ai_analysis && (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '2px 8px',
+                                  backgroundColor: '#8b5cf620',
+                                  color: '#7c3aed',
+                                  borderRadius: '12px',
+                                  fontSize: '11px',
+                                  fontWeight: '600',
+                                  flexShrink: 0
+                                }}>
+                                  <Sparkles size={10} />
+                                  محلّل
+                                </span>
+                              )}
+                            </div>
                             <p style={{
                               fontSize: 'var(--font-size-sm)',
                               color: 'var(--color-text-secondary)',
@@ -1008,6 +1054,45 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                             >
                               <Download size={14} />
                             </button>
+                            {(doc as any).ai_analysis && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewAnalysis(doc);
+                              }}
+                              disabled={loadingAnalysis === doc.id}
+                              style={{
+                                background: 'none',
+                                border: '1px solid #7c3aed',
+                                padding: '6px',
+                                borderRadius: '4px',
+                                cursor: loadingAnalysis === doc.id ? 'wait' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#7c3aed',
+                                transition: 'all 0.2s ease',
+                                opacity: loadingAnalysis === doc.id ? 0.6 : 1
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#7c3aed';
+                                e.currentTarget.style.color = 'white';
+                                e.currentTarget.style.borderColor = '#7c3aed';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                                e.currentTarget.style.color = '#7c3aed';
+                                e.currentTarget.style.borderColor = '#7c3aed';
+                              }}
+                              title="عرض التحليل الذكي"
+                            >
+                              {loadingAnalysis === doc.id ? (
+                                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                              ) : (
+                                <Sparkles size={14} />
+                              )}
+                            </button>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1302,6 +1387,262 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
           setShowCloudPicker(false);
         }}
       />
+
+      {/* AI Analysis Viewer Modal */}
+      {viewingAnalysis && (
+        <div
+          onClick={() => setViewingAnalysis(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '600px',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+              direction: 'rtl'
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+              color: 'white',
+              padding: '24px',
+              borderRadius: '16px 16px 0 0',
+              position: 'sticky',
+              top: 0,
+              zIndex: 1
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Sparkles size={24} />
+                  <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>نتيجة التحليل الذكي</h2>
+                </div>
+                <button
+                  onClick={() => setViewingAnalysis(null)}
+                  style={{
+                    background: 'rgba(255,255,255,0.2)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '6px',
+                    cursor: 'pointer',
+                    color: 'white',
+                    display: 'flex'
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              {viewingAnalysis.analyzedAt && (
+                <p style={{ margin: '8px 0 0', opacity: 0.85, fontSize: '13px' }}>
+                  {viewingAnalysis.analyzedBy && `بواسطة: ${viewingAnalysis.analyzedBy} • `}
+                  {new Date(viewingAnalysis.analyzedAt).toLocaleDateString('ar-SA', {
+                    year: 'numeric', month: 'long', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                  })}
+                </p>
+              )}
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Document Type & Priority */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {viewingAnalysis.analysis.document_type && (
+                  <div style={{
+                    padding: '12px 16px',
+                    backgroundColor: '#f0f9ff',
+                    borderRadius: '10px',
+                    borderRight: '4px solid #0284c7'
+                  }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>نوع الوثيقة</div>
+                    <div style={{ fontSize: '15px', fontWeight: '600', color: '#0c4a6e' }}>
+                      {viewingAnalysis.analysis.document_type}
+                    </div>
+                  </div>
+                )}
+                {viewingAnalysis.analysis.priority && (
+                  <div style={{
+                    padding: '12px 16px',
+                    backgroundColor: viewingAnalysis.analysis.priority === 'عالية' ? '#fef2f2' : '#f0fdf4',
+                    borderRadius: '10px',
+                    borderRight: `4px solid ${viewingAnalysis.analysis.priority === 'عالية' ? '#dc2626' : '#16a34a'}`
+                  }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>الأهمية</div>
+                    <div style={{
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      color: viewingAnalysis.analysis.priority === 'عالية' ? '#991b1b' : '#166534'
+                    }}>
+                      {viewingAnalysis.analysis.priority}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Title */}
+              {viewingAnalysis.analysis.suggested_title && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#faf5ff',
+                  borderRadius: '10px',
+                  borderRight: '4px solid #7c3aed'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>العنوان المقترح</div>
+                  <div style={{ fontSize: '15px', fontWeight: '600', color: '#4c1d95' }}>
+                    {viewingAnalysis.analysis.suggested_title}
+                  </div>
+                </div>
+              )}
+
+              {/* Description */}
+              {viewingAnalysis.analysis.description && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>الوصف</div>
+                  <div style={{ fontSize: '14px', color: '#334155', lineHeight: 1.7 }}>
+                    {viewingAnalysis.analysis.description}
+                  </div>
+                </div>
+              )}
+
+              {/* Summary */}
+              {viewingAnalysis.analysis.summary && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#fefce8',
+                  borderRadius: '10px',
+                  borderRight: '4px solid #ca8a04'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>الملخص</div>
+                  <div style={{ fontSize: '14px', color: '#713f12', lineHeight: 1.7 }}>
+                    {viewingAnalysis.analysis.summary}
+                  </div>
+                </div>
+              )}
+
+              {/* Parties */}
+              {viewingAnalysis.analysis.parties?.length > 0 && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>الأطراف المذكورة</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {viewingAnalysis.analysis.parties.map((party: string, i: number) => (
+                      <span key={i} style={{
+                        padding: '4px 10px',
+                        backgroundColor: '#dbeafe',
+                        color: '#1e40af',
+                        borderRadius: '16px',
+                        fontSize: '13px',
+                        fontWeight: '500'
+                      }}>{party}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Keywords */}
+              {viewingAnalysis.analysis.keywords?.length > 0 && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>الكلمات المفتاحية</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {viewingAnalysis.analysis.keywords.map((kw: string, i: number) => (
+                      <span key={i} style={{
+                        padding: '4px 10px',
+                        backgroundColor: '#ede9fe',
+                        color: '#5b21b6',
+                        borderRadius: '16px',
+                        fontSize: '13px',
+                        fontWeight: '500'
+                      }}>{kw}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Important Dates */}
+              {viewingAnalysis.analysis.important_dates?.length > 0 && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>التواريخ المهمة</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {viewingAnalysis.analysis.important_dates.map((date: string, i: number) => (
+                      <span key={i} style={{
+                        padding: '4px 10px',
+                        backgroundColor: '#fef3c7',
+                        color: '#92400e',
+                        borderRadius: '16px',
+                        fontSize: '13px',
+                        fontWeight: '500'
+                      }}>{date}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Case Relation (if exists) */}
+              {viewingAnalysis.analysis.case_relation && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#ecfdf5',
+                  borderRadius: '10px',
+                  borderRight: '4px solid #059669'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>علاقة الوثيقة بالقضية</div>
+                  <div style={{ fontSize: '14px', color: '#064e3b', lineHeight: 1.7 }}>
+                    {viewingAnalysis.analysis.case_relation.case_summary}
+                  </div>
+                  {viewingAnalysis.analysis.case_relation.client_role && (
+                    <div style={{ marginTop: '8px', fontSize: '13px', color: '#047857' }}>
+                      دور العميل: <strong>{viewingAnalysis.analysis.case_relation.client_role}</strong>
+                      {' • '}
+                      الصلة: <strong>{viewingAnalysis.analysis.case_relation.relevance}</strong>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Footer */}
+              <div style={{ textAlign: 'center', paddingTop: '8px' }}>
+                <small style={{ color: '#94a3b8' }}>✨ تم التحليل بواسطة Gemini AI</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </>
   );

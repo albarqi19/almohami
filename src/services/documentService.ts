@@ -1,4 +1,4 @@
-﻿import { apiClient } from '../utils/api';
+import { apiClient } from '../utils/api';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
 import type { Document } from '../types';
 
@@ -263,7 +263,7 @@ export class DocumentService {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
         body: formData
       });
@@ -282,10 +282,12 @@ export class DocumentService {
 
   static async saveSmartDocument(data: SmartDocumentSave): Promise<ApiResponse<Document>> {
     try {
+      const token = localStorage.getItem('authToken');
       const response = await fetch('https://api.alraedlaw.com/api/v1/smart-documents/save', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
         body: JSON.stringify(data)
       });
@@ -299,10 +301,12 @@ export class DocumentService {
 
   static async deleteTempFile(tempPath: string): Promise<ApiResponse<any>> {
     try {
+      const token = localStorage.getItem('authToken');
       const response = await fetch('https://api.alraedlaw.com/api/v1/smart-documents/temp', {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
         body: JSON.stringify({ temp_path: tempPath })
       });
@@ -311,6 +315,29 @@ export class DocumentService {
       return data;
     } catch (error: any) {
       throw new Error(error.message || 'فشل في حذف الملف المؤقت');
+    }
+  }
+
+  // Document AI Analysis — عرض وحفظ التحليل
+  static async getDocumentAnalysis(documentId: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await apiClient.get<ApiResponse<any>>(`/documents/${documentId}/analysis`);
+      return response;
+    } catch (error: any) {
+      console.error('Error fetching document analysis:', error);
+      throw new Error(error.message || 'فشل في جلب نتيجة التحليل');
+    }
+  }
+
+  static async saveAnalysisToDocument(documentId: string, analysis: any): Promise<ApiResponse<any>> {
+    try {
+      const response = await apiClient.post<ApiResponse<any>>(`/documents/${documentId}/save-analysis`, {
+        analysis
+      });
+      return response;
+    } catch (error: any) {
+      console.error('Error saving analysis to document:', error);
+      throw new Error(error.message || 'فشل في حفظ التحليل');
     }
   }
 

@@ -740,8 +740,7 @@ body.dark .exec-timeline__dot {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 60vh;
-    padding: 20px;
+    padding: 60px 20px;
     color: var(--color-text-muted);
     gap: 12px;
 }

@@ -13,9 +13,22 @@ import {
   List,
   Eye,
   Banknote,
+  Building,
   Gavel,
+  TrendingUp,
   AlertCircle,
 } from 'lucide-react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import { ExecutionRequestService } from '../services/executionRequestService';
 import type { ExecutionRequest, ExecutionRequestStats } from '../types';
 import '../styles/execution-requests-page.css';
@@ -73,8 +86,31 @@ const formatDate = (value?: string | null): string => {
 const CACHE_KEY = 'execution_requests_data';
 const CACHE_DURATION = 60 * 60 * 1000;
 
+// ==================== Custom Tooltip ====================
 
-// ==================== Detail Modal ====================
+const ChartTooltip = ({ active, payload }: any) => {
+  if (!active || !payload?.length) return null;
+  const data = payload[0];
+  return (
+    <div style={{
+      background: 'var(--dashboard-card)',
+      border: '1px solid var(--color-border)',
+      borderRadius: 8,
+      padding: '8px 12px',
+      fontSize: 12,
+      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+    }}>
+      <div style={{ fontWeight: 600, color: 'var(--color-heading)' }}>{data.name}</div>
+      <div style={{ color: 'var(--color-text-secondary)', marginTop: 2 }}>
+        {typeof data.value === 'number' && data.value > 1000
+          ? formatAmount(data.value) + ' ر.س'
+          : data.value}
+      </div>
+    </div>
+  );
+};
+
+// ==================== Detail Modal ==
 
 interface DetailModalProps {
   request: ExecutionRequest | null;
@@ -309,6 +345,24 @@ const ExecutionRequests: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  // Chart data
+  const pieData = useMemo(() => {
+    if (!stats?.by_status) return [];
+    return stats.by_status.map(s => ({
+      name: s.status,
+      value: s.count,
+      color: getStatusConfig(s.status).color,
+    }));
+  }, [stats]);
+
+  const barData = useMemo(() => {
+    if (!stats?.by_court) return [];
+    return stats.by_court.map(c => ({
+      name: c.court ? (c.court.length > 20 ? c.court.substring(0, 20) + '...' : c.court) : '-',
+      value: Number(c.remaining_total) || 0,
+    }));
+  }, [stats]);
+
   // Unique statuses for filter
   const uniqueStatuses = useMemo(() => {
     if (!stats?.by_status) return [];
@@ -391,6 +445,101 @@ const ExecutionRequests: React.FC = () => {
         </div>
       </div>
 
+      {/* Stats Cards */}
+      {stats && stats.total > 0 && (
+        <div className="exec-stats-section">
+          <div className="exec-amount-card exec-amount-card--remaining">
+            <div className="exec-amount-card__label">إجمالي الأموال قيد التحصيل</div>
+            <div className="exec-amount-card__value">{formatAmount(stats.remaining_amount)}</div>
+            <div className="exec-amount-card__sub">ريال سعودي</div>
+          </div>
+          <div className="exec-amount-card exec-amount-card--total">
+            <div className="exec-amount-card__label">إجمالي المبالغ المحكوم بها</div>
+            <div className="exec-amount-card__value">{formatAmount(stats.total_amount)}</div>
+            <div className="exec-amount-card__sub">ريال سعودي</div>
+          </div>
+          <div className="exec-amount-card exec-amount-card--paid">
+            <div className="exec-amount-card__label">المبالغ المحصّلة</div>
+            <div className="exec-amount-card__value">{formatAmount(stats.paid_amount)}</div>
+            <div className="exec-amount-card__sub">ريال سعودي</div>
+          </div>
+        </div>
+      )}
+
+      {/* Charts */}
+      {stats && stats.total > 0 && (pieData.length > 0 || barData.length > 0) && (
+        <div className="exec-charts-row">
+          {/* Pie Chart - By Status */}
+          {pieData.length > 0 && (
+            <div className="exec-chart-card">
+              <div className="exec-chart-card__title">
+                <TrendingUp size={15} />
+                توزيع الطلبات حسب الحالة
+              </div>
+              <div style={{ height: 220 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={85}
+                      paddingAngle={3}
+                      dataKey="value"
+                      animationDuration={800}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="exec-chart-legend">
+                {pieData.map((entry, i) => (
+                  <div key={i} className="exec-chart-legend__item">
+                    <span className="exec-chart-legend__dot" style={{ background: entry.color }} />
+                    {entry.name} ({entry.value})
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Bar Chart - By Court */}
+          {barData.length > 0 && (
+            <div className="exec-chart-card">
+              <div className="exec-chart-card__title">
+                <Building size={15} />
+                المبالغ حسب المحاكم (ر.س)
+              </div>
+              <div style={{ height: 220 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barData} layout="vertical" margin={{ right: 10, left: 10 }}>
+                    <XAxis type="number" hide />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      width={150}
+                      tick={{ fontSize: 11, fill: 'var(--color-text-secondary)' }}
+                    />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Bar
+                      dataKey="value"
+                      fill="#0A192F"
+                      radius={[0, 4, 4, 0]}
+                      barSize={18}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Content */}
       {loading ? (
         <div className="exec-loading">
@@ -408,6 +557,9 @@ const ExecutionRequests: React.FC = () => {
         <div className="exec-empty">
           <Scale size={48} className="exec-empty__icon" />
           <div className="exec-empty__text">لا توجد طلبات تنفيذ</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+            استخدم إضافة Chrome لسحب الطلبات من ناجز
+          </div>
         </div>
       ) : (
         <>
