@@ -857,3 +857,35 @@ body.dark .settings-help-panel {
 .settings-btn--danger:hover {
     background: var(--status-red-light);
 }
+
+/* Shrink animation for progress bar */
+@keyframes shrink {
+    from {
+        width: 100%;
+    }
+
+    to {
+        width: 0%;
+    }
+}
+
+/* Danger section - delete all data */
+.settings-section--danger {
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.settings-section--danger .settings-section__header {
+    border-bottom-color: rgba(239, 68, 68, 0.15);
+}
+
+/* Secondary button variant */
+.settings-btn--secondary {
+    background: var(--color-primary-light, rgba(30, 58, 95, 0.08));
+    color: var(--law-navy);
+    border-color: var(--law-navy);
+}
+
+.settings-btn--secondary:hover {
+    background: var(--law-navy);
+    color: white;
+}

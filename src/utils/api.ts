@@ -1,5 +1,5 @@
-﻿// API Configuration and HTTP Client
-const API_BASE_URL = 'https://api.alraedlaw.com/api/v1';
+// API Configuration and HTTP Client
+export const API_BASE_URL = 'https://api.alraedlaw.com/api/v1';
 
 // HTTP Client with token management
 class ApiClient {

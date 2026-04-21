@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   User,
@@ -26,14 +26,19 @@ import {
   Image,
   Upload,
   ShieldCheck,
-  FileText
+  FileText,
+  Trash2,
+  AlertTriangle,
+  X,
+  FileSpreadsheet,
+  Mail
 } from 'lucide-react';
 import NotificationSettings from '../components/NotificationSettings';
 import TiptapEditor from '../components/TiptapEditor';
 import { downloadInvoice, InvoicePreviewModal } from '../components/InvoiceDownload';
 import LetterheadManager from '../components/settings/LetterheadManager';
 import TwoFactorSettings from '../components/settings/TwoFactorSettings';
-import { apiClient } from '../utils/api';
+import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/settings-page.css';
 
@@ -137,6 +142,17 @@ const Settings: React.FC = () => {
     interval_days: 10,
   });
   const [savingPolicy, setSavingPolicy] = useState(false);
+
+  // Data Management State
+  const [exportingData, setExportingData] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<'idle' | 'warning' | 'confirm' | 'code' | 'deleting' | 'done'>('idle');
+  const [deleteStats, setDeleteStats] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [emailHint, setEmailHint] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [confirmText, setConfirmText] = useState('');
 
   // User Profile State
   const [userProfile, setUserProfile] = useState({
@@ -877,8 +893,138 @@ const Settings: React.FC = () => {
         );
 
       case 'system':
+        // Handle Export — uses API_BASE_URL from api.ts (not hardcoded)
+        const handleExportExcel = async () => {
+          try {
+            setExportingData(true);
+            const response = await fetch(`${API_BASE_URL}/tenant/data/export`, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              },
+            });
+            if (!response.ok) throw new Error('فشل تصدير البيانات');
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `بيانات_الشركة_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+          } catch (error) {
+            alert('حدث خطأ أثناء تصدير البيانات');
+          } finally {
+            setExportingData(false);
+          }
+        };
+
+        // Handle Delete Flow
+        const handleStartDelete = async () => {
+          setDeleteStep('warning');
+          setDeleteError('');
+          setVerificationCode('');
+          setConfirmText('');
+          try {
+            setLoadingStats(true);
+            const response: any = await apiClient.get('/tenant/data/stats');
+            if (response.success) {
+              setDeleteStats(response.data);
+            }
+          } catch (e) { console.error(e); }
+          finally { setLoadingStats(false); }
+        };
+
+        const handleSendCode = async () => {
+          try {
+            setSendingCode(true);
+            setDeleteError('');
+            const response: any = await apiClient.post('/tenant/data/delete/send-code');
+            if (response.success) {
+              setEmailHint(response.email_hint || '');
+              setDeleteStep('code');
+            }
+          } catch (error: any) {
+            setDeleteError(error.message || 'فشل إرسال رمز التحقق');
+          } finally {
+            setSendingCode(false);
+          }
+        };
+
+        const handleConfirmDelete = async () => {
+          if (verificationCode.length !== 6) {
+            setDeleteError('يرجى إدخال رمز التحقق المكون من 6 أرقام');
+            return;
+          }
+          try {
+            setDeleteStep('deleting');
+            setDeleteError('');
+            // ✅ إرسال confirm_text للتحقق على السيرفر أيضاً
+            const response: any = await apiClient.post('/tenant/data/delete/confirm', {
+              verification_code: verificationCode,
+              confirm_text: 'حذف جميع البيانات',
+            });
+            if (response.success) {
+              setDeleteStep('done');
+              setTimeout(() => {
+                localStorage.removeItem('authToken');
+                window.location.href = '/login';
+              }, 3000);
+            }
+          } catch (error: any) {
+            setDeleteError(error.message || 'فشل حذف البيانات');
+            setDeleteStep('code');
+          }
+        };
+
         return (
           <>
+            {/* ===== تصدير البيانات ===== */}
+            <div className="settings-section">
+              <div className="settings-section__header">
+                <div className="settings-section__icon" style={{ background: 'var(--status-green-light)', color: 'var(--status-green)' }}>
+                  <Download size={14} />
+                </div>
+                <span className="settings-section__title">تصدير البيانات</span>
+              </div>
+              <div className="settings-section__content">
+                <div className="settings-option-card">
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                    <div style={{
+                      width: '48px', height: '48px', borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                    }}>
+                      <FileSpreadsheet size={24} style={{ color: 'white' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div className="settings-option-card__title" style={{ fontSize: '15px', marginBottom: '6px' }}>تصدير جميع البيانات - Excel</div>
+                      <div className="settings-option-card__desc" style={{ marginBottom: '14px', lineHeight: '1.6' }}>
+                        تصدير نسخة شاملة من جميع بيانات شركتك في ملف Excel مرتب يتضمن:
+                        <span style={{ display: 'block', marginTop: '6px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                          📋 معلومات الشركة • 👥 المستخدمين • ⚖️ القضايا • 📅 الجلسات • ✅ المهام • 📄 المستندات • 📝 العقود • 🔑 الوكالات • ⚡ طلبات التنفيذ • 📑 المذكرات القانونية • 🧾 الفواتير
+                        </span>
+                      </div>
+                      <button
+                        className="settings-btn settings-btn--success"
+                        onClick={handleExportExcel}
+                        disabled={exportingData}
+                        style={{ padding: '10px 24px' }}
+                      >
+                        {exportingData ? (
+                          <><Loader2 className="animate-spin" size={16} /> جاري التصدير...</>
+                        ) : (
+                          <><Download size={16} /> تصدير Excel</>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ===== النسخ الاحتياطي ===== */}
             <div className="settings-section">
               <div className="settings-section__header">
                 <div className="settings-section__icon">
@@ -898,24 +1044,353 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
-            <div className="settings-section">
-              <div className="settings-section__header">
-                <div className="settings-section__icon">
-                  <Database size={14} />
+            {/* ===== حذف جميع البيانات ===== */}
+            <div className="settings-section" style={{ border: '1px solid var(--status-red)', borderColor: 'rgba(239, 68, 68, 0.3)' }}>
+              <div className="settings-section__header" style={{ borderBottomColor: 'rgba(239, 68, 68, 0.15)' }}>
+                <div className="settings-section__icon" style={{ background: 'var(--status-red-light)', color: 'var(--status-red)' }}>
+                  <Trash2 size={14} />
                 </div>
-                <span className="settings-section__title">تصدير البيانات</span>
+                <span className="settings-section__title" style={{ color: 'var(--status-red)' }}>منطقة الخطر</span>
               </div>
               <div className="settings-section__content">
-                <div className="settings-option-card">
-                  <div className="settings-option-card__title">تصدير جميع البيانات</div>
-                  <div className="settings-option-card__desc">تصدير البيانات بصيغ مختلفة</div>
-                  <div className="settings-option-card__actions">
-                    <button className="settings-btn settings-btn--success">تصدير Excel</button>
-                    <button className="settings-btn settings-btn--info">تصدير PDF</button>
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(239,68,68,0.04) 0%, rgba(239,68,68,0.08) 100%)',
+                  borderRadius: '10px', padding: '20px',
+                  border: '1px solid rgba(239,68,68,0.15)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                    <div style={{
+                      width: '48px', height: '48px', borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                    }}>
+                      <AlertTriangle size={24} style={{ color: 'white' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--status-red)', marginBottom: '8px' }}>
+                        حذف جميع البيانات نهائياً
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: '1.7', marginBottom: '16px' }}>
+                        <strong style={{ color: 'var(--status-red)' }}>⚠️ تحذير:</strong> هذا الإجراء سيحذف <strong>جميع بيانات الشركة نهائياً</strong> بما في ذلك:
+                        <ul style={{ margin: '8px 0 0 0', padding: '0 20px', listStyle: 'disc' }}>
+                          <li>جميع القضايا والجلسات والأطراف</li>
+                          <li>جميع المستخدمين والمحامين والموكلين</li>
+                          <li>جميع المستندات والعقود والمذكرات</li>
+                          <li>جميع المهام والمواعيد والاجتماعات</li>
+                          <li>جميع الفواتير والمدفوعات والاشتراكات</li>
+                          <li style={{ color: 'var(--status-red)', fontWeight: 600 }}>حساب الشركة نفسه سيتم حذفه</li>
+                        </ul>
+                      </div>
+                      <div style={{
+                        background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+                        borderRadius: '8px', padding: '10px 14px', marginBottom: '16px',
+                        fontSize: '12px', color: 'var(--status-red)', fontWeight: 500
+                      }}>
+                        💡 ننصح بتصدير البيانات أولاً قبل المتابعة. يمكنك استخدام زر "تصدير Excel" أعلاه.
+                      </div>
+                      <button
+                        className="settings-btn settings-btn--danger"
+                        onClick={handleStartDelete}
+                        style={{ padding: '10px 24px', fontWeight: 600 }}
+                      >
+                        <Trash2 size={16} />
+                        حذف جميع البيانات
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* ===== مودال حذف البيانات ===== */}
+            {deleteStep !== 'idle' && (
+              <div style={{
+                position: 'fixed', inset: 0, zIndex: 9999,
+                background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '20px'
+              }}>
+                <div style={{
+                  background: 'var(--dashboard-card)', borderRadius: '16px',
+                  width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto',
+                  boxShadow: '0 25px 60px rgba(0,0,0,0.3)', position: 'relative'
+                }}>
+                  {/* Close button */}
+                  {deleteStep !== 'deleting' && deleteStep !== 'done' && (
+                    <button
+                      onClick={() => { setDeleteStep('idle'); setDeleteError(''); }}
+                      style={{
+                        position: 'absolute', top: '16px', left: '16px',
+                        background: 'var(--quiet-gray-100)', border: 'none', borderRadius: '8px',
+                        width: '32px', height: '32px', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', cursor: 'pointer', color: 'var(--color-text-secondary)'
+                      }}
+                    >
+                      <X size={18} />
+                    </button>
+                  )}
+
+                  {/* Header */}
+                  <div style={{
+                    background: deleteStep === 'done' ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #ef4444, #dc2626)',
+                    padding: '30px', textAlign: 'center', borderRadius: '16px 16px 0 0'
+                  }}>
+                    <div style={{
+                      width: '64px', height: '64px', borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.2)', margin: '0 auto 12px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      {deleteStep === 'done' ? <CheckCircle size={32} style={{ color: 'white' }} /> :
+                       deleteStep === 'code' ? <Mail size={32} style={{ color: 'white' }} /> :
+                       deleteStep === 'deleting' ? <Loader2 size={32} className="animate-spin" style={{ color: 'white' }} /> :
+                       <AlertTriangle size={32} style={{ color: 'white' }} />}
+                    </div>
+                    <h2 style={{ color: 'white', margin: 0, fontSize: '20px', fontWeight: 700 }}>
+                      {deleteStep === 'done' ? 'تم الحذف بنجاح' :
+                       deleteStep === 'deleting' ? 'جاري حذف البيانات...' :
+                       deleteStep === 'code' ? 'إدخال رمز التحقق' :
+                       deleteStep === 'confirm' ? 'تأكيد نهائي' :
+                       'تحذير: حذف جميع البيانات'}
+                    </h2>
+                    {deleteStep === 'deleting' && (
+                      <p style={{ color: 'rgba(255,255,255,0.8)', margin: '8px 0 0', fontSize: '14px' }}>
+                        يرجى عدم إغلاق هذه النافذة...
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Body */}
+                  <div style={{ padding: '24px' }}>
+
+                    {/* Step: Warning */}
+                    {deleteStep === 'warning' && (
+                      <>
+                        {/* Data Stats */}
+                        {loadingStats ? (
+                          <div style={{ textAlign: 'center', padding: '20px' }}>
+                            <Loader2 className="animate-spin" size={24} style={{ color: 'var(--color-primary)' }} />
+                            <p style={{ marginTop: '8px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>جاري تحميل إحصائيات البيانات...</p>
+                          </div>
+                        ) : deleteStats && (
+                          <div style={{
+                            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px',
+                            marginBottom: '20px'
+                          }}>
+                            {/* ✅ Dynamic stats from server — covers ALL entities */}
+                            {Object.entries(deleteStats).map(([key, val]: [string, any]) => (
+                              <div key={key} style={{
+                                background: 'var(--quiet-gray-100)', borderRadius: '8px',
+                                padding: '12px', textAlign: 'center'
+                              }}>
+                                <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--status-red)' }}>{val.count}</div>
+                                <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>{val.label}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div style={{
+                          background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px',
+                          padding: '16px', marginBottom: '16px', fontSize: '13px',
+                          color: '#991b1b', lineHeight: '1.7'
+                        }}>
+                          <strong>⚠️ لا يمكن التراجع عن هذا الإجراء!</strong><br />
+                          سيتم حذف جميع البيانات أعلاه نهائياً بما في ذلك حساب الشركة.
+                          سيتم تسجيل خروجك بعد الحذف ولن تتمكن من الوصول للنظام مرة أخرى.
+                        </div>
+
+                        <div style={{
+                          background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px',
+                          padding: '14px', marginBottom: '20px', fontSize: '13px', color: '#92400e'
+                        }}>
+                          💡 <strong>ننصحك</strong> بتصدير بياناتك أولاً قبل الحذف.
+                          <button
+                            onClick={() => { setDeleteStep('idle'); handleExportExcel(); }}
+                            style={{
+                              display: 'block', marginTop: '8px', background: '#059669',
+                              color: 'white', border: 'none', borderRadius: '6px',
+                              padding: '8px 16px', fontSize: '13px', cursor: 'pointer', fontWeight: 500
+                            }}
+                          >
+                            <Download size={14} style={{ display: 'inline', verticalAlign: 'middle', marginLeft: '6px' }} />
+                            تصدير البيانات الآن
+                          </button>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                          <button
+                            className="settings-btn"
+                            onClick={() => setDeleteStep('idle')}
+                          >إلغاء</button>
+                          <button
+                            className="settings-btn settings-btn--danger"
+                            onClick={() => setDeleteStep('confirm')}
+                            style={{ fontWeight: 600 }}
+                          >
+                            متابعة الحذف
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Step: Confirm */}
+                    {deleteStep === 'confirm' && (
+                      <>
+                        <p style={{ fontSize: '14px', color: 'var(--color-text)', marginBottom: '16px', lineHeight: '1.7' }}>
+                          للتأكيد، اكتب <strong style={{ color: 'var(--status-red)' }}>"حذف جميع البيانات"</strong> في الحقل أدناه:
+                        </p>
+                        <input
+                          type="text"
+                          className="settings-field__input"
+                          value={confirmText}
+                          onChange={(e) => setConfirmText(e.target.value)}
+                          placeholder='اكتب: حذف جميع البيانات'
+                          style={{
+                            width: '100%', marginBottom: '16px', textAlign: 'center',
+                            fontSize: '15px', fontWeight: 600,
+                            borderColor: confirmText === 'حذف جميع البيانات' ? 'var(--status-red)' : undefined
+                          }}
+                          dir="rtl"
+                        />
+
+                        {deleteError && (
+                          <div style={{
+                            background: '#fef2f2', color: '#991b1b', padding: '10px 14px',
+                            borderRadius: '8px', fontSize: '13px', marginBottom: '16px'
+                          }}>{deleteError}</div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                          <button className="settings-btn" onClick={() => setDeleteStep('warning')}>رجوع</button>
+                          <button
+                            className="settings-btn settings-btn--danger"
+                            disabled={confirmText !== 'حذف جميع البيانات' || sendingCode}
+                            onClick={handleSendCode}
+                            style={{ fontWeight: 600 }}
+                          >
+                            {sendingCode ? (
+                              <><Loader2 className="animate-spin" size={16} /> جاري الإرسال...</>
+                            ) : (
+                              <><Mail size={16} /> إرسال رمز التحقق</>
+                            )}
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Step: Verification Code */}
+                    {deleteStep === 'code' && (
+                      <>
+                        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                          <div style={{
+                            width: '56px', height: '56px', borderRadius: '50%',
+                            background: 'var(--status-blue-light)', margin: '0 auto 12px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}>
+                            <Mail size={28} style={{ color: 'var(--status-blue)' }} />
+                          </div>
+                          <p style={{ fontSize: '14px', color: 'var(--color-text)', marginBottom: '4px' }}>
+                            تم إرسال رمز التحقق إلى البريد الإلكتروني
+                          </p>
+                          {emailHint && (
+                            <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-primary)', direction: 'ltr' }}>
+                              {emailHint}
+                            </p>
+                          )}
+                          <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                            الرمز صالح لمدة 10 دقائق فقط
+                          </p>
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                          <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px', color: 'var(--color-text)' }}>
+                            رمز التحقق (6 أرقام)
+                          </label>
+                          <input
+                            type="text"
+                            className="settings-field__input"
+                            value={verificationCode}
+                            onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            placeholder="000000"
+                            maxLength={6}
+                            style={{
+                              width: '100%', textAlign: 'center', letterSpacing: '12px',
+                              fontSize: '28px', fontWeight: 700, fontFamily: 'monospace',
+                              padding: '16px', borderColor: verificationCode.length === 6 ? 'var(--status-red)' : undefined
+                            }}
+                            dir="ltr"
+                            autoFocus
+                          />
+                        </div>
+
+                        {deleteError && (
+                          <div style={{
+                            background: '#fef2f2', color: '#991b1b', padding: '10px 14px',
+                            borderRadius: '8px', fontSize: '13px', marginBottom: '16px'
+                          }}>{deleteError}</div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                          <button className="settings-btn" onClick={() => setDeleteStep('confirm')}>رجوع</button>
+                          <button
+                            className="settings-btn"
+                            onClick={handleSendCode}
+                            disabled={sendingCode}
+                            style={{ fontSize: '12px' }}
+                          >
+                            {sendingCode ? <Loader2 className="animate-spin" size={14} /> : 'إعادة إرسال الرمز'}
+                          </button>
+                          <button
+                            className="settings-btn settings-btn--danger"
+                            disabled={verificationCode.length !== 6}
+                            onClick={handleConfirmDelete}
+                            style={{ fontWeight: 600 }}
+                          >
+                            <Trash2 size={16} />
+                            حذف نهائي
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Step: Deleting */}
+                    {deleteStep === 'deleting' && (
+                      <div style={{ textAlign: 'center', padding: '30px 0' }}>
+                        <Loader2 className="animate-spin" size={48} style={{ color: 'var(--status-red)', marginBottom: '16px' }} />
+                        <p style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text)', marginBottom: '8px' }}>
+                          جاري حذف جميع البيانات...
+                        </p>
+                        <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                          يرجى عدم إغلاق المتصفح أو هذه الصفحة
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Step: Done */}
+                    {deleteStep === 'done' && (
+                      <div style={{ textAlign: 'center', padding: '30px 0' }}>
+                        <CheckCircle size={48} style={{ color: 'var(--status-green)', marginBottom: '16px' }} />
+                        <p style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text)', marginBottom: '8px' }}>
+                          تم حذف جميع البيانات بنجاح
+                        </p>
+                        <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                          سيتم تسجيل خروجك تلقائياً خلال ثوانٍ...
+                        </p>
+                        <div style={{
+                          width: '100%', height: '4px', background: 'var(--quiet-gray-100)',
+                          borderRadius: '4px', marginTop: '20px', overflow: 'hidden'
+                        }}>
+                          <div style={{
+                            width: '100%', height: '100%', background: 'var(--status-green)',
+                            animation: 'shrink 3s linear forwards'
+                          }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         );
 
