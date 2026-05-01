@@ -205,7 +205,7 @@ const AdminDashboard: React.FC = () => {
             label: 'قضايا نشطة',
             value: stats?.active_cases ?? 0,
             total: stats?.total_cases ?? 0,
-            icon: <FileText size={18} />,
+            icon: <FileText size={14} />,
             color: 'var(--law-navy)',
             bgColor: 'var(--law-navy-light)'
         },
@@ -214,7 +214,7 @@ const AdminDashboard: React.FC = () => {
             label: 'مهام مكتملة',
             value: stats?.completed_tasks ?? 0,
             total: stats?.total_tasks ?? 0,
-            icon: <CheckSquare size={18} />,
+            icon: <CheckSquare size={14} />,
             color: 'var(--status-green)',
             bgColor: 'var(--status-green-light)'
         },
@@ -222,7 +222,7 @@ const AdminDashboard: React.FC = () => {
             id: 'sessions',
             label: 'جلسات قادمة',
             value: stats?.upcoming_sessions ?? 0,
-            icon: <Calendar size={18} />,
+            icon: <Calendar size={14} />,
             color: 'var(--status-orange)',
             bgColor: 'var(--status-orange-light)'
         },
@@ -230,7 +230,7 @@ const AdminDashboard: React.FC = () => {
             id: 'active',
             label: 'تحتاج متابعة',
             value: stats?.urgent_items ?? 0,
-            icon: <AlertTriangle size={18} />,
+            icon: <AlertTriangle size={14} />,
             color: 'var(--status-red)',
             bgColor: 'var(--status-red-light)'
         },
@@ -285,85 +285,65 @@ const AdminDashboard: React.FC = () => {
 
     return (
         <div className="dashboard-container">
-            {/* Header */}
-            <div className="dashboard-header">
-                {/* Top Row: Greeting only */}
-                <div style={{ marginBottom: '12px' }}>
-                    <h1 className="dashboard-header__welcome">
-                        <span className="dashboard-header__welcome-emoji">👋</span>
-                        {getGreeting()}، {user?.name || 'المستخدم'}
-                    </h1>
-                    <p className="dashboard-header__subtitle" style={{ fontSize: '13px', marginTop: '2px' }}>
-                        {formatDate()}
-                    </p>
-                </div>
+            {/* Header — single-row: greeting · stats pills · quick actions */}
+            <div className="dashboard-header dashboard-header--inline">
+                <div className="dash-toolbar">
+                    {/* Greeting */}
+                    <div className="dash-greeting">
+                        <span className="dash-greeting__emoji">👋</span>
+                        <div className="dash-greeting__text">
+                            <span className="dash-greeting__hi">{getGreeting()}، {user?.name || 'المستخدم'}</span>
+                            <span className="dash-greeting__date">{formatDate()}</span>
+                        </div>
+                    </div>
 
-                {/* Stats Cards + Quick Actions في سطر واحد */}
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    {/* Stats Cards */}
-                    {statsCards.map((card) => (
-                        <div
-                            key={card.id}
-                            onClick={() => handleStatClick(card.id)}
-                            className="stat-card stat-card-hover"
-                            style={{ flex: '1 1 auto', minWidth: 0 }}
-                        >
-                            <div className="stat-card__icon" style={{
-                                background: card.bgColor,
-                                color: card.color,
-                            }}>
-                                {card.icon}
-                            </div>
-                            <div className="stat-card__content">
-                                <div className="stat-card__value">
+                    {/* Stats pills */}
+                    <div className="dash-pills">
+                        {statsCards.map((card) => (
+                            <button
+                                key={card.id}
+                                onClick={() => handleStatClick(card.id)}
+                                className="stat-pill"
+                                title={card.label}
+                            >
+                                <span className="stat-pill__icon" style={{ color: card.color }}>
+                                    {card.icon}
+                                </span>
+                                <span className="stat-pill__value">
                                     {card.value}
                                     {card.total !== undefined && card.total > 0 && (
-                                        <span style={{ fontSize: '14px', color: 'var(--color-text-secondary)', fontWeight: 400 }}>/{card.total}</span>
+                                        <span className="stat-pill__total">/{card.total}</span>
                                     )}
+                                </span>
+                                <span className="stat-pill__label">{card.label}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Quick actions */}
+                    <div className="dash-actions">
+                        {quickActions.map((action) => {
+                            const content = (
+                                <div
+                                    className="dash-action"
+                                    title={action.label}
+                                >
+                                    <span className="dash-action__icon" style={{ color: action.color }}>
+                                        {action.icon}
+                                    </span>
+                                    <span className="dash-action__label">{action.label}</span>
                                 </div>
-                                <div className="stat-card__label">{card.label}</div>
-                            </div>
-                        </div>
-                    ))}
-
-                    {/* Divider */}
-                    <div style={{ width: '1px', height: '36px', background: 'var(--color-border)', flexShrink: 0 }} />
-
-                    {/* Quick Actions - Compact */}
-                    {quickActions.map((action) => {
-                        const content = (
-                            <div
-                                key={action.id}
-                                className="quick-action-hover"
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    padding: '8px 12px',
-                                    borderRadius: '6px',
-                                    background: 'var(--quiet-gray-100)',
-                                    border: '1px solid transparent',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.1s',
-                                    whiteSpace: 'nowrap'
-                                }}
-                            >
-                                <div style={{ color: action.color, display: 'flex' }}>
-                                    {action.icon}
-                                </div>
-                                <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--color-text)' }}>{action.label}</span>
-                            </div>
-                        );
-
-                        if (action.href) {
-                            return (
-                                <Link key={action.id} to={action.href} style={{ textDecoration: 'none', flexShrink: 0 }}>
-                                    {content}
-                                </Link>
                             );
-                        }
-                        return <div key={action.id} style={{ flexShrink: 0 }}>{content}</div>;
-                    })}
+                            if (action.href) {
+                                return (
+                                    <Link key={action.id} to={action.href} className="dash-action-link">
+                                        {content}
+                                    </Link>
+                                );
+                            }
+                            return <div key={action.id} className="dash-action-link">{content}</div>;
+                        })}
+                    </div>
                 </div>
             </div>
 

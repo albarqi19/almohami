@@ -27,6 +27,7 @@ import { AddSessionModal } from './AddSessionModal';
 import { AddWekalaModal } from './AddWekalaModal';
 import AddTaskModal from './AddTaskModal';
 import AddServiceModal from './legal-services/AddServiceModal';
+import GlobalSearchModal from './GlobalSearchModal';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -352,39 +353,10 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
       </header>
 
       {/* Search Modal */}
-      <AnimatePresence>
-        {showSearch && (
-          <>
-            <motion.div
-              className="clickup-search-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowSearch(false)}
-            />
-            <motion.div
-              className="clickup-search-modal"
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
-            >
-              <div className="clickup-search-modal__input-wrapper">
-                <Search size={18} />
-                <input
-                  type="text"
-                  placeholder="ابحث في القضايا، المهام، الوثائق..."
-                  autoFocus
-                />
-                <kbd onClick={() => setShowSearch(false)}>ESC</kbd>
-              </div>
-              <div className="clickup-search-modal__hints">
-                <span>اكتب للبحث أو استخدم الأوامر</span>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      <GlobalSearchModal
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
+      />
 
       {/* Quick Add Modals */}
       <AddSessionModal
@@ -418,7 +390,10 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
           padding: 0 16px;
           position: sticky;
           top: 0;
-          z-index: 40;
+          /* Must stay above any in-page sub-headers (case-detail-header,
+             other sticky toolbars) so dropdowns can render on top of them.
+             Sticky creates a stacking context that traps children's z-index. */
+          z-index: 60;
         }
 
         .clickup-header__content {
@@ -692,8 +667,12 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
         .clickup-header__dropdown--notifications {
           width: 360px;
-          left: auto;
-          right: 0;
+          /* Anchor the dropdown to the wrapper's left edge so it grows
+             toward the viewport's interior in RTL (icons sit on the left
+             side of the header, so right:0 would push the panel offscreen). */
+          left: 0;
+          right: auto;
+          max-width: calc(100vw - 24px);
         }
 
         .clickup-header__dropdown-header {
