@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
   RefreshCw,
@@ -300,52 +301,101 @@ const Wekalat: React.FC = () => {
   const [wekalaVisibility, setWekalaVisibility] = useState<'all' | 'assigned'>('all');
   const [savingVisibility, setSavingVisibility] = useState(false);
 
-  // State with local storage initialization
-  const [wekalat, setWekalat] = useState<Wekala[]>(() => {
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_DURATION) {
-          return data.wekalat || [];
-        }
-      }
-    } catch (e) { console.error('Cache error:', e); }
-    return [];
-  });
-
-  const [loading, setLoading] = useState(() => {
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_DURATION) return false;
-      }
-    } catch (e) { }
-    return true;
-  });
-
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('معتمدة');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [sortByExpiry, setSortByExpiry] = useState<'asc' | 'desc' | null>(null);
   const [selectedWekala, setSelectedWekala] = useState<Wekala | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const [pagination, setPagination] = useState(() => {
+  // Debounce search input so we don't refetch on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => { setCurrentPage(1); }, [statusFilter]);
+
+  // Per-filter cache key so each filter combo has its own snapshot
+  const buildCacheKey = (page: number, search: string, status: string) =>
+    `${CACHE_KEY}_${status || 'all'}_${search || 'none'}_p${page}`;
+
+  const readCachedPage = (page: number, search: string, status: string):
+    { wekalat: Wekala[]; pagination: { currentPage: number; totalPages: number; total: number } } | undefined => {
     try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_DURATION && data.pagination) {
-          return data.pagination;
-        }
-      }
-    } catch (e) { }
-    return { currentPage: 1, totalPages: 1, total: 0 };
+      const cached = localStorage.getItem(buildCacheKey(page, search, status));
+      if (!cached) return undefined;
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp >= CACHE_DURATION) return undefined;
+      return data;
+    } catch { return undefined; }
+  };
+
+  const queryClient = useQueryClient();
+
+  // TanStack Query: instant cached display + silent background refresh
+  const {
+    data: queryData,
+    isLoading,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useQuery<{ wekalat: Wekala[]; pagination: { currentPage: number; totalPages: number; total: number } }>({
+    queryKey: ['wekalat', debouncedSearch, statusFilter, currentPage],
+    queryFn: async () => {
+      const response = await WekalatService.getWekalat({
+        page: currentPage,
+        limit: 15,
+        ...(debouncedSearch && { search: debouncedSearch }),
+        ...(statusFilter !== 'all' && { status: statusFilter }),
+      });
+      const list = Array.isArray(response.data) ? response.data : [];
+      return {
+        wekalat: list,
+        pagination: {
+          currentPage: response.current_page ?? currentPage,
+          totalPages: response.last_page ?? 1,
+          total: response.total ?? list.length,
+        },
+      };
+    },
+    placeholderData: () => readCachedPage(currentPage, debouncedSearch, statusFilter),
+    staleTime: 60 * 1000,
+    refetchInterval: 90 * 1000,
+    refetchIntervalInBackground: false,
   });
+
+  const wekalat = queryData?.wekalat ?? [];
+  const pagination = queryData?.pagination ?? { currentPage: 1, totalPages: 1, total: 0 };
+  const loading = isLoading;
+  const error = queryError ? (queryError instanceof Error ? queryError.message : 'خطأ في جلب الوكالات') : null;
+
+  // Persist each filter/page combo to localStorage so the next visit is instant
+  useEffect(() => {
+    if (!queryData) return;
+    try {
+      localStorage.setItem(
+        buildCacheKey(currentPage, debouncedSearch, statusFilter),
+        JSON.stringify({ data: queryData, timestamp: Date.now() })
+      );
+    } catch { /* quota — ignore */ }
+  }, [queryData, currentPage, debouncedSearch, statusFilter]);
+
+  // Convenience aliases for the rest of the component to keep diffs small.
+  const fetchWekalat = (page?: number, forceRefresh = false) => {
+    if (page && page !== currentPage) {
+      setCurrentPage(page);
+    } else if (forceRefresh) {
+      refetch();
+    }
+  };
 
   // Stats
   const stats = useMemo(() => ({
@@ -354,57 +404,6 @@ const Wekalat: React.FC = () => {
     pending: wekalat.filter(w => w.status === 'قيد الاعتماد').length,
     total: pagination.total
   }), [wekalat, pagination.total]);
-
-  // Fetch data
-  const fetchWekalat = async (page = 1, forceRefresh = false) => {
-    try {
-      // Check cache first - ONLY if default filter and no search
-      if (!forceRefresh && !searchTerm && statusFilter === 'all') {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < CACHE_DURATION && data.wekalat?.length > 0) {
-            setWekalat(data.wekalat);
-            setPagination(data.pagination);
-            setLoading(false);
-            return;
-          }
-        }
-      }
-
-      setLoading(true);
-      setError(null);
-
-      const response = await WekalatService.getWekalat({
-        page,
-        limit: 15,
-        ...(searchTerm && { search: searchTerm }),
-        ...(statusFilter !== 'all' && { status: statusFilter })
-      });
-
-      const data = Array.isArray(response.data) ? response.data : [];
-      const paginationData = {
-        currentPage: response.current_page ?? page,
-        totalPages: response.last_page ?? 1,
-        total: response.total ?? data.length
-      };
-
-      setWekalat(data);
-      setPagination(paginationData);
-
-      // Save to cache (only if default filter - all)
-      if (!searchTerm && statusFilter === 'all') {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          data: { wekalat: data, pagination: paginationData },
-          timestamp: Date.now()
-        }));
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'خطأ في جلب الوكالات');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const settingsRef = useRef<HTMLDivElement>(null);
 
@@ -427,27 +426,8 @@ const Wekalat: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showSettingsMenu]);
 
-  useEffect(() => {
-    // Only fetch if no cached data exists
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      try {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_DURATION && data.wekalat?.length > 0) {
-          // Cache is valid, data already loaded in initial state
-          return;
-        }
-      } catch (e) { }
-    }
-    // No valid cache, fetch fresh data
-    fetchWekalat(1, true);
-  }, []);
-
-  useEffect(() => {
-    // Refetch on filter changes
-    const timeout = setTimeout(() => fetchWekalat(1, true), 400);
-    return () => clearTimeout(timeout);
-  }, [searchTerm, statusFilter]);
+  // Initial fetch + filter-change refetches are handled automatically by
+  // useQuery's queryKey reactivity above. No manual useEffects needed.
 
   // حفظ إعداد الخصوصية
   const handleVisibilityChange = async (value: 'all' | 'assigned') => {
@@ -456,9 +436,11 @@ const Wekalat: React.FC = () => {
       await WekalatService.updateVisibilitySetting(value);
       setWekalaVisibility(value);
       setShowSettingsMenu(false);
-      // مسح الكاش وإعادة جلب البيانات لأن الفلترة تغيرت على السيرفر
-      localStorage.removeItem(CACHE_KEY);
-      fetchWekalat(1, true);
+      // Server-side filter changed → drop all cached pages for this list
+      Object.keys(localStorage)
+        .filter(k => k.startsWith(`${CACHE_KEY}_`))
+        .forEach(k => localStorage.removeItem(k));
+      queryClient.invalidateQueries({ queryKey: ['wekalat'] });
     } catch (e) {
       console.error('Failed to update visibility:', e);
     } finally {
@@ -773,7 +755,7 @@ const Wekalat: React.FC = () => {
             onClick={() => fetchWekalat(pagination.currentPage, true)}
             title="تحديث"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />
           </button>
           <button
             className="wekalat-icon-btn"

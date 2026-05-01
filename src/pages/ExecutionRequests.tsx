@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Search,
   RefreshCw,
@@ -275,70 +276,106 @@ const DetailModal: React.FC<DetailModalProps> = ({ request, isOpen, onClose }) =
 // ==================== Main Component ====================
 
 const ExecutionRequests: React.FC = () => {
-  const [requests, setRequests] = useState<ExecutionRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [selectedRequest, setSelectedRequest] = useState<ExecutionRequest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [stats, setStats] = useState<ExecutionRequestStats | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    total: 0,
+  // Debounce search input so we don't refetch on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  // Reset page when other filters change
+  useEffect(() => { setCurrentPage(1); }, [statusFilter, roleFilter]);
+
+  // Per-filter cache key so each combo has its own snapshot
+  const buildCacheKey = (page: number, search: string, status: string, role: string) =>
+    `${CACHE_KEY}_${status}_${role}_${search || 'none'}_p${page}`;
+
+  const readCachedPage = (page: number, search: string, status: string, role: string):
+    { requests: ExecutionRequest[]; pagination: { currentPage: number; totalPages: number; total: number } } | undefined => {
+    try {
+      const cached = localStorage.getItem(buildCacheKey(page, search, status, role));
+      if (!cached) return undefined;
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp >= CACHE_DURATION) return undefined;
+      return data;
+    } catch { return undefined; }
+  };
+
+  // Requests list — re-fetched whenever filters or page change
+  const {
+    data: queryData,
+    isLoading,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useQuery<{ requests: ExecutionRequest[]; pagination: { currentPage: number; totalPages: number; total: number } }>({
+    queryKey: ['execution-requests', debouncedSearch, statusFilter, roleFilter, currentPage],
+    queryFn: async () => {
+      const requestsRes = await ExecutionRequestService.getRequests({
+        page: currentPage,
+        limit: 15,
+        ...(debouncedSearch && { search: debouncedSearch }),
+        ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(roleFilter !== 'all' && { party_role_id: roleFilter }),
+      });
+      const list = Array.isArray(requestsRes.data) ? requestsRes.data : [];
+      return {
+        requests: list,
+        pagination: {
+          currentPage: requestsRes.current_page ?? currentPage,
+          totalPages: requestsRes.last_page ?? 1,
+          total: requestsRes.total ?? list.length,
+        },
+      };
+    },
+    placeholderData: () => readCachedPage(currentPage, debouncedSearch, statusFilter, roleFilter),
+    staleTime: 60 * 1000,
+    refetchInterval: 90 * 1000,
+    refetchIntervalInBackground: false,
   });
 
-  // Fetch data
-  const fetchData = async (page = 1, forceRefresh = false) => {
+  // Stats — kept in its own query so filter/page changes don't reload it
+  const { data: stats } = useQuery<ExecutionRequestStats | null>({
+    queryKey: ['execution-requests', 'stats'],
+    queryFn: () => ExecutionRequestService.getStatistics(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const requests = queryData?.requests ?? [];
+  const pagination = queryData?.pagination ?? { currentPage: 1, totalPages: 1, total: 0 };
+  const loading = isLoading;
+  const refreshing = isFetching && !isLoading;
+  const error = queryError ? (queryError instanceof Error ? queryError.message : 'خطأ في جلب البيانات') : null;
+
+  // Persist each filter/page combo to localStorage for instant next visit
+  useEffect(() => {
+    if (!queryData) return;
     try {
-      setLoading(true);
-      setError(null);
+      localStorage.setItem(
+        buildCacheKey(currentPage, debouncedSearch, statusFilter, roleFilter),
+        JSON.stringify({ data: queryData, timestamp: Date.now() })
+      );
+    } catch { /* quota — ignore */ }
+  }, [queryData, currentPage, debouncedSearch, statusFilter, roleFilter]);
 
-      const [requestsRes, statsRes] = await Promise.all([
-        ExecutionRequestService.getRequests({
-          page,
-          limit: 15,
-          ...(searchTerm && { search: searchTerm }),
-          ...(statusFilter !== 'all' && { status: statusFilter }),
-          ...(roleFilter !== 'all' && { party_role_id: roleFilter }),
-        }),
-        ExecutionRequestService.getStatistics(),
-      ]);
-
-      const data = Array.isArray(requestsRes.data) ? requestsRes.data : [];
-      setRequests(data);
-      setPagination({
-        currentPage: requestsRes.current_page ?? page,
-        totalPages: requestsRes.last_page ?? 1,
-        total: requestsRes.total ?? data.length,
-      });
-      setStats(statsRes);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'خطأ في جلب البيانات');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+  // Convenience aliases to keep the rest of the component unchanged.
+  const fetchData = (page?: number, _forceRefresh = false) => {
+    if (page && page !== currentPage) setCurrentPage(page);
+    else refetch();
   };
 
-  useEffect(() => {
-    fetchData(1);
-  }, []);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => fetchData(1), 400);
-    return () => clearTimeout(timeout);
-  }, [searchTerm, statusFilter, roleFilter]);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchData(1, true);
-  };
+  const handleRefresh = () => { refetch(); };
 
   const handleViewRequest = (req: ExecutionRequest) => {
     setSelectedRequest(req);
