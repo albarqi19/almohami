@@ -12,6 +12,7 @@ import type { UpcomingSession } from '../../../services/dashboardService';
 
 interface Session {
     id: string | number;
+    case_id?: number | null;
     title?: string;
     caseTitle?: string;
     case_title?: string;
@@ -39,6 +40,7 @@ const SessionsWidget: React.FC<SessionsWidgetProps> = ({
     // تحويل البيانات من API إلى الشكل المتوقع
     const normalizeSession = (s: UpcomingSession | Session): Session => ({
         id: s.id,
+        case_id: (s as UpcomingSession).case_id ?? (s as Session).case_id ?? null,
         title: (s as Session).title || getSessionTypeLabel((s as UpcomingSession).type || (s as Session).type),
         caseTitle: (s as UpcomingSession).case_title || (s as Session).caseTitle || '',
         date: typeof s.date === 'string' ? new Date(s.date) : s.date,
@@ -150,7 +152,12 @@ const SessionsWidget: React.FC<SessionsWidgetProps> = ({
                         <div
                             key={session.id}
                             className="session-item"
-                            onClick={() => onSessionClick?.(session)}
+                            onClick={() => {
+                                if (onSessionClick) onSessionClick(session);
+                                else if (session.case_id) navigate(`/cases/${session.case_id}`);
+                                else navigate('/sessions');
+                            }}
+                            style={{ cursor: 'pointer' }}
                         >
                             <div className="session-item__date">
                                 <span className="session-item__day">{day}</span>
