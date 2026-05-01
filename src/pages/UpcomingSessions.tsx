@@ -761,6 +761,36 @@ const UpcomingSessions: React.FC = () => {
 				</div>
 
 				<div className="sessions-header-bar__center">
+					{/* Filter pills */}
+					<div className="sessions-filter-pills">
+						{[
+							{ key: 'upcoming', label: 'القادمة' },
+							{ key: 'today', label: 'اليوم' },
+							{ key: 'week', label: 'هذا الأسبوع' },
+							{ key: 'all', label: 'الكل' }
+						].map(f => (
+							<button
+								key={f.key}
+								className={`sessions-filter-pill ${filter === f.key ? 'sessions-filter-pill--active' : ''}`}
+								onClick={() => setFilter(f.key as any)}
+							>
+								{f.label}
+							</button>
+						))}
+					</div>
+
+					{/* Search */}
+					<div className="sessions-header-search">
+						<Search size={13} />
+						<input
+							type="text"
+							placeholder="بحث..."
+							value={searchTerm}
+							onChange={(e) => setSearchTerm(e.target.value)}
+						/>
+					</div>
+
+					{/* View switcher */}
 					<div className="view-switcher">
 						<button
 							className={`view-switcher__btn ${viewMode === 'table' ? 'view-switcher__btn--active' : ''}`}
@@ -832,51 +862,6 @@ const UpcomingSessions: React.FC = () => {
 					</button>
 				</div>
 			</header>
-
-			{/* Filters Bar */}
-			<div style={{ padding: '0 20px', marginTop: '16px', display: 'flex', gap: '10px' }}>
-				{/* Simple Search */}
-				<div style={{ position: 'relative' }}>
-					<Search size={14} style={{ position: 'absolute', right: '10px', top: '10px', color: 'var(--color-text-secondary)' }} />
-					<input
-						type="text"
-						placeholder="بحث في الجلسات..."
-						value={searchTerm}
-						onChange={(e) => setSearchTerm(e.target.value)}
-						style={{
-							padding: '8px 32px 8px 12px',
-							borderRadius: '6px',
-							border: '1px solid var(--color-border)',
-							fontSize: '13px',
-							width: '240px'
-						}}
-					/>
-				</div>
-
-				{[
-					{ key: 'upcoming', label: 'القادمة' },
-					{ key: 'today', label: 'اليوم' },
-					{ key: 'week', label: 'هذا الأسبوع' },
-					{ key: 'all', label: 'الكل' }
-				].map(f => (
-					<button
-						key={f.key}
-						onClick={() => setFilter(f.key as any)}
-						style={{
-							padding: '6px 12px',
-							borderRadius: '6px',
-							border: filter === f.key ? '1px solid var(--law-navy)' : '1px solid transparent',
-							background: filter === f.key ? 'var(--law-navy)' : 'transparent',
-							color: filter === f.key ? 'white' : 'var(--color-text-secondary)',
-							fontSize: '13px',
-							cursor: 'pointer',
-							transition: 'all 0.15s'
-						}}
-					>
-						{f.label}
-					</button>
-				))}
-			</div>
 
 			{/* Content Area */}
 			{loading ? (
