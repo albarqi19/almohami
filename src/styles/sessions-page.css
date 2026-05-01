@@ -778,3 +778,251 @@
 @keyframes dabt-spin {
     to { transform: rotate(360deg); }
 }
+/* ==================== Calendar — proper monthly grid ==================== */
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.calendar-nav__btn {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+    color: var(--color-text);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.calendar-nav__btn:hover {
+    background: var(--law-navy-light);
+    color: var(--law-navy);
+    border-color: var(--law-navy);
+}
+.calendar-nav__label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-heading);
+    min-width: 130px;
+    text-align: center;
+}
+.calendar-nav__today {
+    margin-right: auto;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+.calendar-nav__today:hover {
+    background: var(--law-navy-light);
+    color: var(--law-navy);
+    border-color: var(--law-navy);
+}
+
+/* Days outside the current month — dimmed but still visible */
+.calendar-day--outside {
+    background: var(--quiet-gray-50);
+    opacity: 0.55;
+}
+
+/* Today highlight (border accent) */
+.calendar-day--today {
+    background: var(--law-navy-light) !important;
+    box-shadow: inset 0 0 0 2px var(--law-navy);
+}
+
+/* Date row: day number + sessions count chip */
+.calendar-date__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    background: var(--law-navy);
+    color: #fff;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* Finished sessions — desaturated */
+.calendar-session--finished {
+    opacity: 0.5;
+    background: var(--quiet-gray-100);
+    border-right-color: var(--color-text-secondary);
+}
+.calendar-session--finished .calendar-session__title {
+    text-decoration: line-through;
+    color: var(--color-text-secondary);
+}
+
+/* "+ N more" pill */
+.calendar-day__more {
+    display: block;
+    width: 100%;
+    margin-top: 2px;
+    padding: 3px 6px;
+    background: transparent;
+    border: 1px dashed var(--color-border);
+    border-radius: 4px;
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s;
+    font-family: inherit;
+    text-align: center;
+}
+.calendar-day__more:hover {
+    background: var(--law-navy-light);
+    border-color: var(--law-navy);
+    border-style: solid;
+    color: var(--law-navy);
+}
+
+/* ==================== Day-detail modal ==================== */
+.calendar-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+    animation: calFade 0.15s ease-out;
+}
+@keyframes calFade { from { opacity: 0 } to { opacity: 1 } }
+
+.calendar-modal {
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+    animation: calUp 0.2s cubic-bezier(.16,1,.3,1);
+}
+@keyframes calUp { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: translateY(0) } }
+
+.calendar-modal__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--color-border);
+}
+.calendar-modal__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-heading);
+    flex: 1;
+}
+.calendar-modal__count {
+    margin-right: 6px;
+    padding: 2px 7px;
+    background: var(--law-navy-light);
+    color: var(--law-navy);
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.calendar-modal__close {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 5px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.12s;
+}
+.calendar-modal__close:hover {
+    background: var(--color-error-soft);
+    color: var(--color-error);
+    border-color: var(--color-error);
+}
+
+.calendar-modal__body {
+    padding: 8px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.calendar-modal__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s;
+    background: var(--dashboard-card);
+}
+.calendar-modal__item:hover {
+    background: var(--law-navy-light);
+    border-color: var(--law-navy);
+}
+.calendar-modal__item--finished {
+    opacity: 0.55;
+    background: var(--quiet-gray-50);
+}
+.calendar-modal__item--finished .calendar-modal__case {
+    text-decoration: line-through;
+}
+
+.calendar-modal__time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--law-navy-light);
+    color: var(--law-navy);
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.calendar-modal__info {
+    flex: 1;
+    min-width: 0;
+}
+.calendar-modal__case {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-heading);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.calendar-modal__meta {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}

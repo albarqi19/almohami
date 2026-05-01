@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -74,6 +74,13 @@ const UpcomingSessions: React.FC = () => {
 	const [exportPeriod, setExportPeriod] = useState<'today' | 'tomorrow' | 'week'>('today');
 	const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
 	const exportMenuRef = useRef<HTMLDivElement>(null);
+
+	// Calendar state — current month being displayed + day-detail modal
+	const [calendarCursor, setCalendarCursor] = useState(() => {
+		const d = new Date();
+		return new Date(d.getFullYear(), d.getMonth(), 1);
+	});
+	const [dayModalKey, setDayModalKey] = useState<string | null>(null);
 
 	// Tick to re-sort every 30s — pushes finished sessions down without needing a network fetch
 	const [now, setNow] = useState(() => Date.now());
@@ -692,46 +699,202 @@ const UpcomingSessions: React.FC = () => {
 		</div>
 	);
 
-	// Render Calendar View (Simplified for Demo)
-	const renderCalendar = () => {
-		// Generate dates for current month view logic is complex, 
-		// for now we'll just map sessions to a grid if they have dates
-		// A proper calendar library would be better, but we'll build a simple visual grid
-		return (
-			<div className="calendar-view">
-				<div className="calendar-grid">
-					{['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'].map(day => (
-						<div key={day} className="calendar-day-header">{day}</div>
-					))}
+	// ========== Calendar View — proper monthly grid ==========
 
-					{/* Mocking empty days for start of month alignment (would need real date logic) */}
-					{[1, 2, 3].map(d => <div key={`empty-${d}`} className="calendar-day" style={{ background: 'var(--quiet-gray-50)' }}></div>)}
+	// Group sessions by their effective date (YYYY-MM-DD), sorted by time within day.
+	const sessionsByDateKey = useMemo(() => {
+		const map = new Map<string, Session[]>();
+		const toKey = (d: Date) => {
+			const y = d.getFullYear();
+			const m = String(d.getMonth() + 1).padStart(2, '0');
+			const day = String(d.getDate()).padStart(2, '0');
+			return `${y}-${m}-${day}`;
+		};
+		sessions.forEach(s => {
+			const ed = getEffectiveDate(s);
+			if (!ed) return;
+			const d = new Date(ed);
+			if (isNaN(d.getTime())) return;
+			const key = toKey(d);
+			if (!map.has(key)) map.set(key, []);
+			map.get(key)!.push(s);
+		});
+		// Sort each day's sessions by time (using the same timestamp helper).
+		map.forEach(list => {
+			list.sort((a, b) => getSessionTimestamp(a) - getSessionTimestamp(b));
+		});
+		return map;
+	}, [sessions, now]);
 
-					{sortedSessions.map((session, idx) => (
-						<div key={session.id} className="calendar-day">
-							<div className="calendar-date">
-								{(() => { const ed = getEffectiveDate(session); return ed ? new Date(ed).getDate() : '-'; })()}
-							</div>
-							<div className="calendar-session" onClick={() => session.case_id && navigate(`/cases/${session.case_id}`)}>
-								<div className="calendar-session__title">{session.case?.title}</div>
-								<div className="calendar-session__time">{session.session_time}</div>
-							</div>
-						</div>
-					))}
+	// Build the visible 6×7 grid for the current month cursor.
+	const calendarGrid = useMemo(() => {
+		const year = calendarCursor.getFullYear();
+		const month = calendarCursor.getMonth();
+		const firstOfMonth = new Date(year, month, 1);
+		const startDay = firstOfMonth.getDay(); // 0 = Sunday
+		const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-					{/* Fill rest of grid */}
-					{Array.from({ length: 35 - (sortedSessions.length + 3) }).map((_, i) => (
-						<div key={`fill-${i}`} className="calendar-day">
-							<div className="calendar-date" style={{ opacity: 0.3 }}>{i + sortedSessions.length + 1}</div>
-						</div>
-					))}
-				</div>
-				<div style={{ textAlign: 'center', marginTop: '10px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-					(عرض تقويم مبسط للأغراض التوضيحية)
-				</div>
-			</div>
-		);
+		const cells: Array<{ date: Date; inMonth: boolean }> = [];
+		// Leading days from previous month
+		for (let i = startDay - 1; i >= 0; i--) {
+			cells.push({ date: new Date(year, month, -i), inMonth: false });
+		}
+		// Current month
+		for (let d = 1; d <= daysInMonth; d++) {
+			cells.push({ date: new Date(year, month, d), inMonth: true });
+		}
+		// Trailing days from next month — pad to 6 rows (42 cells) for stable height
+		while (cells.length < 42) {
+			const last = cells[cells.length - 1].date;
+			const next = new Date(last);
+			next.setDate(last.getDate() + 1);
+			cells.push({ date: next, inMonth: false });
+		}
+		return cells;
+	}, [calendarCursor]);
+
+	const cursorMonthLabel = useMemo(() => {
+		const months = [
+			'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+			'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+		];
+		return `${months[calendarCursor.getMonth()]} ${calendarCursor.getFullYear()}`;
+	}, [calendarCursor]);
+
+	const dayKey = (d: Date) => {
+		const y = d.getFullYear();
+		const m = String(d.getMonth() + 1).padStart(2, '0');
+		const day = String(d.getDate()).padStart(2, '0');
+		return `${y}-${m}-${day}`;
 	};
+
+	const todayKey = dayKey(new Date());
+
+	const goToPrevMonth = () => setCalendarCursor(c => new Date(c.getFullYear(), c.getMonth() - 1, 1));
+	const goToNextMonth = () => setCalendarCursor(c => new Date(c.getFullYear(), c.getMonth() + 1, 1));
+	const goToToday = () => {
+		const d = new Date();
+		setCalendarCursor(new Date(d.getFullYear(), d.getMonth(), 1));
+	};
+
+	const MAX_VISIBLE_PER_DAY = 3;
+
+	const renderCalendar = () => (
+		<div className="calendar-view">
+			{/* Month nav */}
+			<div className="calendar-nav">
+				<button className="calendar-nav__btn" onClick={goToPrevMonth} title="الشهر السابق">
+					<ChevronRight size={16} />
+				</button>
+				<div className="calendar-nav__label">{cursorMonthLabel}</div>
+				<button className="calendar-nav__btn" onClick={goToNextMonth} title="الشهر التالي">
+					<ChevronLeft size={16} />
+				</button>
+				<button className="calendar-nav__today" onClick={goToToday}>هذا الشهر</button>
+			</div>
+
+			<div className="calendar-grid">
+				{['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'].map(day => (
+					<div key={day} className="calendar-day-header">{day}</div>
+				))}
+
+				{calendarGrid.map(({ date, inMonth }) => {
+					const key = dayKey(date);
+					const daySessions = sessionsByDateKey.get(key) || [];
+					const visible = daySessions.slice(0, MAX_VISIBLE_PER_DAY);
+					const hidden = daySessions.length - visible.length;
+					const isToday = key === todayKey;
+
+					return (
+						<div
+							key={key}
+							className={`calendar-day ${!inMonth ? 'calendar-day--outside' : ''} ${isToday ? 'calendar-day--today' : ''}`}
+						>
+							<div className="calendar-date">
+								<span>{date.getDate()}</span>
+								{daySessions.length > 0 && (
+									<span className="calendar-date__count" title={`${daySessions.length} جلسة`}>
+										{daySessions.length}
+									</span>
+								)}
+							</div>
+
+							{visible.map(s => {
+								const finished = isSessionFinished(s);
+								return (
+									<div
+										key={s.id}
+										className={`calendar-session ${finished ? 'calendar-session--finished' : ''}`}
+										onClick={(e) => { e.stopPropagation(); s.case_id && navigate(`/cases/${s.case_id}`); }}
+										title={`${s.case?.title || ''} — ${s.session_time || ''}`}
+									>
+										<div className="calendar-session__title">{s.case?.title || 'بدون عنوان'}</div>
+										{s.session_time && <div className="calendar-session__time">{s.session_time}</div>}
+									</div>
+								);
+							})}
+
+							{hidden > 0 && (
+								<button
+									className="calendar-day__more"
+									onClick={(e) => { e.stopPropagation(); setDayModalKey(key); }}
+								>
+									+{hidden} أخرى
+								</button>
+							)}
+						</div>
+					);
+				})}
+			</div>
+
+			{/* Day-detail modal */}
+			{dayModalKey && (() => {
+				const list = sessionsByDateKey.get(dayModalKey) || [];
+				const d = new Date(dayModalKey);
+				const dateLabel = d.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+				return (
+					<div className="calendar-modal-overlay" onClick={() => setDayModalKey(null)}>
+						<div className="calendar-modal" onClick={e => e.stopPropagation()}>
+							<div className="calendar-modal__header">
+								<div className="calendar-modal__title">
+									<CalendarIcon size={16} />
+									<span>{dateLabel}</span>
+									<span className="calendar-modal__count">{list.length} جلسة</span>
+								</div>
+								<button className="calendar-modal__close" onClick={() => setDayModalKey(null)}>
+									<X size={16} />
+								</button>
+							</div>
+							<div className="calendar-modal__body">
+								{list.map(s => {
+									const finished = isSessionFinished(s);
+									return (
+										<div
+											key={s.id}
+											className={`calendar-modal__item ${finished ? 'calendar-modal__item--finished' : ''}`}
+											onClick={() => { setDayModalKey(null); s.case_id && navigate(`/cases/${s.case_id}`); }}
+										>
+											<div className="calendar-modal__time">
+												<Clock size={12} />
+												{s.session_time || '—'}
+											</div>
+											<div className="calendar-modal__info">
+												<div className="calendar-modal__case">{s.case?.title || 'بدون عنوان'}</div>
+												<div className="calendar-modal__meta">
+													{s.court && <span>{s.court}</span>}
+													{s.case?.client_name && <span>· {s.case.client_name}</span>}
+												</div>
+											</div>
+										</div>
+									);
+								})}
+							</div>
+						</div>
+					</div>
+				);
+			})()}
+		</div>
+	);
 
 	return (
 		<div className="sessions-page">
