@@ -82,13 +82,17 @@ const UpcomingSessions: React.FC = () => {
 		return () => clearInterval(id);
 	}, []);
 
-	// TanStack Query: silent background refresh + cache + window focus refetch
-	const initialFromCache = (): Session[] => {
+	// TanStack Query: silent background refresh + cache + window focus refetch.
+	// We use placeholderData (NOT initialData) so the query always fetches on
+	// mount even when localStorage has cached data — placeholderData is shown
+	// for instant UX but is never treated as real cache.
+	const cachedFromStorage = ((): Session[] => {
 		try {
 			const saved = localStorage.getItem('cached_sessions');
-			return saved ? JSON.parse(saved) : [];
+			const parsed = saved ? JSON.parse(saved) : [];
+			return Array.isArray(parsed) ? parsed : [];
 		} catch { return []; }
-	};
+	})();
 
 	const {
 		data: sessions = [],
@@ -103,7 +107,7 @@ const UpcomingSessions: React.FC = () => {
 			const data = response.data || [];
 			return Array.isArray(data) ? data : [];
 		},
-		initialData: initialFromCache,
+		placeholderData: cachedFromStorage.length > 0 ? cachedFromStorage : undefined,
 		staleTime: 60 * 1000,            // valid for 1 minute
 		refetchInterval: 90 * 1000,      // background refetch every 90s
 		refetchIntervalInBackground: false,
