@@ -38,9 +38,9 @@ export class TaskService {
         completedAt: task.completed_at ? new Date(task.completed_at) : undefined,
         estimatedHours: task.estimated_hours,
         actualHours: task.actual_hours,
-        assignedTo: task.assigned_to,
-        assignedBy: task.assigned_by,
-        caseId: task.case_id
+        assignedTo: task.assigned_to != null ? String(task.assigned_to) : '',
+        assignedBy: task.assigned_by != null ? String(task.assigned_by) : '',
+        caseId: task.case_id != null ? String(task.case_id) : undefined
       }));
       
       return {
@@ -65,9 +65,9 @@ export class TaskService {
         completedAt: response.data.completed_at ? new Date(response.data.completed_at) : undefined,
         estimatedHours: response.data.estimated_hours,
         actualHours: response.data.actual_hours,
-        assignedTo: response.data.assigned_to,
-        assignedBy: response.data.assigned_by,
-        caseId: response.data.case_id
+        assignedTo: response.data.assigned_to != null ? String(response.data.assigned_to) : '',
+        assignedBy: response.data.assigned_by != null ? String(response.data.assigned_by) : '',
+        caseId: response.data.case_id != null ? String(response.data.case_id) : undefined
       };
       return task as Task;
     } else {
