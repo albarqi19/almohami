@@ -8,7 +8,9 @@ import {
   Search,
   Trash2,
   Shield,
-  Lock
+  Lock,
+  Star,
+  Briefcase
 } from 'lucide-react';
 import { CaseService } from '../services/caseService';
 import { UserService } from '../services/UserService';
@@ -34,6 +36,18 @@ interface SharedUser {
   name: string;
   email: string;
   role: string;
+  is_responsible?: boolean;
+}
+
+interface EligibleParty {
+  party_id: number;
+  name: string;
+  national_id: string | null;
+  role: string | null;
+  represents: string | null;
+  matched_user_id: number | null;
+  is_staff: boolean;
+  already_shared: boolean;
 }
 
 interface SharingPermission {
@@ -68,6 +82,8 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [allowLawyerSharing, setAllowLawyerSharing] = useState(false);
+  const [eligibleParties, setEligibleParties] = useState<EligibleParty[]>([]);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   useEffect(() => {
     if (isOpen) loadData();
@@ -81,14 +97,16 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
       setPermission(permissionData);
       setAllowLawyerSharing(permissionData.allow_lawyer_sharing);
       if (permissionData.can_share) {
-        const [usersData, sharesData] = await Promise.all([
+        const [usersData, sharesData, partiesData] = await Promise.all([
           UserService.getLawyers(),
-          CaseService.getCaseShares(caseId)
+          CaseService.getCaseShares(caseId),
+          CaseService.getEligibleParties(caseId).catch(() => []),
         ]);
         setAllUsers((usersData || []).map((u: any) => ({
           id: Number(u.id), name: u.name || '', email: u.email || '', role: u.role || ''
         })));
         setSharedUsers(sharesData);
+        setEligibleParties(partiesData);
       }
     } catch (err: any) {
       setError(err.message || 'فشل في تحميل البيانات');
@@ -131,13 +149,89 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
     } catch (err: any) { setError(err.message || 'فشل في التحديث'); }
   };
 
+  const handleToggleResponsibility = async (userId: number) => {
+    setTogglingId(userId);
+    setError(''); setSuccess('');
+    try {
+      const newVal = await CaseService.toggleResponsibility(caseId, userId);
+      // The toggle may have auto-created a share row (when starring a party-only
+      // lawyer), so re-fetch the shares list to keep the UI in sync.
+      const shares = await CaseService.getCaseShares(caseId);
+      setSharedUsers(shares);
+      setSuccess(newVal ? 'تم تعيينه كمسؤول' : 'تم إلغاء المسؤولية');
+      onSuccess?.();
+    } catch (err: any) {
+      setError(err.message || 'فشل في تعديل المسؤولية');
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const toggle = (id: number) => {
     setSelectedUserIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
     setError('');
   };
 
+  // Build unified team list: explicit shares + lawyers from case parties who are staff.
+  // A user appearing in BOTH is shown once with both badges.
+  type TeamRow = {
+    user_id: number;
+    name: string;
+    email?: string;
+    role: string;
+    is_responsible: boolean;
+    is_share: boolean;       // explicit row in case_shares
+    is_party: boolean;       // appears as a lawyer party in this case
+    represents?: string | null;
+  };
+
+  const teamRows: TeamRow[] = (() => {
+    const byUserId = new Map<number, TeamRow>();
+    sharedUsers.forEach(u => {
+      byUserId.set(u.id, {
+        user_id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        is_responsible: !!u.is_responsible,
+        is_share: true,
+        is_party: false,
+      });
+    });
+    eligibleParties.forEach(p => {
+      if (!p.is_staff || !p.matched_user_id) return;
+      const existing = byUserId.get(p.matched_user_id);
+      if (existing) {
+        existing.is_party = true;
+        existing.represents = p.represents;
+      } else {
+        // Lawyer is a party + staff but not yet a share — show implicitly so admin
+        // can star them without an extra "add" step.
+        const staff = allUsers.find(s => s.id === p.matched_user_id);
+        byUserId.set(p.matched_user_id, {
+          user_id: p.matched_user_id,
+          name: p.name || staff?.name || '',
+          email: staff?.email,
+          role: staff?.role || '',
+          is_responsible: false,
+          is_share: false,
+          is_party: true,
+          represents: p.represents,
+        });
+      }
+    });
+    // Responsibles first, then shares, then party-only.
+    return Array.from(byUserId.values()).sort((a, b) => {
+      if (a.is_responsible !== b.is_responsible) return a.is_responsible ? -1 : 1;
+      if (a.is_share !== b.is_share) return a.is_share ? -1 : 1;
+      return a.name.localeCompare(b.name, 'ar');
+    });
+  })();
+
+  // Users available to share with: not in shares, not already implicit via party.
+  const teamUserIds = new Set(teamRows.map(r => r.user_id));
   const available = allUsers.filter(u =>
-    !sharedUsers.some(s => s.id === u.id) &&
+    !teamUserIds.has(u.id) &&
     u.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -150,7 +244,7 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
         <div className="sc-modal sc-modal--sm" onClick={e => e.stopPropagation()}>
           <div className="sc-header">
             <Lock size={14} className="sc-header__icon" />
-            <span className="sc-header__title">مشاركة القضية</span>
+            <span className="sc-header__title">مسؤول القضية ومشاركتها</span>
             <div className="sc-header__spacer" />
             <button className="sc-close" onClick={onClose}><X size={15} /></button>
           </div>
@@ -170,7 +264,7 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
         {/* Header */}
         <div className="sc-header">
           <UserPlus size={14} className="sc-header__icon" />
-          <span className="sc-header__title">مشاركة القضية</span>
+          <span className="sc-header__title">مسؤول القضية ومشاركتها</span>
           <span className="sc-header__case">{caseTitle}</span>
           <div className="sc-header__spacer" />
           {selectedUserIds.length > 0 && (
@@ -196,25 +290,46 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
             <div className="sc-loading">جاري التحميل...</div>
           ) : (
             <div className="sc-grid">
-              {/* Left: Current shares */}
+              {/* Left: Team (shares + lawyer parties who are staff) */}
               <div className="sc-panel">
                 <div className="sc-panel__head">
-                  <Users size={13} /> المشاركين الحاليين
-                  <span className="sc-badge">{sharedUsers.length}</span>
+                  <Users size={13} /> فريق القضية
+                  <span className="sc-badge">{teamRows.length}</span>
                 </div>
                 <div className="sc-panel__body">
-                  {sharedUsers.length === 0 ? (
-                    <div className="sc-empty">لم تتم مشاركة القضية</div>
-                  ) : sharedUsers.map(u => (
-                    <div key={u.id} className="sc-user sc-user--shared">
-                      <span className="sc-avatar">{u.name?.charAt(0)}</span>
+                  {teamRows.length === 0 ? (
+                    <div className="sc-empty">لا يوجد أعضاء بعد</div>
+                  ) : teamRows.map(r => (
+                    <div
+                      key={r.user_id}
+                      className={`sc-user sc-user--shared ${r.is_responsible ? 'sc-user--responsible' : ''} ${!r.is_share && r.is_party ? 'sc-user--party-only' : ''}`}
+                    >
+                      <span className="sc-avatar">{r.name?.charAt(0)}</span>
                       <div className="sc-user__info">
-                        <span className="sc-user__name">{u.name}</span>
-                        <span className="sc-user__role">{ROLE_LABELS[u.role] || u.role}</span>
+                        <span className="sc-user__name">
+                          {r.name}
+                          {r.is_responsible && <span className="sc-resp-tag" title="مسؤول"><Star size={10} fill="currentColor" /> مسؤول</span>}
+                          {r.is_party && <span className="sc-party-tag" title={r.represents ? `يمثل: ${r.represents}` : 'طرف في القضية'}><Briefcase size={9} /> كطرف</span>}
+                        </span>
+                        <span className="sc-user__role">{ROLE_LABELS[r.role] || r.role || '—'}</span>
                       </div>
-                      <button className="sc-remove" onClick={() => handleRemove(u.id)} title="إزالة">
-                        <Trash2 size={13} />
+                      <button
+                        className={`sc-star ${r.is_responsible ? 'sc-star--active' : ''}`}
+                        onClick={() => handleToggleResponsibility(r.user_id)}
+                        disabled={togglingId === r.user_id}
+                        title={r.is_responsible ? 'إلغاء المسؤولية' : 'تعيين كمسؤول'}
+                      >
+                        <Star size={13} fill={r.is_responsible ? 'currentColor' : 'none'} />
                       </button>
+                      {r.is_share ? (
+                        <button className="sc-remove" onClick={() => handleRemove(r.user_id)} title="إزالة المشاركة">
+                          <Trash2 size={13} />
+                        </button>
+                      ) : (
+                        <span className="sc-remove sc-remove--placeholder" title="عضو تلقائي بحكم كونه طرفاً">
+                          <Lock size={11} />
+                        </span>
+                      )}
                     </div>
                   ))}
 
@@ -237,6 +352,7 @@ const ShareCaseModal: React.FC<ShareCaseModalProps> = ({
                   <UserPlus size={13} /> إضافة مشاركين
                   <span className="sc-badge">{available.length}</span>
                 </div>
+
                 <div className="sc-search">
                   <Search size={13} />
                   <input

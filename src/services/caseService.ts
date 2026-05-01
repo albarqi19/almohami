@@ -209,6 +209,37 @@ export class CaseService {
     }
   }
 
+  /**
+   * تبديل علامة "مسؤول" لمشارك في القضية
+   */
+  static async toggleResponsibility(caseId: string | number, userId: number): Promise<boolean> {
+    const response = await apiClient.patch<ApiResponse<{ is_responsible: boolean }>>(
+      `/cases/${caseId}/shares/${userId}/responsible`
+    );
+    if (response.success && response.data) {
+      return response.data.is_responsible;
+    }
+    throw new Error(response.message || 'فشل في تعديل المسؤولية');
+  }
+
+  /**
+   * جلب محامي القضية من الأطراف، مع تمييز من منهم موظف بالمكتب ومن أُضيف كمشارك
+   */
+  static async getEligibleParties(caseId: string | number): Promise<Array<{
+    party_id: number;
+    name: string;
+    national_id: string | null;
+    role: string | null;
+    represents: string | null;
+    matched_user_id: number | null;
+    is_staff: boolean;
+    already_shared: boolean;
+  }>> {
+    const response = await apiClient.get<ApiResponse<any[]>>(`/cases/${caseId}/eligible-parties`);
+    if (response.success && response.data) return response.data;
+    return [];
+  }
+
   // ========== Najiz Linking Methods - ربط القضايا بناجز ==========
 
   /**

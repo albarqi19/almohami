@@ -234,3 +234,117 @@ body.dark .sc-user__role { background: rgba(255,255,255,.05); }
     .sc-grid { grid-template-columns: 1fr; }
     .sc-header__case { display: none; }
 }
+
+/* ── Responsibility star + party chips ── */
+.sc-star {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    transition: all .12s;
+}
+.sc-star:hover { background: var(--color-warning-soft); border-color: var(--color-warning); color: var(--color-warning); }
+.sc-star:disabled { opacity: 0.5; cursor: wait; }
+.sc-star--active {
+    background: var(--color-warning-soft);
+    border-color: var(--color-warning);
+    color: var(--color-warning);
+}
+
+.sc-user--responsible {
+    background: var(--color-warning-soft);
+    border-right: 2px solid var(--color-warning);
+}
+
+.sc-resp-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-right: 6px;
+    padding: 1px 5px;
+    background: var(--color-warning);
+    color: #fff;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+.sc-parties-hint {
+    padding: 8px 10px;
+    background: var(--color-info-soft);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.sc-parties-hint__label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+.sc-party-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--color-surface);
+    border: 1px dashed var(--color-info);
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all .12s;
+    text-align: right;
+    width: 100%;
+}
+.sc-party-chip:hover:not(:disabled) {
+    background: var(--color-info-soft);
+    border-style: solid;
+}
+.sc-party-chip:disabled { opacity: 0.5; cursor: wait; }
+.sc-party-chip__rep {
+    margin-right: auto;
+    font-size: 10px;
+    color: var(--color-text-secondary);
+}
+
+/* ── Party tag (lawyer who is also a case party) ── */
+.sc-party-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-right: 4px;
+    padding: 1px 5px;
+    background: var(--color-info);
+    color: #fff;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+.sc-user--party-only {
+    background: var(--color-info-soft);
+}
+.sc-user--party-only.sc-user--responsible {
+    /* Responsible takes precedence visually */
+    background: var(--color-warning-soft);
+}
+
+.sc-remove--placeholder {
+    background: transparent !important;
+    border: 1px dashed var(--color-border) !important;
+    color: var(--color-text-secondary) !important;
+    cursor: default !important;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+}

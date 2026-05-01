@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
 	Calendar as CalendarIcon,
 	Clock,
@@ -66,13 +67,6 @@ interface Session {
 
 const UpcomingSessions: React.FC = () => {
 	const navigate = useNavigate();
-	// Initialize from LocalStorage
-	const [sessions, setSessions] = useState<Session[]>(() => {
-		const saved = localStorage.getItem('cached_sessions');
-		return saved ? JSON.parse(saved) : [];
-	});
-	const [loading, setLoading] = useState(false); // Start false if data exists
-	const [error, setError] = useState<string | null>(null);
 	const [filter, setFilter] = useState<'all' | 'upcoming' | 'today' | 'week'>('upcoming');
 	const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
 	const [searchTerm, setSearchTerm] = useState('');
@@ -80,38 +74,51 @@ const UpcomingSessions: React.FC = () => {
 	const [exportPeriod, setExportPeriod] = useState<'today' | 'tomorrow' | 'week'>('today');
 	const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
 	const exportMenuRef = useRef<HTMLDivElement>(null);
-	const fetchSessions = async () => {
+
+	// Tick to re-sort every 30s — pushes finished sessions down without needing a network fetch
+	const [now, setNow] = useState(() => Date.now());
+	useEffect(() => {
+		const id = setInterval(() => setNow(Date.now()), 30 * 1000);
+		return () => clearInterval(id);
+	}, []);
+
+	// TanStack Query: silent background refresh + cache + window focus refetch
+	const initialFromCache = (): Session[] => {
 		try {
-			if (sessions.length === 0) setLoading(true);
-			setError(null);
-			const response = await apiClient.get<{ success: boolean; data: Session[] }>('/sessions/upcoming');
-			const data = response.data || [];
-			const sessionData = Array.isArray(data) ? data : [];
-			setSessions(sessionData);
-			localStorage.setItem('cached_sessions', JSON.stringify(sessionData));
-		} catch (err) {
-			console.error('Error fetching sessions:', err);
-			if (sessions.length === 0) setError('خطأ في جلب الجلسات');
-		} finally {
-			setLoading(false);
-		}
+			const saved = localStorage.getItem('cached_sessions');
+			return saved ? JSON.parse(saved) : [];
+		} catch { return []; }
 	};
 
+	const {
+		data: sessions = [],
+		isLoading,
+		isFetching,
+		error: queryError,
+		refetch,
+	} = useQuery<Session[]>({
+		queryKey: ['sessions', 'upcoming'],
+		queryFn: async () => {
+			const response = await apiClient.get<{ success: boolean; data: Session[] }>('/sessions/upcoming');
+			const data = response.data || [];
+			return Array.isArray(data) ? data : [];
+		},
+		initialData: initialFromCache,
+		staleTime: 60 * 1000,            // valid for 1 minute
+		refetchInterval: 90 * 1000,      // background refetch every 90s
+		refetchIntervalInBackground: false,
+	});
+
+	// Persist latest data to localStorage so the page opens instantly next time
 	useEffect(() => {
-		// Only fetch if no cached sessions exist
-		const cached = localStorage.getItem('cached_sessions');
-		if (cached) {
-			try {
-				const data = JSON.parse(cached);
-				if (data && data.length > 0) {
-					// Cache is valid, don't refetch
-					return;
-				}
-			} catch (e) { }
+		if (sessions && sessions.length >= 0) {
+			try { localStorage.setItem('cached_sessions', JSON.stringify(sessions)); } catch { }
 		}
-		// No valid cache, fetch fresh data
-		fetchSessions();
-	}, []);
+	}, [sessions]);
+
+	const loading = isLoading;
+	const error = queryError ? 'خطأ في جلب الجلسات' : null;
+	const fetchSessions = () => { refetch(); };
 
 	// Close export menu when clicking outside
 	useEffect(() => {
@@ -169,11 +176,41 @@ const UpcomingSessions: React.FC = () => {
 		}
 	});
 
-	// Sort
+	// Build full timestamp from session_date + session_time (HH:mm[:ss])
+	const getSessionTimestamp = (s: Session): number => {
+		const date = getEffectiveDate(s);
+		if (!date) return Number.POSITIVE_INFINITY;
+		const t = new Date(date);
+		if (s.session_time) {
+			const m = s.session_time.match(/^(\d{1,2}):(\d{2})/);
+			if (m) t.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0);
+			else t.setHours(23, 59, 0, 0);
+		} else {
+			// No explicit time → push to end of day so timed sessions of same day rank above it
+			t.setHours(23, 59, 0, 0);
+		}
+		return t.getTime();
+	};
+
+	// A session is considered finished when its status says so, or when its scheduled
+	// time is more than ~1 hour in the past (buffer for late-running sessions).
+	const FINISHED_BUFFER_MS = 60 * 60 * 1000;
+	const isSessionFinished = (s: Session): boolean => {
+		if (s.status === 'منتهية' || s.status === 'completed') return true;
+		const ts = getSessionTimestamp(s);
+		if (!isFinite(ts)) return false;
+		return ts + FINISHED_BUFFER_MS < now;
+	};
+
+	// Sort: upcoming first (nearest → farthest), then finished (most recent → oldest)
 	const sortedSessions = [...filteredSessions].sort((a, b) => {
-		const dateA = getEffectiveDate(a) ? new Date(getEffectiveDate(a)!).getTime() : Infinity;
-		const dateB = getEffectiveDate(b) ? new Date(getEffectiveDate(b)!).getTime() : Infinity;
-		return dateA - dateB;
+		const aFinished = isSessionFinished(a);
+		const bFinished = isSessionFinished(b);
+		if (aFinished !== bFinished) return aFinished ? 1 : -1;
+		const tsA = getSessionTimestamp(a);
+		const tsB = getSessionTimestamp(b);
+		if (aFinished && bFinished) return tsB - tsA;
+		return tsA - tsB;
 	});
 
 	// Helpers
@@ -777,10 +814,10 @@ const UpcomingSessions: React.FC = () => {
 					<button
 						className="icon-btn"
 						onClick={fetchSessions}
-						disabled={loading}
+						disabled={isFetching}
 						title="تحديث"
 					>
-						<RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+						<RefreshCw size={18} className={isFetching ? 'animate-spin' : ''} />
 					</button>
 					<button
 						className="icon-btn"

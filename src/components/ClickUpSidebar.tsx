@@ -40,6 +40,70 @@ interface SidebarProps {
     onMobileClose: () => void;
 }
 
+interface MenuItem {
+    icon: React.ComponentType<{ size?: number }>;
+    label: string;
+    path: string;
+    roles: string[];
+}
+
+interface NavItemProps {
+    item: MenuItem;
+    isCollapsed: boolean;
+    isActive: boolean;
+    isMobileOpen: boolean;
+    onMobileClose: () => void;
+}
+
+const NavItem: React.FC<NavItemProps> = React.memo(({
+    item,
+    isCollapsed,
+    isActive,
+    isMobileOpen,
+    onMobileClose,
+}) => {
+    const Icon = item.icon;
+
+    const content = (
+        <NavLink
+            to={item.path}
+            className={`sidebar-link ${isActive ? 'sidebar-link--active' : ''}`}
+            onClick={() => isMobileOpen && onMobileClose()}
+        >
+            <span className="sidebar-link__icon">
+                <Icon size={20} />
+            </span>
+
+            {!isCollapsed && (
+                <span className="sidebar-link__label">{item.label}</span>
+            )}
+        </NavLink>
+    );
+
+    if (isCollapsed) {
+        return (
+            <Tooltip.Root>
+                <Tooltip.Trigger asChild>
+                    {content}
+                </Tooltip.Trigger>
+                <Tooltip.Portal>
+                    <Tooltip.Content
+                        className="tooltip"
+                        side="left"
+                        sideOffset={10}
+                    >
+                        {item.label}
+                    </Tooltip.Content>
+                </Tooltip.Portal>
+            </Tooltip.Root>
+        );
+    }
+
+    return content;
+});
+
+NavItem.displayName = 'NavItem';
+
 const ClickUpSidebar: React.FC<SidebarProps> = ({
     isCollapsed,
     onToggleCollapse,
@@ -51,7 +115,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
     const [showFavorites, setShowFavorites] = React.useState(true);
 
     // Menu items configuration
-    const menuItems = [
+    const menuItems: MenuItem[] = [
         { icon: Home, label: 'لوحة التحكم', path: '/dashboard', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
         { icon: FileText, label: 'القضايا', path: '/cases', roles: ['admin', 'lawyer', 'legal_assistant'] },
         { icon: FileCheck, label: 'الوكالات', path: '/wekalat', roles: ['admin', 'lawyer', 'legal_assistant'] },
@@ -101,57 +165,8 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
 
     const sidebarWidth = isCollapsed ? 64 : 240;
 
-    // Navigation Link Component
-    const NavItem: React.FC<{
-        item: typeof menuItems[0];
-        isCollapsed: boolean;
-    }> = ({ item, isCollapsed }) => {
-        const Icon = item.icon;
-        const isActive = location.pathname === item.path;
-
-        const content = (
-            <NavLink
-                to={item.path}
-                className={`sidebar-link ${isActive ? 'sidebar-link--active' : ''}`}
-                onClick={() => isMobileOpen && onMobileClose()}
-            >
-                <span className="sidebar-link__icon">
-                    <Icon size={20} />
-                </span>
-
-                {!isCollapsed && (
-                    <span className="sidebar-link__label">{item.label}</span>
-                )}
-
-            </NavLink>
-        );
-
-        if (isCollapsed) {
-            return (
-                <Tooltip.Provider>
-                    <Tooltip.Root>
-                        <Tooltip.Trigger asChild>
-                            {content}
-                        </Tooltip.Trigger>
-                        <Tooltip.Portal>
-                            <Tooltip.Content
-                                className="tooltip"
-                                side="left"
-                                sideOffset={10}
-                            >
-                                {item.label}
-                            </Tooltip.Content>
-                        </Tooltip.Portal>
-                    </Tooltip.Root>
-                </Tooltip.Provider>
-            );
-        }
-
-        return content;
-    };
-
     return (
-        <>
+        <Tooltip.Provider>
             <aside
                 className={`sidebar ${isCollapsed ? 'sidebar--collapsed' : ''} ${isMobileOpen ? 'sidebar--mobile-open' : ''}`}
                 style={{ width: sidebarWidth }}
@@ -203,7 +218,14 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                             <div className="sidebar__section-title">القائمة الرئيسية</div>
                         )}
                         {visibleMenuItems.map((item) => (
-                            <NavItem key={item.path} item={item} isCollapsed={isCollapsed} />
+                            <NavItem
+                                key={item.path}
+                                item={item}
+                                isCollapsed={isCollapsed}
+                                isActive={location.pathname === item.path}
+                                isMobileOpen={isMobileOpen}
+                                onMobileClose={onMobileClose}
+                            />
                         ))}
                     </div>
 
@@ -242,7 +264,14 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                             <div className="sidebar__section-title">الإعدادات</div>
                         )}
                         {visibleSettingsItems.map((item) => (
-                            <NavItem key={item.path} item={item} isCollapsed={isCollapsed} />
+                            <NavItem
+                                key={item.path}
+                                item={item}
+                                isCollapsed={isCollapsed}
+                                isActive={location.pathname === item.path}
+                                isMobileOpen={isMobileOpen}
+                                onMobileClose={onMobileClose}
+                            />
                         ))}
                     </div>
                 </nav>
@@ -576,7 +605,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                     z-index: 100;
                 }
             `}</style>
-        </>
+        </Tooltip.Provider>
     );
 };
 
