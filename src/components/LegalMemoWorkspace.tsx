@@ -9,8 +9,10 @@ import {
     FileText, Plus, Save, Brain, Upload, X, Check,
     ChevronLeft, ChevronRight, AlertCircle, Loader2,
     Clock, Cloud, CloudOff, Sparkles, Settings,
-    FileUp, Trash2, Eye, Download, Link2, Zap, Info
+    FileUp, Trash2, Eye, Download, Link2, Zap, Info,
+    HelpCircle
 } from 'lucide-react';
+import { useModalTour } from '../hooks/useModalTour';
 import TiptapEditor from './TiptapEditor';
 import type { TiptapEditorRef } from './TiptapEditor';
 import LegalAIToolbarButton from './LegalAIToolbarButton';
@@ -248,6 +250,8 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
     onMemoCreated,
     editingMemo
 }) => {
+    const { startTour, hasTour } = useModalTour('modal:legal-memo', isOpen);
+
     // الخطوة الحالية: اختيار النوع أو التحرير
     const [step, setStep] = useState<'select_type' | 'editor'>('select_type');
 
@@ -698,7 +702,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                 onClick={onClose}
             >
                 <motion.div
-                    className={`legal-memo-workspace ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
+                    className={`legal-memo-workspace ${step === 'select_type' ? 'erp-mode' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.95, opacity: 0 }}
@@ -710,6 +714,17 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                             <button className="lmw-close-btn" onClick={onClose}>
                                 <X size={20} />
                             </button>
+                            {hasTour && (
+                                <button
+                                    data-tour="memo-help-btn"
+                                    className="lmw-close-btn"
+                                    onClick={startTour}
+                                    title="جولة تعريفية"
+                                    aria-label="جولة تعريفية"
+                                >
+                                    <HelpCircle size={20} />
+                                </button>
+                            )}
                             <div className="lmw-breadcrumb">
                                 <span className="lmw-breadcrumb-case">{caseNumber || 'قضية'}</span>
                                 <ChevronLeft size={14} />
@@ -720,6 +735,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                             {step === 'editor' && (
                                 <input
                                     type="text"
+                                    data-tour="memo-title"
                                     className="lmw-title-input-header"
                                     placeholder="عنوان المذكرة..."
                                     value={title}
@@ -778,7 +794,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                     </div>
 
                                     {/* قائمة التحليل الذكي */}
-                                    <div className="lmw-analysis-dropdown-wrapper" ref={analysisMenuRef}>
+                                    <div className="lmw-analysis-dropdown-wrapper" ref={analysisMenuRef} data-tour="memo-analysis">
                                         <button
                                             className={`lmw-btn lmw-btn-analysis ${showAnalysisMenu ? 'active' : ''}`}
                                             onClick={() => setShowAnalysisMenu(!showAnalysisMenu)}
@@ -819,6 +835,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
 
                                     {/* زر الحفظ */}
                                     <button
+                                        data-tour="memo-save"
                                         className={`lmw-btn lmw-btn-save ${hasUnsavedChanges ? 'has-changes' : ''}`}
                                         onClick={handleSave}
                                         disabled={loading || !title.trim()}
@@ -845,7 +862,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                     <div className="lmw-content">
                         {step === 'select_type' ? (
                             /* اختيار نوع المذكرة */
-                            <div className="lmw-type-selector">
+                            <div className="lmw-type-selector" data-tour="memo-types">
                                 <div className="lmw-type-header">
                                     <FileText size={32} />
                                     <h2>إنشاء مذكرة قانونية</h2>
@@ -888,7 +905,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                             /* المحرر */
                             <div className="lmw-editor-layout">
                                 {/* Sidebar */}
-                                <aside className={`lmw-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+                                <aside className={`lmw-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`} data-tour="memo-sidebar">
                                     <button
                                         className="lmw-sidebar-toggle"
                                         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}

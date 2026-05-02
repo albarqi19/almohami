@@ -553,7 +553,7 @@ const Cases: React.FC = () => {
 						<span>القضايا</span>
 						<span className="cases-header-bar__count">{stats.total}</span>
 					</div>
-					<div className="cases-header-bar__stats">
+					<div className="cases-header-bar__stats" data-tour="cases-stats">
 						<span className="stat-pill stat-pill--active">
 							<span className="stat-pill__dot" />
 							{stats.active} نشطة
@@ -571,7 +571,7 @@ const Cases: React.FC = () => {
 
 				{/* Center: Search + Filters */}
 				<div className="cases-header-bar__center">
-					<div className="search-box">
+					<div className="search-box" data-tour="cases-search">
 						<Search size={16} />
 						<input
 							type="text"
@@ -588,6 +588,7 @@ const Cases: React.FC = () => {
 
 					<select
 						className="filter-select"
+						data-tour="cases-filter-status"
 						value={statusFilter}
 						onChange={(e) => setStatusFilter(e.target.value as any)}
 					>
@@ -600,6 +601,7 @@ const Cases: React.FC = () => {
 
 					<select
 						className="filter-select"
+						data-tour="cases-filter-type"
 						value={typeFilter}
 						onChange={(e) => setTypeFilter(e.target.value as any)}
 					>
@@ -621,7 +623,7 @@ const Cases: React.FC = () => {
 
 				{/* Left: View Switcher + Add Button */}
 				<div className="cases-header-bar__end">
-					<div className="view-tabs">
+					<div className="view-tabs" data-tour="cases-view-tabs">
 						<button
 							className={`view-tab ${viewMode === 'table' ? 'view-tab--active' : ''}`}
 							onClick={() => setViewMode('table')}
@@ -642,7 +644,7 @@ const Cases: React.FC = () => {
 						</button>
 					</div>
 
-					<button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
+					<button className="btn-primary" data-tour="cases-add" onClick={() => setIsAddModalOpen(true)}>
 						<Plus size={16} />
 						<span>قضية جديدة</span>
 					</button>
@@ -675,11 +677,11 @@ const Cases: React.FC = () => {
 						</button>
 					</div>
 				) : (
-					<>
+					<div data-tour="cases-list">
 						{viewMode === 'table' && renderTable()}
 						{viewMode === 'grid' && renderGrid()}
 						{viewMode === 'kanban' && renderKanban()}
-					</>
+					</div>
 				)
 			}
 

@@ -18,8 +18,10 @@ import {
   AlertCircle,
   Brain,
   Trash2,
-  Sparkles
+  Sparkles,
+  HelpCircle
 } from 'lucide-react';
+import { useModalTour } from '../hooks/useModalTour';
 import Modal from './Modal';
 import DocumentPreviewModal from './DocumentPreviewModal';
 import SmartUploadModal from './SmartUploadModal';
@@ -85,6 +87,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   caseType,
   parties
 }) => {
+  const { startTour, hasTour } = useModalTour('modal:case-documents', isOpen);
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [memos, setMemos] = useState<LegalMemo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -509,7 +512,35 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   return (
     <>
       {console.log('CaseDocumentsModal render:', { isOpen, caseId, caseTitle })} {/* للتشخيص */}
-      <Modal isOpen={isOpen} onClose={onClose} size="xl" title={`وثائق القضية${caseTitle ? ' — ' + caseTitle : ''}`}>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        size="xl"
+        title={`وثائق القضية${caseTitle ? ' — ' + caseTitle : ''}`}
+        headerActions={hasTour ? (
+          <button
+            data-tour="docs-help-btn"
+            onClick={startTour}
+            title="جولة تعريفية بالنافذة"
+            aria-label="جولة تعريفية"
+            style={{
+              padding: '4px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: 'var(--color-text-secondary)',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-primary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
+          >
+            <HelpCircle size={15} />
+          </button>
+        ) : null}
+      >
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -526,19 +557,19 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
             gap: '8px'
           }}>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <button onClick={() => setShowCloudPicker(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'transparent', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
+              <button data-tour="docs-cloud" onClick={() => setShowCloudPicker(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'transparent', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.color = 'var(--color-primary)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 ملف سحابي
               </button>
-              <button onClick={() => setShowSmartUpload(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'var(--color-primary)', color: 'white', border: '1px solid var(--color-primary)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
+              <button data-tour="docs-upload" onClick={() => setShowSmartUpload(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'var(--color-primary)', color: 'white', border: '1px solid var(--color-primary)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
                 onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}>
                 <Upload size={14} />
                 رفع وثيقة ذكي
               </button>
-              <button onClick={() => { setEditingMemo(null); setShowCreateMemo(true); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'transparent', color: 'var(--color-success)', border: '1px solid var(--color-success)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
+              <button data-tour="docs-memo" onClick={() => { setEditingMemo(null); setShowCreateMemo(true); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'transparent', color: 'var(--color-success)', border: '1px solid var(--color-success)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-success)'; e.currentTarget.style.color = 'white'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-success)'; }}>
                 <FileText size={14} />

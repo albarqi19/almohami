@@ -169,9 +169,23 @@ export class TaskService {
 
   static async archiveTask(taskId: string): Promise<void> {
     const response = await apiClient.put<ApiResponse>(`/tasks/${taskId}/archive`, {});
-    
+
     if (!response.success) {
       throw new Error(response.message || 'فشل في أرشفة المهمة');
+    }
+  }
+
+  /**
+   * إعادة ترتيب مهام داخل قضية. يُرسل قائمة معرّفات المهام بالترتيب الجديد.
+   */
+  static async reorderInCase(caseId: string, orderedTaskIds: string[]): Promise<void> {
+    const response = await apiClient.post<ApiResponse>(
+      `/cases/${caseId}/tasks/reorder`,
+      { order: orderedTaskIds.map((id) => Number(id)) }
+    );
+
+    if (!response.success) {
+      throw new Error(response.message || 'فشل في إعادة ترتيب المهام');
     }
   }
 }

@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { TenantProvider, useTenant } from './contexts/TenantContext';
 import { TimerProvider } from './contexts/TimerContext';
+import { AnnouncementProvider } from './contexts/AnnouncementContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthLayout from './components/AuthLayout';
 import Layout from './components/Layout';
@@ -78,6 +79,7 @@ function App() {
   return (
     <TenantProvider>
       <AuthProvider>
+        <AnnouncementProvider>
         <SubscriptionProvider>
           <UpdateBanner />
           <Router>
@@ -313,6 +315,7 @@ function App() {
           </Router>
           <ToastContainer position="bottom-left" rtl autoClose={3000} hideProgressBar={false} closeOnClick pauseOnHover theme="light" />
         </SubscriptionProvider>
+        </AnnouncementProvider>
       </AuthProvider>
     </TenantProvider>
   );

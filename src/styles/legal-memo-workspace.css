@@ -1455,3 +1455,172 @@
 .dark .lmw-saved-name {
     color: #f3f4f6;
 }
+
+/* ============================================================
+   ERP DENSE OVERRIDES — TYPE SELECTOR ONLY
+   --------------------------------------------------------------
+   Activated by .erp-mode on the .legal-memo-workspace root, which
+   is added only while step === 'select_type'. Editor step keeps
+   the original Notion-style design untouched.
+   ============================================================ */
+
+.legal-memo-workspace.erp-mode {
+    max-width: 1100px;
+    height: auto;
+    max-height: 85vh;
+}
+
+.legal-memo-workspace.erp-mode .lmw-content {
+    flex: 0 0 auto;
+}
+
+/* ----- Type Selector (step 1) ----- */
+.legal-memo-workspace.erp-mode .lmw-type-selector {
+    padding: 14px 18px;
+    max-width: 100%;
+    margin: 0;
+}
+
+.legal-memo-workspace.erp-mode .lmw-type-header {
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+    margin-bottom: 14px;
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    grid-template-areas:
+        "icon title desc"
+        "badge badge badge";
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 8px;
+    text-align: start;
+}
+
+.legal-memo-workspace.erp-mode .lmw-type-header > svg {
+    grid-area: icon;
+    width: 18px;
+    height: 18px;
+    color: var(--color-primary, #2563eb);
+    flex-shrink: 0;
+}
+
+.legal-memo-workspace.erp-mode .lmw-type-header h2 {
+    grid-area: title;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--color-text, #111827);
+    white-space: nowrap;
+}
+
+.legal-memo-workspace.erp-mode .lmw-type-header p {
+    grid-area: desc;
+    font-size: 12px;
+    color: var(--color-text-secondary, #6b7280);
+    margin: 0;
+}
+
+.legal-memo-workspace.erp-mode .lmw-case-badge {
+    grid-area: badge;
+    justify-self: start;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    background: var(--color-surface-subtle, #eff6ff);
+    color: var(--color-primary, #2563eb);
+    border: 1px solid var(--color-border, #bfdbfe);
+    gap: 4px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.legal-memo-workspace.erp-mode .lmw-case-badge svg {
+    width: 11px;
+    height: 11px;
+}
+
+.legal-memo-workspace.erp-mode .lmw-categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 8px;
+}
+
+.legal-memo-workspace.erp-mode .lmw-category-card {
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--color-surface, #ffffff);
+    box-shadow: none;
+    transition: border-color 0.1s;
+}
+
+.legal-memo-workspace.erp-mode .lmw-category-card:hover {
+    border-color: var(--color-primary, #93c5fd);
+}
+
+.legal-memo-workspace.erp-mode .lmw-category-header {
+    padding: 6px 10px;
+    background: var(--color-surface-subtle, #f9fafb);
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+    border-inline-start: 3px solid;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.legal-memo-workspace.erp-mode .lmw-category-icon {
+    font-size: 14px;
+}
+
+.legal-memo-workspace.erp-mode .lmw-category-name {
+    color: var(--color-text, #111827);
+}
+
+.legal-memo-workspace.erp-mode .lmw-category-types {
+    padding: 4px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.legal-memo-workspace.erp-mode .lmw-type-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--color-text, #111827);
+    background: transparent;
+    border: none;
+    text-align: start;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.08s;
+    border-radius: 0;
+}
+
+.legal-memo-workspace.erp-mode .lmw-type-btn:hover {
+    background: var(--color-surface-subtle, #f3f4f6);
+}
+
+.legal-memo-workspace.erp-mode .lmw-type-btn svg {
+    width: 11px;
+    height: 11px;
+    color: var(--color-text-secondary, #9ca3af);
+    flex-shrink: 0;
+}
+
+/* ----- Dark mode polish (type selector only) ----- */
+body.dark .legal-memo-workspace.erp-mode .lmw-category-header {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+body.dark .legal-memo-workspace.erp-mode .lmw-type-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 900px) {
+    .legal-memo-workspace.erp-mode .lmw-categories-grid {
+        grid-template-columns: 1fr;
+    }
+}

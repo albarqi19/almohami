@@ -4,6 +4,7 @@ import { apiClient } from '../utils/api';
 import { destroyEcho } from '../lib/echo';
 import { queryClient } from '../main';
 import type { User } from '../types';
+import { collectTourKeys, restoreTourKeys } from '../utils/tourStorage';
 
 interface LoginResult {
   success: boolean;
@@ -68,8 +69,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔐 AuthContext: login() called');
     setIsLoading(true);
 
-    // Preserve theme preference before clearing cache
+    // Preserve theme preference and tour completion flags before clearing cache
     const savedTheme = localStorage.getItem('theme');
+    const savedTours = collectTourKeys();
 
     // Clear any cached data from previous user for security
     localStorage.clear();
@@ -77,10 +79,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 🔐 مسح cache الـ TanStack Query لمنع تسرب البيانات بين المستأجرين
     queryClient.clear();
 
-    // Restore theme preference
+    // Restore theme preference and tour completion flags
     if (savedTheme) {
       localStorage.setItem('theme', savedTheme);
     }
+    restoreTourKeys(savedTours);
 
     try {
       console.log('🔐 AuthContext: Calling AuthService.login()...');
@@ -141,8 +144,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     setIsLoading(true);
 
-    // Preserve theme preference before clearing cache
+    // Preserve theme preference and tour completion flags before clearing cache
     const savedTheme = localStorage.getItem('theme');
+    const savedTours = collectTourKeys();
 
     // إنهاء جلسة الحضور وقطع اتصال Reverb
     apiClient.post('/presence/end-session').catch(() => {});
@@ -159,10 +163,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 🔐 مسح cache الـ TanStack Query لمنع تسرب البيانات بين المستأجرين
       queryClient.clear();
 
-      // Restore theme preference
+      // Restore theme preference and tour completion flags
       if (savedTheme) {
         localStorage.setItem('theme', savedTheme);
       }
+      restoreTourKeys(savedTours);
 
       // Clear apiClient token
       apiClient.setToken(null);

@@ -11,6 +11,11 @@ import PresenceTracker from './PresenceTracker';
 import CompanyPolicyModal from './CompanyPolicyModal';
 import SubscriptionBanner from './SubscriptionBanner';
 import BottomActionBar from './BottomActionBar';
+import TourLoader from './TourLoader';
+import AnnouncementBanner from './announcements/AnnouncementBanner';
+import AnnouncementTicker from './announcements/AnnouncementTicker';
+import AnnouncementModal from './announcements/AnnouncementModal';
+import AnnouncementToast from './announcements/AnnouncementToast';
 import { useAuth } from '../contexts/AuthContext';
 import { usePolicyCheck } from '../hooks/usePolicyCheck';
 
@@ -123,6 +128,9 @@ const Layout: React.FC = () => {
           {/* ClickUp Header */}
           <ClickUpHeader onMenuClick={handleMenuClick} />
 
+          {/* Top announcement banners (channel: banner) */}
+          <AnnouncementBanner />
+
           {/* Page Content - Scrollable */}
           <main
             id="main-content"
@@ -135,8 +143,15 @@ const Layout: React.FC = () => {
             <Outlet />
           </main>
 
+          {/* Announcement ticker (channel: ticker) — shown above admin status bar */}
+          <AnnouncementTicker />
+
           {/* Bottom Action Bar - status chips for non-client users */}
           <BottomActionBar />
+
+          {/* Announcement modal + toast channels (portal-style overlays) */}
+          <AnnouncementModal />
+          <AnnouncementToast />
 
           {/* Floating Timer Widget */}
           <FloatingTimer />
@@ -154,6 +169,9 @@ const Layout: React.FC = () => {
 
           {/* Presence Tracker - Invisible component for tracking lawyer activity */}
           <PresenceTracker />
+
+          {/* Tour Loader - Invisible component that auto-runs first-time tours per route */}
+          <TourLoader />
         </div>
 
         <style>{`

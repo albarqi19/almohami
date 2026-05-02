@@ -248,6 +248,20 @@ export interface Task {
   actualHours?: number;
   tags?: string[];
   notes?: string;
+  sort_order?: number;
+  subtasks?: Array<{
+    id: string | number;
+    title: string;
+    description?: string | null;
+    is_completed: boolean;
+    order: number;
+    assigned_to?: number | string | null;
+    assignee?: { id: string | number; name: string } | null;
+  }>;
+  subtasks_total?: number;
+  subtasks_completed?: number;
+  comments_count?: number;
+  assignee?: { id: string | number; name: string } | null;
 }
 
 export const TaskStatus = {

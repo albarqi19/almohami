@@ -18,7 +18,9 @@ import {
   FileText,
   Scale,
   CheckSquare,
-  Clock
+  Clock,
+  HelpCircle,
+  PlayCircle
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -28,6 +30,9 @@ import { AddWekalaModal } from './AddWekalaModal';
 import AddTaskModal from './AddTaskModal';
 import AddServiceModal from './legal-services/AddServiceModal';
 import GlobalSearchModal from './GlobalSearchModal';
+import { useTour } from '../hooks/useTour';
+import { getTourForPath } from '../data/pageTours';
+import { resetTour } from '../utils/tourStorage';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -65,11 +70,23 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [showSearch, setShowSearch] = React.useState(false);
   const [showQuickAdd, setShowQuickAdd] = React.useState(false);
+  const [showHelp, setShowHelp] = React.useState(false);
   const [activeModal, setActiveModal] = React.useState<QuickAddModal>(null);
 
   const profileMenuRef = React.useRef<HTMLDivElement | null>(null);
   const notificationsRef = React.useRef<HTMLDivElement | null>(null);
   const quickAddRef = React.useRef<HTMLDivElement | null>(null);
+  const helpRef = React.useRef<HTMLDivElement | null>(null);
+
+  const { runTour } = useTour();
+  const currentTour = getTourForPath(location.pathname);
+
+  const handleStartTour = () => {
+    if (!currentTour) return;
+    setShowHelp(false);
+    resetTour(currentTour.key);
+    runTour(currentTour, { force: true });
+  };
 
   // Apply theme on mount and change
   React.useEffect(() => {
@@ -139,6 +156,9 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
       }
       if (notificationsRef.current && !notificationsRef.current.contains(target)) {
         setShowNotifications(false);
+      }
+      if (helpRef.current && !helpRef.current.contains(target)) {
+        setShowHelp(false);
       }
       if (quickAddRef.current && !quickAddRef.current.contains(target)) {
         setShowQuickAdd(false);
@@ -279,6 +299,47 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
                       isOpen={showNotifications}
                       onClose={() => setShowNotifications(false)}
                     />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Help / Tours */}
+            <div className="clickup-header__icon-wrapper" ref={helpRef}>
+              <button
+                type="button"
+                className="clickup-header__icon-btn"
+                onClick={() => setShowHelp(!showHelp)}
+                aria-label="المساعدة والشرح"
+                title="المساعدة والشرح"
+              >
+                <HelpCircle size={18} />
+              </button>
+
+              <AnimatePresence>
+                {showHelp && (
+                  <motion.div
+                    className="clickup-header__dropdown clickup-header__dropdown--help"
+                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <div className="quickadd-title">المساعدة</div>
+                    <button
+                      type="button"
+                      className="quickadd-item"
+                      onClick={handleStartTour}
+                      disabled={!currentTour}
+                      style={{ opacity: currentTour ? 1 : 0.5, cursor: currentTour ? 'pointer' : 'not-allowed' }}
+                    >
+                      <span className="quickadd-item__icon" style={{ color: '#10b981' }}>
+                        <PlayCircle size={16} />
+                      </span>
+                      <span className="quickadd-item__label">
+                        {currentTour ? `جولة ${currentTour.pageLabel}` : 'لا توجد جولة لهذه الصفحة بعد'}
+                      </span>
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -522,13 +583,18 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
           transition: transform 0.2s ease;
         }
 
-        .clickup-header__dropdown--quickadd {
+        .clickup-header__dropdown--quickadd,
+        .clickup-header__dropdown--help {
           width: auto;
           min-width: fit-content;
           white-space: nowrap;
           padding: 6px 0;
           left: auto;
           right: 0;
+        }
+
+        .quickadd-item:disabled {
+          pointer-events: none;
         }
 
         .quickadd-title {

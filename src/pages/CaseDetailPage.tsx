@@ -360,7 +360,7 @@ const CaseDetailPage: React.FC = () => {
           </Link>
 
           {/* Title Section */}
-          <div className="case-detail-header__title-section">
+          <div className="case-detail-header__title-section" data-tour="case-title">
             <div className="case-detail-header__title">
               <FileText size={18} />
               {caseData.title}
@@ -384,9 +384,10 @@ const CaseDetailPage: React.FC = () => {
           </div>
 
           {/* Quick Tabs */}
-          <div className="case-header-tabs">
+          <div className="case-header-tabs" data-tour="case-tabs">
             <button
               className="case-header-tab"
+              data-tour="case-memo-btn"
               onClick={() => setShowMemoWorkspace(true)}
             >
               <span className="case-header-tab__icon case-header-tab__icon--teal">
@@ -424,7 +425,7 @@ const CaseDetailPage: React.FC = () => {
           </div>
 
           {/* Actions */}
-          <div className="case-detail-header__actions">
+          <div className="case-detail-header__actions" data-tour="case-actions">
             <button onClick={() => setShowEditModal(true)} className="case-header-btn case-header-btn--primary">
               <Edit size={16} />
               <span>تعديل</span>
@@ -457,7 +458,7 @@ const CaseDetailPage: React.FC = () => {
       {/* Two Column Layout */}
       <div className="case-detail-layout">
         {/* Main Content */}
-        <div className="case-main-content">
+        <div className="case-main-content" data-tour="case-main-content">
           {/* Najiz Link */}
           {caseData.najiz_url && (
             <div className="case-najiz-link">
@@ -570,7 +571,7 @@ const CaseDetailPage: React.FC = () => {
 
           {/* Sessions Section */}
           {caseData.sessions && caseData.sessions.length > 0 && (
-            <div className="case-card">
+            <div className="case-card" data-tour="case-sessions-section">
               <div className="case-card__header">
                 <div className="case-card__title">
                   <Calendar size={16} />
@@ -672,7 +673,7 @@ const CaseDetailPage: React.FC = () => {
           )}
 
           {/* Timeline Section */}
-          <div className="case-timeline-section">
+          <div className="case-timeline-section" data-tour="case-timeline">
             <div className="case-timeline-header">
               <div className="case-timeline-header__title">
                 <Activity size={16} />
@@ -693,7 +694,7 @@ const CaseDetailPage: React.FC = () => {
         <div className="case-sidebar">
 
           {/* Quick Overview */}
-          <div className="case-card">
+          <div className="case-card" data-tour="case-overview">
             <div className="case-card__header">
               <div className="case-card__title">
                 <Hash size={16} />
@@ -778,7 +779,7 @@ const CaseDetailPage: React.FC = () => {
           </div>
 
           {/* Fees */}
-          <div className="case-card">
+          <div className="case-card" data-tour="case-fees-section">
             <div className="case-card__header">
               <div className="case-card__title">
                 <DollarSign size={16} />

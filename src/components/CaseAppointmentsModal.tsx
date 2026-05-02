@@ -3,25 +3,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Calendar,
-  Clock,
   MapPin,
-  Users,
   Plus,
   Edit3,
   CheckCircle,
   XCircle,
   Play,
-  FileText,
   Video,
-  Building2,
   Gavel,
-  ExternalLink,
-  RefreshCw,
-  CalendarClock
+  CalendarClock,
+  HelpCircle
 } from 'lucide-react';
 import { appointmentService } from '../services/appointmentService';
 import { AddAppointmentModal } from './AddAppointmentModal';
-import type { Appointment, AppointmentType, AppointmentStatus, Case, CaseSession } from '../types';
+import { useModalTour } from '../hooks/useModalTour';
+import type { Appointment, AppointmentType, AppointmentStatus, Case } from '../types';
 import '../styles/case-appointments-modal.css';
 
 interface CaseAppointmentsModalProps {
@@ -30,23 +26,19 @@ interface CaseAppointmentsModalProps {
   caseData: Case;
 }
 
-type TabType = 'sessions' | 'appointments';
-
 export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
   isOpen,
   onClose,
   caseData
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('sessions');
+  const { startTour, hasTour } = useModalTour('modal:case-appointments', isOpen);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // جلسات ناجز من بيانات القضية
   const sessions = caseData.sessions || [];
 
-  // جلب المواعيد عند فتح النافذة
   useEffect(() => {
     if (isOpen && caseData.id) {
       fetchAppointments();
@@ -59,8 +51,8 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
       setError(null);
       const data = await appointmentService.getCaseAppointments(parseInt(caseData.id));
       setAppointments(data);
-    } catch (error) {
-      console.error('Error fetching appointments:', error);
+    } catch (err) {
+      console.error('Error fetching appointments:', err);
       setError('فشل في تحميل المواعيد');
       setAppointments([]);
     } finally {
@@ -68,7 +60,6 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
     }
   };
 
-  // تنسيق التاريخ
   const formatDateTime = (dateTime: Date | string) => {
     const date = dateTime instanceof Date ? dateTime : new Date(dateTime);
     return {
@@ -77,15 +68,13 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
     };
   };
 
-  // تنسيق المدة
   const formatDuration = (minutes: number) => {
-    if (minutes < 60) return `${minutes} دقيقة`;
+    if (minutes < 60) return `${minutes}د`;
     const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0 ? `${hours} ساعة و ${remainingMinutes} دقيقة` : `${hours} ساعة`;
+    const remaining = minutes % 60;
+    return remaining > 0 ? `${hours}س ${remaining}د` : `${hours}س`;
   };
 
-  // ترجمة نوع الموعد
   const getAppointmentTypeLabel = (type: AppointmentType): string => {
     const types: Record<AppointmentType, string> = {
       court_hearing: 'جلسة محكمة',
@@ -101,7 +90,6 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
     return types[type];
   };
 
-  // ترجمة حالة الموعد
   const getAppointmentStatusLabel = (status: AppointmentStatus): string => {
     const statuses: Record<AppointmentStatus, string> = {
       scheduled: 'مجدول',
@@ -115,15 +103,16 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
     return statuses[status];
   };
 
-  // لون حالة الجلسة
   const getSessionStatusStyle = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'scheduled':
       case 'مجدولة':
+      case 'جديدة':
         return { bg: '#eff6ff', color: '#2563eb', label: 'مجدولة' };
       case 'completed':
       case 'مكتملة':
-        return { bg: '#ecfdf5', color: '#059669', label: 'مكتملة' };
+      case 'منتهية':
+        return { bg: '#ecfdf5', color: '#059669', label: 'منتهية' };
       case 'postponed':
       case 'مؤجلة':
         return { bg: '#fff7ed', color: '#ea580c', label: 'مؤجلة' };
@@ -135,7 +124,6 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
     }
   };
 
-  // لون حالة الموعد
   const getAppointmentStatusStyle = (status: AppointmentStatus) => {
     const styles: Record<AppointmentStatus, { bg: string; color: string }> = {
       scheduled: { bg: '#eff6ff', color: '#2563eb' },
@@ -149,44 +137,21 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
     return styles[status];
   };
 
-  // تأكيد موعد
-  const handleConfirmAppointment = async (appointmentId: string) => {
-    try {
-      await appointmentService.confirmAppointment(parseInt(appointmentId));
-      fetchAppointments();
-    } catch (error) {
-      console.error('Error confirming appointment:', error);
-    }
+  const handleConfirmAppointment = async (id: string) => {
+    try { await appointmentService.confirmAppointment(parseInt(id)); fetchAppointments(); }
+    catch (e) { console.error(e); }
   };
-
-  // إلغاء موعد
-  const handleCancelAppointment = async (appointmentId: string) => {
-    try {
-      await appointmentService.cancelAppointment(parseInt(appointmentId), 'تم الإلغاء');
-      fetchAppointments();
-    } catch (error) {
-      console.error('Error cancelling appointment:', error);
-    }
+  const handleCancelAppointment = async (id: string) => {
+    try { await appointmentService.cancelAppointment(parseInt(id), 'تم الإلغاء'); fetchAppointments(); }
+    catch (e) { console.error(e); }
   };
-
-  // بدء موعد
-  const handleStartAppointment = async (appointmentId: string) => {
-    try {
-      await appointmentService.startAppointment(parseInt(appointmentId));
-      fetchAppointments();
-    } catch (error) {
-      console.error('Error starting appointment:', error);
-    }
+  const handleStartAppointment = async (id: string) => {
+    try { await appointmentService.startAppointment(parseInt(id)); fetchAppointments(); }
+    catch (e) { console.error(e); }
   };
-
-  // إكمال موعد
-  const handleCompleteAppointment = async (appointmentId: string) => {
-    try {
-      await appointmentService.completeAppointment(parseInt(appointmentId));
-      fetchAppointments();
-    } catch (error) {
-      console.error('Error completing appointment:', error);
-    }
+  const handleCompleteAppointment = async (id: string) => {
+    try { await appointmentService.completeAppointment(parseInt(id)); fetchAppointments(); }
+    catch (e) { console.error(e); }
   };
 
   if (!isOpen) return null;
@@ -201,310 +166,243 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
         onClick={onClose}
       >
         <motion.div
-          className="cam-modal"
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="cam-modal cam-modal--erp"
+          initial={{ opacity: 0, scale: 0.97, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          exit={{ opacity: 0, scale: 0.97, y: 8 }}
+          transition={{ type: 'spring', damping: 26, stiffness: 320 }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="cam-header">
-            <div className="cam-header-title">
-              <div className="cam-icon-wrapper">
-                <CalendarClock size={22} />
-              </div>
-              <div className="cam-title-text">
-                <h2>الجلسات والمواعيد</h2>
-                <p>{caseData.title}</p>
-              </div>
+          {/* Compact Header */}
+          <div className="cam-erp-header">
+            <div className="cam-erp-header__title">
+              <CalendarClock size={14} />
+              <span>الجلسات والمواعيد</span>
+              {caseData.title && <span className="cam-erp-header__subtitle">— {caseData.title}</span>}
             </div>
-            <button className="cam-close-btn" onClick={onClose}>
-              <X size={20} />
-            </button>
+            <div className="cam-erp-header__actions">
+              {hasTour && (
+                <button
+                  data-tour="appts-help-btn"
+                  className="cam-erp-icon-btn"
+                  onClick={startTour}
+                  title="جولة تعريفية"
+                  aria-label="جولة تعريفية"
+                >
+                  <HelpCircle size={14} />
+                </button>
+              )}
+              <button className="cam-erp-icon-btn" onClick={onClose} aria-label="إغلاق">
+                <X size={14} />
+              </button>
+            </div>
           </div>
 
-          {/* Tabs */}
-          <div className="cam-tabs">
-            <button
-              className={`cam-tab ${activeTab === 'sessions' ? 'active' : ''}`}
-              onClick={() => setActiveTab('sessions')}
-            >
-              <Gavel size={16} />
-              <span>جلسات ناجز</span>
-              {sessions.length > 0 && (
-                <span className="cam-tab-badge">{sessions.length}</span>
-              )}
-            </button>
-            <button
-              className={`cam-tab ${activeTab === 'appointments' ? 'active' : ''}`}
-              onClick={() => setActiveTab('appointments')}
-            >
-              <Calendar size={16} />
-              <span>المواعيد</span>
-              {appointments.length > 0 && (
-                <span className="cam-tab-badge">{appointments.length}</span>
-              )}
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="cam-content">
-            {/* Sessions Tab */}
-            {activeTab === 'sessions' && (
-              <div className="cam-tab-content">
-                {sessions.length === 0 ? (
-                  <div className="cam-empty-state">
-                    <div className="cam-empty-icon">
-                      <Gavel size={48} />
-                    </div>
-                    <h3>لا توجد جلسات</h3>
-                    <p>لم يتم استيراد أي جلسات من ناجز لهذه القضية</p>
-                    {caseData.najiz_url && (
-                      <a
-                        href={caseData.najiz_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="cam-najiz-link"
-                      >
-                        <ExternalLink size={16} />
-                        <span>فتح في ناجز</span>
-                      </a>
-                    )}
-                  </div>
-                ) : (
-                  <div className="cam-sessions-list">
-                    {sessions.map((session, index) => {
-                      const statusStyle = getSessionStatusStyle(session.status);
-                      return (
-                        <div key={session.id || index} className="cam-session-card">
-                          <div className="cam-session-header">
-                            <div className="cam-session-type">
-                              {session.is_video_conference ? (
-                                <Video size={18} className="cam-icon-video" />
-                              ) : (
-                                <Building2 size={18} />
-                              )}
-                              <span>{session.session_type || 'جلسة'}</span>
-                            </div>
-                            <span
-                              className="cam-status-badge"
-                              style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}
-                            >
-                              {statusStyle.label}
-                            </span>
-                          </div>
-
-                          <div className="cam-session-details">
-                            <div className="cam-detail-row">
-                              <Calendar size={14} />
-                              <span>{session.session_date || 'غير محدد'}</span>
-                              {session.session_time && (
-                                <>
-                                  <Clock size={14} />
-                                  <span>{session.session_time}</span>
-                                </>
-                              )}
-                            </div>
-
-                            {session.court && (
-                              <div className="cam-detail-row">
-                                <Building2 size={14} />
-                                <span>{session.court}</span>
-                                {session.department && <span className="cam-dept">- {session.department}</span>}
-                              </div>
-                            )}
-
-                            {session.location && (
-                              <div className="cam-detail-row">
-                                <MapPin size={14} />
-                                <span>{session.location}</span>
-                              </div>
-                            )}
-
-                            {session.method && (
-                              <div className="cam-detail-row cam-method">
-                                <span>طريقة الحضور:</span>
-                                <span className="cam-method-value">{session.method}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          {session.notes && (
-                            <div className="cam-session-notes">
-                              <span className="cam-notes-label">ملاحظات:</span>
-                              <p>{session.notes}</p>
-                            </div>
-                          )}
-
-                          {session.result && (
-                            <div className="cam-session-result">
-                              <span className="cam-result-label">النتيجة:</span>
-                              <p>{session.result}</p>
-                            </div>
-                          )}
-
-                          {session.video_conference_url && (
-                            <a
-                              href={session.video_conference_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="cam-video-link"
-                            >
-                              <Video size={16} />
-                              <span>انضمام للجلسة المرئية</span>
-                            </a>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+          {/* Body */}
+          <div className="cam-erp-body" data-tour="appts-content">
+            {/* Section 1: Najiz Sessions */}
+            <section className="cam-erp-section" data-tour="appts-sessions">
+              <div className="cam-erp-section__header">
+                <Gavel size={12} />
+                <span className="cam-erp-section__title">جلسات ناجز</span>
+                <span className="cam-erp-section__count">{sessions.length}</span>
               </div>
-            )}
-
-            {/* Appointments Tab */}
-            {activeTab === 'appointments' && (
-              <div className="cam-tab-content">
-                {/* Add Button */}
-                <div className="cam-add-section">
-                  <button className="cam-add-btn" onClick={() => setShowAddForm(true)}>
-                    <Plus size={18} />
-                    <span>إضافة موعد جديد</span>
-                  </button>
+              {sessions.length === 0 ? (
+                <div className="cam-erp-empty">لا توجد جلسات مستوردة من ناجز.</div>
+              ) : (
+                <div className="cam-erp-table-wrap">
+                  <table className="cam-erp-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '18%' }}>التاريخ والوقت</th>
+                        <th style={{ width: '22%' }}>النوع</th>
+                        <th style={{ width: '28%' }}>المحكمة / الإدارة</th>
+                        <th style={{ width: '14%' }}>الحالة</th>
+                        <th style={{ width: '18%' }}>إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sessions.map((session, index) => {
+                        const statusStyle = getSessionStatusStyle(session.status);
+                        return (
+                          <tr key={session.id || index}>
+                            <td>
+                              <div className="cam-erp-cell__primary">{session.session_date || '—'}</div>
+                              {session.session_time && (
+                                <div className="cam-erp-cell__sub">{session.session_time}</div>
+                              )}
+                            </td>
+                            <td>
+                              <div className="cam-erp-cell__primary">{session.session_type || 'جلسة'}</div>
+                              {session.is_video_conference && (
+                                <div className="cam-erp-cell__sub cam-erp-cell__sub--accent">
+                                  <Video size={10} /> مرئية
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <div className="cam-erp-cell__primary">{session.court || '—'}</div>
+                              {session.department && (
+                                <div className="cam-erp-cell__sub">{session.department}</div>
+                              )}
+                            </td>
+                            <td>
+                              <span
+                                className="cam-erp-status"
+                                style={{ background: statusStyle.bg, color: statusStyle.color }}
+                              >
+                                {statusStyle.label}
+                              </span>
+                            </td>
+                            <td>
+                              {session.video_conference_url ? (
+                                <a
+                                  href={session.video_conference_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="cam-erp-btn cam-erp-btn--primary"
+                                >
+                                  <Video size={11} /> انضمام
+                                </a>
+                              ) : (
+                                <span className="cam-erp-cell__sub">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
+              )}
+            </section>
 
-                {loading ? (
-                  <div className="cam-loading">
-                    <RefreshCw size={24} className="cam-spinner" />
-                    <span>جاري تحميل المواعيد...</span>
-                  </div>
-                ) : error ? (
-                  <div className="cam-error">
-                    <p>{error}</p>
-                    <button onClick={fetchAppointments} className="cam-retry-btn">
-                      إعادة المحاولة
-                    </button>
-                  </div>
-                ) : appointments.length === 0 ? (
-                  <div className="cam-empty-state">
-                    <div className="cam-empty-icon">
-                      <Calendar size={48} />
-                    </div>
-                    <h3>لا توجد مواعيد</h3>
-                    <p>لم يتم إضافة أي مواعيد لهذه القضية بعد</p>
-                    <button className="cam-add-first-btn" onClick={() => setShowAddForm(true)}>
-                      <Plus size={18} />
-                      <span>إضافة أول موعد</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="cam-appointments-list">
-                    {appointments.map((appointment) => {
-                      const { date, time } = formatDateTime(appointment.scheduled_at);
-                      const statusStyle = getAppointmentStatusStyle(appointment.status);
+            {/* Section 2: Manual Appointments */}
+            <section className="cam-erp-section" data-tour="appts-appointments">
+              <div className="cam-erp-section__header">
+                <Calendar size={12} />
+                <span className="cam-erp-section__title">المواعيد</span>
+                <span className="cam-erp-section__count">{appointments.length}</span>
+                <button
+                  className="cam-erp-btn cam-erp-btn--primary cam-erp-section__add"
+                  onClick={() => setShowAddForm(true)}
+                >
+                  <Plus size={11} /> موعد جديد
+                </button>
+              </div>
 
-                      return (
-                        <div key={appointment.id} className="cam-appointment-card">
-                          <div className="cam-appointment-header">
-                            <div className="cam-appointment-title">
-                              <h4>{appointment.title}</h4>
-                              <span className="cam-appointment-type">
+              {loading ? (
+                <div className="cam-erp-empty">جارٍ التحميل…</div>
+              ) : error ? (
+                <div className="cam-erp-empty cam-erp-empty--error">
+                  {error}{' '}
+                  <button className="cam-erp-link" onClick={fetchAppointments}>إعادة المحاولة</button>
+                </div>
+              ) : appointments.length === 0 ? (
+                <div className="cam-erp-empty">لم يتم إضافة مواعيد بعد.</div>
+              ) : (
+                <div className="cam-erp-table-wrap">
+                  <table className="cam-erp-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '26%' }}>العنوان والمكان</th>
+                        <th style={{ width: '14%' }}>النوع</th>
+                        <th style={{ width: '18%' }}>التاريخ والوقت</th>
+                        <th style={{ width: '10%' }}>المدة</th>
+                        <th style={{ width: '12%' }}>الحالة</th>
+                        <th style={{ width: '20%' }}>إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {appointments.map((appointment) => {
+                        const { date, time } = formatDateTime(appointment.scheduled_at);
+                        const statusStyle = getAppointmentStatusStyle(appointment.status);
+                        return (
+                          <tr key={appointment.id}>
+                            <td>
+                              <div className="cam-erp-cell__primary">{appointment.title}</div>
+                              {appointment.location && (
+                                <div className="cam-erp-cell__sub">
+                                  <MapPin size={10} /> {appointment.location}
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <span className="cam-erp-cell__primary">
                                 {getAppointmentTypeLabel(appointment.type)}
                               </span>
-                            </div>
-                            <span
-                              className="cam-status-badge"
-                              style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}
-                            >
-                              {getAppointmentStatusLabel(appointment.status)}
-                            </span>
-                          </div>
-
-                          <div className="cam-appointment-details">
-                            <div className="cam-detail-row">
-                              <Calendar size={14} />
-                              <span>{date}</span>
-                              <Clock size={14} />
-                              <span>{time}</span>
-                              <span className="cam-duration">({formatDuration(appointment.duration_minutes)})</span>
-                            </div>
-
-                            {appointment.location && (
-                              <div className="cam-detail-row">
-                                <MapPin size={14} />
-                                <span>{appointment.location}</span>
-                              </div>
-                            )}
-
-                            {appointment.attendees && appointment.attendees.length > 0 && (
-                              <div className="cam-detail-row">
-                                <Users size={14} />
-                                <span>
-                                  {Array.isArray(appointment.attendees)
-                                    ? appointment.attendees.join('، ')
-                                    : appointment.attendees}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {appointment.description && (
-                            <p className="cam-appointment-desc">{appointment.description}</p>
-                          )}
-
-                          <div className="cam-appointment-actions">
-                            {appointment.status === 'scheduled' && (
-                              <>
-                                <button
-                                  className="cam-action-btn confirm"
-                                  onClick={() => handleConfirmAppointment(appointment.id)}
-                                  title="تأكيد"
-                                >
-                                  <CheckCircle size={16} />
-                                </button>
-                                <button
-                                  className="cam-action-btn cancel"
-                                  onClick={() => handleCancelAppointment(appointment.id)}
-                                  title="إلغاء"
-                                >
-                                  <XCircle size={16} />
-                                </button>
-                              </>
-                            )}
-                            {appointment.status === 'confirmed' && (
-                              <button
-                                className="cam-action-btn start"
-                                onClick={() => handleStartAppointment(appointment.id)}
-                                title="بدء"
+                            </td>
+                            <td>
+                              <div className="cam-erp-cell__primary">{date}</div>
+                              <div className="cam-erp-cell__sub">{time}</div>
+                            </td>
+                            <td>
+                              <span className="cam-erp-cell__primary">
+                                {formatDuration(appointment.duration_minutes)}
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                className="cam-erp-status"
+                                style={{ background: statusStyle.bg, color: statusStyle.color }}
                               >
-                                <Play size={16} />
-                              </button>
-                            )}
-                            {appointment.status === 'in_progress' && (
-                              <button
-                                className="cam-action-btn complete"
-                                onClick={() => handleCompleteAppointment(appointment.id)}
-                                title="إكمال"
-                              >
-                                <CheckCircle size={16} />
-                              </button>
-                            )}
-                            <button className="cam-action-btn edit" title="تعديل">
-                              <Edit3 size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+                                {getAppointmentStatusLabel(appointment.status)}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="cam-erp-actions">
+                                {appointment.status === 'scheduled' && (
+                                  <>
+                                    <button
+                                      className="cam-erp-icon-btn cam-erp-icon-btn--success"
+                                      onClick={() => handleConfirmAppointment(appointment.id)}
+                                      title="تأكيد"
+                                    >
+                                      <CheckCircle size={12} />
+                                    </button>
+                                    <button
+                                      className="cam-erp-icon-btn cam-erp-icon-btn--danger"
+                                      onClick={() => handleCancelAppointment(appointment.id)}
+                                      title="إلغاء"
+                                    >
+                                      <XCircle size={12} />
+                                    </button>
+                                  </>
+                                )}
+                                {appointment.status === 'confirmed' && (
+                                  <button
+                                    className="cam-erp-icon-btn cam-erp-icon-btn--accent"
+                                    onClick={() => handleStartAppointment(appointment.id)}
+                                    title="بدء"
+                                  >
+                                    <Play size={12} />
+                                  </button>
+                                )}
+                                {appointment.status === 'in_progress' && (
+                                  <button
+                                    className="cam-erp-icon-btn cam-erp-icon-btn--success"
+                                    onClick={() => handleCompleteAppointment(appointment.id)}
+                                    title="إكمال"
+                                  >
+                                    <CheckCircle size={12} />
+                                  </button>
+                                )}
+                                <button className="cam-erp-icon-btn" title="تعديل">
+                                  <Edit3 size={12} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
           </div>
         </motion.div>
 
-        {/* Add Appointment Modal */}
         <AddAppointmentModal
           isOpen={showAddForm}
           onClose={() => setShowAddForm(false)}

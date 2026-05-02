@@ -8,9 +8,10 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  headerActions?: React.ReactNode;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md', headerActions }) => {
   const sizeClasses = {
     sm: { maxWidth: '400px' },
     md: { maxWidth: '600px' },
@@ -97,28 +98,31 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
                 }}>
                   {title}
                 </h2>
-                <button
-                  onClick={onClose}
-                  style={{
-                    padding: '4px',
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    color: 'var(--color-text-secondary)',
-                    borderRadius: '3px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = 'var(--color-error)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'var(--color-text-secondary)';
-                  }}
-                >
-                  <X size={15} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {headerActions}
+                  <button
+                    onClick={onClose}
+                    style={{
+                      padding: '4px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: 'var(--color-text-secondary)',
+                      borderRadius: '3px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'var(--color-error)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--color-text-secondary)';
+                    }}
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
               </div>
 
               {/* Content */}
