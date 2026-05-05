@@ -67,6 +67,8 @@ interface Session {
 		client_id?: number | null;
 		lawyers?: Array<{ id: number; name: string; pivot?: { is_primary?: boolean | number | null } }>;
 		primaryLawyer?: Array<{ id: number; name: string }> | null;
+		// Laravel serializes camelCase relations to snake_case in JSON output.
+		primary_lawyer?: Array<{ id: number; name: string }> | null;
 	};
 }
 

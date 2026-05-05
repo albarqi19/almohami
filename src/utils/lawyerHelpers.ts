@@ -19,7 +19,10 @@ interface LawyerLike {
 }
 
 interface CaseLikeWithLawyers {
+  // Laravel auto-converts camelCase relations to snake_case in JSON output,
+  // so the API returns `primary_lawyer`. We accept both for robustness.
   primaryLawyer?: LawyerLike[] | LawyerLike | null;
+  primary_lawyer?: LawyerLike[] | LawyerLike | null;
   lawyers?: LawyerLike[] | null;
 }
 
@@ -30,11 +33,13 @@ export function getPrimaryLawyer(input: CaseLikeWithLawyers | LawyerLike[] | nul
     return pickPrimaryFromList(input);
   }
 
-  if (input.primaryLawyer) {
-    if (Array.isArray(input.primaryLawyer)) {
-      if (input.primaryLawyer.length > 0) return input.primaryLawyer[0];
-    } else if (typeof input.primaryLawyer === 'object') {
-      return input.primaryLawyer;
+  // Accept both camelCase (PHP-side) and snake_case (Laravel JSON output).
+  const primary = input.primaryLawyer ?? input.primary_lawyer;
+  if (primary) {
+    if (Array.isArray(primary)) {
+      if (primary.length > 0) return primary[0];
+    } else if (typeof primary === 'object') {
+      return primary;
     }
   }
 
