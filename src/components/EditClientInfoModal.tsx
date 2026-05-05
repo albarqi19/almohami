@@ -50,11 +50,11 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="تعديل بيانات العميل" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="تعديل بيانات العميل" size="lg">
       <div className="edit-client-modal">
         {error && <div className="edit-client-modal__error">{error}</div>}
 
-        <div className="edit-client-modal__group">
+        <div className="edit-client-modal__group edit-client-modal__group--full">
           <label>نوع العميل</label>
           <div className="edit-client-modal__pills">
             {(['individual', 'company', 'organization'] as const).map(t => (
@@ -70,41 +70,37 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
           </div>
         </div>
 
-        <Field label="الاسم">
-          <input type="text" value={form.name ?? ''} onChange={(e) => set('name', e.target.value)} />
-        </Field>
-
-        <Field label="الجوال" hint="يجب أن يبدأ بـ 05">
-          <input type="tel" dir="ltr" value={form.phone ?? ''} onChange={(e) => set('phone', e.target.value)} placeholder="05xxxxxxxx" />
-        </Field>
-
-        <Field label="التصنيف">
-          <select value={form.classification ?? ''} onChange={(e) => set('classification', (e.target.value || undefined) as any)}>
-            <option value="">— غير محدد —</option>
-            <option value="vip">VIP</option>
-            <option value="regular">منتظم</option>
-            <option value="one_time">لمرة واحدة</option>
-          </select>
-        </Field>
+        <div className="edit-client-modal__grid">
+          <Field label="الاسم">
+            <input type="text" value={form.name ?? ''} onChange={(e) => set('name', e.target.value)} />
+          </Field>
+          <Field label="الجوال" hint="يجب أن يبدأ بـ 05">
+            <input type="tel" dir="ltr" value={form.phone ?? ''} onChange={(e) => set('phone', e.target.value)} placeholder="05xxxxxxxx" />
+          </Field>
+          <Field label="التصنيف" span={isCompany ? 1 : 2}>
+            <select value={form.classification ?? ''} onChange={(e) => set('classification', (e.target.value || undefined) as any)}>
+              <option value="">— غير محدد —</option>
+              <option value="vip">VIP</option>
+              <option value="regular">منتظم</option>
+              <option value="one_time">لمرة واحدة</option>
+            </select>
+          </Field>
+        </div>
 
         {isCompany && (
           <>
             <div className="edit-client-modal__divider">بيانات الكيان القانوني</div>
 
-            <div className="edit-client-modal__row">
+            <div className="edit-client-modal__grid">
               <Field label="السجل التجاري">
                 <input type="text" value={form.commercial_registration ?? ''} onChange={(e) => set('commercial_registration', e.target.value)} />
               </Field>
               <Field label="الرقم الضريبي">
                 <input type="text" value={form.vat_number ?? ''} onChange={(e) => set('vat_number', e.target.value)} />
               </Field>
-            </div>
-
-            <Field label="العنوان الوطني">
-              <input type="text" value={form.national_address ?? ''} onChange={(e) => set('national_address', e.target.value)} />
-            </Field>
-
-            <div className="edit-client-modal__row">
+              <Field label="العنوان الوطني" span={2}>
+                <input type="text" value={form.national_address ?? ''} onChange={(e) => set('national_address', e.target.value)} />
+              </Field>
               <Field label="الصناعة">
                 <input type="text" value={form.industry ?? ''} onChange={(e) => set('industry', e.target.value)} />
               </Field>
@@ -115,10 +111,10 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
 
             <div className="edit-client-modal__divider">جهة الاتصال (Point of Contact)</div>
 
-            <Field label="الاسم">
-              <input type="text" value={form.point_of_contact_name ?? ''} onChange={(e) => set('point_of_contact_name', e.target.value)} />
-            </Field>
-            <div className="edit-client-modal__row">
+            <div className="edit-client-modal__grid">
+              <Field label="اسم الشخص" span={2}>
+                <input type="text" value={form.point_of_contact_name ?? ''} onChange={(e) => set('point_of_contact_name', e.target.value)} />
+              </Field>
               <Field label="الجوال">
                 <input type="tel" dir="ltr" value={form.point_of_contact_phone ?? ''} onChange={(e) => set('point_of_contact_phone', e.target.value)} />
               </Field>
@@ -143,8 +139,8 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
   );
 };
 
-const Field: React.FC<{ label: string; hint?: string; children: React.ReactNode }> = ({ label, hint, children }) => (
-  <div className="edit-client-modal__group">
+const Field: React.FC<{ label: string; hint?: string; span?: 1 | 2; children: React.ReactNode }> = ({ label, hint, span = 1, children }) => (
+  <div className={`edit-client-modal__group ${span === 2 ? 'edit-client-modal__group--span-2' : ''}`}>
     <label>{label}{hint && <span className="edit-client-modal__hint"> ({hint})</span>}</label>
     {children}
   </div>
