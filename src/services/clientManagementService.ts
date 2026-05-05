@@ -11,6 +11,19 @@ export interface Client {
     is_active: boolean;
     assigned_cases_count?: number;
     created_at: string;
+
+    // Legal entity profile (for the redesigned ClientDetailPage)
+    entity_type?: 'individual' | 'company' | 'organization' | null;
+    commercial_registration?: string | null;
+    vat_number?: string | null;
+    national_address?: string | null;
+    industry?: string | null;
+    legal_representative?: string | null;
+    point_of_contact_name?: string | null;
+    point_of_contact_phone?: string | null;
+    point_of_contact_email?: string | null;
+    relationship_manager_id?: number | null;
+    relationship_manager?: { id: number; name: string; role?: string } | null;
 }
 
 export interface PotentialClient {
@@ -42,6 +55,45 @@ export interface CreateClientResponse {
     is_existing: boolean;
 }
 
+export interface ClientCommunication {
+    id: number;
+    type: 'call' | 'whatsapp' | 'email' | 'meeting' | 'sms' | 'other';
+    direction: 'inbound' | 'outbound';
+    subject: string | null;
+    notes: string | null;
+    occurred_at: string;
+    created_at: string;
+    logged_by_user?: { id: number; name: string } | null;
+    loggedBy?: { id: number; name: string } | null;
+    logged_by?: { id: number; name: string } | null;
+}
+
+export type LogCommunicationPayload = {
+    type: ClientCommunication['type'];
+    direction?: ClientCommunication['direction'];
+    subject?: string | null;
+    notes?: string | null;
+    occurred_at?: string | null;
+};
+
+export type UpdateClientPayload = {
+    rating?: number;
+    classification?: 'vip' | 'regular' | 'one_time';
+    internal_notes?: string;
+    name?: string;
+    phone?: string;
+    entity_type?: 'individual' | 'company' | 'organization' | null;
+    commercial_registration?: string | null;
+    vat_number?: string | null;
+    national_address?: string | null;
+    industry?: string | null;
+    legal_representative?: string | null;
+    point_of_contact_name?: string | null;
+    point_of_contact_phone?: string | null;
+    point_of_contact_email?: string | null;
+    relationship_manager_id?: number | null;
+};
+
 // Client Management Service
 export class ClientManagementService {
     /**
@@ -50,17 +102,38 @@ export class ClientManagementService {
     static async getClients(params?: {
         search?: string;
         without_phone?: boolean;
+        preset?: 'with_cases' | 'vip';
+        sort_by?: 'name' | 'created_at' | 'cases_count' | 'entity_type' | 'phone';
+        sort_order?: 'asc' | 'desc';
         per_page?: number;
         page?: number;
     }): Promise<any> {
         const searchParams = new URLSearchParams();
         if (params?.search) searchParams.append('search', params.search);
         if (params?.without_phone) searchParams.append('without_phone', '1');
+        if (params?.preset) searchParams.append('preset', params.preset);
+        if (params?.sort_by) searchParams.append('sort_by', params.sort_by);
+        if (params?.sort_order) searchParams.append('sort_order', params.sort_order);
         if (params?.per_page) searchParams.append('per_page', params.per_page.toString());
         if (params?.page) searchParams.append('page', params.page.toString());
 
         const query = searchParams.toString();
         const response = await apiClient.get<any>(`/client-management${query ? `?${query}` : ''}`);
+        return response.data;
+    }
+
+    /**
+     * Aggregate client counts (across all clients in tenant, not page-bound).
+     */
+    static async getClientStats(): Promise<{
+        total: number;
+        withoutPhone: number;
+        withCases: number;
+        vip: number;
+        companies: number;
+        individuals: number;
+    }> {
+        const response = await apiClient.get<any>('/client-management/stats');
         return response.data;
     }
 
@@ -162,17 +235,67 @@ export class ClientManagementService {
     }
 
     /**
-     * Update client data (rating, classification, notes)
+     * Update client data — supports rating/notes plus the new legal-entity
+     * fields. Uses PUT to match the registered route.
      */
-    static async updateClient(clientId: number | string, data: {
-        rating?: number;
-        classification?: 'vip' | 'regular' | 'one_time';
-        internal_notes?: string;
-        name?: string;
-        phone?: string;
-    }): Promise<Client> {
-        const response = await apiClient.patch<any>(`/client-management/${clientId}`, data);
+    static async updateClient(clientId: number | string, data: UpdateClientPayload): Promise<Client> {
+        const response = await apiClient.put<any>(`/client-management/${clientId}`, data);
         return response.data;
+    }
+
+    // ----------- Endpoints powering the redesigned ClientDetailPage -----------
+
+    static async getClientTasks(clientId: number | string, params?: {
+        status?: 'pending' | 'in_progress' | 'completed' | 'overdue';
+        per_page?: number;
+        page?: number;
+    }): Promise<{ data: any[]; meta?: any }> {
+        const searchParams = new URLSearchParams();
+        if (params?.status) searchParams.append('status', params.status);
+        if (params?.per_page) searchParams.append('per_page', params.per_page.toString());
+        if (params?.page) searchParams.append('page', params.page.toString());
+        const query = searchParams.toString();
+        const response = await apiClient.get<any>(`/client-management/${clientId}/tasks${query ? `?${query}` : ''}`);
+        return response.data;
+    }
+
+    static async getClientUpcomingSessions(clientId: number | string, limit = 10): Promise<any[]> {
+        const response = await apiClient.get<any>(`/client-management/${clientId}/upcoming-sessions?limit=${limit}`);
+        return response.data || [];
+    }
+
+    static async getClientCommunications(clientId: number | string, params?: {
+        per_page?: number;
+        page?: number;
+    }): Promise<{ data: ClientCommunication[]; meta?: any }> {
+        const searchParams = new URLSearchParams();
+        if (params?.per_page) searchParams.append('per_page', params.per_page.toString());
+        if (params?.page) searchParams.append('page', params.page.toString());
+        const query = searchParams.toString();
+        const response = await apiClient.get<any>(`/client-management/${clientId}/communications${query ? `?${query}` : ''}`);
+        return response.data;
+    }
+
+    static async logCommunication(clientId: number | string, payload: LogCommunicationPayload): Promise<ClientCommunication> {
+        const response = await apiClient.post<any>(`/client-management/${clientId}/communications`, payload);
+        return response.data;
+    }
+
+    static async getClientDocuments(clientId: number | string, params?: {
+        per_page?: number;
+        page?: number;
+    }): Promise<{ data: any[]; meta?: any }> {
+        const searchParams = new URLSearchParams();
+        if (params?.per_page) searchParams.append('per_page', params.per_page.toString());
+        if (params?.page) searchParams.append('page', params.page.toString());
+        const query = searchParams.toString();
+        const response = await apiClient.get<any>(`/client-management/${clientId}/documents${query ? `?${query}` : ''}`);
+        return response.data;
+    }
+
+    static async getClientWekalat(clientId: number | string): Promise<any[]> {
+        const response = await apiClient.get<any>(`/client-management/${clientId}/wekalat`);
+        return response.data || [];
     }
 }
 

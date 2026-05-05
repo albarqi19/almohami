@@ -5,13 +5,18 @@ import {
     Users,
     Search,
     Phone,
+    PhoneOff,
     FileText,
-    Clock,
-    Star,
     Crown,
+    Star,
+    Building2,
     RefreshCw,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    X,
+    ArrowUp,
+    ArrowDown,
+    ArrowUpDown
 } from 'lucide-react';
 import ClientManagementService from '../services/clientManagementService';
 import type { Client } from '../services/clientManagementService';
@@ -26,11 +31,18 @@ interface PaginatedClientsResponse {
     per_page: number;
 }
 
+type FilterPreset = 'all' | 'with_cases' | 'no_phone' | 'vip';
+type SortKey = 'name' | 'created_at' | 'cases_count' | 'entity_type' | 'phone';
+type SortOrder = 'asc' | 'desc';
+
 const Clients: React.FC = () => {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [filterPreset, setFilterPreset] = useState<FilterPreset>('all');
+    const [sortBy, setSortBy] = useState<SortKey>('created_at');
+    const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
     // Debounce search query
     React.useEffect(() => {
@@ -41,6 +53,40 @@ const Clients: React.FC = () => {
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
+    // Reset to page 1 when filter/sort changes
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [filterPreset, sortBy, sortOrder]);
+
+    // Toggle sort: first click → asc, second → desc, third → reset to default.
+    const handleSort = (key: SortKey) => {
+        if (sortBy !== key) {
+            setSortBy(key);
+            setSortOrder('asc');
+            return;
+        }
+        if (sortOrder === 'asc') {
+            setSortOrder('desc');
+        } else {
+            // Reset to default
+            setSortBy('created_at');
+            setSortOrder('desc');
+        }
+    };
+
+    const sortIndicator = (key: SortKey) => {
+        if (sortBy !== key) return <ArrowUpDown size={11} className="sort-icon sort-icon--idle" />;
+        return sortOrder === 'asc'
+            ? <ArrowUp size={11} className="sort-icon sort-icon--active" />
+            : <ArrowDown size={11} className="sort-icon sort-icon--active" />;
+    };
+
+    // Translate UI filter preset → backend params
+    const queryFilterParams: { without_phone?: boolean; preset?: 'with_cases' | 'vip' } = {};
+    if (filterPreset === 'no_phone') queryFilterParams.without_phone = true;
+    else if (filterPreset === 'with_cases') queryFilterParams.preset = 'with_cases';
+    else if (filterPreset === 'vip') queryFilterParams.preset = 'vip';
+
     // TanStack Query with caching and keepPreviousData
     const {
         data: paginatedData,
@@ -48,22 +94,40 @@ const Clients: React.FC = () => {
         isFetching,
         refetch
     } = useQuery<PaginatedClientsResponse>({
-        queryKey: ['clients', currentPage, debouncedSearch],
+        queryKey: ['clients', currentPage, debouncedSearch, filterPreset, sortBy, sortOrder],
         queryFn: async () => {
             const response = await ClientManagementService.getClients({
                 page: currentPage,
                 per_page: 15,
                 search: debouncedSearch || undefined,
+                sort_by: sortBy,
+                sort_order: sortOrder,
+                ...queryFilterParams,
             });
             return response as PaginatedClientsResponse;
         },
-        placeholderData: keepPreviousData, // يحافظ على البيانات السابقة أثناء التحميل
-        staleTime: 30 * 1000, // البيانات صالحة 30 ثانية
+        placeholderData: keepPreviousData,
+        staleTime: 30 * 1000,
+    });
+
+    // Aggregate stats — independent of pagination, used for the filter pills.
+    const { data: statsData } = useQuery({
+        queryKey: ['clients-stats'],
+        queryFn: () => ClientManagementService.getClientStats(),
+        staleTime: 60 * 1000,
     });
 
     const clients = paginatedData?.data || [];
     const totalPages = paginatedData?.last_page || 1;
     const totalClients = paginatedData?.total || 0;
+
+    // Aggregate stats from the dedicated endpoint (full tenant, not page-bound).
+    const stats = {
+        total: statsData?.total ?? 0,
+        withCases: statsData?.withCases ?? 0,
+        vip: statsData?.vip ?? 0,
+        withoutPhone: statsData?.withoutPhone ?? 0,
+    };
 
     const handleClientClick = (clientId: number) => {
         navigate(`/clients/${clientId}`);
@@ -74,7 +138,7 @@ const Clients: React.FC = () => {
     };
 
     const formatDate = (dateString: string | null | undefined) => {
-        if (!dateString) return '-';
+        if (!dateString) return '—';
         try {
             return new Date(dateString).toLocaleDateString('ar-SA', {
                 year: 'numeric',
@@ -82,51 +146,88 @@ const Clients: React.FC = () => {
                 day: 'numeric',
             });
         } catch {
-            return '-';
+            return '—';
         }
     };
 
-    const getClientClassificationBadge = (casesCount: number) => {
-        if (casesCount >= 5) {
-            return (
-                <span className="client-badge client-badge--vip">
-                    <Crown size={12} />
-                    عميل VIP
-                </span>
-            );
-        } else if (casesCount >= 2) {
-            return (
-                <span className="client-badge client-badge--regular">
-                    <Star size={12} />
-                    عميل دائم
-                </span>
-            );
+    const getClientClassificationBadge = (client: Client) => {
+        // Prefer the explicit user-set classification when present.
+        const explicit = (client as any).classification as string | undefined;
+        const cases = (client as any).client_cases_count || 0;
+        if (explicit === 'vip' || cases >= 5) {
+            return (<span className="client-badge client-badge--vip"><Crown size={11} />VIP</span>);
         }
-        return null;
+        if (explicit === 'regular' || cases >= 2) {
+            return (<span className="client-badge client-badge--regular"><Star size={11} />دائم</span>);
+        }
+        if (explicit === 'one_time' || cases === 1) {
+            return (<span className="client-badge client-badge--once">جديد</span>);
+        }
+        return <span className="client-badge client-badge--none">—</span>;
+    };
+
+    const getEntityBadge = (entity?: string | null) => {
+        const isCompany = entity === 'company' || entity === 'organization';
+        return (
+            <span className={`entity-badge ${isCompany ? 'entity-badge--company' : 'entity-badge--individual'}`}>
+                {isCompany ? <Building2 size={11} /> : <Users size={11} />}
+                {entity === 'organization' ? 'مؤسسة' : isCompany ? 'شركة' : 'فرد'}
+            </span>
+        );
     };
 
     return (
         <div className="clients-page">
-            {/* Header Bar */}
+            {/* Header Bar — title + search + filter pills + refresh */}
             <div className="clients-header-bar">
                 <div className="clients-header-bar__start">
                     <div className="clients-header-bar__title">
-                        <Users size={22} />
+                        <Users size={20} />
                         العملاء
                     </div>
                     <span className="clients-header-bar__count">{totalClients} عميل</span>
                 </div>
 
-                <div className="clients-header-bar__center">
-                    <div className="search-box">
-                        <Search size={16} />
-                        <input
-                            type="text"
-                            placeholder="بحث بالاسم أو رقم الهوية..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
+                <div className="search-box">
+                    <Search size={14} />
+                    <input
+                        type="text"
+                        placeholder="بحث بالاسم أو رقم الهوية..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    {searchQuery && (
+                        <button className="search-box__clear" onClick={() => setSearchQuery('')} title="مسح">
+                            <X size={12} />
+                        </button>
+                    )}
+                </div>
+
+                <div className="clients-header-bar__pills">
+                    <button
+                        className={`clients-pill ${filterPreset === 'all' ? 'is-active' : ''}`}
+                        onClick={() => setFilterPreset('all')}
+                    >
+                        الكل <span className="clients-pill__count">{stats.total}</span>
+                    </button>
+                    <button
+                        className={`clients-pill ${filterPreset === 'with_cases' ? 'is-active' : ''}`}
+                        onClick={() => setFilterPreset('with_cases')}
+                    >
+                        لديهم قضايا <span className="clients-pill__count">{stats.withCases}</span>
+                    </button>
+                    <button
+                        className={`clients-pill ${filterPreset === 'vip' ? 'is-active' : ''}`}
+                        onClick={() => setFilterPreset('vip')}
+                    >
+                        VIP <span className="clients-pill__count">{stats.vip}</span>
+                    </button>
+                    <button
+                        className={`clients-pill clients-pill--warn ${filterPreset === 'no_phone' ? 'is-active' : ''}`}
+                        onClick={() => setFilterPreset('no_phone')}
+                    >
+                        بدون جوال <span className="clients-pill__count">{stats.withoutPhone}</span>
+                    </button>
                 </div>
 
                 <div className="clients-header-bar__end">
@@ -136,7 +237,7 @@ const Clients: React.FC = () => {
                         title="تحديث"
                         disabled={isFetching}
                     >
-                        <RefreshCw size={18} />
+                        <RefreshCw size={16} />
                     </button>
                 </div>
             </div>
@@ -171,62 +272,73 @@ const Clients: React.FC = () => {
                             <table className="clients-table">
                                 <thead>
                                     <tr>
-                                        <th>اسم العميل</th>
+                                        <th className="col-num">#</th>
+                                        <th className="col-sortable" onClick={() => handleSort('name')}>
+                                            <span>اسم العميل</span>
+                                            {sortIndicator('name')}
+                                        </th>
+                                        <th className="col-sortable" onClick={() => handleSort('entity_type')}>
+                                            <span>النوع</span>
+                                            {sortIndicator('entity_type')}
+                                        </th>
                                         <th>رقم الهوية</th>
                                         <th>رقم الجوال</th>
-                                        <th>عدد القضايا</th>
+                                        <th className="col-num col-sortable" onClick={() => handleSort('cases_count')}>
+                                            <span>القضايا</span>
+                                            {sortIndicator('cases_count')}
+                                        </th>
                                         <th>التصنيف</th>
-                                        <th>تاريخ التسجيل</th>
+                                        <th className="col-sortable" onClick={() => handleSort('created_at')}>
+                                            <span>تاريخ التسجيل</span>
+                                            {sortIndicator('created_at')}
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {clients.map((client) => (
-                                        <tr
-                                            key={client.id}
-                                            onClick={() => handleClientClick(client.id)}
-                                        >
-                                            <td>
-                                                <div className="client-name-cell">
-                                                    <div className="client-avatar">
-                                                        {client.name?.charAt(0) || '؟'}
-                                                    </div>
-                                                    <span className="client-name">{client.name}</span>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span className="client-id-badge">
-                                                    {client.national_id || '-'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div className="client-phone">
+                                    {clients.map((client, idx) => {
+                                        const casesCount = (client as any).client_cases_count || 0;
+                                        const rowNum = (currentPage - 1) * 15 + idx + 1;
+                                        return (
+                                            <tr key={client.id} onClick={() => handleClientClick(client.id)}>
+                                                <td className="col-num">{rowNum}</td>
+                                                <td>
+                                                    <span className="client-name">{client.name || '—'}</span>
+                                                </td>
+                                                <td>{getEntityBadge(client.entity_type)}</td>
+                                                <td>
+                                                    <span className="client-id-badge">
+                                                        {client.national_id || '—'}
+                                                    </span>
+                                                </td>
+                                                <td>
                                                     {client.phone ? (
-                                                        <>
-                                                            <Phone size={14} />
+                                                        <span className="client-phone">
+                                                            <Phone size={12} />
                                                             <span dir="ltr">{client.phone}</span>
-                                                        </>
+                                                        </span>
                                                     ) : (
-                                                        <span className="no-phone">بدون رقم</span>
+                                                        <span className="client-phone client-phone--missing">
+                                                            <PhoneOff size={12} /> بدون رقم
+                                                        </span>
                                                     )}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div className="cases-count">
-                                                    <FileText size={14} />
-                                                    <span>{(client as any).client_cases_count || 0} قضية</span>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                {getClientClassificationBadge((client as any).client_cases_count || 0)}
-                                            </td>
-                                            <td>
-                                                <div className="date-cell">
-                                                    <Clock size={14} />
-                                                    {formatDate(client.created_at)}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                                <td className="col-num">
+                                                    {casesCount > 0 ? (
+                                                        <span className="cases-count">
+                                                            <FileText size={12} />
+                                                            {casesCount}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="cases-count cases-count--zero">0</span>
+                                                    )}
+                                                </td>
+                                                <td>{getClientClassificationBadge(client)}</td>
+                                                <td>
+                                                    <span className="date-cell">{formatDate(client.created_at)}</span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
