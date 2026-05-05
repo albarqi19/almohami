@@ -239,19 +239,29 @@ const LawyersReport: React.FC = () => {
       </div>
 
       {/* Detail Modal */}
-      {selectedLawyer && (
-        <Modal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedLawyer(null);
-          }}
-          title={lawyers.find(l => l.id === selectedLawyer)?.name || ''}
-          size="xl"
-        >
-          <LawyerDetailContent lawyerId={selectedLawyer} dateFilter={filter} />
-        </Modal>
-      )}
+      {selectedLawyer && (() => {
+        const selected = lawyers.find(l => l.id === selectedLawyer);
+        return (
+          <Modal
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setSelectedLawyer(null);
+            }}
+            title={selected?.name || ''}
+            size="xl"
+          >
+            <LawyerDetailContent
+              lawyerId={selectedLawyer}
+              dateFilter={filter}
+              presence={selected ? {
+                status: selected.presence_status || 'offline',
+                lastActivityAgo: selected.last_activity_ago,
+              } : undefined}
+            />
+          </Modal>
+        );
+      })()}
     </div>
   );
 };

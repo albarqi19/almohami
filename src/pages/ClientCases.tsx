@@ -5,11 +5,13 @@ import {
   Eye,
   Search,
   User,
-  ChevronLeft
+  ChevronLeft,
+  Scale
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CaseService } from '../services/caseService';
 import type { Case } from '../types';
+import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
 import '../styles/client-cases.css';
 
 const ClientCases: React.FC = () => {
@@ -196,6 +198,16 @@ const ClientCases: React.FC = () => {
 
                 {/* Details */}
                 <div className="case-card__details">
+                  {(() => {
+                    const lawyerName = getPrimaryLawyerName(case_ as never, '');
+                    return lawyerName ? (
+                      <div className="case-card__detail">
+                        <Scale size={16} />
+                        <span>المحامي المسؤول: {lawyerName}</span>
+                      </div>
+                    ) : null;
+                  })()}
+
                   {case_.opponent_name && (
                     <div className="case-card__detail">
                       <User size={16} />

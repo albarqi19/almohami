@@ -27,6 +27,7 @@ import { CaseService } from '../services';
 import { UserService, type User as UserType } from '../services/UserService';
 import AddCaseModal from '../components/AddCaseModal';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
 
 type ViewMode = 'grid' | 'table' | 'kanban';
 
@@ -60,12 +61,9 @@ const formatDate = (value?: Date | string | null): string => {
 	return date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-const getLawyerName = (lawyers: unknown): string => {
-	if (!Array.isArray(lawyers) || lawyers.length === 0) return '-';
-	const lawyer = lawyers[0];
-	return typeof lawyer === 'object' && lawyer && 'name' in lawyer
-		? (lawyer as { name?: string }).name || '-'
-		: '-';
+const getLawyerName = (caseObj: unknown): string => {
+	if (!caseObj || typeof caseObj !== 'object') return '-';
+	return getPrimaryLawyerName(caseObj as never);
 };
 
 const CACHE_KEY = 'cases_data';
@@ -415,7 +413,7 @@ const Cases: React.FC = () => {
 										</div>
 										<div className="erp-cell__row erp-cell__row--sub">
 											<Scale size={11} className="erp-cell__icon" />
-											<span>{getLawyerName(c.lawyers)}</span>
+											<span>{getLawyerName(c)}</span>
 										</div>
 									</div>
 								</td>

@@ -389,8 +389,16 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
   };
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const search = searchTerm.toLowerCase();
+    const name = user.name?.toLowerCase() || '';
+    const email = user.email?.toLowerCase() || '';
+    const phone = user.phone?.toLowerCase() || '';
+    const nationalId = user.national_id?.toLowerCase() || '';
+    const matchesSearch = !search ||
+      name.includes(search) ||
+      email.includes(search) ||
+      phone.includes(search) ||
+      nationalId.includes(search);
     const matchesRole = selectedRole === 'all' || user.role === selectedRole;
     const matchesStatus = selectedStatus === 'all' || user.status === selectedStatus;
 

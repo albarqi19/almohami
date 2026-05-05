@@ -7,6 +7,7 @@ import {
 	MapPin,
 	FileText,
 	User,
+	Scale,
 	ChevronLeft,
 	ChevronRight,
 	Filter,
@@ -25,8 +26,10 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import { AddSessionModal } from '../components/AddSessionModal';
+import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
 import '../styles/sessions-page.css';
 import '../styles/add-session-modal.css';
+
 
 interface Session {
 	id: number;
@@ -62,6 +65,8 @@ interface Session {
 		court: string | null;
 		najiz_status: string | null;
 		client_id?: number | null;
+		lawyers?: Array<{ id: number; name: string; pivot?: { is_primary?: boolean | number | null } }>;
+		primaryLawyer?: Array<{ id: number; name: string }> | null;
 	};
 }
 
@@ -281,11 +286,23 @@ const UpcomingSessions: React.FC = () => {
 			endDate.setHours(23, 59, 59, 999);
 		}
 
-		return sessions.filter(session => {
+		const filtered = sessions.filter(session => {
 			const ed = getEffectiveDate(session);
 			if (!ed) return false;
 			const sessionDate = new Date(ed);
 			return sessionDate >= startDate && sessionDate <= endDate;
+		});
+
+		// Match the on-screen ordering: upcoming first (nearest → farthest),
+		// then finished (most recent → oldest). Same logic as `sortedSessions`.
+		return filtered.sort((a, b) => {
+			const aFinished = isSessionFinished(a);
+			const bFinished = isSessionFinished(b);
+			if (aFinished !== bFinished) return aFinished ? 1 : -1;
+			const tsA = getSessionTimestamp(a);
+			const tsB = getSessionTimestamp(b);
+			if (aFinished && bFinished) return tsB - tsA;
+			return tsA - tsB;
 		});
 	};
 
@@ -383,6 +400,7 @@ const UpcomingSessions: React.FC = () => {
 							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">#</th>
 							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">القضية</th>
 							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">العميل</th>
+							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">المحامي المسؤول</th>
 							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">المحكمة</th>
 							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">الوقت</th>
 							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">النوع</th>
@@ -395,6 +413,7 @@ const UpcomingSessions: React.FC = () => {
 								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${index + 1}</td>
 								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0; font-weight: 500;">${session.case?.title || '-'}</td>
 								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${session.case?.client_name || '-'}</td>
+								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${getPrimaryLawyerName(session.case as never, '-')}</td>
 								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${session.court || session.case?.court || '-'}</td>
 								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${session.session_time || '-'}</td>
 								<td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid #e2e8f0;">
@@ -469,6 +488,7 @@ const UpcomingSessions: React.FC = () => {
 							<th>القضية</th>
 							<th>رقم الملف</th>
 							<th>العميل</th>
+							<th>المحامي المسؤول</th>
 							<th>المحكمة</th>
 							<th>الوقت</th>
 							<th>النوع</th>
@@ -482,6 +502,7 @@ const UpcomingSessions: React.FC = () => {
 								<td><strong>${session.case?.title || '-'}</strong></td>
 								<td>${session.case?.file_number || '-'}</td>
 								<td>${session.case?.client_name || '-'}</td>
+								<td>${getPrimaryLawyerName(session.case as never, '-')}</td>
 								<td>${session.court || session.case?.court || '-'}</td>
 								<td>${session.session_time || '-'}</td>
 								<td class="${session.method === 'عن بعد' ? 'type-remote' : 'type-inperson'}">
@@ -530,14 +551,15 @@ const UpcomingSessions: React.FC = () => {
 			</head>
 			<body>
 				<table>
-					<tr><td colspan="8" class="header">📅 ${getExportTitle()}</td></tr>
-					<tr><td colspan="8" class="date">${dateStr}</td></tr>
-					<tr><td colspan="8"></td></tr>
+					<tr><td colspan="9" class="header">📅 ${getExportTitle()}</td></tr>
+					<tr><td colspan="9" class="date">${dateStr}</td></tr>
+					<tr><td colspan="9"></td></tr>
 					<tr>
 						<th>#</th>
 						<th>القضية</th>
 						<th>رقم الملف</th>
 						<th>العميل</th>
+						<th>المحامي المسؤول</th>
 						<th>المحكمة</th>
 						<th>الوقت</th>
 						<th>النوع</th>
@@ -549,6 +571,7 @@ const UpcomingSessions: React.FC = () => {
 							<td>${session.case?.title || '-'}</td>
 							<td>${session.case?.file_number || '-'}</td>
 							<td>${session.case?.client_name || '-'}</td>
+							<td>${getPrimaryLawyerName(session.case as never, '-')}</td>
 							<td>${session.court || session.case?.court || '-'}</td>
 							<td>${session.session_time || '-'}</td>
 							<td>${session.method === 'عن بعد' ? 'عن بعد' : 'حضوري'}</td>
@@ -579,7 +602,7 @@ const UpcomingSessions: React.FC = () => {
 						<th>المحكمة / القاعة</th>
 						<th>التاريخ والوقت</th>
 						<th>المدة المتبقية</th>
-						<th>العميل</th>
+						<th>العميل / المحامي</th>
 						<th>الحالة</th>
 						<th>الدخول</th>
 					</tr>
@@ -627,9 +650,20 @@ const UpcomingSessions: React.FC = () => {
 								</span>
 							</td>
 							<td>
-								<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-									<User size={14} className="text-gray-400" />
-									<span>{session.case?.client_name || '-'}</span>
+								<div className="session-info">
+									<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+										<User size={14} className="text-gray-400" />
+										<span>{session.case?.client_name || '-'}</span>
+									</div>
+									{(() => {
+										const lawyerName = getPrimaryLawyerName(session.case as never, '');
+										return lawyerName ? (
+											<div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+												<Scale size={11} />
+												<span>{lawyerName}</span>
+											</div>
+										) : null;
+									})()}
 								</div>
 							</td>
 							<td>
