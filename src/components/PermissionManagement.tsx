@@ -236,6 +236,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
     } catch (err) {
       console.error('Error creating user:', err);
       setError(err instanceof Error ? err.message : 'فشل في إنشاء المستخدم');
+      throw err; // إعادة رمي الخطأ ليلتقطه المودال ويعرض التفاصيل (validation errors)
     } finally {
       setLoading(false);
     }
@@ -252,6 +253,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
     } catch (err) {
       console.error('Error updating user:', err);
       setError(err instanceof Error ? err.message : 'فشل في تحديث المستخدم');
+      throw err; // إعادة رمي الخطأ ليلتقطه المودال ويعرض التفاصيل
     } finally {
       setLoading(false);
     }
@@ -405,7 +407,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const UserModal: React.FC<{ user?: User; onClose: () => void; onSave: (user: User) => void }> = ({
+  const UserModal: React.FC<{ user?: User; onClose: () => void; onSave: (user: User) => void | Promise<void> }> = ({
     user,
     onClose,
     onSave
@@ -419,16 +421,54 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
       department: user?.department || '',
       national_id: user?.national_id || ''
     });
+    const [submitting, setSubmitting] = useState(false);
+    const [modalError, setModalError] = useState<string | null>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
+      if (submitting) return;
       const newUser: User = {
         id: user?.id || Date.now().toString(),
         ...formData,
         lastLogin: user?.lastLogin || new Date()
       } as User;
-      onSave(newUser);
-      onClose();
+      setModalError(null);
+      setSubmitting(true);
+      try {
+        await onSave(newUser);
+        onClose();
+      } catch (err: any) {
+        // استخراج تفاصيل أخطاء الـ validation (422) من الباك إند
+        let msg = 'تعذّر حفظ البيانات';
+        if (err?.errors && typeof err.errors === 'object') {
+          const fieldLabels: Record<string, string> = {
+            name: 'الاسم',
+            email: 'البريد الإلكتروني',
+            national_id: 'رقم الهوية',
+            role: 'الدور',
+            phone: 'رقم الهاتف',
+          };
+          msg = Object.entries(err.errors)
+            .map(([field, msgs]: [string, any]) => {
+              const label = fieldLabels[field] || field;
+              const raw = Array.isArray(msgs) ? msgs[0] : String(msgs);
+              const arabic = /already been taken/i.test(raw)
+                ? 'مستخدم مسبقاً (مسجّل في النظام)'
+                : /required/i.test(raw)
+                ? 'حقل مطلوب'
+                : /invalid/i.test(raw)
+                ? 'قيمة غير صالحة'
+                : raw;
+              return `• ${label}: ${arabic}`;
+            })
+            .join('\n');
+        } else if (err?.message) {
+          msg = err.message;
+        }
+        setModalError(msg);
+      } finally {
+        setSubmitting(false);
+      }
     };
 
     return (
@@ -466,6 +506,23 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
           }}>
             {user ? 'تعديل المستخدم' : 'إضافة مستخدم جديد'}
           </h3>
+
+          {modalError && (
+            <div style={{
+              backgroundColor: 'rgba(220, 38, 38, 0.08)',
+              border: '1px solid rgba(220, 38, 38, 0.3)',
+              borderRadius: '8px',
+              padding: '12px 14px',
+              marginBottom: '16px',
+              color: '#dc2626',
+              fontSize: 'var(--font-size-sm)',
+              whiteSpace: 'pre-line',
+              lineHeight: 1.6
+            }}>
+              <strong style={{ display: 'block', marginBottom: '4px' }}>تعذّر الحفظ:</strong>
+              {modalError}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
@@ -681,6 +738,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
               </button>
               <button
                 type="submit"
+                disabled={submitting}
                 style={{
                   padding: '10px 20px',
                   fontSize: 'var(--font-size-sm)',
@@ -688,10 +746,11 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
                   backgroundColor: 'var(--color-primary)',
                   border: 'none',
                   borderRadius: '6px',
-                  cursor: 'pointer'
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  opacity: submitting ? 0.6 : 1
                 }}
               >
-                {user ? 'تحديث' : 'إضافة'}
+                {submitting ? 'جارٍ الحفظ...' : (user ? 'تحديث' : 'إضافة')}
               </button>
             </div>
           </form>
