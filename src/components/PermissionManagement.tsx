@@ -471,6 +471,37 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
       }
     };
 
+    // ERP-style shared field styles (compact, dense)
+    const fieldLabelStyle: React.CSSProperties = {
+      display: 'block',
+      fontSize: '12px',
+      fontWeight: 500,
+      color: 'var(--color-text)',
+      marginBottom: '4px',
+      lineHeight: 1.4
+    };
+    const fieldInputStyle: React.CSSProperties = {
+      width: '100%',
+      padding: '7px 10px',
+      fontSize: '13px',
+      color: 'var(--color-text)',
+      backgroundColor: 'var(--color-surface)',
+      border: '1px solid var(--color-border)',
+      borderRadius: '6px',
+      lineHeight: 1.4,
+      outline: 'none'
+    };
+    const requiredStarStyle: React.CSSProperties = {
+      color: '#dc2626',
+      fontWeight: 700,
+      marginInlineStart: '2px'
+    };
+    const optionalHintStyle: React.CSSProperties = {
+      color: 'var(--color-text-secondary)',
+      fontSize: '11px',
+      fontWeight: 400
+    };
+
     return (
       <div style={{
         position: 'fixed',
@@ -485,275 +516,308 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
         zIndex: 1000
       }}>
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
+          initial={{ scale: 0.96, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           style={{
             backgroundColor: 'var(--color-surface)',
-            borderRadius: '12px',
-            padding: '24px',
-            maxWidth: '500px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflow: 'auto'
+            borderRadius: '10px',
+            padding: '0',
+            maxWidth: '720px',
+            width: '92%',
+            maxHeight: '88vh',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.25)'
           }}
         >
-          <h3 style={{
-            fontSize: 'var(--font-size-lg)',
-            fontWeight: 'var(--font-weight-semibold)',
-            color: 'var(--color-text)',
-            margin: 0,
-            marginBottom: '20px'
+          {/* Header */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            padding: '16px 20px',
+            borderBottom: '1px solid var(--color-border)',
+            flexShrink: 0
           }}>
-            {user ? 'تعديل المستخدم' : 'إضافة مستخدم جديد'}
-          </h3>
-
-          {modalError && (
-            <div style={{
-              backgroundColor: 'rgba(220, 38, 38, 0.08)',
-              border: '1px solid rgba(220, 38, 38, 0.3)',
-              borderRadius: '8px',
-              padding: '12px 14px',
-              marginBottom: '16px',
-              color: '#dc2626',
-              fontSize: 'var(--font-size-sm)',
-              whiteSpace: 'pre-line',
-              lineHeight: 1.6
-            }}>
-              <strong style={{ display: 'block', marginBottom: '4px' }}>تعذّر الحفظ:</strong>
-              {modalError}
+            <div>
+              <h3 style={{
+                fontSize: '15px',
+                fontWeight: 600,
+                color: 'var(--color-text)',
+                margin: 0,
+                lineHeight: 1.3
+              }}>
+                {user ? 'تعديل المستخدم' : 'إضافة مستخدم جديد'}
+              </h3>
+              <p style={{
+                fontSize: '12px',
+                color: 'var(--color-text-secondary)',
+                margin: '3px 0 0 0',
+                lineHeight: 1.3
+              }}>
+                {user ? 'تحديث بيانات المستخدم في النظام' : 'إنشاء حساب جديد لمستخدم في الشركة'}
+              </p>
             </div>
-          )}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="إغلاق"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px 8px',
+                color: 'var(--color-text-secondary)',
+                fontSize: '20px',
+                lineHeight: 1,
+                marginRight: '-8px'
+              }}
+            >
+              ×
+            </button>
+          </div>
 
-          <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  color: 'var(--color-text)',
-                  marginBottom: '6px'
-                }}>
-                  الاسم
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: 'var(--font-size-sm)',
-                    color: 'var(--color-text)',
-                    backgroundColor: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px'
-                  }}
-                  required
-                />
+          {/* Body (scrollable) */}
+          <div style={{
+            padding: '16px 20px',
+            overflowY: 'auto',
+            flex: 1
+          }}>
+            {modalError && (
+              <div style={{
+                backgroundColor: 'rgba(220, 38, 38, 0.08)',
+                border: '1px solid rgba(220, 38, 38, 0.3)',
+                borderRadius: '6px',
+                padding: '10px 12px',
+                marginBottom: '14px',
+                color: '#dc2626',
+                fontSize: '12px',
+                whiteSpace: 'pre-line',
+                lineHeight: 1.6
+              }}>
+                <strong style={{ display: 'block', marginBottom: '3px', fontSize: '12px' }}>تعذّر الحفظ:</strong>
+                {modalError}
               </div>
+            )}
 
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  color: 'var(--color-text)',
-                  marginBottom: '6px'
-                }}>
-                  البريد الإلكتروني
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: 'var(--font-size-sm)',
-                    color: 'var(--color-text)',
-                    backgroundColor: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px'
-                  }}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  color: 'var(--color-text)',
-                  marginBottom: '6px'
-                }}>
-                  الدور
-                </label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: 'var(--font-size-sm)',
-                    color: 'var(--color-text)',
-                    backgroundColor: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px'
-                  }}
-                >
-                  {roles.map(role => (
-                    <option key={role.id} value={role.id}>
-                      {role.displayName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  color: 'var(--color-text)',
-                  marginBottom: '6px'
-                }}>
-                  الحالة
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: 'var(--font-size-sm)',
-                    color: 'var(--color-text)',
-                    backgroundColor: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px'
-                  }}
-                >
-                  <option value="active">نشط</option>
-                  <option value="inactive">غير نشط</option>
-                  <option value="pending">معلق</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  color: 'var(--color-text)',
-                  marginBottom: '6px'
-                }}>
-                  رقم الهاتف
-                </label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: 'var(--font-size-sm)',
-                    color: 'var(--color-text)',
-                    backgroundColor: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  color: 'var(--color-text)',
-                  marginBottom: '6px'
-                }}>
-                  رقم الهوية الوطنية *
-                </label>
-                <input
-                  type="text"
-                  value={formData.national_id}
-                  onChange={(e) => setFormData({ ...formData, national_id: e.target.value })}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: 'var(--font-size-sm)',
-                    color: 'var(--color-text)',
-                    backgroundColor: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  color: 'var(--color-text)',
-                  marginBottom: '6px'
-                }}>
-                  القسم
-                </label>
-                <input
-                  type="text"
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: 'var(--font-size-sm)',
-                    color: 'var(--color-text)',
-                    backgroundColor: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px'
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: 'var(--font-size-sm)',
+            <form id="user-modal-form" onSubmit={handleSubmit}>
+              {/* Section: المعلومات الأساسية */}
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
                   color: 'var(--color-text-secondary)',
-                  backgroundColor: 'transparent',
-                  border: '1px solid var(--color-border)',
+                  letterSpacing: '0.04em',
+                  marginBottom: '8px',
+                  paddingBottom: '4px',
+                  borderBottom: '1px dashed var(--color-border)'
+                }}>
+                  المعلومات الأساسية
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {/* الاسم — مطلوب */}
+                  <div>
+                    <label style={fieldLabelStyle}>
+                      الاسم الكامل <span style={requiredStarStyle}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                      placeholder="مثال: محمد عبدالله"
+                      style={fieldInputStyle}
+                    />
+                  </div>
+                  {/* رقم الهوية — مطلوب */}
+                  <div>
+                    <label style={fieldLabelStyle}>
+                      رقم الهوية الوطنية <span style={requiredStarStyle}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={formData.national_id}
+                      onChange={(e) => setFormData({ ...formData, national_id: e.target.value })}
+                      required
+                      placeholder="10 أرقام"
+                      style={fieldInputStyle}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: الدور والصلاحيات */}
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: 'var(--color-text-secondary)',
+                  letterSpacing: '0.04em',
+                  marginBottom: '8px',
+                  paddingBottom: '4px',
+                  borderBottom: '1px dashed var(--color-border)'
+                }}>
+                  الدور والصلاحيات
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {/* الدور — مطلوب */}
+                  <div>
+                    <label style={fieldLabelStyle}>
+                      الدور <span style={requiredStarStyle}>*</span>
+                    </label>
+                    <select
+                      value={formData.role}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      required
+                      style={fieldInputStyle}
+                    >
+                      {roles.map(role => (
+                        <option key={role.id} value={role.name}>
+                          {role.displayName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* الحالة — للتعديل فقط */}
+                  {user && (
+                    <div>
+                      <label style={fieldLabelStyle}>
+                        الحالة
+                      </label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                        style={fieldInputStyle}
+                      >
+                        <option value="active">نشط</option>
+                        <option value="inactive">غير نشط</option>
+                        <option value="pending">معلق</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Section: التواصل */}
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: 'var(--color-text-secondary)',
+                  letterSpacing: '0.04em',
+                  marginBottom: '8px',
+                  paddingBottom: '4px',
+                  borderBottom: '1px dashed var(--color-border)'
+                }}>
+                  معلومات التواصل
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {/* البريد — اختياري للإضافة، مطلوب للتعديل */}
+                  <div>
+                    <label style={fieldLabelStyle}>
+                      البريد الإلكتروني{user
+                        ? <span style={requiredStarStyle}> *</span>
+                        : <span style={optionalHintStyle}> (اختياري)</span>}
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      required={!!user}
+                      placeholder="example@domain.com"
+                      style={fieldInputStyle}
+                    />
+                  </div>
+                  {/* رقم الهاتف — اختياري */}
+                  <div>
+                    <label style={fieldLabelStyle}>
+                      رقم الهاتف <span style={optionalHintStyle}>(اختياري)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="05xxxxxxxx"
+                      style={fieldInputStyle}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Helper info — يظهر عند الإضافة فقط */}
+              {!user && (
+                <div style={{
+                  marginTop: '6px',
+                  padding: '10px 12px',
+                  backgroundColor: 'rgba(59, 130, 246, 0.06)',
+                  border: '1px solid rgba(59, 130, 246, 0.2)',
                   borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
-              >
-                إلغاء
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: 'var(--font-size-sm)',
-                  color: 'white',
-                  backgroundColor: 'var(--color-primary)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: submitting ? 'not-allowed' : 'pointer',
-                  opacity: submitting ? 0.6 : 1
-                }}
-              >
-                {submitting ? 'جارٍ الحفظ...' : (user ? 'تحديث' : 'إضافة')}
-              </button>
-            </div>
-          </form>
+                  fontSize: '12px',
+                  color: 'var(--color-text-secondary)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                  lineHeight: 1.6
+                }}>
+                  <span style={{ color: '#3b82f6', flexShrink: 0, fontWeight: 700 }}>ⓘ</span>
+                  <div>
+                    <strong style={{ color: 'var(--color-text)' }}>تنبيه:</strong>{' '}
+                    سيتم توليد رقم سري (PIN) من 5 أرقام تلقائياً وإرسال رسالة ترحيب عبر واتساب على رقم الهاتف المُسجَّل.
+                  </div>
+                </div>
+              )}
+            </form>
+          </div>
+
+          {/* Footer */}
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            justifyContent: 'flex-end',
+            padding: '12px 20px',
+            borderTop: '1px solid var(--color-border)',
+            backgroundColor: 'rgba(0,0,0,0.015)',
+            flexShrink: 0
+          }}>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              style={{
+                padding: '8px 18px',
+                fontSize: '13px',
+                color: 'var(--color-text-secondary)',
+                backgroundColor: 'transparent',
+                border: '1px solid var(--color-border)',
+                borderRadius: '6px',
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                opacity: submitting ? 0.6 : 1
+              }}
+            >
+              إلغاء
+            </button>
+            <button
+              type="submit"
+              form="user-modal-form"
+              disabled={submitting}
+              style={{
+                padding: '8px 22px',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: 'white',
+                backgroundColor: 'var(--color-primary)',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                opacity: submitting ? 0.7 : 1
+              }}
+            >
+              {submitting ? 'جارٍ الحفظ...' : (user ? 'حفظ التعديلات' : 'إضافة المستخدم')}
+            </button>
+          </div>
         </motion.div>
       </div>
     );
