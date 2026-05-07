@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Users,
   Shield,
@@ -15,6 +16,7 @@ import {
 import { UserService, type User as ApiUser, type CreateUserForm, type UpdateUserForm, type UserFilters } from '../services/UserService';
 import RoleService, { type Role as ApiRole } from '../services/roleService';
 import PermissionService, { type Permission as ApiPermission, type GroupedPermission } from '../services/permissionService';
+import { apiClient } from '../utils/api';
 
 interface Permission extends ApiPermission {
   category: 'cases' | 'tasks' | 'documents' | 'reports' | 'admin' | 'clients';
@@ -423,6 +425,31 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
     });
     const [submitting, setSubmitting] = useState(false);
     const [modalError, setModalError] = useState<string | null>(null);
+    type WaStatus = 'loading' | 'connected' | 'disconnected' | 'no_instance' | 'error';
+    const [waStatus, setWaStatus] = useState<WaStatus>('loading');
+    const navigate = useNavigate();
+
+    // فحص حالة جهاز الواتساب الخاص بالشركة عند فتح المودال (للإضافة فقط)
+    useEffect(() => {
+      if (user) { setWaStatus('connected'); return; } // التعديل لا يحتاج فحص
+      let cancelled = false;
+      (async () => {
+        try {
+          const resp: any = await apiClient.get('/whatsapp/instances');
+          if (cancelled) return;
+          const list: any[] = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp?.data?.data) ? resp.data.data : []);
+          if (list.length === 0) {
+            setWaStatus('no_instance');
+          } else {
+            const anyConnected = list.some((i: any) => (i.status || '').toLowerCase() === 'connected');
+            setWaStatus(anyConnected ? 'connected' : 'disconnected');
+          }
+        } catch {
+          if (!cancelled) setWaStatus('error');
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [user]);
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -598,6 +625,63 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
               }}>
                 <strong style={{ display: 'block', marginBottom: '3px', fontSize: '12px' }}>تعذّر الحفظ:</strong>
                 {modalError}
+              </div>
+            )}
+
+            {/* تنبيه حالة الواتساب — يظهر فقط في وضع الإضافة */}
+            {!user && (waStatus === 'no_instance' || waStatus === 'disconnected') && (
+              <div style={{
+                backgroundColor: waStatus === 'no_instance' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(220, 38, 38, 0.08)',
+                border: `1px solid ${waStatus === 'no_instance' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(220, 38, 38, 0.35)'}`,
+                borderRadius: '6px',
+                padding: '10px 12px',
+                marginBottom: '14px',
+                fontSize: '12px',
+                lineHeight: 1.6,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px'
+              }}>
+                <span style={{
+                  color: waStatus === 'no_instance' ? '#d97706' : '#dc2626',
+                  fontSize: '16px',
+                  lineHeight: 1,
+                  flexShrink: 0,
+                  marginTop: '1px'
+                }}>⚠</span>
+                <div style={{ flex: 1, color: 'var(--color-text)' }}>
+                  <strong style={{
+                    display: 'block',
+                    marginBottom: '3px',
+                    color: waStatus === 'no_instance' ? '#b45309' : '#b91c1c'
+                  }}>
+                    {waStatus === 'no_instance'
+                      ? 'لم يتم ربط جهاز واتساب بعد'
+                      : 'جهاز الواتساب غير متصل حالياً'}
+                  </strong>
+                  <div style={{ color: 'var(--color-text-secondary)' }}>
+                    {waStatus === 'no_instance'
+                      ? 'الرقم السري لن يصل تلقائياً للمستخدم. يرجى ربط جهاز واتساب أولاً من صفحة إعدادات الواتساب.'
+                      : 'الرقم السري لن يصل للمستخدم حتى يُعاد اتصال الجهاز.'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { onClose(); navigate('/whatsapp-settings'); }}
+                    style={{
+                      marginTop: '8px',
+                      padding: '5px 12px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: 'white',
+                      backgroundColor: waStatus === 'no_instance' ? '#d97706' : '#dc2626',
+                      border: 'none',
+                      borderRadius: '5px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {waStatus === 'no_instance' ? 'ربط جهاز واتساب ←' : 'إدارة الواتساب ←'}
+                  </button>
+                </div>
               </div>
             )}
 
