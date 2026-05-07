@@ -139,6 +139,20 @@ export class UserService {
     }
   }
 
+  // إعادة إرسال بيانات الدخول (PIN جديد) عبر واتساب
+  static async resendCredentials(id: string): Promise<{ pin: string; temporary_password: string; user_id: number }> {
+    try {
+      const response = await apiClient.post<ApiResponse<{ pin: string; temporary_password: string; user_id: number }>>(`/users/${id}/resend-credentials`);
+      if (response.success && response.data) {
+        return response.data;
+      }
+      throw new Error(response.message || 'فشل في إعادة إرسال بيانات الدخول');
+    } catch (error) {
+      console.error('Error resending credentials:', error);
+      throw error;
+    }
+  }
+
   // تحديث حالة المستخدم (تفعيل/إلغاء تفعيل)
   static async updateUserStatus(id: string, isActive: boolean): Promise<User> {
     try {

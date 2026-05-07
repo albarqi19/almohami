@@ -261,6 +261,21 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
     }
   };
 
+  // Handle resend credentials (PIN جديد + واتساب)
+  const handleResendCredentials = async (id: string) => {
+    if (!confirm('سيتم إنشاء رقم سري جديد وإرساله للمستخدم عبر واتساب. هل تريد المتابعة؟')) return;
+    try {
+      setLoading(true);
+      const result = await UserService.resendCredentials(id);
+      alert(`تم إعادة إنشاء بيانات الدخول بنجاح ✅\n\nالرقم السري الجديد: ${result.pin}\n\nتم إرسال الرسالة عبر واتساب (إذا كان الجهاز متصلاً ورقم الهاتف صحيحاً).`);
+    } catch (err) {
+      console.error('Error resending credentials:', err);
+      alert('تعذّر إعادة إرسال بيانات الدخول. تحقق من اتصال الواتساب وحاول مرة أخرى.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle user deletion
   const handleDeleteUser = async (id: string) => {
     if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) return;
@@ -409,10 +424,16 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const UserModal: React.FC<{ user?: User; onClose: () => void; onSave: (user: User) => void | Promise<void> }> = ({
+  const UserModal: React.FC<{
+    user?: User;
+    onClose: () => void;
+    onSave: (user: User) => void | Promise<void>;
+    onResendCredentials?: () => void | Promise<void>;
+  }> = ({
     user,
     onClose,
-    onSave
+    onSave,
+    onResendCredentials
   }) => {
     const [formData, setFormData] = useState({
       name: user?.name || '',
@@ -814,10 +835,10 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
                       style={fieldInputStyle}
                     />
                   </div>
-                  {/* رقم الهاتف — اختياري */}
+                  {/* رقم الهاتف */}
                   <div>
                     <label style={fieldLabelStyle}>
-                      رقم الهاتف <span style={optionalHintStyle}>(اختياري)</span>
+                      رقم الهاتف (واتساب)
                     </label>
                     <input
                       type="tel"
@@ -851,6 +872,48 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
                     <strong style={{ color: 'var(--color-text)' }}>تنبيه:</strong>{' '}
                     سيتم توليد رقم سري (PIN) من 5 أرقام تلقائياً وإرسال رسالة ترحيب عبر واتساب على رقم الهاتف المُسجَّل.
                   </div>
+                </div>
+              )}
+
+              {/* Resend credentials — يظهر عند التعديل فقط */}
+              {user && onResendCredentials && (
+                <div style={{
+                  marginTop: '6px',
+                  padding: '12px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ flex: 1, minWidth: '200px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text)', marginBottom: '2px' }}>
+                      إعادة إرسال بيانات الدخول
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+                      سيُولَّد رقم سري جديد ويُرسل عبر واتساب — مفيد لو لم تصل الرسالة الأولى.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onResendCredentials()}
+                    style={{
+                      padding: '7px 14px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: 'white',
+                      backgroundColor: '#10b981',
+                      border: 'none',
+                      borderRadius: '5px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    إعادة الإرسال
+                  </button>
                 </div>
               )}
             </form>
@@ -1586,6 +1649,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
               setShowAddUserModal(false);
               setSelectedUser(null);
             }}
+            onResendCredentials={selectedUser ? () => handleResendCredentials(selectedUser.id) : undefined}
             onSave={async (user) => {
               if (selectedUser) {
                 // Update existing user
@@ -1598,7 +1662,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
                   is_active: user.status === 'active'
                 });
               } else {
-                // Create new user  
+                // Create new user
                 await handleCreateUser({
                   name: user.name,
                   email: user.email,
