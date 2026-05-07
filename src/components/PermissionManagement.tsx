@@ -11,7 +11,11 @@ import {
   Key,
   CheckCircle,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  Scale,
+  RefreshCw,
+  Phone,
+  Mail
 } from 'lucide-react';
 import { UserService, type User as ApiUser, type CreateUserForm, type UpdateUserForm, type UserFilters } from '../services/UserService';
 import RoleService, { type Role as ApiRole } from '../services/roleService';
@@ -970,31 +974,54 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
     );
   };
 
+  // ─── Inline stats computed from current users ───
+  const stats = {
+    total: users.length,
+    active: users.filter(u => u.status === 'active').length,
+    lawyers: users.filter(u => ['lawyer','senior_lawyer','partner'].includes(u.role || '')).length,
+    rolesCount: roles.length
+  };
+
+  // ─── Role color/label helpers ───
+  const roleColorOf = (roleName: string): string => {
+    const r = roles.find(x => x.name === roleName || x.id === roleName);
+    return r?.color || 'var(--color-text-secondary)';
+  };
+
   return (
     <div className={className}>
-      {/* Header */}
+      {/* ─── ERP Header (compact, single row) ─── */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px'
+        alignItems: 'flex-start',
+        marginBottom: '14px',
+        paddingBottom: '12px',
+        borderBottom: '1px solid var(--color-border)',
+        gap: '12px',
+        flexWrap: 'wrap'
       }}>
         <div>
           <h2 style={{
-            fontSize: 'var(--font-size-xl)',
-            fontWeight: 'var(--font-weight-bold)',
+            fontSize: '17px',
+            fontWeight: 700,
             color: 'var(--color-text)',
             margin: 0,
-            marginBottom: '4px'
+            lineHeight: 1.3,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}>
-            إدارة الصلاحيات والمستخدمين
+            <Users size={18} style={{ color: 'var(--color-primary)' }} />
+            المستخدمون والصلاحيات
           </h2>
           <p style={{
-            fontSize: 'var(--font-size-sm)',
+            fontSize: '12px',
             color: 'var(--color-text-secondary)',
-            margin: 0
+            margin: '3px 0 0 0',
+            lineHeight: 1.3
           }}>
-            إدارة المستخدمين والأدوار والصلاحيات
+            إدارة الفريق والأدوار والصلاحيات في الشركة
           </p>
         </div>
 
@@ -1005,382 +1032,530 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            padding: '12px 20px',
+            gap: '6px',
+            padding: '8px 16px',
             backgroundColor: 'var(--color-primary)',
             color: 'white',
             border: 'none',
-            borderRadius: '8px',
-            fontSize: 'var(--font-size-sm)',
-            fontWeight: 'var(--font-weight-medium)',
-            cursor: 'pointer'
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap'
           }}
         >
-          <UserPlus style={{ height: '18px', width: '18px' }} />
+          <UserPlus size={15} />
           إضافة مستخدم
         </motion.button>
       </div>
 
-      {/* Tabs */}
+      {/* ─── Inline stats bar ─── */}
       <div style={{
-        display: 'flex',
-        borderBottom: '1px solid var(--color-border)',
-        marginBottom: '24px'
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+        gap: '8px',
+        marginBottom: '14px'
       }}>
         {[
-          { id: 'users', label: 'المستخدمين', icon: Users },
-          { id: 'roles', label: 'الأدوار', icon: Shield },
-          { id: 'permissions', label: 'الصلاحيات', icon: Key }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            style={{
+          { icon: Users, label: 'إجمالي المستخدمين', value: stats.total, color: '#3b82f6' },
+          { icon: CheckCircle, label: 'نشط', value: stats.active, color: '#10b981' },
+          { icon: Scale, label: 'محامون', value: stats.lawyers, color: '#8b5cf6' },
+          { icon: Shield, label: 'الأدوار', value: stats.rolesCount, color: '#f59e0b' }
+        ].map((s, i) => (
+          <div key={i} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '10px 12px',
+            backgroundColor: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: '6px'
+          }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '6px',
+              backgroundColor: `${s.color}15`,
+              color: s.color,
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              padding: '12px 20px',
-              fontSize: 'var(--font-size-sm)',
-              fontWeight: 'var(--font-weight-medium)',
-              color: activeTab === tab.id ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === tab.id ? '2px solid var(--color-primary)' : '2px solid transparent',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <tab.icon style={{ height: '16px', width: '16px' }} />
-            {tab.label}
-          </button>
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <s.icon size={16} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.2 }}>
+                {s.value}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', lineHeight: 1.2 }}>
+                {s.label}
+              </div>
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* Users Tab */}
+      {/* ─── Tabs (compact pill-style) ─── */}
+      <div style={{
+        display: 'flex',
+        gap: '4px',
+        borderBottom: '1px solid var(--color-border)',
+        marginBottom: '14px'
+      }}>
+        {[
+          { id: 'users', label: 'المستخدمون', icon: Users, count: users.length },
+          { id: 'roles', label: 'الأدوار', icon: Shield, count: roles.length },
+          { id: 'permissions', label: 'الصلاحيات', icon: Key, count: permissions.length }
+        ].map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                fontSize: '13px',
+                fontWeight: isActive ? 600 : 500,
+                color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderBottom: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
+                cursor: 'pointer',
+                marginBottom: '-1px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <tab.icon size={14} />
+              {tab.label}
+              <span style={{
+                padding: '1px 6px',
+                fontSize: '10px',
+                fontWeight: 600,
+                color: isActive ? 'white' : 'var(--color-text-secondary)',
+                backgroundColor: isActive ? 'var(--color-primary)' : 'var(--color-secondary)',
+                borderRadius: '8px',
+                minWidth: '18px',
+                textAlign: 'center'
+              }}>
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ─── Users Tab ─── */}
       {activeTab === 'users' && (
         <div>
-          {/* Filters */}
+          {/* Compact horizontal toolbar */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '16px',
-            marginBottom: '24px',
-            padding: '20px',
-            backgroundColor: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '12px'
+            display: 'flex',
+            gap: '8px',
+            marginBottom: '12px',
+            flexWrap: 'wrap',
+            alignItems: 'center'
           }}>
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: 'var(--font-size-sm)',
-                fontWeight: 'var(--font-weight-medium)',
-                color: 'var(--color-text)',
-                marginBottom: '6px'
-              }}>
-                البحث
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Search style={{
-                  position: 'absolute',
-                  top: '50%',
-                  right: '12px',
-                  transform: 'translateY(-50%)',
-                  height: '16px',
-                  width: '16px',
-                  color: 'var(--color-text-secondary)'
-                }} />
-                <input
-                  type="text"
-                  placeholder="البحث في الأسماء والإيميلات..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 40px 10px 12px',
-                    fontSize: 'var(--font-size-sm)',
-                    color: 'var(--color-text)',
-                    backgroundColor: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px'
-                  }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: 'var(--font-size-sm)',
-                fontWeight: 'var(--font-weight-medium)',
-                color: 'var(--color-text)',
-                marginBottom: '6px'
-              }}>
-                الدور
-              </label>
-              <select
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
+            {/* Search */}
+            <div style={{ position: 'relative', flex: '1 1 240px', minWidth: '180px' }}>
+              <Search size={14} style={{
+                position: 'absolute',
+                top: '50%',
+                right: '10px',
+                transform: 'translateY(-50%)',
+                color: 'var(--color-text-secondary)'
+              }} />
+              <input
+                type="text"
+                placeholder="بحث بالاسم أو البريد أو الهوية..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '10px 12px',
-                  fontSize: 'var(--font-size-sm)',
+                  padding: '7px 32px 7px 10px',
+                  fontSize: '13px',
                   color: 'var(--color-text)',
                   backgroundColor: 'var(--color-surface)',
                   border: '1px solid var(--color-border)',
-                  borderRadius: '8px'
+                  borderRadius: '6px',
+                  outline: 'none'
                 }}
-              >
-                <option value="all">جميع الأدوار</option>
-                {roles.map(role => (
-                  <option key={role.id} value={role.name}>
-                    {role.displayName}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: 'var(--font-size-sm)',
-                fontWeight: 'var(--font-weight-medium)',
+            {/* Role filter */}
+            <select
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              style={{
+                padding: '7px 10px',
+                fontSize: '13px',
                 color: 'var(--color-text)',
-                marginBottom: '6px'
-              }}>
-                الحالة
-              </label>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  fontSize: 'var(--font-size-sm)',
-                  color: 'var(--color-text)',
-                  backgroundColor: 'var(--color-surface)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px'
-                }}
-              >
-                <option value="all">جميع الحالات</option>
-                <option value="active">نشط</option>
-                <option value="inactive">غير نشط</option>
-                <option value="pending">معلق</option>
-              </select>
+                backgroundColor: 'var(--color-surface)',
+                border: '1px solid var(--color-border)',
+                borderRadius: '6px',
+                minWidth: '140px',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="all">كل الأدوار</option>
+              {roles.map(role => (
+                <option key={role.id} value={role.name}>
+                  {role.displayName}
+                </option>
+              ))}
+            </select>
+
+            {/* Status filter */}
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              style={{
+                padding: '7px 10px',
+                fontSize: '13px',
+                color: 'var(--color-text)',
+                backgroundColor: 'var(--color-surface)',
+                border: '1px solid var(--color-border)',
+                borderRadius: '6px',
+                minWidth: '120px',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="all">كل الحالات</option>
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
+              <option value="pending">معلق</option>
+            </select>
+
+            {/* Refresh */}
+            <button
+              type="button"
+              onClick={() => loadUsers({}, true)}
+              title="تحديث"
+              style={{
+                padding: '7px 10px',
+                fontSize: '13px',
+                color: 'var(--color-text-secondary)',
+                backgroundColor: 'var(--color-surface)',
+                border: '1px solid var(--color-border)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <RefreshCw size={14} />
+            </button>
+
+            {/* Result count */}
+            <div style={{
+              fontSize: '12px',
+              color: 'var(--color-text-secondary)',
+              marginInlineStart: 'auto',
+              whiteSpace: 'nowrap'
+            }}>
+              {filteredUsers.length} مستخدم
             </div>
           </div>
 
-          {/* Error Message */}
+          {/* Error */}
           {error && (
             <div style={{
-              padding: '16px',
-              backgroundColor: 'var(--color-red-50)',
-              border: '1px solid var(--color-red-200)',
-              borderRadius: '8px',
-              marginBottom: '16px',
-              color: 'var(--color-red-700)',
-              fontSize: 'var(--font-size-sm)'
+              padding: '10px 12px',
+              backgroundColor: 'rgba(220, 38, 38, 0.08)',
+              border: '1px solid rgba(220, 38, 38, 0.3)',
+              borderRadius: '6px',
+              marginBottom: '10px',
+              color: '#dc2626',
+              fontSize: '12px'
             }}>
               {error}
             </div>
           )}
 
-          {/* Loading State */}
+          {/* Loading */}
           {loading && (
             <div style={{
-              padding: '40px',
+              padding: '32px',
               textAlign: 'center',
               backgroundColor: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
-              borderRadius: '12px',
-              color: 'var(--color-text-secondary)'
+              borderRadius: '8px',
+              color: 'var(--color-text-secondary)',
+              fontSize: '13px'
             }}>
+              <RefreshCw size={18} className="spinning" style={{ marginInlineEnd: 8, verticalAlign: 'middle' }} />
               جارٍ تحميل المستخدمين...
             </div>
           )}
 
-          {/* Users Table */}
-          {!loading && (
+          {/* Empty */}
+          {!loading && filteredUsers.length === 0 && (
+            <div style={{
+              padding: '40px 20px',
+              textAlign: 'center',
+              backgroundColor: 'var(--color-surface)',
+              border: '1px dashed var(--color-border)',
+              borderRadius: '8px',
+              color: 'var(--color-text-secondary)'
+            }}>
+              <Users size={32} style={{ opacity: 0.4, marginBottom: 8 }} />
+              <div style={{ fontSize: '13px' }}>
+                {searchTerm || selectedRole !== 'all' || selectedStatus !== 'all'
+                  ? 'لا توجد نتائج تطابق البحث'
+                  : 'لا يوجد مستخدمون بعد'}
+              </div>
+            </div>
+          )}
+
+          {/* ─── ERP-style compact table ─── */}
+          {!loading && filteredUsers.length > 0 && (
             <div style={{
               backgroundColor: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
-              borderRadius: '12px',
-              overflow: 'hidden'
+              borderRadius: '6px',
+              overflow: 'hidden',
+              overflowX: 'auto'
             }}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr auto',
-                padding: '16px',
-                backgroundColor: 'var(--color-secondary)',
-                borderBottom: '1px solid var(--color-border)',
-                fontSize: 'var(--font-size-sm)',
-                fontWeight: 'var(--font-weight-semibold)',
-                color: 'var(--color-text-secondary)',
-                gap: '16px'
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: '13px',
+                minWidth: '720px'
               }}>
-                <div>الحالة</div>
-                <div>المستخدم</div>
-                <div>الدور</div>
-                <div>القسم</div>
-                <div>آخر دخول</div>
-                <div>الإجراءات</div>
-              </div>
-
-              {filteredUsers.map(user => (
-                <div
-                  key={user.id}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr auto',
-                    padding: '16px',
-                    borderBottom: '1px solid var(--color-border)',
-                    gap: '16px',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {getStatusIcon(user.status)}
-                    <span style={{
-                      fontSize: 'var(--font-size-xs)',
-                      color: 'var(--color-text-secondary)'
-                    }}>
-                      {getStatusDisplayName(user.status)}
-                    </span>
-                  </div>
-
-                  <div>
-                    <div style={{
-                      fontSize: 'var(--font-size-sm)',
-                      fontWeight: 'var(--font-weight-medium)',
-                      color: 'var(--color-text)',
-                      marginBottom: '2px'
-                    }}>
-                      {user.name}
-                    </div>
-                    <div style={{
-                      fontSize: 'var(--font-size-xs)',
-                      color: 'var(--color-text-secondary)'
-                    }}>
-                      {user.email}
-                    </div>
-                  </div>
-
-                  <div>
-                    <span style={{
-                      padding: '4px 8px',
-                      fontSize: 'var(--font-size-xs)',
-                      backgroundColor: `${roles.find(r => r.id === user.role)?.color}15`,
-                      color: roles.find(r => r.id === user.role)?.color,
-                      borderRadius: '4px'
-                    }}>
-                      {getRoleDisplayName(user.role || '')}
-                    </span>
-                  </div>
-
-                  <div style={{
-                    fontSize: 'var(--font-size-sm)',
-                    color: 'var(--color-text-secondary)'
+                <thead>
+                  <tr style={{
+                    backgroundColor: 'var(--color-secondary)',
+                    borderBottom: '1px solid var(--color-border)'
                   }}>
-                    {user.department || 'غير محدد'}
-                  </div>
-
-                  <div style={{
-                    fontSize: 'var(--font-size-sm)',
-                    color: 'var(--color-text-secondary)'
-                  }}>
-                    {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('ar-SA') : 'لم يسجل دخول'}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setShowAddUserModal(true);
+                    {['#', 'الاسم', 'رقم الهوية', 'الدور', 'البريد / الهاتف', 'الحالة', 'آخر دخول', ''].map((h, i) => (
+                      <th key={i} style={{
+                        textAlign: 'right',
+                        padding: '8px 12px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: 'var(--color-text-secondary)',
+                        letterSpacing: '0.02em',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((user, idx) => {
+                    const roleColor = roleColorOf(user.role || '');
+                    return (
+                      <tr key={user.id} style={{
+                        borderBottom: idx < filteredUsers.length - 1 ? '1px solid var(--color-border)' : 'none',
+                        transition: 'background-color 0.15s'
                       }}
-                      style={{
-                        padding: '6px',
-                        backgroundColor: 'transparent',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        color: 'var(--color-text-secondary)'
-                      }}
-                    >
-                      <Edit2 style={{ height: '14px', width: '14px' }} />
-                    </button>
-                    <div style={{ position: 'relative' }}>
-                      <button
-                        onClick={() => setDropdownOpen(dropdownOpen === user.id ? null : user.id)}
-                        style={{
-                          padding: '6px',
-                          backgroundColor: 'transparent',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          color: 'var(--color-text-secondary)'
-                        }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.02)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
-                        <MoreHorizontal style={{ height: '14px', width: '14px' }} />
-                      </button>
-
-                      {dropdownOpen === user.id && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '100%',
-                          left: 0,
-                          backgroundColor: 'var(--color-surface)',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '8px',
-                          padding: '8px',
-                          minWidth: '150px',
-                          zIndex: 1000,
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                        }}>
-                          <button
-                            onClick={() => {
-                              handleToggleUserStatus(user.id, user.status === 'active');
-                              setDropdownOpen(null);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '8px 12px',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              textAlign: 'right',
-                              cursor: 'pointer',
-                              borderRadius: '4px',
-                              fontSize: 'var(--font-size-sm)',
-                              color: 'var(--color-text)'
-                            }}
-                          >
-                            {user.status === 'active' ? 'إلغاء التفعيل' : 'تفعيل'}
-                          </button>
-                          <button
-                            onClick={() => {
-                              handleDeleteUser(user.id);
-                              setDropdownOpen(null);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '8px 12px',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              textAlign: 'right',
-                              cursor: 'pointer',
-                              borderRadius: '4px',
-                              fontSize: 'var(--font-size-sm)',
-                              color: 'var(--color-red-600)'
-                            }}
-                          >
-                            حذف المستخدم
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                        <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontSize: '12px', width: '40px' }}>
+                          {idx + 1}
+                        </td>
+                        <td style={{ padding: '8px 12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '50%',
+                              backgroundColor: `${roleColor}20`,
+                              color: roleColor,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              flexShrink: 0
+                            }}>
+                              {user.name?.charAt(0) || '؟'}
+                            </div>
+                            <div style={{ fontWeight: 500, color: 'var(--color-text)' }}>
+                              {user.name}
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontFamily: 'monospace', fontSize: '12px' }} dir="ltr">
+                          {user.national_id || '—'}
+                        </td>
+                        <td style={{ padding: '8px 12px' }}>
+                          <span style={{
+                            padding: '2px 8px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            backgroundColor: `${roleColor}15`,
+                            color: roleColor,
+                            borderRadius: '4px',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {getRoleDisplayName(user.role || '')}
+                          </span>
+                        </td>
+                        <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                          {user.email && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Mail size={11} style={{ opacity: 0.6, flexShrink: 0 }} />
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>
+                                {user.email}
+                              </span>
+                            </div>
+                          )}
+                          {user.phone && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: user.email ? '2px' : 0 }} dir="ltr">
+                              <Phone size={11} style={{ opacity: 0.6, flexShrink: 0 }} />
+                              <span>{user.phone}</span>
+                            </div>
+                          )}
+                          {!user.email && !user.phone && '—'}
+                        </td>
+                        <td style={{ padding: '8px 12px' }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '2px 8px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            backgroundColor: user.status === 'active' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                            color: user.status === 'active' ? '#10b981' : '#ef4444',
+                            borderRadius: '4px',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {getStatusIcon(user.status)}
+                            {getStatusDisplayName(user.status)}
+                          </span>
+                        </td>
+                        <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                          {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('ar-SA') : '—'}
+                        </td>
+                        <td style={{ padding: '8px 12px', textAlign: 'left', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'inline-flex', gap: '4px' }}>
+                            <button
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowAddUserModal(true);
+                              }}
+                              title="تعديل"
+                              style={{
+                                padding: '4px 6px',
+                                backgroundColor: 'transparent',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                color: 'var(--color-text-secondary)',
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            <div style={{ position: 'relative' }}>
+                              <button
+                                onClick={() => setDropdownOpen(dropdownOpen === user.id ? null : user.id)}
+                                title="المزيد"
+                                style={{
+                                  padding: '4px 6px',
+                                  backgroundColor: 'transparent',
+                                  border: '1px solid var(--color-border)',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  color: 'var(--color-text-secondary)',
+                                  display: 'flex',
+                                  alignItems: 'center'
+                                }}
+                              >
+                                <MoreHorizontal size={13} />
+                              </button>
+                              {dropdownOpen === user.id && (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '100%',
+                                  left: 0,
+                                  marginTop: '4px',
+                                  backgroundColor: 'var(--color-surface)',
+                                  border: '1px solid var(--color-border)',
+                                  borderRadius: '6px',
+                                  padding: '4px',
+                                  minWidth: '180px',
+                                  zIndex: 100,
+                                  boxShadow: '0 6px 18px rgba(0,0,0,0.12)'
+                                }}>
+                                  <button
+                                    onClick={() => {
+                                      handleResendCredentials(user.id);
+                                      setDropdownOpen(null);
+                                    }}
+                                    style={{
+                                      width: '100%',
+                                      padding: '7px 10px',
+                                      backgroundColor: 'transparent',
+                                      border: 'none',
+                                      textAlign: 'right',
+                                      cursor: 'pointer',
+                                      borderRadius: '4px',
+                                      fontSize: '12px',
+                                      color: 'var(--color-text)'
+                                    }}
+                                  >
+                                    إعادة إرسال بيانات الدخول
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      handleToggleUserStatus(user.id, user.status === 'active');
+                                      setDropdownOpen(null);
+                                    }}
+                                    style={{
+                                      width: '100%',
+                                      padding: '7px 10px',
+                                      backgroundColor: 'transparent',
+                                      border: 'none',
+                                      textAlign: 'right',
+                                      cursor: 'pointer',
+                                      borderRadius: '4px',
+                                      fontSize: '12px',
+                                      color: 'var(--color-text)'
+                                    }}
+                                  >
+                                    {user.status === 'active' ? 'إلغاء التفعيل' : 'تفعيل'}
+                                  </button>
+                                  <div style={{ height: '1px', backgroundColor: 'var(--color-border)', margin: '4px 0' }} />
+                                  <button
+                                    onClick={() => {
+                                      handleDeleteUser(user.id);
+                                      setDropdownOpen(null);
+                                    }}
+                                    style={{
+                                      width: '100%',
+                                      padding: '7px 10px',
+                                      backgroundColor: 'transparent',
+                                      border: 'none',
+                                      textAlign: 'right',
+                                      cursor: 'pointer',
+                                      borderRadius: '4px',
+                                      fontSize: '12px',
+                                      color: '#dc2626'
+                                    }}
+                                  >
+                                    حذف المستخدم
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
