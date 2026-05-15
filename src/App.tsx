@@ -3,17 +3,20 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import UpdateBanner from './components/UpdateBanner';
 import { AuthProvider } from './contexts/AuthContext';
+import { PermissionProvider } from './contexts/PermissionContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { TenantProvider, useTenant } from './contexts/TenantContext';
 import { TimerProvider } from './contexts/TimerContext';
 import { AnnouncementProvider } from './contexts/AnnouncementContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import Forbidden from './pages/Forbidden';
 import AuthLayout from './components/AuthLayout';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Cases from './pages/Cases';
 import CaseDetailPage from './pages/CaseDetailPage';
 import UpcomingSessions from './pages/UpcomingSessions';
+import SessionPrep from './pages/SessionPrep';
 import ClientCases from './pages/ClientCases';
 import ClientCaseDetail from './pages/ClientCaseDetail';
 import Tasks from './pages/Tasks';
@@ -79,6 +82,7 @@ function App() {
   return (
     <TenantProvider>
       <AuthProvider>
+        <PermissionProvider>
         <AnnouncementProvider>
         <SubscriptionProvider>
           <UpdateBanner />
@@ -105,6 +109,9 @@ function App() {
               {/* Public Booking Page - No auth required */}
               <Route path="/booking/:token" element={<PublicBooking />} />
 
+              {/* Forbidden page - Phase 3 */}
+              <Route path="/forbidden" element={<Forbidden />} />
+
               {/* All routes below need TimerProvider */}
               <Route path="*" element={
                 <TimerProvider>
@@ -130,6 +137,11 @@ function App() {
               <Route path="sessions" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <UpcomingSessions />
+                </ProtectedRoute>
+              } />
+              <Route path="sessions/:sessionId/prep" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                  <SessionPrep />
                 </ProtectedRoute>
               } />
               <Route path="wekalat" element={
@@ -316,6 +328,7 @@ function App() {
           <ToastContainer position="bottom-left" rtl autoClose={3000} hideProgressBar={false} closeOnClick pauseOnHover theme="light" />
         </SubscriptionProvider>
         </AnnouncementProvider>
+        </PermissionProvider>
       </AuthProvider>
     </TenantProvider>
   );

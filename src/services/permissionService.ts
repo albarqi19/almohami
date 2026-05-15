@@ -1,4 +1,5 @@
 import { apiClient } from '../utils/api';
+import type { MePermissionsResponse } from '../types';
 
 export interface Permission {
   id: string | number;
@@ -134,6 +135,15 @@ class PermissionService {
       console.error('Error deleting permission:', error);
       throw error.response?.data || error;
     }
+  }
+
+  /**
+   * صلاحيات المستخدم الحالي + version + is_super_admin.
+   * يُستدعى بعد login وعند ملاحظة تغيير الـ version.
+   */
+  async getMyPermissions(): Promise<MePermissionsResponse> {
+    const response = await apiClient.get<{ data: MePermissionsResponse }>('/me/permissions');
+    return response.data;
   }
 }
 

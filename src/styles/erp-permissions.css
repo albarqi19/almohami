@@ -1,0 +1,449 @@
+/* ───────────────────────────────────────────────────────────
+   ERP Dense Permissions UI
+   تكامل كامل مع نظام الثيمات (light/dark/classic) عبر CSS variables.
+   يستخدم متغيرات المشروع: --color-surface, --color-text, --color-border, ...
+   ─────────────────────────────────────────────────────────── */
+
+.erp-perm {
+  /* Sizing tokens (محايدة عن الثيم) */
+  --erp-row-h: 32px;
+  --erp-text-xs: 11.5px;
+  --erp-text-sm: 12.5px;
+  --erp-text-base: 13.5px;
+  --erp-text-md: 14px;
+  --erp-text-lg: 16px;
+
+  --erp-gap-1: 4px;
+  --erp-gap-2: 8px;
+  --erp-gap-3: 12px;
+  --erp-gap-4: 16px;
+  --erp-pad-cell: 6px 10px;
+
+  /* Color tokens — مربوطة بالـ project design system */
+  --erp-bg:           var(--color-surface, #ffffff);
+  --erp-bg-alt:       var(--color-surface-subtle, var(--color-gray-100, #f7f5f0));
+  --erp-bg-hover:     var(--color-primary-soft, rgba(10, 25, 47, 0.06));
+  --erp-bg-active:    var(--color-primary-soft, rgba(10, 25, 47, 0.10));
+  --erp-bg-system:    var(--color-gray-100, #f5f3ed);
+
+  --erp-border:       var(--color-border, #E0E0E0);
+  --erp-border-strong:var(--color-border-strong, #c9c9c9);
+
+  --erp-text:         var(--color-text, #212121);
+  --erp-text-muted:   var(--color-text-secondary, #5a5a5a);
+  --erp-text-faint:   var(--color-gray-400, #a8a8a8);
+  --erp-heading:      var(--color-heading, var(--color-primary, #0A192F));
+
+  --erp-accent:       var(--color-primary, #0A192F);
+  --erp-accent-hover: var(--color-primary-hover, #142840);
+  --erp-accent-soft:  var(--color-primary-soft, rgba(10, 25, 47, 0.12));
+
+  --erp-success:      var(--color-success, #1b998b);
+  --erp-success-soft: rgba(27, 153, 139, 0.12);
+  --erp-warn:         var(--color-warning, #f4a259);
+  --erp-warn-soft:    rgba(244, 162, 89, 0.18);
+  --erp-danger:       var(--color-error, #d1495b);
+  --erp-danger-soft:  rgba(209, 73, 91, 0.12);
+  --erp-info:         var(--color-info, #3b82f6);
+  --erp-info-soft:    rgba(59, 130, 246, 0.12);
+
+  font-size: var(--erp-text-sm);
+  color: var(--erp-text);
+  font-feature-settings: "tnum";
+}
+
+/* Dark/Classic theme overrides — استخدام المتغيرات تلقائيًا، لكن
+   نُحدّث system-bg + hover ليتناسبا مع خلفية داكنة */
+body.dark .erp-perm,
+body.classic .erp-perm {
+  --erp-bg-hover:   rgba(255, 255, 255, 0.06);
+  --erp-bg-active:  rgba(255, 255, 255, 0.10);
+  --erp-bg-system:  rgba(255, 255, 255, 0.03);
+  --erp-text-faint: var(--color-gray-400, #6b7280);
+}
+
+/* ── Layout: 2/3-column grid، يعمل full-width أو كـ card ─── */
+.erp-shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  background: var(--erp-bg);
+  border: 1px solid var(--erp-border);
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 520px;
+  max-height: calc(100vh - 200px);
+}
+.erp-shell--with-panel {
+  grid-template-columns: 220px 1fr 340px;
+}
+
+.erp-shell__nav {
+  border-inline-end: 1px solid var(--erp-border);
+  background: var(--erp-bg-alt);
+  overflow-y: auto;
+  padding: var(--erp-gap-3) var(--erp-gap-2);
+}
+
+.erp-shell__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--erp-bg);
+  overflow: hidden;
+}
+
+/* Toolbar يبقى ثابتًا أعلى المحتوى عند التمرير */
+.erp-shell__main .erp-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.erp-shell__panel {
+  border-inline-start: 1px solid var(--erp-border);
+  background: var(--erp-bg-alt);
+  overflow-y: auto;
+}
+
+/* ── Sidebar nav ─────────────────────────────────────────── */
+.erp-nav-section { margin-bottom: var(--erp-gap-3); }
+.erp-nav-section__title {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--erp-text-faint);
+  padding: 4px 8px;
+  margin-bottom: 2px;
+}
+.erp-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-gap-2);
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: var(--erp-text-sm);
+  color: var(--erp-text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: background .08s, color .08s;
+  width: 100%;
+  text-align: start;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+}
+.erp-nav-item:hover {
+  background: var(--erp-bg-hover);
+  color: var(--erp-text);
+}
+.erp-nav-item--active {
+  background: var(--erp-accent-soft);
+  color: var(--erp-accent);
+  font-weight: 600;
+}
+.erp-nav-item--active:hover { background: var(--erp-accent-soft); }
+.erp-nav-item__icon { display: inline-flex; }
+.erp-nav-item__label { flex: 1; }
+.erp-nav-item__badge {
+  font-size: 10px;
+  background: var(--erp-bg-hover);
+  color: var(--erp-text-muted);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+.erp-nav-item--active .erp-nav-item__badge {
+  background: var(--erp-accent);
+  color: var(--erp-bg);
+}
+
+/* ── Toolbar ─────────────────────────────────────────────── */
+.erp-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-gap-2);
+  padding: var(--erp-gap-3);
+  border-bottom: 1px solid var(--erp-border);
+  background: var(--erp-bg);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.erp-toolbar__title {
+  font-size: var(--erp-text-md);
+  font-weight: 600;
+  color: var(--erp-heading);
+  margin: 0;
+}
+.erp-toolbar__count {
+  font-size: var(--erp-text-xs);
+  color: var(--erp-text-muted);
+  margin-inline-start: var(--erp-gap-2);
+}
+.erp-toolbar__spacer { flex: 1; }
+
+/* ── Inputs ──────────────────────────────────────────────── */
+.erp-input {
+  font-size: var(--erp-text-sm);
+  padding: 5px 10px;
+  border: 1px solid var(--erp-border);
+  border-radius: 4px;
+  background: var(--erp-bg);
+  color: var(--erp-text);
+  outline: none;
+  min-width: 180px;
+  transition: border-color .1s, box-shadow .1s;
+  font-family: inherit;
+}
+.erp-input:focus {
+  border-color: var(--erp-accent);
+  box-shadow: 0 0 0 2px var(--erp-accent-soft);
+}
+.erp-input::placeholder { color: var(--erp-text-faint); }
+
+.erp-select {
+  font-size: var(--erp-text-sm);
+  padding: 5px 8px;
+  border: 1px solid var(--erp-border);
+  border-radius: 4px;
+  background: var(--erp-bg);
+  color: var(--erp-text);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.erp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  font-size: var(--erp-text-xs);
+  border-radius: 12px;
+  background: var(--erp-bg);
+  color: var(--erp-text-muted);
+  border: 1px solid var(--erp-border);
+  user-select: none;
+}
+.erp-chip:hover { background: var(--erp-bg-hover); }
+.erp-chip--active {
+  background: var(--erp-accent-soft);
+  color: var(--erp-accent);
+  border-color: var(--erp-accent);
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.erp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  font-size: var(--erp-text-sm);
+  font-weight: 500;
+  border: 1px solid var(--erp-border);
+  border-radius: 4px;
+  background: var(--erp-bg);
+  color: var(--erp-text);
+  cursor: pointer;
+  transition: background .1s, border-color .1s, color .1s;
+  font-family: inherit;
+}
+.erp-btn:hover:not(:disabled) {
+  background: var(--erp-bg-hover);
+  border-color: var(--erp-border-strong);
+}
+.erp-btn:disabled { opacity: .5; cursor: not-allowed; }
+.erp-btn--primary {
+  background: var(--erp-accent);
+  color: var(--color-surface, #ffffff);
+  border-color: var(--erp-accent);
+}
+.erp-btn--primary:hover:not(:disabled) {
+  background: var(--erp-accent-hover);
+  border-color: var(--erp-accent-hover);
+  color: var(--color-surface, #ffffff);
+}
+.erp-btn--danger { color: var(--erp-danger); border-color: transparent; }
+.erp-btn--danger:hover:not(:disabled) {
+  background: var(--erp-danger-soft);
+  border-color: transparent;
+}
+.erp-btn--ghost { border-color: transparent; background: transparent; }
+.erp-btn--ghost:hover:not(:disabled) { background: var(--erp-bg-hover); }
+.erp-btn--sm { padding: 3px 6px; font-size: var(--erp-text-xs); }
+.erp-btn--icon { padding: 4px; }
+
+/* ── Table ───────────────────────────────────────────────── */
+.erp-table-wrap {
+  flex: 1;
+  overflow: auto;
+  background: var(--erp-bg);
+}
+.erp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--erp-text-sm);
+}
+.erp-table th {
+  text-align: start;
+  padding: var(--erp-pad-cell);
+  font-size: var(--erp-text-xs);
+  font-weight: 600;
+  color: var(--erp-text-muted);
+  background: var(--erp-bg-alt);
+  border-bottom: 1px solid var(--erp-border);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  white-space: nowrap;
+}
+.erp-table td {
+  padding: var(--erp-pad-cell);
+  border-bottom: 1px solid var(--erp-border);
+  vertical-align: middle;
+  color: var(--erp-text);
+}
+.erp-table tbody tr { cursor: pointer; transition: background .05s; }
+.erp-table tbody tr:hover { background: var(--erp-bg-hover); }
+.erp-table tbody tr.erp-row--selected { background: var(--erp-bg-active); }
+.erp-table tbody tr.erp-row--system { background: var(--erp-bg-system); }
+.erp-table tbody tr.erp-row--system:hover { background: var(--erp-bg-hover); }
+
+/* ── Status badges ───────────────────────────────────────── */
+.erp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  font-size: 10.5px;
+  font-weight: 500;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.erp-badge--neutral { background: var(--erp-bg-hover); color: var(--erp-text-muted); }
+.erp-badge--success { background: var(--erp-success-soft); color: var(--erp-success); }
+.erp-badge--warn    { background: var(--erp-warn-soft); color: var(--erp-warn); }
+.erp-badge--danger  { background: var(--erp-danger-soft); color: var(--erp-danger); }
+.erp-badge--info    { background: var(--erp-info-soft); color: var(--erp-info); }
+.erp-badge--accent  { background: var(--erp-accent-soft); color: var(--erp-accent); }
+
+/* ── Panel/Drawer ────────────────────────────────────────── */
+.erp-panel { display: flex; flex-direction: column; height: 100%; background: var(--erp-bg); }
+.erp-panel__header {
+  padding: var(--erp-gap-3);
+  border-bottom: 1px solid var(--erp-border);
+  display: flex;
+  align-items: center;
+  gap: var(--erp-gap-2);
+  background: var(--erp-bg);
+}
+.erp-panel__title {
+  font-size: var(--erp-text-md);
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+  color: var(--erp-heading);
+}
+.erp-panel__close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--erp-text-muted);
+  padding: 2px;
+  border-radius: 3px;
+}
+.erp-panel__close:hover { background: var(--erp-bg-hover); }
+.erp-panel__body { padding: var(--erp-gap-3); flex: 1; overflow-y: auto; }
+.erp-panel__footer {
+  padding: var(--erp-gap-3);
+  border-top: 1px solid var(--erp-border);
+  background: var(--erp-bg);
+  display: flex;
+  gap: var(--erp-gap-2);
+  justify-content: flex-end;
+}
+
+.erp-field { margin-bottom: var(--erp-gap-3); }
+.erp-field__label {
+  display: block;
+  font-size: var(--erp-text-xs);
+  font-weight: 500;
+  color: var(--erp-text-muted);
+  margin-bottom: 4px;
+}
+.erp-field__value { font-size: var(--erp-text-sm); color: var(--erp-text); }
+
+/* ── Empty state ─────────────────────────────────────────── */
+.erp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  color: var(--erp-text-muted);
+  font-size: var(--erp-text-sm);
+  text-align: center;
+}
+
+/* ── Matrix ──────────────────────────────────────────────── */
+.erp-matrix-wrap { flex: 1; overflow: auto; position: relative; background: var(--erp-bg); }
+.erp-matrix-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--erp-text-xs);
+  width: max-content;
+  min-width: 100%;
+}
+.erp-matrix-table th,
+.erp-matrix-table td {
+  border-inline-end: 1px solid var(--erp-border);
+  border-bottom: 1px solid var(--erp-border);
+  background: var(--erp-bg);
+}
+.erp-matrix-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--erp-bg-alt);
+  padding: 8px 6px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--erp-heading);
+}
+.erp-matrix-table thead th.erp-matrix-th--sticky-left {
+  inset-inline-start: 0;
+  z-index: 4;
+}
+.erp-matrix-table tbody th {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 2;
+  background: var(--erp-bg);
+  text-align: start;
+  padding: 4px 8px;
+  font-weight: 400;
+  color: var(--erp-text);
+  min-width: 220px;
+}
+.erp-matrix-table .erp-matrix-group {
+  background: var(--erp-bg-alt) !important;
+  font-weight: 600;
+  color: var(--erp-text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.erp-matrix-cell { text-align: center; padding: 4px; }
+.erp-matrix-cell--system { background: var(--erp-bg-system); }
+.erp-matrix-cell__check { width: 14px; height: 14px; accent-color: var(--erp-accent); cursor: pointer; }
+
+.erp-matrix-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-gap-2);
+  padding: 8px var(--erp-gap-3);
+  background: var(--erp-warn-soft);
+  border-bottom: 1px solid var(--erp-warn);
+  font-size: var(--erp-text-sm);
+  color: var(--erp-warn);
+  flex-shrink: 0;
+}
+
+/* Section wrapper — لا margin افتراضي. يحدّده الـ parent (Admin flush mode). */

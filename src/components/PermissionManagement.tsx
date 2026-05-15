@@ -12,8 +12,9 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
-  Scale,
   RefreshCw,
+  ChevronRight,
+  ChevronLeft,
   Phone,
   Mail
 } from 'lucide-react';
@@ -45,8 +46,8 @@ interface PermissionManagementProps {
   onAddUserModalChange?: (isOpen: boolean) => void;
 }
 
+// Legacy cache key — kept only to clear stale data on mount
 const USERS_CACHE_KEY = 'users_data';
-const USERS_CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
 const PermissionManagement: React.FC<PermissionManagementProps> = ({
   className = "",
@@ -75,75 +76,16 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
   const [rolesLoading, setRolesLoading] = useState(true);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
 
-  // States for API data - initialize from cache
-  const [users, setUsers] = useState<User[]>(() => {
-    try {
-      const cached = localStorage.getItem(USERS_CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < USERS_CACHE_DURATION) {
-          return data.users || [];
-        }
-      }
-    } catch (e) { console.error('Cache error:', e); }
-    return [];
-  });
-  const [loading, setLoading] = useState(() => {
-    try {
-      const cached = localStorage.getItem(USERS_CACHE_KEY);
-      if (cached) {
-        const { timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < USERS_CACHE_DURATION) return false;
-      }
-    } catch (e) { }
-    return true;
-  });
+  // States for API data
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(() => {
-    try {
-      const cached = localStorage.getItem(USERS_CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < USERS_CACHE_DURATION) {
-          return data.totalPages || 1;
-        }
-      }
-    } catch (e) { }
-    return 1;
-  });
-  const [totalUsers, setTotalUsers] = useState(() => {
-    try {
-      const cached = localStorage.getItem(USERS_CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < USERS_CACHE_DURATION) {
-          return data.totalUsers || 0;
-        }
-      }
-    } catch (e) { }
-    return 0;
-  });
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
 
-  // Load users from API
-  const loadUsers = async (filters: UserFilters = {}, forceRefresh = false) => {
-    // Check if we have valid cache for default filters
-    if (!forceRefresh && !searchTerm && selectedRole === 'all' && selectedStatus === 'all') {
-      const cached = localStorage.getItem(USERS_CACHE_KEY);
-      if (cached) {
-        try {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < USERS_CACHE_DURATION && data.users?.length > 0) {
-            setUsers(data.users);
-            setTotalPages(data.totalPages || 1);
-            setTotalUsers(data.totalUsers || 0);
-            setLoading(false);
-            return;
-          }
-        } catch (e) { }
-      }
-    }
-
+  // Load users from API (no cache — always fetch fresh, paginated server-side)
+  const loadUsers = async (filters: UserFilters = {}, _forceRefresh = false) => {
     setLoading(true);
     setError(null);
     try {
@@ -152,16 +94,15 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
         search: searchTerm || undefined,
         role: selectedRole !== 'all' ? selectedRole : undefined,
         status: selectedStatus !== 'all' ? selectedStatus : undefined,
+        exclude_role: 'client', // المستخدمون فقط (دون العملاء) — العملاء في صفحة /clients
         page: currentPage,
         limit: 10
-      });
+      } as any);
 
-      // Check if response and response.data exist
       if (!response || !response.data) {
         throw new Error('استجابة غير صحيحة من الخادم');
       }
 
-      // Transform API data to match local User interface
       const transformedUsers: User[] = response.data.map((apiUser: any) => ({
         ...apiUser,
         status: (apiUser.is_active ? 'active' : 'inactive') as 'active' | 'inactive' | 'pending',
@@ -172,18 +113,9 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
       setUsers(transformedUsers);
       setTotalPages(response.last_page || 1);
       setTotalUsers(response.total || 0);
-
-      // Save to cache (only if default filters)
-      if (!searchTerm && selectedRole === 'all' && selectedStatus === 'all') {
-        localStorage.setItem(USERS_CACHE_KEY, JSON.stringify({
-          data: { users: transformedUsers, totalPages: response.last_page || 1, totalUsers: response.total || 0 },
-          timestamp: Date.now()
-        }));
-      }
     } catch (err) {
       console.error('Error loading users:', err);
       setError(err instanceof Error ? err.message : 'فشل في تحميل المستخدمين');
-      // Set empty data on error
       setUsers([]);
       setTotalPages(1);
       setTotalUsers(0);
@@ -192,22 +124,10 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
     }
   };
 
-  // Load users on component mount and when filters change
+  // Reload whenever filters or page change
   useEffect(() => {
-    // Only fetch if no cached data for default filters
-    if (!searchTerm && selectedRole === 'all' && selectedStatus === 'all') {
-      const cached = localStorage.getItem(USERS_CACHE_KEY);
-      if (cached) {
-        try {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < USERS_CACHE_DURATION && data.users?.length > 0) {
-            // Cache is valid, already loaded in initial state
-            return;
-          }
-        } catch (e) { }
-      }
-    }
     loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, selectedRole, selectedStatus, currentPage]);
 
   // Load roles and permissions on component mount
@@ -408,25 +328,31 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
   };
 
   const getRoleDisplayName = (roleId: string) => {
-    return roles.find(r => r.id === roleId)?.displayName || roleId;
+    // البحث بالاسم (name) لأن user.role يحوي اسم الدور (مثل "admin") وليس id رقمي
+    const match = roles.find(r => r.name === roleId || String(r.id) === roleId);
+    if (match?.displayName) return match.displayName;
+    // Fallback لقاموس ثابت بالعربي إذا كانت الأدوار لم تُحمَّل بعد
+    const arabicMap: Record<string, string> = {
+      admin: 'مدير النظام',
+      owner: 'صاحب الشركة',
+      partner: 'شريك',
+      senior_lawyer: 'محامي أول',
+      lawyer: 'محامي',
+      legal_assistant: 'مساعد قانوني',
+      accountant: 'محاسب',
+      secretary: 'سكرتير',
+      client: 'موكل',
+      super_admin: 'مدير عام',
+    };
+    return arabicMap[roleId] || roleId;
   };
 
-  const filteredUsers = users.filter(user => {
-    const search = searchTerm.toLowerCase();
-    const name = user.name?.toLowerCase() || '';
-    const email = user.email?.toLowerCase() || '';
-    const phone = user.phone?.toLowerCase() || '';
-    const nationalId = user.national_id?.toLowerCase() || '';
-    const matchesSearch = !search ||
-      name.includes(search) ||
-      email.includes(search) ||
-      phone.includes(search) ||
-      nationalId.includes(search);
-    const matchesRole = selectedRole === 'all' || user.role === selectedRole;
-    const matchesStatus = selectedStatus === 'all' || user.status === selectedStatus;
-
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+  // Server-side filtering/pagination is done in loadUsers — no local filter needed.
+  // Reset to page 1 whenever filters change.
+  useEffect(() => {
+    if (currentPage !== 1) setCurrentPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, selectedRole, selectedStatus]);
 
   const UserModal: React.FC<{
     user?: User;
@@ -782,7 +708,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
                       required
                       style={fieldInputStyle}
                     >
-                      {roles.map(role => (
+                      {roles.filter(role => role.name !== 'client').map(role => (
                         <option key={role.id} value={role.name}>
                           {role.displayName}
                         </option>
@@ -974,19 +900,26 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
     );
   };
 
-  // ─── Inline stats computed from current users ───
-  const stats = {
-    total: users.length,
-    active: users.filter(u => u.status === 'active').length,
-    lawyers: users.filter(u => ['lawyer','senior_lawyer','partner'].includes(u.role || '')).length,
-    rolesCount: roles.length
-  };
-
   // ─── Role color/label helpers ───
   const roleColorOf = (roleName: string): string => {
     const r = roles.find(x => x.name === roleName || x.id === roleName);
     return r?.color || 'var(--color-text-secondary)';
   };
+
+  // ─── Pagination button style ───
+  const paginationBtnStyle = (disabled: boolean): React.CSSProperties => ({
+    display: 'flex',
+    alignItems: 'center',
+    gap: '3px',
+    padding: '4px 8px',
+    fontSize: '12px',
+    color: disabled ? 'var(--color-text-secondary)' : 'var(--color-text)',
+    backgroundColor: 'transparent',
+    border: '1px solid var(--color-border)',
+    borderRadius: '4px',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.5 : 1
+  });
 
   return (
     <div className={className}>
@@ -1013,7 +946,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
             gap: '8px'
           }}>
             <Users size={18} style={{ color: 'var(--color-primary)' }} />
-            المستخدمون والصلاحيات
+            الفريق والصلاحيات
           </h2>
           <p style={{
             fontSize: '12px',
@@ -1021,7 +954,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
             margin: '3px 0 0 0',
             lineHeight: 1.3
           }}>
-            إدارة الفريق والأدوار والصلاحيات في الشركة
+            إدارة المستخدمين (المحامين والمساعدين) والأدوار والصلاحيات. <strong>العملاء يُداروَن من <a href="/clients" style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>صفحة العملاء</a></strong>.
           </p>
         </div>
 
@@ -1049,52 +982,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
         </motion.button>
       </div>
 
-      {/* ─── Inline stats bar ─── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-        gap: '8px',
-        marginBottom: '14px'
-      }}>
-        {[
-          { icon: Users, label: 'إجمالي المستخدمين', value: stats.total, color: '#3b82f6' },
-          { icon: CheckCircle, label: 'نشط', value: stats.active, color: '#10b981' },
-          { icon: Scale, label: 'محامون', value: stats.lawyers, color: '#8b5cf6' },
-          { icon: Shield, label: 'الأدوار', value: stats.rolesCount, color: '#f59e0b' }
-        ].map((s, i) => (
-          <div key={i} style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            padding: '10px 12px',
-            backgroundColor: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '6px'
-          }}>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '6px',
-              backgroundColor: `${s.color}15`,
-              color: s.color,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              <s.icon size={16} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.2 }}>
-                {s.value}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', lineHeight: 1.2 }}>
-                {s.label}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Stats moved to Admin.tsx (single source) — avoid duplication. */}
 
       {/* ─── Tabs (compact pill-style) ─── */}
       <div style={{
@@ -1104,7 +992,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
         marginBottom: '14px'
       }}>
         {[
-          { id: 'users', label: 'المستخدمون', icon: Users, count: users.length },
+          { id: 'users', label: 'المستخدمون', icon: Users, count: totalUsers || users.length },
           { id: 'roles', label: 'الأدوار', icon: Shield, count: roles.length },
           { id: 'permissions', label: 'الصلاحيات', icon: Key, count: permissions.length }
         ].map(tab => {
@@ -1202,7 +1090,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
               }}
             >
               <option value="all">كل الأدوار</option>
-              {roles.map(role => (
+              {roles.filter(role => role.name !== 'client').map(role => (
                 <option key={role.id} value={role.name}>
                   {role.displayName}
                 </option>
@@ -1258,7 +1146,9 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
               marginInlineStart: 'auto',
               whiteSpace: 'nowrap'
             }}>
-              {filteredUsers.length} مستخدم
+              {totalUsers > 0
+                ? `${(currentPage - 1) * 10 + 1}–${Math.min(currentPage * 10, totalUsers)} من ${totalUsers}`
+                : `${users.length} مستخدم`}
             </div>
           </div>
 
@@ -1294,7 +1184,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
           )}
 
           {/* Empty */}
-          {!loading && filteredUsers.length === 0 && (
+          {!loading && users.length === 0 && (
             <div style={{
               padding: '40px 20px',
               textAlign: 'center',
@@ -1313,7 +1203,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
           )}
 
           {/* ─── ERP-style compact table ─── */}
-          {!loading && filteredUsers.length > 0 && (
+          {!loading && users.length > 0 && (
             <div style={{
               backgroundColor: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
@@ -1348,11 +1238,11 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((user, idx) => {
+                  {users.map((user, idx) => {
                     const roleColor = roleColorOf(user.role || '');
                     return (
                       <tr key={user.id} style={{
-                        borderBottom: idx < filteredUsers.length - 1 ? '1px solid var(--color-border)' : 'none',
+                        borderBottom: idx < users.length - 1 ? '1px solid var(--color-border)' : 'none',
                         transition: 'background-color 0.15s'
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.02)'}
@@ -1558,6 +1448,90 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
               </table>
             </div>
           )}
+
+          {/* ─── Pagination ─── */}
+          {!loading && totalPages > 1 && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: '12px',
+              padding: '8px 12px',
+              backgroundColor: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '6px',
+              fontSize: '12px'
+            }}>
+              <div style={{ color: 'var(--color-text-secondary)' }}>
+                صفحة <strong style={{ color: 'var(--color-text)' }}>{currentPage}</strong> من <strong style={{ color: 'var(--color-text)' }}>{totalPages}</strong>
+              </div>
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  style={paginationBtnStyle(currentPage === 1)}
+                  title="الأولى"
+                >
+                  «
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  style={paginationBtnStyle(currentPage === 1)}
+                >
+                  <ChevronRight size={14} />
+                  السابق
+                </button>
+                {/* Page numbers (compact: window of 5) */}
+                {(() => {
+                  const pages: number[] = [];
+                  const start = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                  const end = Math.min(totalPages, start + 4);
+                  for (let p = start; p <= end; p++) pages.push(p);
+                  return pages.map(p => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setCurrentPage(p)}
+                      style={{
+                        padding: '4px 9px',
+                        fontSize: '12px',
+                        fontWeight: p === currentPage ? 700 : 500,
+                        color: p === currentPage ? 'white' : 'var(--color-text)',
+                        backgroundColor: p === currentPage ? 'var(--color-primary)' : 'transparent',
+                        border: '1px solid ' + (p === currentPage ? 'var(--color-primary)' : 'var(--color-border)'),
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        minWidth: '28px'
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ));
+                })()}
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  style={paginationBtnStyle(currentPage === totalPages)}
+                >
+                  التالي
+                  <ChevronLeft size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  style={paginationBtnStyle(currentPage === totalPages)}
+                  title="الأخيرة"
+                >
+                  »
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1565,151 +1539,199 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
       {activeTab === 'roles' && (
         <div>
           {rolesLoading ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
-              جاري تحميل الأدوار...
+            <div style={{
+              padding: '32px',
+              textAlign: 'center',
+              backgroundColor: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '6px',
+              color: 'var(--color-text-secondary)',
+              fontSize: '13px'
+            }}>
+              <RefreshCw size={18} className="spinning" style={{ marginInlineEnd: 8, verticalAlign: 'middle' }} />
+              جارٍ تحميل الأدوار...
             </div>
           ) : roles.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
-              لا توجد أدوار بعد
+            <div style={{
+              padding: '40px 20px',
+              textAlign: 'center',
+              backgroundColor: 'var(--color-surface)',
+              border: '1px dashed var(--color-border)',
+              borderRadius: '8px',
+              color: 'var(--color-text-secondary)'
+            }}>
+              <Shield size={32} style={{ opacity: 0.4, marginBottom: 8 }} />
+              <div style={{ fontSize: '13px' }}>لا توجد أدوار بعد</div>
             </div>
           ) : (
+            // ─── ERP-style roles table ───
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-              gap: '24px'
+              backgroundColor: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '6px',
+              overflow: 'hidden',
+              overflowX: 'auto'
             }}>
-              {roles.map(role => (
-                <motion.div
-                  key={role.id}
-                  whileHover={{ scale: 1.02 }}
-                  style={{
-                    backgroundColor: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '12px',
-                    padding: '20px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    marginBottom: '16px'
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: '13px',
+                minWidth: '640px'
+              }}>
+                <thead>
+                  <tr style={{
+                    backgroundColor: 'var(--color-secondary)',
+                    borderBottom: '1px solid var(--color-border)'
                   }}>
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      backgroundColor: `${role.color}15`,
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <Shield style={{ height: '24px', width: '24px', color: role.color }} />
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      {role.isSystem && (
-                        <span style={{
-                          padding: '4px 8px',
-                          fontSize: 'var(--font-size-xs)',
-                          backgroundColor: 'var(--color-blue-100)',
-                          color: 'var(--color-blue-600)',
-                          borderRadius: '4px'
+                    {['#', 'الدور', 'الوصف', 'النوع', 'المستخدمون', 'الصلاحيات', ''].map((h, i) => (
+                      <th key={i} style={{
+                        textAlign: 'right',
+                        padding: '8px 12px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: 'var(--color-text-secondary)',
+                        letterSpacing: '0.02em',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {roles.map((role, idx) => (
+                    <tr key={role.id} style={{
+                      borderBottom: idx < roles.length - 1 ? '1px solid var(--color-border)' : 'none',
+                      transition: 'background-color 0.15s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.02)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontSize: '12px', width: '40px' }}>
+                        {idx + 1}
+                      </td>
+                      <td style={{ padding: '8px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '6px',
+                            backgroundColor: `${role.color}15`,
+                            color: role.color,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <Shield size={14} />
+                          </div>
+                          <div style={{ fontWeight: 600, color: 'var(--color-text)' }}>
+                            {role.displayName}
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                        <div style={{
+                          maxWidth: '260px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
                         }}>
-                          نظام
-                        </span>
-                      )}
-                      <button
-                        style={{
-                          padding: '6px',
-                          backgroundColor: 'transparent',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          color: 'var(--color-text-secondary)'
-                        }}
-                      >
-                        <Edit2 style={{ height: '14px', width: '14px' }} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <h3 style={{
-                    fontSize: 'var(--font-size-lg)',
-                    fontWeight: 'var(--font-weight-semibold)',
-                    color: 'var(--color-text)',
-                    margin: 0,
-                    marginBottom: '8px'
-                  }}>
-                    {role.displayName}
-                  </h3>
-
-                  <p style={{
-                    fontSize: 'var(--font-size-sm)',
-                    color: 'var(--color-text-secondary)',
-                    margin: 0,
-                    marginBottom: '16px'
-                  }}>
-                    {role.description}
-                  </p>
-
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '16px'
-                  }}>
-                    <span style={{
-                      fontSize: 'var(--font-size-sm)',
-                      color: 'var(--color-text-secondary)'
-                    }}>
-                      {role.userCount} مستخدم
-                    </span>
-                    <span style={{
-                      fontSize: 'var(--font-size-sm)',
-                      color: 'var(--color-text-secondary)'
-                    }}>
-                      {role.permissions.length} صلاحية
-                    </span>
-                  </div>
-
-                  <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '6px'
-                  }}>
-                    {role.permissions.slice(0, 3).map(permissionName => {
-                      const permission = permissions.find(p => p.name === permissionName);
-                      return permission ? (
-                        <span
-                          key={permissionName}
+                          {role.description || '—'}
+                        </div>
+                      </td>
+                      <td style={{ padding: '8px 12px' }}>
+                        {role.isSystem ? (
+                          <span style={{
+                            padding: '2px 8px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                            color: '#3b82f6',
+                            borderRadius: '4px',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            نظام
+                          </span>
+                        ) : (
+                          <span style={{
+                            padding: '2px 8px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            backgroundColor: 'rgba(139, 92, 246, 0.12)',
+                            color: '#8b5cf6',
+                            borderRadius: '4px',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            مخصص
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '8px 12px', color: 'var(--color-text)', fontWeight: 600, fontSize: '13px' }}>
+                        {role.userCount}
+                      </td>
+                      <td style={{ padding: '8px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: 'var(--color-text)'
+                          }}>
+                            {role.permissions.length}
+                          </span>
+                          {role.permissions.length > 0 && (
+                            <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+                              {role.permissions.slice(0, 2).map(permissionName => {
+                                const permission = permissions.find(p => p.name === permissionName);
+                                return permission ? (
+                                  <span key={permissionName} style={{
+                                    padding: '1px 6px',
+                                    fontSize: '10px',
+                                    backgroundColor: 'var(--color-secondary)',
+                                    color: 'var(--color-text-secondary)',
+                                    borderRadius: '3px',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {permission.display_name}
+                                  </span>
+                                ) : null;
+                              })}
+                              {role.permissions.length > 2 && (
+                                <span style={{
+                                  padding: '1px 6px',
+                                  fontSize: '10px',
+                                  backgroundColor: 'var(--color-secondary)',
+                                  color: 'var(--color-text-secondary)',
+                                  borderRadius: '3px'
+                                }}>
+                                  +{role.permissions.length - 2}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: '8px 12px', textAlign: 'left', whiteSpace: 'nowrap' }}>
+                        <button
+                          title="تعديل الدور"
                           style={{
-                            padding: '2px 6px',
-                            fontSize: 'var(--font-size-xs)',
-                            backgroundColor: 'var(--color-secondary)',
+                            padding: '4px 6px',
+                            backgroundColor: 'transparent',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
                             color: 'var(--color-text-secondary)',
-                            borderRadius: '4px'
+                            display: 'inline-flex',
+                            alignItems: 'center'
                           }}
                         >
-                          {permission.display_name}
-                        </span>
-                      ) : null;
-                    })}
-                    {role.permissions.length > 3 && (
-                      <span style={{
-                        padding: '2px 6px',
-                        fontSize: 'var(--font-size-xs)',
-                        backgroundColor: 'var(--color-secondary)',
-                        color: 'var(--color-text-secondary)',
-                        borderRadius: '4px'
-                      }}>
-                        +{role.permissions.length - 3}
-                      </span>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
+                          <Edit2 size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

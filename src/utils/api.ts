@@ -6,6 +6,12 @@ class ApiClient {
   private baseURL: string;
   private token: string | null = null;
 
+  /**
+   * Phase 3: Listener يُستدعى عند ملاحظة X-Permissions-Version في response header
+   * مختلف عن النسخة المحلية. يُسجَّل من PermissionContext.
+   */
+  private versionListener: ((version: number) => void) | null = null;
+
   constructor(baseURL: string) {
     this.baseURL = baseURL;
     // Get token from localStorage on initialization
@@ -19,6 +25,14 @@ class ApiClient {
     } else {
       localStorage.removeItem('authToken');
     }
+  }
+
+  /**
+   * تسجيل listener لمراقبة تغيّر permissions_version في كل response.
+   * يُستدعى من PermissionProvider مرة واحدة.
+   */
+  setPermissionsVersionListener(listener: ((version: number) => void) | null) {
+    this.versionListener = listener;
   }
 
   private async request<T>(
@@ -103,6 +117,15 @@ class ApiClient {
         const error = new Error(errorData.message || `HTTP ${response.status}`) as Error & { errors?: Record<string, string[]> };
         error.errors = errorData.errors;
         throw error;
+      }
+
+      // Phase 3: راقب version header للـ permissions live refresh
+      const versionHeader = response.headers.get('X-Permissions-Version');
+      if (versionHeader && this.versionListener) {
+        const v = parseInt(versionHeader, 10);
+        if (!Number.isNaN(v)) {
+          this.versionListener(v);
+        }
       }
 
       const data = await response.json();

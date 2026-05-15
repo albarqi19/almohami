@@ -1,23 +1,33 @@
 ﻿import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissionContext } from '../contexts/PermissionContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
+import Forbidden from '../pages/Forbidden';
 import type { UserRole } from '../types';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  /** Legacy: حماية حسب أدوار users.role. سيُستبدل تدريجياً بـ requiredPermission. */
   allowedRoles?: UserRole[];
+  /** الصلاحية المطلوبة. لو فقدت → عرض صفحة Forbidden. */
+  requiredPermission?: string;
+  /** يكفي أي صلاحية من القائمة. */
+  anyOfPermissions?: string[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  allowedRoles
+  allowedRoles,
+  requiredPermission,
+  anyOfPermissions,
 }) => {
   const { user, isLoading } = useAuth();
+  const { has, hasAny, isLoading: permsLoading } = usePermissionContext();
   const { status, isOwner, isLawyer } = useSubscription();
   const location = useLocation();
 
-  if (isLoading) {
+  if (isLoading || (user && permsLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -95,25 +105,27 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }
 
-  if (allowedRoles && user.role && !allowedRoles.includes(user.role)) {
-    // User doesn't have permission
-    console.warn('ProtectedRoute: User role not allowed', {
-      userRole: user.role,
-      allowedRoles,
-      userId: user.id
+  // ─── Phase 3: Permission-based gate (preferred) ───
+  if (requiredPermission && !has(requiredPermission)) {
+    console.warn('ProtectedRoute: Permission denied', {
+      userId: user.id, permission: requiredPermission,
     });
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            غير مصرح لك بالدخول
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            ليس لديك الصلاحية للوصول إلى هذه الصفحة
-          </p>
-        </div>
-      </div>
-    );
+    return <Forbidden requiredPermission={requiredPermission} />;
+  }
+
+  if (anyOfPermissions && anyOfPermissions.length > 0 && !hasAny(anyOfPermissions)) {
+    console.warn('ProtectedRoute: None of permissions matched', {
+      userId: user.id, anyOfPermissions,
+    });
+    return <Forbidden requiredPermission={anyOfPermissions.join(' / ')} />;
+  }
+
+  // ─── Legacy: role-based gate (during transition) ───
+  if (allowedRoles && user.role && !allowedRoles.includes(user.role)) {
+    console.warn('ProtectedRoute: User role not allowed', {
+      userRole: user.role, allowedRoles, userId: user.id,
+    });
+    return <Forbidden />;
   }
 
   return <>{children}</>;

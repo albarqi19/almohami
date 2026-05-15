@@ -27,6 +27,9 @@ export interface User {
     trial_ends_at: string | null;
     requires_renewal: boolean;
   };
+  // Phase 3 - Permission System
+  is_super_admin?: boolean;
+  permissions_version?: number;
 }
 
 export const UserRole = {
@@ -37,10 +40,36 @@ export const UserRole = {
   LAWYER: 'lawyer',
   SENIOR_LAWYER: 'senior_lawyer',
   LEGAL_ASSISTANT: 'legal_assistant',
+  ACCOUNTANT: 'accountant',
+  SECRETARY: 'secretary',
   CLIENT: 'client',
 } as const;
 
 export type UserRole = typeof UserRole[keyof typeof UserRole];
+
+// Phase 3 — Permissions API response
+export interface MePermissionsResponse {
+  permissions: string[]; // قائمة كأسماء "cases.view", "cases.edit"... أو ["*"] لـ super_admin
+  roles: string[];
+  is_super_admin: boolean;
+  version: number;
+}
+
+/**
+ * meta.permissions الذي يرجع مع كل Resource من الباك:
+ * { canEdit: true, canDelete: false, canExport: true, ... }
+ * الفرونت يقرأ منه بدلاً من حساب الصلاحية محليًا (يحترم record grants).
+ */
+export interface ResourcePermissionsMeta {
+  canView?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
+  canShare?: boolean;
+  canAssign?: boolean;
+  canArchive?: boolean;
+  [key: string]: boolean | undefined;
+}
 
 // Case Billing Data - البيانات المالية للقضية
 export interface CaseBilling {
@@ -118,6 +147,7 @@ export interface Case {
   najiz_data?: any;
   najiz_synced_at?: Date;
   najiz_status?: string;
+  najiz_status_arabic?: string | null;
   source?: string;
   // Case demands and proofs
   case_demands?: string;
@@ -131,6 +161,8 @@ export interface Case {
   preparation_progress?: number;
   is_prep_mode?: boolean;
   status_arabic?: string;
+  type_arabic?: string;
+  priority_arabic?: string;
 }
 
 // Case Party - طرف القضية

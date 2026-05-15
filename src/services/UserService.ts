@@ -38,6 +38,7 @@ export interface UpdateUserForm {
 export interface UserFilters {
   search?: string;
   role?: string;
+  exclude_role?: string;
   status?: string;
   page?: number;
   limit?: number;
