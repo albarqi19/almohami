@@ -616,7 +616,7 @@ body.dark .cam-action-btn {
    ============================================================ */
 
 .cam-modal.cam-modal--erp {
-  max-width: 1100px;
+  max-width: 920px;
   max-height: 85vh;
   border-radius: 6px;
 }

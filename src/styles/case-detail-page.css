@@ -831,37 +831,47 @@ body.dark .case-session-item {
     flex-shrink: 0;
 }
 
-/* زر إرسال الإفادة */
+/* زر إرسال الإفادة — متوافق مع هوية الموقع ومحاذٍ لبقية أزرار الجلسة */
 .case-session-item__notify-btn {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
+    margin-top: 8px;
     padding: 5px 10px;
-    background: #3b82f6;
+    background: var(--law-navy);
     color: white;
+    border: 1px solid var(--law-navy);
     border-radius: 4px;
     font-size: 11px;
     font-weight: 500;
-    border: none;
     cursor: pointer;
     transition: all var(--transition-fast);
+    line-height: 1.4;
 }
 
 .case-session-item__notify-btn:hover {
-    background: #2563eb;
+    background: var(--law-navy-dark);
+    border-color: var(--law-navy-dark);
 }
 
+/* الحالة المفعّلة — يبقى ضمن هوية الموقع لكن بحدّ مميّز */
 .case-session-item__notify-btn--active {
-    background: #059669;
+    background: var(--law-navy-dark);
+    border-color: var(--status-green, #059669);
 }
 
 .case-session-item__notify-btn--active:hover {
-    background: #dc2626;
+    background: var(--law-navy);
+    border-color: var(--status-green, #059669);
 }
 
 .case-session-item__notify-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+.case-session-item__notify-btn svg {
+    flex-shrink: 0;
 }
 
 /* === Dabt Modal === */

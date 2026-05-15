@@ -653,3 +653,206 @@ body.dark .table-loading-overlay {
         transform: rotate(360deg);
     }
 }
+
+/* ───────────────────────────────────────────────────────────
+   Phase 4 — Admin header with inline stats + flush content
+   ─────────────────────────────────────────────────────────── */
+
+/* Header — ثابت بارتفاع محدد، لا يتمرر مع المحتوى */
+.admin-header--with-stats {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    /* لا يكبر مهما زاد العرض الداخلي — يبقى نفس الارتفاع */
+}
+
+.admin-header--with-stats .admin-header__title-area {
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+/* الإحصائيات: تمرير أفقي بدل النزول لسطر جديد */
+.admin-header__stats-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    overflow-x: auto;
+    overflow-y: hidden;
+    min-width: 0;
+    scrollbar-width: thin;
+    /* إخفاء scrollbar الافتراضي ليبدو نظيفاً */
+}
+.admin-header__stats-strip::-webkit-scrollbar { height: 4px; }
+.admin-header__stats-strip::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 2px;
+}
+
+.admin-stat-pill { flex-shrink: 0; }
+
+.admin-stat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--dashboard-card, var(--color-surface));
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-family: inherit;
+    transition: border-color .15s, transform .15s, background .15s;
+    min-width: 0;
+}
+
+.admin-stat-pill--readonly { cursor: default; }
+.admin-stat-pill--readonly:hover { transform: none; }
+
+.admin-stat-pill:hover {
+    border-color: var(--color-primary, var(--law-navy, #0A192F));
+    transform: translateY(-1px);
+}
+
+.admin-stat-pill__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.admin-stat-pill__icon--navy {
+    background: var(--law-navy-light, var(--color-primary-soft));
+    color: var(--law-navy, var(--color-primary));
+}
+.admin-stat-pill__icon--green {
+    background: var(--status-green-light, rgba(27, 153, 139, 0.12));
+    color: var(--status-green, var(--color-success, #1b998b));
+}
+.admin-stat-pill__icon--blue {
+    background: var(--status-blue-light, rgba(59, 130, 246, 0.12));
+    color: var(--status-blue, var(--color-info, #3b82f6));
+}
+.admin-stat-pill__icon--orange {
+    background: var(--status-orange-light, rgba(244, 162, 89, 0.12));
+    color: var(--status-orange, var(--color-warning, #f4a259));
+}
+
+.admin-stat-pill__main {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.2;
+    min-width: 0;
+}
+
+.admin-stat-pill__value {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-heading, var(--color-text));
+}
+
+.admin-stat-pill__label {
+    font-size: 10.5px;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────────────────
+   Flush content mode — الصفحة تأخذ كامل الـ viewport بارتفاع ثابت،
+   المحتوى يتمرر داخليًا فقط (لا scrollbar للصفحة).
+
+   Layout chain:
+   .admin-page--full-height  (height: 100vh, flex column, overflow: hidden)
+     ├── .admin-header          (flex-shrink: 0)
+     └── .admin-content--flush  (flex: 1, min-height: 0, overflow: hidden, padding bottom)
+           └── .erp-shell       (height: 100%, grid 220px 1fr، border + radius)
+                 ├── .erp-shell__nav   (overflow-y: auto)  ← sidebar ثابت
+                 └── .erp-shell__main  (flex column, overflow: hidden)
+                       ├── .erp-toolbar    (flex-shrink: 0)
+                       └── .erp-table-wrap (flex: 1, overflow: auto)
+   ───────────────────────────────────────────────────────── */
+
+.admin-page--full-height,
+.admin-page:has(.admin-content--flush) {
+    height: 100vh;
+    min-height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+}
+
+.admin-content--flush {
+    /* ملتصق بالحواف — لا padding، لا margin */
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.admin-content--flush > .erp-section-wrap {
+    margin: 0;
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.admin-content--flush > .erp-section-wrap > .erp-perm.erp-shell {
+    flex: 1;
+    /* ملتصق — border-top فقط يفصله عن الهيدر */
+    border: none;
+    border-top: 1px solid var(--color-border);
+    border-radius: 0;
+    box-shadow: none;
+    max-height: none;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Sidebar — ثابت داخل الـ shell */
+.admin-content--flush .erp-shell__nav {
+    position: relative;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* Main — flex column، toolbar + content area */
+.admin-content--flush .erp-shell__main {
+    overflow: hidden;
+    min-height: 0;
+    height: 100%;
+}
+
+.admin-content--flush .erp-shell__main > .erp-toolbar {
+    flex-shrink: 0;
+    position: relative;
+    top: auto;
+}
+
+/* مناطق التمرير الداخلية فقط */
+.admin-content--flush .erp-table-wrap,
+.admin-content--flush .erp-matrix-wrap {
+    overflow: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+.admin-content--flush .erp-matrix-bar {
+    flex-shrink: 0;
+}
+
+/* Responsive: على الشاشات الضيقة، الإحصائيات تحت العنوان */
+@media (max-width: 1000px) {
+    .admin-header__stats-strip {
+        order: 3;
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

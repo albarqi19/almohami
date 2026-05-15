@@ -161,6 +161,61 @@ export class AdminRequestService {
             throw new Error(response.message || 'فشل في جلب الإحصائيات');
         }
     }
+
+    /**
+     * يجلب سياق الطلب: إجازات سابقة + مهام/جلسات متعارضة خلال نافذة الإجازة.
+     * يُستخدم في ReviewModal لمساعدة المدير قبل القبول.
+     */
+    static async getRequestContext(id: number | string): Promise<AdminRequestContext> {
+        const response = await apiClient.get<ApiResponse<AdminRequestContext>>(`/admin-requests/${id}/context`);
+        if (response.success && response.data) {
+            return response.data;
+        }
+        throw new Error(response.message || 'فشل في جلب سياق الطلب');
+    }
+}
+
+// ─── Context Types ───
+export interface AdminRequestContext {
+    request_window: {
+        start_date: string | null;
+        end_date: string | null;
+        duration_days: number | null;
+    };
+    employee: { id: number; name: string; role: string };
+    previous_leaves: {
+        same_type_count: number;
+        same_type_days: number;
+        this_year_count: number;
+        this_year_days: number;
+        all_approved: number;
+        recent_same_type: Array<{
+            id: number;
+            start_date: string;
+            end_date: string | null;
+            reason: string | null;
+        }>;
+    };
+    pending_tasks: Array<{
+        id: number;
+        title: string;
+        due_date: string;
+        status: string;
+        case_id: number | null;
+        priority: string | null;
+    }>;
+    scheduled_sessions: Array<{
+        id: number;
+        case_id: number;
+        session_type: string | null;
+        session_date: string | null;
+        session_date_gregorian: string;
+        session_time: string | null;
+        court: string | null;
+        status: string;
+        case?: { id: number; title: string; file_number: string | null };
+    }>;
+    has_conflicts: boolean;
 }
 
 // Request Type Service

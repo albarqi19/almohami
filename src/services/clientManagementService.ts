@@ -138,6 +138,29 @@ export class ClientManagementService {
     }
 
     /**
+     * Create a brand-new client (individual / company / organization)
+     */
+    static async createClient(payload: {
+        name: string;
+        national_id: string;
+        email?: string;
+        phone?: string;
+        entity_type?: 'individual' | 'company' | 'organization';
+        classification?: 'vip' | 'regular' | 'one_time';
+        commercial_registration?: string;
+        vat_number?: string;
+        national_address?: string;
+        industry?: string;
+        legal_representative?: string;
+        point_of_contact_name?: string;
+        point_of_contact_phone?: string;
+        point_of_contact_email?: string;
+    }): Promise<{ client: Client; pin: string; temporary_password: string }> {
+        const response = await apiClient.post<any>('/client-management', payload);
+        return response.data;
+    }
+
+    /**
      * Update client phone and optionally send credentials
      */
     static async updateClientPhone(

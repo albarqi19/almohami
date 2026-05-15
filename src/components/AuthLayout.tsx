@@ -59,41 +59,32 @@ const AuthLayout: React.FC = () => {
 
     const heroContent = getHeroContent();
 
-    // If it's a subdomain (tenant), show simplified layout without hero
+    // If it's a subdomain (tenant), show simplified ERP-style layout without hero
     if (isSubdomain && tenant) {
-        const primaryColor = tenant.primary_color || '#C5A059';
-        const secondaryColor = tenant.secondary_color || '#1a1a1a';
         const logoUrl = tenant.logo_url || tenant.logo;
 
         return (
-            <div 
-                className="auth-page auth-page--tenant" 
+            <div
+                className="auth-page auth-page--tenant"
                 aria-labelledby="auth-title"
-                style={{
-                    '--tenant-primary': primaryColor,
-                    '--tenant-secondary': secondaryColor,
-                } as React.CSSProperties}
             >
                 {/* Tenant Logo Header */}
                 <header className="auth-tenant-top-header">
-                    <motion.div 
-                        initial={{ opacity: 0, y: -20 }}
+                    <motion.div
+                        initial={{ opacity: 0, y: -8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8 }}
+                        transition={{ duration: 0.3 }}
                         className="auth-tenant-logo-container"
                     >
                         {logoUrl ? (
-                            <img 
-                                src={logoUrl} 
-                                alt={tenant.name} 
+                            <img
+                                src={logoUrl}
+                                alt={tenant.name}
                                 className="auth-tenant-header-logo"
                             />
                         ) : (
-                            <div 
-                                className="auth-tenant-header-logo-placeholder"
-                                style={{ backgroundColor: primaryColor }}
-                            >
-                                <Scale size={28} color="white" />
+                            <div className="auth-tenant-header-logo-placeholder">
+                                <Scale size={24} />
                             </div>
                         )}
                     </motion.div>

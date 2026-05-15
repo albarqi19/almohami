@@ -25,7 +25,11 @@ import {
   Activity,
   MessageSquare,
   PenTool,
-  Link2
+  Link2,
+  Scroll,
+  Sparkles,
+  ClipboardList,
+  X as XIcon
 } from 'lucide-react';
 import Timeline from '../components/Timeline';
 import EditCaseModal from '../components/EditCaseModal';
@@ -41,9 +45,12 @@ import LinkToNajizModal from '../components/LinkToNajizModal';
 import LegalMemoWorkspace from '../components/LegalMemoWorkspace';
 import CasePrepKitchen from '../components/CasePrepKitchen';
 import LawSearchModal from '../components/LawSearchModal';
+import CaseWekalatPanel from '../components/CaseWekalatPanel';
+import { SendDabtPreferencesModal, type NotifyMode } from '../components/SendDabtPreferencesModal';
 import type { TimelineEvent } from '../components/Timeline';
 import { apiClient } from '../utils/api';
 import { CaseService } from '../services/caseService';
+import '../styles/send-dabt-modal.css';
 import { ActivityService } from '../services/activityService';
 import { DocumentService } from '../services/documentService';
 import { TaskService } from '../services/taskService';
@@ -57,7 +64,7 @@ const CaseDetailPage: React.FC = () => {
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [togglingNotify, setTogglingNotify] = useState<number | null>(null);
+  const [notifyModalSession, setNotifyModalSession] = useState<{ id: number; mode: NotifyMode | null; enabled: boolean } | null>(null);
   const [selectedDabtSession, setSelectedDabtSession] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -72,6 +79,7 @@ const CaseDetailPage: React.FC = () => {
   const [showLinkNajizModal, setShowLinkNajizModal] = useState(false);
   const [canLinkToNajiz, setCanLinkToNajiz] = useState(false);
   const [showLawSearch, setShowLawSearch] = useState(false);
+  const [showWekalatModal, setShowWekalatModal] = useState(false);
   const [documentsCount, setDocumentsCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
 
@@ -139,27 +147,6 @@ const CaseDetailPage: React.FC = () => {
     };
     checkCanLink();
   }, [caseId, caseData]);
-
-  // Separate function for force refresh
-  const handleToggleNotify = async (sessionId: number) => {
-    if (togglingNotify) return;
-    setTogglingNotify(sessionId);
-    try {
-      const response = await apiClient.post<{ success: boolean; notify_client: boolean }>(`/sessions/${sessionId}/toggle-notify`);
-      if (response.success && caseData) {
-        setCaseData({
-          ...caseData,
-          sessions: caseData.sessions?.map((s: any) =>
-            s.id === sessionId ? { ...s, notify_client: response.notify_client } : s
-          )
-        });
-      }
-    } catch (err) {
-      console.error('Error toggling notify:', err);
-    } finally {
-      setTogglingNotify(null);
-    }
-  };
 
   const refreshCaseData = async () => {
     if (!caseId) return;
@@ -366,7 +353,7 @@ const CaseDetailPage: React.FC = () => {
               {caseData.title}
             </div>
             <div className="case-detail-header__subtitle">
-              رقم الملف: {caseData.file_number} • {caseData.case_type}
+              رقم الملف: {caseData.file_number} • {caseData.case_type_arabic || caseData.type_arabic || caseData.case_type}
             </div>
           </div>
 
@@ -374,11 +361,11 @@ const CaseDetailPage: React.FC = () => {
           <div className="case-detail-header__badges">
             <span className={`case-badge ${getStatusBadgeClass(caseData.najiz_status || caseData.status)}`}>
               <span className="case-badge__dot"></span>
-              {caseData.najiz_status || caseData.status}
+              {caseData.najiz_status_arabic || caseData.status_arabic || caseData.status}
             </span>
             {caseData.priority && (
               <span className={`case-badge ${getPriorityBadgeClass(caseData.priority)}`}>
-                {caseData.priority}
+                {caseData.priority_arabic || caseData.priority}
               </span>
             )}
           </div>
@@ -421,6 +408,18 @@ const CaseDetailPage: React.FC = () => {
                 <MessageSquare size={14} />
               </span>
               الرسائل
+            </button>
+            <button className="case-header-tab" onClick={() => setShowWekalatModal(true)}>
+              <span className="case-header-tab__icon case-header-tab__icon--blue">
+                <Scroll size={14} />
+              </span>
+              الوكالات
+              {(() => {
+                const s = (caseData as any)?.wekalat_summary;
+                const total = s ? (s.matched_count ?? 0) : 0;
+                if (total > 0) return <span className="case-header-tab__count">{total}</span>;
+                return null;
+              })()}
             </button>
           </div>
 
@@ -627,6 +626,17 @@ const CaseDetailPage: React.FC = () => {
                           </div>
                           {/* أزرار الجلسة */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
+                            {/* زر غرفة التحضير — يفتح workspace الجلسة */}
+                            <Link
+                              to={`/sessions/${session.id}/prep`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="case-session-item__join-btn"
+                              style={{ background: 'var(--color-primary-soft)', color: 'var(--color-primary)' }}
+                              title="افتح غرفة تحضير الجلسة"
+                            >
+                              <ClipboardList size={12} />
+                              غرفة التحضير
+                            </Link>
                             {/* زر الدخول للجلسة الافتراضية */}
                             {session.video_conference_url && isUpcoming && (
                               <a
@@ -641,15 +651,28 @@ const CaseDetailPage: React.FC = () => {
                                 <ExternalLink size={12} />
                               </a>
                             )}
-                            {/* زر تفعيل/إلغاء إرسال الإفادة - للجلسات القادمة */}
+                            {/* زر إعدادات إرسال الإفادة - للجلسات القادمة */}
                             {isUpcoming && (
                               <button
                                 className={`case-session-item__notify-btn ${session.notify_client ? 'case-session-item__notify-btn--active' : ''}`}
-                                onClick={(e) => { e.stopPropagation(); handleToggleNotify(session.id); }}
-                                disabled={togglingNotify === session.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setNotifyModalSession({
+                                    id: session.id,
+                                    mode: (session.notify_client_mode as NotifyMode) ?? null,
+                                    enabled: !!session.notify_client,
+                                  });
+                                }}
+                                title="إعدادات إرسال الإفادة للعميل"
                               >
                                 <FileText size={12} />
-                                {togglingNotify === session.id ? '...' : session.notify_client ? 'سيتم ارسال الافادة ✓' : 'ارسال الافادة'}
+                                {session.notify_client
+                                  ? session.notify_client_mode === 'save_only'
+                                    ? 'إفادة (للمراجعة) ✓'
+                                    : session.notify_client_mode === 'raw'
+                                      ? 'إفادة (خام) ✓'
+                                      : 'سيتم ارسال الافادة ✓'
+                                  : 'ارسال الافادة'}
                               </button>
                             )}
                             {/* زر ضبط الجلسة - للجلسات المنتهية مع ضبط */}
@@ -707,8 +730,15 @@ const CaseDetailPage: React.FC = () => {
                   <AlertCircle size={14} />
                 </div>
                 <div className="case-info-row__content">
-                  <div className="case-info-row__label">الحالة</div>
-                  <div className="case-info-row__value">{caseData.najiz_status || caseData.status}</div>
+                  <div className="case-info-row__label">الحالة / حالة ناجز</div>
+                  <div className="case-info-row__value">
+                    {caseData.status_arabic || caseData.status}
+                    <span style={{ margin: '0 6px', color: 'var(--color-text-secondary)' }}>·</span>
+                    {caseData.najiz_status_arabic
+                      ? <span style={{ color: 'var(--law-navy)' }}>{caseData.najiz_status_arabic}</span>
+                      : <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>لم يتم الربط</span>
+                    }
+                  </div>
                 </div>
               </div>
               <div className="case-info-row">
@@ -717,7 +747,7 @@ const CaseDetailPage: React.FC = () => {
                 </div>
                 <div className="case-info-row__content">
                   <div className="case-info-row__label">نوع القضية</div>
-                  <div className="case-info-row__value">{caseData.case_type || 'غير محدد'}</div>
+                  <div className="case-info-row__value">{caseData.case_type_arabic || caseData.type_arabic || caseData.case_type || 'غير محدد'}</div>
                 </div>
               </div>
               <div className="case-info-row">
@@ -753,7 +783,20 @@ const CaseDetailPage: React.FC = () => {
                 </div>
                 <div className="case-info-row__content">
                   <div className="case-info-row__label">العميل</div>
-                  <div className="case-info-row__value">{caseData.client_name}</div>
+                  <div className="case-info-row__value">
+                    {caseData.client_id ? (
+                      <Link
+                        to={`/clients/${caseData.client_id}`}
+                        style={{ color: 'var(--law-navy)', textDecoration: 'none', fontWeight: 600 }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline'; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none'; }}
+                      >
+                        {caseData.client_name}
+                      </Link>
+                    ) : (
+                      caseData.client_name
+                    )}
+                  </div>
                 </div>
               </div>
               {caseData.client_phone ? (
@@ -777,6 +820,73 @@ const CaseDetailPage: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Wekalat summary card */}
+          {(() => {
+            const s = (caseData as any)?.wekalat_summary;
+            if (!s) return null;
+            const primary = s.primary_active_wekala;
+            const matched = s.matched_count ?? 0;
+            const stateClassMap: Record<string, string> = {
+              active: 'cw-days--ok',
+              expiring_soon: 'cw-days--soon',
+              expiring_urgent: 'cw-days--urgent',
+              expired: 'cw-days--expired',
+              terminated: 'cw-days--expired',
+              none: 'cw-days--none',
+            };
+            const badgeMap: Record<string, string> = {
+              'معتمدة': 'cw-badge--approved',
+              'منتهية': 'cw-badge--expired',
+              'مفسوخة': 'cw-badge--terminated',
+              'قيد الاعتماد': 'cw-badge--pending',
+              'موقوفة': 'cw-badge--suspended',
+            };
+            return (
+              <div className="case-card">
+                <div className="case-card__header">
+                  <div className="case-card__title">
+                    <Scroll size={16} />
+                    الوكالة الرئيسية
+                  </div>
+                  <button className="case-card__action" onClick={() => setShowWekalatModal(true)}>
+                    عرض الكل {matched > 0 ? `(${matched})` : ''}
+                  </button>
+                </div>
+                <div className="case-card__content case-card__content--compact">
+                  {primary ? (
+                    <>
+                      <div className="cw-sidecard__row">
+                        <span className="cw-sidecard__number">#{primary.number}</span>
+                        <span className={`cw-badge ${badgeMap[primary.status] ?? 'cw-badge--pending'}`}>
+                          {primary.status}
+                        </span>
+                      </div>
+                      <div className="cw-sidecard__row">
+                        <span className={`cw-days ${stateClassMap[primary.expiry_state] ?? 'cw-days--none'}`}>
+                          {primary.expiry_state === 'expired' ? 'منتهية' :
+                            primary.days_until_expiry !== null
+                              ? `تنتهي خلال ${primary.days_until_expiry} يوم`
+                              : 'بدون تاريخ انتهاء'}
+                        </span>
+                      </div>
+                      {s.suggested_count > 0 && (
+                        <div className="cw-sidecard__meta">+ {s.suggested_count} اقتراحات</div>
+                      )}
+                    </>
+                  ) : s.has_expired_only ? (
+                    <div className="cw-alert cw-alert--danger" style={{ padding: '6px 0', borderBottom: 'none', borderRadius: 4 }}>
+                      <AlertCircle size={13} /> كل الوكالات منتهية
+                    </div>
+                  ) : (
+                    <div className="cw-alert cw-alert--warn" style={{ padding: '6px 0', borderBottom: 'none', borderRadius: 4 }}>
+                      <AlertCircle size={13} /> لا توجد وكالة مرتبطة
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Fees */}
           <div className="case-card" data-tour="case-fees-section">
@@ -957,6 +1067,28 @@ const CaseDetailPage: React.FC = () => {
         clientName={caseData.client_name}
       />
 
+      {showWekalatModal && (
+        <div className="sc-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowWekalatModal(false); }}>
+          <div className="sc-modal" style={{ maxWidth: 920 }}>
+            <div className="sc-header">
+              <Scroll size={16} className="sc-header__icon" />
+              <div className="sc-header__title">وكالات القضية</div>
+              <div className="sc-header__case" title={caseData.file_number}>#{caseData.file_number}</div>
+              <div className="sc-header__spacer" />
+              <button className="sc-close" onClick={() => setShowWekalatModal(false)}>
+                <XIcon size={16} />
+              </button>
+            </div>
+            <div className="sc-body" style={{ padding: 12 }}>
+              <CaseWekalatPanel
+                caseId={caseData.id}
+                caseFileNumber={caseData.file_number}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <ShareCaseModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
@@ -974,6 +1106,29 @@ const CaseDetailPage: React.FC = () => {
           refreshCaseData();
         }}
       />
+
+      {/* مودل تفضيلات إرسال الإفادة */}
+      {notifyModalSession && (
+        <SendDabtPreferencesModal
+          open={!!notifyModalSession}
+          onClose={() => setNotifyModalSession(null)}
+          sessionId={notifyModalSession.id}
+          currentMode={notifyModalSession.mode}
+          currentEnabled={notifyModalSession.enabled}
+          onSuccess={(result) => {
+            if (caseData) {
+              setCaseData({
+                ...caseData,
+                sessions: caseData.sessions?.map((s: any) =>
+                  s.id === notifyModalSession.id
+                    ? { ...s, notify_client: result.enabled, notify_client_mode: result.mode }
+                    : s
+                ),
+              });
+            }
+          }}
+        />
+      )}
 
       {/* Modal ضبط الجلسة */}
       {selectedDabtSession && (

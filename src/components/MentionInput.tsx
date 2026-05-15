@@ -46,7 +46,8 @@ const MentionInput: React.FC<MentionInputProps> = ({
 
   const loadUsers = async () => {
     try {
-      const response = await UserService.getAllUsers({ limit: 100 });
+      // استثناء العملاء من قائمة الإشارة (@) — حماية للمحادثات الداخلية
+      const response = await UserService.getAllUsers({ limit: 100, exclude_role: 'client' });
       const usersData = response.data || [];
       setUsers(usersData.map(u => ({
         id: u.id,

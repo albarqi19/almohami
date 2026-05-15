@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Chrome, AlertTriangle, ExternalLink, X } from 'lucide-react';
+import { MessageSquare, Chrome, AlertTriangle, ExternalLink, X, Link2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import CompanyLinkModal from './CompanyLinkModal';
 
 const API_BASE_URL = 'https://api.alraedlaw.com/api';
 const CHROME_EXTENSION_URL = 'https://chromewebstore.google.com/detail/cmanbngddccpfalmmpmkglfgncopmmcn?utm_source=item-share-cb';
@@ -24,6 +25,7 @@ const BottomActionBar: React.FC = () => {
   const [waInstances, setWaInstances] = useState<InstanceLite[]>([]);
   const [showWaTip, setShowWaTip] = useState(false);
   const [tipDismissed, setTipDismissed] = useState(false);
+  const [showCompanyLink, setShowCompanyLink] = useState(false);
 
   const tipRef = useRef<HTMLDivElement>(null);
   const waBtnRef = useRef<HTMLButtonElement>(null);
@@ -111,6 +113,23 @@ const BottomActionBar: React.FC = () => {
         <span className="bab__chip-value">تثبيت</span>
         <ExternalLink size={10} className="bab__ext-icon" />
       </button>
+
+      <button
+        className="bab__chip bab__chip--neutral"
+        onClick={() => setShowCompanyLink(true)}
+        title="رابط الشركة — فتح أو إرسال للمحامين"
+      >
+        <Link2 size={12} />
+        <span className="bab__chip-label">رابط الشركة</span>
+        <span className="bab__chip-value">فتح / إرسال</span>
+      </button>
+
+      <CompanyLinkModal
+        isOpen={showCompanyLink}
+        onClose={() => setShowCompanyLink(false)}
+        waStatus={waStatus}
+        onOpenWhatsappSettings={() => { setShowCompanyLink(false); navigate('/whatsapp-settings'); }}
+      />
 
       {showWaTip && !isWaOk && (
         <div ref={tipRef} className="bab__tip" role="tooltip">

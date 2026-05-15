@@ -28,6 +28,7 @@ import { UserService, type User as UserType } from '../services/UserService';
 import AddCaseModal from '../components/AddCaseModal';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
+import { apiClient } from '../utils/api';
 
 type ViewMode = 'grid' | 'table' | 'kanban';
 
@@ -69,6 +70,34 @@ const getLawyerName = (caseObj: unknown): string => {
 const CACHE_KEY = 'cases_data';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// LocalStorage key للفلاتر المتقدمة (تبقى عبر التنقل بين الصفحات)
+const ADV_FILTERS_KEY = 'cases_advanced_filters';
+
+interface AdvancedFilters {
+	lawyer_id?: string;
+	responsible_lawyer_id?: string;
+	client_id?: string;
+	najiz_status?: string;
+}
+
+const loadAdvFilters = (): AdvancedFilters => {
+	try {
+		const raw = localStorage.getItem(ADV_FILTERS_KEY);
+		return raw ? JSON.parse(raw) : {};
+	} catch { return {}; }
+};
+
+const saveAdvFilters = (f: AdvancedFilters) => {
+	try {
+		const clean: AdvancedFilters = {};
+		(Object.keys(f) as (keyof AdvancedFilters)[]).forEach(k => {
+			if (f[k]) clean[k] = f[k];
+		});
+		if (Object.keys(clean).length === 0) localStorage.removeItem(ADV_FILTERS_KEY);
+		else localStorage.setItem(ADV_FILTERS_KEY, JSON.stringify(clean));
+	} catch {}
+};
+
 const Cases: React.FC = () => {
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -98,6 +127,9 @@ const Cases: React.FC = () => {
 	const [searchTerm, setSearchTerm] = useState('');
 	const [statusFilter, setStatusFilter] = useState<CaseStatus | 'all'>('all');
 	const [typeFilter, setTypeFilter] = useState<CaseType | 'all'>('all');
+	const [advFilters, setAdvFilters] = useState<AdvancedFilters>(loadAdvFilters);
+	const [showAdvancedPanel, setShowAdvancedPanel] = useState(false);
+	const [najizStatuses, setNajizStatuses] = useState<string[]>([]);
 	const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 	const [lawyers, setLawyers] = useState<UserType[]>([]);
 	const [clients, setClients] = useState<UserType[]>([]);
@@ -137,7 +169,8 @@ const Cases: React.FC = () => {
 	const fetchCases = async (page = 1, forceRefresh = false) => {
 		try {
 			// Only use cache for first page without filters (and not forcing refresh)
-			const hasFilters = searchTerm || statusFilter !== 'all' || typeFilter !== 'all';
+			const hasAdvFilters = !!(advFilters.lawyer_id || advFilters.responsible_lawyer_id || advFilters.client_id || advFilters.najiz_status);
+			const hasFilters = searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || hasAdvFilters;
 			const shouldUseCache = !forceRefresh && page === 1 && !hasFilters;
 
 			if (shouldUseCache) {
@@ -165,7 +198,11 @@ const Cases: React.FC = () => {
 				limit: 15,
 				...(searchTerm && { search: searchTerm }),
 				...(statusFilter !== 'all' && { status: statusFilter }),
-				...(typeFilter !== 'all' && { case_type: typeFilter })
+				...(typeFilter !== 'all' && { case_type: typeFilter }),
+				...(advFilters.lawyer_id && { lawyer_id: advFilters.lawyer_id }),
+				...(advFilters.responsible_lawyer_id && { responsible_lawyer_id: advFilters.responsible_lawyer_id }),
+				...(advFilters.client_id && { client_id: advFilters.client_id }),
+				...(advFilters.najiz_status && { najiz_status: advFilters.najiz_status }),
 			};
 			const response = await CaseService.getCases(filters);
 			const data = Array.isArray(response.data) ? response.data : [];
@@ -227,11 +264,22 @@ const Cases: React.FC = () => {
 
 	useEffect(() => {
 		// Only refetch on filter changes if they actually changed (not initial render)
-		if (searchTerm || statusFilter !== 'all' || typeFilter !== 'all') {
+		const hasAdv = !!(advFilters.lawyer_id || advFilters.responsible_lawyer_id || advFilters.client_id || advFilters.najiz_status);
+		if (searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || hasAdv) {
 			const timeout = setTimeout(() => fetchCases(1, true), 400);
 			return () => clearTimeout(timeout);
 		}
-	}, [searchTerm, statusFilter, typeFilter]);
+	}, [searchTerm, statusFilter, typeFilter, advFilters]);
+
+	// Persist advanced filters across navigations
+	useEffect(() => { saveAdvFilters(advFilters); }, [advFilters]);
+
+	// Fetch available najiz statuses (one-shot)
+	useEffect(() => {
+		apiClient.get<{ success: boolean; data: string[] }>('/cases-najiz-statuses')
+			.then(res => { if (res.success) setNajizStatuses(res.data || []); })
+			.catch(() => {});
+	}, []);
 
 	// تحديث تلقائي عند العودة للصفحة وكل دقيقتين
 	useAutoRefresh({
@@ -320,11 +368,13 @@ const Cases: React.FC = () => {
 		}
 	};
 
-	const hasFilters = searchTerm.trim() || statusFilter !== 'all' || typeFilter !== 'all';
+	const advFilterCount = (advFilters.lawyer_id ? 1 : 0) + (advFilters.responsible_lawyer_id ? 1 : 0) + (advFilters.client_id ? 1 : 0) + (advFilters.najiz_status ? 1 : 0);
+	const hasFilters = !!(searchTerm.trim() || statusFilter !== 'all' || typeFilter !== 'all' || advFilterCount);
 	const resetFilters = () => {
 		setSearchTerm('');
 		setStatusFilter('all');
 		setTypeFilter('all');
+		setAdvFilters({});
 	};
 
 	// ── Column Resize ──
@@ -332,8 +382,8 @@ const Cases: React.FC = () => {
 		{ key: 'case', label: 'القضية', defaultWidth: 44 },
 		{ key: 'parties', label: 'العميل / المحامي', defaultWidth: 18 },
 		{ key: 'dates', label: 'الإنشاء / الجلسة', defaultWidth: 17 },
-		{ key: 'status', label: 'الحالة', defaultWidth: 10 },
-		{ key: 'file', label: 'رقم الملف', defaultWidth: 11 },
+		{ key: 'status', label: 'الحالة / حالة ناجز', defaultWidth: 12 },
+		{ key: 'file', label: 'رقم الملف', defaultWidth: 9 },
 	];
 
 	const [colWidths, setColWidths] = useState<number[]>(() => columns.map(c => c.defaultWidth));
@@ -440,12 +490,27 @@ const Cases: React.FC = () => {
 									</div>
 								</td>
 
-								{/* العمود 4: الحالة */}
+								{/* العمود 4: الحالة / حالة ناجز */}
 								<td>
-									<span className={`status-badge ${statusConfig.class}`}>
-										<span className="status-badge__dot" />
-										{statusConfig.label}
-									</span>
+									<div className="erp-cell">
+										<div className="erp-cell__row">
+											<span className={`status-badge ${statusConfig.class}`}>
+												<span className="status-badge__dot" />
+												{statusConfig.label}
+											</span>
+										</div>
+										<div className="erp-cell__row erp-cell__row--sub" style={{ marginTop: 3 }}>
+											{(c as any).najiz_status_arabic ? (
+												<span style={{ fontSize: 11, color: 'var(--law-navy)', fontWeight: 500 }}>
+													{(c as any).najiz_status_arabic}
+												</span>
+											) : (
+												<span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>
+													لم يتم الربط
+												</span>
+											)}
+										</div>
+									</div>
 								</td>
 
 								{/* العمود 5: رقم الملف + حذف */}
@@ -611,6 +676,26 @@ const Cases: React.FC = () => {
 
 					<button
 						className="icon-btn"
+						onClick={() => setShowAdvancedPanel(s => !s)}
+						title="فلاتر متقدمة"
+						style={advFilterCount > 0 || showAdvancedPanel ? { background: 'var(--law-navy-light, rgba(30,58,95,.08))', color: 'var(--law-navy)', position: 'relative' } : { position: 'relative' }}
+					>
+						<Filter size={16} />
+						{advFilterCount > 0 && (
+							<span style={{
+								position: 'absolute', top: -4, insetInlineEnd: -4,
+								background: 'var(--law-navy)', color: '#fff',
+								fontSize: 9, fontWeight: 700,
+								minWidth: 14, height: 14, padding: '0 3px',
+								borderRadius: 8, display: 'inline-flex',
+								alignItems: 'center', justifyContent: 'center',
+								lineHeight: 1
+							}}>{advFilterCount}</span>
+						)}
+					</button>
+
+					<button
+						className="icon-btn"
 						onClick={() => fetchCases(pagination.currentPage, true)}
 						title="تحديث"
 						disabled={softRefreshing}
@@ -649,6 +734,93 @@ const Cases: React.FC = () => {
 				</div>
 			</header>
 
+			{/* Advanced Filters Panel */}
+			{showAdvancedPanel && (
+				<div style={{
+					background: 'var(--dashboard-card)',
+					border: '1px solid var(--color-border)',
+					borderRadius: 8,
+					padding: '12px 16px',
+					margin: '0 0 12px 0',
+					display: 'grid',
+					gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+					gap: 12,
+					alignItems: 'end',
+				}}>
+					<div>
+						<label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>
+							العميل
+						</label>
+						<select
+							className="filter-select"
+							value={advFilters.client_id || ''}
+							onChange={(e) => setAdvFilters(f => ({ ...f, client_id: e.target.value || undefined }))}
+							style={{ width: '100%' }}
+						>
+							<option value="">كل العملاء</option>
+							{clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+						</select>
+					</div>
+
+					<div>
+						<label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>
+							محامي مرتبط
+						</label>
+						<select
+							className="filter-select"
+							value={advFilters.lawyer_id || ''}
+							onChange={(e) => setAdvFilters(f => ({ ...f, lawyer_id: e.target.value || undefined }))}
+							style={{ width: '100%' }}
+						>
+							<option value="">كل المحامين</option>
+							{lawyers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+						</select>
+					</div>
+
+					<div>
+						<label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>
+							المحامي المسؤول
+						</label>
+						<select
+							className="filter-select"
+							value={advFilters.responsible_lawyer_id || ''}
+							onChange={(e) => setAdvFilters(f => ({ ...f, responsible_lawyer_id: e.target.value || undefined }))}
+							style={{ width: '100%' }}
+						>
+							<option value="">الكل</option>
+							{lawyers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+						</select>
+					</div>
+
+					<div>
+						<label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>
+							حالة ناجز
+						</label>
+						<select
+							className="filter-select"
+							value={advFilters.najiz_status || ''}
+							onChange={(e) => setAdvFilters(f => ({ ...f, najiz_status: e.target.value || undefined }))}
+							style={{ width: '100%' }}
+						>
+							<option value="">كل الحالات</option>
+							{najizStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+						</select>
+					</div>
+
+					{advFilterCount > 0 && (
+						<div>
+							<button
+								className="icon-btn"
+								onClick={() => setAdvFilters({})}
+								style={{ width: '100%', fontSize: 12, padding: '6px 10px' }}
+								title="مسح الفلاتر المتقدمة"
+							>
+								<X size={14} /> مسح
+							</button>
+						</div>
+					)}
+				</div>
+			)}
 
 			{/* Content */}
 			{

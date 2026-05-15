@@ -71,23 +71,9 @@ function extractSubdomain(hostname: string): string | null {
 }
 
 /**
- * Apply tenant theme colors to CSS variables
+ * Apply tenant identity (favicon + title فقط — الألوان مُلغاة)
  */
 function applyTenantTheme(tenant: Tenant) {
-  const root = document.documentElement;
-
-  // Apply primary color
-  if (tenant.primary_color) {
-    root.style.setProperty('--tenant-primary', tenant.primary_color);
-    root.style.setProperty('--color-accent', tenant.primary_color);
-  }
-
-  // Apply secondary color
-  if (tenant.secondary_color) {
-    root.style.setProperty('--tenant-secondary', tenant.secondary_color);
-  }
-
-  // Update favicon if provided
   if (tenant.favicon_url) {
     const favicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
     if (favicon) {
@@ -95,20 +81,15 @@ function applyTenantTheme(tenant: Tenant) {
     }
   }
 
-  // Update page title with company name
   if (tenant.name) {
     document.title = `${tenant.name} | نظام إدارة المحاماة`;
   }
 }
 
 /**
- * Reset theme to default values
+ * Reset to default title
  */
 function resetTheme() {
-  const root = document.documentElement;
-  root.style.removeProperty('--tenant-primary');
-  root.style.removeProperty('--tenant-secondary');
-  root.style.removeProperty('--color-accent');
   document.title = 'الرائد | نظام إدارة المحاماة';
 }
 

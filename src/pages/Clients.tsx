@@ -16,10 +16,12 @@ import {
     X,
     ArrowUp,
     ArrowDown,
-    ArrowUpDown
+    ArrowUpDown,
+    UserPlus
 } from 'lucide-react';
 import ClientManagementService from '../services/clientManagementService';
 import type { Client } from '../services/clientManagementService';
+import AddClientModal from '../components/AddClientModal';
 import '../styles/clients-page.css';
 
 // Pagination response type
@@ -43,6 +45,7 @@ const Clients: React.FC = () => {
     const [filterPreset, setFilterPreset] = useState<FilterPreset>('all');
     const [sortBy, setSortBy] = useState<SortKey>('created_at');
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+    const [showAddModal, setShowAddModal] = useState(false);
 
     // Debounce search query
     React.useEffect(() => {
@@ -230,7 +233,28 @@ const Clients: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="clients-header-bar__end">
+                <div className="clients-header-bar__end" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                        type="button"
+                        onClick={() => setShowAddModal(true)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '7px 14px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: 'white',
+                            backgroundColor: 'var(--color-primary)',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        <UserPlus size={14} />
+                        إضافة عميل
+                    </button>
                     <button
                         className={`icon-btn ${isFetching ? 'spinning' : ''}`}
                         onClick={handleRefresh}
@@ -241,6 +265,13 @@ const Clients: React.FC = () => {
                     </button>
                 </div>
             </div>
+
+            {/* Add Client Modal */}
+            <AddClientModal
+                isOpen={showAddModal}
+                onClose={() => setShowAddModal(false)}
+                onCreated={() => refetch()}
+            />
 
             {/* Content */}
             <div className="clients-content">

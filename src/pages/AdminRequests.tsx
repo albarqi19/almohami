@@ -25,7 +25,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { AdminRequestService, RequestTypeService } from '../services/adminRequestService';
-import type { AdminRequest, RequestType, CreateAdminRequestForm } from '../services/adminRequestService';
+import type { AdminRequest, RequestType, CreateAdminRequestForm, AdminRequestContext } from '../services/adminRequestService';
+import { Briefcase, History, AlertTriangle, Loader2, ChevronDown, ChevronLeft } from 'lucide-react';
 import '../styles/admin-requests.css';
 
 // Status config
@@ -158,6 +159,25 @@ const ReviewModal: React.FC<{
     const [loading, setLoading] = useState(false);
     const [action, setAction] = useState<'approve' | 'reject' | null>(null);
     const [error, setError] = useState('');
+    const [context, setContext] = useState<AdminRequestContext | null>(null);
+    const [contextLoading, setContextLoading] = useState(false);
+    const [historyExpanded, setHistoryExpanded] = useState(false);
+
+    // جلب السياق (الإجازات السابقة + المهام + الجلسات المتعارضة) عند فتح المودل للطلبات المعلّقة
+    useEffect(() => {
+        if (!request || request.status !== 'pending') {
+            setContext(null);
+            return;
+        }
+        let cancelled = false;
+        setContextLoading(true);
+        setContext(null);
+        AdminRequestService.getRequestContext(request.id)
+            .then((ctx) => { if (!cancelled) setContext(ctx); })
+            .catch(() => { /* صامت — السياق إضافي وليس حرجاً */ })
+            .finally(() => { if (!cancelled) setContextLoading(false); });
+        return () => { cancelled = true; };
+    }, [request]);
 
     const handleAction = async (type: 'approve' | 'reject') => {
         if (type === 'reject' && !notes.trim()) { setError('يجب ذكر سبب الرفض'); return; }
@@ -210,8 +230,145 @@ const ReviewModal: React.FC<{
                 {/* Alert */}
                 {error && <div className="rv-alert"><AlertCircle size={13} />{error}</div>}
 
+                {/* Conflict banner */}
+                {request.status === 'pending' && context?.has_conflicts && (
+                    <div className="rv-conflict-banner">
+                        <AlertTriangle size={13} />
+                        <span>
+                            هذا الطلب يتعارض مع{' '}
+                            {context.scheduled_sessions.length > 0 && (
+                                <strong>{context.scheduled_sessions.length} جلسة مجدولة</strong>
+                            )}
+                            {context.scheduled_sessions.length > 0 && context.pending_tasks.length > 0 && ' و'}
+                            {context.pending_tasks.length > 0 && (
+                                <strong>{context.pending_tasks.length} مهمة معلّقة</strong>
+                            )}
+                            {' '}— راجع التفاصيل أدناه قبل الموافقة.
+                        </span>
+                    </div>
+                )}
+
                 {/* Body */}
                 <div className="rv-body">
+                    {/* === Context Section (للمدير عند المراجعة) === */}
+                    {request.status === 'pending' && (
+                        <div className="rv-context">
+                            {contextLoading && (
+                                <div className="rv-context__loading">
+                                    <Loader2 size={12} className="rv-spin" />
+                                    <span>جاري تحليل السياق...</span>
+                                </div>
+                            )}
+
+                            {context && (
+                                <>
+                                    {/* سجل الإجازات السابقة (collapsible — مغلق افتراضياً) */}
+                                    <div className="rv-context__card">
+                                        <button
+                                            type="button"
+                                            className="rv-context__head rv-context__head--toggle"
+                                            onClick={() => setHistoryExpanded(v => !v)}
+                                            aria-expanded={historyExpanded}
+                                        >
+                                            <History size={12} />
+                                            <span>سجل الإجازات السابقة</span>
+                                            <span className="rv-context__head-summary">
+                                                ({context.previous_leaves.all_approved} مقبولة • {context.previous_leaves.this_year_count} هذا العام)
+                                            </span>
+                                            <span className="rv-context__head-chevron">
+                                                {historyExpanded ? <ChevronDown size={12} /> : <ChevronLeft size={12} />}
+                                            </span>
+                                        </button>
+                                        {historyExpanded && (
+                                            <>
+                                                <div className="rv-context__chips">
+                                                    <span className="rv-chip">
+                                                        نفس النوع: <strong>{context.previous_leaves.same_type_count}</strong>
+                                                        {context.previous_leaves.same_type_days > 0 && (
+                                                            <span className="rv-chip__suffix">({context.previous_leaves.same_type_days} يوم)</span>
+                                                        )}
+                                                    </span>
+                                                    <span className="rv-chip">
+                                                        هذا العام: <strong>{context.previous_leaves.this_year_count}</strong>
+                                                        {context.previous_leaves.this_year_days > 0 && (
+                                                            <span className="rv-chip__suffix">({context.previous_leaves.this_year_days} يوم)</span>
+                                                        )}
+                                                    </span>
+                                                    <span className="rv-chip">
+                                                        إجمالي المقبولة: <strong>{context.previous_leaves.all_approved}</strong>
+                                                    </span>
+                                                </div>
+                                                {context.previous_leaves.recent_same_type.length > 0 && (
+                                                    <div className="rv-context__list">
+                                                        {context.previous_leaves.recent_same_type.slice(0, 5).map((r) => (
+                                                            <div key={r.id} className="rv-context__list-item">
+                                                                <Calendar size={10} />
+                                                                <span>
+                                                                    {formatDate(r.start_date)}
+                                                                    {r.end_date && r.end_date !== r.start_date ? ` ← ${formatDate(r.end_date)}` : ''}
+                                                                </span>
+                                                                {r.reason && <span className="rv-muted">— {r.reason.slice(0, 40)}</span>}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* جلسات متعارضة */}
+                                    {context.scheduled_sessions.length > 0 && (
+                                        <div className="rv-context__card rv-context__card--warning">
+                                            <div className="rv-context__head">
+                                                <Calendar size={12} />
+                                                <span>جلسات مجدولة خلال الإجازة ({context.scheduled_sessions.length})</span>
+                                            </div>
+                                            <div className="rv-context__list">
+                                                {context.scheduled_sessions.map((s) => (
+                                                    <div key={s.id} className="rv-context__list-item">
+                                                        <Calendar size={10} />
+                                                        <strong>{formatDate(s.session_date_gregorian)}</strong>
+                                                        {s.session_time && <span>{s.session_time}</span>}
+                                                        <span className="rv-muted">— {s.session_type || 'جلسة'}</span>
+                                                        {s.case?.title && (
+                                                            <span className="rv-muted" title={s.case.title}>
+                                                                — {s.case.title.slice(0, 35)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* مهام متعارضة */}
+                                    {context.pending_tasks.length > 0 && (
+                                        <div className="rv-context__card rv-context__card--warning">
+                                            <div className="rv-context__head">
+                                                <Briefcase size={12} />
+                                                <span>مهام معلّقة خلال الإجازة ({context.pending_tasks.length})</span>
+                                            </div>
+                                            <div className="rv-context__list">
+                                                {context.pending_tasks.map((t) => (
+                                                    <div key={t.id} className="rv-context__list-item">
+                                                        <Briefcase size={10} />
+                                                        <strong>{t.title}</strong>
+                                                        <span className="rv-muted">— استحقاق: {formatDate(t.due_date)}</span>
+                                                        {t.priority && t.priority !== 'normal' && (
+                                                            <span className={`rv-priority rv-priority--${t.priority}`}>
+                                                                {t.priority === 'high' ? 'عالية' : t.priority === 'low' ? 'منخفضة' : t.priority}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
+
                     {/* Properties table */}
                     <table className="rv-table">
                         <tbody>

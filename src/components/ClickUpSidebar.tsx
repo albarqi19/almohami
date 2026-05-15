@@ -32,6 +32,8 @@ import {
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissionContext } from '../contexts/PermissionContext';
+import { mainMenuItems, settingsMenuItems, type SidebarItem } from '../config/sidebarConfig';
 
 interface SidebarProps {
     isCollapsed: boolean;
@@ -40,15 +42,8 @@ interface SidebarProps {
     onMobileClose: () => void;
 }
 
-interface MenuItem {
-    icon: React.ComponentType<{ size?: number }>;
-    label: string;
-    path: string;
-    roles: string[];
-}
-
 interface NavItemProps {
-    item: MenuItem;
+    item: SidebarItem;
     isCollapsed: boolean;
     isActive: boolean;
     isMobileOpen: boolean;
@@ -111,44 +106,27 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
     onMobileClose
 }) => {
     const { user, logout } = useAuth();
+    const { has, hasAny, isSuperAdmin } = usePermissionContext();
     const location = useLocation();
     const [showFavorites, setShowFavorites] = React.useState(true);
 
-    // Menu items configuration
-    const menuItems: MenuItem[] = [
-        { icon: Home, label: 'لوحة التحكم', path: '/dashboard', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
-        { icon: FileText, label: 'القضايا', path: '/cases', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: FileCheck, label: 'الوكالات', path: '/wekalat', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: Calendar, label: 'الجلسات', path: '/sessions', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: Scale, label: 'طلبات التنفيذ', path: '/execution-requests', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: Briefcase, label: 'الخدمات القانونية', path: '/legal-services', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: Users, label: 'الاجتماعات', path: '/meetings/internal', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: Calendar, label: 'مواعيد العملاء', path: '/meetings/client', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: Clock, label: 'إعدادات التوفر', path: '/meetings/availability', roles: ['lawyer'] },
-        { icon: CheckSquare, label: 'المهام', path: '/tasks', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: BookOpen, label: 'المفكرة الشخصية', path: '/notebook', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: FileText, label: 'قضاياي', path: '/my-cases', roles: ['client'] },
-        { icon: MessageSquare, label: 'الرسائل', path: '/my-messages', roles: ['client'] },
-        { icon: Upload, label: 'الوثائق', path: '/documents', roles: ['admin', 'legal_assistant'] },
-        { icon: Clock, label: 'الأنشطة', path: '/activities', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
-        { icon: Users, label: 'العملاء', path: '/clients', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: ClipboardList, label: 'الطلبات الإدارية', path: '/admin/requests', roles: ['admin', 'lawyer', 'legal_assistant'] },
-        { icon: ShieldCheck, label: 'الاستعلام والتحقق', path: '/wathq', roles: ['admin', 'owner', 'partner', 'senior_lawyer', 'lawyer'] },
-        { icon: FileSignature, label: 'العقود', path: '/contracts', roles: ['admin', 'legal_assistant'] },
-        { icon: FileText, label: 'قوالب العقود', path: '/contract-templates', roles: ['admin'] },
-        { icon: Receipt, label: 'الفواتير', path: '/invoices', roles: ['admin', 'legal_assistant'] },
-        { icon: CreditCard, label: 'المدفوعات', path: '/payments', roles: ['admin', 'legal_assistant'] },
-        { icon: TrendingUp, label: 'التحصيل', path: '/billing', roles: ['admin'] },
-    ];
-
-    const settingsItems = [
-        // { icon: BarChart3, label: 'التقارير', path: '/reports', roles: ['admin'] }, // مخفي مؤقتاً
-        { icon: Users, label: 'تقرير المحامين', path: '/lawyers-report', roles: ['admin'] },
-        { icon: Users, label: 'المستخدمين', path: '/users', roles: ['admin'] },
-        { icon: Bell, label: 'التنبيهات', path: '/notifications', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
-        { icon: MessageSquare, label: 'الواتساب', path: '/whatsapp-settings', roles: ['admin'] },
-        { icon: Settings, label: 'الإعدادات', path: '/settings', roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
-    ];
+    /**
+     * Phase 3: تصفية حسب الصلاحيات (مع روية السلوك القديم للـ legacy roles fallback أثناء الانتقال).
+     * super_admin يرى كل شيء.
+     */
+    const isItemVisible = (item: SidebarItem): boolean => {
+        if (isSuperAdmin) return true;
+        if (item.permission === null || item.permission === undefined) {
+            // null = مرئي للجميع المسجلين
+            if (item.roles && user && !item.roles.includes(user.role)) return false;
+            return true;
+        }
+        if (item.permission && has(item.permission)) return true;
+        if (item.any && hasAny(item.any)) return true;
+        // Legacy fallback: لو ما عنده permission، نقبل بـ roles
+        if (item.roles && user && item.roles.includes(user.role)) return true;
+        return false;
+    };
 
     const favorites = [
         { id: '1', label: 'القضية العقارية', type: 'case', color: '#1E3A5F' },
@@ -156,8 +134,8 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
         { id: '3', label: 'جلسات ديسمبر', type: 'session', color: '#D97706' },
     ];
 
-    const visibleMenuItems = menuItems.filter((item) => user && item.roles.includes(user.role));
-    const visibleSettingsItems = settingsItems.filter((item) => user && item.roles.includes(user.role));
+    const visibleMenuItems = mainMenuItems.filter(isItemVisible);
+    const visibleSettingsItems = settingsMenuItems.filter(isItemVisible);
 
     const handleLogout = () => {
         logout();
