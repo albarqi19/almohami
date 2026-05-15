@@ -30,11 +30,14 @@ import {
   Settings,
 } from 'lucide-react';
 import { WekalatService } from '../services/wekalatService';
+import { CaseWekalaService, type WekalaCaseItem } from '../services/caseWekalaService';
 import { AddWekalaModal } from '../components/AddWekalaModal';
 import { useAuth } from '../contexts/AuthContext';
+import { Link as RouterLink } from 'react-router-dom';
 import type { Wekala, WekalaParty, WekalaPermission } from '../types';
 import '../styles/wekalat-page.css';
 import '../styles/add-wekala-modal.css';
+import '../styles/case-wekalat-panel.css';
 
 // ==================== Types ====================
 
@@ -167,7 +170,30 @@ function getRemainingDays(wekala: Wekala): { text: string; urgent: boolean; expi
   } catch { return null; }
 }
 
-const WekalaModal: React.FC<WekalaModalProps> = ({ wekala, isOpen, onClose }) => {
+export const WekalaModal: React.FC<WekalaModalProps> = ({ wekala, isOpen, onClose }) => {
+  const [showLinkedCases, setShowLinkedCases] = useState(false);
+  const [linkedCases, setLinkedCases] = useState<WekalaCaseItem[]>([]);
+  const [linkedCasesLoading, setLinkedCasesLoading] = useState(false);
+
+  // Lazy load: لا نجلب القضايا إلا عند الضغط على الزر
+  const openLinkedCases = () => {
+    if (!wekala) return;
+    setShowLinkedCases(true);
+    if (linkedCases.length === 0) {
+      setLinkedCasesLoading(true);
+      CaseWekalaService.casesForWekala(wekala.id)
+        .then(items => setLinkedCases(items))
+        .catch(() => setLinkedCases([]))
+        .finally(() => setLinkedCasesLoading(false));
+    }
+  };
+
+  // إعادة تعيين عند تغيير الوكالة
+  useEffect(() => {
+    setShowLinkedCases(false);
+    setLinkedCases([]);
+  }, [wekala?.id]);
+
   if (!wekala || !isOpen) return null;
 
   const statusConfig = STATUS_CONFIG[wekala.status] || STATUS_CONFIG['معتمدة'];
@@ -196,6 +222,22 @@ const WekalaModal: React.FC<WekalaModalProps> = ({ wekala, isOpen, onClose }) =>
               <Clock size={11} />{remaining.text}
             </span>
           )}
+          <button
+            type="button"
+            onClick={openLinkedCases}
+            title="عرض القضايا المرتبطة"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '3px 9px', marginInlineStart: 6,
+              fontSize: 11, fontWeight: 600,
+              background: 'var(--law-navy-light, rgba(30,58,95,.08))',
+              color: 'var(--law-navy)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 5, cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            <Briefcase size={11} /> القضايا المرتبطة
+          </button>
           <button className="wk-close" onClick={onClose}><X size={15} /></button>
         </div>
 
@@ -286,6 +328,61 @@ const WekalaModal: React.FC<WekalaModalProps> = ({ wekala, isOpen, onClose }) =>
           )}
         </div>
       </div>
+
+      {/* Linked cases — overlay منفصل فوق المودال */}
+      {showLinkedCases && (
+        <div
+          className="wk-overlay"
+          style={{ zIndex: 1100, background: 'rgba(0,0,0,0.35)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowLinkedCases(false); }}
+        >
+          <div className="wk-modal" style={{ maxWidth: 720 }} onClick={e => e.stopPropagation()}>
+            <div className="wk-header">
+              <Briefcase size={15} className="wk-header__icon" />
+              <span className="wk-header__num">القضايا المرتبطة</span>
+              <span className="wk-header__type">#{wekala.number}</span>
+              <div className="wk-header__spacer" />
+              <button className="wk-close" onClick={() => setShowLinkedCases(false)}>
+                <X size={15} />
+              </button>
+            </div>
+            <div className="wk-body" style={{ paddingBottom: 12 }}>
+              {linkedCasesLoading ? (
+                <div className="cw-loading">جاري التحميل…</div>
+              ) : linkedCases.length === 0 ? (
+                <div className="cw-empty">لا توجد قضايا مرتبطة بهذه الوكالة.</div>
+              ) : (
+                <table className="cw-table">
+                  <thead>
+                    <tr>
+                      <th>رقم القضية</th>
+                      <th>العنوان</th>
+                      <th>العميل</th>
+                      <th>الحالة</th>
+                      <th>آخر جلسة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {linkedCases.map(c => (
+                      <tr key={c.id}>
+                        <td>
+                          <RouterLink to={`/cases/${c.id}`} className="cw-sidecard__link" onClick={onClose}>
+                            #{c.file_number}
+                          </RouterLink>
+                        </td>
+                        <td>{c.title || '—'}</td>
+                        <td>{c.client_name || '—'}</td>
+                        <td><span className="cw-badge cw-badge--pending">{c.status_arabic}</span></td>
+                        <td>{c.last_session_date ? new Date(c.last_session_date).toLocaleDateString('ar-SA-u-ca-gregory', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

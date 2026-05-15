@@ -9,6 +9,9 @@ export interface CaseFilters {
   priority?: string;
   assigned_lawyer?: string;
   client_id?: string;
+  lawyer_id?: string | number;
+  responsible_lawyer_id?: string | number;
+  najiz_status?: string;
   search?: string;
   page?: number;
   limit?: number;
