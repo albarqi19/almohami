@@ -31,16 +31,21 @@ import {
   AlertTriangle,
   X,
   FileSpreadsheet,
-  Mail
+  Mail,
+  ClipboardList
 } from 'lucide-react';
 import NotificationSettings from '../components/NotificationSettings';
 import TiptapEditor from '../components/TiptapEditor';
 import { downloadInvoice, InvoicePreviewModal } from '../components/InvoiceDownload';
 import LetterheadManager from '../components/settings/LetterheadManager';
 import TwoFactorSettings from '../components/settings/TwoFactorSettings';
+import SessionDefaultsSettings from '../components/settings/SessionDefaultsSettings';
+import SessionWorkflowSettingsComponent from '../components/settings/SessionWorkflowSettings';
 import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/settings-page.css';
+import '../styles/session-defaults-settings.css';
+import '../styles/session-workflow-settings.css';
 
 interface SettingsTab {
   id: string;
@@ -78,6 +83,8 @@ const Settings: React.FC = () => {
     { id: 'company', label: 'إعدادات الشركة', icon: Building2, roles: ['admin'] },
     { id: 'branding', label: 'هوية الشركة', icon: Image, roles: ['admin'] },
     { id: 'letterheads', label: 'الكليشات', icon: FileText, roles: ['admin'] },
+    { id: 'session_defaults', label: 'قوالب الجلسات', icon: ClipboardList, roles: ['admin'] },
+    { id: 'session_workflow', label: 'سير عمل الجلسات', icon: Bell, roles: ['admin'] },
     { id: 'company_policy', label: 'سياسة الشركة', icon: ShieldCheck, roles: ['admin'] },
     { id: 'subscription', label: 'الاشتراك', icon: CreditCard, roles: ['admin'] },
     { id: 'invoices', label: 'الفواتير', icon: Receipt, roles: ['admin'] },
@@ -107,10 +114,8 @@ const Settings: React.FC = () => {
   });
   const [savingCompany, setSavingCompany] = useState(false);
 
-  // Branding Settings State
+  // Branding Settings State (الألوان أُلغيت — يبقى الشعار و tagline فقط)
   const [branding, setBranding] = useState({
-    primary_color: '#C5A059',
-    secondary_color: '#1a1a1a',
     logo_url: '',
     tagline: ''
   });
@@ -208,8 +213,6 @@ const Settings: React.FC = () => {
           });
           // Load branding data
           setBranding({
-            primary_color: tenant.primary_color || '#C5A059',
-            secondary_color: tenant.secondary_color || '#1a1a1a',
             logo_url: tenant.logo_url || tenant.logo || '',
             tagline: tenant.tagline || ''
           });
@@ -1549,67 +1552,6 @@ const Settings: React.FC = () => {
                 </div>
               </div>
 
-              {/* Colors */}
-              <div className="settings-form-grid" style={{ marginBottom: '20px' }}>
-                <div className="settings-field">
-                  <label className="settings-field__label">اللون الأساسي</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input
-                      type="color"
-                      value={branding.primary_color}
-                      onChange={(e) => setBranding(prev => ({ ...prev, primary_color: e.target.value }))}
-                      style={{
-                        width: '50px',
-                        height: '40px',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer'
-                      }}
-                    />
-                    <input
-                      type="text"
-                      className="settings-field__input"
-                      value={branding.primary_color}
-                      onChange={(e) => setBranding(prev => ({ ...prev, primary_color: e.target.value }))}
-                      placeholder="#C5A059"
-                      style={{ flex: 1 }}
-                    />
-                  </div>
-                  <small style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-                    يُستخدم في الأزرار والعناصر الرئيسية
-                  </small>
-                </div>
-
-                <div className="settings-field">
-                  <label className="settings-field__label">اللون الثانوي</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input
-                      type="color"
-                      value={branding.secondary_color}
-                      onChange={(e) => setBranding(prev => ({ ...prev, secondary_color: e.target.value }))}
-                      style={{
-                        width: '50px',
-                        height: '40px',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer'
-                      }}
-                    />
-                    <input
-                      type="text"
-                      className="settings-field__input"
-                      value={branding.secondary_color}
-                      onChange={(e) => setBranding(prev => ({ ...prev, secondary_color: e.target.value }))}
-                      placeholder="#1a1a1a"
-                      style={{ flex: 1 }}
-                    />
-                  </div>
-                  <small style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-                    يُستخدم في الخلفيات والنصوص
-                  </small>
-                </div>
-              </div>
-
               {/* Tagline */}
               <div className="settings-field" style={{ marginBottom: '20px' }}>
                 <label className="settings-field__label">الشعار النصي (Tagline)</label>
@@ -1621,52 +1563,56 @@ const Settings: React.FC = () => {
                   placeholder="مثال: نخبة في القانون منذ 2010"
                 />
                 <small style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-                  يظهر أسفل اسم الشركة في صفحة تسجيل الدخول
+                  يظهر أسفل اسم الشركة في صفحة الهبوط
                 </small>
               </div>
 
-              {/* Preview */}
+              {/* Preview - ERP neutral */}
               <div className="settings-option-card" style={{
-                background: branding.secondary_color,
-                padding: '30px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                padding: '32px',
                 borderRadius: '12px',
                 textAlign: 'center',
                 marginBottom: '20px'
               }}>
-                <div style={{ color: 'white', opacity: 0.5, fontSize: '12px', marginBottom: '10px' }}>معاينة</div>
+                <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '16px' }}>معاينة</div>
                 {branding.logo_url ? (
                   <img
                     src={branding.logo_url}
                     alt="Logo Preview"
-                    style={{ width: '60px', height: '60px', objectFit: 'contain', marginBottom: '10px', background: 'white', borderRadius: '8px', padding: '8px' }}
+                    style={{
+                      width: '72px', height: '72px', objectFit: 'contain',
+                      marginBottom: '12px', background: '#ffffff',
+                      border: '1px solid #e2e8f0', borderRadius: '12px', padding: '10px'
+                    }}
                   />
                 ) : (
                   <div style={{
-                    width: '60px',
-                    height: '60px',
-                    margin: '0 auto 10px',
-                    borderRadius: '8px',
-                    background: branding.primary_color,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
+                    width: '72px', height: '72px',
+                    margin: '0 auto 12px',
+                    borderRadius: '12px',
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
-                    <Building2 size={28} style={{ color: 'white' }} />
+                    <Building2 size={28} style={{ color: '#475569' }} />
                   </div>
                 )}
-                <div style={{ color: 'white', fontSize: '18px', fontWeight: 600 }}>{companyInfo.name || 'اسم الشركة'}</div>
+                <div style={{ color: '#0f172a', fontSize: '18px', fontWeight: 600 }}>{companyInfo.name || 'اسم الشركة'}</div>
                 {branding.tagline && (
-                  <div style={{ color: 'white', opacity: 0.7, fontSize: '14px', marginTop: '5px' }}>{branding.tagline}</div>
+                  <div style={{ color: '#64748b', fontSize: '13px', marginTop: '6px' }}>{branding.tagline}</div>
                 )}
                 <button
                   style={{
-                    marginTop: '15px',
+                    marginTop: '20px',
                     padding: '10px 24px',
-                    background: branding.primary_color,
+                    background: '#0f172a',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
                     fontSize: '14px',
+                    fontWeight: 500,
                     cursor: 'pointer'
                   }}
                 >
@@ -2260,6 +2206,12 @@ const Settings: React.FC = () => {
 
       case 'letterheads':
         return <LetterheadManager />;
+
+      case 'session_defaults':
+        return <SessionDefaultsSettings />;
+
+      case 'session_workflow':
+        return <SessionWorkflowSettingsComponent />;
 
       default:
         return <div>التبويب غير موجود</div>;

@@ -1,0 +1,362 @@
+/* ====================================================
+   Session Defaults Settings (قوالب الجلسات الافتراضية)
+   ERP-Dense style — يدعم الثيمات عبر CSS Variables
+   ==================================================== */
+
+.sds {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* === Header === */
+.sds__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sds__header-text h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0 0 4px 0;
+}
+
+.sds__header-text p {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 0;
+  max-width: 640px;
+  line-height: 1.6;
+}
+
+.sds__header-text strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.sds__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* === Buttons === */
+.sds-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.sds-btn:hover:not(:disabled) {
+  background: var(--color-surface-hover, var(--color-bg-secondary));
+}
+
+.sds-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sds-btn--primary {
+  background: var(--law-navy, var(--color-primary));
+  color: #fff;
+  border-color: var(--law-navy, var(--color-primary));
+}
+
+.sds-btn--primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+  background: var(--law-navy, var(--color-primary));
+}
+
+.sds-saved-msg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-success, #22c55e);
+  font-weight: 500;
+}
+
+/* === Error banner === */
+.sds-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-error, #dc2626);
+  font-size: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+/* === Loading === */
+.sds-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 48px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.sds-spin {
+  animation: sds-spin 1s linear infinite;
+}
+
+@keyframes sds-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === Session Type Pills === */
+.sds__types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--color-bg-secondary, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.sds-type-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.sds-type-pill:hover {
+  border-color: var(--law-navy, var(--color-primary));
+  color: var(--law-navy, var(--color-primary));
+}
+
+.sds-type-pill--active {
+  background: var(--law-navy, var(--color-primary));
+  color: #fff;
+  border-color: var(--law-navy, var(--color-primary));
+}
+
+.sds-type-pill--active:hover {
+  color: #fff;
+  filter: brightness(1.1);
+}
+
+.sds-type-pill__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.25);
+  color: inherit;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.sds-type-pill:not(.sds-type-pill--active) .sds-type-pill__badge {
+  background: var(--law-navy, var(--color-primary));
+  color: #fff;
+}
+
+.sds__hint {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  padding: 0 2px;
+}
+
+.sds__hint strong {
+  color: var(--law-navy, var(--color-primary));
+  font-weight: 600;
+}
+
+/* === Columns === */
+.sds__columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 1024px) {
+  .sds__columns { grid-template-columns: 1fr; }
+}
+
+/* === Panel === */
+.sds-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sds-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--color-bg-secondary, var(--color-surface));
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.sds-panel__head h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0;
+  flex: 1;
+}
+
+.sds-panel__count {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  padding: 1px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
+.sds-panel__body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* === Item === */
+.sds-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg, var(--color-surface));
+}
+
+.sds-item__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sds-input, .sds-select, .sds-textarea {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  transition: border-color 150ms ease;
+}
+
+.sds-input:focus, .sds-select:focus, .sds-textarea:focus {
+  outline: none;
+  border-color: var(--law-navy, var(--color-primary));
+}
+
+.sds-textarea {
+  resize: vertical;
+  min-height: 32px;
+}
+
+.sds-select {
+  flex-shrink: 0;
+  width: auto;
+  min-width: 100px;
+}
+
+.sds-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 150ms ease;
+}
+
+.sds-icon-btn:hover {
+  background: var(--color-bg-secondary, var(--color-surface));
+}
+
+.sds-icon-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-error, #dc2626);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* === Add button === */
+.sds-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.sds-add-btn:hover {
+  border-color: var(--law-navy, var(--color-primary));
+  color: var(--law-navy, var(--color-primary));
+  border-style: solid;
+}
+
+/* === Empty state === */
+.sds-empty {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--color-text-secondary);
+}
+
+.sds-empty p {
+  margin: 0 0 4px;
+  font-size: 12px;
+}
+
+.sds-empty__hint {
+  font-size: 10px !important;
+  opacity: 0.75;
+}

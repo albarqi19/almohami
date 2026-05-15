@@ -29,6 +29,7 @@ import { AddSessionModal } from '../components/AddSessionModal';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
 import '../styles/sessions-page.css';
 import '../styles/add-session-modal.css';
+import '../styles/case-wekalat-panel.css';
 
 
 interface Session {
@@ -56,6 +57,7 @@ interface Session {
 	dabt_sent_to_client?: boolean;
 	dabt_sent_at?: string | null;
 	source?: string | null;
+	wekala_status_at_session?: 'valid' | 'expiring_before_session' | 'expired_before_session' | 'none' | null;
 	case?: {
 		id: number;
 		title: string;
@@ -611,10 +613,42 @@ const UpcomingSessions: React.FC = () => {
 				</thead>
 				<tbody>
 					{sortedSessions.map(session => (
-						<tr key={session.id} onClick={() => session.case_id && navigate(`/cases/${session.case_id}`)}>
+						<tr
+							key={session.id}
+							className="session-row session-row--clickable"
+							title="انقر لفتح غرفة تحضير الجلسة"
+							onClick={() => navigate(`/sessions/${session.id}/prep`)}
+						>
 							<td>
 								<div className="session-info">
-									<span className="session-case-title">{session.case?.title || '-'}</span>
+									<span className="session-case-title">
+										{session.case?.title || '-'}
+										{(() => {
+											const s = session.wekala_status_at_session;
+											if (s === 'expired_before_session') {
+												return (
+													<span className="cw-session-badge cw-session-badge--expired" title="الوكالة منتهية قبل تاريخ الجلسة">
+														<AlertCircle size={11} /> وكالة منتهية
+													</span>
+												);
+											}
+											if (s === 'expiring_before_session') {
+												return (
+													<span className="cw-session-badge cw-session-badge--expiring" title="الوكالة قاربت الانتهاء قبل الجلسة">
+														<AlertCircle size={11} /> وكالة قاربت الانتهاء
+													</span>
+												);
+											}
+											if (s === 'none') {
+												return (
+													<span className="cw-session-badge cw-session-badge--none" title="لا توجد وكالة مرتبطة بالقضية">
+														بدون وكالة
+													</span>
+												);
+											}
+											return null;
+										})()}
+									</span>
 									<span className="session-case-number">#{session.case?.file_number || session.case_id}</span>
 								</div>
 							</td>

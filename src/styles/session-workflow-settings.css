@@ -1,0 +1,302 @@
+/* ====================================================
+   Session Workflow Settings — كشف + تذكير ما بعد الجلسة
+   ==================================================== */
+
+.sws {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sws__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sws__header-text h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0 0 4px 0;
+}
+
+.sws__header-text p {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.sws__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sws-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.sws-btn:hover:not(:disabled) {
+  background: var(--color-bg-secondary, var(--color-surface));
+}
+
+.sws-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sws-btn--primary {
+  background: var(--law-navy, var(--color-primary));
+  color: #fff;
+  border-color: var(--law-navy, var(--color-primary));
+}
+
+.sws-btn--primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.sws-saved-msg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-success, #22c55e);
+  font-weight: 500;
+}
+
+.sws-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-error, #dc2626);
+  font-size: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.sws-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 48px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.sws-spin {
+  animation: sws-spin 1s linear infinite;
+}
+
+@keyframes sws-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === Section === */
+.sws-section {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.sws-section__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--color-bg-secondary, var(--color-surface));
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.sws-section__head h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0;
+}
+
+.sws-section__body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* === Toggle === */
+.sws-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.sws-toggle input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sws-toggle__slider {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  border-radius: 10px;
+  background: var(--color-border);
+  transition: background 150ms ease;
+  margin-top: 2px;
+}
+
+.sws-toggle__slider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 150ms ease;
+}
+
+.sws-toggle input:checked + .sws-toggle__slider {
+  background: var(--law-navy, var(--color-primary));
+}
+
+[dir="rtl"] .sws-toggle input:checked + .sws-toggle__slider::after {
+  transform: translateX(-14px);
+}
+
+[dir="ltr"] .sws-toggle input:checked + .sws-toggle__slider::after {
+  transform: translateX(14px);
+}
+
+.sws-toggle__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sws-toggle__title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.sws-toggle__desc {
+  font-size: 11.5px;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+/* === Field === */
+.sws-field-row, .sws-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sws-field__label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.sws-field__hint {
+  font-size: 10.5px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.sws-field__hint code {
+  display: inline-block;
+  padding: 0 4px;
+  font-size: 10px;
+  background: var(--color-bg-secondary, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  font-family: monospace;
+  color: var(--color-text);
+}
+
+.sws-field__input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sws-field__suffix {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.sws-input, .sws-textarea {
+  padding: 5px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+}
+
+.sws-input:focus, .sws-textarea:focus {
+  outline: none;
+  border-color: var(--law-navy, var(--color-primary));
+}
+
+.sws-input[type="number"] {
+  width: 100px;
+}
+
+.sws-textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+.sws-field-row--disabled,
+.sws-field-row--disabled label,
+.sws-field-row--disabled input,
+.sws-field-row--disabled textarea {
+  opacity: 0.55;
+}
+
+.sws-input:disabled, .sws-textarea:disabled {
+  cursor: not-allowed;
+  background: var(--color-bg-secondary, var(--color-surface));
+}
+
+/* === Info === */
+.sws-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--color-bg-secondary, var(--color-surface));
+  border-radius: 6px;
+  font-size: 10.5px;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
