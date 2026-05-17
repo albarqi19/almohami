@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
 import {
     Users,
     Search,
@@ -17,10 +18,13 @@ import {
     ArrowUp,
     ArrowDown,
     ArrowUpDown,
-    UserPlus
+    UserPlus,
+    Trash2,
+    Loader2
 } from 'lucide-react';
 import ClientManagementService from '../services/clientManagementService';
 import type { Client } from '../services/clientManagementService';
+import { useAuth } from '../contexts/AuthContext';
 import AddClientModal from '../components/AddClientModal';
 import '../styles/clients-page.css';
 
@@ -39,6 +43,8 @@ type SortOrder = 'asc' | 'desc';
 
 const Clients: React.FC = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -46,6 +52,36 @@ const Clients: React.FC = () => {
     const [sortBy, setSortBy] = useState<SortKey>('created_at');
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
     const [showAddModal, setShowAddModal] = useState(false);
+    const [deletingClientId, setDeletingClientId] = useState<number | string | null>(null);
+
+    // الحذف متاح فقط لـ admin/owner (نفس حماية manage.users middleware في الباك).
+    const canDeleteClients = user?.role === 'admin'
+        || user?.role === 'owner'
+        || (user as any)?.is_tenant_owner === true;
+
+    // Mutation: أرشفة عميل
+    const deleteMutation = useMutation({
+        mutationFn: (id: number | string) => ClientManagementService.deleteClient(id),
+        onSuccess: () => {
+            toast.success('تم أرشفة العميل بنجاح');
+            queryClient.invalidateQueries({ queryKey: ['clients'] });
+            queryClient.invalidateQueries({ queryKey: ['clients-stats'] });
+        },
+        onError: (err: any) => {
+            toast.error(err?.message || 'تعذّر أرشفة العميل');
+        },
+        onSettled: () => setDeletingClientId(null),
+    });
+
+    const handleDeleteClient = (client: Client, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const ok = window.confirm(
+            `هل أنت متأكد من أرشفة العميل "${client.name}"؟\n\nسيختفي من القائمة الافتراضية لكن بياناته ستبقى محفوظة ويمكن استرجاعه لاحقاً.`
+        );
+        if (!ok) return;
+        setDeletingClientId(client.id);
+        deleteMutation.mutate(client.id);
+    };
 
     // Debounce search query
     React.useEffect(() => {
@@ -323,6 +359,7 @@ const Clients: React.FC = () => {
                                             <span>تاريخ التسجيل</span>
                                             {sortIndicator('created_at')}
                                         </th>
+                                        {canDeleteClients && <th style={{ width: 60, textAlign: 'center' }}>إجراءات</th>}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -367,6 +404,45 @@ const Clients: React.FC = () => {
                                                 <td>
                                                     <span className="date-cell">{formatDate(client.created_at)}</span>
                                                 </td>
+                                                {canDeleteClients && (
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => handleDeleteClient(client, e)}
+                                                            disabled={deletingClientId === client.id}
+                                                            title="أرشفة العميل"
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: 28,
+                                                                height: 28,
+                                                                padding: 0,
+                                                                border: '1px solid #fee2e2',
+                                                                background: '#fff',
+                                                                color: '#dc2626',
+                                                                borderRadius: 6,
+                                                                cursor: deletingClientId === client.id ? 'not-allowed' : 'pointer',
+                                                                opacity: deletingClientId === client.id ? 0.5 : 1,
+                                                                transition: 'background 0.15s, border-color 0.15s',
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                if (deletingClientId !== client.id) {
+                                                                    e.currentTarget.style.background = '#fef2f2';
+                                                                    e.currentTarget.style.borderColor = '#fca5a5';
+                                                                }
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.background = '#fff';
+                                                                e.currentTarget.style.borderColor = '#fee2e2';
+                                                            }}
+                                                        >
+                                                            {deletingClientId === client.id
+                                                                ? <Loader2 size={13} className="spinning" />
+                                                                : <Trash2 size={13} />}
+                                                        </button>
+                                                    </td>
+                                                )}
                                             </tr>
                                         );
                                     })}

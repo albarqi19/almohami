@@ -266,6 +266,13 @@ export class ClientManagementService {
         return response.data;
     }
 
+    /**
+     * أرشفة العميل (soft delete عبر is_active=false).
+     */
+    static async deleteClient(clientId: number | string): Promise<void> {
+        await apiClient.delete<any>(`/client-management/${clientId}`);
+    }
+
     // ----------- Endpoints powering the redesigned ClientDetailPage -----------
 
     static async getClientTasks(clientId: number | string, params?: {
