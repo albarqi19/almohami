@@ -1,7 +1,7 @@
 import {
   Home, FileText, FileCheck, Calendar, Scale, Briefcase, Users, Clock, CheckSquare,
   BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature, Receipt, CreditCard,
-  TrendingUp, Bell, Settings, ClipboardList,
+  TrendingUp, Bell, Settings, ClipboardList, BarChart3,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -37,6 +37,7 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: Clock, label: 'إعدادات التوفر', path: '/meetings/availability', permission: 'meetings.view', roles: ['lawyer', 'senior_lawyer'] },
   { icon: CheckSquare, label: 'المهام', path: '/tasks', permission: 'tasks.view' },
   { icon: BookOpen, label: 'المفكرة الشخصية', path: '/notebook', permission: null },
+  { icon: BarChart3, label: 'أدائي', path: '/my-performance', permission: null, roles: ['lawyer', 'senior_lawyer', 'legal_assistant'] },
   { icon: FileText, label: 'قضاياي', path: '/my-cases', permission: null, roles: ['client'] },
   { icon: MessageSquare, label: 'الرسائل', path: '/my-messages', permission: null, roles: ['client'] },
   { icon: Upload, label: 'الوثائق', path: '/documents', permission: 'documents.view' },
@@ -55,7 +56,7 @@ export const mainMenuItems: SidebarItem[] = [
  * عناصر قسم الإعدادات.
  */
 export const settingsMenuItems: SidebarItem[] = [
-  { icon: Users, label: 'تقرير المحامين', path: '/lawyers-report', permission: 'reports.view' },
+  { icon: BarChart3, label: 'تقرير الأداء', path: '/lawyers-report', permission: 'reports.view' },
   { icon: Users, label: 'المستخدمين', path: '/users', permission: 'users.view' },
   { icon: Bell, label: 'التنبيهات', path: '/notifications', permission: null },
   { icon: MessageSquare, label: 'الواتساب', path: '/whatsapp-settings', permission: 'whatsapp.send' },

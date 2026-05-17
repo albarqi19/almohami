@@ -25,6 +25,7 @@ import Documents from './pages/Documents';
 import Activities from './pages/Activities';
 import Reports from './pages/Reports';
 import LawyersReport from './pages/LawyersReport';
+import MyPerformance from './pages/MyPerformance';
 import Notifications from './pages/Notifications';
 import Admin from './pages/Admin';
 import Statistics from './pages/Statistics';
@@ -211,8 +212,13 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="lawyers-report" element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner']}>
                   <LawyersReport />
+                </ProtectedRoute>
+              } />
+              <Route path="my-performance" element={
+                <ProtectedRoute allowedRoles={['lawyer', 'senior_lawyer', 'legal_assistant', 'partner', 'admin', 'owner']}>
+                  <MyPerformance />
                 </ProtectedRoute>
               } />
               <Route path="users" element={

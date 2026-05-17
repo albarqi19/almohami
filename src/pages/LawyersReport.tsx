@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Users, TrendingUp, CheckSquare, BarChart3 } from 'lucide-react';
+import { Users, Trophy, CheckSquare, Star, Briefcase, Share2 } from 'lucide-react';
 import Modal from '../components/Modal';
 import LawyerDetailContent from '../components/LawyerDetailContent';
 import PresenceIndicator from '../components/PresenceIndicator';
 import type { PresenceStatus } from '../components/PresenceIndicator';
 import { apiClient } from '../utils/api';
+import type { BucketCounts, PerformanceBreakdown } from '../utils/lawyerExportHelpers';
 import '../styles/lawyers-report.css';
 
-interface LawyerReportData {
+interface LawyerReportRow {
   id: number;
   name: string;
   avatar: string | null;
@@ -27,50 +28,29 @@ interface LawyerReportData {
   overdue_tasks: number;
   next_hearing_date: string | null;
   contract_value_total: number;
-}
-
-interface DateFilter {
-  period: 'current_month' | 'last_3_months' | 'this_year' | 'custom';
-  start_date?: string;
-  end_date?: string;
+  breakdown: PerformanceBreakdown;
 }
 
 const LawyersReport: React.FC = () => {
   const [selectedLawyer, setSelectedLawyer] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filter, setFilter] = useState<DateFilter>({
-    period: 'current_month'
-  });
 
-  // ✨ TanStack Query - بديل لـ useState + useEffect + fetchLawyersReport
-  const { data: lawyers = [], isLoading: loading } = useQuery<LawyerReportData[]>({
-    queryKey: ['lawyers-report', filter],
+  // All-time stats by default. Per-card date range may be applied later
+  // from inside the detail modal via the existing dateFilter prop.
+  const { data: lawyers = [], isLoading: loading } = useQuery<LawyerReportRow[]>({
+    queryKey: ['lawyers-report'],
     queryFn: async () => {
-      const queryParams = new URLSearchParams();
-      if (filter.period) queryParams.append('period', filter.period);
-      if (filter.start_date) queryParams.append('start_date', filter.start_date);
-      if (filter.end_date) queryParams.append('end_date', filter.end_date);
-
-      const queryString = queryParams.toString();
-      const endpoint = `/lawyers-report${queryString ? `?${queryString}` : ''}`;
-
-      const response: any = await apiClient.get(endpoint);
-      if (response.success) {
-        return response.data;
-      }
+      const response: any = await apiClient.get('/lawyers-report');
+      if (response.success) return response.data;
       return [];
     },
-    refetchInterval: 30000, // ⏰ تحديث تلقائي كل 30 ثانية
-    refetchOnWindowFocus: true, // 🔄 تحديث عند العودة للتبويب
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
   });
 
   const handleLawyerClick = (lawyerId: number) => {
     setSelectedLawyer(lawyerId);
     setIsModalOpen(true);
-  };
-
-  const handleFilterChange = (newFilter: Partial<DateFilter>) => {
-    setFilter(prev => ({ ...prev, ...newFilter }));
   };
 
   const getProgressColor = (rate: number) => {
@@ -93,45 +73,9 @@ const LawyersReport: React.FC = () => {
         <div className="header-title-area">
           <h1>
             <Users size={18} />
-            تقرير المحامين
+            تقرير الأداء
           </h1>
-          <p>متابعة أداء المحامين وإحصائيات القضايا والمهام</p>
-        </div>
-
-        <div className="header-actions">
-          {/* Period Filter */}
-          <div className="filter-group">
-            <label>الفترة:</label>
-            <select
-              value={filter.period}
-              onChange={(e) => handleFilterChange({ period: e.target.value as any })}
-              className="filter-select"
-            >
-              <option value="current_month">الشهر الحالي</option>
-              <option value="last_3_months">آخر 3 أشهر</option>
-              <option value="this_year">هذه السنة</option>
-              <option value="custom">مخصص</option>
-            </select>
-          </div>
-
-          {/* Custom Date Range */}
-          {filter.period === 'custom' && (
-            <div className="filter-group">
-              <input
-                type="date"
-                value={filter.start_date || ''}
-                onChange={(e) => handleFilterChange({ start_date: e.target.value })}
-                className="filter-input"
-              />
-              <span>إلى</span>
-              <input
-                type="date"
-                value={filter.end_date || ''}
-                onChange={(e) => handleFilterChange({ end_date: e.target.value })}
-                className="filter-input"
-              />
-            </div>
-          )}
+          <p>متابعة أداء الفريق وعلاقتهم بالقضايا (مسؤول / طرف / مشارك)</p>
         </div>
       </div>
 
@@ -140,7 +84,7 @@ const LawyersReport: React.FC = () => {
         {loading ? (
           <div className="loading-state">جاري التحميل...</div>
         ) : lawyers.length === 0 ? (
-          <div className="empty-state">لا توجد بيانات محامين</div>
+          <div className="empty-state">لا توجد بيانات</div>
         ) : (
           <div className="lawyers-grid">
             {lawyers.map((lawyer, index) => (
@@ -153,7 +97,7 @@ const LawyersReport: React.FC = () => {
                 whileHover={{ y: -2 }}
                 onClick={() => handleLawyerClick(lawyer.id)}
               >
-                {/* Header: Small Icon + Name + Role */}
+                {/* Header: Avatar + Name + Role */}
                 <div className="lawyer-card-header">
                   <div className="lawyer-avatar-container">
                     <div className="lawyer-avatar">
@@ -168,17 +112,15 @@ const LawyersReport: React.FC = () => {
                   </div>
                   <div className="lawyer-info">
                     <h3 className="lawyer-name">{lawyer.name}</h3>
-                    <p className="lawyer-role">{lawyer.role}</p>
+                    <p className="lawyer-role">{roleLabel(lawyer.role)}</p>
                   </div>
                 </div>
 
-                {/* Properties List (Notion Style) */}
+                {/* Properties */}
                 <div className="card-properties">
-                  {/* Status Property */}
+                  {/* Presence */}
                   <div className="card-property-row">
-                    <span className="card-property-label">
-                      الحالة
-                    </span>
+                    <span className="card-property-label">الحالة</span>
                     <PresenceIndicator
                       status={lawyer.presence_status || 'offline'}
                       lastActivityAgo={lawyer.last_activity_ago || undefined}
@@ -187,17 +129,13 @@ const LawyersReport: React.FC = () => {
                     />
                   </div>
 
-                  <div className="card-property-row">
-                    <span className="card-property-label">
-                      <BarChart3 size={13} />
-                      قضايا نشطة
-                    </span>
-                    <span className="card-property-value">{lawyer.active_cases}</span>
-                  </div>
+                  {/* Three-dimensional breakdown */}
+                  <BreakdownBlock breakdown={lawyer.breakdown} />
 
+                  {/* Win rate */}
                   <div className="card-property-row">
                     <span className="card-property-label">
-                      <TrendingUp size={13} />
+                      <Trophy size={13} />
                       معدل الفوز
                     </span>
                     <span className="card-property-value" style={{ color: getWinRateColor(lawyer.win_rate) }}>
@@ -205,6 +143,7 @@ const LawyersReport: React.FC = () => {
                     </span>
                   </div>
 
+                  {/* Task completion */}
                   <div className="card-property-row">
                     <span className="card-property-label">
                       <CheckSquare size={13} />
@@ -253,7 +192,7 @@ const LawyersReport: React.FC = () => {
           >
             <LawyerDetailContent
               lawyerId={selectedLawyer}
-              dateFilter={filter}
+              dateFilter={{}}
               presence={selected ? {
                 status: selected.presence_status || 'offline',
                 lastActivityAgo: selected.last_activity_ago,
@@ -265,5 +204,74 @@ const LawyersReport: React.FC = () => {
     </div>
   );
 };
+
+// =====================================================================
+// BreakdownBlock — three dimensions × {active, closed}
+// =====================================================================
+
+const EMPTY_COUNTS: BucketCounts = { active: 0, closed: 0, total: 0 };
+
+const BreakdownBlock: React.FC<{ breakdown?: PerformanceBreakdown }> = ({ breakdown }) => {
+  // Defensive: an older backend (pre-2026-05-18) won't include `breakdown` —
+  // render zeroes instead of crashing while CI/CD rolls out.
+  const b = breakdown ?? { responsible: EMPTY_COUNTS, party: EMPTY_COUNTS, shared: EMPTY_COUNTS };
+
+  return (
+    <div className="lawyer-breakdown">
+      <BreakdownRow
+        icon={<Star size={12} />}
+        label="مسؤول عنها"
+        counts={b.responsible ?? EMPTY_COUNTS}
+        prominence="primary"
+      />
+      <BreakdownRow
+        icon={<Briefcase size={12} />}
+        label="طرف فيها"
+        counts={b.party ?? EMPTY_COUNTS}
+        prominence="primary"
+      />
+      <BreakdownRow
+        icon={<Share2 size={12} />}
+        label="مشارك فيها"
+        counts={b.shared ?? EMPTY_COUNTS}
+        prominence="muted"
+      />
+    </div>
+  );
+};
+
+const BreakdownRow: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  counts: BucketCounts;
+  prominence: 'primary' | 'muted';
+}> = ({ icon, label, counts, prominence }) => (
+  <div className={`lawyer-breakdown__row lawyer-breakdown__row--${prominence}`}>
+    <span className="lawyer-breakdown__label">
+      {icon}
+      {label}
+    </span>
+    <span className="lawyer-breakdown__counts">
+      <span className="lawyer-breakdown__pill lawyer-breakdown__pill--active" title="نشطة">
+        {counts.active}
+      </span>
+      <span className="lawyer-breakdown__pill lawyer-breakdown__pill--closed" title="مغلقة">
+        {counts.closed}
+      </span>
+    </span>
+  </div>
+);
+
+function roleLabel(r: string): string {
+  const map: Record<string, string> = {
+    admin: 'مدير النظام',
+    owner: 'مالك',
+    partner: 'شريك',
+    senior_lawyer: 'محامي أول',
+    lawyer: 'محامي',
+    legal_assistant: 'مساعد قانوني',
+  };
+  return map[r] || r;
+}
 
 export default LawyersReport;

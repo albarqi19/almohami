@@ -24,7 +24,12 @@ export interface LawyerCase {
   filing_date: string | null;
   next_hearing: string | null;
   contract_value: number | null;
+  /** Legacy alias for is_responsible — kept for old export helpers. */
   is_primary: boolean;
+  /** New per-case bucket flags (2026-05-18). */
+  is_responsible?: boolean;
+  is_party?: boolean;
+  is_shared?: boolean;
 }
 
 export interface LawyerTask {
@@ -43,6 +48,18 @@ export interface MonthlyPerformance {
   tasks_completed: number;
 }
 
+export interface BucketCounts {
+  active: number;
+  closed: number;
+  total: number;
+}
+
+export interface PerformanceBreakdown {
+  responsible: BucketCounts;
+  party: BucketCounts;
+  shared: BucketCounts;
+}
+
 export interface LawyerReportData {
   lawyer: { id: number; name: string; email: string | null; avatar: string | null; role: string };
   cases: LawyerCase[];
@@ -53,6 +70,8 @@ export interface LawyerReportData {
   tasks: LawyerTask[];
   win_rate: { percentage: number; won: number; lost: number; settled: number; total_closed: number };
   monthly_performance: MonthlyPerformance[];
+  breakdown: PerformanceBreakdown;
+  is_self?: boolean;
 }
 
 export interface PresenceLogData {
@@ -65,6 +84,11 @@ export interface PresenceLogData {
 
 export type CasesScope = 'active' | 'responsible' | 'all';
 export type TasksScope = 'overdue' | 'unfinished' | 'completed' | 'all';
+
+/** Bucket dimension used by the new two-level cases filter (2026-05-18). */
+export type BucketScope = 'responsible' | 'party' | 'shared';
+/** Status sub-filter used within a bucket. */
+export type StatusScope = 'all' | 'active' | 'closed';
 
 export interface ExportConfig {
   cases: { enabled: boolean; scope: CasesScope };

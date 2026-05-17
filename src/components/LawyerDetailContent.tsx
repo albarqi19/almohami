@@ -45,6 +45,8 @@ import {
   type LawyerTask,
   type CasesScope,
   type TasksScope,
+  type BucketScope,
+  type StatusScope,
   type PresenceLogData,
   type ExportConfig,
 } from '../utils/lawyerExportHelpers';
@@ -61,8 +63,9 @@ const LawyerDetailContent: React.FC<LawyerDetailContentProps> = ({ lawyerId, dat
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'cases' | 'tasks' | 'performance' | 'attendance'>('cases');
 
-  // Cases tab state
-  const [casesScope, setCasesScope] = useState<CasesScope>('responsible');
+  // Cases tab state — two-level: bucket × status
+  const [casesBucket, setCasesBucket] = useState<BucketScope>('responsible');
+  const [casesStatus, setCasesStatus] = useState<StatusScope>('all');
   const [casesSearch, setCasesSearch] = useState('');
 
   // Tasks tab state
@@ -127,11 +130,37 @@ const LawyerDetailContent: React.FC<LawyerDetailContentProps> = ({ lawyerId, dat
     return data.cases.reduce((s, c) => s + (Number(c.contract_value) || 0), 0);
   }, [data]);
 
+  // Bucket-based counts (any status) — for the bucket pills.
+  const bucketCounts = useMemo(() => {
+    if (!data) return { responsible: 0, party: 0, shared: 0 };
+    const b = data.breakdown;
+    if (b) {
+      return { responsible: b.responsible.total, party: b.party.total, shared: b.shared.total };
+    }
+    // Fallback when serving an older backend response.
+    return {
+      responsible: data.cases.filter(c => c.is_responsible ?? c.is_primary).length,
+      party: data.cases.filter(c => c.is_party).length,
+      shared: data.cases.filter(c => c.is_shared).length,
+    };
+  }, [data]);
+
+  // Filter cases by current (bucket, status) selection, then by search.
   const visibleCases = useMemo(() => {
     if (!data) return [];
-    const list = casesScope === 'active' ? data.active_cases
-               : casesScope === 'responsible' ? data.responsible_cases
-               : data.cases;
+
+    const inBucket = (c: LawyerCase): boolean => {
+      if (casesBucket === 'responsible') return Boolean(c.is_responsible ?? c.is_primary);
+      if (casesBucket === 'party')       return Boolean(c.is_party);
+      return Boolean(c.is_shared);
+    };
+    const matchesStatus = (c: LawyerCase): boolean => {
+      if (casesStatus === 'all') return true;
+      if (casesStatus === 'active') return c.status === 'active' || c.status === 'pending';
+      return c.status === 'closed';
+    };
+
+    const list = data.cases.filter(c => inBucket(c) && matchesStatus(c));
     if (!casesSearch.trim()) return list;
     const q = casesSearch.toLowerCase();
     return list.filter(c =>
@@ -139,7 +168,23 @@ const LawyerDetailContent: React.FC<LawyerDetailContentProps> = ({ lawyerId, dat
       (c.file_number || '').toLowerCase().includes(q) ||
       (c.client_name || '').toLowerCase().includes(q)
     );
-  }, [data, casesScope, casesSearch]);
+  }, [data, casesBucket, casesStatus, casesSearch]);
+
+  // Status counts within the currently selected bucket — for the status pills.
+  const statusCountsInBucket = useMemo(() => {
+    if (!data) return { all: 0, active: 0, closed: 0 };
+    const inBucket = (c: LawyerCase): boolean => {
+      if (casesBucket === 'responsible') return Boolean(c.is_responsible ?? c.is_primary);
+      if (casesBucket === 'party')       return Boolean(c.is_party);
+      return Boolean(c.is_shared);
+    };
+    const list = data.cases.filter(inBucket);
+    return {
+      all: list.length,
+      active: list.filter(c => c.status === 'active' || c.status === 'pending').length,
+      closed: list.filter(c => c.status === 'closed').length,
+    };
+  }, [data, casesBucket]);
 
   const visibleTasks = useMemo(() => {
     if (!data) return [];
@@ -240,17 +285,16 @@ const LawyerDetailContent: React.FC<LawyerDetailContentProps> = ({ lawyerId, dat
       <div className="lawyer-detail-tab-content">
         {activeTab === 'cases' && (
           <CasesTab
-            scope={casesScope}
-            setScope={setCasesScope}
+            bucket={casesBucket}
+            setBucket={(b) => { setCasesBucket(b); setCasesStatus('all'); }}
+            status={casesStatus}
+            setStatus={setCasesStatus}
             search={casesSearch}
             setSearch={setCasesSearch}
             cases={visibleCases}
-            counts={{
-              responsible: data.responsible_cases_count,
-              all: data.cases.length,
-              active: data.active_cases.length,
-            }}
-            onOpenExport={(scope) => openExportModal({ cases: { enabled: true, scope } })}
+            bucketCounts={bucketCounts}
+            statusCounts={statusCountsInBucket}
+            onOpenExport={() => openExportModal({ cases: { enabled: true, scope: bucketToExportScope(casesBucket, casesStatus) } })}
             onQuickExport={() => quickExportActiveCases(data)}
             onCaseClick={(id) => navigate(`/cases/${id}`)}
           />
@@ -330,24 +374,41 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; icon: React.Re
 // ---- Cases Tab -------------------------------------------------------
 
 interface CasesTabProps {
-  scope: CasesScope;
-  setScope: (s: CasesScope) => void;
+  bucket: BucketScope;
+  setBucket: (b: BucketScope) => void;
+  status: StatusScope;
+  setStatus: (s: StatusScope) => void;
   search: string;
   setSearch: (v: string) => void;
   cases: LawyerCase[];
-  counts: { responsible: number; all: number; active: number };
-  onOpenExport: (scope: CasesScope) => void;
+  bucketCounts: { responsible: number; party: number; shared: number };
+  statusCounts: { all: number; active: number; closed: number };
+  onOpenExport: () => void;
   onQuickExport: () => void;
   onCaseClick: (id: number) => void;
 }
 
-const CasesTab: React.FC<CasesTabProps> = ({ scope, setScope, search, setSearch, cases, counts, onOpenExport, onQuickExport, onCaseClick }) => (
+const CasesTab: React.FC<CasesTabProps> = ({
+  bucket, setBucket, status, setStatus, search, setSearch,
+  cases, bucketCounts, statusCounts, onOpenExport, onQuickExport, onCaseClick,
+}) => (
   <div className="lawyer-cases">
+    {/* Level 1: bucket (responsible / party / shared) */}
+    <div className="lawyer-cases__buckets" role="tablist">
+      <BucketPill value="responsible" current={bucket} onClick={setBucket}
+        icon={<Star size={13} />} label="مسؤول عنها" count={bucketCounts.responsible} />
+      <BucketPill value="party" current={bucket} onClick={setBucket}
+        icon={<Briefcase size={13} />} label="طرف فيها" count={bucketCounts.party} />
+      <BucketPill value="shared" current={bucket} onClick={setBucket}
+        icon={<Search size={13} />} label="مشارك فيها" count={bucketCounts.shared} />
+    </div>
+
+    {/* Level 2: status sub-filter (all / active / closed) + tools */}
     <div className="lawyer-cases__toolbar">
       <div className="lawyer-cases__toggle" role="tablist">
-        <ScopeToggle value="responsible" current={scope} onClick={setScope} label="مسؤول عنها" count={counts.responsible} icon={<Star size={12} />} />
-        <ScopeToggle value="all" current={scope} onClick={setScope} label="كل المكلف بها" count={counts.all} />
-        <ScopeToggle value="active" current={scope} onClick={setScope} label="النشطة فقط" count={counts.active} />
+        <StatusPill value="all" current={status} onClick={setStatus} label="الكل" count={statusCounts.all} />
+        <StatusPill value="active" current={status} onClick={setStatus} label="نشط" count={statusCounts.active} />
+        <StatusPill value="closed" current={status} onClick={setStatus} label="غير نشط" count={statusCounts.closed} />
       </div>
       <div className="lawyer-cases__toolbar-actions">
         <div className="lawyer-cases__search">
@@ -357,7 +418,7 @@ const CasesTab: React.FC<CasesTabProps> = ({ scope, setScope, search, setSearch,
         <button className="lawyer-cases__btn lawyer-cases__btn--quick" onClick={onQuickExport} title="تصدير القضايا النشطة فوراً">
           <FileSpreadsheet size={14} /> تصدير سريع
         </button>
-        <button className="lawyer-cases__btn lawyer-cases__btn--primary" onClick={() => onOpenExport(scope)} title="تخصيص محتوى التقرير">
+        <button className="lawyer-cases__btn lawyer-cases__btn--primary" onClick={onOpenExport} title="تخصيص محتوى التقرير">
           <Download size={14} /> تخصيص...
         </button>
       </div>
@@ -366,7 +427,7 @@ const CasesTab: React.FC<CasesTabProps> = ({ scope, setScope, search, setSearch,
     {cases.length === 0 ? (
       <div className="lawyer-empty-state">
         <Briefcase size={32} />
-        <p>{search ? 'لا توجد نتائج للبحث' : emptyCasesMessage(scope)}</p>
+        <p>{search ? 'لا توجد نتائج للبحث' : emptyBucketMessage(bucket, status)}</p>
       </div>
     ) : (
       <div className="lawyer-cases__table-wrap">
@@ -396,7 +457,7 @@ const CasesTab: React.FC<CasesTabProps> = ({ scope, setScope, search, setSearch,
                 <td><span className="notion-badge badge-gray">{caseTypeLabel(c.case_type)}</span></td>
                 <td>{priorityBadge(c.priority)}</td>
                 <td className="lawyer-cases__cell-role">
-                  {c.is_primary
+                  {(c.is_responsible ?? c.is_primary)
                     ? <span className="lawyer-role-star" title="المحامي المسؤول"><Star size={13} /></span>
                     : <span className="lawyer-role-assigned" title="مكلف">—</span>}
                 </td>
@@ -413,9 +474,16 @@ const CasesTab: React.FC<CasesTabProps> = ({ scope, setScope, search, setSearch,
   </div>
 );
 
-const ScopeToggle: React.FC<{ value: CasesScope; current: CasesScope; onClick: (v: CasesScope) => void; label: string; count: number; icon?: React.ReactNode }> = ({ value, current, onClick, label, count, icon }) => (
-  <button className={`lawyer-scope-pill ${current === value ? 'is-active' : ''}`} onClick={() => onClick(value)}>
+const BucketPill: React.FC<{ value: BucketScope; current: BucketScope; onClick: (v: BucketScope) => void; label: string; count: number; icon?: React.ReactNode }> = ({ value, current, onClick, label, count, icon }) => (
+  <button className={`lawyer-bucket-pill ${current === value ? 'is-active' : ''}`} onClick={() => onClick(value)}>
     {icon}
+    <span className="lawyer-bucket-pill__label">{label}</span>
+    <span className="lawyer-bucket-pill__count">{count}</span>
+  </button>
+);
+
+const StatusPill: React.FC<{ value: StatusScope; current: StatusScope; onClick: (v: StatusScope) => void; label: string; count: number }> = ({ value, current, onClick, label, count }) => (
+  <button className={`lawyer-scope-pill ${current === value ? 'is-active' : ''}`} onClick={() => onClick(value)}>
     {label}
     <span className="lawyer-scope-pill__count">{count}</span>
   </button>
@@ -737,10 +805,25 @@ function roleLabel(r: string): string {
   return map[r] || r;
 }
 
-function emptyCasesMessage(scope: CasesScope): string {
-  if (scope === 'responsible') return 'هذا المحامي ليس مسؤولاً (مُعَلَّماً بنجمة) على أي قضية في الفترة المختارة.';
-  if (scope === 'active') return 'لا توجد قضايا نشطة لهذا المحامي حالياً.';
-  return 'لا توجد قضايا مكلف بها هذا المحامي في الفترة المختارة.';
+function emptyBucketMessage(bucket: BucketScope, status: StatusScope): string {
+  const bucketLabel =
+    bucket === 'responsible' ? 'مسؤولاً عنها (★)' :
+    bucket === 'party'       ? 'طرفاً فيها' :
+                               'مشاركاً فيها';
+  if (status === 'active') return `لا توجد قضايا نشطة يكون فيها ${bucketLabel}.`;
+  if (status === 'closed') return `لا توجد قضايا مغلقة يكون فيها ${bucketLabel}.`;
+  return `لا توجد قضايا يكون فيها ${bucketLabel}.`;
+}
+
+/**
+ * Best-effort mapping from (bucket, status) → legacy CasesScope used by the
+ * existing export builder. Exact bucket-shared/party scopes are not yet
+ * supported by the export modal; for those we fall back to 'all'.
+ */
+function bucketToExportScope(bucket: BucketScope, status: StatusScope): CasesScope {
+  if (bucket === 'responsible') return 'responsible';
+  if (status === 'active') return 'active';
+  return 'all';
 }
 
 function emptyTasksMessage(scope: TasksScope): string {
