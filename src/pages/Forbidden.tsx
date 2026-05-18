@@ -6,41 +6,82 @@ const Forbidden: React.FC<{ requiredPermission?: string }> = ({ requiredPermissi
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ background: 'var(--color-background)', color: 'var(--color-text)' }}
+    >
       <div className="max-w-md w-full text-center">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-50 dark:bg-red-900/20 mb-6">
-          <ShieldOff className="w-10 h-10 text-red-500" strokeWidth={1.5} />
+        <div
+          className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-6"
+          style={{ background: 'var(--color-error-soft, rgba(239, 68, 68, 0.1))' }}
+        >
+          <ShieldOff
+            className="w-10 h-10"
+            strokeWidth={1.5}
+            style={{ color: 'var(--color-error, #ef4444)' }}
+          />
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1
+          className="text-2xl font-bold mb-2"
+          style={{ color: 'var(--color-heading)' }}
+        >
           غير مصرح بالوصول
         </h1>
 
-        <p className="text-gray-600 dark:text-gray-400 mb-2">
+        <p className="mb-2" style={{ color: 'var(--color-text-secondary)' }}>
           ليس لديك الصلاحية اللازمة لعرض هذه الصفحة.
         </p>
 
         {requiredPermission && (
-          <p className="text-xs text-gray-500 dark:text-gray-500 mb-6 font-mono">
-            الصلاحية المطلوبة: <span className="text-gray-700 dark:text-gray-300">{requiredPermission}</span>
+          <p
+            className="text-xs mb-6 font-mono"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            الصلاحية المطلوبة:{' '}
+            <span style={{ color: 'var(--color-text)' }}>{requiredPermission}</span>
           </p>
         )}
 
-        <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
+        <p
+          className="text-sm mb-6"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
           إذا كنت تحتاج الوصول، تواصل مع مدير الشركة لمنحك الصلاحية المناسبة.
         </p>
 
         <div className="flex gap-3 justify-center">
           <button
             onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors"
+            style={{
+              color: 'var(--color-text)',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--color-surface-subtle)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--color-surface)';
+            }}
           >
             <ArrowRight className="w-4 h-4 rotate-180" />
             العودة
           </button>
           <button
             onClick={() => navigate('/dashboard')}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark transition-colors"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors"
+            style={{
+              color: '#ffffff',
+              background: 'var(--color-primary)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--color-primary-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--color-primary)';
+            }}
           >
             لوحة التحكم
           </button>
