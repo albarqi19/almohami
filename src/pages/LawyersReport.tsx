@@ -226,7 +226,7 @@ const BreakdownBlock: React.FC<{ breakdown?: PerformanceBreakdown }> = ({ breakd
       />
       <BreakdownRow
         icon={<Briefcase size={12} />}
-        label="طرف فيها"
+        label="مكلف بها"
         counts={b.party ?? EMPTY_COUNTS}
         prominence="primary"
       />

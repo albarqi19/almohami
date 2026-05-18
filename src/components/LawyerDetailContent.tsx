@@ -398,7 +398,7 @@ const CasesTab: React.FC<CasesTabProps> = ({
       <BucketPill value="responsible" current={bucket} onClick={setBucket}
         icon={<Star size={13} />} label="مسؤول عنها" count={bucketCounts.responsible} />
       <BucketPill value="party" current={bucket} onClick={setBucket}
-        icon={<Briefcase size={13} />} label="طرف فيها" count={bucketCounts.party} />
+        icon={<Briefcase size={13} />} label="مكلف بها" count={bucketCounts.party} />
       <BucketPill value="shared" current={bucket} onClick={setBucket}
         icon={<Search size={13} />} label="مشارك فيها" count={bucketCounts.shared} />
     </div>
@@ -808,7 +808,7 @@ function roleLabel(r: string): string {
 function emptyBucketMessage(bucket: BucketScope, status: StatusScope): string {
   const bucketLabel =
     bucket === 'responsible' ? 'مسؤولاً عنها (★)' :
-    bucket === 'party'       ? 'طرفاً فيها' :
+    bucket === 'party'       ? 'مكلفاً بها' :
                                'مشاركاً فيها';
   if (status === 'active') return `لا توجد قضايا نشطة يكون فيها ${bucketLabel}.`;
   if (status === 'closed') return `لا توجد قضايا مغلقة يكون فيها ${bucketLabel}.`;
