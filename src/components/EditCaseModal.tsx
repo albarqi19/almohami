@@ -190,7 +190,7 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
                   <select value={formData.case_type} onChange={(e) => updateField('case_type', e.target.value)}>
                     <option value="civil">مدنية</option>
                     <option value="commercial">تجارية</option>
-                    <option value="criminal">جنائية</option>
+                    <option value="criminal">جزائية</option>
                     <option value="administrative">إدارية</option>
                     <option value="family">أحوال شخصية</option>
                     <option value="labor">عمالية</option>

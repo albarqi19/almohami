@@ -40,7 +40,7 @@ const TaskReassignModal: React.FC<TaskReassignModalProps> = ({
   const lawyers = [
     { id: 'lawyer-1', name: 'أحمد محامي', workload: 'متوسط', specialization: 'قضايا مدنية' },
     { id: 'lawyer-2', name: 'سارة محامية', workload: 'منخفض', specialization: 'قضايا تجارية' },
-    { id: 'lawyer-3', name: 'محمد محامي', workload: 'عالي', specialization: 'قضايا جنائية' },
+    { id: 'lawyer-3', name: 'محمد محامي', workload: 'عالي', specialization: 'قضايا جزائية' },
     { id: 'lawyer-4', name: 'خالد محامية', workload: 'متوسط', specialization: 'قضايا عمالية' },
     { id: 'lawyer-5', name: 'عبدالله محامي', workload: 'منخفض', specialization: 'قضايا عقارية' }
   ];

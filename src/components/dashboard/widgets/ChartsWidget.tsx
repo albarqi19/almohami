@@ -34,7 +34,7 @@ const ChartsWidget: React.FC<ChartsWidgetProps> = ({
         { name: 'تجاري', value: 25, color: '#00BFA5' },
         { name: 'عمالي', value: 20, color: '#FF6B9D' },
         { name: 'أحوال شخصية', value: 12, color: '#FF9500' },
-        { name: 'جنائي', value: 8, color: '#0096FF' }
+        { name: 'جزائي', value: 8, color: '#0096FF' }
     ];
 
     const monthlyStats = initialMonthlyStats || [

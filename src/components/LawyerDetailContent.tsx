@@ -790,7 +790,7 @@ function taskStatusBadge(s: string) {
 function caseTypeLabel(t: string | null): string {
   if (!t) return '-';
   const map: Record<string, string> = {
-    civil: 'مدنية', criminal: 'جنائية', commercial: 'تجارية', family: 'أسرية',
+    civil: 'مدنية', criminal: 'جزائية', commercial: 'تجارية', family: 'أسرية',
     labor: 'عمالية', administrative: 'إدارية', real_estate: 'عقارية',
     intellectual_property: 'ملكية فكرية', other: 'أخرى',
   };

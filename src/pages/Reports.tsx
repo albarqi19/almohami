@@ -35,7 +35,7 @@ const mockReportsData = {
     { type: 'تجارية', count: 12, percentage: 27 },
     { type: 'عمالية', count: 8, percentage: 18 },
     { type: 'أسرية', count: 6, percentage: 13 },
-    { type: 'جنائية', count: 4, percentage: 9 }
+    { type: 'جزائية', count: 4, percentage: 9 }
   ],
   monthlyStats: [
     { month: 'أبريل', cases: 7, revenue: 78000 },
