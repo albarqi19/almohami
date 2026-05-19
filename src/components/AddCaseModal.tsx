@@ -116,6 +116,7 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
 
   const courts = [
     'المحكمة العامة',
+    'المحكمة الجزائية',
     'محكمة الاستئناف',
     'المحكمة التجارية',
     'محكمة العمل',
