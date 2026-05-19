@@ -45,7 +45,7 @@ const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
 // Case type labels
 const CASE_TYPE_LABELS: Record<CaseType, string> = {
 	civil: 'مدنية',
-	criminal: 'جزائية',
+	criminal: 'جنائية',
 	commercial: 'تجارية',
 	family: 'أسرية',
 	labor: 'عمالية',

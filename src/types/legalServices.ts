@@ -961,7 +961,7 @@ export const BILLING_TYPE_LABELS: Record<BillingType, string> = {
 };
 
 export const CLASSIFICATION_LABELS: Record<ConsultationClassification, string> = {
-  criminal: 'جزائي',
+  criminal: 'جنائي',
   commercial: 'تجاري',
   family: 'أحوال شخصية',
   labor: 'عمالي',

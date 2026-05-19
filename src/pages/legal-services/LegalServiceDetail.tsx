@@ -362,7 +362,7 @@ const ConvertToCaseModal: React.FC<ConvertToCaseModalProps> = ({
               onChange={(e) => setCaseType(e.target.value)}
             >
               <option value="civil">مدني</option>
-              <option value="criminal">جزائي</option>
+              <option value="criminal">جنائي</option>
               <option value="commercial">تجاري</option>
               <option value="administrative">إداري</option>
               <option value="labor">عمالي</option>

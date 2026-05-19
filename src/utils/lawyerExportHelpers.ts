@@ -478,7 +478,7 @@ function priorityLabel(p: string | null): string {
 
 function caseTypeLabel(t: string | null): string {
   if (!t) return '-';
-  return ({ civil: 'مدنية', criminal: 'جزائية', commercial: 'تجارية', family: 'أسرية', labor: 'عمالية', administrative: 'إدارية', real_estate: 'عقارية', intellectual_property: 'ملكية فكرية', other: 'أخرى' } as Record<string, string>)[t] || t;
+  return ({ civil: 'مدنية', criminal: 'جنائية', commercial: 'تجارية', family: 'أسرية', labor: 'عمالية', administrative: 'إدارية', real_estate: 'عقارية', intellectual_property: 'ملكية فكرية', other: 'أخرى' } as Record<string, string>)[t] || t;
 }
 
 function taskStatusLabel(s: string): string {

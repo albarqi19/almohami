@@ -19,7 +19,7 @@ interface ConvertToCaseModalProps {
 const CASE_TYPE_OPTIONS = [
   { value: 'civil', label: 'مدنية' },
   { value: 'commercial', label: 'تجارية' },
-  { value: 'criminal', label: 'جزائية' },
+  { value: 'criminal', label: 'جنائية' },
   { value: 'family', label: 'أسرية' },
   { value: 'administrative', label: 'إدارية' },
   { value: 'labor', label: 'عمالية' },

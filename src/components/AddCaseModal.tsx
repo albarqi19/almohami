@@ -108,7 +108,7 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     { value: 'real_estate', label: 'قضايا عقارية' },
     { value: 'labor', label: 'قضايا عمالية' },
     { value: 'family', label: 'قضايا أسرة' },
-    { value: 'criminal', label: 'قضايا جزائية' },
+    { value: 'criminal', label: 'قضايا جنائية' },
     { value: 'administrative', label: 'قضايا إدارية' },
     { value: 'intellectual_property', label: 'الملكية الفكرية' },
     { value: 'other', label: 'أخرى' }

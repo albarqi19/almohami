@@ -290,7 +290,7 @@ export const RolesSection: React.FC<{
           <input
             className="erp-input"
             style={{ width: '100%' }}
-            placeholder="مثال: محامي قسم جزائي"
+            placeholder="مثال: محامي قسم جنائي"
             value={edit.displayName}
             onChange={(e) => setEdit((s) => ({ ...s, displayName: e.target.value }))}
           />
