@@ -41,6 +41,7 @@ import LetterheadManager from '../components/settings/LetterheadManager';
 import TwoFactorSettings from '../components/settings/TwoFactorSettings';
 import SessionDefaultsSettings from '../components/settings/SessionDefaultsSettings';
 import SessionWorkflowSettingsComponent from '../components/settings/SessionWorkflowSettings';
+import MicrosoftIntegrationSettings from '../components/settings/MicrosoftIntegrationSettings';
 import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/settings-page.css';
@@ -59,15 +60,25 @@ const Settings: React.FC = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('notifications');
 
-  // Check URL hash or state for initial tab
+  // Check URL hash, query, or state for initial tab
   useEffect(() => {
-    // Check if there's a hash in the URL (e.g., /settings#subscription)
+    // Priority 1: ?tab= query (used by OAuth callbacks like Microsoft)
+    const params = new URLSearchParams(location.search);
+    const tabFromQuery = params.get('tab');
+    if (tabFromQuery) {
+      setActiveTab(tabFromQuery);
+      return;
+    }
+
+    // Priority 2: URL hash (e.g., /settings#subscription)
     if (location.hash) {
       const tabFromHash = location.hash.replace('#', '');
       setActiveTab(tabFromHash);
+      return;
     }
-    // Check if there's a state passed via navigation
-    else if (location.state?.tab) {
+
+    // Priority 3: navigation state
+    if (location.state?.tab) {
       setActiveTab(location.state.tab);
     }
   }, [location]);
@@ -86,6 +97,7 @@ const Settings: React.FC = () => {
     { id: 'session_defaults', label: 'قوالب الجلسات', icon: ClipboardList, roles: ['admin'] },
     { id: 'session_workflow', label: 'سير عمل الجلسات', icon: Bell, roles: ['admin'] },
     { id: 'company_policy', label: 'سياسة الشركة', icon: ShieldCheck, roles: ['admin'] },
+    { id: 'integrations', label: 'التكاملات', icon: Link, roles: ['admin', 'lawyer', 'legal_assistant'] },
     { id: 'subscription', label: 'الاشتراك', icon: CreditCard, roles: ['admin'] },
     { id: 'invoices', label: 'الفواتير', icon: Receipt, roles: ['admin'] },
   ];
@@ -2212,6 +2224,9 @@ const Settings: React.FC = () => {
 
       case 'session_workflow':
         return <SessionWorkflowSettingsComponent />;
+
+      case 'integrations':
+        return <MicrosoftIntegrationSettings />;
 
       default:
         return <div>التبويب غير موجود</div>;
