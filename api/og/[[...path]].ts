@@ -23,26 +23,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Fetch tenant data from API if subdomain exists
   if (subdomain && subdomain !== 'www' && subdomain !== 'app') {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/public/tenant/${subdomain}`, {
         headers: {
           'Accept': 'application/json',
         },
+        signal: controller.signal,
       });
-      const data = await response.json();
+      clearTimeout(timeoutId);
 
-      if (data.success && data.data) {
-        const tenantData = data.data;
-        meta = {
-          title: `${tenantData.name} | مكتب محاماة`,
-          description: tenantData.tagline || `${tenantData.name} - مكتب محاماة متخصص`,
-          image: tenantData.logo_url || DEFAULT_META.image,
-          siteName: tenantData.name,
-          themeColor: tenantData.primary_color || DEFAULT_META.themeColor,
-        };
+      if (response.ok) {
+        const data = await response.json().catch(() => null);
+
+        if (data?.success && data?.data) {
+          const tenantData = data.data;
+          meta = {
+            title: `${tenantData.name} | مكتب محاماة`,
+            description: tenantData.tagline || `${tenantData.name} - مكتب محاماة متخصص`,
+            image: tenantData.logo_url || DEFAULT_META.image,
+            siteName: tenantData.name,
+            themeColor: tenantData.primary_color || DEFAULT_META.themeColor,
+          };
+        }
       }
+      // إذا response.ok = false، نبقي DEFAULT_META (fail silently)
     } catch (error) {
-      console.error('Failed to fetch tenant:', error);
+      clearTimeout(timeoutId);
+      console.error('Failed to fetch tenant (using defaults):', error);
+      // meta = DEFAULT_META (تم تعيينها بالأعلى)
     }
   }
 

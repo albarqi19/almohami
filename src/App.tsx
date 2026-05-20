@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import UpdateBanner from './components/UpdateBanner';
+import ErrorBoundary from './components/ErrorBoundary';
+import NotFound from './pages/NotFound';
 import { AuthProvider } from './contexts/AuthContext';
 import { PermissionProvider } from './contexts/PermissionContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
@@ -81,6 +83,7 @@ const SmartLandingPage: React.FC = () => {
 
 function App() {
   return (
+    <ErrorBoundary>
     <TenantProvider>
       <AuthProvider>
         <PermissionProvider>
@@ -326,6 +329,8 @@ function App() {
                 </ProtectedRoute>
               } />
             </Route>
+            {/* 404 - catch-all خارج Layout (بدون sidebar وبدون auth) */}
+            <Route path="*" element={<NotFound />} />
                   </Routes>
                 </TimerProvider>
               } />
@@ -337,6 +342,7 @@ function App() {
         </PermissionProvider>
       </AuthProvider>
     </TenantProvider>
+    </ErrorBoundary>
   );
 }
 
