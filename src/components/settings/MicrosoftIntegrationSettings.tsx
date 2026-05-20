@@ -502,12 +502,17 @@ const PreferencesCard: React.FC<{
                         }
                         style={{ padding: '4px 8px', minWidth: 200 }}
                     >
-                        <option value="outbound_only">من النظام إلى Microsoft فقط (الموصى به حالياً)</option>
-                        <option value="bidirectional" disabled>
-                            ثنائي الاتجاه (قريباً)
-                        </option>
+                        <option value="bidirectional">ثنائي الاتجاه (مزامنة كاملة)</option>
+                        <option value="outbound_only">من النظام إلى Microsoft فقط</option>
                         <option value="paused">إيقاف مؤقت</option>
                     </select>
+                    <div style={{ marginTop: 6, fontSize: 11, opacity: 0.7 }}>
+                        {prefs.sync_mode === 'bidirectional'
+                            ? 'التعديل من Outlook أو To Do سينعكس تلقائياً على النظام (مع احترام قواعد ملكية الحقول).'
+                            : prefs.sync_mode === 'outbound_only'
+                                ? 'التعديلات من Microsoft لا تُطبَّق على النظام (المراقبة فقط).'
+                                : 'كل المزامنة متوقفة. لا قراءة ولا كتابة.'}
+                    </div>
                 </div>
             </div>
         </div>
