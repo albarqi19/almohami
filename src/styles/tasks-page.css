@@ -185,27 +185,48 @@ body.classic .tasks-toolbar__add-btn {
 }
 
 .task-filter-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border: 1px solid transparent;
+    gap: 5px;
+    padding: 4px 10px;
+    height: 28px;
+    border: 1px solid var(--color-border);
     border-radius: 6px;
-    background: transparent;
+    background: var(--dashboard-card);
     color: var(--color-text-secondary);
-    font-size: 13px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    white-space: nowrap;
 }
 
 .task-filter-btn:hover {
-    background: var(--quiet-gray-200);
+    background: var(--quiet-gray-100);
+    color: var(--color-text);
+    border-color: var(--color-border-strong);
 }
 
 .task-filter-btn.active {
-    background: var(--law-navy-light);
-    color: var(--law-navy);
-    border-color: rgba(30, 58, 95, 0.1);
+    background: var(--law-navy);
+    color: #fff;
+    border-color: var(--law-navy);
+}
+
+body.classic .task-filter-btn.active {
+    color: #FFFBF5;
+}
+
+.task-filter-btn.active:hover {
+    background: var(--law-navy);
+    filter: brightness(1.1);
+}
+
+/* Dot inside the filter button — make it pop when active */
+.task-filter-btn.active > span:first-child {
+    background: #fff !important;
+    opacity: 0.9;
 }
 
 /* ==================== List View (Table) ==================== */
@@ -252,49 +273,148 @@ body.classic .tasks-toolbar__add-btn {
     color: var(--law-navy);
 }
 
-/* Status Badges */
+/* Status Badges — compact + theme-aware (light/dark/classic) */
 .status-badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 5px;
-    font-size: 12px;
+    gap: 4px;
+    padding: 2px 8px;
+    height: 22px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    font-size: 11px;
     font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
     text-transform: capitalize;
 }
 
-.status-badge.todo {
-    background: #E2E8F0;
+/* Dot indicator before label */
+.status-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.85;
+    flex-shrink: 0;
+}
+
+/* === Light theme defaults === */
+.status-badge.todo,
+.status-badge.pending {
+    background: #F1F5F9;
     color: #475569;
+    border-color: #E2E8F0;
 }
-
 .status-badge.in_progress {
-    background: #DBEAFE;
+    background: #EFF6FF;
     color: #2563EB;
+    border-color: #DBEAFE;
 }
-
 .status-badge.review {
-    background: #FEF3C7;
-    color: #D97706;
+    background: #FFFBEB;
+    color: #B45309;
+    border-color: #FEF3C7;
 }
-
 .status-badge.completed {
-    background: #D1FAE5;
-    color: #059669;
+    background: #ECFDF5;
+    color: #047857;
+    border-color: #D1FAE5;
 }
-
 .status-badge.cancelled {
-    background: #FEE2E2;
+    background: #FEF2F2;
+    color: #B91C1C;
+    border-color: #FEE2E2;
+}
+.status-badge.overdue {
+    background: #FEF2F2;
     color: #DC2626;
+    border-color: #FECACA;
+}
+.status-badge.archived {
+    background: #F8FAFC;
+    color: #64748B;
+    border-color: #E2E8F0;
 }
 
-/* Priorities */
+/* === Dark theme overrides === */
+body.dark .status-badge.todo,
+body.dark .status-badge.pending {
+    background: rgba(148, 163, 184, 0.14);
+    color: #94A3B8;
+    border-color: rgba(148, 163, 184, 0.25);
+}
+body.dark .status-badge.in_progress {
+    background: rgba(90, 165, 247, 0.16);
+    color: #5AA5F7;
+    border-color: rgba(90, 165, 247, 0.3);
+}
+body.dark .status-badge.review {
+    background: rgba(251, 196, 109, 0.16);
+    color: #FBC46D;
+    border-color: rgba(251, 196, 109, 0.3);
+}
+body.dark .status-badge.completed {
+    background: rgba(70, 194, 179, 0.18);
+    color: #4FD3C4;
+    border-color: rgba(70, 194, 179, 0.32);
+}
+body.dark .status-badge.cancelled,
+body.dark .status-badge.overdue {
+    background: rgba(255, 123, 138, 0.16);
+    color: #FF7B8A;
+    border-color: rgba(255, 123, 138, 0.3);
+}
+body.dark .status-badge.archived {
+    background: rgba(154, 165, 185, 0.1);
+    color: #9AA5B9;
+    border-color: rgba(154, 165, 185, 0.22);
+}
+
+/* === Classic theme overrides — muted parchment === */
+body.classic .status-badge.todo,
+body.classic .status-badge.pending {
+    background: rgba(107, 91, 77, 0.1);
+    color: #6B5B4D;
+    border-color: rgba(107, 91, 77, 0.25);
+}
+body.classic .status-badge.in_progress {
+    background: rgba(184, 134, 11, 0.12);
+    color: #8B6914;
+    border-color: rgba(184, 134, 11, 0.3);
+}
+body.classic .status-badge.review {
+    background: rgba(184, 134, 11, 0.18);
+    color: #92660D;
+    border-color: rgba(184, 134, 11, 0.4);
+}
+body.classic .status-badge.completed {
+    background: rgba(74, 110, 64, 0.14);
+    color: #3F5F37;
+    border-color: rgba(74, 110, 64, 0.3);
+}
+body.classic .status-badge.cancelled,
+body.classic .status-badge.overdue {
+    background: rgba(139, 0, 0, 0.1);
+    color: #8B0000;
+    border-color: rgba(139, 0, 0, 0.25);
+}
+body.classic .status-badge.archived {
+    background: rgba(74, 44, 26, 0.08);
+    color: #6B5B4D;
+    border-color: rgba(74, 44, 26, 0.2);
+}
+
+/* Priorities — compact to match status badges */
 .priority-flag {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .priority-high {
@@ -306,7 +426,27 @@ body.classic .tasks-toolbar__add-btn {
 }
 
 .priority-low {
-    color: #059669;
+    color: #2563EB;
+}
+
+body.dark .priority-high {
+    color: #FF7B8A;
+}
+body.dark .priority-medium {
+    color: #FBC46D;
+}
+body.dark .priority-low {
+    color: #5AA5F7;
+}
+
+body.classic .priority-high {
+    color: #8B0000;
+}
+body.classic .priority-medium {
+    color: #B8860B;
+}
+body.classic .priority-low {
+    color: #4A2C1A;
 }
 
 /* ==================== Board View (Kanban) ==================== */
