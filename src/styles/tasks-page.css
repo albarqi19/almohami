@@ -289,17 +289,6 @@ body.classic .task-filter-btn.active {
     text-transform: capitalize;
 }
 
-/* Dot indicator before label */
-.status-badge::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-    opacity: 0.85;
-    flex-shrink: 0;
-}
-
 /* === Light theme defaults === */
 .status-badge.todo,
 .status-badge.pending {
