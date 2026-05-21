@@ -649,7 +649,28 @@ const UpcomingSessions: React.FC = () => {
 											return null;
 										})()}
 									</span>
-									<span className="session-case-number">#{session.case?.file_number || session.case_id}</span>
+									<span
+											className="session-case-number"
+											role={session.case_id ? 'link' : undefined}
+											tabIndex={session.case_id ? 0 : undefined}
+											title={session.case_id ? 'فتح القضية' : undefined}
+											onClick={(e) => {
+												if (!session.case_id) return;
+												e.stopPropagation();
+												navigate(`/cases/${session.case_id}`);
+											}}
+											onKeyDown={(e) => {
+												if (!session.case_id) return;
+												if (e.key === 'Enter' || e.key === ' ') {
+													e.preventDefault();
+													e.stopPropagation();
+													navigate(`/cases/${session.case_id}`);
+												}
+											}}
+											style={session.case_id ? { cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px' } : undefined}
+										>
+											#{session.case?.file_number || session.case_id}
+										</span>
 								</div>
 							</td>
 							<td>

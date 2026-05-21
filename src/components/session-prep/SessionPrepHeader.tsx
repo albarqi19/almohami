@@ -55,7 +55,26 @@ export const SessionPrepHeader: React.FC<Props> = ({
           </h1>
           {session.case && (
             <div className="sp-header__subtitle">
-              قضية #{session.case.file_number || session.case.id} ─ {session.case.title}
+              قضية{' '}
+              <button
+                type="button"
+                onClick={() => session.case && navigate(`/cases/${session.case.id}`)}
+                title="فتح القضية"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  color: 'inherit',
+                  font: 'inherit',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  textDecorationStyle: 'dotted',
+                  textUnderlineOffset: '3px',
+                }}
+              >
+                #{session.case.file_number || session.case.id}
+              </button>
+              {' '}─ {session.case.title}
             </div>
           )}
         </div>
