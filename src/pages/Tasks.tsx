@@ -479,103 +479,40 @@ const Tasks: React.FC = () => {
 
   return (
     <div className="tasks-page">
-      {/* Header */}
-      <header className="tasks-header">
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="tasks-header__title">
-            <CheckCircle size={20} color="var(--law-navy)" />
-            <span>إدارة المهام</span>
-          </div>
-          <div className="tasks-header__subtitle">
-            تتبع مهام الفريق القانوني وإنجازها
-          </div>
+      {/* Unified Toolbar — العنوان + البحث + التجميع + الفلاتر + التبديل + الإضافة في سطر واحد */}
+      <header className="tasks-header tasks-header--unified">
+        {/* Title */}
+        <div className="tasks-header__title" style={{ flexShrink: 0 }}>
+          <CheckCircle size={20} color="var(--law-navy)" />
+          <span>إدارة المهام</span>
         </div>
 
-        <div className="tasks-header__center">
-          {/* View Switcher */}
-          <div className="tasks-view-switcher">
-            <button
-              className={`tasks-view-btn ${viewMode === 'list' ? 'active' : ''}`}
-              onClick={() => setViewMode('list')}
-            >
-              <List size={16} />
-              قائمة
-            </button>
-            <button
-              className={`tasks-view-btn ${viewMode === 'board' ? 'active' : ''}`}
-              onClick={() => setViewMode('board')}
-            >
-              <LayoutGrid size={16} />
-              كانبان
-            </button>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            className="btn-primary"
-            onClick={() => setIsAddModalOpen(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 16px',
-              background: 'var(--law-navy)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '13px'
-            }}
-          >
-            <Plus size={16} />
-            مهمة جديدة
-          </button>
-        </div>
-      </header>
-
-      {/* Filter & Group Bar */}
-      <div className="tasks-filters">
-        <div style={{ position: 'relative', width: '250px' }}>
-          <Search size={14} style={{ position: 'absolute', right: '10px', top: '10px', color: 'var(--color-text-secondary)' }} />
+        {/* Search */}
+        <div style={{ position: 'relative', width: '220px', flexShrink: 0 }}>
+          <Search size={14} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)' }} />
           <input
             type="text"
             placeholder="بحث عن مهمة..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 32px 8px 12px',
-              border: '1px solid var(--color-border)',
-              borderRadius: '6px',
-              fontSize: '13px',
-              outline: 'none'
-            }}
+            className="tasks-toolbar__search-input"
           />
         </div>
 
-        {/* Group By (Only for List View usually, but can be global) */}
+        {/* Group By (List view only) */}
         {viewMode === 'list' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '16px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>تجميع حسب:</span>
-            <div style={{ display: 'flex', background: 'var(--quiet-gray-100)', borderRadius: '6px', padding: '2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>تجميع:</span>
+            <div className="tasks-toolbar__segmented">
               <button
                 onClick={() => setGroupBy('status')}
-                style={{
-                  padding: '4px 8px', border: 'none', background: groupBy === 'status' ? 'white' : 'transparent',
-                  borderRadius: '4px', fontSize: '12px', cursor: 'pointer',
-                  boxShadow: groupBy === 'status' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
-                }}
+                className={`tasks-toolbar__segmented-btn ${groupBy === 'status' ? 'active' : ''}`}
               >
                 الحالة
               </button>
               <button
                 onClick={() => setGroupBy('assignee')}
-                style={{
-                  padding: '4px 8px', border: 'none', background: groupBy === 'assignee' ? 'white' : 'transparent',
-                  borderRadius: '4px', fontSize: '12px', cursor: 'pointer',
-                  boxShadow: groupBy === 'assignee' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
-                }}
+                className={`tasks-toolbar__segmented-btn ${groupBy === 'assignee' ? 'active' : ''}`}
               >
                 المحامي
               </button>
@@ -583,26 +520,54 @@ const Tasks: React.FC = () => {
           </div>
         )}
 
-        <div style={{ flex: 1 }}></div>
-
-        {/* Status Filters */}
-        <button
-          className={`task-filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
-          onClick={() => setStatusFilter('all')}
-        >
-          الكل
-        </button>
-        {TASK_STATUSES.map(s => (
+        {/* Status Filters — wrap horizontally if needed */}
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
           <button
-            key={s.key}
-            className={`task-filter-btn ${statusFilter === s.key ? 'active' : ''}`}
-            onClick={() => setStatusFilter(s.key)}
+            className={`task-filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('all')}
           >
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: s.color }}></span>
-            {s.label}
+            الكل
           </button>
-        ))}
-      </div>
+          {TASK_STATUSES.map(s => (
+            <button
+              key={s.key}
+              className={`task-filter-btn ${statusFilter === s.key ? 'active' : ''}`}
+              onClick={() => setStatusFilter(s.key)}
+            >
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: s.color }}></span>
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {/* View Switcher + Add */}
+        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+          <div className="tasks-view-switcher">
+            <button
+              className={`tasks-view-btn ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => setViewMode('list')}
+              title="قائمة"
+            >
+              <List size={14} />
+            </button>
+            <button
+              className={`tasks-view-btn ${viewMode === 'board' ? 'active' : ''}`}
+              onClick={() => setViewMode('board')}
+              title="كانبان"
+            >
+              <LayoutGrid size={14} />
+            </button>
+          </div>
+
+          <button
+            className="btn-primary tasks-toolbar__add-btn"
+            onClick={() => setIsAddModalOpen(true)}
+          >
+            <Plus size={14} />
+            مهمة جديدة
+          </button>
+        </div>
+      </header>
 
       {loading ? (
         <div className="tasks-loading">جاري التحميل...</div>
