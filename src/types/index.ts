@@ -294,6 +294,7 @@ export interface Task {
   subtasks_completed?: number;
   comments_count?: number;
   assignee?: { id: string | number; name: string } | null;
+  case?: { id: number | string; title: string; file_number?: string | null } | null;
 }
 
 export const TaskStatus = {

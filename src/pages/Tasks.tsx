@@ -298,7 +298,8 @@ const Tasks: React.FC = () => {
         <table className="tasks-table">
           <thead>
             <tr>
-              <th style={{ width: '40%' }}>المهمة</th>
+              <th style={{ width: '32%' }}>المهمة</th>
+              <th>القضية</th>
               <th>الحالة</th>
               <th>الأولوية</th>
               <th>المكلف</th>
@@ -313,7 +314,7 @@ const Tasks: React.FC = () => {
               return (
                 <React.Fragment key={group.id}>
                   <tr className="task-group-header">
-                    <td colSpan={6} style={{ padding: '8px 16px', background: 'var(--quiet-gray-50)' }}>
+                    <td colSpan={7} style={{ padding: '8px 16px', background: 'var(--quiet-gray-50)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <ChevronDown size={14} />
                         <span style={{ color: group.color }}>{group.label}</span>
@@ -328,6 +329,37 @@ const Tasks: React.FC = () => {
                       <td>
                         <div style={{ fontWeight: 500 }}>{task.title}</div>
 
+                      </td>
+                      <td>
+                        {task.case && task.caseId ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/cases/${task.caseId}`);
+                            }}
+                            title="فتح القضية"
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: 0,
+                              color: 'var(--color-primary, #2563eb)',
+                              font: 'inherit',
+                              cursor: 'pointer',
+                              textDecoration: 'underline',
+                              textDecorationStyle: 'dotted',
+                              textUnderlineOffset: '3px',
+                              textAlign: 'right',
+                            }}
+                          >
+                            {task.case.file_number ? `#${task.case.file_number} — ` : ''}
+                            {task.case.title}
+                          </button>
+                        ) : (
+                          <span style={{ color: 'var(--color-text-secondary, #94a3b8)', fontSize: '12px' }}>
+                            غير مسندة
+                          </span>
+                        )}
                       </td>
                       <td>
                         <span className={`status-badge ${task.status}`}>
