@@ -419,7 +419,7 @@ const WhatsappSettings: React.FC = () => {
   const loadClients = useCallback(async () => {
     if (!clientSearch || clientSearch.length < 2) { setClients([]); return; }
     try {
-      const response = await api.get(`/v1/clients?search=${clientSearch}&per_page=10`);
+      const response = await api.get(`/v1/client-management?search=${encodeURIComponent(clientSearch)}&per_page=10`);
       if (response.data.success) {
         const list = response.data.data?.data || response.data.data || [];
         setClients(list.map((c: any) => ({ id: c.id, name: c.name, phone: c.phone || '' })));
