@@ -34,7 +34,7 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: Briefcase, label: 'الخدمات القانونية', path: '/legal-services', permission: 'cases.view' },
   { icon: Users, label: 'الاجتماعات', path: '/meetings/internal', permission: 'meetings.view' },
   { icon: Calendar, label: 'مواعيد العملاء', path: '/meetings/client', permission: 'meetings.view' },
-  { icon: Clock, label: 'إعدادات التوفر', path: '/meetings/availability', permission: 'meetings.view', roles: ['lawyer', 'senior_lawyer'] },
+  { icon: Clock, label: 'إعدادات التوفر', path: '/meetings/availability', permission: 'meetings.view', roles: ['admin', 'lawyer', 'senior_lawyer'] },
   { icon: CheckSquare, label: 'المهام', path: '/tasks', permission: 'tasks.view' },
   { icon: BookOpen, label: 'المفكرة الشخصية', path: '/notebook', permission: null },
   { icon: BarChart3, label: 'أدائي', path: '/my-performance', permission: null, roles: ['lawyer', 'senior_lawyer', 'legal_assistant'] },

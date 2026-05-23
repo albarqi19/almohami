@@ -111,11 +111,30 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
     const [showFavorites, setShowFavorites] = React.useState(true);
 
     /**
+     * Whitelist مسارات العميل — أي مسار خارجها يُخفى من الـ sidebar حتى لو كانت الصلاحية موجودة.
+     * الحماية الفعلية تبقى في الباك إند؛ هذه طبقة UX لمنع الإرباك.
+     */
+    const CLIENT_ALLOWED_PATHS = new Set<string>([
+        '/dashboard',
+        '/my-cases',
+        '/my-messages',
+        '/activities',
+        '/notifications',
+        '/settings',
+    ]);
+
+    /**
      * Phase 3: تصفية حسب الصلاحيات (مع روية السلوك القديم للـ legacy roles fallback أثناء الانتقال).
      * super_admin يرى كل شيء.
      */
     const isItemVisible = (item: SidebarItem): boolean => {
         if (isSuperAdmin) return true;
+
+        // العميل: whitelist صارمة
+        if (user?.role === 'client') {
+            return CLIENT_ALLOWED_PATHS.has(item.path);
+        }
+
         if (item.permission === null || item.permission === undefined) {
             // null = مرئي للجميع المسجلين
             if (item.roles && user && !item.roles.includes(user.role)) return false;
