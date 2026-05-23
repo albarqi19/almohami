@@ -171,7 +171,7 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="meetings/availability" element={
-                <ProtectedRoute allowedRoles={['lawyer', 'senior_lawyer']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer']}>
                   <MyAvailability />
                 </ProtectedRoute>
               } />
