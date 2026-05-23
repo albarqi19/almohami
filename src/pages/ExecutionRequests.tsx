@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
   RefreshCw,
@@ -13,6 +13,7 @@ import {
   LayoutGrid,
   List,
   Eye,
+  Trash2,
   Banknote,
   Building,
   Gavel,
@@ -276,6 +277,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ request, isOpen, onClose }) =
 // ==================== Main Component ====================
 
 const ExecutionRequests: React.FC = () => {
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -284,6 +286,8 @@ const ExecutionRequests: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<ExecutionRequest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [deletingId, setDeletingId] = useState<number | string | null>(null);
+  const [requestToDelete, setRequestToDelete] = useState<ExecutionRequest | null>(null);
 
   // Debounce search input so we don't refetch on every keystroke
   useEffect(() => {
@@ -380,6 +384,29 @@ const ExecutionRequests: React.FC = () => {
   const handleViewRequest = (req: ExecutionRequest) => {
     setSelectedRequest(req);
     setIsModalOpen(true);
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!requestToDelete) return;
+    const id = requestToDelete.id;
+    setDeletingId(id);
+    try {
+      await ExecutionRequestService.deleteRequest(id);
+      // امسح الـ cache لكل الصفحات وأعد جلب البيانات
+      queryClient.invalidateQueries({ queryKey: ['execution-requests'] });
+      // امسح الـ localStorage cache أيضاً
+      try {
+        Object.keys(localStorage)
+          .filter(k => k.startsWith(CACHE_KEY))
+          .forEach(k => localStorage.removeItem(k));
+      } catch { /* ignore */ }
+      setRequestToDelete(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'فشل في حذف الطلب';
+      alert(msg);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   // Chart data
@@ -673,16 +700,35 @@ const ExecutionRequests: React.FC = () => {
                         {req.filing_date_hijri || formatDate(req.filing_date_gregorian)}
                       </td>
                       <td>
-                        <button
-                          className="exec-refresh-btn"
-                          style={{ padding: 5, border: 'none' }}
-                          onClick={e => {
-                            e.stopPropagation();
-                            handleViewRequest(req);
-                          }}
-                        >
-                          <Eye size={14} />
-                        </button>
+                        <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                          <button
+                            className="exec-refresh-btn"
+                            style={{ padding: 5, border: 'none' }}
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleViewRequest(req);
+                            }}
+                            title="عرض التفاصيل"
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button
+                            className="exec-refresh-btn"
+                            style={{
+                              padding: 5,
+                              border: 'none',
+                              color: 'var(--status-red, #dc2626)'
+                            }}
+                            onClick={e => {
+                              e.stopPropagation();
+                              setRequestToDelete(req);
+                            }}
+                            title="حذف الطلب"
+                            disabled={deletingId === req.id}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -725,6 +771,76 @@ const ExecutionRequests: React.FC = () => {
           setSelectedRequest(null);
         }}
       />
+
+      {/* Delete Confirmation */}
+      {requestToDelete && (
+        <div className="exec-overlay" onClick={() => deletingId === null && setRequestToDelete(null)}>
+          <div
+            className="exec-modal"
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: 420 }}
+          >
+            <div className="exec-modal__header">
+              <AlertCircle size={18} style={{ color: 'var(--status-red, #dc2626)' }} />
+              <span className="exec-modal__num">تأكيد الحذف</span>
+              <div className="exec-modal__spacer" />
+              <button
+                className="exec-modal__close"
+                onClick={() => setRequestToDelete(null)}
+                disabled={deletingId !== null}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="exec-modal__body" style={{ padding: '16px 18px' }}>
+              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: 'var(--color-text)' }}>
+                هل تريد حذف طلب التنفيذ رقم{' '}
+                <strong>{requestToDelete.request_number}</strong>؟
+              </p>
+              <p style={{
+                margin: '8px 0 0',
+                fontSize: 11.5,
+                color: 'var(--color-text-secondary)',
+                lineHeight: 1.5,
+              }}>
+                لن يتم حذفه من ناجز، لكنه سيُحذف من النظام. يمكن إعادة سحبه عبر إضافة Chrome لاحقاً.
+              </p>
+              <div style={{
+                display: 'flex',
+                gap: 8,
+                justifyContent: 'flex-end',
+                marginTop: 16,
+              }}>
+                <button
+                  className="exec-refresh-btn"
+                  onClick={() => setRequestToDelete(null)}
+                  disabled={deletingId !== null}
+                  style={{ padding: '6px 14px', fontSize: 12 }}
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleDeleteRequest}
+                  disabled={deletingId !== null}
+                  style={{
+                    padding: '6px 16px',
+                    fontSize: 12,
+                    background: 'var(--status-red, #dc2626)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 6,
+                    cursor: deletingId !== null ? 'wait' : 'pointer',
+                    fontWeight: 600,
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {deletingId !== null ? 'جاري الحذف…' : 'حذف'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

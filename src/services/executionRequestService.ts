@@ -75,4 +75,15 @@ export class ExecutionRequestService {
       throw new Error(response.message || 'فشل في ربط الطلب بالقضية');
     }
   }
+
+  /**
+   * حذف طلب تنفيذ
+   */
+  static async deleteRequest(id: number | string): Promise<void> {
+    const response = await apiClient.delete<ApiResponse<null>>(`/execution-requests/${id}`);
+
+    if (!response.success) {
+      throw new Error(response.message || 'فشل في حذف طلب التنفيذ');
+    }
+  }
 }
