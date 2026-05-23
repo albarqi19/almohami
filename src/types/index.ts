@@ -141,6 +141,7 @@ export interface Case {
   activities?: Activity[];
   parties?: CaseParty[];
   sessions?: CaseSession[];
+  judgements?: CaseJudgement[];
   // Najiz Integration
   najiz_id?: string;
   najiz_url?: string;
@@ -171,12 +172,39 @@ export interface CaseParty {
   case_id: string;
   name: string;
   role: string;
-  side: 'plaintiff' | 'defendant';
+  side: 'plaintiff' | 'defendant' | 'lawyer' | 'agent' | 'other';
   national_id?: string;
   commercial_reg?: string;
   nationality?: string;
+  party_type?: string;
+  represents?: string;
   phone?: string;
   email?: string;
+}
+
+// Case Judgement - حكم القضية (من /judgments-for-portal)
+export interface CaseJudgement {
+  id: string;
+  case_id: string;
+  najiz_id?: number;
+  judgement_code?: string;
+  court_name?: string;
+  circle_name?: string;
+  sak_or_decision?: string;
+  judgement_description?: string;
+  judgement_type?: string; // "نهائي" | "غير نهائي"
+  judgement_level_id?: number;
+  subject?: string; // الوقائع
+  pleading?: string; // المرافعة
+  reasons?: string; // الأسباب
+  text?: string; // المنطوق
+  session_date?: string;
+  sak_date?: string;
+  delivery_date?: string;
+  available_for_objection?: boolean;
+  remaining_objection_days?: number;
+  objection_due_date?: string;
+  spid?: string;
 }
 
 // Case Session - جلسة القضية
@@ -187,6 +215,8 @@ export interface CaseSession {
   session_date?: string;
   session_date_gregorian?: Date;
   session_time?: string;
+  session_text?: string;
+  session_judgement?: string;
   status: string;
   court?: string;
   department?: string;

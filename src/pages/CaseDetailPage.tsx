@@ -66,6 +66,8 @@ const CaseDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [notifyModalSession, setNotifyModalSession] = useState<{ id: number; mode: NotifyMode | null; enabled: boolean } | null>(null);
   const [selectedDabtSession, setSelectedDabtSession] = useState<any>(null);
+  const [selectedJudgementSession, setSelectedJudgementSession] = useState<any>(null);
+  const [judgementActiveTab, setJudgementActiveTab] = useState<string>('text');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showDocumentsModal, setShowDocumentsModal] = useState(false);
@@ -563,6 +565,15 @@ const CaseDetailPage: React.FC = () => {
                       <span className="case-party-tag__role">{party.represents ? `يمثل: ${party.represents}` : party.role}</span>
                     </div>
                   ))}
+
+                  {/* Agents (وكلاء بوكالة) */}
+                  {caseData.parties.filter((p: any) => p.side === 'agent').map((party: any, idx: number) => (
+                    <div key={`agent-${idx}`} className="case-party-tag case-party-tag--agent">
+                      <span className="case-party-tag__icon">ك</span>
+                      <span className="case-party-tag__name">{party.name}</span>
+                      <span className="case-party-tag__role">{party.represents ? `وكيل: ${party.represents}` : party.role || 'وكيل'}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -685,8 +696,73 @@ const CaseDetailPage: React.FC = () => {
                                 ضبط الجلسة
                               </button>
                             )}
+                            {/* زر منطوق الحكم - للجلسات التي صدر فيها حكم */}
+                            {session.session_judgement && (
+                              <button
+                                className="case-session-item__join-btn"
+                                style={{ background: 'rgba(180, 140, 60, 0.12)', color: '#8a6620' }}
+                                onClick={(e) => { e.stopPropagation(); setJudgementActiveTab('text'); setSelectedJudgementSession(session); }}
+                                title="عرض منطوق الحكم القضائي"
+                              >
+                                <FileText size={14} />
+                                منطوق الحكم
+                              </button>
+                            )}
                           </div>
                         </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Judgements Section - الأحكام القضائية */}
+          {caseData.judgements && caseData.judgements.length > 0 && (
+            <div className="case-card">
+              <div className="case-card__header">
+                <div className="case-card__title">
+                  <FileText size={16} />
+                  الأحكام القضائية ({caseData.judgements.length})
+                </div>
+              </div>
+              <div className="case-card__content">
+                <div className="case-judgements-list">
+                  {caseData.judgements.map((judgement: any, idx: number) => {
+                    const isFinal = judgement.judgement_type === 'نهائي';
+                    const canObject = judgement.available_for_objection && judgement.remaining_objection_days > 0;
+                    return (
+                      <div key={`judgement-${idx}`} className="case-judgement-item">
+                        <div className="case-judgement-item__header">
+                          <span className="case-judgement-item__title">
+                            {judgement.judgement_description || 'حكم'}
+                            {judgement.judgement_code && (
+                              <span className="case-judgement-item__code"> — صك رقم {judgement.judgement_code}</span>
+                            )}
+                          </span>
+                          <span className={`case-judgement-item__type ${isFinal ? 'case-judgement-item__type--final' : 'case-judgement-item__type--pending'}`}>
+                            {judgement.judgement_type || 'غير محدد'}
+                          </span>
+                        </div>
+                        <div className="case-judgement-item__meta">
+                          {judgement.court_name && <span><Building size={12} /> {judgement.court_name}</span>}
+                          {judgement.sak_date && <span><Calendar size={12} /> {new Date(judgement.sak_date).toLocaleDateString('ar-SA')}</span>}
+                          {canObject && (
+                            <span className="case-judgement-item__objection">
+                              <Clock size={12} /> متبقي {judgement.remaining_objection_days} يوم للاعتراض
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          className="case-session-item__join-btn"
+                          style={{ background: 'rgba(180, 140, 60, 0.12)', color: '#8a6620', marginTop: '6px' }}
+                          onClick={() => { setJudgementActiveTab('text'); setSelectedJudgementSession(judgement); }}
+                          title="عرض تفاصيل الحكم الكاملة (الوقائع + الأسباب + المنطوق)"
+                        >
+                          <FileText size={14} />
+                          عرض الحكم كاملاً
+                        </button>
                       </div>
                     );
                   })}
@@ -1171,6 +1247,193 @@ const CaseDetailPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal الحكم القضائي - تخطيط ERP بعمودين: sidebar معلومات + main tabs */}
+      {selectedJudgementSession && (() => {
+        const j = selectedJudgementSession;
+        const subject = j.subject || null;
+        const pleading = j.pleading || null;
+        const reasons = j.reasons || null;
+        const text = j.text || j.session_judgement || null;
+        const isFinal = j.judgement_type === 'نهائي';
+        const canObject = j.available_for_objection && (j.remaining_objection_days ?? 0) > 0;
+
+        const tabs = [
+          text && { key: 'text', label: 'المنطوق', body: text, icon: '⚖️' },
+          subject && { key: 'subject', label: 'الوقائع', body: subject, icon: '📋' },
+          pleading && { key: 'pleading', label: 'المرافعة', body: pleading, icon: '💬' },
+          reasons && { key: 'reasons', label: 'الأسباب', body: reasons, icon: '📝' },
+        ].filter(Boolean) as { key: string; label: string; body: string; icon: string }[];
+
+        // اختر افتراضي tab صالح
+        const activeKey = tabs.find(t => t.key === judgementActiveTab)?.key || tabs[0]?.key || 'text';
+        const activeTab = tabs.find(t => t.key === activeKey);
+
+        const formatDate = (d: string | null | undefined) => {
+          if (!d) return '-';
+          try {
+            return new Date(d).toLocaleString('ar-SA', { year: 'numeric', month: '2-digit', day: '2-digit' });
+          } catch { return d; }
+        };
+
+        const close = () => { setSelectedJudgementSession(null); setJudgementActiveTab('text'); };
+
+        return (
+          <div className="jm-overlay" onClick={close}>
+            <div className="jm-modal" onClick={(e) => e.stopPropagation()}>
+              {/* Header - compact single row */}
+              <div className="jm-header">
+                <FileText size={15} className="jm-header__icon" />
+                <span className="jm-header__title">
+                  {j.judgement_description || 'الحكم القضائي'}
+                </span>
+                {j.judgement_code && (
+                  <span className="jm-header__sak" title="رقم الصك">{j.judgement_code}</span>
+                )}
+                <div className="jm-header__spacer" />
+                <div className="jm-header__badges">
+                  {j.judgement_type && (
+                    <span className={`jm-badge ${isFinal ? 'jm-badge--final' : 'jm-badge--pending'}`}>
+                      {j.judgement_type}
+                    </span>
+                  )}
+                  {canObject && (
+                    <span className="jm-badge jm-badge--objection">
+                      اعتراض: {j.remaining_objection_days} يوم
+                    </span>
+                  )}
+                </div>
+                <button className="jm-close" onClick={close} aria-label="إغلاق">
+                  <XIcon size={16} />
+                </button>
+              </div>
+
+              {/* Body: Sidebar + Main */}
+              <div className="jm-body">
+                {/* Sidebar - Metadata */}
+                <aside className="jm-sidebar">
+                  <div className="jm-group">
+                    <h4 className="jm-group__title">القضية</h4>
+                    <div className="jm-row">
+                      <span className="jm-row__label">العنوان</span>
+                      <span className="jm-row__value">{caseData?.title || '-'}</span>
+                    </div>
+                    {caseData?.file_number && (
+                      <div className="jm-row">
+                        <span className="jm-row__label">الرقم</span>
+                        <span className="jm-row__value">{caseData.file_number}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="jm-group">
+                    <h4 className="jm-group__title">المحكمة</h4>
+                    <div className="jm-row">
+                      <span className="jm-row__label">الجهة</span>
+                      <span className="jm-row__value">{j.court_name || j.court || '-'}</span>
+                    </div>
+                    {j.circle_name && (
+                      <div className="jm-row">
+                        <span className="jm-row__label">الدائرة</span>
+                        <span className="jm-row__value">{j.circle_name}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {(j.session_date || j.sak_date || j.delivery_date) && (
+                    <div className="jm-group">
+                      <h4 className="jm-group__title">التواريخ</h4>
+                      {j.session_date && (
+                        <div className="jm-row">
+                          <span className="jm-row__label">النطق</span>
+                          <span className="jm-row__value">{formatDate(j.session_date)}</span>
+                        </div>
+                      )}
+                      {j.sak_date && (
+                        <div className="jm-row">
+                          <span className="jm-row__label">إصدار الصك</span>
+                          <span className="jm-row__value">{formatDate(j.sak_date)}</span>
+                        </div>
+                      )}
+                      {j.delivery_date && (
+                        <div className="jm-row">
+                          <span className="jm-row__label">التسليم</span>
+                          <span className="jm-row__value">{formatDate(j.delivery_date)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {(j.available_for_objection || j.objection_due_date) && (
+                    <div className="jm-group">
+                      <h4 className="jm-group__title">الاعتراض</h4>
+                      <div className="jm-row">
+                        <span className="jm-row__label">الحالة</span>
+                        <span className={`jm-row__value ${canObject ? 'jm-row__value--accent' : ''}`}>
+                          {canObject ? 'متاح' : 'منتهي'}
+                        </span>
+                      </div>
+                      {j.remaining_objection_days !== null && j.remaining_objection_days !== undefined && (
+                        <div className="jm-row">
+                          <span className="jm-row__label">المتبقي</span>
+                          <span className="jm-row__value">{j.remaining_objection_days} يوم</span>
+                        </div>
+                      )}
+                      {j.objection_due_date && (
+                        <div className="jm-row">
+                          <span className="jm-row__label">ينتهي</span>
+                          <span className="jm-row__value">{j.objection_due_date}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {(j.sak_or_decision || j.elimination_dispute_judgement_type_name) && (
+                    <div className="jm-group">
+                      <h4 className="jm-group__title">التصنيف</h4>
+                      {j.sak_or_decision && (
+                        <div className="jm-row">
+                          <span className="jm-row__label">الفئة</span>
+                          <span className="jm-row__value">{j.sak_or_decision}</span>
+                        </div>
+                      )}
+                      {j.elimination_dispute_judgement_type_name && (
+                        <div className="jm-row">
+                          <span className="jm-row__label">النوع</span>
+                          <span className="jm-row__value">{j.elimination_dispute_judgement_type_name}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </aside>
+
+                {/* Main - Tabs + Content */}
+                <main className="jm-main">
+                  {tabs.length === 0 ? (
+                    <div className="jm-empty">لا يوجد نص محفوظ لهذا الحكم.</div>
+                  ) : (
+                    <>
+                      <div className="jm-tabs">
+                        {tabs.map(tab => (
+                          <button
+                            key={tab.key}
+                            className={`jm-tab ${tab.key === activeKey ? 'jm-tab--active' : ''}`}
+                            onClick={() => setJudgementActiveTab(tab.key)}
+                          >
+                            <span className="jm-tab__icon">{tab.icon}</span>
+                            <span>{tab.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="jm-content">{activeTab?.body || ''}</div>
+                    </>
+                  )}
+                </main>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
