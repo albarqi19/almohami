@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -12,7 +12,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { contractTemplateService } from '../../services/contractTemplateService';
-import ContractTemplateEditor from '../../components/contracts/ContractTemplateEditor';
+import ContractTemplateEditor, { type ContractTemplateEditorRef } from '../../components/contracts/ContractTemplateEditor';
 import ContractVariablesList from '../../components/contracts/ContractVariablesList';
 import PaymentTermsEditor from '../../components/contracts/PaymentTermsEditor';
 import ContractPreview from '../../components/contracts/ContractPreview';
@@ -56,6 +56,7 @@ const ContractTemplateEditorPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEditing = !!id;
+  const editorRef = useRef<ContractTemplateEditorRef>(null);
 
   // الحالة
   const [activeTab, setActiveTab] = useState<'content' | 'settings' | 'payments'>('content');
@@ -130,8 +131,7 @@ const ContractTemplateEditorPage: React.FC = () => {
 
   // إدراج متغير
   const handleInsertVariable = (variable: string) => {
-    // يتم التعامل معه في المحرر
-    console.log('Insert variable:', variable);
+    editorRef.current?.insertVariable(variable);
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
@@ -220,6 +220,7 @@ const ContractTemplateEditorPage: React.FC = () => {
           <div className="content-tab">
             <div className="editor-section">
               <ContractTemplateEditor
+                ref={editorRef}
                 content={formData.content}
                 onChange={(content) => setFormData({ ...formData, content })}
                 onPreview={() => setShowPreview(true)}
