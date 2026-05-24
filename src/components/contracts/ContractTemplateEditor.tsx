@@ -103,9 +103,17 @@ const ContractTemplateEditor = forwardRef<
 
     const insertVariable = useCallback(
       (variable: string) => {
-        if (editor) {
-          editor.chain().focus().insertContent(variable).run();
-        }
+        if (!editor) return;
+        // variable يأتي بصيغة {{key}}؛ نحتاج الـ key فقط لإنشاء mention node
+        const key = variable.replace(/^\{\{|\}\}$/g, '');
+        editor
+          .chain()
+          .focus()
+          .insertContent([
+            { type: 'mention', attrs: { id: key } },
+            { type: 'text', text: ' ' },
+          ])
+          .run();
       },
       [editor]
     );
