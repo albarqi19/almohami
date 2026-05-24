@@ -63,7 +63,7 @@ class MicrosoftIntegrationService {
     /**
      * Start OAuth — returns the Microsoft login URL the frontend should redirect to.
      */
-    async startAuth(features: Array<'calendar' | 'todo'> = ['calendar', 'todo']): Promise<AuthorizeResponse> {
+    async startAuth(features: Array<'calendar' | 'todo' | 'mail'> = ['calendar', 'todo']): Promise<AuthorizeResponse> {
         const featuresParam = features.join(',');
         return await apiClient.get<AuthorizeResponse>(
             `/microsoft/authorize?features=${encodeURIComponent(featuresParam)}`

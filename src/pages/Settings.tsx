@@ -42,6 +42,7 @@ import TwoFactorSettings from '../components/settings/TwoFactorSettings';
 import SessionDefaultsSettings from '../components/settings/SessionDefaultsSettings';
 import SessionWorkflowSettingsComponent from '../components/settings/SessionWorkflowSettings';
 import MicrosoftIntegrationSettings from '../components/settings/MicrosoftIntegrationSettings';
+import EmailIntegrationSection from '../components/settings/EmailIntegrationSection';
 import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/settings-page.css';
@@ -53,6 +54,7 @@ interface SettingsTab {
   label: string;
   icon: React.ComponentType<any>;
   roles: string[];
+  ownerOnly?: boolean; // إن كانت true: يظهر فقط للأونر (is_tenant_owner=true) داخل الأدوار المسموحة
 }
 
 const Settings: React.FC = () => {
@@ -98,13 +100,19 @@ const Settings: React.FC = () => {
     { id: 'session_workflow', label: 'سير عمل الجلسات', icon: Bell, roles: ['admin'] },
     { id: 'company_policy', label: 'سياسة الشركة', icon: ShieldCheck, roles: ['admin'] },
     { id: 'integrations', label: 'التكاملات', icon: Link, roles: ['admin', 'lawyer', 'legal_assistant'] },
+    { id: 'email', label: 'البريد الإلكتروني', icon: Mail, roles: ['admin'], ownerOnly: true },
     { id: 'subscription', label: 'الاشتراك', icon: CreditCard, roles: ['admin'] },
     { id: 'invoices', label: 'الفواتير', icon: Receipt, roles: ['admin'] },
   ];
 
   // الحصول على دور المستخدم من AuthContext
   const userRole = user?.role || 'client';
-  const visibleTabs = tabs.filter(tab => tab.roles.includes(userRole));
+  const isTenantOwner = !!user?.is_tenant_owner;
+  const visibleTabs = tabs.filter(tab => {
+    if (!tab.roles.includes(userRole)) return false;
+    if (tab.ownerOnly && !isTenantOwner) return false;
+    return true;
+  });
 
   // Najiz Settings State
   const [najizSettings, setNajizSettings] = useState({
@@ -2227,6 +2235,9 @@ const Settings: React.FC = () => {
 
       case 'integrations':
         return <MicrosoftIntegrationSettings />;
+
+      case 'email':
+        return <EmailIntegrationSection />;
 
       default:
         return <div>التبويب غير موجود</div>;

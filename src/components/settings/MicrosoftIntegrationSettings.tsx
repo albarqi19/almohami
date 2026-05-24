@@ -97,7 +97,6 @@ const MicrosoftIntegrationSettings: React.FC = () => {
         setError('');
         try {
             const resp = await microsoftIntegrationService.startAuth(['calendar', 'todo']);
-            // Redirect to Microsoft login
             window.location.href = resp.auth_url;
         } catch (e) {
             setError(errMessage(e, 'تعذّر بدء عملية الربط'));
@@ -744,6 +743,7 @@ function translateScope(scope: string): string {
         {
             'Calendars.ReadWrite': 'التقويم',
             'Tasks.ReadWrite': 'المهام',
+            'Mail.Send': 'إرسال البريد',
             'Files.ReadWrite': 'الملفات',
             'Files.Read': 'قراءة الملفات',
         } as Record<string, string>
