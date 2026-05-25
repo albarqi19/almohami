@@ -2258,7 +2258,21 @@ const Settings: React.FC = () => {
       </div>
 
       <div className="settings-layout">
-        {/* Sidebar */}
+        {/* Mobile-only: قائمة منسدلة بدل الشريط الأفقي الطويل */}
+        <div className="settings-sidebar-mobile">
+          <label className="settings-sidebar-mobile__label">القسم</label>
+          <select
+            className="settings-sidebar-mobile__select"
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+          >
+            {visibleTabs.map((tab) => (
+              <option key={tab.id} value={tab.id}>{tab.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Sidebar (Desktop) */}
         <div className="settings-sidebar">
           {visibleTabs.map((tab) => {
             const Icon = tab.icon;

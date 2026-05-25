@@ -890,18 +890,53 @@ body.dark .settings-help-panel {
     color: white;
 }
 
+/* Mobile-only dropdown — مخفي على الديسكتوب */
+.settings-sidebar-mobile {
+    display: none;
+}
+
 /* =====================================================================
    📱 Mobile-only enhancements (≤ 768px)
    كل التحسينات هنا لا تؤثر على شاشة الديسكتوب — معزولة داخل media query
    ===================================================================== */
 @media (max-width: 768px) {
-    /* Sidebar Tabs: منع انضغاط الأزرار وقطع نصوصها */
-    .settings-sidebar__tab {
-        width: auto;
-        min-width: max-content;
-        flex-shrink: 0;
-        padding: 10px 16px;
-        font-size: 14px;
+    /* إخفاء الـ Sidebar الأفقي الطويل + إظهار dropdown أنيق بدلاً عنه */
+    .settings-sidebar {
+        display: none !important;
+    }
+
+    .settings-sidebar-mobile {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 12px 16px;
+        background: var(--dashboard-card);
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .settings-sidebar-mobile__label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+    }
+
+    .settings-sidebar-mobile__select {
+        width: 100%;
+        padding: 12px 14px;
+        font-size: 15px;
+        font-family: inherit;
+        background: var(--dashboard-bg);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        color: var(--color-text);
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23667085' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: left 14px center;
+    }
+
+    body[dir="rtl"] .settings-sidebar-mobile__select {
+        background-position: left 14px center;
     }
 
     /* جدول الفواتير: ضمان عرض أدنى للجدول حتى لا تتداخل الأعمدة */
