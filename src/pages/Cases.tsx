@@ -26,6 +26,7 @@ import type { Case, CaseStatus, CaseType, Priority } from '../types';
 import { CaseService } from '../services';
 import { UserService, type User as UserType } from '../services/UserService';
 import AddCaseModal from '../components/AddCaseModal';
+import OutcomeBadge from '../components/OutcomeBadge';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
 import { apiClient } from '../utils/api';
@@ -493,11 +494,21 @@ const Cases: React.FC = () => {
 								{/* العمود 4: الحالة / حالة ناجز */}
 								<td>
 									<div className="erp-cell">
-										<div className="erp-cell__row">
+										<div className="erp-cell__row" style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
 											<span className={`status-badge ${statusConfig.class}`}>
 												<span className="status-badge__dot" />
 												{statusConfig.label}
 											</span>
+											{(c as any).outcome && (
+												<OutcomeBadge
+													size="sm"
+													outcome={(c as any).outcome}
+													confidence={(c as any).outcome_confidence}
+													source={(c as any).outcome_source}
+													appealed={(c as any).outcome_appealed}
+													partial={(c as any).outcome_is_partial}
+												/>
+											)}
 										</div>
 										<div className="erp-cell__row erp-cell__row--sub" style={{ marginTop: 3 }}>
 											{(c as any).najiz_status_arabic ? (
@@ -549,8 +560,18 @@ const Cases: React.FC = () => {
 								{statusConfig.label}
 							</span>
 						</div>
-						<div className="case-card__meta">
+						<div className="case-card__meta" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
 							<span className="type-badge">{typeLabel}</span>
+							{(c as any).outcome && (
+								<OutcomeBadge
+									size="sm"
+									outcome={(c as any).outcome}
+									confidence={(c as any).outcome_confidence}
+									source={(c as any).outcome_source}
+									appealed={(c as any).outcome_appealed}
+									partial={(c as any).outcome_is_partial}
+								/>
+							)}
 						</div>
 						<div className="case-card__footer">
 							<span><User size={12} /> {c.client_name || '-'}</span>

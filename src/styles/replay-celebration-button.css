@@ -1,0 +1,41 @@
+.replay-celebration-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--status-green, #059669);
+  cursor: pointer;
+  transition: all 120ms ease;
+  vertical-align: middle;
+}
+
+.replay-celebration-btn:hover,
+.replay-celebration-btn:focus-visible {
+  background: var(--status-green-light, rgba(5, 150, 105, 0.12));
+  border-color: var(--status-green, #059669);
+  outline: none;
+  transform: scale(1.05);
+}
+
+body.dark .replay-celebration-btn {
+  color: #6ee7b7;
+}
+body.dark .replay-celebration-btn:hover,
+body.dark .replay-celebration-btn:focus-visible {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+body.classic .replay-celebration-btn {
+  color: #1B5E20;
+}
+body.classic .replay-celebration-btn:hover,
+body.classic .replay-celebration-btn:focus-visible {
+  background: rgba(46, 125, 50, 0.15);
+  border-color: rgba(46, 125, 50, 0.4);
+}

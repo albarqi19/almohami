@@ -22,9 +22,12 @@ import {
   Scale,
   CheckSquare,
   BookOpen,
-  Hash
+  Hash,
+  Trophy,
+  Sparkles,
 } from 'lucide-react';
 import type { Case } from '../types';
+import { apiClient } from '../utils/api';
 import '../styles/add-appointment-modal.css';
 
 interface EditCaseModalProps {
@@ -77,6 +80,22 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
     najiz_status: caseData.najiz_status || '',
   });
 
+  // النتيجة (حقل منفصل — يُحفظ عبر endpoint مستقل لاتباع منطق Active Learning)
+  const [outcomeData, setOutcomeData] = useState({
+    outcome: (caseData.outcome as string) || '',
+    is_appealed: Boolean(caseData.outcome_appealed),
+    is_partial: Boolean(caseData.outcome_is_partial),
+  });
+  const initialOutcome = (caseData.outcome as string) || '';
+  const initialAppealed = Boolean(caseData.outcome_appealed);
+  const initialPartial = Boolean(caseData.outcome_is_partial);
+  const isOutcomeDirty = (
+    outcomeData.outcome !== initialOutcome ||
+    outcomeData.is_appealed !== initialAppealed ||
+    outcomeData.is_partial !== initialPartial
+  );
+  const outcomeFromAi = caseData.outcome_source === 'ai';
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,6 +134,21 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
       });
 
       await onSave(updatedData);
+
+      // حفظ النتيجة عبر endpoint منفصل (يُسجّل ai_outcome_was_correct تلقائياً)
+      if (isOutcomeDirty) {
+        try {
+          await apiClient.patch(`/cases/${caseData.id}/outcome`, {
+            outcome: outcomeData.outcome || null,
+            is_appealed: outcomeData.is_appealed,
+            is_partial: outcomeData.is_partial,
+          });
+        } catch (e: any) {
+          // لا نرفع خطأ كاملاً — التحديث الأساسي نجح، فقط نُسجّل
+          console.warn('فشل حفظ النتيجة:', e?.message);
+        }
+      }
+
       onClose();
     } catch (err: any) {
       setError(err.message || 'فشل في تحديث القضية');
@@ -558,6 +592,94 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
                   updateField('case_evidence', e.target.value);
                 }}
               />
+            </div>
+
+            <div className="notion-section-divider"></div>
+
+            {/* ============ النتيجة (Outcome) ============ */}
+            <div className="edit-case-section-label" style={{ color: '#059669' }}>
+              <Trophy size={14} style={{ marginLeft: '6px' }} />
+              نتيجة القضية
+              {outcomeFromAi && (
+                <span
+                  style={{
+                    marginInlineStart: 8,
+                    fontSize: 11,
+                    padding: '2px 8px',
+                    borderRadius: 10,
+                    background: 'rgba(5, 150, 105, 0.10)',
+                    color: '#059669',
+                    fontWeight: 500,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                  title={
+                    caseData.outcome_detected_at
+                      ? `حدّدها الذكاء الاصطناعي بثقة ${caseData.outcome_confidence ?? '—'} في ${new Date(caseData.outcome_detected_at).toLocaleDateString('ar-SA-u-ca-gregory')}`
+                      : 'حدّدها الذكاء الاصطناعي'
+                  }
+                >
+                  <Sparkles size={11} />
+                  ذكاء اصطناعي · {caseData.outcome_confidence ?? '—'}
+                </span>
+              )}
+            </div>
+
+            <div className="notion-properties-grid">
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <Trophy size={14} className="notion-property-icon" />
+                  <span>النتيجة</span>
+                </div>
+                <div className="notion-property-value">
+                  <select
+                    className="notion-select"
+                    value={outcomeData.outcome}
+                    onChange={(e) => setOutcomeData(prev => ({ ...prev, outcome: e.target.value }))}
+                  >
+                    <option value="">— غير محدد —</option>
+                    <option value="won">لصالحنا</option>
+                    <option value="lost">ضدنا</option>
+                    <option value="settled">تسوية</option>
+                    <option value="dismissed">مرفوضة شكلاً</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <Scale size={14} className="notion-property-icon" />
+                  <span>الحالة</span>
+                </div>
+                <div className="notion-property-value">
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={outcomeData.is_appealed}
+                      onChange={(e) => setOutcomeData(prev => ({ ...prev, is_appealed: e.target.checked }))}
+                    />
+                    مستأنفة / مميَّزة
+                  </label>
+                </div>
+              </div>
+
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <CheckSquare size={14} className="notion-property-icon" />
+                  <span>الشمولية</span>
+                </div>
+                <div className="notion-property-value">
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={outcomeData.is_partial}
+                      onChange={(e) => setOutcomeData(prev => ({ ...prev, is_partial: e.target.checked }))}
+                    />
+                    فوز/خسارة جزئية
+                  </label>
+                </div>
+              </div>
             </div>
 
             <div className="notion-section-divider"></div>

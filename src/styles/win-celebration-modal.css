@@ -1,0 +1,258 @@
+/* ====================================================
+   WinCelebrationModal — احتفال الفوز (نسخة مرتبة، صغيرة)
+   - بدون backdrop (الخلفية تبقى ظاهرة)
+   - بدون gradient (متناسق مع ثيم الموقع)
+   - حجم 340px وسط الشاشة
+   - bell الكأس ثابت (بدون animation)
+   ==================================================== */
+
+/* ===== Wrapper: شفاف، يلتقط click خارج المودال للإغلاق ===== */
+.win-celebration-wrapper {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+  pointer-events: auto;
+}
+
+/* ===== Modal — حجم صغير، متناسق مع الموقع ===== */
+.win-celebration-modal {
+  position: relative;
+  width: 340px;
+  max-width: 100%;
+  background: var(--dashboard-card, #ffffff);
+  border: 1px solid var(--quiet-gray-200, #EBECF0);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow:
+    0 20px 50px rgba(9, 30, 66, 0.18),
+    0 4px 12px rgba(9, 30, 66, 0.08);
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+}
+
+body.dark .win-celebration-modal {
+  background: var(--dashboard-card, #161B22);
+  border-color: var(--quiet-gray-300, #30363D);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.55),
+    0 4px 12px rgba(0, 0, 0, 0.30);
+}
+
+body.classic .win-celebration-modal {
+  background: var(--dashboard-card, #FFFBF5);
+  border-color: rgba(74, 44, 26, 0.18);
+  box-shadow:
+    0 20px 50px rgba(74, 44, 26, 0.22),
+    0 4px 12px rgba(74, 44, 26, 0.10);
+}
+
+/* ===== Close button ===== */
+.win-celebration-close {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--quiet-gray-600, #6B778C);
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 2;
+  transition: background 120ms ease, color 120ms ease;
+}
+.win-celebration-close:hover,
+.win-celebration-close:focus-visible {
+  background: var(--quiet-gray-100, #F4F5F7);
+  color: var(--quiet-gray-900, #172B4D);
+  outline: none;
+}
+body.dark .win-celebration-close { color: var(--quiet-gray-500, #8B949E); }
+body.dark .win-celebration-close:hover,
+body.dark .win-celebration-close:focus-visible {
+  background: var(--quiet-gray-200, #21262D);
+  color: var(--quiet-gray-800, #E6EDF3);
+}
+
+/* ===== Header — لون موحّد، بدون gradient ===== */
+.win-celebration-header {
+  padding: 20px 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.win-celebration-trophy {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--status-green-light, rgba(5, 150, 105, 0.10));
+  color: var(--status-green, #059669);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--status-green, #059669);
+  /* لا animation — ثابت ومرتب */
+}
+
+body.classic .win-celebration-trophy {
+  background: var(--law-gold-light, rgba(184, 134, 11, 0.15));
+  color: var(--law-gold, #B8860B);
+  border-color: var(--law-gold, #B8860B);
+}
+
+/* ===== Body ===== */
+.win-celebration-body {
+  padding: 4px 18px 14px;
+  text-align: center;
+}
+
+.win-celebration-title {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--law-navy, #1E3A5F);
+  line-height: 1.4;
+}
+body.dark .win-celebration-title { color: var(--quiet-gray-800, #E6EDF3); }
+body.classic .win-celebration-title { color: var(--law-navy, #4A2C1A); }
+
+.win-celebration-summary {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--quiet-gray-700, #42526E);
+}
+body.dark .win-celebration-summary { color: var(--quiet-gray-600, #8B949E); }
+
+/* ===== Info card (ERP-dense، صفوف منضغطة) ===== */
+.win-celebration-info-card {
+  background: var(--quiet-gray-50, #FAFBFC);
+  border: 1px solid var(--quiet-gray-200, #EBECF0);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+  text-align: start;
+}
+body.dark .win-celebration-info-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--quiet-gray-300, #30363D);
+}
+body.classic .win-celebration-info-card {
+  background: rgba(74, 44, 26, 0.04);
+  border-color: rgba(74, 44, 26, 0.15);
+}
+
+.win-celebration-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--quiet-gray-200, #EBECF0);
+  font-size: 11.5px;
+  gap: 8px;
+}
+.win-celebration-info-row:last-child {
+  border-bottom: none;
+}
+body.dark .win-celebration-info-row { border-bottom-color: var(--quiet-gray-300, #30363D); }
+body.classic .win-celebration-info-row { border-bottom-color: rgba(74, 44, 26, 0.12); }
+
+.win-celebration-info-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--quiet-gray-600, #6B778C);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.win-celebration-info-value {
+  color: var(--quiet-gray-900, #172B4D);
+  font-weight: 600;
+  text-align: end;
+  word-break: break-word;
+  min-width: 0;
+  font-size: 11.5px;
+}
+body.dark .win-celebration-info-value { color: var(--quiet-gray-800, #E6EDF3); }
+
+.win-celebration-info-meta {
+  font-weight: 400;
+  color: var(--quiet-gray-500, #97A0AF);
+  font-size: 10.5px;
+}
+
+/* ===== AI badge ===== */
+.win-celebration-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--status-green-light, rgba(5, 150, 105, 0.10));
+  color: var(--status-green, #059669);
+  border: 1px solid var(--status-green, #059669);
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+body.classic .win-celebration-ai-badge {
+  background: var(--law-gold-light, rgba(184, 134, 11, 0.10));
+  color: var(--law-gold, #B8860B);
+  border-color: var(--law-gold, #B8860B);
+}
+
+/* ===== Footer ===== */
+.win-celebration-footer {
+  padding: 0 18px 16px;
+}
+
+.win-celebration-primary-btn {
+  width: 100%;
+  padding: 8px 14px;
+  background: var(--status-green, #059669);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.win-celebration-primary-btn:hover,
+.win-celebration-primary-btn:focus-visible {
+  background: #047857;
+  outline: none;
+}
+.win-celebration-primary-btn:active {
+  background: #065f46;
+}
+
+body.classic .win-celebration-primary-btn {
+  background: var(--law-gold, #B8860B);
+}
+body.classic .win-celebration-primary-btn:hover,
+body.classic .win-celebration-primary-btn:focus-visible {
+  background: #8B6914;
+}
+body.classic .win-celebration-primary-btn:active {
+  background: #6B5010;
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 640px) {
+  .win-celebration-modal {
+    width: 100%;
+    max-width: 360px;
+  }
+}

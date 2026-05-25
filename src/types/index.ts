@@ -164,6 +164,18 @@ export interface Case {
   status_arabic?: string;
   type_arabic?: string;
   priority_arabic?: string;
+  // Outcome - نتيجة القضية + تحليل AI
+  outcome?: 'won' | 'lost' | 'settled' | 'appealed' | 'dismissed' | null;
+  outcome_confidence?: 'low' | 'medium' | 'high' | null;
+  outcome_source?: 'manual' | 'ai' | null;
+  outcome_appealed?: boolean;
+  outcome_is_partial?: boolean;
+  outcome_detected_at?: string | null;
+  outcome_judgement_id?: number | null;
+  outcome_summary?: string | null; // ملخص ذكي من AI للعرض في WinCelebrationModal
+  outcome_celebrated_by_current_user?: boolean; // per-user flag
+  ai_outcome_was_correct?: boolean | null;
+  client_role?: 'plaintiff' | 'defendant' | 'third_party' | 'unknown';
 }
 
 // Case Party - طرف القضية

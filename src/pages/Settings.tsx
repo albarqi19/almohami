@@ -32,7 +32,8 @@ import {
   X,
   FileSpreadsheet,
   Mail,
-  ClipboardList
+  ClipboardList,
+  Sparkles,
 } from 'lucide-react';
 import NotificationSettings from '../components/NotificationSettings';
 import TiptapEditor from '../components/TiptapEditor';
@@ -118,7 +119,8 @@ const Settings: React.FC = () => {
   const [najizSettings, setNajizSettings] = useState({
     auto_link_lawyers: true,
     send_whatsapp_on_import: false,
-    default_case_priority: 'medium'
+    default_case_priority: 'medium',
+    ai_judgement_analysis_enabled: true,
   });
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -554,6 +556,40 @@ const Settings: React.FC = () => {
                         <span className="settings-toggle__slider"></span>
                         <span style={{ marginRight: '12px' }}>
                           {najizSettings.auto_link_lawyers ? 'مفعّل' : 'معطّل'}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* تحليل الأحكام بالذكاء الاصطناعي */}
+                  <div className="settings-option-card" style={{ marginTop: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <Sparkles size={20} style={{ color: '#059669', flexShrink: 0, marginTop: 2 }} />
+                      <div>
+                        <div className="settings-option-card__title">تحليل الأحكام بالذكاء الاصطناعي</div>
+                        <div className="settings-option-card__desc">
+                          عند استيراد حكم جديد من ناجز، يحلّل الذكاء الاصطناعي نص المنطوق تلقائياً ويُحدّد
+                          نتيجة القضية (لصالحنا/ضدنا/تسوية/مرفوضة شكلاً) مع درجة الثقة.
+                          <br />
+                          عند تحقق فوز مؤكد، يظهر للمحامي المخصص والمدير احتفال لطيف بالنتيجة (مرة واحدة لكل شخص).
+                          <br />
+                          <strong>ملاحظة:</strong> يمكنك إيقاف هذه الخاصية في أي وقت — الأحكام التي لم تُحلَّل بعد لن تُرسَل.
+                        </div>
+                      </div>
+                    </div>
+                    <div className="settings-option-card__actions" style={{ marginTop: '12px' }}>
+                      <label className="settings-toggle">
+                        <input
+                          type="checkbox"
+                          checked={najizSettings.ai_judgement_analysis_enabled}
+                          onChange={(e) => setNajizSettings(prev => ({
+                            ...prev,
+                            ai_judgement_analysis_enabled: e.target.checked
+                          }))}
+                        />
+                        <span className="settings-toggle__slider"></span>
+                        <span style={{ marginRight: '12px' }}>
+                          {najizSettings.ai_judgement_analysis_enabled ? 'مفعّل' : 'معطّل'}
                         </span>
                       </label>
                     </div>

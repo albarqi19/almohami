@@ -47,6 +47,10 @@ import CasePrepKitchen from '../components/CasePrepKitchen';
 import LawSearchModal from '../components/LawSearchModal';
 import CaseWekalatPanel from '../components/CaseWekalatPanel';
 import { SendDabtPreferencesModal, type NotifyMode } from '../components/SendDabtPreferencesModal';
+import OutcomeBadge from '../components/OutcomeBadge';
+import WinCelebrationModal from '../components/WinCelebrationModal';
+import ReplayCelebrationButton from '../components/ReplayCelebrationButton';
+import { useAuth } from '../contexts/AuthContext';
 import type { TimelineEvent } from '../components/Timeline';
 import { apiClient } from '../utils/api';
 import { CaseService } from '../services/caseService';
@@ -60,7 +64,10 @@ import '../styles/case-prep-kitchen.css';
 
 const CaseDetailPage: React.FC = () => {
   const { caseId } = useParams<{ caseId: string }>();
+  const { user } = useAuth();
   const [caseData, setCaseData] = useState<Case | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationReplayMode, setCelebrationReplayMode] = useState(false);
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +141,35 @@ const CaseDetailPage: React.FC = () => {
 
     fetchData();
   }, [caseId]);
+
+  /**
+   * هل نُظهر احتفال الفوز؟ شروط حصرية:
+   *  1) outcome === 'won'
+   *  2) outcome_confidence === 'high'  (medium لا يحتفل — badge فقط)
+   *  3) outcome_source !== 'manual'   (لا احتفال على تعديل يدوي)
+   *  4) outcome_celebrated_by_current_user === false  (per-user, خادم authoritative)
+   *  5) المستخدم: محامٍ مخصص أو مدير tenant/owner
+   */
+  const shouldCelebrate = useCallback((c: Case | null): boolean => {
+    if (!c || !user) return false;
+    if (c.outcome !== 'won') return false;
+    if (c.outcome_confidence !== 'high') return false;
+    if (c.outcome_source === 'manual') return false;
+    if (c.outcome_celebrated_by_current_user) return false;
+
+    const isAssigned = Array.isArray(c.lawyers)
+      && c.lawyers.some((l: any) => String(l.id) === String(user.id));
+    const isAdmin = user.role === 'admin' || user.role === 'super_admin' || Boolean(user.is_tenant_owner);
+    return Boolean(isAssigned || isAdmin);
+  }, [user]);
+
+  // بعد تحميل/تحديث caseData، افحص لو نُظهر الاحتفال
+  useEffect(() => {
+    if (caseData && shouldCelebrate(caseData)) {
+      setCelebrationReplayMode(false);
+      setShowCelebration(true);
+    }
+  }, [caseData, shouldCelebrate]);
 
   // Check if case can be linked to Najiz
   useEffect(() => {
@@ -365,6 +401,25 @@ const CaseDetailPage: React.FC = () => {
               <span className="case-badge__dot"></span>
               {caseData.najiz_status_arabic || caseData.status_arabic || caseData.status}
             </span>
+            {caseData.outcome && (
+              <>
+                <OutcomeBadge
+                  outcome={caseData.outcome as any}
+                  confidence={caseData.outcome_confidence}
+                  source={caseData.outcome_source}
+                  appealed={caseData.outcome_appealed}
+                  partial={caseData.outcome_is_partial}
+                />
+                {caseData.outcome === 'won' && (
+                  <ReplayCelebrationButton
+                    onClick={() => {
+                      setCelebrationReplayMode(true);
+                      setShowCelebration(true);
+                    }}
+                  />
+                )}
+              </>
+            )}
             {caseData.priority && (
               <span className={`case-badge ${getPriorityBadgeClass(caseData.priority)}`}>
                 {caseData.priority_arabic || caseData.priority}
@@ -1435,6 +1490,23 @@ const CaseDetailPage: React.FC = () => {
         );
       })()}
 
+      {/* احتفال الفوز — يظهر مرة لكل (مستخدم، قضية) عبر case_outcome_user_views */}
+      {caseData && (
+        <WinCelebrationModal
+          isOpen={showCelebration}
+          caseData={caseData}
+          replayMode={celebrationReplayMode}
+          onClose={() => {
+            setShowCelebration(false);
+            // عند الإغلاق العادي (ليس replay) نُعلّم المشاهدة محلياً
+            // كي لا يظهر مرة أخرى حتى قبل تحديث caseData من الـ server
+            if (!celebrationReplayMode) {
+              setCaseData(prev => prev ? { ...prev, outcome_celebrated_by_current_user: true } : prev);
+            }
+            setCelebrationReplayMode(false);
+          }}
+        />
+      )}
     </div>
   );
 };

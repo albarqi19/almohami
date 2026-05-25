@@ -1,0 +1,136 @@
+/* ====================================================
+   OutcomeBadge — Compact ERP-style badge
+   Supports light / dark / classic themes
+   ==================================================== */
+
+.outcome-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.outcome-badge--sm {
+  padding: 2px 6px;
+  font-size: 11px;
+  gap: 3px;
+}
+
+/* === Won === */
+.outcome-badge--won {
+  background: rgba(5, 150, 105, 0.10);
+  color: #047857;
+  border-color: rgba(5, 150, 105, 0.25);
+}
+body.dark .outcome-badge--won {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+body.classic .outcome-badge--won {
+  background: rgba(46, 125, 50, 0.12);
+  color: #1B5E20;
+  border-color: rgba(46, 125, 50, 0.30);
+}
+
+/* === Lost === */
+.outcome-badge--lost {
+  background: rgba(220, 38, 38, 0.10);
+  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.25);
+}
+body.dark .outcome-badge--lost {
+  background: rgba(248, 113, 113, 0.12);
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.30);
+}
+body.classic .outcome-badge--lost {
+  background: rgba(153, 27, 27, 0.12);
+  color: #7f1d1d;
+  border-color: rgba(153, 27, 27, 0.30);
+}
+
+/* === Settled === */
+.outcome-badge--settled {
+  background: rgba(2, 132, 199, 0.10);
+  color: #0369a1;
+  border-color: rgba(2, 132, 199, 0.25);
+}
+body.dark .outcome-badge--settled {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+body.classic .outcome-badge--settled {
+  background: rgba(120, 53, 15, 0.10);
+  color: #78350f;
+  border-color: rgba(120, 53, 15, 0.25);
+}
+
+/* === Dismissed === */
+.outcome-badge--dismissed {
+  background: rgba(107, 114, 128, 0.12);
+  color: #4b5563;
+  border-color: rgba(107, 114, 128, 0.30);
+}
+body.dark .outcome-badge--dismissed {
+  background: rgba(156, 163, 175, 0.15);
+  color: #d1d5db;
+  border-color: rgba(156, 163, 175, 0.30);
+}
+body.classic .outcome-badge--dismissed {
+  background: rgba(120, 113, 108, 0.15);
+  color: #44403c;
+  border-color: rgba(120, 113, 108, 0.30);
+}
+
+/* === Appealed (legacy enum value) === */
+.outcome-badge--appealed {
+  background: rgba(217, 119, 6, 0.10);
+  color: #b45309;
+  border-color: rgba(217, 119, 6, 0.25);
+}
+body.dark .outcome-badge--appealed {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fcd34d;
+  border-color: rgba(251, 191, 36, 0.30);
+}
+
+/* === Unknown === */
+.outcome-badge--unknown {
+  background: rgba(148, 163, 184, 0.12);
+  color: #64748b;
+  border-color: rgba(148, 163, 184, 0.30);
+}
+
+/* === Inner tags === */
+.outcome-badge__partial {
+  font-weight: 500;
+  opacity: 0.85;
+  font-size: 0.9em;
+}
+
+.outcome-badge__appealed-tag {
+  display: inline-flex;
+  align-items: center;
+  padding-inline-start: 5px;
+  margin-inline-start: 2px;
+  border-inline-start: 1px solid currentColor;
+  opacity: 0.7;
+}
+
+.outcome-badge__ai-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+  display: inline-block;
+}
