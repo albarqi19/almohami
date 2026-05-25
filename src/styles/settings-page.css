@@ -889,3 +889,65 @@ body.dark .settings-help-panel {
     background: var(--law-navy);
     color: white;
 }
+
+/* =====================================================================
+   📱 Mobile-only enhancements (≤ 768px)
+   كل التحسينات هنا لا تؤثر على شاشة الديسكتوب — معزولة داخل media query
+   ===================================================================== */
+@media (max-width: 768px) {
+    /* Sidebar Tabs: منع انضغاط الأزرار وقطع نصوصها */
+    .settings-sidebar__tab {
+        width: auto;
+        min-width: max-content;
+        flex-shrink: 0;
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+
+    /* جدول الفواتير: ضمان عرض أدنى للجدول حتى لا تتداخل الأعمدة */
+    .settings-table {
+        min-width: 640px;
+    }
+
+    .settings-table th,
+    .settings-table td {
+        padding: 10px 12px;
+        white-space: nowrap;
+    }
+
+    /* الأزرار الصغيرة: زيادة حجم اللمسة لـ ~44px */
+    .settings-btn--small {
+        padding: 10px 14px;
+        font-size: 13px;
+        min-height: 40px;
+    }
+
+    /* النصوص الصغيرة 11-12px → مقروءة على الجوال */
+    .settings-field__label {
+        font-size: 14px;
+    }
+
+    .settings-option-card__desc {
+        font-size: 13px;
+    }
+
+    .settings-help-panel__section-text {
+        font-size: 13px;
+    }
+
+    .settings-badge {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+
+    /* Select fields بعرض ثابت inline → تتأقلم مع عرض الشاشة */
+    .settings-field__select[style*="width"] {
+        width: 100% !important;
+        max-width: 100%;
+    }
+
+    /* Cards: السماح بـ wrap للمحتوى الأفقي */
+    .settings-section__body > div[style*="display: flex"][style*="gap"] {
+        flex-wrap: wrap;
+    }
+}
