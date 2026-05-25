@@ -616,8 +616,8 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
                   }}
                   title={
                     caseData.outcome_detected_at
-                      ? `حدّدها الذكاء الاصطناعي بثقة ${caseData.outcome_confidence ?? '—'} في ${new Date(caseData.outcome_detected_at).toLocaleDateString('ar-SA-u-ca-gregory')}`
-                      : 'حدّدها الذكاء الاصطناعي'
+                      ? `حُدِّدت تلقائياً بثقة ${caseData.outcome_confidence ?? '—'} في ${new Date(caseData.outcome_detected_at).toLocaleDateString('ar-SA-u-ca-gregory')}`
+                      : 'حُدِّدت تلقائياً'
                   }
                 >
                   <Sparkles size={11} />

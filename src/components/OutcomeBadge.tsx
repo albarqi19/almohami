@@ -45,7 +45,7 @@ const OutcomeBadge: React.FC<OutcomeBadgeProps> = ({
   return (
     <span
       className={`outcome-badge ${meta.className} outcome-badge--${size}`}
-      title={source === 'ai' ? 'حُدِّدت تلقائياً بالذكاء الاصطناعي' : undefined}
+      title={source === 'ai' ? 'حُدِّدت تلقائياً' : undefined}
     >
       <Icon size={size === 'sm' ? 12 : 14} />
       <span>

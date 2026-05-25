@@ -561,14 +561,14 @@ const Settings: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* تحليل الأحكام بالذكاء الاصطناعي */}
+                  {/* تحليل الأحكام */}
                   <div className="settings-option-card" style={{ marginTop: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                       <Sparkles size={20} style={{ color: '#059669', flexShrink: 0, marginTop: 2 }} />
                       <div>
-                        <div className="settings-option-card__title">تحليل الأحكام بالذكاء الاصطناعي</div>
+                        <div className="settings-option-card__title">تحليل الأحكام</div>
                         <div className="settings-option-card__desc">
-                          عند استيراد حكم جديد من ناجز، يحلّل الذكاء الاصطناعي نص المنطوق تلقائياً ويُحدّد
+                          عند استيراد حكم جديد من ناجز، يحلّل النظام نص المنطوق تلقائياً ويُحدّد
                           نتيجة القضية (لصالحنا/ضدنا/تسوية/مرفوضة شكلاً) مع درجة الثقة.
                           <br />
                           عند تحقق فوز مؤكد، يظهر للمحامي المخصص والمدير احتفال لطيف بالنتيجة (مرة واحدة لكل شخص).
