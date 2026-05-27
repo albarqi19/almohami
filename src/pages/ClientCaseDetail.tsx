@@ -4,7 +4,6 @@ import {
   FileText,
   Calendar,
   AlertCircle,
-  Upload,
   MessageSquare,
   Download,
   Eye,
@@ -33,17 +32,10 @@ const ClientCaseDetail: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [activities, setActivities] = useState<TimelineItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showCommentForm, setShowCommentForm] = useState<number | null>(null);
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadForm, setUploadForm] = useState({
-    title: '',
-    description: '',
-    file: null as File | null,
-    category: 'other'
-  });
   const [messageForm, setMessageForm] = useState({
     message: ''
   });
@@ -90,30 +82,6 @@ const ClientCaseDetail: React.FC = () => {
 
     loadCaseData();
   }, [caseId]);
-
-  const handleFileUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!uploadForm.file || !uploadForm.title || !caseId) return;
-
-    try {
-      setIsSubmitting(true);
-      const formData = new FormData();
-      formData.append('file', uploadForm.file);
-      formData.append('title', uploadForm.title);
-      formData.append('description', uploadForm.description);
-      formData.append('category', uploadForm.category);
-      formData.append('case_id', caseId);
-
-      const newDocument = await DocumentService.uploadDocument(formData as any);
-      setDocuments(prev => [...prev, newDocument]);
-      setUploadForm({ title: '', description: '', file: null, category: 'other' });
-      setShowUploadModal(false);
-    } catch (error) {
-      console.error('Error uploading file:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleCommentSubmit = async (e: React.FormEvent, documentId: string) => {
     e.preventDefault();
@@ -294,13 +262,6 @@ const ClientCaseDetail: React.FC = () => {
         </div>
         <div className="case-detail__actions">
           <button
-            onClick={() => setShowUploadModal(true)}
-            className="case-detail__btn case-detail__btn--primary"
-          >
-            <Upload size={18} />
-            رفع وثيقة
-          </button>
-          <button
             onClick={() => setShowMessageModal(true)}
             className="case-detail__btn case-detail__btn--success"
           >
@@ -360,16 +321,9 @@ const ClientCaseDetail: React.FC = () => {
           <div className="detail-card">
             <div className="detail-card__header">
               <h2 className="detail-card__title">
-                <Upload size={18} />
+                <FileText size={18} />
                 الوثائق ({documents.length})
               </h2>
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="detail-card__action"
-              >
-                <Upload size={14} />
-                رفع وثيقة
-              </button>
             </div>
             <div className="detail-card__body">
               {documents.length === 0 ? (
@@ -378,14 +332,7 @@ const ClientCaseDetail: React.FC = () => {
                     <FileText size={28} />
                   </div>
                   <h3 className="documents-empty__title">لا توجد وثائق</h3>
-                  <p className="documents-empty__text">لم يتم رفع أي وثائق لهذه القضية بعد</p>
-                  <button
-                    onClick={() => setShowUploadModal(true)}
-                    className="case-detail__btn case-detail__btn--primary"
-                  >
-                    <Upload size={16} />
-                    رفع أول وثيقة
-                  </button>
+                  <p className="documents-empty__text">لم يتم رفع أي وثائق لهذه القضية بعد. إذا طلب منك المحامي وثائق، ستجدها في صفحة "الوثائق المطلوبة".</p>
                 </div>
               ) : (
                 <div className="documents-list">
@@ -536,99 +483,6 @@ const ClientCaseDetail: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Upload Modal */}
-      {showUploadModal && (
-        <div className="case-modal-overlay" onClick={() => setShowUploadModal(false)}>
-          <div className="case-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="case-modal__header">
-              <h3 className="case-modal__title">رفع وثيقة جديدة</h3>
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="case-modal__close"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleFileUpload}>
-              <div className="case-modal__body">
-                <div className="form-group">
-                  <label className="form-label">عنوان الوثيقة</label>
-                  <input
-                    type="text"
-                    required
-                    value={uploadForm.title}
-                    onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-                    className="form-input"
-                    placeholder="أدخل عنوان الوثيقة"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">وصف الوثيقة (اختياري)</label>
-                  <textarea
-                    value={uploadForm.description}
-                    onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
-                    className="form-textarea"
-                    placeholder="أدخل وصفاً للوثيقة"
-                    rows={3}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">فئة الوثيقة</label>
-                  <select
-                    value={uploadForm.category}
-                    onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value })}
-                    className="form-select"
-                  >
-                    <option value="evidence">أدلة</option>
-                    <option value="contract">عقود</option>
-                    <option value="correspondence">مراسلات</option>
-                    <option value="report">تقارير</option>
-                    <option value="court_document">وثائق المحكمة</option>
-                    <option value="other">أخرى</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">الملف</label>
-                  <input
-                    type="file"
-                    required
-                    onChange={(e) => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })}
-                    className="form-file"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  />
-                </div>
-              </div>
-              <div className="case-modal__footer">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="modal-btn modal-btn--primary"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      جاري الرفع...
-                    </>
-                  ) : (
-                    <>
-                      <Upload size={16} />
-                      رفع الوثيقة
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowUploadModal(false)}
-                  className="modal-btn modal-btn--secondary"
-                >
-                  إلغاء
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Message Modal */}
       {showMessageModal && (

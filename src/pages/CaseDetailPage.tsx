@@ -1153,6 +1153,7 @@ const CaseDetailPage: React.FC = () => {
         caseNumber={caseData.file_number}
         caseType={caseData.case_type}
         parties={caseData.parties}
+        clientId={caseData.client_id ? Number(caseData.client_id) : undefined}
       />
 
       <LegalMemoWorkspace

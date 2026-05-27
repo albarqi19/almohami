@@ -9,9 +9,11 @@ interface ModalProps {
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   headerActions?: React.ReactNode;
+  /** z-index override (default 50). ارفعه إذا كان Modal مفتوحاً فوق Drawer/Panel آخر. */
+  zIndex?: number;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md', headerActions }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md', headerActions, zIndex = 50 }) => {
   const sizeClasses = {
     sm: { maxWidth: '400px' },
     md: { maxWidth: '600px' },
@@ -54,7 +56,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
               inset: 0,
               backgroundColor: 'rgba(0, 0, 0, 0.4)',
               backdropFilter: 'blur(3px)',
-              zIndex: 50,
+              zIndex,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

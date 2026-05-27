@@ -21,6 +21,7 @@ import UpcomingSessions from './pages/UpcomingSessions';
 import SessionPrep from './pages/SessionPrep';
 import ClientCases from './pages/ClientCases';
 import ClientCaseDetail from './pages/ClientCaseDetail';
+import ClientDocumentsRequired from './pages/ClientDocumentsRequired';
 import Tasks from './pages/Tasks';
 import TaskDetail from './pages/TaskDetail';
 import Documents from './pages/Documents';
@@ -185,6 +186,11 @@ function App() {
               <Route path="my-cases/:caseId" element={
                 <ProtectedRoute allowedRoles={['client']}>
                   <ClientCaseDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="my-documents-required" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientDocumentsRequired />
                 </ProtectedRoute>
               } />
               <Route path="my-messages" element={

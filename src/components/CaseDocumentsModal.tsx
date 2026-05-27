@@ -19,7 +19,8 @@ import {
   Brain,
   Trash2,
   Sparkles,
-  HelpCircle
+  HelpCircle,
+  ClipboardList
 } from 'lucide-react';
 import { useModalTour } from '../hooks/useModalTour';
 import Modal from './Modal';
@@ -28,6 +29,7 @@ import SmartUploadModal from './SmartUploadModal';
 import LegalMemoWorkspace from './LegalMemoWorkspace';
 import AnalysisProgress from './AnalysisProgress';
 import CloudFilePickerModal from './CloudFilePickerModal';
+import DocumentRequestsPanel from './DocumentRequests/DocumentRequestsPanel';
 
 import { DocumentService } from '../services/documentService';
 import { LegalMemoService, type LegalMemo, type AnalysisStep } from '../services/legalMemoService';
@@ -63,6 +65,7 @@ interface CaseDocumentsModalProps {
   caseNumber?: string;
   caseType?: string;
   parties?: CaseParty[];
+  clientId?: number;
 }
 
 interface DocumentComment {
@@ -85,8 +88,10 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   clientName,
   caseNumber,
   caseType,
-  parties
+  parties,
+  clientId,
 }) => {
+  const [showDocumentRequestsPanel, setShowDocumentRequestsPanel] = useState(false);
   const { startTour, hasTour } = useModalTour('modal:case-documents', isOpen);
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [memos, setMemos] = useState<LegalMemo[]>([]);
@@ -575,6 +580,19 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                 <FileText size={14} />
                 مذكرة
               </button>
+              {clientId ? (
+                <button
+                  data-tour="docs-requests"
+                  onClick={() => setShowDocumentRequestsPanel(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'transparent', color: '#6366f1', border: '1px solid #6366f1', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#6366f1'; e.currentTarget.style.color = 'white'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#6366f1'; }}
+                  title="طلب وثائق من العميل"
+                >
+                  <ClipboardList size={14} />
+                  طلبات الوثائق
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -991,6 +1009,18 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
         onClose={() => setPreviewDocument(null)}
         document={previewDocument}
       />
+
+      {/* Document Requests Panel */}
+      {clientId ? (
+        <DocumentRequestsPanel
+          isOpen={showDocumentRequestsPanel}
+          onClose={() => setShowDocumentRequestsPanel(false)}
+          caseId={Number(caseId)}
+          clientId={clientId}
+          clientName={clientName}
+          caseTitle={caseTitle}
+        />
+      ) : null}
 
       {/* Smart Upload Modal */}
       <SmartUploadModal

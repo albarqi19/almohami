@@ -1,7 +1,7 @@
 import {
   Home, FileText, FileCheck, Calendar, Scale, Briefcase, Users, Clock, CheckSquare,
   BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature, Receipt, CreditCard,
-  TrendingUp, Bell, Settings, ClipboardList, BarChart3,
+  TrendingUp, Bell, Settings, ClipboardList, BarChart3, FolderUp,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -39,6 +39,7 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: BookOpen, label: 'المفكرة الشخصية', path: '/notebook', permission: null },
   { icon: BarChart3, label: 'أدائي', path: '/my-performance', permission: null, roles: ['lawyer', 'senior_lawyer', 'legal_assistant'] },
   { icon: FileText, label: 'قضاياي', path: '/my-cases', permission: null, roles: ['client'] },
+  { icon: FolderUp, label: 'الوثائق المطلوبة', path: '/my-documents-required', permission: null, roles: ['client'] },
   { icon: MessageSquare, label: 'الرسائل', path: '/my-messages', permission: null, roles: ['client'] },
   { icon: Upload, label: 'الوثائق', path: '/documents', permission: 'documents.view' },
   { icon: Clock, label: 'الأنشطة', path: '/activities', permission: null },
