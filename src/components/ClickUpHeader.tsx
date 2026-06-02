@@ -234,7 +234,8 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
           {/* Right: Actions */}
           <div className="clickup-header__end">
-            {/* Quick Add */}
+            {/* Quick Add — hidden for clients (they have no create permissions) */}
+            {user && user.role !== 'client' && (
             <div className="clickup-header__icon-wrapper" ref={quickAddRef}>
               <button
                 type="button"
@@ -272,6 +273,7 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 )}
               </AnimatePresence>
             </div>
+            )}
 
             {/* Notifications */}
             <div className="clickup-header__icon-wrapper" ref={notificationsRef}>
