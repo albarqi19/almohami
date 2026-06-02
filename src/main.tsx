@@ -1,4 +1,5 @@
-﻿import { createRoot } from 'react-dom/client'
+﻿// deploy: 2026-06-02 (إعادة تحفيز نشر Vercel)
+import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 // [P4] متغيّرات الثيم (--status-*/--law-*/--quiet-gray-*) تُحمَّل عالمياً قبل erp.css
