@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, Clock } from 'lucide-react';
+import { Play, Pause, Clock, FileText } from 'lucide-react';
 import { TimeService, type TimeEntry } from '../services/timeService';
 import { useTimer } from '../contexts/TimerContext';
 
@@ -15,6 +15,7 @@ const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle, com
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [totalSeconds, setTotalSeconds] = useState(0);
   const [loadingEntries, setLoadingEntries] = useState(true);
+  const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
 
   const isTimerForThisTask = timerState.isRunning && timerState.taskId === taskId;
 
@@ -231,24 +232,44 @@ const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle, com
           <div className="task-timer__entries-empty">لم يتم تسجيل وقت بعد</div>
         ) : (
           <div className="task-timer__entries-list">
-            {entries.slice(0, 5).map((entry) => (
-              <div key={entry.id} className="task-timer__entry">
-                <div className="task-timer__entry-user">
-                  <div className="task-timer__entry-avatar">
-                    {entry.user?.name?.charAt(0) || 'U'}
+            {entries.slice(0, 5).map((entry) => {
+              const hasNote = !!entry.description && entry.description.trim().length > 0;
+              const isExpanded = expandedEntryId === entry.id;
+              return (
+                <div key={entry.id} className="task-timer__entry-wrap">
+                  <div className="task-timer__entry">
+                    <div className="task-timer__entry-user">
+                      <div className="task-timer__entry-avatar">
+                        {entry.user?.name?.charAt(0) || 'U'}
+                      </div>
+                      <span className="task-timer__entry-name">{entry.user?.name || 'مستخدم'}</span>
+                    </div>
+                    <div className="task-timer__entry-duration">
+                      {entry.ended_at ? formatTime(entry.duration_seconds) : (
+                        <span className="task-timer__entry-running">جاري...</span>
+                      )}
+                    </div>
+                    <div className="task-timer__entry-date">
+                      {formatDate(entry.started_at)}
+                    </div>
+                    {hasNote && (
+                      <button
+                        type="button"
+                        className={`task-timer__entry-note-btn ${isExpanded ? 'task-timer__entry-note-btn--open' : ''}`}
+                        onClick={() => setExpandedEntryId(isExpanded ? null : entry.id)}
+                        title={isExpanded ? 'إخفاء ما أُنجز' : 'عرض ما أُنجز'}
+                        aria-expanded={isExpanded}
+                      >
+                        <FileText size={13} />
+                      </button>
+                    )}
                   </div>
-                  <span className="task-timer__entry-name">{entry.user?.name || 'مستخدم'}</span>
-                </div>
-                <div className="task-timer__entry-duration">
-                  {entry.ended_at ? formatTime(entry.duration_seconds) : (
-                    <span className="task-timer__entry-running">جاري...</span>
+                  {hasNote && isExpanded && (
+                    <div className="task-timer__entry-note">{entry.description}</div>
                   )}
                 </div>
-                <div className="task-timer__entry-date">
-                  {formatDate(entry.started_at)}
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
             {entries.length > 5 && (
               <div className="task-timer__entries-more">
@@ -407,6 +428,47 @@ const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle, com
           font-size: var(--font-size-xs, 12px);
         }
 
+        .task-timer__entry-note-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 26px;
+          height: 26px;
+          margin-inline-start: var(--space-2, 8px);
+          border: 1px solid var(--color-border, #e5e5e5);
+          border-radius: var(--radius-sm, 6px);
+          background: var(--color-surface-subtle, #f8f9fa);
+          color: var(--color-text-secondary, #666);
+          cursor: pointer;
+          transition: all 0.15s ease;
+          flex-shrink: 0;
+        }
+
+        .task-timer__entry-note-btn:hover {
+          background: var(--color-primary-soft, rgba(10, 25, 47, 0.08));
+          border-color: var(--color-primary, #0A192F);
+          color: var(--color-primary, #0A192F);
+        }
+
+        .task-timer__entry-note-btn--open {
+          background: var(--color-primary, #0A192F);
+          border-color: var(--color-primary, #0A192F);
+          color: #fff;
+        }
+
+        .task-timer__entry-note {
+          margin-top: 6px;
+          padding: var(--space-2, 8px) var(--space-3, 12px);
+          background: var(--color-surface-subtle, #f8f9fa);
+          border: 1px solid var(--color-border, #e5e5e5);
+          border-radius: var(--radius-sm, 6px);
+          font-size: var(--font-size-xs, 12px);
+          line-height: 1.6;
+          color: var(--color-text, #1a1a1a);
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+
         .task-timer__entry-user {
           display: flex;
           align-items: center;
@@ -466,6 +528,12 @@ const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle, com
         }
 
         body.dark .task-timer__entry {
+          background: var(--color-surface);
+          border-color: var(--color-border);
+        }
+
+        body.dark .task-timer__entry-note,
+        body.dark .task-timer__entry-note-btn {
           background: var(--color-surface);
           border-color: var(--color-border);
         }
