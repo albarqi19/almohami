@@ -71,7 +71,7 @@ export const PermissionManagementShell: React.FC<Props> = ({ initialSection, tri
       case 'roles':
         return <RolesSection selectedRoleId={selectedRoleId} onSelectRole={setSelectedRoleId} />;
       case 'matrix':
-        return <MatrixSection />;
+        return <MatrixSection onGoToRoles={() => setSection('roles')} />;
       case 'grants':
         return <GrantsSection />;
       case 'audit':

@@ -3,6 +3,11 @@ import { Save, Undo2, Search, Lock, AlertCircle, CheckSquare, Square } from 'luc
 import RoleService, { type Role } from '../../../services/roleService';
 import PermissionService, { type GroupedPermission } from '../../../services/permissionService';
 
+interface MatrixSectionProps {
+  /** الانتقال إلى قسم الأدوار (لإنشاء دور مخصّص) */
+  onGoToRoles?: () => void;
+}
+
 /**
  * Permissions Matrix بنمط draft → save:
  *  - الصفوف: الصلاحيات (مجمّعة بفئات)
@@ -10,9 +15,11 @@ import PermissionService, { type GroupedPermission } from '../../../services/per
  *  - الخلايا: checkboxes
  *  - تغييرات في state محلي فقط حتى ضغط "حفظ"
  *  - "تجاهل" يعيد كل شيء للأصل
- *  - الأدوار النظامية تظهر بخلفية رمادية لكن لا تُمنع التعديل (لأن المستخدم قد يحتاج لذلك)
+ *  - الأدوار النظامية (is_system) للقراءة فقط: تُدار مركزياً عبر الكود (seeder)،
+ *    والباك يرفض تعديلها (403). التحكم بصلاحياتها قيد الإتاحة لاحقاً. للتخصيص الآن
+ *    ينشئ المستخدم دوراً مخصّصاً يتحكّم فيه بالكامل.
  */
-export const MatrixSection: React.FC = () => {
+export const MatrixSection: React.FC<MatrixSectionProps> = ({ onGoToRoles }) => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [grouped, setGrouped] = useState<GroupedPermission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +67,12 @@ export const MatrixSection: React.FC = () => {
     load();
   }, []);
 
+  // أدوار النظام للقراءة فقط (يرفضها الباك) — لا تُعدَّل من المصفوفة.
+  const isRoleLocked = (roleId: string | number): boolean =>
+    !!roles.find((r) => String(r.id) === String(roleId))?.is_system;
+
   const toggleCell = (roleId: string | number, permName: string) => {
+    if (isRoleLocked(roleId)) return;
     setDraft((s) => {
       const key = String(roleId);
       const next = cloneState(s);
@@ -73,6 +85,7 @@ export const MatrixSection: React.FC = () => {
   };
 
   const toggleColumnAll = (roleId: string | number, allPermNames: string[]) => {
+    if (isRoleLocked(roleId)) return;
     setDraft((s) => {
       const key = String(roleId);
       const next = cloneState(s);
@@ -92,6 +105,7 @@ export const MatrixSection: React.FC = () => {
   const changes = useMemo(() => {
     const out: { roleId: string; added: string[]; removed: string[] }[] = [];
     Object.keys(original).forEach((roleId) => {
+      if (isRoleLocked(roleId)) return; // أدوار النظام لا تُحفَظ
       const orig = original[roleId] || new Set();
       const cur = draft[roleId] || new Set();
       const added: string[] = [];
@@ -175,6 +189,22 @@ export const MatrixSection: React.FC = () => {
         </div>
       </div>
 
+      <div
+        className="erp-matrix-bar"
+        style={{ background: 'var(--erp-bg)', borderColor: 'var(--erp-border)' }}
+      >
+        <Lock size={14} style={{ color: 'var(--erp-text-faint)' }} />
+        <span style={{ flex: 1, fontSize: 12, color: 'var(--erp-text-muted)' }}>
+          أدوار النظام (🔒) قياسية للقراءة فقط — التحكم بصلاحياتها <strong>قيد الإتاحة قريباً</strong>.
+          لتخصيص الصلاحيات الآن، أنشئ دوراً مخصّصاً تتحكّم فيه بالكامل.
+        </span>
+        {onGoToRoles && (
+          <button className="erp-btn erp-btn--sm erp-btn--primary" onClick={onGoToRoles}>
+            + إنشاء دور مخصّص
+          </button>
+        )}
+      </div>
+
       {totalChanges > 0 && (
         <div className="erp-matrix-bar">
           <AlertCircle size={14} />
@@ -202,18 +232,23 @@ export const MatrixSection: React.FC = () => {
                 return (
                   <th key={r.id} style={{ textAlign: 'center', minWidth: 100 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, opacity: r.is_system ? 0.7 : 1 }}
+                        title={r.is_system ? 'دور قياسي — للقراءة فقط' : undefined}
+                      >
                         {r.is_system && <Lock size={9} style={{ color: 'var(--erp-text-faint)' }} />}
                         {r.display_name}
                       </span>
-                      <button
-                        className="erp-btn erp-btn--sm erp-btn--ghost"
-                        title="تحديد/إلغاء الكل"
-                        onClick={() => toggleColumnAll(r.id, allNames)}
-                        style={{ padding: 2 }}
-                      >
-                        {allChecked ? <CheckSquare size={11} /> : <Square size={11} />}
-                      </button>
+                      {!r.is_system && (
+                        <button
+                          className="erp-btn erp-btn--sm erp-btn--ghost"
+                          title="تحديد/إلغاء الكل"
+                          onClick={() => toggleColumnAll(r.id, allNames)}
+                          style={{ padding: 2 }}
+                        >
+                          {allChecked ? <CheckSquare size={11} /> : <Square size={11} />}
+                        </button>
+                      )}
                     </div>
                   </th>
                 );
@@ -243,12 +278,16 @@ export const MatrixSection: React.FC = () => {
                           key={r.id}
                           className={`erp-matrix-cell ${r.is_system ? 'erp-matrix-cell--system' : ''}`.trim()}
                           style={isDirty ? { boxShadow: 'inset 0 0 0 2px var(--erp-warn)' } : undefined}
+                          title={r.is_system ? 'دور قياسي — للقراءة فقط' : undefined}
                         >
                           <input
                             type="checkbox"
                             className="erp-matrix-cell__check"
                             checked={checked}
+                            disabled={r.is_system}
+                            readOnly={r.is_system}
                             onChange={() => toggleCell(r.id, perm.name)}
+                            style={r.is_system ? { cursor: 'not-allowed' } : undefined}
                           />
                         </td>
                       );
