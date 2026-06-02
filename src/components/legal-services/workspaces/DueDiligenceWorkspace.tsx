@@ -2,13 +2,14 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Edit2, Plus, X, Building2, Hash, FileText, Flag,
-  AlertTriangle, Check, CheckCircle, MapPin, DollarSign,
-  ClipboardList, Filter, Save,
+  AlertTriangle, CheckCircle, MapPin, DollarSign,
+  ClipboardList, ScrollText,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
 import type { WorkspaceProps } from './types';
 import MicroStatsBar from './MicroStatsBar';
+import LegalRichEditorField from '../LegalRichEditorField';
 
 // ── تسميات عربية ──
 
@@ -69,15 +70,10 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
   const [newFinding, setNewFinding] = useState<Record<string, any>>({});
   const [addFindingLoading, setAddFindingLoading] = useState(false);
 
-  // ── ملخص المخاطر ──
+  // ── ملخص المخاطر (التقييم المنظَّم) ──
   const [editingRisk, setEditingRisk] = useState(false);
   const [riskData, setRiskData] = useState<Record<string, any>>({});
   const [riskLoading, setRiskLoading] = useState(false);
-
-  // ── الملخص التنفيذي ──
-  const [editingSummary, setEditingSummary] = useState(false);
-  const [summaryText, setSummaryText] = useState('');
-  const [summaryLoading, setSummaryLoading] = useState(false);
 
   const scopeAreas = useMemo(() => detail?.scope_areas ?? [], [detail?.scope_areas]);
   const findings = useMemo(() => detail?.findings ?? [], [detail?.findings]);
@@ -156,14 +152,28 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
     finally { setRiskLoading(false); }
   };
 
-  const handleSaveSummary = async () => {
-    setSummaryLoading(true);
-    try {
-      const res = await LegalServiceService.updateDdTargetInfo(service.id, { executive_summary: summaryText });
-      if (res.success) { toast.success('تم حفظ الملخص التنفيذي'); setEditingSummary(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
-    finally { setSummaryLoading(false); }
+  // ── معالجات الكتابة الغنية ──
+
+  const handleSaveSummary = async (html: string) => {
+    const res = await LegalServiceService.updateDdTargetInfo(service.id, { executive_summary: html });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر حفظ الملخص التنفيذي');
+    await refreshService();
+  };
+
+  const handleSaveRecommendationDetails = async (html: string) => {
+    const res = await LegalServiceService.updateDdTargetInfo(service.id, {
+      overall_risk: detail.overall_risk || '',
+      recommendation: detail.recommendation || '',
+      recommendation_details: html,
+    });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر حفظ تفاصيل التوصية');
+    await refreshService();
+  };
+
+  const handleSaveDetailedReport = async (html: string) => {
+    const res = await LegalServiceService.updateDdTargetInfo(service.id, { detailed_report: html });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر حفظ التقرير التفصيلي');
+    await refreshService();
   };
 
   return (
@@ -350,6 +360,7 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
               recommendation_details: detail.recommendation_details || '',
             });
           }}><Edit2 size={13} /> تعديل</button>
+          {/* تفاصيل التوصية تُحرَّر كنص غني في بطاقة مستقلة أدناه */}
         </div>
         <div className="lsd-card__content">
           {editingRisk ? (
@@ -358,7 +369,6 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
                 <div className="lsd-form-group"><label className="lsd-form-label">المخاطر الإجمالية</label><select className="lsd-form-input" value={riskData.overall_risk || ''} onChange={e => setRiskData({ ...riskData, overall_risk: e.target.value })}><option value="">اختر</option>{Object.entries(RISK_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
                 <div className="lsd-form-group"><label className="lsd-form-label">التوصية</label><select className="lsd-form-input" value={riskData.recommendation || ''} onChange={e => setRiskData({ ...riskData, recommendation: e.target.value })}><option value="">اختر</option>{Object.entries(RECOMMENDATION_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
               </div>
-              <div className="lsd-form-group" style={{ marginTop: 8 }}><label className="lsd-form-label">تفاصيل التوصية</label><textarea className="lsd-form-textarea" rows={3} value={riskData.recommendation_details || ''} onChange={e => setRiskData({ ...riskData, recommendation_details: e.target.value })} placeholder="تفاصيل التوصية..." /></div>
               <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
                 <button className="lsd-header-btn" onClick={() => setEditingRisk(false)}>إلغاء</button>
                 <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleSaveRisk} disabled={riskLoading}>{riskLoading ? 'جارٍ...' : 'حفظ'}</button>
@@ -370,42 +380,50 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
                 {detail.overall_risk && <div className="lsd-info-item"><div className="lsd-info-item__icon"><AlertTriangle size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">المخاطر الإجمالية</div><div className="lsd-info-item__value" style={{ color: RISK_COLORS[detail.overall_risk] || '#6b7280', fontWeight: 700 }}>{RISK_LABELS[detail.overall_risk] || detail.overall_risk}</div></div></div>}
                 {detail.recommendation && <div className="lsd-info-item"><div className="lsd-info-item__icon"><CheckCircle size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">التوصية</div><div className="lsd-info-item__value" style={{ color: RECOMMENDATION_COLORS[detail.recommendation] || '#6b7280', fontWeight: 700 }}>{RECOMMENDATION_LABELS[detail.recommendation] || detail.recommendation}</div></div></div>}
               </div>
-              {detail.recommendation_details && <div className="lsd-notes-section" style={{ marginTop: 12 }}><div className="lsd-notes-section__label">تفاصيل التوصية</div><p className="lsd-description-text">{detail.recommendation_details}</p></div>}
               {!detail.overall_risk && !detail.recommendation && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم يُحدد تقييم المخاطر بعد</div>}
             </div>
           )}
         </div>
       </div>
 
-      {/* ── بطاقة الملخص التنفيذي ── */}
-      <div className="lsd-card">
-        <div className="lsd-card__header">
-          <div className="lsd-card__title"><FileText size={15} /> الملخص التنفيذي</div>
-          {!editingSummary && (
-            <button className="lsd-card__action" onClick={() => {
-              setEditingSummary(true);
-              setSummaryText(detail.executive_summary || '');
-            }}><Edit2 size={13} /> تعديل</button>
-          )}
-        </div>
-        <div className="lsd-card__content">
-          {editingSummary ? (
-            <div>
-              <textarea className="lsd-form-textarea" rows={6} value={summaryText} onChange={e => setSummaryText(e.target.value)} placeholder="اكتب الملخص التنفيذي هنا..." />
-              <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
-                <button className="lsd-header-btn" onClick={() => setEditingSummary(false)}>إلغاء</button>
-                <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleSaveSummary} disabled={summaryLoading}>{summaryLoading ? 'جارٍ...' : 'حفظ'}</button>
-              </div>
-            </div>
-          ) : detail.executive_summary ? (
-            <p className="lsd-description-text">{detail.executive_summary}</p>
-          ) : (
-            <div className="lsd-empty-state-small"><FileText size={22} /><span>لم يُكتب الملخص التنفيذي بعد</span>
-              <button className="lsd-header-btn lsd-header-btn--primary" style={{ marginTop: 8 }} onClick={() => { setEditingSummary(true); setSummaryText(''); }}><Edit2 size={13} /> كتابة الملخص</button>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* ── تفاصيل التوصية (نص غني) ── */}
+      <LegalRichEditorField
+        label="تفاصيل التوصية"
+        icon={CheckCircle}
+        value={detail.recommendation_details}
+        onSave={handleSaveRecommendationDetails}
+        description="شرح مفصّل للتوصية وأساسها ومتطلبات تنفيذها."
+        placeholder="اكتب تفاصيل التوصية هنا..."
+        emptyText="لم تُكتب تفاصيل التوصية بعد — اضغط «تعديل» لبدء الكتابة"
+        successMessage="تم حفظ تفاصيل التوصية"
+        minHeight="180px"
+      />
+
+      {/* ── الملخص التنفيذي (نص غني) ── */}
+      <LegalRichEditorField
+        label="الملخص التنفيذي"
+        icon={FileText}
+        value={detail.executive_summary}
+        onSave={handleSaveSummary}
+        description="نظرة عامة موجزة على نتائج الفحص النافي للجهالة وأبرز المخاطر."
+        placeholder="اكتب الملخص التنفيذي هنا..."
+        emptyText="لم يُكتب الملخص التنفيذي بعد — اضغط «تعديل» لبدء الكتابة"
+        successMessage="تم حفظ الملخص التنفيذي"
+        minHeight="220px"
+      />
+
+      {/* ── التقرير التفصيلي (نص غني) ── */}
+      <LegalRichEditorField
+        label="التقرير التفصيلي"
+        icon={ScrollText}
+        value={detail.detailed_report}
+        onSave={handleSaveDetailedReport}
+        description="متن تقرير الفحص النافي للجهالة الكامل بكل أقسامه وتفصيلاته."
+        placeholder="اكتب التقرير التفصيلي هنا..."
+        emptyText="لم يُكتب التقرير التفصيلي بعد — اضغط «تعديل» لبدء الكتابة"
+        successMessage="تم حفظ التقرير التفصيلي"
+        minHeight="360px"
+      />
     </div>
   );
 };

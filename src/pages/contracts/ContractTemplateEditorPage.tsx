@@ -11,6 +11,7 @@ import {
   CreditCard,
   Loader2,
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { contractTemplateService } from '../../services/contractTemplateService';
 import ContractTemplateEditor, { type ContractTemplateEditorRef } from '../../components/contracts/ContractTemplateEditor';
 import ContractVariablesList from '../../components/contracts/ContractVariablesList';
@@ -81,32 +82,56 @@ const ContractTemplateEditorPage: React.FC = () => {
     enabled: isEditing,
   });
 
+  // [P4·UX-09/TPL-4.9] تتبّع التغييرات غير المحفوظة لتحذير المغادرة.
+  const formRef = useRef(formData);
+  const savedSnapshotRef = useRef<string>(JSON.stringify(formData));
+  useEffect(() => { formRef.current = formData; }, [formData]);
+
+  const isDirty = () => JSON.stringify(formRef.current) !== savedSnapshotRef.current;
+
   // تحديث النموذج عند جلب البيانات
   useEffect(() => {
     if (templateData?.data) {
       const template = templateData.data;
-      setFormData({
+      const loaded: FormData = {
         name: template.name,
         name_ar: template.name_ar || '',
         type: template.type,
         scope_type: template.scope_type,
-        content: template.content,
+        content: template.content || '',
         description: template.description || '',
         default_vat_rate: template.default_vat_rate,
         is_active: template.is_active,
         is_default: template.is_default,
         default_payment_terms: template.default_payment_terms || [],
-      });
+      };
+      setFormData(loaded);
+      savedSnapshotRef.current = JSON.stringify(loaded); // اللقطة المرجعية = الحالة المحمّلة
     }
   }, [templateData]);
+
+  // تحذير عند إغلاق/تحديث الصفحة مع تغييرات غير محفوظة.
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, []);
 
   // إنشاء قالب
   const createMutation = useMutation({
     mutationFn: (data: typeof formData) => contractTemplateService.createTemplate(data),
     onSuccess: () => {
+      toast.success('تم إنشاء القالب');
+      savedSnapshotRef.current = JSON.stringify(formRef.current); // لا تحذير بعد الحفظ
       queryClient.invalidateQueries({ queryKey: ['contractTemplates'] });
-      navigate('/contract-templates');
+      navigate('/settings/contract-templates');
     },
+    onError: (e: Error) => toast.error(e.message || 'تعذّر إنشاء القالب'),
   });
 
   // تحديث قالب
@@ -114,11 +139,20 @@ const ContractTemplateEditorPage: React.FC = () => {
     mutationFn: (data: typeof formData) =>
       contractTemplateService.updateTemplate(Number(id), data),
     onSuccess: () => {
+      toast.success('تم تحديث القالب');
+      savedSnapshotRef.current = JSON.stringify(formRef.current);
       queryClient.invalidateQueries({ queryKey: ['contractTemplates'] });
       queryClient.invalidateQueries({ queryKey: ['contractTemplate', id] });
-      navigate('/contract-templates');
+      navigate('/settings/contract-templates');
     },
+    onError: (e: Error) => toast.error(e.message || 'تعذّر تحديث القالب'),
   });
+
+  // مغادرة آمنة (تأكيد عند وجود تغييرات).
+  const handleBack = () => {
+    if (isDirty() && !window.confirm('لديك تغييرات غير محفوظة. هل تريد المغادرة دون حفظ؟')) return;
+    navigate('/settings/contract-templates');
+  };
 
   // حفظ القالب
   const handleSave = () => {
@@ -150,7 +184,7 @@ const ContractTemplateEditorPage: React.FC = () => {
       {/* الهيدر */}
       <div className="builder-header">
         <div className="header-right">
-          <button className="back-btn" onClick={() => navigate('/contract-templates')}>
+          <button className="back-btn" onClick={handleBack}>
             <ArrowRight size={20} />
           </button>
           <div>

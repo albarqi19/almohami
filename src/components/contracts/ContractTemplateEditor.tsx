@@ -1,5 +1,5 @@
 import React, { useEffect, useImperativeHandle, forwardRef, useCallback } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
@@ -21,7 +21,7 @@ import {
   Undo,
   Redo,
   Eye,
-  Type,
+  Braces,
 } from 'lucide-react';
 
 interface ContractTemplateEditorProps {
@@ -41,87 +41,80 @@ export interface ContractTemplateEditorRef {
   insertVariable: (variable: string) => void;
 }
 
-const ContractTemplateEditor = forwardRef<
-  ContractTemplateEditorRef,
-  ContractTemplateEditorProps
->(
-  (
-    {
-      content,
-      onChange,
-      placeholder = 'اكتب محتوى القالب هنا... استخدم {{ لإدراج متغير',
-      className = '',
-      editable = true,
-      onPreview,
-    },
-    ref
-  ) => {
+// [P4·UX-09/TPL-4.7] MenuButton مرفوع خارج جسم المكوّن (لا يُعاد تعريفه كل render).
+// ألوان الحالة النشطة عبر tokens (لا hex مثبّت) فتعمل في الثيمات الثلاثة.
+const MenuButton: React.FC<{
+  onClick: () => void;
+  isActive?: boolean;
+  disabled?: boolean;
+  children: React.ReactNode;
+  title: string;
+}> = ({ onClick, isActive = false, disabled = false, children, title }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    title={title}
+    style={{
+      padding: '8px',
+      border: '1px solid var(--color-border)',
+      borderRadius: '4px',
+      backgroundColor: isActive ? 'var(--law-navy-light, var(--color-primary-soft))' : 'transparent',
+      color: isActive ? 'var(--law-navy, var(--color-primary))' : 'var(--color-text)',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      opacity: disabled ? 0.5 : 1,
+      transition: 'all 0.15s ease',
+    }}
+  >
+    {children}
+  </button>
+);
+
+const Divider: React.FC = () => (
+  <div style={{ width: '1px', height: '32px', backgroundColor: 'var(--color-border)', margin: '0 4px' }} />
+);
+
+const ContractTemplateEditor = forwardRef<ContractTemplateEditorRef, ContractTemplateEditorProps>(
+  ({ content, onChange, placeholder = 'اكتب محتوى القالب هنا... استخدم {{ لإدراج متغير', className = '', editable = true, onPreview }, ref) => {
     const editor = useEditor({
       extensions: [
         StarterKit.configure({
-          heading: {
-            levels: [1, 2, 3, 4, 5, 6],
-          },
-          bulletList: {
-            HTMLAttributes: {
-              dir: 'rtl',
-            },
-          },
-          orderedList: {
-            HTMLAttributes: {
-              dir: 'rtl',
-            },
-          },
+          heading: { levels: [1, 2, 3, 4, 5, 6] },
+          bulletList: { HTMLAttributes: { dir: 'rtl' } },
+          orderedList: { HTMLAttributes: { dir: 'rtl' } },
         }),
-        TextAlign.configure({
-          types: ['heading', 'paragraph'],
-          alignments: ['left', 'center', 'right', 'justify'],
-          defaultAlignment: 'right',
-        }),
+        TextAlign.configure({ types: ['heading', 'paragraph'], alignments: ['left', 'center', 'right', 'justify'], defaultAlignment: 'right' }),
         Underline,
         TextStyle,
         Color,
         FontSize,
-        Highlight.configure({
-          multicolor: true,
-        }),
+        Highlight.configure({ multicolor: true }),
         VariableMention,
       ],
       content,
       editable,
-      onUpdate: ({ editor }) => {
-        onChange(editor.getHTML());
-      },
+      onUpdate: ({ editor }) => onChange(editor.getHTML()),
       editorProps: {
-        attributes: {
-          class: 'contract-template-editor-content',
-          dir: 'rtl',
-          style: 'text-align: right;',
-        },
+        attributes: { class: 'contract-template-editor-content', dir: 'rtl', style: 'text-align: right;' },
       },
     });
 
     const insertVariable = useCallback(
       (variable: string) => {
         if (!editor) return;
-        // variable يأتي بصيغة {{key}}؛ نحتاج الـ key فقط لإنشاء mention node
         const key = variable.replace(/^\{\{|\}\}$/g, '');
-        editor
-          .chain()
-          .focus()
-          .insertContent([
-            { type: 'mention', attrs: { id: key } },
-            { type: 'text', text: ' ' },
-          ])
-          .run();
+        editor.chain().focus().insertContent([{ type: 'mention', attrs: { id: key } }, { type: 'text', text: ' ' }]).run();
       },
-      [editor]
+      [editor],
     );
 
     useImperativeHandle(ref, () => ({
       getHTML: () => editor?.getHTML() || '',
       getJSON: () => editor?.getJSON() || {},
-      setContent: (content: string) => editor?.commands.setContent(content),
+      setContent: (c: string) => editor?.commands.setContent(c),
       focus: () => editor?.commands.focus(),
       insertVariable,
     }));
@@ -132,133 +125,29 @@ const ContractTemplateEditor = forwardRef<
       }
     }, [editor, content]);
 
-    if (!editor) {
-      return null;
-    }
-
-    const MenuButton = ({
-      onClick,
-      isActive = false,
-      disabled = false,
-      children,
-      title,
-    }: {
-      onClick: () => void;
-      isActive?: boolean;
-      disabled?: boolean;
-      children: React.ReactNode;
-      title: string;
-    }) => (
-      <button
-        onClick={onClick}
-        disabled={disabled}
-        title={title}
-        style={{
-          padding: '8px',
-          border: '1px solid var(--color-border, #e5e7eb)',
-          borderRadius: '4px',
-          backgroundColor: isActive ? '#dbeafe' : 'transparent',
-          color: isActive ? '#1d4ed8' : 'var(--color-text, #374151)',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: disabled ? 0.5 : 1,
-          transition: 'all 0.2s ease',
-        }}
-      >
-        {children}
-      </button>
-    );
+    if (!editor) return null;
+    const ed: Editor = editor;
 
     return (
       <div
         className={`contract-template-editor ${className}`}
-        style={{
-          direction: 'rtl',
-          border: '1px solid var(--color-border, #e5e7eb)',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          backgroundColor: 'white',
-        }}
+        style={{ direction: 'rtl', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden', backgroundColor: 'var(--color-surface)' }}
       >
         {editable && (
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '4px',
-              padding: '12px',
-              borderBottom: '1px solid var(--color-border, #e5e7eb)',
-              backgroundColor: 'var(--color-background, #f9fafb)',
-              alignItems: 'center',
-            }}
-          >
-            {/* تنسيق النصوص */}
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleBold().run()}
-              isActive={editor.isActive('bold')}
-              title="نص عريض"
-            >
-              <Bold size={16} />
-            </MenuButton>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '12px', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--quiet-gray-50, var(--color-surface-subtle))', alignItems: 'center' }}>
+            <MenuButton onClick={() => ed.chain().focus().toggleBold().run()} isActive={ed.isActive('bold')} title="نص عريض"><Bold size={16} /></MenuButton>
+            <MenuButton onClick={() => ed.chain().focus().toggleItalic().run()} isActive={ed.isActive('italic')} title="نص مائل"><Italic size={16} /></MenuButton>
+            <MenuButton onClick={() => ed.chain().focus().toggleUnderline().run()} isActive={ed.isActive('underline')} title="نص تحته خط"><UnderlineIcon size={16} /></MenuButton>
+            <Divider />
 
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleItalic().run()}
-              isActive={editor.isActive('italic')}
-              title="نص مائل"
-            >
-              <Italic size={16} />
-            </MenuButton>
-
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleUnderline().run()}
-              isActive={editor.isActive('underline')}
-              title="نص تحته خط"
-            >
-              <UnderlineIcon size={16} />
-            </MenuButton>
-
-            <div
-              style={{
-                width: '1px',
-                height: '32px',
-                backgroundColor: 'var(--color-border, #e5e7eb)',
-                margin: '0 4px',
-              }}
-            />
-
-            {/* العناوين */}
             <select
-              value={
-                editor.isActive('heading', { level: 1 })
-                  ? 'h1'
-                  : editor.isActive('heading', { level: 2 })
-                  ? 'h2'
-                  : editor.isActive('heading', { level: 3 })
-                  ? 'h3'
-                  : 'p'
-              }
+              value={ed.isActive('heading', { level: 1 }) ? 'h1' : ed.isActive('heading', { level: 2 }) ? 'h2' : ed.isActive('heading', { level: 3 }) ? 'h3' : 'p'}
               onChange={(e) => {
                 const level = e.target.value;
-                if (level === 'p') {
-                  editor.chain().focus().setParagraph().run();
-                } else {
-                  const headingLevel = parseInt(level.replace('h', ''));
-                  editor
-                    .chain()
-                    .focus()
-                    .toggleHeading({ level: headingLevel as any })
-                    .run();
-                }
+                if (level === 'p') ed.chain().focus().setParagraph().run();
+                else ed.chain().focus().toggleHeading({ level: parseInt(level.replace('h', '')) as any }).run();
               }}
-              style={{
-                padding: '6px 8px',
-                border: '1px solid var(--color-border, #e5e7eb)',
-                borderRadius: '4px',
-                backgroundColor: 'transparent',
-                fontSize: '14px',
-              }}
+              style={{ padding: '6px 8px', border: '1px solid var(--color-border)', borderRadius: '4px', backgroundColor: 'transparent', color: 'var(--color-text)', fontSize: '14px' }}
             >
               <option value="p">فقرة عادية</option>
               <option value="h1">عنوان رئيسي</option>
@@ -266,156 +155,55 @@ const ContractTemplateEditor = forwardRef<
               <option value="h3">عنوان صغير</option>
             </select>
 
-            {/* حجم الخط */}
             <select
               onChange={(e) => {
                 const size = e.target.value;
-                if (size === 'default') {
-                  editor.chain().focus().unsetFontSize().run();
-                } else {
-                  editor.chain().focus().setFontSize(size).run();
-                }
+                if (size === 'default') ed.chain().focus().unsetFontSize().run();
+                else ed.chain().focus().setFontSize(size).run();
               }}
-              style={{
-                padding: '6px 8px',
-                border: '1px solid var(--color-border, #e5e7eb)',
-                borderRadius: '4px',
-                backgroundColor: 'transparent',
-                fontSize: '14px',
-                minWidth: '80px',
-              }}
+              style={{ padding: '6px 8px', border: '1px solid var(--color-border)', borderRadius: '4px', backgroundColor: 'transparent', color: 'var(--color-text)', fontSize: '14px', minWidth: '80px' }}
               title="حجم الخط"
             >
               <option value="default">حجم الخط</option>
-              <option value="10px">10</option>
-              <option value="12px">12</option>
-              <option value="14px">14</option>
-              <option value="16px">16</option>
-              <option value="18px">18</option>
-              <option value="20px">20</option>
-              <option value="24px">24</option>
-              <option value="28px">28</option>
-              <option value="32px">32</option>
-              <option value="36px">36</option>
-              <option value="48px">48</option>
+              {['10px', '12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'].map((s) => (
+                <option key={s} value={s}>{s.replace('px', '')}</option>
+              ))}
             </select>
+            <Divider />
 
-            <div
-              style={{
-                width: '1px',
-                height: '32px',
-                backgroundColor: 'var(--color-border, #e5e7eb)',
-                margin: '0 4px',
-              }}
-            />
+            <MenuButton onClick={() => ed.chain().focus().toggleBulletList().run()} isActive={ed.isActive('bulletList')} title="قائمة نقطية"><List size={16} /></MenuButton>
+            <MenuButton onClick={() => ed.chain().focus().toggleOrderedList().run()} isActive={ed.isActive('orderedList')} title="قائمة مرقمة"><ListOrdered size={16} /></MenuButton>
+            <Divider />
 
-            {/* القوائم */}
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleBulletList().run()}
-              isActive={editor.isActive('bulletList')}
-              title="قائمة نقطية"
+            <MenuButton onClick={() => ed.chain().focus().setTextAlign('right').run()} isActive={ed.isActive({ textAlign: 'right' })} title="محاذاة يمين"><AlignRight size={16} /></MenuButton>
+            <MenuButton onClick={() => ed.chain().focus().setTextAlign('center').run()} isActive={ed.isActive({ textAlign: 'center' })} title="محاذاة وسط"><AlignCenter size={16} /></MenuButton>
+            <MenuButton onClick={() => ed.chain().focus().setTextAlign('left').run()} isActive={ed.isActive({ textAlign: 'left' })} title="محاذاة يسار"><AlignLeft size={16} /></MenuButton>
+            <MenuButton onClick={() => ed.chain().focus().setTextAlign('justify').run()} isActive={ed.isActive({ textAlign: 'justify' })} title="محاذاة منتظمة"><AlignJustify size={16} /></MenuButton>
+            <Divider />
+
+            <MenuButton onClick={() => ed.chain().focus().undo().run()} disabled={!ed.can().undo()} title="تراجع"><Undo size={16} /></MenuButton>
+            <MenuButton onClick={() => ed.chain().focus().redo().run()} disabled={!ed.can().redo()} title="إعادة"><Redo size={16} /></MenuButton>
+            <Divider />
+
+            {/* [P4·UX-09/TPL-4.9] إدراج متغيّر — يفتح مُنتقي المتغيّرات بكتابة {{ */}
+            <button
+              type="button"
+              onClick={() => ed.chain().focus().insertContent('{{').run()}
+              title="إدراج متغيّر"
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: '4px', backgroundColor: 'transparent', color: 'var(--color-text)', cursor: 'pointer', fontSize: '13px' }}
             >
-              <List size={16} />
-            </MenuButton>
+              <Braces size={15} /> متغيّر
+            </button>
 
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleOrderedList().run()}
-              isActive={editor.isActive('orderedList')}
-              title="قائمة مرقمة"
-            >
-              <ListOrdered size={16} />
-            </MenuButton>
-
-            <div
-              style={{
-                width: '1px',
-                height: '32px',
-                backgroundColor: 'var(--color-border, #e5e7eb)',
-                margin: '0 4px',
-              }}
-            />
-
-            {/* المحاذاة */}
-            <MenuButton
-              onClick={() => editor.chain().focus().setTextAlign('right').run()}
-              isActive={editor.isActive({ textAlign: 'right' })}
-              title="محاذاة يمين"
-            >
-              <AlignRight size={16} />
-            </MenuButton>
-
-            <MenuButton
-              onClick={() => editor.chain().focus().setTextAlign('center').run()}
-              isActive={editor.isActive({ textAlign: 'center' })}
-              title="محاذاة وسط"
-            >
-              <AlignCenter size={16} />
-            </MenuButton>
-
-            <MenuButton
-              onClick={() => editor.chain().focus().setTextAlign('left').run()}
-              isActive={editor.isActive({ textAlign: 'left' })}
-              title="محاذاة يسار"
-            >
-              <AlignLeft size={16} />
-            </MenuButton>
-
-            <MenuButton
-              onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-              isActive={editor.isActive({ textAlign: 'justify' })}
-              title="محاذاة منتظمة"
-            >
-              <AlignJustify size={16} />
-            </MenuButton>
-
-            <div
-              style={{
-                width: '1px',
-                height: '32px',
-                backgroundColor: 'var(--color-border, #e5e7eb)',
-                margin: '0 4px',
-              }}
-            />
-
-            {/* التراجع والإعادة */}
-            <MenuButton
-              onClick={() => editor.chain().focus().undo().run()}
-              disabled={!editor.can().undo()}
-              title="تراجع"
-            >
-              <Undo size={16} />
-            </MenuButton>
-
-            <MenuButton
-              onClick={() => editor.chain().focus().redo().run()}
-              disabled={!editor.can().redo()}
-              title="إعادة"
-            >
-              <Redo size={16} />
-            </MenuButton>
-
-            {/* زر المعاينة */}
             {onPreview && (
               <>
                 <div style={{ flex: 1 }} />
                 <button
+                  type="button"
                   onClick={onPreview}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 16px',
-                    backgroundColor: '#1d4ed8',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', backgroundColor: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}
                 >
-                  <Eye size={16} />
-                  معاينة
+                  <Eye size={16} /> معاينة
                 </button>
               </>
             )}
@@ -424,32 +212,17 @@ const ContractTemplateEditor = forwardRef<
 
         <EditorContent
           editor={editor}
-          style={{
-            minHeight: editable ? '400px' : 'auto',
-            padding: '20px',
-            fontSize: '16px',
-            lineHeight: '1.8',
-            fontFamily: 'inherit',
-          }}
+          style={{ minHeight: editable ? '400px' : 'auto', padding: '20px', fontSize: '16px', lineHeight: '1.8', fontFamily: 'inherit', color: 'var(--color-text)' }}
         />
 
         {placeholder && editable && editor.isEmpty && (
-          <div
-            style={{
-              position: 'absolute',
-              top: editable ? '80px' : '20px',
-              right: '20px',
-              color: 'var(--color-text-light, #9ca3af)',
-              pointerEvents: 'none',
-              fontSize: '16px',
-            }}
-          >
+          <div style={{ position: 'absolute', top: editable ? '80px' : '20px', right: '20px', color: 'var(--color-text-secondary)', pointerEvents: 'none', fontSize: '16px' }}>
             {placeholder}
           </div>
         )}
       </div>
     );
-  }
+  },
 );
 
 ContractTemplateEditor.displayName = 'ContractTemplateEditor';

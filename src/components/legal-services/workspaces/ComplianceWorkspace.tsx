@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShieldCheck, AlertTriangle, Edit2, Plus, X, Calendar, BarChart3,
   ClipboardCheck, FileWarning, Wrench, CheckCircle2, XCircle, MinusCircle,
-  HelpCircle, Eye, ChevronDown, ChevronUp, User, Clock,
+  HelpCircle, Eye, ChevronDown, ChevronUp, User, Clock, FileText, Lightbulb,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
@@ -11,6 +11,7 @@ import { useDynamicList } from '../../../hooks/useDynamicList';
 import type { WorkspaceProps } from './types';
 import MicroStatsBar from './MicroStatsBar';
 import ContextualAlert from './ContextualAlert';
+import LegalRichEditorField from '../LegalRichEditorField';
 
 // ── تسميات عربية ──
 
@@ -211,6 +212,18 @@ const ComplianceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
       }
     } catch { toast.error('حدث خطأ في الاتصال'); }
     finally { setInfoLoading(false); }
+  };
+
+  const handleSaveAssessmentReport = async (html: string) => {
+    const res = await LegalServiceService.updateComplianceInfo(service.id, { assessment_report: html });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر الحفظ');
+    await refreshService();
+  };
+
+  const handleSaveRecommendations = async (html: string) => {
+    const res = await LegalServiceService.updateComplianceInfo(service.id, { recommendations: html });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر الحفظ');
+    await refreshService();
   };
 
   const handleChecklistStatusChange = async (originalIndex: number, newStatus: string) => {
@@ -429,6 +442,28 @@ const ComplianceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
           )}
         </div>
       </div>
+
+      {/* ── تقرير التقييم ── */}
+      <LegalRichEditorField
+        label="تقرير التقييم"
+        icon={FileText}
+        value={detail.assessment_report}
+        onSave={handleSaveAssessmentReport}
+        successMessage="تم حفظ تقرير التقييم"
+        placeholder="اكتب تقرير تقييم الامتثال..."
+        emptyText="لا يوجد تقرير تقييم بعد"
+      />
+
+      {/* ── التوصيات ── */}
+      <LegalRichEditorField
+        label="التوصيات"
+        icon={Lightbulb}
+        value={detail.recommendations}
+        onSave={handleSaveRecommendations}
+        successMessage="تم حفظ التوصيات"
+        placeholder="اكتب التوصيات..."
+        emptyText="لا توجد توصيات بعد"
+      />
 
       {/* ── بطاقة شريط نتيجة الامتثال ── */}
       <div className="lsd-card">

@@ -61,6 +61,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
     if (!formData.payment_date) {
       newErrors.payment_date = 'تاريخ الدفع مطلوب';
+    } else if (formData.payment_date > new Date().toISOString().split('T')[0]) {
+      // [BILL-06] لا تاريخ دفع مستقبلي.
+      newErrors.payment_date = 'لا يمكن أن يكون تاريخ الدفع في المستقبل';
     }
 
     if (formData.payment_method === 'check') {
@@ -361,6 +364,25 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   }}
                 />
               </div>
+              {/* [BILL-10] رقم الحساب/الآيبان (يُحفظ في bank_account). */}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
+                  رقم الحساب / الآيبان
+                </label>
+                <input
+                  type="text"
+                  value={formData.bank_account || ''}
+                  onChange={(e) => setFormData({ ...formData, bank_account: e.target.value })}
+                  placeholder="SA.."
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
             </div>
           )}
 
@@ -421,6 +443,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             <input
               type="date"
               value={formData.payment_date}
+              max={new Date().toISOString().split('T')[0]}
               onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
               style={{
                 width: '100%',

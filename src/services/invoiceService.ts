@@ -1,4 +1,4 @@
-import { apiClient } from '../utils/api';
+import { apiClient, API_BASE_URL } from '../utils/api';
 import type {
   CaseInvoice,
   InvoiceFilters,
@@ -74,10 +74,36 @@ export class InvoiceService {
   }
 
   /**
-   * تحميل الفاتورة كـ PDF
+   * [BILL-08] تحميل الفاتورة كـ PDF خادمي حقيقي (blob موثّق) وحفظه.
    */
-  static async downloadPdf(id: number): Promise<{ success: boolean; data: { url: string } }> {
-    return apiClient.get<{ success: boolean; data: { url: string } }>(`/case-invoices/${id}/pdf`);
+  static async downloadPdf(id: number, invoiceNumber?: string): Promise<void> {
+    const token = localStorage.getItem('authToken');
+    const res = await fetch(`${API_BASE_URL}/case-invoices/${id}/pdf`, {
+      headers: {
+        Accept: 'application/pdf',
+        'ngrok-skip-browser-warning': '69420',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (!res.ok) {
+      let message = 'تعذّر تنزيل ملف PDF';
+      try {
+        const body = await res.clone().json();
+        if (body?.message) message = body.message;
+      } catch {
+        /* ليس JSON — نُبقي الرسالة الافتراضية */
+      }
+      throw new Error(message);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `invoice-${invoiceNumber || id}.pdf`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
   }
 
   /**

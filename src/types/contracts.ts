@@ -7,7 +7,8 @@ export type ContractType = 'representation' | 'consultation' | 'retainer' | 'con
 export type ScopeType = 'plaintiff' | 'defendant' | 'both';
 
 // حالة العقد
-export type ContractStatus = 'draft' | 'pending_signature' | 'active' | 'completed' | 'cancelled' | 'expired' | 'suspended';
+// [CTR-07] أُزيلت 'suspended' — لا تعريف لها في enum الباك (مواءمة الطرفين).
+export type ContractStatus = 'draft' | 'pending_signature' | 'active' | 'completed' | 'cancelled' | 'expired';
 
 // نوع شرط الدفع
 export type PaymentTermType = 'upfront' | 'milestone' | 'final' | 'percentage';
@@ -23,13 +24,15 @@ export interface ContractTemplate {
   name_ar?: string;
   type: ContractType;
   scope_type: ScopeType;
-  content: string;
-  variables: string[];
-  default_payment_terms: DefaultPaymentTerm[];
+  category?: string; // [TPL-T11]
+  tags?: string[]; // [TPL-T11]
+  content?: string; // [TPL-T10] قائمة القوالب لا تُرجع content (يظهر في show فقط)
+  variables?: string[] | Record<string, unknown>; // [TPL-T06] قد يكون خريطة custom
+  default_payment_terms?: DefaultPaymentTerm[];
   default_vat_rate: number;
   is_active: boolean;
   is_default: boolean;
-  usage_count: number;
+  usage_count?: number; // [TPL-T04]
   description?: string;
   created_at: string;
   updated_at: string;
@@ -62,7 +65,8 @@ export interface Contract {
   vat_rate: number;
   vat_amount: number;
   grand_total: number;
-  paid_amount?: number;
+  total_paid?: number;
+  collection_percentage?: number;
   remaining_amount?: number;
   status: ContractStatus;
   contract_date: string;
@@ -78,6 +82,12 @@ export interface Contract {
   // العلاقات
   template?: ContractTemplate;
   case?: {
+    id: number;
+    file_number: string;
+    title: string;
+  };
+  // [P4] الباك يحمّل العلاقة caseModel فتُسلسَل كـ case_model (snake_case) — المفتاح الفعلي في JSON.
+  case_model?: {
     id: number;
     file_number: string;
     title: string;
@@ -111,16 +121,24 @@ export interface ContractParty {
   party_type: PartyType;
   entity_type: EntityType;
   name: string;
+  name_ar?: string;
   role?: string;
   national_id?: string;
-  commercial_reg?: string;
+  // [CTR-10] أسماء موحّدة مع الباك (commercial_registration/representative_national_id).
+  commercial_registration?: string;
+  tax_number?: string;
   phone?: string;
   email?: string;
   address?: string;
+  city?: string;
+  postal_code?: string;
   nationality?: string;
   representative_name?: string;
-  representative_id?: string;
+  representative_national_id?: string;
   representative_position?: string;
+  license_number?: string;
+  bank_name?: string;
+  bank_iban?: string;
   created_at: string;
   updated_at: string;
 }
@@ -242,7 +260,7 @@ export interface CreateContractData {
   client_id: number;
   case_id?: number;
   title: string; // العنوان مطلوب
-  scope_type: 'plaintiff' | 'defendant'; // الباك إند يقبل فقط هذين القيمتين
+  scope_type: ScopeType; // [CTR-09] الباك إند يقبل plaintiff/defendant/both
   content: string;
   total_amount: number;
   discount?: number;

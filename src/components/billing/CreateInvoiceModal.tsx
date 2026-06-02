@@ -9,11 +9,20 @@ import {
   Search,
   Briefcase,
   DollarSign,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { UserService } from '../../services/UserService';
 import { CaseService } from '../../services/caseService';
+import { apiClient } from '../../utils/api';
 import type { User as UserType, Case } from '../../types';
 import '../../styles/add-session-modal.css';
+
+interface LineItemRow {
+  description: string;
+  quantity: string;
+  unit_price: string;
+}
 
 interface CreateInvoiceModalProps {
   isOpen: boolean;
@@ -65,9 +74,17 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
   const [clientsLoading, setClientsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // [BILL-05] محرّر بنود الفاتورة (اختياري؛ عند وجوده يُشتقّ subtotal منه).
+  const [lineItems, setLineItems] = useState<LineItemRow[]>([]);
+  // [TAX-02] حالة التسجيل الضريبي للمستأجر + النسبة الافتراضية (بدل تثبيت 15).
+  const [isVatRegistered, setIsVatRegistered] = useState(true);
+  const [defaultVatRate, setDefaultVatRate] = useState('15');
 
   useEffect(() => {
-    if (isOpen && clients.length === 0) fetchClients();
+    if (isOpen) {
+      if (clients.length === 0) fetchClients();
+      fetchBillingSettings();
+    }
   }, [isOpen]);
 
   const fetchClients = async () => {
@@ -77,6 +94,29 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
       setClients(data.map((c: any) => ({ id: c.id, name: c.name, phone: c.phone, nationalId: c.nationalId })));
     } catch { /* ignore */ }
     finally { setClientsLoading(false); }
+  };
+
+  // [TAX-02] جلب إعدادات الفوترة لتحديد النسبة الافتراضية وتعطيل الضريبة لغير المسجّلين.
+  const fetchBillingSettings = async () => {
+    try {
+      const res = await apiClient.get<{ data: { settings: Record<string, { value: unknown }> } }>(
+        '/advanced-settings/group/billing'
+      );
+      const settings = res?.data?.settings || {};
+      const registered = Boolean(settings.is_vat_registered?.value);
+      const rate = settings.default_vat_rate?.value != null ? String(settings.default_vat_rate.value) : '15';
+      setIsVatRegistered(registered);
+      setDefaultVatRate(rate);
+      setFormData(prev => ({ ...prev, vat_rate: registered ? rate : '0' }));
+    } catch { /* تجاهل — الباك يفرض النسبة الصحيحة على أي حال */ }
+  };
+
+  // [BILL-05] عمليات محرّر البنود.
+  const addLineItem = () => setLineItems(prev => [...prev, { description: '', quantity: '1', unit_price: '' }]);
+  const removeLineItem = (idx: number) => setLineItems(prev => prev.filter((_, i) => i !== idx));
+  const updateLineItem = (idx: number, field: keyof LineItemRow, value: string) => {
+    setLineItems(prev => prev.map((it, i) => (i === idx ? { ...it, [field]: value } : it)));
+    if (error) setError(null);
   };
 
   // جلب قضايا العميل
@@ -104,7 +144,13 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
   };
 
   // الحسابات
-  const subtotal = Number(formData.subtotal) || 0;
+  // [BILL-05] عند وجود بنود، يُشتقّ المجموع الفرعي منها (الحقل اليدوي للقراءة فقط).
+  const hasLineItems = lineItems.length > 0;
+  const lineItemsSubtotal = lineItems.reduce(
+    (sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
+    0
+  );
+  const subtotal = hasLineItems ? lineItemsSubtotal : (Number(formData.subtotal) || 0);
   const discountPerc = Number(formData.discount_percentage) || 0;
   const discount = discountPerc > 0 ? (subtotal * discountPerc) / 100 : 0;
   const taxable = subtotal - discount;
@@ -134,13 +180,27 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
         vat_rate: vatRate,
         notes: formData.notes || undefined,
         status: formData.status,
+        // [BILL-05] إرسال البنود عند وجودها (الباك يعيد حساب total خادمياً).
+        line_items: hasLineItems
+          ? lineItems
+              .filter(it => it.description.trim())
+              .map(it => ({
+                description: it.description.trim(),
+                quantity: Number(it.quantity) || 0,
+                unit_price: Number(it.unit_price) || 0,
+                total: (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
+              }))
+          : undefined,
       });
       // reset
       setFormData({
         title: '', client_id: '', case_id: '', due_date: '',
         invoice_date: new Date().toISOString().split('T')[0],
-        subtotal: '', discount_percentage: '', vat_rate: '15', notes: '', status: 'draft',
+        subtotal: '', discount_percentage: '',
+        vat_rate: isVatRegistered ? defaultVatRate : '0',
+        notes: '', status: 'draft',
       });
+      setLineItems([]);
       setClientSearch('');
       onClose();
     } catch (err) {
@@ -246,19 +306,57 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
                 placeholder="مثلاً: أتعاب استشارة قانونية" />
             </div>
 
+            {/* [BILL-05] محرّر بنود الفاتورة (اختياري — عند وجوده يُشتقّ المبلغ منه) */}
+            <div className="asm-field">
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>بنود الفاتورة (اختياري)</span>
+                <button type="button" onClick={addLineItem}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <Plus size={12} /> إضافة بند
+                </button>
+              </label>
+              {hasLineItems && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                  {lineItems.map((it, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input type="text" value={it.description}
+                        onChange={(e) => updateLineItem(idx, 'description', e.target.value)}
+                        placeholder="الوصف" style={{ flex: 1 }} />
+                      <input type="number" value={it.quantity}
+                        onChange={(e) => updateLineItem(idx, 'quantity', e.target.value)}
+                        placeholder="كمية" style={{ width: 56 }} min="0" />
+                      <input type="number" value={it.unit_price}
+                        onChange={(e) => updateLineItem(idx, 'unit_price', e.target.value)}
+                        placeholder="سعر الوحدة" style={{ width: 84 }} min="0" />
+                      <span style={{ width: 72, fontSize: 11, textAlign: 'left', color: 'var(--color-text-secondary, #6b7280)' }}>
+                        {((Number(it.quantity) || 0) * (Number(it.unit_price) || 0)).toFixed(2)}
+                      </span>
+                      <button type="button" onClick={() => removeLineItem(idx)}
+                        style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: 2 }}
+                        aria-label="حذف البند">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Row 4: Amount + VAT + Discount (inline) */}
             <div className="asm-row">
               <div className="asm-field asm-field--grow">
-                <label><DollarSign size={11} /> المبلغ</label>
-                <input type="number" value={formData.subtotal}
+                <label><DollarSign size={11} /> المبلغ{hasLineItems && ' (من البنود)'}</label>
+                <input type="number"
+                  value={hasLineItems ? subtotal.toFixed(2) : formData.subtotal}
                   onChange={(e) => updateField('subtotal', e.target.value)}
-                  placeholder="0.00" />
+                  placeholder="0.00" readOnly={hasLineItems} disabled={hasLineItems} />
               </div>
               <div className="asm-field" style={{ width: 80 }}>
                 <label>الضريبة %</label>
                 <input type="number" value={formData.vat_rate}
                   onChange={(e) => updateField('vat_rate', e.target.value)}
-                  placeholder="15" />
+                  placeholder={defaultVatRate} disabled={!isVatRegistered}
+                  title={!isVatRegistered ? 'الشركة غير مسجّلة في ضريبة القيمة المضافة' : ''} />
               </div>
               <div className="asm-field" style={{ width: 80 }}>
                 <label>خصم %</label>

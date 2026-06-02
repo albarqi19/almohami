@@ -33,6 +33,7 @@ import {
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissionContext } from '../contexts/PermissionContext';
+import { useZatcaFeature } from '../contexts/ZatcaStatusContext';
 import { mainMenuItems, settingsMenuItems, type SidebarItem } from '../config/sidebarConfig';
 
 interface SidebarProps {
@@ -107,6 +108,8 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
 }) => {
     const { user, logout } = useAuth();
     const { has, hasAny, isSuperAdmin } = usePermissionContext();
+    // حالة ميزة ZATCA من الـ context (أعلى الشجرة) — لا تُستدعى داخل isItemVisible ولا في sidebarConfig.
+    const { available: zatcaAvailable } = useZatcaFeature();
     const location = useLocation();
     const [showFavorites, setShowFavorites] = React.useState(true);
 
@@ -129,6 +132,9 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
      * super_admin يرى كل شيء.
      */
     const isItemVisible = (item: SidebarItem): boolean => {
+        // بوّابة الميزة: تُخفي العنصر تماماً عن أي منشأة غير متاحة لها الميزة (حتى super_admin) — لا تعرف بوجوده.
+        if (item.featureGate === 'zatca' && !zatcaAvailable) return false;
+
         if (isSuperAdmin) return true;
 
         // العميل: whitelist صارمة
@@ -220,7 +226,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                                 key={item.path}
                                 item={item}
                                 isCollapsed={isCollapsed}
-                                isActive={location.pathname === item.path}
+                                isActive={location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)}
                                 isMobileOpen={isMobileOpen}
                                 onMobileClose={onMobileClose}
                             />
@@ -266,7 +272,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                                 key={item.path}
                                 item={item}
                                 isCollapsed={isCollapsed}
-                                isActive={location.pathname === item.path}
+                                isActive={location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)}
                                 isMobileOpen={isMobileOpen}
                                 onMobileClose={onMobileClose}
                             />

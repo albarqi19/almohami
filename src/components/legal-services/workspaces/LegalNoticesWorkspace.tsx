@@ -3,13 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell, User, Edit2, FileText, Send, CheckCircle, MessageSquare,
   Clock, DollarSign, Calendar, Mail, Phone, MapPin, Hash,
-  AlertTriangle, ChevronLeft, Save, X, Plus,
+  AlertTriangle, Plus,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
 import type { WorkspaceProps, MicroStatItem } from './types';
 import MicroStatsBar from './MicroStatsBar';
 import ContextualAlert from './ContextualAlert';
+import LegalRichEditorField from '../LegalRichEditorField';
+import LegalRichText from '../LegalRichText';
 
 // ── تسميات عربية ──
 
@@ -141,6 +143,45 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
     } finally {
       setContentLoading(false);
     }
+  };
+
+  // حفظ الحقول النصّية الغنيّة عبر updateNoticeContent مع الحفاظ على بقية حقول المحتوى
+  const handleSaveNoticeContentHtml = async (html: string) => {
+    const res = await LegalServiceService.updateNoticeContent(service.id, {
+      notice_summary: detail.notice_summary || '',
+      notice_content: html,
+      demanded_amount: detail.demanded_amount ?? '',
+      demanded_actions: detail.demanded_actions || '',
+      response_deadline_days: detail.response_deadline_days ?? '',
+      response_deadline_date: detail.response_deadline_date || '',
+      template_used: detail.template_used || '',
+    });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر حفظ نص الإنذار');
+    await refreshService();
+  };
+
+  const handleSaveDemandedActionsHtml = async (html: string) => {
+    const res = await LegalServiceService.updateNoticeContent(service.id, {
+      notice_summary: detail.notice_summary || '',
+      notice_content: detail.notice_content || '',
+      demanded_amount: detail.demanded_amount ?? '',
+      demanded_actions: html,
+      response_deadline_days: detail.response_deadline_days ?? '',
+      response_deadline_date: detail.response_deadline_date || '',
+      template_used: detail.template_used || '',
+    });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر حفظ الإجراءات المطلوبة');
+    await refreshService();
+  };
+
+  const handleSaveResponseContentHtml = async (html: string) => {
+    const res = await LegalServiceService.recordNoticeResponse(service.id, {
+      response_received_date: detail.response_received_date || '',
+      response_content: html,
+      response_document_path: detail.response_document_path || '',
+    });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر حفظ نص الرد');
+    await refreshService();
   };
 
   const handleRecordSend = async () => {
@@ -434,22 +475,20 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
         </div>
       </div>
 
-      {/* ── بطاقة محتوى الإنذار ── */}
+      {/* ── بطاقة بيانات الإنذار (الحقول المنظَّمة) ── */}
       <div className="lsd-card">
         <div className="lsd-card__header">
           <div className="lsd-card__title">
             <FileText size={15} />
-            محتوى الإنذار
+            بيانات الإنذار
           </div>
           <button
             className="lsd-card__action"
             onClick={() => {
               setEditingContent(true);
               setContentData({
-                notice_content: detail.notice_content || '',
                 notice_summary: detail.notice_summary || '',
                 demanded_amount: detail.demanded_amount || '',
-                demanded_actions: detail.demanded_actions || '',
                 response_deadline_days: detail.response_deadline_days || '',
                 response_deadline_date: detail.response_deadline_date || '',
               });
@@ -470,16 +509,6 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
                   value={contentData.notice_summary || ''}
                   onChange={e => setContentData({ ...contentData, notice_summary: e.target.value })}
                   placeholder="ملخص مختصر للإنذار..."
-                />
-              </div>
-              <div className="lsd-form-group" style={{ marginTop: 8 }}>
-                <label className="lsd-form-label">نص الإنذار الكامل</label>
-                <textarea
-                  className="lsd-form-textarea"
-                  rows={8}
-                  value={contentData.notice_content || ''}
-                  onChange={e => setContentData({ ...contentData, notice_content: e.target.value })}
-                  placeholder="اكتب نص الإنذار هنا..."
                 />
               </div>
               <div className="lsd-info-grid" style={{ marginTop: 8 }}>
@@ -516,16 +545,6 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
                   />
                 </div>
               </div>
-              <div className="lsd-form-group" style={{ marginTop: 8 }}>
-                <label className="lsd-form-label">الإجراءات المطلوبة</label>
-                <textarea
-                  className="lsd-form-textarea"
-                  rows={3}
-                  value={contentData.demanded_actions || ''}
-                  onChange={e => setContentData({ ...contentData, demanded_actions: e.target.value })}
-                  placeholder="الإجراءات المطلوب من المرسل إليه اتخاذها..."
-                />
-              </div>
               <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
                 <button className="lsd-header-btn" onClick={() => setEditingContent(false)}>إلغاء</button>
                 <button
@@ -537,7 +556,7 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
                 </button>
               </div>
             </div>
-          ) : detail.notice_content || detail.notice_summary ? (
+          ) : detail.notice_summary || detail.demanded_amount || detail.response_deadline_days || detail.response_deadline_date ? (
             <div>
               {detail.notice_summary && (
                 <div className="lsd-notes-section">
@@ -545,28 +564,13 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
                   <p className="lsd-description-text">{detail.notice_summary}</p>
                 </div>
               )}
-              {detail.notice_content && (
-                <div className="lsd-notes-section" style={{ marginTop: 12 }}>
-                  <div className="lsd-notes-section__label">نص الإنذار</div>
-                  <p className="lsd-description-text" style={{ whiteSpace: 'pre-wrap' }}>{detail.notice_content}</p>
-                </div>
-              )}
-              <div className="lsd-info-grid" style={{ marginTop: 12 }}>
+              <div className="lsd-info-grid" style={{ marginTop: detail.notice_summary ? 12 : 0 }}>
                 {detail.demanded_amount && (
                   <div className="lsd-info-item">
                     <div className="lsd-info-item__icon"><DollarSign size={14} /></div>
                     <div className="lsd-info-item__body">
                       <div className="lsd-info-item__label">المبلغ المطالب به</div>
                       <div className="lsd-info-item__value">{formatCurrency(detail.demanded_amount)}</div>
-                    </div>
-                  </div>
-                )}
-                {detail.demanded_actions && (
-                  <div className="lsd-info-item">
-                    <div className="lsd-info-item__icon"><AlertTriangle size={14} /></div>
-                    <div className="lsd-info-item__body">
-                      <div className="lsd-info-item__label">الإجراءات المطلوبة</div>
-                      <div className="lsd-info-item__value">{detail.demanded_actions}</div>
                     </div>
                   </div>
                 )}
@@ -593,14 +597,38 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
           ) : (
             <div className="lsd-empty-state-small">
               <FileText size={22} />
-              <span>لم يُكتب محتوى الإنذار بعد</span>
+              <span>لم تُضف بيانات الإنذار بعد</span>
               <button className="lsd-header-btn lsd-header-btn--primary" style={{ marginTop: 8 }} onClick={() => { setEditingContent(true); setContentData({}); }}>
-                <Plus size={13} /> كتابة الإنذار
+                <Plus size={13} /> إضافة البيانات
               </button>
             </div>
           )}
         </div>
       </div>
+
+      {/* ── نص الإنذار الكامل (محرّر غني) ── */}
+      <LegalRichEditorField
+        label="نص الإنذار الكامل"
+        icon={FileText}
+        value={detail.notice_content}
+        onSave={handleSaveNoticeContentHtml}
+        placeholder="اكتب نص الإنذار هنا..."
+        emptyText="لم يُكتب نص الإنذار بعد — اضغط «تعديل» لبدء الكتابة"
+        successMessage="تم حفظ نص الإنذار"
+      />
+
+      {/* ── الإجراءات المطلوبة (محرّر غني) ── */}
+      <LegalRichEditorField
+        label="الإجراءات المطلوبة"
+        icon={AlertTriangle}
+        value={detail.demanded_actions}
+        onSave={handleSaveDemandedActionsHtml}
+        description="الإجراءات المطلوب من المرسل إليه اتخاذها"
+        placeholder="مثال: سداد المبلغ المستحق خلال المهلة المحددة..."
+        emptyText="لم تُحدَّد الإجراءات المطلوبة بعد"
+        successMessage="تم حفظ الإجراءات المطلوبة"
+        minHeight="160px"
+      />
 
       {/* ── بطاقة مسار التسليم (Timeline) ── */}
       <div className="lsd-card">
@@ -780,19 +808,22 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
                     />
                   </div>
                   <div className="lsd-form-group" style={{ marginTop: 8 }}>
-                    <label className="lsd-form-label">محتوى الرد</label>
-                    <textarea
-                      className="lsd-form-textarea"
-                      rows={4}
-                      value={responseData.response_content || ''}
-                      onChange={e => setResponseData({ ...responseData, response_content: e.target.value })}
+                    <span className="lsd-form-label" style={{ display: 'block', marginBottom: 6 }}>محتوى الرد</span>
+                    <LegalRichEditorField
+                      label="نص الرد"
+                      icon={MessageSquare}
+                      value={detail.response_content}
+                      onSave={handleSaveResponseContentHtml}
                       placeholder="اكتب محتوى الرد الوارد..."
+                      emptyText="لم يُسجَّل نص الرد بعد"
+                      successMessage="تم حفظ نص الرد"
+                      minHeight="160px"
                     />
                   </div>
                   <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
-                    <button className="lsd-header-btn" onClick={() => setShowResponseForm(false)}>إلغاء</button>
+                    <button className="lsd-header-btn" onClick={() => setShowResponseForm(false)}>إغلاق</button>
                     <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleRecordResponse} disabled={responseLoading}>
-                      {responseLoading ? 'جارٍ...' : 'تسجيل الرد'}
+                      {responseLoading ? 'جارٍ...' : 'حفظ تاريخ الرد'}
                     </button>
                   </div>
                 </div>
@@ -801,10 +832,10 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
           </AnimatePresence>
 
           {/* عرض محتوى الرد إذا ورد */}
-          {detail.response_content && (
+          {detail.response_content && !showResponseForm && (
             <div className="lsd-notes-section" style={{ marginTop: 16 }}>
               <div className="lsd-notes-section__label">محتوى الرد الوارد</div>
-              <p className="lsd-description-text" style={{ whiteSpace: 'pre-wrap' }}>{detail.response_content}</p>
+              <LegalRichText html={detail.response_content} />
             </div>
           )}
         </div>
@@ -818,7 +849,7 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
           disabled={pdfLoading}
         >
           <FileText size={15} />
-          {pdfLoading ? 'جارٍ التوليد...' : 'توليد PDF'}
+          {pdfLoading ? 'جارٍ التوليد...' : 'توليد PDF (قريباً)'}
         </button>
       </div>
     </div>

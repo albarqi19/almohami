@@ -9,6 +9,7 @@ import { LegalServiceService } from '../../../services/legalServiceService';
 import type { WorkspaceProps } from './types';
 import type { ClaimedItem } from '../../../types/legalServices';
 import MicroStatsBar from './MicroStatsBar';
+import LegalRichEditorField from '../LegalRichEditorField';
 
 // ── تسميات عربية ──
 
@@ -172,6 +173,17 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
       else toast.error(res.message || 'حدث خطأ');
     } catch { toast.error('حدث خطأ'); }
     finally { setSettlementLoading(false); }
+  };
+
+  // حفظ شروط التسوية كمحتوى غني — مع الحفاظ على المبلغ والتاريخ الحاليَّين
+  const handleSaveSettlementTerms = async (html: string) => {
+    const res = await LegalServiceService.updateLaborSettlement(service.id, {
+      settlement_amount: detail.settlement_amount || '',
+      settlement_terms: html,
+      settlement_date: detail.settlement_date || '',
+    });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر الحفظ');
+    await refreshService();
   };
 
   return (
@@ -359,7 +371,7 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
           <div className="lsd-card__title"><DollarSign size={15} /> التسوية</div>
           <button className="lsd-card__action" onClick={() => {
             setEditingSettlement(true);
-            setSettlementData({ settlement_amount: detail.settlement_amount || '', settlement_terms: detail.settlement_terms || '', settlement_date: detail.settlement_date || '' });
+            setSettlementData({ settlement_amount: detail.settlement_amount || '', settlement_terms: detail.settlement_terms || '', settlement_date: detail.settlement_date || '', });
           }}><Edit2 size={13} /> تعديل</button>
         </div>
         <div className="lsd-card__content">
@@ -369,7 +381,6 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
                 <div className="lsd-form-group"><label className="lsd-form-label">مبلغ التسوية</label><input className="lsd-form-input" type="number" value={settlementData.settlement_amount || ''} onChange={e => setSettlementData({ ...settlementData, settlement_amount: e.target.value })} dir="ltr" /></div>
                 <div className="lsd-form-group"><label className="lsd-form-label">التاريخ</label><input className="lsd-form-input" type="date" value={settlementData.settlement_date || ''} onChange={e => setSettlementData({ ...settlementData, settlement_date: e.target.value })} dir="ltr" /></div>
               </div>
-              <div className="lsd-form-group" style={{ marginTop: 8 }}><label className="lsd-form-label">شروط التسوية</label><textarea className="lsd-form-textarea" rows={3} value={settlementData.settlement_terms || ''} onChange={e => setSettlementData({ ...settlementData, settlement_terms: e.target.value })} placeholder="شروط التسوية..." /></div>
               <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
                 <button className="lsd-header-btn" onClick={() => setEditingSettlement(false)}>إلغاء</button>
                 <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleSaveSettlement} disabled={settlementLoading}>{settlementLoading ? 'جارٍ...' : 'حفظ'}</button>
@@ -381,13 +392,24 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
                 <div className="lsd-info-item"><div className="lsd-info-item__icon"><DollarSign size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">مبلغ التسوية</div><div className="lsd-info-item__value">{formatCurrency(detail.settlement_amount)}</div></div></div>
                 {detail.settlement_date && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">التاريخ</div><div className="lsd-info-item__value">{formatDate(detail.settlement_date)}</div></div></div>}
               </div>
-              {detail.settlement_terms && <div className="lsd-notes-section" style={{ marginTop: 12 }}><div className="lsd-notes-section__label">الشروط</div><p className="lsd-description-text">{detail.settlement_terms}</p></div>}
             </div>
           ) : (
             <div className="lsd-empty-state-small"><DollarSign size={22} /><span>لم تُسجَّل تسوية بعد</span></div>
           )}
         </div>
       </div>
+
+      {/* ── شروط التسوية (محتوى غني) ── */}
+      <LegalRichEditorField
+        label="شروط التسوية"
+        icon={Handshake}
+        value={detail.settlement_terms}
+        onSave={handleSaveSettlementTerms}
+        description="نص شروط وبنود التسوية مع الموظف."
+        placeholder="اكتب شروط التسوية..."
+        emptyText="لم تُسجَّل شروط تسوية بعد — اضغط «تعديل» لبدء الكتابة"
+        successMessage="تم حفظ شروط التسوية"
+      />
     </div>
   );
 };

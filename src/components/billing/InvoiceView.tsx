@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Printer, Download, Send } from 'lucide-react';
 import type { CaseInvoice } from '../../types/billing';
+import { invoiceService } from '../../services/invoiceService';
 
 export interface InvoiceViewProps {
   invoice: CaseInvoice;
@@ -16,6 +17,7 @@ export interface InvoiceViewProps {
     address: string;
     iban: string;
     bank: string;
+    taxNumber?: string;
   };
 }
 
@@ -193,12 +195,13 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
             <h1>${firmInfo.name}</h1>
             ${firmInfo.cr ? `<p>سجل تجاري: ${firmInfo.cr}</p>` : ''}
             ${firmInfo.license ? `<p>ترخيص رقم: ${firmInfo.license}</p>` : ''}
+            ${invoice.is_tax_invoice && firmInfo.taxNumber ? `<p>الرقم الضريبي: ${firmInfo.taxNumber}</p>` : ''}
             ${firmInfo.phone ? `<p>هاتف: ${firmInfo.phone}</p>` : ''}
             ${firmInfo.address ? `<p>${firmInfo.address}</p>` : ''}
           </div>
 
           <div class="invoice-title">
-            <h2>فاتورة ضريبية</h2>
+            <h2>${invoice.is_tax_invoice ? 'فاتورة ضريبية' : 'فاتورة'}</h2>
           </div>
 
           <div class="info-section">
@@ -208,6 +211,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
               ${invoice.client?.phone ? `<p><strong>الهاتف:</strong> ${invoice.client.phone}</p>` : ''}
               ${invoice.client?.email ? `<p><strong>البريد:</strong> ${invoice.client.email}</p>` : ''}
               ${invoice.client?.address ? `<p><strong>العنوان:</strong> ${invoice.client.address}</p>` : ''}
+              ${invoice.is_tax_invoice && (invoice.client?.vat_number || invoice.client?.tax_number) ? `<p><strong>الرقم الضريبي:</strong> ${invoice.client?.vat_number || invoice.client?.tax_number}</p>` : ''}
             </div>
             <div class="info-box">
               <h3>بيانات الفاتورة</h3>
@@ -266,10 +270,16 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
             `
                 : ''
             }
+            ${
+              invoice.vat_amount > 0
+                ? `
             <div class="totals-row">
               <span>ضريبة القيمة المضافة (${invoice.vat_rate}%):</span>
               <span>${formatAmount(invoice.vat_amount)} ر.س</span>
             </div>
+            `
+                : ''
+            }
             <div class="totals-row total">
               <span>الإجمالي المستحق:</span>
               <span>${formatAmount(invoice.total_amount)} ر.س</span>
@@ -348,17 +358,22 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
     }
   };
 
-  const handleDownload = () => {
-    const html = generatePrintHTML();
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `فاتورة-${invoice.invoice_number}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  // [BILL-08] التحميل يستدعي الـ PDF الخادمي الحقيقي؛ وعند تعذّره يتراجع لحفظ HTML للمعاينة.
+  const handleDownload = async () => {
+    try {
+      await invoiceService.downloadPdf(invoice.id, invoice.invoice_number);
+    } catch {
+      const html = generatePrintHTML();
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `فاتورة-${invoice.invoice_number}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   };
 
   return (

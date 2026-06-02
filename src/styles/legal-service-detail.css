@@ -17,7 +17,8 @@
     z-index: 40;
     background: var(--dashboard-card);
     border-bottom: 1px solid var(--color-border);
-    padding: 12px 20px;
+    padding: 11px 24px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .lsd-header__top {
@@ -25,6 +26,8 @@
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
+    max-width: 1320px;
+    margin: 0 auto;
 }
 
 /* Back button */
@@ -192,7 +195,7 @@ body.dark .lsd-header-btn--icon {
 .lsd-status-pipeline {
     display: flex;
     align-items: center;
-    padding: 14px 20px;
+    padding: 14px 24px;
     background: var(--dashboard-card);
     border-bottom: 1px solid var(--color-border);
     overflow-x: auto;
@@ -300,7 +303,7 @@ body.dark .lsd-pipeline-step__content:hover {
     display: flex;
     align-items: center;
     gap: 2px;
-    padding: 0 20px;
+    padding: 0 24px;
     background: var(--dashboard-card);
     border-bottom: 1px solid var(--color-border);
     overflow-x: auto;
@@ -351,16 +354,23 @@ body.dark .lsd-pipeline-step__content:hover {
    PAGE LAYOUT
    ====================================================== */
 .lsd-layout {
+    padding: 22px 24px 40px;
+    max-width: 1320px;
+    margin: 0 auto;
+}
+
+/* Work area: main panel + sticky summary aside */
+.lsd-workarea {
     display: grid;
-    grid-template-columns: 1fr 300px;
-    gap: 20px;
-    padding: 20px;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 22px;
     align-items: start;
 }
 
 @media (max-width: 1024px) {
-    .lsd-layout {
+    .lsd-workarea {
         grid-template-columns: 1fr;
+        gap: 16px;
     }
 }
 
@@ -383,6 +393,141 @@ body.dark .lsd-pipeline-step__content:hover {
     .lsd-sidebar {
         position: static;
     }
+}
+
+/* ======================================================
+   SIDE SUMMARY ASIDE (ERP snapshot)
+   ====================================================== */
+.lsd-aside {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: sticky;
+    top: 84px;
+    min-width: 0;
+}
+
+@media (max-width: 1024px) {
+    .lsd-aside {
+        position: static;
+        order: -1;
+    }
+}
+
+.lsd-aside-card {
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.lsd-aside-card__header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    background: var(--quiet-gray-50);
+    border-bottom: 1px solid var(--color-border);
+}
+
+body.dark .lsd-aside-card__header {
+    background: var(--quiet-gray-100);
+}
+
+.lsd-aside-card__header svg {
+    color: var(--law-navy);
+    flex-shrink: 0;
+}
+
+.lsd-aside-card__body {
+    padding: 6px 14px 10px;
+}
+
+.lsd-aside-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 13px;
+}
+
+.lsd-aside-row:last-child {
+    border-bottom: none;
+}
+
+.lsd-aside-row__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.lsd-aside-row__label svg {
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+}
+
+.lsd-aside-row__value {
+    color: var(--color-text);
+    font-weight: 500;
+    text-align: left;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.lsd-aside-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lsd-aside-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    width: 100%;
+}
+
+.lsd-aside-action-btn:hover {
+    border-color: var(--law-navy);
+    background: var(--law-navy-light);
+    color: var(--law-navy);
+}
+
+.lsd-aside-action-btn--primary {
+    background: var(--law-navy);
+    color: #fff;
+    border-color: var(--law-navy);
+}
+
+.lsd-aside-action-btn--primary:hover {
+    background: var(--law-navy-dark, #152A45);
+    border-color: var(--law-navy-dark, #152A45);
+    color: #fff;
 }
 
 /* ======================================================
@@ -1221,6 +1366,25 @@ body.dark .lsd-version-item {
     gap: 4px;
 }
 
+/* Version item rendered as a block (with rich content body) */
+.lsd-version-item--block {
+    display: block;
+    align-items: stretch;
+    padding: 12px 14px;
+}
+
+.lsd-version-item__row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.lsd-version-item__content {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--color-border);
+}
+
 /* ======================================================
    CHECKLIST
    ====================================================== */
@@ -1312,7 +1476,6 @@ body.dark .lsd-checklist-item:hover {
 @media (max-width: 1024px) {
     .lsd-layout {
         padding: 16px;
-        gap: 16px;
     }
 
     .lsd-header__badges,
@@ -1371,7 +1534,7 @@ body.dark .lsd-checklist-item:hover {
    ====================================================== */
 .lsd-info-cards-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
 }
 
@@ -1379,6 +1542,11 @@ body.dark .lsd-checklist-item:hover {
     .lsd-info-cards-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* Denser key-value grid inside info cards */
+.lsd-info-cards-grid .lsd-info-grid {
+    column-gap: 18px;
 }
 
 .lsd-card--full {

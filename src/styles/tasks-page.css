@@ -544,3 +544,60 @@ body.classic .priority-low {
     text-align: center;
     color: var(--color-text-secondary);
 }
+
+/* ==================== Row Actions Menu (النقاط الثلاثة) ==================== */
+.icon-btn.active {
+    border-color: var(--law-navy);
+    color: var(--law-navy);
+    background: var(--quiet-gray-50);
+}
+
+.task-row-menu {
+    background: var(--dashboard-card, #fff);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    z-index: 1001;
+    padding: 4px;
+    font-size: 13px;
+}
+
+.task-menu-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--color-text);
+    font-size: 13px;
+    text-align: right;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+.task-menu-item:hover {
+    background: var(--quiet-gray-50);
+}
+
+.task-menu-item.danger {
+    color: #ef4444;
+}
+
+.task-menu-item.danger:hover {
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.task-menu-sep {
+    height: 1px;
+    background: var(--color-border);
+    margin: 4px 0;
+}
+
+.task-menu-label {
+    padding: 6px 10px 4px;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}

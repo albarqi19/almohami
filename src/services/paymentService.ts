@@ -78,13 +78,14 @@ export class PaymentService {
   }
 
   /**
-   * استرداد دفعة
+   * استرداد دفعة (جزئي أو كامل) — [DATA-03].
    */
   static async refundPayment(
     id: number,
-    reason?: string
+    reason?: string,
+    amount?: number
   ): Promise<PaymentResponse> {
-    return apiClient.post<PaymentResponse>(`/payments/${id}/refund`, { reason });
+    return apiClient.post<PaymentResponse>(`/payments/${id}/refund`, { reason, amount });
   }
 
   /**

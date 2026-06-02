@@ -212,6 +212,7 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 {location.pathname.includes('/sessions') && 'الجلسات'}
                 {location.pathname.includes('/settings') && 'الإعدادات'}
                 {location.pathname.includes('/wekalat') && 'الوكالات'}
+                {location.pathname.includes('/zatca') && 'الفوترة الإلكترونية'}
               </span>
             </nav>
           </div>

@@ -43,3 +43,7 @@ temp/
 tmp/
 .gitignore
 nul
+
+# Claude temp files
+tmpclaude-*
+خطة الفجر

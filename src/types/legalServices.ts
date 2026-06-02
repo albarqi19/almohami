@@ -99,6 +99,7 @@ export interface LegalService {
   description: string | null;
   notes: string | null;
   internal_notes: string | null;
+  work_notes: string | null;
   source: ServiceSource;
   next_action_type: string | null;
   conversion_value: string | null;
@@ -129,6 +130,7 @@ export interface LegalService {
   service_documents?: ServiceDocumentItem[];
   time_entries?: ServiceTimeEntryItem[];
   invoices?: CaseInvoiceItem[];
+  deliverables?: ServiceDeliverableItem[];
   case_model?: { id: number; case_number: string; title: string };
 
   // Computed
@@ -139,7 +141,44 @@ export interface LegalService {
   service_type_arabic?: string;
   priority_arabic?: string;
   billing_type_arabic?: string;
+  onedrive_connected?: boolean;
 }
+
+/** مخرَج رسمي مُولّد لخدمة (PDF/Word) */
+export interface ServiceDeliverableItem {
+  id: number;
+  type: string;
+  type_label: string;
+  format: 'pdf' | 'docx';
+  title: string;
+  file_name: string;
+  file_size: number | null;
+  generated_by: string | null;
+  created_at: string;
+  download_url: string;
+  view_url: string;
+}
+
+/** رابط بوابة العميل/الخصوم White-Label */
+export interface ServicePortalLinkItem {
+  id: number;
+  token: string;
+  audience: 'client' | 'adversary';
+  audience_label: string;
+  recipient_name: string | null;
+  allow_upload: boolean;
+  path: string;
+  is_valid: boolean;
+  expires_at: string | null;
+  revoked_at: string | null;
+  last_accessed_at: string | null;
+  created_at: string;
+}
+
+/** أنواع الخدمات التي يصحّ تحويلها إلى قضية (نزاعات قد تتصاعد للتقاضي) */
+export const CONVERTIBLE_SERVICE_TYPES: ServiceType[] = [
+  'consultation', 'labor', 'legal_notices', 'ip', 'arbitration', 'real_estate', 'contract_drafting',
+];
 
 export interface ConsultationDetail {
   id: number;
@@ -149,13 +188,12 @@ export interface ConsultationDetail {
   scope_definition: string | null;
   client_question: string | null;
   legal_references: LegalReference[] | null;
-  legal_opinion: LegalOpinion | null;
-  legal_opinion_legacy: string | null;
+  // التمثيل الموحّد: نص الرأي القانوني HTML غني (سابقاً legal_opinion_legacy).
+  legal_opinion: string | null;
   opinion_finalized_at: string | null;
   delivery_method: DeliveryMethod | null;
   delivered_at: string | null;
   letterhead_id: number | null;
-  pdf_path: string | null;
 }
 
 export interface LegalReference {
@@ -193,6 +231,30 @@ export interface ContractDraftingDetail {
   termination_notice_date: string | null;
   alert_days_before: number;
   versions?: ContractDraftingVersion[];
+  ai_audit?: ContractAuditResult | null;
+}
+
+/** نتيجة التدقيق الآلي للعقد (AI) */
+export interface ContractAuditFinding {
+  id: string;
+  original_text: string;
+  suggested_text: string;
+  reason: string;
+  legal_reference: string | null;
+  severity: 'high' | 'medium' | 'low';
+  category: string;
+}
+
+export interface ContractAuditResult {
+  status: string;
+  model: string;
+  prompt_version: string;
+  audited_version_number: number | null;
+  audited_at: string;
+  overall_risk: 'low' | 'medium' | 'high';
+  summary: string;
+  missing_clauses: string[];
+  findings: ContractAuditFinding[];
 }
 
 export interface PartyInfo {

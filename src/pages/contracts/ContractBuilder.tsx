@@ -269,7 +269,7 @@ const ContractBuilder: React.FC = () => {
   // اختيار قالب
   const handleSelectTemplate = (template: ContractTemplate) => {
     setSelectedTemplate(template);
-    setContractContent(template.content);
+    setContractContent(template.content || '');
     setContractTitle(template.name);
     setScopeType(template.scope_type);
     setVatRate(template.default_vat_rate);
@@ -344,8 +344,8 @@ const ContractBuilder: React.FC = () => {
       case_id: selectedCase?.id,
       title: contractTitle, // إضافة العنوان المطلوب
       content: contractContent,
-      // تحويل 'both' إلى 'plaintiff' لأن الباك إند لا يقبل 'both'
-      scope_type: scopeType === 'both' ? 'plaintiff' : scopeType,
+      // [CTR-09] الباك إند يدعم 'both' الآن — لا تحويل قسري (لا فقدان للقيمة).
+      scope_type: scopeType,
       total_amount: totalAmount,
       vat_rate: vatRate,
       notes,
@@ -353,7 +353,7 @@ const ContractBuilder: React.FC = () => {
         party_type: 'first',
         entity_type: 'company',
         name: tenantData?.name || 'مكتب المحاماة',
-        commercial_reg: tenantData?.commercial_reg,
+        commercial_registration: tenantData?.commercial_reg,
         phone: tenantData?.phone,
         email: tenantData?.email,
         address: tenantData?.address,
@@ -372,7 +372,8 @@ const ContractBuilder: React.FC = () => {
     }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
-      navigate(`/contracts/${res.data.id}`);
+      queryClient.invalidateQueries({ queryKey: ['finance', 'contracts'] });
+      navigate(`/finance/contracts/${res.data.id}`);
     },
   });
 
@@ -418,7 +419,7 @@ const ContractBuilder: React.FC = () => {
       {/* الهيدر */}
       <div className="builder-header">
         <div className="header-right">
-          <button className="back-btn" onClick={() => navigate('/contracts')}>
+          <button className="back-btn" onClick={() => navigate('/finance/contracts')}>
             <ArrowRight size={20} />
           </button>
           <div>

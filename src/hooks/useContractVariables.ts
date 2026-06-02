@@ -9,21 +9,41 @@ export const CONTRACT_VARIABLES: ContractVariable[] = [
   { key: 'client_phone', label: 'هاتف العميل', category: 'client', description: 'رقم جوال العميل' },
   { key: 'client_email', label: 'بريد العميل', category: 'client', description: 'البريد الإلكتروني للعميل' },
   { key: 'client_address', label: 'عنوان العميل', category: 'client', description: 'العنوان الكامل للعميل' },
+  { key: 'client_city', label: 'مدينة العميل', category: 'client', description: 'مدينة العميل' },
   { key: 'client_nationality', label: 'جنسية العميل', category: 'client', description: 'جنسية العميل' },
+
+  // متغيرات الشركة (إذا كان الطرف شركة)
+  { key: 'company_name', label: 'اسم الشركة', category: 'client', description: 'اسم الشركة الموكِّلة' },
+  { key: 'company_cr', label: 'السجل التجاري للشركة', category: 'client', description: 'رقم السجل التجاري' },
+  { key: 'company_tax_number', label: 'الرقم الضريبي للشركة', category: 'client', description: 'الرقم الضريبي' },
+  { key: 'representative_name', label: 'اسم ممثل الشركة', category: 'client', description: 'اسم الممثل القانوني' },
+  { key: 'representative_id', label: 'هوية ممثل الشركة', category: 'client', description: 'رقم هوية الممثل' },
+  { key: 'representative_position', label: 'منصب ممثل الشركة', category: 'client', description: 'منصب الممثل' },
 
   // متغيرات القضية
   { key: 'case_number', label: 'رقم القضية', category: 'case', description: 'رقم القضية في المحكمة' },
+  { key: 'case_type', label: 'نوع القضية', category: 'case', description: 'نوع القضية' },
   { key: 'court_name', label: 'اسم المحكمة', category: 'case', description: 'اسم المحكمة المختصة' },
+  { key: 'court_city', label: 'مدينة المحكمة', category: 'case', description: 'مدينة/دائرة المحكمة' },
+  { key: 'opponent_name', label: 'اسم الخصم', category: 'case', description: 'اسم الطرف الخصم' },
   { key: 'scope_type', label: 'صفة الموكل', category: 'case', description: 'مدعي أو مدعى عليه' },
+  { key: 'scope_description', label: 'وصف نطاق العمل', category: 'case', description: 'وصف نطاق العمل' },
 
   // متغيرات المالية
   { key: 'first_payment', label: 'الدفعة الأولى', category: 'payment', description: 'مبلغ الدفعة الأولى بالريال' },
+  { key: 'first_payment_text', label: 'الدفعة الأولى كتابةً', category: 'payment', description: 'تفقيط الدفعة الأولى' },
   { key: 'second_payment', label: 'الدفعة الثانية', category: 'payment', description: 'مبلغ الدفعة الثانية بالريال' },
+  { key: 'second_payment_text', label: 'الدفعة الثانية كتابةً', category: 'payment', description: 'تفقيط الدفعة الثانية' },
   { key: 'total_amount', label: 'المبلغ الإجمالي', category: 'payment', description: 'إجمالي قيمة العقد' },
+  { key: 'total_amount_text', label: 'المبلغ الإجمالي كتابةً', category: 'payment', description: 'تفقيط المبلغ الإجمالي' },
   { key: 'percentage', label: 'النسبة المئوية', category: 'payment', description: 'نسبة من الحكم إن وجدت' },
   { key: 'vat_rate', label: 'نسبة الضريبة', category: 'payment', description: 'نسبة ضريبة القيمة المضافة' },
+  { key: 'vat_amount', label: 'مبلغ الضريبة', category: 'payment', description: 'قيمة ضريبة القيمة المضافة' },
+  { key: 'grand_total', label: 'المجموع مع الضريبة', category: 'payment', description: 'الإجمالي شاملاً الضريبة' },
 
   // متغيرات العقد
+  { key: 'today_date', label: 'تاريخ اليوم', category: 'contract', description: 'تاريخ اليوم بالميلادي' },
+  { key: 'today_date_hijri', label: 'تاريخ اليوم هجري', category: 'contract', description: 'تاريخ اليوم بالهجري' },
   { key: 'contract_date', label: 'تاريخ العقد', category: 'contract', description: 'تاريخ العقد بالميلادي' },
   { key: 'contract_date_hijri', label: 'تاريخ العقد هجري', category: 'contract', description: 'تاريخ العقد بالهجري' },
   { key: 'day_name', label: 'اسم اليوم', category: 'contract', description: 'اسم يوم التوقيع' },

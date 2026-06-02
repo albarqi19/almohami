@@ -11,6 +11,7 @@ import { useDynamicList } from '../../../hooks/useDynamicList';
 import type { WorkspaceProps } from './types';
 import type { TrainingAttendee, TrainingMaterial } from '../../../types/legalServices';
 import MicroStatsBar from './MicroStatsBar';
+import LegalRichEditorField from '../LegalRichEditorField';
 
 // ── تسميات عربية ──
 
@@ -138,6 +139,20 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
     finally { setDetailsLoading(false); }
   };
 
+  // حفظ الوصف كمحتوى غني
+  const handleSaveDescription = async (html: string) => {
+    const res = await LegalServiceService.updateTrainingDetails(service.id, { description: html });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر الحفظ');
+    await refreshService();
+  };
+
+  // حفظ الأهداف كمحتوى غني
+  const handleSaveObjectives = async (html: string) => {
+    const res = await LegalServiceService.updateTrainingDetails(service.id, { objectives: html });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر الحفظ');
+    await refreshService();
+  };
+
   const handleGenerateCerts = async () => {
     setCertLoading(true);
     try {
@@ -224,8 +239,6 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
                 training_type: detail.training_type || '',
                 topic: detail.topic || '',
                 topic_category: detail.topic_category || '',
-                description: detail.description || '',
-                objectives: detail.objectives || '',
                 target_audience: detail.target_audience || '',
                 delivery_format: detail.delivery_format || 'in_person',
                 event_date: detail.event_date || '',
@@ -305,14 +318,6 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
                   <label className="lsd-form-label">الحد الأقصى للمتدربين</label>
                   <input className="lsd-form-input" type="number" value={detailsData.max_attendees || ''} onChange={e => setDetailsData({ ...detailsData, max_attendees: e.target.value })} dir="ltr" />
                 </div>
-              </div>
-              <div className="lsd-form-group" style={{ marginTop: 8 }}>
-                <label className="lsd-form-label">الوصف</label>
-                <textarea className="lsd-form-textarea" rows={3} value={detailsData.description || ''} onChange={e => setDetailsData({ ...detailsData, description: e.target.value })} placeholder="وصف التدريب..." />
-              </div>
-              <div className="lsd-form-group" style={{ marginTop: 8 }}>
-                <label className="lsd-form-label">الأهداف</label>
-                <textarea className="lsd-form-textarea" rows={2} value={detailsData.objectives || ''} onChange={e => setDetailsData({ ...detailsData, objectives: e.target.value })} placeholder="أهداف التدريب..." />
               </div>
               <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
                 <button className="lsd-header-btn" onClick={() => setEditingDetails(false)}>إلغاء</button>
@@ -413,22 +418,34 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
                   </div>
                 )}
               </div>
-              {detail.description && (
-                <div className="lsd-notes-section" style={{ marginTop: 12 }}>
-                  <div className="lsd-notes-section__label">الوصف</div>
-                  <p className="lsd-description-text">{detail.description}</p>
-                </div>
-              )}
-              {detail.objectives && (
-                <div className="lsd-notes-section" style={{ marginTop: 12 }}>
-                  <div className="lsd-notes-section__label">الأهداف</div>
-                  <p className="lsd-description-text">{detail.objectives}</p>
-                </div>
-              )}
             </div>
           )}
         </div>
       </div>
+
+      {/* ── الوصف (محتوى غني) ── */}
+      <LegalRichEditorField
+        label="الوصف"
+        icon={FileText}
+        value={detail.description}
+        onSave={handleSaveDescription}
+        description="وصف تفصيلي للتدريب ومحتواه."
+        placeholder="اكتب وصف التدريب..."
+        emptyText="لا يوجد وصف بعد — اضغط «تعديل» لبدء الكتابة"
+        successMessage="تم حفظ الوصف"
+      />
+
+      {/* ── الأهداف (محتوى غني) ── */}
+      <LegalRichEditorField
+        label="الأهداف"
+        icon={GraduationCap}
+        value={detail.objectives}
+        onSave={handleSaveObjectives}
+        description="الأهداف التعليمية المرجوّة من التدريب."
+        placeholder="اكتب أهداف التدريب..."
+        emptyText="لا توجد أهداف بعد — اضغط «تعديل» لبدء الكتابة"
+        successMessage="تم حفظ الأهداف"
+      />
 
       {/* ── بطاقة المتدربين ── */}
       <div className="lsd-card">

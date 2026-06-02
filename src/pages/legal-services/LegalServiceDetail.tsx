@@ -32,7 +32,6 @@ import {
   ArrowRightLeft,
   Receipt,
   X,
-  Edit2,
   Link,
   CheckCircle,
   FileCheck,
@@ -42,15 +41,26 @@ import {
   AlignLeft,
   StickyNote,
   BarChart2,
+  GitCompare,
 } from 'lucide-react';
 
+import { toast } from 'react-toastify';
+
 import { LegalServiceService } from '../../services/legalServiceService';
+import TiptapEditor from '../../components/TiptapEditor';
+import LegalRichEditorField from '../../components/legal-services/LegalRichEditorField';
+import LegalRichText from '../../components/legal-services/LegalRichText';
+import DeliverablesPanel from '../../components/legal-services/DeliverablesPanel';
+import PortalLinksPanel from '../../components/legal-services/PortalLinksPanel';
+import ContractAuditPanel from '../../components/legal-services/ContractAuditPanel';
+import { diffWords, stripHtml, diffSummary } from '../../utils/legalDiff';
 import type {
   LegalService,
   ServiceTimeEntryItem,
   StatusFlowItem,
   ChecklistItem,
   LegalReference,
+  ContractDraftingVersion,
 } from '../../types/legalServices';
 import {
   SERVICE_TYPE_LABELS,
@@ -61,6 +71,7 @@ import {
   DELIVERY_METHOD_LABELS,
   CONTRACT_TYPE_LABELS,
   CONTRACT_LANGUAGE_LABELS,
+  CONVERTIBLE_SERVICE_TYPES,
 } from '../../types/legalServices';
 import { WorkspaceRegistry } from '../../components/legal-services/workspaces';
 import '../../styles/legal-service-detail.css';
@@ -618,12 +629,11 @@ const NewVersionForm: React.FC<NewVersionFormProps> = ({ onSave, onCancel, loadi
     <div className="lsd-inline-form">
       <div className="lsd-form-group">
         <label className="lsd-form-label">محتوى المسودة *</label>
-        <textarea
-          className="lsd-form-textarea"
-          rows={6}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
+        <TiptapEditor
+          content={content}
+          onChange={setContent}
           placeholder="أدخل نص المسودة..."
+          minHeight="280px"
         />
       </div>
       <div className="lsd-form-group">
@@ -688,18 +698,17 @@ const LegalServiceDetail: React.FC = () => {
   } | null>(null);
 
   // ── Consultation state ──
-  const [editingOpinion, setEditingOpinion] = useState(false);
-  const [opinionText, setOpinionText] = useState('');
-  const [opinionLoading, setOpinionLoading] = useState(false);
   const [showAddReference, setShowAddReference] = useState(false);
   const [addRefLoading, setAddRefLoading] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
   const [deliverLoading, setDeliverLoading] = useState(false);
 
   // ── Contract state ──
   const [showNewVersionForm, setShowNewVersionForm] = useState(false);
   const [newVersionLoading, setNewVersionLoading] = useState(false);
   const [checklistLoading, setChecklistLoading] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
+  const [compareA, setCompareA] = useState<number | null>(null);
+  const [compareB, setCompareB] = useState<number | null>(null);
 
   // ── Documents state ──
   const [docLoading, setDocLoading] = useState(false);
@@ -782,9 +791,13 @@ const LegalServiceDetail: React.FC = () => {
     setShowStatusDropdown(false);
     try {
       const res = await LegalServiceService.updateStatus(service.id, newStatus);
-      if (res.success) setService(res.data);
+      if (res.success) {
+        setService(res.data);
+      } else {
+        toast.error('تعذّر تغيير حالة الخدمة');
+      }
     } catch {
-      // ignore
+      toast.error('تعذّر تغيير حالة الخدمة، حاول مرة أخرى');
     }
     setStatusLoading(false);
   };
@@ -796,9 +809,10 @@ const LegalServiceDetail: React.FC = () => {
     try {
       await LegalServiceService.convertToCase(service.id, { title, case_type: caseType });
       setShowConvertModal(false);
+      toast.success('تم تحويل الخدمة إلى قضية بنجاح');
       fetchService();
     } catch {
-      // ignore
+      toast.error('تعذّر تحويل الخدمة إلى قضية، حاول مرة أخرى');
     }
     setConvertLoading(false);
   };
@@ -814,9 +828,10 @@ const LegalServiceDetail: React.FC = () => {
         due_date: dueDate || undefined,
       });
       setShowInvoiceModal(false);
+      toast.success('تم إنشاء الفاتورة بنجاح');
       fetchService();
     } catch {
-      // ignore
+      toast.error('تعذّر إنشاء الفاتورة، حاول مرة أخرى');
     }
     setInvoiceLoading(false);
   };
@@ -828,9 +843,14 @@ const LegalServiceDetail: React.FC = () => {
     setDeleteLoading(true);
     try {
       const res = await LegalServiceService.deleteService(service.id);
-      if (res.success) navigate('/legal-services');
+      if (res.success) {
+        toast.success('تم حذف الخدمة بنجاح');
+        navigate('/legal-services');
+      } else {
+        toast.error('تعذّر حذف الخدمة');
+      }
     } catch {
-      // ignore
+      toast.error('تعذّر حذف الخدمة، حاول مرة أخرى');
     }
     setDeleteLoading(false);
   };
@@ -845,9 +865,11 @@ const LegalServiceDetail: React.FC = () => {
         setActiveTimerEntry(res.data);
         setTimerRunning(true);
         setTimerSeconds(0);
+      } else {
+        toast.error('تعذّر بدء المؤقت');
       }
     } catch {
-      // ignore
+      toast.error('تعذّر بدء المؤقت، حاول مرة أخرى');
     }
     setTimerLoading(false);
   };
@@ -863,7 +885,7 @@ const LegalServiceDetail: React.FC = () => {
       setTimerDescription('');
       fetchService();
     } catch {
-      // ignore
+      toast.error('تعذّر إيقاف المؤقت، حاول مرة أخرى');
     }
     setTimerLoading(false);
   };
@@ -884,25 +906,22 @@ const LegalServiceDetail: React.FC = () => {
         is_billable: billable,
       });
       setShowManualForm(false);
+      toast.success('تم إضافة إدخال الوقت بنجاح');
       fetchService();
     } catch {
-      // ignore
+      toast.error('تعذّر إضافة إدخال الوقت، حاول مرة أخرى');
     }
     setManualTimeLoading(false);
   };
 
   // ── Consultation actions ──
-  const handleSaveOpinion = async () => {
+  const handleSaveOpinion = async (html: string) => {
     if (!service) return;
-    setOpinionLoading(true);
-    try {
-      await LegalServiceService.updateOpinion(service.id, { legal_opinion_legacy: opinionText });
-      setEditingOpinion(false);
-      fetchService();
-    } catch {
-      // ignore
-    }
-    setOpinionLoading(false);
+    const res = await LegalServiceService.updateOpinion(service.id, {
+      legal_opinion: html,
+    });
+    if (!res?.success) throw new Error('تعذّر حفظ الرأي القانوني');
+    await fetchService();
   };
 
   const handleAddReference = async (ref: LegalReference) => {
@@ -911,9 +930,10 @@ const LegalServiceDetail: React.FC = () => {
     try {
       await LegalServiceService.addReference(service.id, ref);
       setShowAddReference(false);
+      toast.success('تم إضافة المرجع القانوني');
       fetchService();
     } catch {
-      // ignore
+      toast.error('تعذّر إضافة المرجع القانوني، حاول مرة أخرى');
     }
     setAddRefLoading(false);
   };
@@ -924,20 +944,8 @@ const LegalServiceDetail: React.FC = () => {
       await LegalServiceService.removeReference(service.id, index);
       fetchService();
     } catch {
-      // ignore
+      toast.error('تعذّر حذف المرجع القانوني، حاول مرة أخرى');
     }
-  };
-
-  const handleGeneratePdf = async () => {
-    if (!service) return;
-    setPdfLoading(true);
-    try {
-      await LegalServiceService.generatePdf(service.id);
-      fetchService();
-    } catch {
-      // ignore
-    }
-    setPdfLoading(false);
   };
 
   const handleMarkDelivered = async () => {
@@ -945,9 +953,14 @@ const LegalServiceDetail: React.FC = () => {
     setDeliverLoading(true);
     try {
       const res = await LegalServiceService.markDelivered(service.id);
-      if (res.success) setService(res.data);
+      if (res.success) {
+        setService(res.data);
+        toast.success('تم تسليم الاستشارة بنجاح');
+      } else {
+        toast.error('تعذّر تسليم الاستشارة');
+      }
     } catch {
-      // ignore
+      toast.error('تعذّر تسليم الاستشارة، حاول مرة أخرى');
     }
     setDeliverLoading(false);
   };
@@ -963,7 +976,7 @@ const LegalServiceDetail: React.FC = () => {
       await LegalServiceService.updateChecklist(service.id, updated);
       fetchService();
     } catch {
-      // ignore
+      toast.error('تعذّر تحديث قائمة الفحص، حاول مرة أخرى');
     }
     setChecklistLoading(false);
   };
@@ -977,9 +990,10 @@ const LegalServiceDetail: React.FC = () => {
         change_summary: summary,
       });
       setShowNewVersionForm(false);
+      toast.success('تم إصدار مسودة جديدة بنجاح');
       fetchService();
     } catch {
-      // ignore
+      toast.error('تعذّر إصدار المسودة الجديدة، حاول مرة أخرى');
     }
     setNewVersionLoading(false);
   };
@@ -992,9 +1006,10 @@ const LegalServiceDetail: React.FC = () => {
       const formData = new FormData();
       formData.append('file', file);
       await LegalServiceService.uploadDocument(service.id, formData);
+      toast.success('تم رفع المستند بنجاح');
       fetchService();
     } catch {
-      // ignore
+      toast.error('تعذّر رفع المستند، حاول مرة أخرى');
     }
     setDocLoading(false);
   };
@@ -1004,9 +1019,10 @@ const LegalServiceDetail: React.FC = () => {
     if (!window.confirm('هل أنت متأكد من حذف هذا المستند؟')) return;
     try {
       await LegalServiceService.removeDocument(service.id, docId);
+      toast.success('تم حذف المستند بنجاح');
       fetchService();
     } catch {
-      // ignore
+      toast.error('تعذّر حذف المستند، حاول مرة أخرى');
     }
   };
 
@@ -1410,98 +1426,21 @@ const LegalServiceDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Legal opinion */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <BookOpen size={15} />
-              الرأي القانوني
-            </div>
-            <button
-              className="lsd-card__action"
-              onClick={() => {
-                setEditingOpinion(true);
-                setOpinionText(detail.legal_opinion_legacy ?? '');
-              }}
-            >
-              <Edit2 size={13} />
-              تعديل
-            </button>
-          </div>
-          <div className="lsd-card__content">
-            {editingOpinion ? (
-              <div>
-                <textarea
-                  className="lsd-form-textarea"
-                  rows={8}
-                  value={opinionText}
-                  onChange={(e) => setOpinionText(e.target.value)}
-                  placeholder="اكتب الرأي القانوني هنا..."
-                />
-                <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
-                  <button className="lsd-header-btn" onClick={() => setEditingOpinion(false)}>
-                    إلغاء
-                  </button>
-                  <button
-                    className="lsd-header-btn lsd-header-btn--primary"
-                    onClick={handleSaveOpinion}
-                    disabled={opinionLoading}
-                  >
-                    {opinionLoading ? 'جارٍ الحفظ...' : 'حفظ'}
-                  </button>
-                </div>
-              </div>
-            ) : detail.legal_opinion ? (
-              <div className="lsd-consultation-opinion">
-                <h3>
-                  <BookOpen size={15} />
-                  الرأي القانوني
-                </h3>
-                {detail.legal_opinion.summary && (
-                  <div className="lsd-opinion-section">
-                    <div className="lsd-opinion-section__title">الملخص</div>
-                    <div className="lsd-opinion-section__content">{detail.legal_opinion.summary}</div>
-                  </div>
-                )}
-                {detail.legal_opinion.analysis && (
-                  <div className="lsd-opinion-section">
-                    <div className="lsd-opinion-section__title">التحليل القانوني</div>
-                    <div className="lsd-opinion-section__content">{detail.legal_opinion.analysis}</div>
-                  </div>
-                )}
-                {detail.legal_opinion.recommendations && (
-                  <div className="lsd-opinion-section">
-                    <div className="lsd-opinion-section__title">التوصيات</div>
-                    <div className="lsd-opinion-section__content">
-                      {detail.legal_opinion.recommendations}
-                    </div>
-                  </div>
-                )}
-                {detail.legal_opinion.risks && (
-                  <div className="lsd-opinion-section">
-                    <div className="lsd-opinion-section__title">المخاطر</div>
-                    <div className="lsd-opinion-section__content">{detail.legal_opinion.risks}</div>
-                  </div>
-                )}
-                {detail.legal_opinion.next_steps && (
-                  <div className="lsd-opinion-section">
-                    <div className="lsd-opinion-section__title">الخطوات القادمة</div>
-                    <div className="lsd-opinion-section__content">{detail.legal_opinion.next_steps}</div>
-                  </div>
-                )}
-              </div>
-            ) : detail.legal_opinion_legacy ? (
-              <div className="lsd-consultation-opinion">
-                <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{detail.legal_opinion_legacy}</p>
-              </div>
-            ) : (
-              <div className="lsd-empty-state-small">
-                <BookOpen size={24} />
-                <span>لم يُضف الرأي القانوني بعد</span>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Legal opinion (rich editor) */}
+        <LegalRichEditorField
+          label="الرأي القانوني"
+          icon={FileText}
+          value={detail.legal_opinion}
+          onSave={handleSaveOpinion}
+          readOnly={!!detail.opinion_finalized_at || !!detail.delivered_at}
+          hint={detail.opinion_finalized_at
+            ? `🔒 الرأي معتمد بتاريخ ${new Date(detail.opinion_finalized_at).toLocaleDateString('ar-SA')} — مقفل ضد التعديل`
+            : undefined}
+          minHeight="320px"
+          placeholder="اكتب الرأي القانوني هنا..."
+          emptyText="لم يُضف الرأي القانوني بعد — اضغط «تعديل» لبدء الكتابة"
+          successMessage="تم حفظ الرأي القانوني"
+        />
 
         {/* References */}
         <div className="lsd-card">
@@ -1587,14 +1526,6 @@ const LegalServiceDetail: React.FC = () => {
         {/* Consultation actions */}
         <div className="lsd-consultation-actions">
           <button
-            className="lsd-header-btn"
-            onClick={handleGeneratePdf}
-            disabled={pdfLoading}
-          >
-            <FileText size={15} />
-            {pdfLoading ? 'جارٍ التوليد...' : 'توليد PDF'}
-          </button>
-          <button
             className="lsd-header-btn lsd-header-btn--primary"
             onClick={handleMarkDelivered}
             disabled={deliverLoading || service.status === 'delivered'}
@@ -1603,6 +1534,9 @@ const LegalServiceDetail: React.FC = () => {
             {deliverLoading ? 'جارٍ...' : 'تسليم الاستشارة'}
           </button>
         </div>
+        <p className="lsd-info-item__value--muted" style={{ fontSize: 12, marginTop: 4 }}>
+          لتوليد خطاب الرأي القانوني الرسمي (PDF) انتقل إلى تبويب «المخرجات».
+        </p>
       </div>
     );
   };
@@ -1625,6 +1559,23 @@ const LegalServiceDetail: React.FC = () => {
     const completedCount = checklist.filter((i) => i.checked).length;
     const progressPct = checklist.length > 0 ? Math.round((completedCount / checklist.length) * 100) : 0;
     const versions = detail.versions ?? [];
+
+    // إصدارات مرتّبة تنازلياً حسب رقم الإصدار (الأحدث أولاً) — بشكل متين
+    const versionsDesc: ContractDraftingVersion[] = [...versions].sort(
+      (a, b) => b.version_number - a.version_number
+    );
+    const latestVersion = versionsDesc[0] ?? null;
+
+    // اختيار افتراضي للمقارنة: A = الإصدار السابق، B = الأحدث
+    const defaultB = versionsDesc[0]?.version_number ?? null;
+    const defaultA = versionsDesc[1]?.version_number ?? null;
+    const selA = compareA ?? defaultA;
+    const selB = compareB ?? defaultB;
+    const vA = versionsDesc.find((v) => v.version_number === selA) ?? null;
+    const vB = versionsDesc.find((v) => v.version_number === selB) ?? null;
+    const diffParts =
+      vA && vB ? diffWords(stripHtml(vA.content), stripHtml(vB.content)) : [];
+    const diffStats = diffSummary(diffParts);
 
     return (
       <div className="lsd-tab-content-stack">
@@ -1773,6 +1724,114 @@ const LegalServiceDetail: React.FC = () => {
           </div>
         )}
 
+        {/* العقد الحالي — أحدث إصدار */}
+        <div className="lsd-card">
+          <div className="lsd-card__header">
+            <div className="lsd-card__title">
+              <FileCheck size={15} />
+              العقد الحالي
+              {latestVersion && (
+                <span className="lsd-tab__count">v{latestVersion.version_number}</span>
+              )}
+            </div>
+          </div>
+          <div className="lsd-card__content">
+            <LegalRichText
+              html={latestVersion?.content}
+              emptyText="لا توجد مسودة بعد"
+            />
+          </div>
+        </div>
+
+        {/* التدقيق الآلي للعقد (AI) */}
+        <ContractAuditPanel
+          serviceId={service.id}
+          versionContent={latestVersion?.content}
+          existingAudit={detail.ai_audit ?? null}
+        />
+
+        {/* مقارنة الإصدارات (redline) */}
+        {versions.length >= 2 && (
+          <div className="lsd-card">
+            <style>{`.lsd-diff{line-height:1.9;font-size:13px;white-space:pre-wrap}.lsd-diff ins{background:#dcfce7;color:#166534;text-decoration:none}.lsd-diff del{background:#fee2e2;color:#991b1b}`}</style>
+            <div className="lsd-card__header">
+              <div className="lsd-card__title">
+                <GitCompare size={15} />
+                مقارنة الإصدارات
+              </div>
+              <button
+                className="lsd-card__action"
+                onClick={() => setShowCompare((v) => !v)}
+              >
+                {showCompare ? 'إخفاء' : 'عرض'}
+              </button>
+            </div>
+            <AnimatePresence>
+              {showCompare && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div className="lsd-card__content">
+                    <div className="lsd-form-row" dir="rtl">
+                      <div className="lsd-form-group">
+                        <label className="lsd-form-label">الإصدار الأقدم</label>
+                        <select
+                          className="lsd-form-input"
+                          value={selA ?? ''}
+                          onChange={(e) => setCompareA(Number(e.target.value))}
+                        >
+                          {versionsDesc.map((v) => (
+                            <option key={v.id} value={v.version_number}>
+                              v{v.version_number}
+                              {v.change_summary ? ` — ${v.change_summary}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="lsd-form-group">
+                        <label className="lsd-form-label">الإصدار الأحدث</label>
+                        <select
+                          className="lsd-form-input"
+                          value={selB ?? ''}
+                          onChange={(e) => setCompareB(Number(e.target.value))}
+                        >
+                          {versionsDesc.map((v) => (
+                            <option key={v.id} value={v.version_number}>
+                              v{v.version_number}
+                              {v.change_summary ? ` — ${v.change_summary}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {vA && vB && (
+                      <>
+                        <div
+                          className="lsd-version-item__meta"
+                          style={{ marginBottom: 8 }}
+                        >
+                          +{diffStats.added} / -{diffStats.removed} كلمة
+                        </div>
+                        <div className="lsd-diff" dir="rtl">
+                          {diffParts.map((part, idx) => {
+                            if (part.type === 'add') return <ins key={idx}>{part.text}</ins>;
+                            if (part.type === 'del') return <del key={idx}>{part.text}</del>;
+                            return <span key={idx}>{part.text}</span>;
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
         {/* Versions */}
         <div className="lsd-card">
           <div className="lsd-card__header">
@@ -1816,27 +1875,34 @@ const LegalServiceDetail: React.FC = () => {
                   return (
                     <div
                       key={ver.id}
-                      className={`lsd-version-item${isCurrent ? ' lsd-version-item--current' : ''}`}
+                      className={`lsd-version-item lsd-version-item--block${isCurrent ? ' lsd-version-item--current' : ''}`}
                     >
-                      <div className="lsd-version-item__badge">v{ver.version_number}</div>
-                      <div className="lsd-version-item__info">
-                        <div className="lsd-version-item__name">
-                          {ver.change_summary ?? `مسودة الإصدار ${ver.version_number}`}
+                      <div className="lsd-version-item__row">
+                        <div className="lsd-version-item__badge">v{ver.version_number}</div>
+                        <div className="lsd-version-item__info">
+                          <div className="lsd-version-item__name">
+                            {ver.change_summary ?? `مسودة الإصدار ${ver.version_number}`}
+                          </div>
+                          <div className="lsd-version-item__meta">
+                            {ver.creator?.name ?? '—'} · {formatDate(ver.created_at)}
+                          </div>
                         </div>
-                        <div className="lsd-version-item__meta">
-                          {ver.creator?.name ?? 'مجهول'} · {formatDate(ver.created_at)}
-                        </div>
+                        <span className={`ls-status-badge ls-status-badge--${ver.status === 'approved' ? 'completed' : ver.status === 'rejected' ? 'cancelled' : 'in_progress'}`}>
+                          <span className="ls-status-badge__dot" />
+                          {ver.status === 'draft'
+                            ? 'مسودة'
+                            : ver.status === 'review'
+                            ? 'مراجعة'
+                            : ver.status === 'approved'
+                            ? 'معتمد'
+                            : 'مرفوض'}
+                        </span>
                       </div>
-                      <span className={`ls-status-badge ls-status-badge--${ver.status === 'approved' ? 'completed' : ver.status === 'rejected' ? 'cancelled' : 'in_progress'}`}>
-                        <span className="ls-status-badge__dot" />
-                        {ver.status === 'draft'
-                          ? 'مسودة'
-                          : ver.status === 'review'
-                          ? 'مراجعة'
-                          : ver.status === 'approved'
-                          ? 'معتمد'
-                          : 'مرفوض'}
-                      </span>
+                      {ver.content && (
+                        <div className="lsd-version-item__content">
+                          <LegalRichText html={ver.content} />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1900,9 +1966,11 @@ const LegalServiceDetail: React.FC = () => {
   const renderDocumentsTab = () => {
     if (!service) return null;
     const docs = service.service_documents ?? [];
+    const oneDriveConnected = service.onedrive_connected !== false;
 
     return (
       <div className="lsd-tab-content-stack">
+        <PortalLinksPanel serviceId={service.id} />
         <div className="lsd-card">
           <div className="lsd-card__header">
             <div className="lsd-card__title">
@@ -1913,13 +1981,24 @@ const LegalServiceDetail: React.FC = () => {
             <button
               className="lsd-card__action"
               onClick={() => fileInputRef.current?.click()}
-              disabled={docLoading}
+              disabled={docLoading || !oneDriveConnected}
+              title={!oneDriveConnected ? 'يلزم ربط OneDrive لرفع المستندات' : undefined}
             >
               <Upload size={13} />
               رفع مستند
             </button>
           </div>
           <div className="lsd-card__content">
+            {!oneDriveConnected && (
+              <div className="lsd-onedrive-warning">
+                <AlertTriangle size={18} />
+                <div>
+                  <strong>OneDrive غير مربوط.</strong> تُرفع مستندات الخدمات القانونية حصراً إلى OneDrive
+                  الخاص بالشركة (مجلد «الخدمات القانونية»). يلزم ربط OneDrive من الإعدادات لتتمكّن من رفع المستندات.
+                </div>
+              </div>
+            )}
+
             <input
               ref={fileInputRef}
               type="file"
@@ -1966,7 +2045,7 @@ const LegalServiceDetail: React.FC = () => {
                   );
                 })}
               </div>
-            ) : (
+            ) : oneDriveConnected ? (
               <label className="lsd-upload-zone" style={{ cursor: 'pointer' }}>
                 <input
                   type="file"
@@ -1984,9 +2063,21 @@ const LegalServiceDetail: React.FC = () => {
                   <strong>اضغط لرفع مستند</strong> أو اسحب الملف هنا
                 </div>
               </label>
+            ) : (
+              <div className="lsd-empty">لا توجد مستندات — اربط OneDrive لبدء رفع المستندات.</div>
             )}
           </div>
         </div>
+
+        <style>{`
+          .lsd-onedrive-warning {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 12px 14px; margin-bottom: 14px;
+            background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px;
+            color: #9a3412; font-size: 13px; line-height: 1.7;
+          }
+          body.dark .lsd-onedrive-warning { background: #2a1c10; border-color: #7c3a12; color: #fdba74; }
+        `}</style>
       </div>
     );
   };
@@ -2297,6 +2388,151 @@ const LegalServiceDetail: React.FC = () => {
     );
   };
 
+  // ── Tab: Notes (التدوين) — shared across all service types ─────────────────
+
+  const renderNotesTab = () => {
+    if (!service) return null;
+    const handleSaveNotes = async (html: string) => {
+      const res = await LegalServiceService.updateWorkNotes(service.id, html);
+      if (!res?.success) throw new Error('تعذّر حفظ دفتر التدوين');
+      await fetchService();
+    };
+    return (
+      <div className="lsd-tab-content-stack">
+        <LegalRichEditorField
+          label="دفتر التدوين"
+          icon={StickyNote}
+          description="ملاحظات ومسودّات العمل الخاصة بهذه الخدمة — تُحفظ بصيغة غنية"
+          value={service.work_notes}
+          minHeight="360px"
+          onSave={handleSaveNotes}
+          successMessage="تم حفظ دفتر التدوين"
+        />
+      </div>
+    );
+  };
+
+  // ── Side summary (ERP snapshot aside) ──────────────────────────────────────
+
+  const renderAside = () => {
+    if (!service) return null;
+    const billingLabel = BILLING_TYPE_LABELS[service.billing_type] ?? service.billing_type;
+    const agreed = service.agreed_amount
+      ? `${parseFloat(service.agreed_amount).toLocaleString('ar-SA')} ريال`
+      : null;
+    const hourly = service.hourly_rate
+      ? `${parseFloat(service.hourly_rate).toLocaleString('ar-SA')} ريال/س`
+      : null;
+    const totalBilled =
+      service.total_billed !== undefined && service.total_billed !== null
+        ? `${Number(service.total_billed).toLocaleString('ar-SA')} ريال`
+        : '—';
+
+    return (
+      <aside className="lsd-aside">
+        {/* Snapshot card */}
+        <div className="lsd-aside-card">
+          <div className="lsd-aside-card__header">
+            <Info size={14} />
+            ملخّص سريع
+          </div>
+          <div className="lsd-aside-card__body">
+            <div className="lsd-aside-row">
+              <span className="lsd-aside-row__label">
+                <User size={13} /> العميل
+              </span>
+              <span className="lsd-aside-row__value">{service.client?.name ?? '—'}</span>
+            </div>
+            <div className="lsd-aside-row">
+              <span className="lsd-aside-row__label">
+                <Scale size={13} /> المحامي
+              </span>
+              <span className="lsd-aside-row__value">
+                {service.assigned_lawyer?.name ?? 'غير محدد'}
+              </span>
+            </div>
+            <div className="lsd-aside-row">
+              <span className="lsd-aside-row__label">الحالة</span>
+              <span className="lsd-aside-row__value">{renderStatusBadge(service.status)}</span>
+            </div>
+            <div className="lsd-aside-row">
+              <span className="lsd-aside-row__label">الأولوية</span>
+              <span className="lsd-aside-row__value">{renderPriorityBadge(service.priority)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Financial snapshot */}
+        <div className="lsd-aside-card">
+          <div className="lsd-aside-card__header">
+            <DollarSign size={14} />
+            المالية
+          </div>
+          <div className="lsd-aside-card__body">
+            <div className="lsd-aside-row">
+              <span className="lsd-aside-row__label">نوع الفوترة</span>
+              <span className="lsd-aside-row__value">{billingLabel}</span>
+            </div>
+            {agreed && (
+              <div className="lsd-aside-row">
+                <span className="lsd-aside-row__label">المبلغ المتفق</span>
+                <span className="lsd-aside-row__value">{agreed}</span>
+              </div>
+            )}
+            {service.billing_type === 'hourly' && hourly && (
+              <div className="lsd-aside-row">
+                <span className="lsd-aside-row__label">سعر الساعة</span>
+                <span className="lsd-aside-row__value">{hourly}</span>
+              </div>
+            )}
+            <div className="lsd-aside-row">
+              <span className="lsd-aside-row__label">إجمالي المفوتر</span>
+              <span className="lsd-aside-row__value">{totalBilled}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Key dates */}
+        <div className="lsd-aside-card">
+          <div className="lsd-aside-card__header">
+            <Calendar size={14} />
+            تواريخ مهمة
+          </div>
+          <div className="lsd-aside-card__body">
+            <div className="lsd-aside-row">
+              <span className="lsd-aside-row__label">البدء</span>
+              <span className="lsd-aside-row__value">{formatDate(service.start_date)}</span>
+            </div>
+            <div className="lsd-aside-row">
+              <span className="lsd-aside-row__label">الاستحقاق</span>
+              <span className="lsd-aside-row__value">{formatDate(service.due_date)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick actions */}
+        <div className="lsd-aside-actions">
+          {!service.case_id && CONVERTIBLE_SERVICE_TYPES.includes(service.service_type) && (
+            <button
+              className="lsd-aside-action-btn"
+              onClick={() => setShowConvertModal(true)}
+            >
+              <ArrowRightLeft size={14} />
+              تحويل لقضية
+            </button>
+          )}
+          <button
+            className="lsd-aside-action-btn lsd-aside-action-btn--primary"
+            onClick={() => setShowInvoiceModal(true)}
+          >
+            <Receipt size={14} />
+            إنشاء فاتورة
+          </button>
+        </div>
+      </aside>
+    );
+  };
+
   // ── Loading & Error states ────────────────────────────────────────────────
 
   if (loading) {
@@ -2350,6 +2586,8 @@ const LegalServiceDetail: React.FC = () => {
   const tabs: { key: string; label: string; icon: any; count?: number }[] = [
     { key: 'info', label: 'المعلومات', icon: Info },
     ...(typeTab ? [typeTab] : []),
+    { key: 'notes', label: 'التدوين', icon: StickyNote },
+    { key: 'deliverables', label: 'المخرجات', icon: FileCheck },
     { key: 'documents', label: 'المستندات', icon: FileText, count: service.service_documents?.length },
     { key: 'time', label: 'تتبع الوقت', icon: Clock, count: service.time_entries?.length },
     { key: 'activities', label: 'الأنشطة', icon: Clock, count: service.service_activities?.length },
@@ -2435,8 +2673,8 @@ const LegalServiceDetail: React.FC = () => {
               </AnimatePresence>
             </div>
 
-            {/* Convert to case (only if not already converted) */}
-            {!service.case_id && (
+            {/* Convert to case (only if convertible type and not already converted) */}
+            {!service.case_id && CONVERTIBLE_SERVICE_TYPES.includes(service.service_type) && (
               <button
                 className="lsd-header-btn"
                 onClick={() => setShowConvertModal(true)}
@@ -2496,25 +2734,32 @@ const LegalServiceDetail: React.FC = () => {
 
       {/* ── Tab Content ── */}
       <div className="lsd-layout">
-        <div className="lsd-main">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              variants={tabVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-            >
-              {activeTab === 'info' && renderInfoTab()}
-              {activeTab === 'consultation' && renderConsultationTab()}
-              {activeTab === 'contract' && renderContractTab()}
-              {activeTab === 'type_detail' && renderTypeDetailTab()}
-              {activeTab === 'documents' && renderDocumentsTab()}
-              {activeTab === 'time' && renderTimeTab()}
-              {activeTab === 'activities' && renderActivitiesTab()}
-              {activeTab === 'invoices' && renderInvoicesTab()}
-            </motion.div>
-          </AnimatePresence>
+        <div className="lsd-workarea">
+          <div className="lsd-main">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                variants={tabVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+              >
+                {activeTab === 'info' && renderInfoTab()}
+                {activeTab === 'consultation' && renderConsultationTab()}
+                {activeTab === 'contract' && renderContractTab()}
+                {activeTab === 'type_detail' && renderTypeDetailTab()}
+                {activeTab === 'notes' && renderNotesTab()}
+                {activeTab === 'deliverables' && (
+                  <DeliverablesPanel serviceId={service.id} serviceType={service.service_type} />
+                )}
+                {activeTab === 'documents' && renderDocumentsTab()}
+                {activeTab === 'time' && renderTimeTab()}
+                {activeTab === 'activities' && renderActivitiesTab()}
+                {activeTab === 'invoices' && renderInvoicesTab()}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+          {renderAside()}
         </div>
       </div>
 

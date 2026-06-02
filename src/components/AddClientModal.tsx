@@ -89,6 +89,13 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
     if (form.phone) payload.phone = form.phone.trim();
     if (form.classification) payload.classification = form.classification;
 
+    // تحقّق الرقم الضريبي (VAT) — مطلوب للفوترة الإلكترونية B2B: 15 رقماً يبدأ وينتهي بـ 3.
+    if (isCompany && form.vat_number.trim() && !/^3\d{13}3$/.test(form.vat_number.trim())) {
+      setModalError('الرقم الضريبي يجب أن يكون 15 رقماً يبدأ وينتهي بالرقم 3 (مطلوب للفوترة الإلكترونية B2B).');
+      setSubmitting(false);
+      return;
+    }
+
     if (isCompany) {
       if (form.commercial_registration) payload.commercial_registration = form.commercial_registration.trim();
       if (form.vat_number) payload.vat_number = form.vat_number.trim();
@@ -114,6 +121,8 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
           email: 'البريد الإلكتروني',
           phone: 'رقم الهاتف',
           entity_type: 'نوع العميل',
+          vat_number: 'الرقم الضريبي',
+          national_address: 'العنوان الوطني',
         };
         msg = Object.entries(err.errors)
           .map(([field, msgs]: [string, any]) => {
@@ -372,8 +381,25 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
                         type="text"
                         value={form.vat_number}
                         onChange={(e) => set('vat_number', e.target.value)}
-                        style={fieldInputStyle}
+                        placeholder="3XXXXXXXXXXXXX3"
+                        dir="ltr"
+                        maxLength={15}
+                        style={{
+                          ...fieldInputStyle,
+                          ...(form.vat_number.trim() && !/^3\d{13}3$/.test(form.vat_number.trim())
+                            ? { borderColor: 'var(--status-red, #dc2626)' }
+                            : {}),
+                        }}
                       />
+                      {form.vat_number.trim() && !/^3\d{13}3$/.test(form.vat_number.trim()) ? (
+                        <span style={{ fontSize: '11px', color: 'var(--status-red, #dc2626)' }}>
+                          15 رقماً تبدأ وتنتهي بالرقم 3
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-secondary, #6b7280)' }}>
+                          مطلوب للفوترة الإلكترونية B2B — 15 رقماً تبدأ وتنتهي بالرقم 3
+                        </span>
+                      )}
                     </div>
                     <div>
                       <label style={fieldLabelStyle}>الصناعة / النشاط</label>

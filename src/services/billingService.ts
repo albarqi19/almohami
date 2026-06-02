@@ -52,10 +52,24 @@ export class BillingService {
   }
 
   /**
-   * الحصول على تنبيهات التحصيل
+   * الحصول على تنبيهات التحصيل (مصفوفة مسطّحة — N-04).
+   * [P4·UX-06] دعم فلاتر اختيارية (الحالة/تذكيرات اليوم/الحدّ).
    */
-  static async getReminders(): Promise<{ success: boolean; data: CollectionReminder[] }> {
-    return apiClient.get<{ success: boolean; data: CollectionReminder[] }>('/billing/reminders');
+  static async getReminders(filters?: {
+    status?: string;
+    type?: string;
+    channel?: string;
+    due_today?: boolean;
+    per_page?: number;
+  }): Promise<{ success: boolean; data: CollectionReminder[] }> {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.type) params.set('type', filters.type);
+    if (filters?.channel) params.set('channel', filters.channel);
+    if (filters?.due_today) params.set('due_today', '1');
+    if (filters?.per_page) params.set('per_page', String(filters.per_page));
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return apiClient.get<{ success: boolean; data: CollectionReminder[] }>(`/billing/reminders${qs}`);
   }
 
   /**
@@ -74,16 +88,31 @@ export class BillingService {
   }
 
   /**
-   * إرسال تنبيه
+   * إرسال تنبيه. القناة اختيارية — عند تركها يستخدم الباك قناة التذكير المُهيّأة.
+   * [P4·UX-06] الباك يقبل channel في [email,whatsapp,sms,internal].
    */
   static async sendReminder(
     reminderId: number,
-    channel: 'email' | 'whatsapp' | 'sms'
+    channel?: 'email' | 'whatsapp' | 'sms' | 'internal'
   ): Promise<{ success: boolean; message: string }> {
     return apiClient.post<{ success: boolean; message: string }>(
       `/billing/reminders/${reminderId}/send`,
-      { channel }
+      channel ? { channel } : {}
     );
+  }
+
+  /**
+   * [P4·UX-11] تقادم الديون (Aging) + DSO من [P2·COL-04].
+   */
+  static async getAging(clientId?: number): Promise<{
+    success: boolean;
+    data: {
+      aging: { current_0_30: number; days_31_60: number; days_61_90: number; days_90_plus: number; total: number };
+      dso: number;
+    };
+  }> {
+    const qs = clientId ? `?client_id=${clientId}` : '';
+    return apiClient.get(`/billing/aging${qs}`);
   }
 
   /**
@@ -114,14 +143,15 @@ export class BillingService {
    * الحصول على تقرير التحصيل
    */
   static async getCollectionReport(params?: {
-    from_date?: string;
-    to_date?: string;
+    start_date?: string;
+    end_date?: string;
   }): Promise<{ success: boolean; data: CollectionReport }> {
     let query = '';
     if (params) {
       const searchParams = new URLSearchParams();
-      if (params.from_date) searchParams.append('from_date', params.from_date);
-      if (params.to_date) searchParams.append('to_date', params.to_date);
+      // [COL-1.5] الباك يتوقّع start_date/end_date (مصدر الحقيقة).
+      if (params.start_date) searchParams.append('start_date', params.start_date);
+      if (params.end_date) searchParams.append('end_date', params.end_date);
       query = searchParams.toString() ? `?${searchParams.toString()}` : '';
     }
     return apiClient.get<{ success: boolean; data: CollectionReport }>(`/billing/report${query}`);
@@ -168,7 +198,7 @@ export class BillingService {
           new_contracts: number;
         };
       };
-    }>(`/billing/yearly-stats/${year}`);
+    }>(`/billing/yearly-stats?year=${year}`);
   }
 
   /**
@@ -176,18 +206,23 @@ export class BillingService {
    */
   static async getTopClients(limit: number = 10): Promise<{
     success: boolean;
+    // [COL-1.6] الباك يُرجِع total_paid/total_invoiced (لا total_due).
     data: {
-      client: { id: number; name: string };
-      total_due: number;
-      invoices_count: number;
+      id: number;
+      name: string;
+      total_paid: number;
+      total_invoiced: number;
+      client_contracts_count?: number;
     }[];
   }> {
     return apiClient.get<{
       success: boolean;
       data: {
-        client: { id: number; name: string };
-        total_due: number;
-        invoices_count: number;
+        id: number;
+        name: string;
+        total_paid: number;
+        total_invoiced: number;
+        client_contracts_count?: number;
       }[];
     }>(`/billing/top-clients?limit=${limit}`);
   }
@@ -223,4 +258,5 @@ export const billingService = {
   getYearlyStats: BillingService.getYearlyStats,
   getTopClients: BillingService.getTopClients,
   updateOverdueStatuses: BillingService.updateOverdueStatuses,
+  getAging: BillingService.getAging,
 };

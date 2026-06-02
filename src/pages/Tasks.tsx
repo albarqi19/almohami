@@ -13,7 +13,9 @@ import {
   ChevronDown,
   User,
   Layers,
-  Archive
+  Archive,
+  Trash2,
+  Pencil
 } from 'lucide-react';
 import {
   DndContext,
@@ -40,6 +42,7 @@ import type { Task, TaskStatus, Priority } from '../types';
 import { TaskService } from '../services/taskService';
 import { UserService } from '../services/UserService';
 import AddTaskModal from '../components/AddTaskModal';
+import EditTaskModal from '../components/EditTaskModal';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { TasksCache, UsersCache } from '../utils/tasksCache';
 import '../styles/tasks-page.css';
@@ -159,6 +162,12 @@ const Tasks: React.FC = () => {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+  // قائمة الإجراءات (زر النقاط الثلاثة)
+  const [menu, setMenu] = useState<{ task: Task; top: number; left: number; openUp: boolean } | null>(null);
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [deleteTask, setDeleteTask] = useState<Task | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     // تحميل البيانات دائماً عند فتح الصفحة لضمان التحديث
     loadTasks();
@@ -263,6 +272,52 @@ const Tasks: React.FC = () => {
 
   const getTasksByStatus = (status: TaskStatus) => {
     return getFilteredTasks().filter(t => t.status === status);
+  };
+
+  // --- Row Actions (قائمة النقاط الثلاثة) ---
+
+  const openTaskMenu = (e: React.MouseEvent, task: Task) => {
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const MENU_W = 210;
+    const MENU_H = 320; // تقدير لاختيار اتجاه الفتح
+    const openUp = rect.bottom + MENU_H > window.innerHeight;
+    const left = Math.max(8, rect.right - MENU_W);
+    const top = openUp ? rect.top - 4 : rect.bottom + 4;
+    // toggle: الضغط على نفس الزر يغلق القائمة
+    setMenu(prev => (prev?.task.id === task.id ? null : { task, top, left, openUp }));
+  };
+
+  const changeStatus = async (task: Task, status: TaskStatus) => {
+    setMenu(null);
+    if (task.status === status) return;
+    // تحديث متفائل
+    const updated = tasks.map(t => (t.id === task.id ? { ...t, status } : t));
+    setTasks(updated);
+    TasksCache.set(updated);
+    try {
+      await TaskService.updateTaskStatus(task.id, status);
+    } catch (err) {
+      console.error('Failed to update task status', err);
+      loadTasks(); // التراجع عند الفشل
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTask) return;
+    setDeleting(true);
+    try {
+      await TaskService.deleteTask(deleteTask.id);
+      const updated = tasks.filter(t => t.id !== deleteTask.id);
+      setTasks(updated);
+      TasksCache.set(updated);
+      setDeleteTask(null);
+    } catch (err) {
+      console.error('Failed to delete task', err);
+      alert('فشل حذف المهمة. حاول مرة أخرى.');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // --- Render Views ---
@@ -391,7 +446,11 @@ const Tasks: React.FC = () => {
                         ) : '-'}
                       </td>
                       <td>
-                        <button className="icon-btn" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          className={`icon-btn ${menu?.task.id === task.id ? 'active' : ''}`}
+                          onClick={(e) => openTaskMenu(e, task)}
+                          title="خيارات"
+                        >
                           <MoreHorizontal size={16} />
                         </button>
                       </td>
@@ -585,6 +644,101 @@ const Tasks: React.FC = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onTaskAdded={loadTasks}
+      />
+
+      {/* قائمة إجراءات الصف (النقاط الثلاثة) */}
+      {menu && (
+        <>
+          <div
+            onClick={() => setMenu(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 1000 }}
+          />
+          <div
+            role="menu"
+            className="task-row-menu"
+            style={{
+              position: 'fixed',
+              top: menu.top,
+              left: menu.left,
+              width: 210,
+              transform: menu.openUp ? 'translateY(-100%)' : 'none',
+            }}
+          >
+            <button
+              className="task-menu-item"
+              onClick={() => { setEditTask(menu.task); setMenu(null); }}
+            >
+              <Pencil size={14} /> تعديل المهمة
+            </button>
+
+            <div className="task-menu-sep" />
+            <div className="task-menu-label">تغيير الحالة إلى</div>
+            {TASK_STATUSES.filter(s => s.key !== menu.task.status).map(s => (
+              <button
+                key={s.key}
+                className="task-menu-item"
+                onClick={() => changeStatus(menu.task, s.key)}
+              >
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+                {s.label}
+              </button>
+            ))}
+
+            <div className="task-menu-sep" />
+            <button
+              className="task-menu-item danger"
+              onClick={() => { setDeleteTask(menu.task); setMenu(null); }}
+            >
+              <Trash2 size={14} /> حذف المهمة
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* تأكيد الحذف */}
+      {deleteTask && (
+        <div
+          onClick={() => !deleting && setDeleteTask(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--dashboard-card, #fff)', borderRadius: 12, padding: 24, width: 380, maxWidth: '90vw', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Trash2 size={20} color="#ef4444" />
+              </div>
+              <h3 style={{ margin: 0, fontSize: 16, color: 'var(--color-text)' }}>حذف المهمة</h3>
+            </div>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, lineHeight: 1.7, marginBottom: 22 }}>
+              هل أنت متأكد من حذف المهمة «<strong style={{ color: 'var(--color-text)' }}>{deleteTask.title}</strong>»؟ لا يمكن التراجع عن هذا الإجراء.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: deleting ? 'default' : 'pointer', fontSize: 14, fontWeight: 600, opacity: deleting ? 0.7 : 1 }}
+              >
+                {deleting ? 'جارٍ الحذف...' : 'نعم، احذف'}
+              </button>
+              <button
+                onClick={() => setDeleteTask(null)}
+                disabled={deleting}
+                style={{ background: 'transparent', color: 'var(--color-text)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '9px 18px', cursor: deleting ? 'default' : 'pointer', fontSize: 14 }}
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <EditTaskModal
+        isOpen={!!editTask}
+        onClose={() => setEditTask(null)}
+        task={editTask}
+        onTaskUpdated={() => { setEditTask(null); loadTasks(); }}
       />
 
     </div>

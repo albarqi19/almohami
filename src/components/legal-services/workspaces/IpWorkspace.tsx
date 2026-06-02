@@ -3,13 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Edit2, Plus, X, Calendar, Hash, Clock,
   FileText, Check, Building2, Search, AlertTriangle,
-  Flag, Globe, Tag, Eye, DollarSign, Layers,
+  Flag, Globe, Tag, Eye, DollarSign, Layers, Trash2,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
 import type { WorkspaceProps } from './types';
 import MicroStatsBar from './MicroStatsBar';
 import ContextualAlert from './ContextualAlert';
+import LegalRichEditorField from '../LegalRichEditorField';
 
 // ── تسميات عربية ──
 
@@ -94,6 +95,24 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
     finally { setDetailsLoading(false); }
   };
 
+  const handleSaveDescription = async (html: string) => {
+    const res = await LegalServiceService.updateIpInfo(service.id, {
+      ip_type: detail.ip_type || '',
+      ip_title: detail.ip_title || '',
+      owner_name: detail.owner_name || '',
+      owner_id_number: detail.owner_id_number || '',
+      registration_office: detail.registration_office || '',
+      application_number: detail.application_number || '',
+      application_date: detail.application_date || '',
+      registration_number: detail.registration_number || '',
+      registration_date: detail.registration_date || '',
+      expiry_date: detail.expiry_date || '',
+      ip_description: html,
+    });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر الحفظ');
+    await refreshService();
+  };
+
   const handleAddSearch = async () => {
     if (!newSearch.similar_mark?.trim()) { toast.error('يرجى إدخال العلامة المشابهة'); return; }
     setAddSearchLoading(true);
@@ -124,6 +143,15 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
     finally { setAddObjectionLoading(false); }
   };
 
+  const handleRemoveObjection = async (idx: number) => {
+    if (!window.confirm('هل تريد حذف هذا الاعتراض؟')) return;
+    try {
+      const res = await LegalServiceService.removeIpObjection(service.id, idx);
+      if (res.success) { toast.success('تم حذف الاعتراض'); await refreshService(); }
+      else toast.error(res.message || 'حدث خطأ');
+    } catch { toast.error('حدث خطأ'); }
+  };
+
   const handleAddInfringement = async () => {
     if (!newInfringement.infringer?.trim()) { toast.error('يرجى إدخال اسم المتعدي'); return; }
     setAddInfringementLoading(true);
@@ -133,6 +161,15 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
       else toast.error(res.message || 'حدث خطأ');
     } catch { toast.error('حدث خطأ'); }
     finally { setAddInfringementLoading(false); }
+  };
+
+  const handleRemoveInfringement = async (idx: number) => {
+    if (!window.confirm('هل تريد حذف هذا التعدي؟')) return;
+    try {
+      const res = await LegalServiceService.removeIpInfringement(service.id, idx);
+      if (res.success) { toast.success('تم حذف التعدي'); await refreshService(); }
+      else toast.error(res.message || 'حدث خطأ');
+    } catch { toast.error('حدث خطأ'); }
   };
 
   return (
@@ -163,7 +200,7 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
             setEditingDetails(true);
             setDetailsData({
               ip_type: detail.ip_type || '', ip_title: detail.ip_title || '',
-              ip_description: detail.ip_description || '', owner_name: detail.owner_name || '',
+              owner_name: detail.owner_name || '',
               owner_id_number: detail.owner_id_number || '', registration_office: detail.registration_office || '',
               application_number: detail.application_number || '', application_date: detail.application_date || '',
               registration_number: detail.registration_number || '', registration_date: detail.registration_date || '',
@@ -186,7 +223,6 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
                 <div className="lsd-form-group"><label className="lsd-form-label">تاريخ التسجيل</label><input className="lsd-form-input" type="date" value={detailsData.registration_date || ''} onChange={e => setDetailsData({ ...detailsData, registration_date: e.target.value })} dir="ltr" /></div>
                 <div className="lsd-form-group"><label className="lsd-form-label">تاريخ الانتهاء</label><input className="lsd-form-input" type="date" value={detailsData.expiry_date || ''} onChange={e => setDetailsData({ ...detailsData, expiry_date: e.target.value })} dir="ltr" /></div>
               </div>
-              <div className="lsd-form-group" style={{ marginTop: 8 }}><label className="lsd-form-label">وصف الملكية</label><textarea className="lsd-form-textarea" rows={3} value={detailsData.ip_description || ''} onChange={e => setDetailsData({ ...detailsData, ip_description: e.target.value })} placeholder="وصف الملكية الفكرية..." /></div>
               <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
                 <button className="lsd-header-btn" onClick={() => setEditingDetails(false)}>إلغاء</button>
                 <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleSaveDetails} disabled={detailsLoading}>{detailsLoading ? 'جارٍ...' : 'حفظ'}</button>
@@ -206,12 +242,22 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
                 {detail.registration_date && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">تاريخ التسجيل</div><div className="lsd-info-item__value">{formatDate(detail.registration_date)}</div></div></div>}
                 {detail.expiry_date && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">تاريخ الانتهاء</div><div className="lsd-info-item__value">{formatDate(detail.expiry_date)}</div></div></div>}
               </div>
-              {detail.ip_description && <div className="lsd-notes-section" style={{ marginTop: 12 }}><div className="lsd-notes-section__label">الوصف</div><p className="lsd-description-text">{detail.ip_description}</p></div>}
               {!detail.ip_title && !detail.ip_type && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُضف تفاصيل الملكية الفكرية بعد</div>}
             </div>
           )}
         </div>
       </div>
+
+      {/* ── بطاقة وصف الملكية الفكرية (محرّر غني) ── */}
+      <LegalRichEditorField
+        label="وصف الملكية الفكرية"
+        icon={FileText}
+        value={detail.ip_description}
+        onSave={handleSaveDescription}
+        placeholder="اكتب وصفاً تفصيلياً للملكية الفكرية..."
+        emptyText="لا يوجد وصف بعد — اضغط «تعديل» لبدء الكتابة"
+        successMessage="تم حفظ وصف الملكية الفكرية"
+      />
 
       {/* ── بطاقة تصنيفات نيس (للعلامات التجارية فقط) ── */}
       {detail.ip_type === 'trademark' && (
@@ -371,6 +417,7 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
                       </span>
                     )}
                     {item.outcome && <span style={{ fontSize: 12, color: 'var(--quiet-gray-500)' }}>{item.outcome}</span>}
+                    <button className="lsd-doc-action-btn" onClick={() => handleRemoveObjection(idx)} title="حذف الاعتراض"><Trash2 size={13} /></button>
                   </div>
                 );
               })}
@@ -429,6 +476,7 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
                       {INFRINGEMENT_STATUS_LABELS[item.status] || item.status}
                     </span>
                   )}
+                  <button className="lsd-doc-action-btn" onClick={() => handleRemoveInfringement(idx)} title="حذف التعدي"><Trash2 size={13} /></button>
                 </div>
               ))}
             </div>

@@ -73,22 +73,39 @@ export class ContractService {
   }
 
   /**
-   * تحميل العقد كـ PDF
+   * [CTR-14] تحميل العقد كـ PDF خادمي متّسق (mpdf) — يجلب الملف blob ويحفظه مباشرةً
+   * (لا توليد بالمتصفّح). يحترم API_BASE_URL الإنتاجي وتوكن المصادقة.
    */
-  static async downloadPdf(id: number): Promise<{ success: boolean; data: { url: string } }> {
-    return apiClient.get<{ success: boolean; data: { url: string } }>(`/contracts/${id}/pdf`);
+  static async downloadPdf(id: number, fileName?: string): Promise<void> {
+    const baseUrl = (import.meta as any).env?.VITE_API_URL || 'https://api.alraedlaw.com/api/v1';
+    const token = localStorage.getItem('authToken');
+    const res = await fetch(`${baseUrl}/contracts/${id}/pdf`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      throw new Error('تعذّر تحميل ملف العقد');
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName || `contract-${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
   }
 
   /**
-   * إرسال العقد للعميل
+   * [CTR-06] إرسال العقد للعميل عبر القناة المحددة (method موحّد مع الباك).
    */
   static async sendContract(
     id: number,
-    channel: 'email' | 'whatsapp',
+    method: 'email' | 'whatsapp',
     message?: string
   ): Promise<{ success: boolean; message: string }> {
     return apiClient.post<{ success: boolean; message: string }>(`/contracts/${id}/send`, {
-      channel,
+      method,
       message,
     });
   }

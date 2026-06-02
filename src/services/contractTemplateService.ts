@@ -55,10 +55,32 @@ export class ContractTemplateService {
   }
 
   /**
-   * الحصول على متغيرات القالب
+   * [TPL-T06] الحصول على متغيرات القالب — نوع الإرجاع يطابق كائن الباك فعلاً.
    */
-  static async getVariables(id: number): Promise<{ success: boolean; data: string[] }> {
-    return apiClient.get<{ success: boolean; data: string[] }>(`/contract-templates/${id}/variables`);
+  static async getVariables(id: number): Promise<{
+    success: boolean;
+    data: {
+      default_variables: Record<string, string>;
+      custom_variables: Record<string, unknown>;
+      merged_variables: Record<string, string>;
+      used_variables: string[];
+    };
+  }> {
+    return apiClient.get(`/contract-templates/${id}/variables`);
+  }
+
+  /**
+   * [TPL-T11] تصدير قالب إلى JSON.
+   */
+  static async exportTemplate(id: number): Promise<{ success: boolean; data: Record<string, unknown> }> {
+    return apiClient.get(`/contract-templates/${id}/export`);
+  }
+
+  /**
+   * [TPL-T11] استيراد قالب من JSON (داخل المستأجر).
+   */
+  static async importTemplate(data: Record<string, unknown>): Promise<ContractTemplateResponse> {
+    return apiClient.post<ContractTemplateResponse>('/contract-templates/import', data);
   }
 
   /**
@@ -109,6 +131,8 @@ export const contractTemplateService = {
   updateTemplate: ContractTemplateService.updateTemplate.bind(ContractTemplateService),
   deleteTemplate: ContractTemplateService.deleteTemplate.bind(ContractTemplateService),
   getVariables: ContractTemplateService.getVariables.bind(ContractTemplateService),
+  exportTemplate: ContractTemplateService.exportTemplate.bind(ContractTemplateService),
+  importTemplate: ContractTemplateService.importTemplate.bind(ContractTemplateService),
   preview: ContractTemplateService.preview.bind(ContractTemplateService),
   duplicate: ContractTemplateService.duplicate.bind(ContractTemplateService),
   getActiveTemplates: ContractTemplateService.getActiveTemplates.bind(ContractTemplateService),

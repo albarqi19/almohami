@@ -1,7 +1,7 @@
 import {
   Home, FileText, FileCheck, Calendar, Scale, Briefcase, Users, Clock, CheckSquare,
   BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature, Receipt, CreditCard,
-  TrendingUp, Bell, Settings, ClipboardList, BarChart3, FolderUp,
+  TrendingUp, Bell, Settings, ClipboardList, BarChart3, FolderUp, QrCode,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -20,6 +20,11 @@ export interface SidebarItem {
   any?: string[];
   /** legacy fallback أثناء الانتقال */
   roles?: string[];
+  /**
+   * بوّابة ميزة — تُخفي العنصر تماماً حتى تكون الميزة متاحة للمنشأة.
+   * 'zatca' يُقرأ من useZatcaFeature() (context) داخل ClickUpSidebar — لا hook هنا (هذا ملف بيانات).
+   */
+  featureGate?: 'zatca';
 }
 
 /**
@@ -46,17 +51,18 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: Users, label: 'العملاء', path: '/clients', permission: 'clients.view' },
   { icon: ClipboardList, label: 'الطلبات الإدارية', path: '/admin/requests', permission: 'cases.view' },
   { icon: ShieldCheck, label: 'الاستعلام والتحقق', path: '/wathq', any: ['cases.view'] },
-  { icon: FileSignature, label: 'العقود', path: '/contracts', permission: 'contracts.view' },
-  { icon: FileText, label: 'قوالب العقود', path: '/contract-templates', permission: 'contracts.templates.manage' },
-  { icon: Receipt, label: 'الفواتير', path: '/invoices', permission: 'billing.view' },
-  { icon: CreditCard, label: 'المدفوعات', path: '/payments', permission: 'billing.payments.manage' },
-  { icon: TrendingUp, label: 'التحصيل', path: '/billing', permission: 'billing.view' },
+  // [P4·UX-01] وحدة موحّدة بدل خمسة عناصر (العقود/قوالب العقود/الفواتير/المدفوعات/التحصيل).
+  // any: يمنح المحامي وصول تبويب العقود حتى لو لم تكن له billing.view (التبويبات تُحرَس داخلياً — UX-07).
+  { icon: FileSignature, label: 'العقود والمالية', path: '/finance', any: ['billing.view', 'contracts.view'] },
+  { icon: QrCode, label: 'الفوترة الإلكترونية', path: '/zatca', roles: ['admin', 'accountant', 'owner'], featureGate: 'zatca' },
 ];
 
 /**
  * عناصر قسم الإعدادات.
  */
 export const settingsMenuItems: SidebarItem[] = [
+  // [P4·UX-09] القوالب نادرة الاستخدام → نُقلت من القائمة الرئيسية إلى الإعدادات.
+  { icon: FileText, label: 'قوالب العقود', path: '/settings/contract-templates', permission: 'contracts.templates.manage' },
   { icon: BarChart3, label: 'تقرير الأداء', path: '/lawyers-report', permission: 'reports.view' },
   { icon: Users, label: 'المستخدمين', path: '/users', permission: 'users.view' },
   { icon: Bell, label: 'التنبيهات', path: '/notifications', permission: null },

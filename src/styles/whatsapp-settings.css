@@ -6,16 +6,14 @@
 /* === Page Layout === */
 .whatsapp-page {
     background-color: var(--dashboard-bg);
-    min-height: 100vh;
+    height: calc(100vh - 64px);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
-/* === Header - Sticky === */
+/* === Header === */
 .whatsapp-header {
-    position: sticky;
-    top: 0;
-    z-index: 10;
     padding: 16px 20px;
     border-bottom: 1px solid var(--color-border);
     background: var(--dashboard-card);
@@ -96,60 +94,116 @@
     cursor: not-allowed;
 }
 
-/* === Tabs Navigation === */
-.whatsapp-tabs {
+/* === Tabs Sidebar Navigation === */
+.whatsapp-layout {
     display: flex;
-    gap: 0;
-    padding: 0 20px;
-    background: var(--dashboard-card);
-    border-bottom: 1px solid var(--color-border);
-    overflow-x: auto;
+    flex: 1;
 }
 
-.whatsapp-tab {
+.whatsapp-sidebar {
+    width: 250px;
+    background: var(--color-surface-subtle, rgba(0,0,0,0.01));
+    border-left: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-shrink: 0;
+    position: sticky;
+    top: 70px;
+    height: calc(100vh - 70px);
+    overflow-y: auto;
+}
+
+.whatsapp-sidebar__menu {
+    padding: 16px 8px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.whatsapp-sidebar__title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    padding: 0 12px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.whatsapp-sidebar-tab {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 12px 16px;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 2px;
+    border-radius: 6px;
     border: none;
     background: transparent;
-    color: var(--color-text-secondary);
+    color: var(--color-text);
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    white-space: nowrap;
-    transition: all var(--transition-fast);
-    position: relative;
+    text-align: right;
+    transition: all var(--transition-fast, 150ms);
+    box-sizing: border-box;
 }
 
-.whatsapp-tab:hover {
-    color: var(--law-navy);
+.whatsapp-sidebar-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.whatsapp-tab--active {
-    color: var(--law-navy);
+.whatsapp-sidebar-tab:hover {
+    background: rgba(0, 0, 0, 0.03);
 }
 
-.whatsapp-tab--active::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: var(--law-navy);
+body.dark .whatsapp-sidebar-tab:hover {
+    background: rgba(255, 255, 255, 0.05);
 }
 
-.whatsapp-tab svg {
-    width: 14px;
-    height: 14px;
+.whatsapp-sidebar-tab--active {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.whatsapp-sidebar-tab svg {
+    flex-shrink: 0;
+}
+
+.whatsapp-sidebar-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--color-text-secondary);
+}
+
+body.dark .whatsapp-sidebar-badge {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.whatsapp-sidebar-tab--active .whatsapp-sidebar-badge {
+    background: var(--color-primary);
+    color: white;
 }
 
 /* === Main Content Area === */
-.whatsapp-content {
+.whatsapp-main {
     flex: 1;
-    padding: 16px 20px;
     overflow-y: auto;
+    background: var(--dashboard-bg);
+}
+
+.whatsapp-main-container {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
 /* === Section Card === */
@@ -828,55 +882,273 @@ body.dark .whatsapp-schedule-row__time {
 }
 .wa-icon-btn:hover { background: var(--quiet-gray-100); color: var(--color-text); }
 
-/* ── Send Layout ── */
-.wa-send-layout {
-    display: grid;
-    grid-template-columns: 1fr 280px;
-    gap: 20px;
-}
-@media (max-width: 768px) { .wa-send-layout { grid-template-columns: 1fr; } }
-
-.wa-send-card {
-    background: var(--dashboard-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 20px;
-}
-.wa-send-card__title {
+/* ── Send Mode Selection ── */
+.wa-send-modes {
     display: flex;
-    align-items: center;
     gap: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--color-heading);
-    margin-bottom: 12px;
+    margin-bottom: 16px;
+    background: var(--quiet-gray-100);
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
 }
-
-.wa-send-btn {
+body.dark .wa-send-modes {
+    background: var(--quiet-gray-200);
+}
+.wa-send-mode-btn {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    width: 100%;
-    margin-top: 16px;
-    padding: 10px;
+    padding: 8px 12px;
     border-radius: 6px;
     border: none;
-    background: #25d366;
-    color: white;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
+    color: var(--color-text-secondary);
+    background: transparent;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s ease;
 }
-.wa-send-btn:hover:not(:disabled) { background: #1ebe57; }
-.wa-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.wa-send-mode-btn:hover {
+    color: var(--color-text);
+}
+.wa-send-mode-btn--active {
+    background: var(--dashboard-card);
+    color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+body.dark .wa-send-mode-btn--active {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
 
-.wa-send-tips {
+/* ── Selected Client Profile Card ── */
+.wa-selected-client-card {
+    background: var(--quiet-gray-50);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 14px;
 }
+body.dark .wa-selected-client-card {
+    background: rgba(255,255,255,0.02);
+}
+.wa-selected-client-card__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+}
+.wa-selected-client-card__avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+.wa-selected-client-card__details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+.wa-selected-client-card__name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-heading);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.wa-selected-client-card__phone {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    font-family: monospace;
+}
+.wa-selected-client-card__remove {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.wa-selected-client-card__remove:hover {
+    background: var(--status-red-light, rgba(239, 68, 68, 0.08));
+    color: var(--status-red, #ef4444);
+    border-color: transparent;
+}
+
+/* ── WhatsApp Phone Simulator Mockup ── */
+.wa-phone-mockup {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    overflow: hidden;
+    height: 380px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+}
+body.dark .wa-phone-mockup {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.wa-phone-header {
+    background: #075e54;
+    color: white;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    direction: rtl;
+}
+body.dark .wa-phone-header {
+    background: #1f2c34;
+}
+.wa-phone-header__back {
+    display: flex;
+    align-items: center;
+    color: white;
+    opacity: 0.8;
+}
+.wa-phone-header__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+.wa-phone-header__info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    flex: 1;
+}
+.wa-phone-header__name {
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.wa-phone-header__status {
+    font-size: 10px;
+    opacity: 0.8;
+}
+
+.wa-phone-chat-bg {
+    flex: 1;
+    background-color: #efeae2;
+    background-image: radial-gradient(rgba(0,0,0,0.06) 1px, transparent 0),
+                      radial-gradient(rgba(0,0,0,0.06) 1px, transparent 0);
+    background-size: 8px 8px;
+    background-position: 0 0, 4px 4px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow-y: auto;
+    direction: ltr;
+}
+body.dark .wa-phone-chat-bg {
+    background-color: #0b141a;
+    background-image: radial-gradient(rgba(255,255,255,0.02) 1px, transparent 0),
+                      radial-gradient(rgba(255,255,255,0.02) 1px, transparent 0);
+}
+.wa-chat-bubble-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.wa-chat-bubble {
+    max-width: 85%;
+    padding: 8px 10px 6px;
+    border-radius: 7.5px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    position: relative;
+    box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+    word-break: break-word;
+}
+.wa-chat-bubble.outbound {
+    background: #d9fdd3;
+    color: #111b21;
+    align-self: flex-end;
+    border-top-right-radius: 0;
+    direction: rtl;
+    text-align: right;
+}
+body.dark .wa-chat-bubble.outbound {
+    background: #005c4b;
+    color: #e9edef;
+}
+.wa-chat-bubble__text {
+    margin-bottom: 4px;
+}
+.wa-chat-bubble__meta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    margin-top: 2px;
+}
+.wa-chat-bubble__time {
+    font-size: 9px;
+    color: #667781;
+}
+body.dark .wa-chat-bubble__time {
+    color: #8696a0;
+}
+.wa-chat-bubble__ticks {
+    display: flex;
+    align-items: center;
+    color: #53bdeb;
+}
+
+.wa-send-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #25d366;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.wa-send-btn:hover:not(:disabled) {
+    background: #20ba59;
+}
+.wa-send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .wa-tip {
     display: flex;
     align-items: flex-start;
@@ -1092,177 +1364,733 @@ body.dark .whatsapp-schedule-row__time {
 .wa-pagination button:disabled { opacity: 0.3; cursor: not-allowed; }
 
 /* ═══════════════════════════════════════════════
-   WhatsApp Instance Card - Professional ERP Style
+   WhatsApp Redesign - Modern ERP Sidebar & Flat Cards
    ═══════════════════════════════════════════════ */
 
-.wa-instance-grid {
+/* --- KPI Stats Summary Banner --- */
+.wa-dashboard-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 16px;
+    margin-bottom: 24px;
 }
 
-.wa-inst {
+.wa-stat-card {
     background: var(--dashboard-card);
     border: 1px solid var(--color-border);
-    border-radius: 10px;
-    overflow: hidden;
-    transition: box-shadow 0.2s;
-}
-.wa-inst:hover { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07); }
-
-/* ── Header ── */
-.wa-inst__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--color-border);
-}
-.wa-inst__header--on { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-bottom-color: #bbf7d0; }
-.wa-inst__header--wait { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-bottom-color: #fde68a; }
-.wa-inst__header--off { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-bottom-color: #fecaca; }
-
-.wa-inst__header-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.wa-inst__header-left {
-    flex-shrink: 0;
-}
-
-.wa-inst__logo {
-    width: 36px;
-    height: 36px;
     border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all var(--transition-fast, 120ms);
+}
+
+.wa-stat-card:hover {
+    border-color: var(--color-primary-soft);
+}
+
+.wa-stat-card__icon {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
     flex-shrink: 0;
 }
-.wa-inst--connected .wa-inst__logo { background: #25d366; color: white; }
-.wa-inst--connecting .wa-inst__logo { background: #f59e0b; color: white; }
-.wa-inst--off .wa-inst__logo { background: #94a3b8; color: white; }
 
-.wa-inst__title {
-    font-size: 14px;
+.wa-stat-card__icon--blue {
+    background: var(--status-blue-soft, rgba(59, 130, 246, 0.08));
+    color: var(--status-blue, #3b82f6);
+}
+
+.wa-stat-card__icon--green {
+    background: var(--status-green-light, rgba(37, 211, 102, 0.08));
+    color: var(--status-green, #25d366);
+}
+
+.wa-stat-card__icon--orange {
+    background: var(--status-orange-soft, rgba(245, 158, 11, 0.08));
+    color: var(--status-orange, #f59e0b);
+}
+
+.wa-stat-card__info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.wa-stat-card__label {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+.wa-stat-card__value {
+    font-size: 18px;
     font-weight: 700;
     color: var(--color-heading);
     margin: 0;
-    line-height: 1.3;
-}
-.wa-inst__phone-sm {
-    font-size: 12px;
-    font-family: 'SF Mono', 'Consolas', monospace;
-    color: var(--color-text-secondary);
-    letter-spacing: 0.3px;
 }
 
-/* ── Status Badge ── */
-.wa-inst__badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    white-space: nowrap;
-}
-.wa-inst__badge--on { background: rgba(255,255,255,0.7); color: #15803d; }
-.wa-inst__badge--wait { background: rgba(255,255,255,0.7); color: #b45309; }
-.wa-inst__badge--off { background: rgba(255,255,255,0.7); color: #dc2626; }
-
-.wa-inst__dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #22c55e;
-    animation: wa-pulse 2s infinite;
-}
-.wa-inst__dot--off { background: #ef4444; animation: none; }
-@keyframes wa-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-/* ── Body ── */
-.wa-inst__body {
-    padding: 14px 16px;
-}
-
-/* ── Stats mini row ── */
-.wa-inst__stats {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-.wa-inst__stat {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 8px 10px;
-    border-radius: 6px;
-    background: var(--quiet-gray-50);
-    border: 1px solid var(--color-border);
-    font-size: 11px;
-    color: var(--color-text-secondary);
-}
-.wa-inst__stat > svg { flex-shrink: 0; }
-.wa-inst__stat-val { font-weight: 700; font-size: 14px; color: var(--color-heading); }
-.wa-inst__stat-lbl { font-size: 10px; }
-.wa-inst__stat--green { border-color: #d1fae5; background: #f0fdf4; }
-.wa-inst__stat--green .wa-inst__stat-val { color: #059669; }
-.wa-inst__stat--green > svg { color: #059669; }
-.wa-inst__stat--red { border-color: #fee2e2; background: #fef2f2; }
-.wa-inst__stat--red .wa-inst__stat-val { color: #ef4444; }
-.wa-inst__stat--red > svg { color: #ef4444; }
-
-/* ── Offline message ── */
-.wa-inst__offline {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 14px;
-    border-radius: 6px;
-    background: #fef2f2;
-    border: 1px dashed #fecaca;
-    color: #b91c1c;
-    font-size: 12px;
-    margin-bottom: 12px;
-}
-
-/* ── Footer ── */
-.wa-inst__footer {
+/* --- Content Header --- */
+.wa-content-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-top: 10px;
-    border-top: 1px solid var(--color-border);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
 }
-.wa-inst__date {
+
+.wa-content-header__title {
     display: flex;
     align-items: center;
-    gap: 4px;
-    font-size: 11px;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.wa-content-header__title svg {
+    color: var(--status-green);
+}
+
+/* --- Empty State --- */
+.wa-empty-state {
+    background: var(--dashboard-card);
+    border: 1px dashed var(--color-border);
+    border-radius: 8px;
+    padding: 48px 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 600px;
+    margin: 40px auto;
+}
+
+.wa-empty-state__icon {
+    color: var(--color-text-secondary);
+    opacity: 0.4;
+    margin-bottom: 16px;
+}
+
+.wa-empty-state__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-heading);
+    margin: 0 0 8px 0;
+}
+
+.wa-empty-state__desc {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin: 0 0 16px 0;
+    max-width: 440px;
+}
+
+/* --- WhatsApp Control Center Layout --- */
+.wa-control-center {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+@media (max-width: 992px) {
+    .wa-control-center {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+.wa-control-panel-main {
+    flex: 1.4;
+    min-width: 0;
+}
+
+.wa-control-panel-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+/* --- Clean Flat ERP Cards --- */
+.wa-card {
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.wa-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+}
+
+.wa-card__header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+.wa-card__header-title svg {
+    color: var(--status-green);
+}
+
+.wa-card__body {
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.wa-card__footer {
+    padding: 12px 18px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+}
+
+.wa-card__footer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.wa-card__footer-actions button {
+    font-size: 12px;
+    height: 32px;
+}
+
+/* --- Profile Row --- */
+.wa-profile-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed var(--color-border);
+}
+
+.wa-profile-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+}
+
+.wa-profile-avatar--connected {
+    background: rgba(37, 211, 102, 0.08);
+    color: #25d366;
+}
+
+.wa-profile-avatar--connecting {
+    background: rgba(245, 158, 11, 0.08);
+    color: #f59e0b;
+}
+
+.wa-profile-avatar--disconnected {
+    background: var(--color-surface-subtle);
     color: var(--color-text-secondary);
 }
-.wa-inst__actions {
+
+.wa-profile-details {
     display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.wa-profile-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-heading);
+    margin: 0;
+}
+
+.wa-profile-phone {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+    font-family: 'SF Mono', Consolas, monospace;
+}
+
+.wa-profile-phone-placeholder {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+/* --- Telemetry Details Grid --- */
+.wa-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+}
+
+@media (max-width: 576px) {
+    .wa-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.wa-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.wa-detail-label {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    font-weight: 600;
+}
+
+.wa-detail-value {
+    font-size: 12px;
+    color: var(--color-text);
+    font-weight: 500;
+    word-break: break-all;
+}
+
+.wa-detail-input,
+.wa-detail-textarea {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    background: var(--dashboard-card);
+    color: var(--color-text);
+    font-size: 12px;
+    outline: none;
+    transition: border-color var(--transition-fast);
+    font-family: inherit;
+    line-height: 1.4;
+}
+
+.wa-detail-input:focus,
+.wa-detail-textarea:focus {
+    border-color: var(--status-green);
+}
+
+body.dark .wa-detail-input,
+body.dark .wa-detail-textarea {
+    background: var(--quiet-gray-300);
+}
+
+.wa-detail-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+/* --- Webhook Status Card --- */
+.wa-webhook-card {
+    background: var(--color-surface-subtle);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
     gap: 6px;
 }
-.wa-inst__action-btn {
+
+.wa-webhook-card__title {
     display: flex;
     align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+.wa-webhook-card__text {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* --- Circular Chart Summary --- */
+.wa-circular-chart-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.wa-circular-chart {
+    width: 90px;
+    height: 90px;
+}
+
+.circular-chart {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.circle-bg {
+    fill: none;
+    stroke: var(--color-border);
+    stroke-width: 3.2;
+}
+
+.circle {
+    fill: none;
+    stroke-width: 3.2;
+    stroke-linecap: round;
+    animation: progress 1s ease-out forwards;
+}
+
+.circular-chart.green .circle {
+    stroke: #25d366;
+}
+
+.percentage {
+    fill: var(--color-heading);
+    font-family: inherit;
+    font-size: 8px;
+    font-weight: 700;
+    text-anchor: middle;
+}
+
+.wa-circular-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+/* --- Status Tag --- */
+.wa-status-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+}
+
+.wa-status-tag--connected {
+    background: rgba(37, 211, 102, 0.08);
+    color: #16a34a;
+}
+
+.wa-status-tag--connecting {
+    background: rgba(245, 158, 11, 0.08);
+    color: #d97706;
+}
+
+.wa-status-tag--disconnected {
+    background: rgba(239, 68, 68, 0.08);
+    color: #dc2626;
+}
+
+.wa-status-tag__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    display: inline-block;
+}
+
+.wa-status-tag--connected .wa-status-tag__dot {
+    animation: wa-pulse 2s infinite;
+}
+
+@keyframes wa-pulse {
+    0% { transform: scale(0.95); opacity: 0.5; }
+    50% { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(0.95); opacity: 0.5; }
+}
+
+.wa-btn-test-connection {
+    border-color: #25d366 !important;
+    color: #16a34a !important;
+    background: transparent !important;
+}
+
+.wa-btn-test-connection:hover {
+    background: rgba(37, 211, 102, 0.05) !important;
+}
+
+/* --- Stat Breakdown List --- */
+.wa-stat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    margin-top: 10px;
+    border-top: 1px dashed var(--color-border);
+    padding-top: 12px;
+}
+
+.wa-stat-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-secondary);
+}
+
+.wa-stat-list-item--green {
+    background: rgba(37, 211, 102, 0.05);
+    color: #16a34a;
+}
+
+.wa-stat-list-item--red {
+    background: rgba(239, 68, 68, 0.05);
+    color: #dc2626;
+}
+
+.wa-stat-list-value {
+    font-weight: 700;
+}
+
+/* --- Placeholder Card for Future Expansion --- */
+.wa-placeholder-card {
+    border: 1px dashed var(--color-border);
+    background: transparent;
+    text-align: center;
+    padding: 24px 16px;
+}
+
+.wa-placeholder-card__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.wa-placeholder-card__icon {
+    color: var(--color-text-secondary);
+    opacity: 0.3;
+}
+
+.wa-placeholder-card__title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-heading);
+    margin: 0;
+}
+
+.wa-placeholder-card__desc {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* === Left Preview Detail Pane === */
+.whatsapp-preview {
+    width: 350px;
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.whatsapp-preview__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.whatsapp-preview__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.whatsapp-preview__body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* === Custom Analytics Sidebar Box === */
+.wa-analytics-box {
+    display: flex;
+    flex-direction: column;
+}
+
+.wa-analytics-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-heading);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.wa-analytics-header svg {
+    color: var(--status-green);
+}
+
+.wa-analytics-body {
+    padding: 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* === Inbound Chat Bubble style for Simulator preview === */
+.wa-chat-bubble.inbound {
+    background: #ffffff;
+    color: #111b21;
+    align-self: flex-start;
+    border-top-left-radius: 0;
+    direction: rtl;
+    text-align: right;
+}
+body.dark .wa-chat-bubble.inbound {
+    background: #202c33;
+    color: #e9edef;
+}
+
+/* === Selected Row style for Log Table === */
+.wa-table__row--selected {
+    background: var(--color-primary-soft, rgba(30, 58, 95, 0.08)) !important;
+    border-right: 3px solid var(--color-primary) !important;
+}
+
+/* === Selection style for Template Cards === */
+.whatsapp-template-card--selected {
+    border-color: var(--color-primary) !important;
+    background: var(--color-primary-soft, rgba(30, 58, 95, 0.04)) !important;
+    box-shadow: 0 4px 12px rgba(30, 58, 95, 0.05);
+}
+
+/* === Interactive Variable Pills === */
+.wa-variable-pills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.wa-variable-pill {
+    display: inline-flex;
+    align-items: center;
     gap: 4px;
-    padding: 5px 10px;
-    border-radius: 5px;
+    padding: 3px 8px;
+    background: var(--quiet-gray-100);
     border: 1px solid var(--color-border);
-    background: var(--dashboard-card);
+    border-radius: 4px;
+    color: var(--color-text);
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
-    color: var(--color-text);
-    transition: all 0.15s;
+    transition: all 0.1s ease;
+    user-select: none;
 }
-.wa-inst__action-btn--primary { border-color: #25d366; color: #16a34a; }
-.wa-inst__action-btn--primary:hover { background: #f0fdf4; }
-.wa-inst__action-btn--danger:hover { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
+.wa-variable-pill:hover {
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+body.dark .wa-variable-pill {
+    background: var(--quiet-gray-200);
+}
+body.dark .wa-variable-pill:hover {
+    background: rgba(30, 58, 95, 0.3);
+}
+
+/* === Selection style for Notification Rows === */
+.whatsapp-notification-item--selected {
+    border-color: var(--color-primary) !important;
+    background: var(--color-primary-soft, rgba(30, 58, 95, 0.04)) !important;
+}
+
+/* === Responsive Media Queries === */
+@media (max-width: 1100px) {
+    .whatsapp-preview {
+        width: 300px;
+    }
+}
+
+@media (max-width: 992px) {
+    .whatsapp-preview {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .whatsapp-layout {
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .whatsapp-sidebar {
+        width: 100%;
+        height: auto;
+        border-left: none;
+        border-bottom: 1px solid var(--color-border);
+        background: var(--dashboard-card);
+        flex-shrink: 0;
+        z-index: 20;
+    }
+    .whatsapp-sidebar__menu {
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 8px 12px;
+        gap: 6px;
+        flex: none;
+        scrollbar-width: none; /* Hide scrollbar for clean look Firefox */
+    }
+    .whatsapp-sidebar__menu::-webkit-scrollbar {
+        display: none; /* Hide scrollbar for Chrome/Safari */
+    }
+    .whatsapp-sidebar__title {
+        display: none; /* Hide title on mobile tabs */
+    }
+    .whatsapp-sidebar-tab {
+        width: auto;
+        margin-bottom: 0;
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+        padding: 6px 14px;
+        border-radius: 6px;
+        background: var(--quiet-gray-100);
+        border: 1px solid var(--color-border);
+    }
+    body.dark .whatsapp-sidebar-tab {
+        background: var(--quiet-gray-200);
+    }
+    .whatsapp-sidebar-tab--active {
+        background: var(--color-primary-soft);
+        border-color: var(--color-primary-soft);
+    }
+    .whatsapp-main {
+        flex: 1;
+        overflow-y: auto;
+    }
+}

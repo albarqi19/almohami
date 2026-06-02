@@ -11,6 +11,8 @@ import { useDynamicList } from '../../../hooks/useDynamicList';
 import type { WorkspaceProps, MicroStatItem } from './types';
 import type { ArbitrationParty, ArbitrationHearing, PanelMember } from '../../../types/legalServices';
 import MicroStatsBar from './MicroStatsBar';
+import LegalRichEditorField from '../LegalRichEditorField';
+import LegalRichText from '../LegalRichText';
 
 // ── تسميات عربية ──
 
@@ -134,6 +136,28 @@ const ArbitrationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServic
       else toast.error(res.message || 'حدث خطأ');
     } catch { toast.error('حدث خطأ في الاتصال'); }
     finally { setSettlementLoading(false); }
+  };
+
+  // ── حفظ النصوص الغنية (محضر الصلح / ملخص الحكم) ──
+  // نحافظ على الحقول المنظَّمة الحالية حتى لا يمسحها الحفظ الجزئي.
+  const handleSaveSettlementTerms = async (html: string) => {
+    const res = await LegalServiceService.recordSettlement(service.id, {
+      settlement_terms: html,
+      settlement_date: detail?.settlement_date ?? null,
+    });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر الحفظ');
+    await refreshService();
+  };
+
+  const handleSaveAwardSummary = async (html: string) => {
+    const res = await LegalServiceService.recordAward(service.id, {
+      award_summary: html,
+      award_amount: detail?.award_amount ?? null,
+      award_date: detail?.award_date ?? null,
+      award_enforceable: detail?.award_enforceable ?? false,
+    });
+    if (!res?.success) throw new Error(res?.message || 'تعذّر الحفظ');
+    await refreshService();
   };
 
   // ── عرض طرف ──
@@ -373,15 +397,34 @@ const ArbitrationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServic
       <div className="lsd-card">
         <div className="lsd-card__header">
           <div className="lsd-card__title"><Award size={15} /> الحكم</div>
-          {!detail.award_summary && <button className="lsd-card__action" onClick={() => { setShowAwardForm(true); setAwardData({}); }}><Plus size={13} /> تسجيل حكم</button>}
+          <button className="lsd-card__action" onClick={() => {
+            setShowAwardForm(true);
+            setAwardData({
+              award_summary: detail.award_summary || '',
+              award_amount: detail.award_amount ?? '',
+              award_date: detail.award_date || '',
+              award_enforceable: detail.award_enforceable || false,
+            });
+          }}><Edit2 size={13} /> {(detail.award_amount || detail.award_date || detail.award_enforceable) ? 'تعديل التفاصيل' : 'تسجيل التفاصيل'}</button>
         </div>
         <div className="lsd-card__content">
+          {/* ملخص الحكم — محرّر غني */}
+          <LegalRichEditorField
+            label="ملخص الحكم"
+            icon={Award}
+            value={detail.award_summary}
+            onSave={handleSaveAwardSummary}
+            placeholder="اكتب ملخص الحكم الصادر عن هيئة التحكيم..."
+            emptyText="لم يُسجَّل ملخص الحكم بعد — اضغط «تعديل» لبدء الكتابة"
+            successMessage="تم حفظ ملخص الحكم"
+          />
+
+          {/* الحقول المنظَّمة: المبلغ / التاريخ / قابلية التنفيذ */}
           <AnimatePresence>
             {showAwardForm && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden', marginTop: 12 }}>
                 <div style={{ padding: 12, background: 'var(--bg-secondary, #f8f9fa)', borderRadius: 8 }}>
-                  <div className="lsd-form-group"><label className="lsd-form-label">ملخص الحكم</label><textarea className="lsd-form-textarea" rows={3} value={awardData.award_summary || ''} onChange={e => setAwardData({ ...awardData, award_summary: e.target.value })} placeholder="ملخص الحكم..." /></div>
-                  <div className="lsd-info-grid" style={{ marginTop: 8 }}>
+                  <div className="lsd-info-grid">
                     <div className="lsd-form-group"><label className="lsd-form-label">المبلغ المحكوم</label><input className="lsd-form-input" type="number" value={awardData.award_amount || ''} onChange={e => setAwardData({ ...awardData, award_amount: e.target.value })} dir="ltr" /></div>
                     <div className="lsd-form-group"><label className="lsd-form-label">تاريخ الحكم</label><input className="lsd-form-input" type="date" value={awardData.award_date || ''} onChange={e => setAwardData({ ...awardData, award_date: e.target.value })} dir="ltr" /></div>
                   </div>
@@ -390,23 +433,19 @@ const ArbitrationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServic
                   </label>
                   <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
                     <button className="lsd-header-btn" onClick={() => setShowAwardForm(false)}>إلغاء</button>
-                    <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleSaveAward} disabled={awardLoading}>{awardLoading ? 'جارٍ...' : 'تسجيل الحكم'}</button>
+                    <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleSaveAward} disabled={awardLoading}>{awardLoading ? 'جارٍ...' : 'حفظ التفاصيل'}</button>
                   </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-          {detail.award_summary ? (
-            <div>
-              <div className="lsd-notes-section"><div className="lsd-notes-section__label">ملخص الحكم</div><p className="lsd-description-text">{detail.award_summary}</p></div>
-              <div className="lsd-info-grid" style={{ marginTop: 12 }}>
-                {detail.award_amount && <div className="lsd-info-item"><div className="lsd-info-item__icon"><DollarSign size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">المبلغ المحكوم</div><div className="lsd-info-item__value">{formatCurrency(detail.award_amount)}</div></div></div>}
-                {detail.award_date && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">تاريخ الحكم</div><div className="lsd-info-item__value">{formatDate(detail.award_date)}</div></div></div>}
-                <div className="lsd-info-item"><div className="lsd-info-item__icon"><Award size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">قابلية التنفيذ</div><div className="lsd-info-item__value">{detail.award_enforceable ? 'نعم' : 'لا'}</div></div></div>
-              </div>
+
+          {!showAwardForm && (detail.award_amount || detail.award_date || detail.award_enforceable) && (
+            <div className="lsd-info-grid" style={{ marginTop: 12 }}>
+              {detail.award_amount && <div className="lsd-info-item"><div className="lsd-info-item__icon"><DollarSign size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">المبلغ المحكوم</div><div className="lsd-info-item__value">{formatCurrency(detail.award_amount)}</div></div></div>}
+              {detail.award_date && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">تاريخ الحكم</div><div className="lsd-info-item__value">{formatDate(detail.award_date)}</div></div></div>}
+              <div className="lsd-info-item"><div className="lsd-info-item__icon"><Award size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">قابلية التنفيذ</div><div className="lsd-info-item__value">{detail.award_enforceable ? 'نعم' : 'لا'}</div></div></div>
             </div>
-          ) : (
-            !showAwardForm && <div className="lsd-empty-state-small"><Award size={22} /><span>لم يُسجَّل حكم بعد</span></div>
           )}
         </div>
       </div>
@@ -415,30 +454,45 @@ const ArbitrationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServic
       <div className="lsd-card">
         <div className="lsd-card__header">
           <div className="lsd-card__title"><Handshake size={15} /> التسوية</div>
-          {!detail.settlement_terms && <button className="lsd-card__action" onClick={() => { setShowSettlementForm(true); setSettlementData({}); }}><Plus size={13} /> تسجيل تسوية</button>}
+          <button className="lsd-card__action" onClick={() => {
+            setShowSettlementForm(true);
+            setSettlementData({
+              settlement_terms: detail.settlement_terms || '',
+              settlement_date: detail.settlement_date || '',
+            });
+          }}><Edit2 size={13} /> {detail.settlement_date ? 'تعديل التاريخ' : 'تسجيل التاريخ'}</button>
         </div>
         <div className="lsd-card__content">
+          {/* محضر الصلح — محرّر غني */}
+          <LegalRichEditorField
+            label="محضر الصلح"
+            icon={Handshake}
+            value={detail.settlement_terms}
+            onSave={handleSaveSettlementTerms}
+            placeholder="اكتب بنود محضر الصلح الملزِم بين الأطراف..."
+            emptyText="لم يُسجَّل محضر الصلح بعد — اضغط «تعديل» لبدء الكتابة"
+            successMessage="تم حفظ محضر الصلح"
+          />
+
+          {/* تاريخ التسوية — حقل منظَّم */}
           <AnimatePresence>
             {showSettlementForm && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden', marginTop: 12 }}>
                 <div style={{ padding: 12, background: 'var(--bg-secondary, #f8f9fa)', borderRadius: 8 }}>
-                  <div className="lsd-form-group"><label className="lsd-form-label">شروط التسوية</label><textarea className="lsd-form-textarea" rows={4} value={settlementData.settlement_terms || ''} onChange={e => setSettlementData({ ...settlementData, settlement_terms: e.target.value })} placeholder="شروط التسوية..." /></div>
-                  <div className="lsd-form-group" style={{ marginTop: 8 }}><label className="lsd-form-label">تاريخ التسوية</label><input className="lsd-form-input" type="date" value={settlementData.settlement_date || ''} onChange={e => setSettlementData({ ...settlementData, settlement_date: e.target.value })} dir="ltr" /></div>
+                  <div className="lsd-form-group"><label className="lsd-form-label">تاريخ التسوية</label><input className="lsd-form-input" type="date" value={settlementData.settlement_date || ''} onChange={e => setSettlementData({ ...settlementData, settlement_date: e.target.value })} dir="ltr" /></div>
                   <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
                     <button className="lsd-header-btn" onClick={() => setShowSettlementForm(false)}>إلغاء</button>
-                    <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleSaveSettlement} disabled={settlementLoading}>{settlementLoading ? 'جارٍ...' : 'تسجيل التسوية'}</button>
+                    <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleSaveSettlement} disabled={settlementLoading}>{settlementLoading ? 'جارٍ...' : 'حفظ التاريخ'}</button>
                   </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-          {detail.settlement_terms ? (
-            <div>
-              <div className="lsd-notes-section"><div className="lsd-notes-section__label">شروط التسوية</div><p className="lsd-description-text">{detail.settlement_terms}</p></div>
-              {detail.settlement_date && <div className="lsd-info-grid" style={{ marginTop: 12 }}><div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">تاريخ التسوية</div><div className="lsd-info-item__value">{formatDate(detail.settlement_date)}</div></div></div></div>}
+
+          {!showSettlementForm && detail.settlement_date && (
+            <div className="lsd-info-grid" style={{ marginTop: 12 }}>
+              <div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">تاريخ التسوية</div><div className="lsd-info-item__value">{formatDate(detail.settlement_date)}</div></div></div>
             </div>
-          ) : (
-            !showSettlementForm && <div className="lsd-empty-state-small"><Handshake size={22} /><span>لم تُسجَّل تسوية بعد</span></div>
           )}
         </div>
       </div>

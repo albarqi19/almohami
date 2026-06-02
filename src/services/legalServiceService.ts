@@ -15,6 +15,9 @@ import type {
   LegalReference,
   LegalOpinion,
   CaseInvoiceItem,
+  ServiceDeliverableItem,
+  ServicePortalLinkItem,
+  ContractAuditResult,
 } from '../types/legalServices';
 
 export class LegalServiceService {
@@ -46,6 +49,11 @@ export class LegalServiceService {
     return apiClient.put<LegalServiceResponse>(`/legal-services/${id}`, data);
   }
 
+  /** دفتر التدوين الموحّد: حفظ ملاحظات/مسودّات العمل الغنية (HTML) لأي نوع خدمة */
+  static async updateWorkNotes(id: number, workNotes: string): Promise<LegalServiceResponse> {
+    return apiClient.put<LegalServiceResponse>(`/legal-services/${id}`, { work_notes: workNotes });
+  }
+
   static async deleteService(id: number): Promise<{ success: boolean; message: string }> {
     return apiClient.delete(`/legal-services/${id}`);
   }
@@ -68,7 +76,7 @@ export class LegalServiceService {
 
   // ── الاستشارات ──
 
-  static async updateOpinion(id: number, data: { legal_opinion?: LegalOpinion; legal_opinion_legacy?: string; finalize?: boolean }): Promise<{ success: boolean; data: ConsultationDetail }> {
+  static async updateOpinion(id: number, data: { legal_opinion?: string; finalize?: boolean }): Promise<{ success: boolean; data: ConsultationDetail }> {
     return apiClient.put(`/legal-services/${id}/consultation/opinion`, data);
   }
 
@@ -78,10 +86,6 @@ export class LegalServiceService {
 
   static async removeReference(id: number, index: number): Promise<{ success: boolean; data: ConsultationDetail }> {
     return apiClient.delete(`/legal-services/${id}/consultation/references/${index}`);
-  }
-
-  static async generatePdf(id: number): Promise<{ success: boolean; data: { pdf_path: string } }> {
-    return apiClient.post(`/legal-services/${id}/consultation/generate-pdf`);
   }
 
   static async markDelivered(id: number): Promise<LegalServiceResponse> {
@@ -112,6 +116,11 @@ export class LegalServiceService {
 
   static async updateClientFeedback(id: number, feedback: string): Promise<{ success: boolean; data: any; message?: string }> {
     return apiClient.put(`/legal-services/${id}/contract-drafting/client-feedback`, { feedback });
+  }
+
+  /** التدقيق الآلي للعقد (AI) مقابل نظام المعاملات المدنية */
+  static async auditContract(id: number): Promise<{ success: boolean; data: ContractAuditResult; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/contract-drafting/audit`);
   }
 
   // ── تتبع الوقت ──
@@ -368,8 +377,16 @@ export class LegalServiceService {
     return apiClient.post(`/legal-services/${id}/ip/objections`, objection);
   }
 
+  static async removeIpObjection(id: number, index: number): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.delete(`/legal-services/${id}/ip/objections/${index}`);
+  }
+
   static async addIpInfringement(id: number, infringement: Record<string, any>): Promise<{ success: boolean; data: any; message?: string }> {
     return apiClient.post(`/legal-services/${id}/ip/infringements`, infringement);
+  }
+
+  static async removeIpInfringement(id: number, index: number): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.delete(`/legal-services/${id}/ip/infringements/${index}`);
   }
 
   // ── العناية الواجبة ──
@@ -421,6 +438,37 @@ export class LegalServiceService {
   static async createInvoice(id: number, data: { title?: string; description?: string; amount?: number; due_date?: string }): Promise<{ success: boolean; data: CaseInvoiceItem; message: string }> {
     return apiClient.post(`/legal-services/${id}/create-invoice`, data);
   }
+
+  // ── المخرجات الرسمية (PDF/Word) ──
+
+  static async listDeliverables(id: number): Promise<{ success: boolean; data: ServiceDeliverableItem[] }> {
+    return apiClient.get(`/legal-services/${id}/deliverables`);
+  }
+
+  static async generateDeliverable(id: number, type: string): Promise<{ success: boolean; data: ServiceDeliverableItem; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/deliverables/generate`, { type });
+  }
+
+  static async deleteDeliverable(id: number, deliverableId: number): Promise<{ success: boolean; message: string }> {
+    return apiClient.delete(`/legal-services/${id}/deliverables/${deliverableId}`);
+  }
+
+  // ── بوابة العميل/الخصوم (White-Label) ──
+
+  static async listPortalLinks(id: number): Promise<{ success: boolean; data: ServicePortalLinkItem[] }> {
+    return apiClient.get(`/legal-services/${id}/portal-links`);
+  }
+
+  static async createPortalLink(
+    id: number,
+    data: { audience?: 'client' | 'adversary'; recipient_name?: string; allow_upload?: boolean; expires_in_days?: number }
+  ): Promise<{ success: boolean; data: ServicePortalLinkItem; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/portal-links`, data);
+  }
+
+  static async revokePortalLink(id: number, linkId: number): Promise<{ success: boolean; message: string }> {
+    return apiClient.delete(`/legal-services/${id}/portal-links/${linkId}`);
+  }
 }
 
 export const legalServiceService = {
@@ -428,6 +476,7 @@ export const legalServiceService = {
   getService: LegalServiceService.getService.bind(LegalServiceService),
   createService: LegalServiceService.createService.bind(LegalServiceService),
   updateService: LegalServiceService.updateService.bind(LegalServiceService),
+  updateWorkNotes: LegalServiceService.updateWorkNotes.bind(LegalServiceService),
   deleteService: LegalServiceService.deleteService.bind(LegalServiceService),
   updateStatus: LegalServiceService.updateStatus.bind(LegalServiceService),
   getStatusFlow: LegalServiceService.getStatusFlow.bind(LegalServiceService),
@@ -435,7 +484,6 @@ export const legalServiceService = {
   updateOpinion: LegalServiceService.updateOpinion.bind(LegalServiceService),
   addReference: LegalServiceService.addReference.bind(LegalServiceService),
   removeReference: LegalServiceService.removeReference.bind(LegalServiceService),
-  generatePdf: LegalServiceService.generatePdf.bind(LegalServiceService),
   markDelivered: LegalServiceService.markDelivered.bind(LegalServiceService),
   getVersions: LegalServiceService.getVersions.bind(LegalServiceService),
   createVersion: LegalServiceService.createVersion.bind(LegalServiceService),
@@ -443,6 +491,7 @@ export const legalServiceService = {
   updateChecklist: LegalServiceService.updateChecklist.bind(LegalServiceService),
   addReviewComment: LegalServiceService.addReviewComment.bind(LegalServiceService),
   updateClientFeedback: LegalServiceService.updateClientFeedback.bind(LegalServiceService),
+  auditContract: LegalServiceService.auditContract.bind(LegalServiceService),
   startTimer: LegalServiceService.startTimer.bind(LegalServiceService),
   stopTimer: LegalServiceService.stopTimer.bind(LegalServiceService),
   getTimeEntries: LegalServiceService.getTimeEntries.bind(LegalServiceService),
@@ -454,6 +503,21 @@ export const legalServiceService = {
   removeDocument: LegalServiceService.removeDocument.bind(LegalServiceService),
   convertToCase: LegalServiceService.convertToCase.bind(LegalServiceService),
   createInvoice: LegalServiceService.createInvoice.bind(LegalServiceService),
+  // المخرجات الرسمية
+  listDeliverables: LegalServiceService.listDeliverables.bind(LegalServiceService),
+  generateDeliverable: LegalServiceService.generateDeliverable.bind(LegalServiceService),
+  deleteDeliverable: LegalServiceService.deleteDeliverable.bind(LegalServiceService),
+  listPortalLinks: LegalServiceService.listPortalLinks.bind(LegalServiceService),
+  createPortalLink: LegalServiceService.createPortalLink.bind(LegalServiceService),
+  revokePortalLink: LegalServiceService.revokePortalLink.bind(LegalServiceService),
+  // Intellectual property
+  updateIpInfo: LegalServiceService.updateIpInfo.bind(LegalServiceService),
+  addIpSearchResult: LegalServiceService.addIpSearchResult.bind(LegalServiceService),
+  removeIpSearchResult: LegalServiceService.removeIpSearchResult.bind(LegalServiceService),
+  addIpObjection: LegalServiceService.addIpObjection.bind(LegalServiceService),
+  removeIpObjection: LegalServiceService.removeIpObjection.bind(LegalServiceService),
+  addIpInfringement: LegalServiceService.addIpInfringement.bind(LegalServiceService),
+  removeIpInfringement: LegalServiceService.removeIpInfringement.bind(LegalServiceService),
   // Company formation
   updatePartners: LegalServiceService.updatePartners.bind(LegalServiceService),
   updateAuthorities: LegalServiceService.updateAuthorities.bind(LegalServiceService),

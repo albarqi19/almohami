@@ -37,6 +37,11 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
       setError('رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام');
       return;
     }
+    // الرقم الضريبي (VAT) — إن أُدخل يجب أن يكون 15 رقماً يبدأ وينتهي بـ 3 (مطلوب للفوترة الإلكترونية B2B).
+    if (isCompany && form.vat_number && form.vat_number.trim() && !/^3\d{13}3$/.test(form.vat_number.trim())) {
+      setError('الرقم الضريبي يجب أن يكون 15 رقماً يبدأ وينتهي بالرقم 3 (مطلوب للفوترة الإلكترونية B2B)');
+      return;
+    }
     setSaving(true);
     try {
       const updated = await ClientManagementService.updateClient(client.id, form);
@@ -95,8 +100,8 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
               <Field label="السجل التجاري">
                 <input type="text" value={form.commercial_registration ?? ''} onChange={(e) => set('commercial_registration', e.target.value)} />
               </Field>
-              <Field label="الرقم الضريبي">
-                <input type="text" value={form.vat_number ?? ''} onChange={(e) => set('vat_number', e.target.value)} />
+              <Field label="الرقم الضريبي" hint="15 رقماً تبدأ وتنتهي بـ 3 (للفوترة B2B)">
+                <input type="text" dir="ltr" maxLength={15} placeholder="3XXXXXXXXXXXXX3" value={form.vat_number ?? ''} onChange={(e) => set('vat_number', e.target.value)} />
               </Field>
               <Field label="العنوان الوطني" span={2}>
                 <input type="text" value={form.national_address ?? ''} onChange={(e) => set('national_address', e.target.value)} />

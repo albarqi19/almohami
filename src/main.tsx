@@ -1,7 +1,11 @@
 ﻿import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
+// [P4] متغيّرات الثيم (--status-*/--law-*/--quiet-gray-*) تُحمَّل عالمياً قبل erp.css
+// حتى تتوفّر على كل الصفحات (كانت مستورَدة في AdminDashboard فقط → تفشل الألوان في وضع التطوير).
+import './styles/dashboard-theme.css'
 import './styles/tiptap.css'
+import './styles/erp.css'
 import App from './App.tsx'
 
 // إعداد TanStack Query - مُصدَّر للاستخدام في AuthContext
