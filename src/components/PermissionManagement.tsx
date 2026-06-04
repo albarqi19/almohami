@@ -61,6 +61,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ left: number; top?: number; bottom?: number } | null>(null);
 
   // States for Roles & Permissions - with fallback defaults
   const DEFAULT_ROLES = [
@@ -83,6 +84,25 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
+
+  // إغلاق قائمة إجراءات المستخدم عند التمرير/تغيير الحجم/النقر خارجها
+  // (القائمة تُرسم بـ position: fixed لتفادي قصّها داخل حاوية الجدول)
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const close = () => { setDropdownOpen(null); setDropdownPos(null); };
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-user-menu]')) close();
+    };
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [dropdownOpen]);
 
   // Load users from API (no cache — always fetch fresh, paginated server-side)
   const loadUsers = async (filters: UserFilters = {}, _forceRefresh = false) => {
@@ -1347,9 +1367,27 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
                             >
                               <Edit2 size={13} />
                             </button>
-                            <div style={{ position: 'relative' }}>
+                            <div style={{ position: 'relative' }} data-user-menu>
                               <button
-                                onClick={() => setDropdownOpen(dropdownOpen === user.id ? null : user.id)}
+                                onClick={(e) => {
+                                  if (dropdownOpen === user.id) {
+                                    setDropdownOpen(null);
+                                    setDropdownPos(null);
+                                    return;
+                                  }
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const MENU_W = 180;
+                                  const MENU_H = 140;
+                                  const spaceBelow = window.innerHeight - rect.bottom;
+                                  const openUp = spaceBelow < MENU_H && rect.top > spaceBelow;
+                                  const left = Math.max(8, rect.right - MENU_W);
+                                  setDropdownPos(
+                                    openUp
+                                      ? { left, bottom: window.innerHeight - rect.top + 4 }
+                                      : { left, top: rect.bottom + 4 }
+                                  );
+                                  setDropdownOpen(user.id);
+                                }}
                                 title="المزيد"
                                 style={{
                                   padding: '4px 6px',
@@ -1364,18 +1402,18 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
                               >
                                 <MoreHorizontal size={13} />
                               </button>
-                              {dropdownOpen === user.id && (
-                                <div style={{
-                                  position: 'absolute',
-                                  top: '100%',
-                                  left: 0,
-                                  marginTop: '4px',
+                              {dropdownOpen === user.id && dropdownPos && (
+                                <div data-user-menu style={{
+                                  position: 'fixed',
+                                  top: dropdownPos.top,
+                                  bottom: dropdownPos.bottom,
+                                  left: dropdownPos.left,
                                   backgroundColor: 'var(--color-surface)',
                                   border: '1px solid var(--color-border)',
                                   borderRadius: '6px',
                                   padding: '4px',
                                   minWidth: '180px',
-                                  zIndex: 100,
+                                  zIndex: 1000,
                                   boxShadow: '0 6px 18px rgba(0,0,0,0.12)'
                                 }}>
                                   <button
