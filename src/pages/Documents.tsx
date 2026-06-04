@@ -45,6 +45,7 @@ import CloudStorageSettingsModal from '../components/CloudStorageSettingsModal';
 import ContextMenu, { createOneDriveContextMenu } from '../components/ContextMenu';
 import SecurePdfViewer from '../components/SecurePdfViewer';
 import SecureWordViewer from '../components/SecureWordViewer';
+import FilePreview from '../components/FilePreview';
 import { DocumentService } from '../services/documentService';
 import { CaseService } from '../services/caseService';
 import { CloudStorageService } from '../services/cloudStorageService';
@@ -297,73 +298,6 @@ const Documents: React.FC = () => {
 
     // Preview Pane Content - Unified for both Local and OneDrive files
     const PreviewPane = ({ doc }: { doc: DocumentType }) => {
-        const [blobUrl, setBlobUrl] = useState<string | null>(null);
-        const [loading, setLoading] = useState(false);
-        const [error, setError] = useState<string | null>(null);
-
-        const isCloudFile = !!doc.cloud_file_id;
-        const isImage = doc.mimeType?.includes('image') || doc.mime_type?.includes('image');
-        const isPdf = doc.mimeType?.includes('pdf') || doc.mime_type?.includes('pdf');
-        const isWord = doc.mimeType?.includes('word') || doc.mime_type?.includes('word') ||
-            doc.mime_type?.includes('document') ||
-            doc.file_name?.endsWith('.docx') || doc.file_name?.endsWith('.doc');
-
-        useEffect(() => {
-            const fetchPreview = async () => {
-                setLoading(true);
-                setError(null);
-                // Clean up previous blob
-                if (blobUrl) URL.revokeObjectURL(blobUrl);
-                setBlobUrl(null);
-
-                try {
-                    const token = localStorage.getItem('authToken');
-                    const apiUrl = import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1';
-
-                    if (isCloudFile && doc.cloud_file_id) {
-                        // OneDrive file - get direct URL
-                        const response = await fetch(`${apiUrl}/cloud-storage/onedrive/preview-url/${doc.cloud_file_id}`, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'ngrok-skip-browser-warning': '69420'
-                            }
-                        });
-
-                        if (!response.ok) throw new Error('Failed to load preview URL');
-
-                        const data = await response.json();
-                        if (data.success && data.download_url) {
-                            setBlobUrl(data.download_url);
-                        } else {
-                            setError(data.message || 'فشل جلب رابط المعاينة');
-                        }
-                    } else {
-                        // Local file - download and create blob URL
-                        const response = await fetch(`${apiUrl}/documents/${doc.id}/preview`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-
-                        if (!response.ok) throw new Error('Failed to load preview');
-
-                        const blob = await response.blob();
-                        const url = URL.createObjectURL(blob);
-                        setBlobUrl(url);
-                    }
-                } catch (err) {
-                    console.error(err);
-                    setError('فشل تحميل المعاينة');
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            fetchPreview();
-
-            return () => {
-                if (blobUrl && !isCloudFile) URL.revokeObjectURL(blobUrl);
-            };
-        }, [doc.id, doc.cloud_file_id]);
-
         return (
             <div className="docs-preview-pane">
                 {/* Header with action buttons - matching OneDrive */}
@@ -505,7 +439,7 @@ const Documents: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Preview content area - matching OneDrive */}
+                {/* Preview content area - مكوّن موحّد للمحلي و OneDrive */}
                 <div style={{
                     flex: 1,
                     display: 'flex',
@@ -513,76 +447,7 @@ const Documents: React.FC = () => {
                     overflow: 'hidden',
                     background: 'var(--color-bg-primary)'
                 }}>
-                    {loading ? (
-                        <div style={{
-                            flex: 1,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>
-                            <Loader2 size={28} className="animate-spin" style={{ color: 'var(--color-primary)' }} />
-                            <span style={{ marginTop: '8px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-                                جاري التحميل...
-                            </span>
-                        </div>
-                    ) : error ? (
-                        <div style={{
-                            flex: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'var(--color-error)',
-                            fontSize: 13
-                        }}>{error}</div>
-                    ) : isImage && blobUrl ? (
-                        <div style={{
-                            flex: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '16px'
-                        }}>
-                            <img
-                                src={blobUrl}
-                                alt="Preview"
-                                style={{
-                                    maxWidth: '100%',
-                                    maxHeight: '100%',
-                                    objectFit: 'contain',
-                                    borderRadius: '6px'
-                                }}
-                            />
-                        </div>
-                    ) : isPdf && blobUrl ? (
-                        isCloudFile ? (
-                            <SecurePdfViewer url={blobUrl} fileName={doc.file_name || doc.fileName || 'document.pdf'} />
-                        ) : (
-                            <iframe
-                                src={blobUrl}
-                                title="PDF Preview"
-                                style={{
-                                    flex: 1,
-                                    width: '100%',
-                                    border: 'none'
-                                }}
-                            />
-                        )
-                    ) : isWord && blobUrl && isCloudFile ? (
-                        <SecureWordViewer url={blobUrl} fileName={doc.file_name || doc.fileName || 'document.docx'} />
-                    ) : (
-                        <div style={{
-                            flex: 1,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 12
-                        }}>
-                            {getFileIcon(doc.mimeType || doc.mime_type)}
-                            <span>لا توجد معاينة متاحة لهذا النوع</span>
-                        </div>
-                    )}
+                    <FilePreview doc={doc} />
                 </div>
             </div>
         );

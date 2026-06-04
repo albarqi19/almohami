@@ -20,7 +20,8 @@ import {
   Trash2,
   Sparkles,
   HelpCircle,
-  ClipboardList
+  ClipboardList,
+  FilePlus
 } from 'lucide-react';
 import { useModalTour } from '../hooks/useModalTour';
 import Modal from './Modal';
@@ -32,6 +33,7 @@ import CloudFilePickerModal from './CloudFilePickerModal';
 import DocumentRequestsPanel from './DocumentRequests/DocumentRequestsPanel';
 
 import { DocumentService } from '../services/documentService';
+import { CloudStorageService } from '../services/cloudStorageService';
 import { LegalMemoService, type LegalMemo, type AnalysisStep } from '../services/legalMemoService';
 import type { Document as DocumentType } from '../types';
 
@@ -102,6 +104,12 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   const [showCreateMemo, setShowCreateMemo] = useState(false);
   const [showCloudPicker, setShowCloudPicker] = useState(false);
   const [editingMemo, setEditingMemo] = useState<LegalMemo | null>(null);
+  // الرفع المباشر إلى OneDrive + السحب والإفلات
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [oneDriveConnected, setOneDriveConnected] = useState<boolean | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
 
 
@@ -112,6 +120,8 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
     type: string;
     url: string;
     uploadedAt: Date;
+    cloud_file_id?: string | null;
+    cloud_web_url?: string | null;
   } | null>(null);
   const [comments, setComments] = useState<DocumentComment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -132,6 +142,10 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
     if (isOpen && caseId) {
       loadDocuments();
       loadMemos();
+      // جلب حالة اتصال OneDrive (الرفع يتم مباشرة إلى OneDrive)
+      CloudStorageService.getOneDriveStatus()
+        .then((status) => setOneDriveConnected(!!status.connected))
+        .catch(() => setOneDriveConnected(false));
     }
   }, [isOpen, caseId]);
 
@@ -444,6 +458,72 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
     }
   };
 
+  // رفع مباشر إلى OneDrive لملف أو أكثر (رابط رفع → رفع مباشر → تسجيل في النظام)
+  const handleDirectUpload = async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+
+    // يجب الاتصال بـ OneDrive أولاً
+    if (oneDriveConnected === false) {
+      alert('يجب الاتصال بـ OneDrive أولاً قبل رفع الملفات. افتح إعدادات التخزين السحابي للربط.');
+      return;
+    }
+
+    setUploading(true);
+    setUploadProgress({ done: 0, total: list.length });
+    let failed = 0;
+
+    for (let i = 0; i < list.length; i++) {
+      const file = list[i];
+      try {
+        const result = await CloudStorageService.uploadFileToCase(Number(caseId), file);
+        if (!result.success) {
+          console.error('OneDrive upload failed for', file.name, result.error);
+          failed++;
+        }
+      } catch (err) {
+        console.error('OneDrive upload failed for', file.name, err);
+        failed++;
+      } finally {
+        setUploadProgress({ done: i + 1, total: list.length });
+      }
+    }
+
+    setUploading(false);
+    setUploadProgress(null);
+    await loadDocuments();
+
+    if (failed > 0) {
+      alert(`تعذّر رفع ${failed} من ${list.length} ملف إلى OneDrive`);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleDirectUpload(e.target.files);
+    }
+    e.target.value = ''; // السماح بإعادة رفع نفس الملف
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    // تجاهل عند الانتقال بين العناصر الداخلية
+    if (e.currentTarget === e.target) setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleDirectUpload(e.dataTransfer.files);
+    }
+  };
+
   const handlePreview = (doc: DocumentType) => {
     // Use official API URL
     const apiUrl = import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1';
@@ -454,7 +534,10 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
       size: doc.file_size || doc.fileSize || 0,
       type: doc.mime_type || doc.mimeType || 'application/octet-stream',
       url: `${apiUrl}/documents/${doc.id}/preview`,
-      uploadedAt: doc.uploaded_at ? new Date(doc.uploaded_at) : (doc.uploadedAt || new Date())
+      uploadedAt: doc.uploaded_at ? new Date(doc.uploaded_at) : (doc.uploadedAt || new Date()),
+      // تمرير الحقول السحابية ليفتح OneDrive عبر الرابط المباشر بدل بروكسي الخادم
+      cloud_file_id: doc.cloud_file_id,
+      cloud_web_url: doc.cloud_web_url,
     };
     setPreviewDocument(previewDoc);
   };
@@ -546,12 +629,51 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
           </button>
         ) : null}
       >
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '80vh',
-          maxHeight: '600px'
-        }}>
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '80vh',
+            maxHeight: '600px',
+            position: 'relative'
+          }}>
+          {/* طبقة السحب والإفلات (الرفع مباشرةً إلى OneDrive) */}
+          {isDragging && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 50,
+              backgroundColor: oneDriveConnected === false ? 'rgba(220, 38, 38, 0.08)' : 'rgba(37, 99, 235, 0.08)',
+              border: `2px dashed ${oneDriveConnected === false ? 'var(--color-error)' : 'var(--color-primary)'}`,
+              borderRadius: '8px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              pointerEvents: 'none',
+              backdropFilter: 'blur(1px)'
+            }}>
+              {oneDriveConnected === false ? (
+                <>
+                  <AlertCircle size={40} style={{ color: 'var(--color-error)' }} />
+                  <span style={{ color: 'var(--color-error)', fontSize: '16px', fontWeight: 600 }}>
+                    يجب الاتصال بـ OneDrive أولاً
+                  </span>
+                </>
+              ) : (
+                <>
+                  <FilePlus size={40} style={{ color: 'var(--color-primary)' }} />
+                  <span style={{ color: 'var(--color-primary)', fontSize: '16px', fontWeight: 600 }}>
+                    أفلت الملفات هنا لرفعها إلى OneDrive
+                  </span>
+                </>
+              )}
+            </div>
+          )}
                         {/* Header toolbar - no title since Modal has one */}
           <div style={{
             display: 'flex',
@@ -567,6 +689,32 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 ملف سحابي
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                style={{ display: 'none' }}
+                onChange={handleFileInputChange}
+              />
+              <button
+                data-tour="docs-upload-direct"
+                title="رفع ملفات إلى OneDrive"
+                onClick={() => {
+                  if (oneDriveConnected === false) {
+                    alert('يجب الاتصال بـ OneDrive أولاً قبل رفع الملفات. افتح إعدادات التخزين السحابي للربط.');
+                    return;
+                  }
+                  fileInputRef.current?.click();
+                }}
+                disabled={uploading}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'transparent', color: 'var(--color-primary)', border: '1px solid var(--color-primary)', borderRadius: '4px', fontSize: '14px', cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.6 : 1 }}
+                onMouseEnter={(e) => { if (!uploading) { e.currentTarget.style.backgroundColor = 'var(--color-primary)'; e.currentTarget.style.color = 'white'; } }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-primary)'; }}>
+                {uploading
+                  ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                  : <FilePlus size={14} />}
+                {uploading && uploadProgress ? `جارٍ الرفع ${uploadProgress.done}/${uploadProgress.total}` : 'رفع'}
               </button>
               <button data-tour="docs-upload" onClick={() => setShowSmartUpload(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'var(--color-primary)', color: 'white', border: '1px solid var(--color-primary)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
                 onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
