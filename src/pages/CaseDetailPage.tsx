@@ -53,7 +53,7 @@ import ReplayCelebrationButton from '../components/ReplayCelebrationButton';
 import { useAuth } from '../contexts/AuthContext';
 import type { TimelineEvent } from '../components/Timeline';
 import { apiClient } from '../utils/api';
-import { formatHijriRaw } from '../utils/hijriDate';
+import { toHijri } from '../utils/hijriDate';
 import { CaseService } from '../services/caseService';
 import '../styles/send-dabt-modal.css';
 import { ActivityService } from '../services/activityService';
@@ -690,10 +690,10 @@ const CaseDetailPage: React.FC = () => {
                             )}
                           </div>
                           <div className="case-session-item__meta">
-                            {formatHijriRaw(session.session_date_hijri) && (
-                              <span title="التاريخ الهجري من ناجز">
+                            {toHijri(session.session_date) && (
+                              <span title="التاريخ الهجري (أم القرى)">
                                 <Calendar size={12} />
-                                {formatHijriRaw(session.session_date_hijri)}
+                                {toHijri(session.session_date)}
                               </span>
                             )}
                             {session.session_time && (

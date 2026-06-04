@@ -257,10 +257,16 @@
 
 .session-date {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 6px;
     font-weight: 500;
     color: var(--color-heading);
+}
+
+/* التاريخ الهجري ينزل سطراً كاملاً تحت الميلادي */
+.session-date-hijri {
+    flex-basis: 100%;
 }
 
 .session-time {

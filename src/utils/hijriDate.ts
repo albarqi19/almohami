@@ -1,42 +1,33 @@
-// تنسيق التاريخ الهجري الخام القادم من ناجز.
-// ناجز يصل بصيغة مطبّعة YYYY-MM-DD (مثل 1445-08-15). الميلادي يبقى الأساس،
-// وهذا للعرض فقط بجانب التاريخ الميلادي.
-
-const HIJRI_MONTHS = [
-  'محرم',
-  'صفر',
-  'ربيع الأول',
-  'ربيع الآخر',
-  'جمادى الأولى',
-  'جمادى الآخرة',
-  'رجب',
-  'شعبان',
-  'رمضان',
-  'شوال',
-  'ذو القعدة',
-  'ذو الحجة',
-];
+// تحويل التاريخ الميلادي إلى هجري (أم القرى) — client-side بالكامل عبر Intl.
+// ناجز يرسل تاريخ الجلسة ميلادياً فقط (sessionDate ISO)، ويعرض الهجري في واجهته
+// بنفس هذه الطريقة (islamic-umalqura). فالنتيجة مطابقة لما يظهر في ناجز.
+// الميلادي يبقى الأساس للترتيب والحسابات، وهذا للعرض فقط.
 
 /**
- * يحوّل النص الهجري الخام (1445-08-15) إلى صيغة مقروءة "15 شعبان 1445 هـ".
- * إن لم يطابق الصيغة المتوقّعة، يُرجع النص الخام كما هو (مع لاحقة هـ إن كان رقمياً).
- * يُرجع null إذا كانت القيمة فارغة.
+ * يحوّل تاريخاً ميلادياً (ISO مثل "2026-06-07" أو "2026-06-07T11:40:00")
+ * إلى نص هجري مقروء "21 ذو القعدة 1447 هـ" بأرقام عربية.
+ * يُرجع null إذا كانت القيمة فارغة أو غير صالحة.
  */
-export function formatHijriRaw(raw?: string | null): string | null {
-  if (!raw) return null;
-  const value = String(raw).trim();
-  if (!value) return null;
+export function toHijri(input?: string | Date | null): string | null {
+  if (!input) return null;
+  const date = input instanceof Date ? input : new Date(input);
+  if (isNaN(date.getTime())) return null;
 
-  // الصيغة المطبّعة من ناجز: YYYY-MM-DD أو YYYY/MM/DD
-  const m = value.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
-  if (m) {
-    const year = m[1];
-    const monthIdx = parseInt(m[2], 10) - 1;
-    const day = parseInt(m[3], 10);
-    const monthName = HIJRI_MONTHS[monthIdx] ?? m[2];
-    return `${day} ${monthName} ${year} هـ`;
+  try {
+    const parts = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).formatToParts(date);
+
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+    const day = get('day');
+    const month = get('month');
+    const year = get('year');
+    if (!day || !year) return null;
+
+    return `${day} ${month} ${year} هـ`;
+  } catch {
+    return null;
   }
-
-  // نص هجري وصفي مسبقاً (مثل "15 شعبان") — أعرضه كما هو
-  return value;
 }
