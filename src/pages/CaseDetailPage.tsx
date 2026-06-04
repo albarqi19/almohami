@@ -53,6 +53,7 @@ import ReplayCelebrationButton from '../components/ReplayCelebrationButton';
 import { useAuth } from '../contexts/AuthContext';
 import type { TimelineEvent } from '../components/Timeline';
 import { apiClient } from '../utils/api';
+import { formatHijriRaw } from '../utils/hijriDate';
 import { CaseService } from '../services/caseService';
 import '../styles/send-dabt-modal.css';
 import { ActivityService } from '../services/activityService';
@@ -621,12 +622,30 @@ const CaseDetailPage: React.FC = () => {
                     </div>
                   ))}
 
-                  {/* Agents (وكلاء بوكالة) */}
+                  {/* Agents (وكلاء/ممثلون/أولياء) */}
                   {caseData.parties.filter((p: any) => p.side === 'agent').map((party: any, idx: number) => (
                     <div key={`agent-${idx}`} className="case-party-tag case-party-tag--agent">
                       <span className="case-party-tag__icon">ك</span>
                       <span className="case-party-tag__name">{party.name}</span>
-                      <span className="case-party-tag__role">{party.represents ? `وكيل: ${party.represents}` : party.role || 'وكيل'}</span>
+                      <span className="case-party-tag__role">{party.represents ? `${party.role || 'وكيل'}: ${party.represents}` : party.role || 'وكيل'}</span>
+                    </div>
+                  ))}
+
+                  {/* Appellants (المستأنِف) — جهة درجة الاستئناف */}
+                  {caseData.parties.filter((p: any) => p.side === 'appellant').map((party: any, idx: number) => (
+                    <div key={`appellant-${idx}`} className="case-party-tag case-party-tag--appellant">
+                      <span className="case-party-tag__icon">س</span>
+                      <span className="case-party-tag__name">{party.name}</span>
+                      <span className="case-party-tag__role">{party.role || 'المستأنِف'}</span>
+                    </div>
+                  ))}
+
+                  {/* Appellees (المستأنَف ضدّه) — جهة درجة الاستئناف */}
+                  {caseData.parties.filter((p: any) => p.side === 'appellee').map((party: any, idx: number) => (
+                    <div key={`appellee-${idx}`} className="case-party-tag case-party-tag--appellee">
+                      <span className="case-party-tag__icon">د</span>
+                      <span className="case-party-tag__name">{party.name}</span>
+                      <span className="case-party-tag__role">{party.role || 'المستأنَف ضدّه'}</span>
                     </div>
                   ))}
                 </div>
@@ -671,6 +690,12 @@ const CaseDetailPage: React.FC = () => {
                             )}
                           </div>
                           <div className="case-session-item__meta">
+                            {formatHijriRaw(session.session_date_hijri) && (
+                              <span title="التاريخ الهجري من ناجز">
+                                <Calendar size={12} />
+                                {formatHijriRaw(session.session_date_hijri)}
+                              </span>
+                            )}
                             {session.session_time && (
                               <span>
                                 <Clock size={12} />

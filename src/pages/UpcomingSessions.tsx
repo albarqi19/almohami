@@ -27,6 +27,7 @@ import {
 import { apiClient } from '../utils/api';
 import { AddSessionModal } from '../components/AddSessionModal';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
+import { formatHijriRaw } from '../utils/hijriDate';
 import '../styles/sessions-page.css';
 import '../styles/add-session-modal.css';
 import '../styles/case-wekalat-panel.css';
@@ -39,6 +40,7 @@ interface Session {
 	session_number: string | null;
 	session_date: string | null;
 	session_date_gregorian?: string | null;
+	session_date_hijri?: string | null;
 	session_time: string | null;
 	status: string;
 	najiz_status: string | null;
@@ -687,6 +689,11 @@ const UpcomingSessions: React.FC = () => {
 								<div className="session-date">
 									<CalendarIcon size={14} className="text-gray-400" />
 									<span>{formatDate(getEffectiveDate(session))}</span>
+										{formatHijriRaw(session.session_date_hijri) && (
+											<span className="session-date-hijri" title="التاريخ الهجري من ناجز" style={{ fontSize: '11px', color: 'var(--color-text-secondary)', width: '100%', display: 'block' }}>
+												{formatHijriRaw(session.session_date_hijri)}
+											</span>
+										)}
 									{session.session_time && (
 										<span className="session-time">
 											<Clock size={12} className="ml-1" />

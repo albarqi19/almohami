@@ -19,7 +19,7 @@ import OneDriveRequiredAlert from './OneDriveRequiredAlert';
 
 interface CaseParty {
   name: string;
-  side: 'plaintiff' | 'defendant' | 'lawyer' | string;
+  side: 'plaintiff' | 'defendant' | 'lawyer' | 'agent' | 'appellant' | 'appellee' | string;
   role?: string;
 }
 

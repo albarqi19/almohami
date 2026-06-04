@@ -577,6 +577,16 @@ body.dark .case-party-tag {
     border-color: rgba(180, 140, 60, 0.25);
 }
 
+.case-party-tag--appellant {
+    background: rgba(124, 58, 173, 0.09);
+    border-color: rgba(124, 58, 173, 0.25);
+}
+
+.case-party-tag--appellee {
+    background: rgba(13, 148, 136, 0.09);
+    border-color: rgba(13, 148, 136, 0.25);
+}
+
 .case-party-tag__icon {
     width: 18px;
     height: 18px;
@@ -603,6 +613,14 @@ body.dark .case-party-tag {
 
 .case-party-tag--agent .case-party-tag__icon {
     background: #b48c3c;
+}
+
+.case-party-tag--appellant .case-party-tag__icon {
+    background: #7c3aad;
+}
+
+.case-party-tag--appellee .case-party-tag__icon {
+    background: #0d9488;
 }
 
 .case-party-tag__name {

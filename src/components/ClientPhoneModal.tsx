@@ -206,7 +206,7 @@ const ClientPhoneModal: React.FC<ClientPhoneModalProps> = ({
                                                     <div className="client-card__name">{party.name}</div>
                                                     <div className="client-card__id">{party.national_id}</div>
                                                     <div className="client-card__role">
-                                                        {party.side === 'plaintiff' ? 'مدعي' : 'مدعى عليه'} - {party.role}
+                                                        {(({ plaintiff: 'مدعي', defendant: 'مدعى عليه', lawyer: 'محامٍ', agent: 'وكيل/ممثل', appellant: 'المستأنِف', appellee: 'المستأنَف ضدّه' } as Record<string, string>)[party.side] || party.role || 'طرف')} - {party.role}
                                                     </div>
                                                 </div>
                                                 {party.has_account ? (

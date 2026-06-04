@@ -184,7 +184,7 @@ export interface CaseParty {
   case_id: string;
   name: string;
   role: string;
-  side: 'plaintiff' | 'defendant' | 'lawyer' | 'agent' | 'other';
+  side: 'plaintiff' | 'defendant' | 'lawyer' | 'agent' | 'appellant' | 'appellee' | 'other';
   national_id?: string;
   commercial_reg?: string;
   nationality?: string;
@@ -226,6 +226,7 @@ export interface CaseSession {
   session_type?: string;
   session_date?: string;
   session_date_gregorian?: Date;
+  session_date_hijri?: string; // التاريخ الهجري الخام من ناجز (للعرض فقط)
   session_time?: string;
   session_text?: string;
   session_judgement?: string;

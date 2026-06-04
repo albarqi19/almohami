@@ -30,7 +30,7 @@ export interface PotentialClient {
     party_id: number;
     name: string;
     national_id: string;
-    side: 'plaintiff' | 'defendant';
+    side: 'plaintiff' | 'defendant' | 'lawyer' | 'agent' | 'appellant' | 'appellee' | 'other';
     role: string;
     user_id: number | null;
     has_account: boolean;
