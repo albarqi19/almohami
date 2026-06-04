@@ -1,9 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2 } from 'lucide-react';
-
-// Set worker path - use unpkg which always has the matching version
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 interface SecurePdfViewerProps {
     url: string;
@@ -12,7 +9,7 @@ interface SecurePdfViewerProps {
 
 const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ url, fileName }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
+    const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     const [scale, setScale] = useState(1.2);
@@ -26,6 +23,9 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ url, fileName }) => {
                 setLoading(true);
                 setError(null);
 
+                // تُحمّل مكتبة pdfjs عند الطلب فقط لتخفيف الحزمة الأولية
+                const pdfjsLib = await import('pdfjs-dist');
+                pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
                 const loadingTask = pdfjsLib.getDocument(url);
                 const pdf = await loadingTask.promise;
 

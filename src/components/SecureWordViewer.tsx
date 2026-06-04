@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import mammoth from 'mammoth';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 interface SecureWordViewerProps {
@@ -26,7 +25,8 @@ const SecureWordViewer: React.FC<SecureWordViewerProps> = ({ url, fileName }) =>
 
                 const arrayBuffer = await response.arrayBuffer();
 
-                // Convert to HTML using mammoth
+                // Convert to HTML using mammoth (تُحمّل عند الطلب فقط لتخفيف الحزمة الأولية)
+                const mammoth = (await import('mammoth')).default;
                 const result = await mammoth.convertToHtml({ arrayBuffer });
 
                 if (result.messages.length > 0) {

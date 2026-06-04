@@ -104,9 +104,35 @@
     "sameAs": []
   }
   </script>
+
+  <!-- منع ومضة المتصفح البيضاء عند التحديث في الوضع الداكن:
+       يُضبط color-scheme وخلفية <html> هنا (سكربت حاجب في <head>) قبل أن يرسم المتصفح أول إطار.
+       هذا أبكر نقطة ممكنة — قبل تحميل أي CSS. -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t !== 'light' && t !== 'dark' && t !== 'classic') t = 'classic';
+        window.__appTheme = t;
+        var el = document.documentElement;
+        if (t === 'dark' || t === 'classic') el.classList.add(t);
+        // color-scheme يجعل المتصفح يرسم خلفية المستند الافتراضية داكنة بدل الأبيض.
+        el.style.colorScheme = (t === 'dark') ? 'dark' : 'light';
+        // خلفية صريحة على <html> مطابقة لـ --color-background لكل ثيم (تسدّ أي فجوة قبل CSS).
+        el.style.backgroundColor = (t === 'dark') ? '#10151f' : (t === 'classic' ? '#F5EFE6' : '#FDFBF7');
+      } catch (e) { /* localStorage غير متاح — تجاهل بأمان */ }
+    })();
+  </script>
 </head>
 
 <body>
+  <!-- متغيّرات الثيم معرّفة على body.dark/body.classic — لذا نضيف الكلاس على <body> أيضًا. -->
+  <script>
+    (function () {
+      var t = window.__appTheme;
+      if (t === 'dark' || t === 'classic') document.body.classList.add(t);
+    })();
+  </script>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 

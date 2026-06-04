@@ -4,8 +4,6 @@ import { useReactToPrint } from 'react-to-print';
 import { useContractVariables } from '../../hooks/useContractVariables';
 import { LetterheadService } from '../../services/letterheadService';
 import type { Letterhead } from '../../types/letterhead';
-// @ts-ignore
-import html2pdf from 'html2pdf.js';
 
 export interface ContractPreviewProps {
   isOpen?: boolean;
@@ -264,6 +262,9 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
     };
 
     try {
+      // تُحمّل html2pdf عند الطلب فقط لتخفيف الحزمة الأولية
+      // @ts-ignore
+      const html2pdf = (await import('html2pdf.js')).default;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (html2pdf as any)().set(opt).from(printRef.current).save();
     } catch (error) {

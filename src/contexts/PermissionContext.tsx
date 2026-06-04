@@ -34,7 +34,9 @@ const PermissionContext = createContext<PermissionContextValue | undefined>(unde
 export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading: authLoading } = useAuth();
   const [data, setData] = useState<MePermissionsResponse>(empty);
-  const [isLoading, setIsLoading] = useState(false);
+  // يبدأ true: وجود توكن يعني أن الصلاحيات حتمًا قيد التحميل. هذا يمنع ظهور الصفحة
+  // في النافذة البينية بين انتهاء المصادقة وبدء جلب الصلاحيات (الوميض المزدوج).
+  const [isLoading, setIsLoading] = useState(true);
 
   // Set للبحث السريع (O(1) بدل O(n) في كل usePermission)
   const permSet = useMemo(() => new Set(data.permissions), [data.permissions]);
@@ -63,6 +65,7 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       fetchPermissions();
     } else {
       setData(empty);
+      setIsLoading(false); // لا مستخدم → لا صلاحيات لجلبها؛ ارفع حالة التحميل حتى لا يُحجب التطبيق
     }
   }, [user, authLoading, fetchPermissions]);
 

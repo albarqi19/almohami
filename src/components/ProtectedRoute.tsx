@@ -29,10 +29,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (isLoading || (user && permsLoading)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">جاري التحميل...</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--dashboard-bg, var(--color-background))' }}>
+        <div className="app-loading">
+          <p className="app-loading__label">جاري التحميل</p>
+          <div className="app-loading-bar" role="progressbar" aria-label="جاري التحميل">
+            <span className="app-loading-bar__fill"></span>
+          </div>
         </div>
       </div>
     );
@@ -45,7 +47,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       // There's a token but user is null, might be network issue
       // Show error message instead of redirecting to login
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--dashboard-bg, var(--color-background))' }}>
           <div className="text-center">
             <div className="text-red-500 mb-4">
               <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">

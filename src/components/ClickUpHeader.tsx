@@ -102,6 +102,12 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
       document.documentElement.classList.add('classic');
       document.body.classList.add('classic');
     }
+
+    // مزامنة color-scheme وخلفية <html> مع index.html — يمنع ومضة المتصفح البيضاء
+    // عند التحديث التالي بعد تبديل الثيم يدويًا.
+    document.documentElement.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
+    document.documentElement.style.backgroundColor =
+      theme === 'dark' ? '#10151f' : theme === 'classic' ? '#F5EFE6' : '#FDFBF7';
   }, [theme]);
 
   const cycleTheme = () => {

@@ -1,7 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import confetti from 'canvas-confetti';
 import { Trophy, X, Sparkles, FileText, Calendar, Building2, Hash } from 'lucide-react';
 import type { Case } from '../types';
 import { apiClient } from '../utils/api';
@@ -41,37 +40,46 @@ const WinCelebrationModal: React.FC<Props> = ({ caseData, isOpen, onClose, repla
     const isMobile = window.innerWidth < 640;
     const count = isMobile ? 35 : 60;
 
-    const fire = () => {
-      confetti({
-        particleCount: count,
-        spread: 70,
-        startVelocity: 50,
-        decay: 0.92,
-        origin: { x: 0.05, y: 0.7 },
-        angle: 60,
-        colors: COLORS,
-        ticks: 200,
-        gravity: 1,
-        zIndex: 10001,
-      });
-      confetti({
-        particleCount: count,
-        spread: 70,
-        startVelocity: 50,
-        decay: 0.92,
-        origin: { x: 0.95, y: 0.7 },
-        angle: 120,
-        colors: COLORS,
-        ticks: 200,
-        gravity: 1,
-        zIndex: 10001,
-      });
-    };
+    let cancelled = false;
+    let timers: number[] = [];
 
-    const delays = [100, 700, 1300, 1900];
-    const timers = delays.map(d => window.setTimeout(fire, d));
+    // تُحمّل canvas-confetti عند الطلب فقط (الاحتفال نادر) لتخفيف الحزمة الأولية
+    import('canvas-confetti').then(({ default: confetti }) => {
+      if (cancelled) return;
+
+      const fire = () => {
+        confetti({
+          particleCount: count,
+          spread: 70,
+          startVelocity: 50,
+          decay: 0.92,
+          origin: { x: 0.05, y: 0.7 },
+          angle: 60,
+          colors: COLORS,
+          ticks: 200,
+          gravity: 1,
+          zIndex: 10001,
+        });
+        confetti({
+          particleCount: count,
+          spread: 70,
+          startVelocity: 50,
+          decay: 0.92,
+          origin: { x: 0.95, y: 0.7 },
+          angle: 120,
+          colors: COLORS,
+          ticks: 200,
+          gravity: 1,
+          zIndex: 10001,
+        });
+      };
+
+      const delays = [100, 700, 1300, 1900];
+      timers = delays.map(d => window.setTimeout(fire, d));
+    });
 
     return () => {
+      cancelled = true;
       timers.forEach(t => window.clearTimeout(t));
       // لا نوقف confetti — الجسيمات تختفي طبيعياً
     };
