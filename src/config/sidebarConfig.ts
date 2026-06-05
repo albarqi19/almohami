@@ -57,7 +57,7 @@ export const mainMenuItems: SidebarItem[] = [
   // any: يمنح المحامي وصول تبويب العقود حتى لو لم تكن له billing.view (التبويبات تُحرَس داخلياً — UX-07).
   { icon: FileSignature, label: 'العقود والمالية', path: '/finance', any: ['billing.view', 'contracts.view'] },
   { icon: QrCode, label: 'الفوترة الإلكترونية', path: '/zatca', roles: ['admin', 'accountant', 'owner'], featureGate: 'zatca' },
-  { icon: Lightbulb, label: 'الملاحظات والاقتراحات', path: '/feedback', permission: 'feedback.submit', badge: 'مؤقتة' },
+  { icon: Lightbulb, label: 'الملاحظات', path: '/feedback', permission: 'feedback.submit', badge: 'مؤقتة' },
 ];
 
 /**
