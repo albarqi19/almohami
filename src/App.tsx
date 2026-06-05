@@ -48,6 +48,7 @@ import LawyerSuspended from './pages/LawyerSuspended';
 import Clients from './pages/Clients';
 import ClientDetailPage from './pages/ClientDetailPage';
 import AdminRequests from './pages/AdminRequests';
+import Feedback from './pages/Feedback';
 import WathqInquiryPage from './pages/WathqInquiry';
 import ClientMessages from './pages/ClientMessages';
 import PersonalNotebook from './pages/NotebookWorkspace';
@@ -171,6 +172,12 @@ function App() {
               <Route path="execution-requests" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <ExecutionRequests />
+                </ProtectedRoute>
+              } />
+              {/* مركز الملاحظات والاقتراحات — كل المستخدمين الداخليين عدا العميل */}
+              <Route path="feedback" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant', 'accountant', 'secretary']}>
+                  <Feedback />
                 </ProtectedRoute>
               } />
 

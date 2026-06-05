@@ -1,7 +1,7 @@
 import {
   Home, FileText, FileCheck, Calendar, Scale, Briefcase, Users, Clock, CheckSquare,
   BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature, Receipt, CreditCard,
-  TrendingUp, Bell, Settings, ClipboardList, BarChart3, FolderUp, QrCode,
+  TrendingUp, Bell, Settings, ClipboardList, BarChart3, FolderUp, QrCode, Lightbulb,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -25,6 +25,8 @@ export interface SidebarItem {
    * 'zatca' يُقرأ من useZatcaFeature() (context) داخل ClickUpSidebar — لا hook هنا (هذا ملف بيانات).
    */
   featureGate?: 'zatca';
+  /** شارة نصية صغيرة بجوار الاسم (مثل "مؤقتة" لميزة تجريبية). */
+  badge?: string;
 }
 
 /**
@@ -55,6 +57,7 @@ export const mainMenuItems: SidebarItem[] = [
   // any: يمنح المحامي وصول تبويب العقود حتى لو لم تكن له billing.view (التبويبات تُحرَس داخلياً — UX-07).
   { icon: FileSignature, label: 'العقود والمالية', path: '/finance', any: ['billing.view', 'contracts.view'] },
   { icon: QrCode, label: 'الفوترة الإلكترونية', path: '/zatca', roles: ['admin', 'accountant', 'owner'], featureGate: 'zatca' },
+  { icon: Lightbulb, label: 'الملاحظات والاقتراحات', path: '/feedback', permission: 'feedback.submit', badge: 'مؤقتة' },
 ];
 
 /**

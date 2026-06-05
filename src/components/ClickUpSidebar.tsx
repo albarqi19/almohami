@@ -73,6 +73,15 @@ const NavItem: React.FC<NavItemProps> = React.memo(({
             {!isCollapsed && (
                 <span className="sidebar-link__label">{item.label}</span>
             )}
+
+            {!isCollapsed && item.badge && (
+                <span
+                    className="sidebar-link__badge"
+                    style={{ background: 'var(--color-warning)', color: '#231a0f' }}
+                >
+                    {item.badge}
+                </span>
+            )}
         </NavLink>
     );
 
