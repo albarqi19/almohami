@@ -4,6 +4,18 @@ import type { Wekala, WekalaFilters } from '../types';
 
 export class WekalatService {
   /**
+   * إصلاح عكس الأطراف في وكالات ناجز.
+   * ناجز يضع في حقل `agents` الموكِّلين (الأطراف الخارجية) وفي حقل `clients` الوكلاء
+   * (محامي المكتب) — أي عكس المعنى الشرعي. لذا نعكسهما هنا في نقطة واحدة فيستفيد
+   * كل المستهلكين (القائمة + التفاصيل + البحث). نقصر العكس على source==='najiz'
+   * حتى لا نكسر الوكالات المُدخلة يدوياً (المخزّنة بالاتجاه الصحيح أصلاً).
+   */
+  private static fixNajizParties(wekala: Wekala): Wekala {
+    if (!wekala || wekala.source !== 'najiz') return wekala;
+    return { ...wekala, agents: wekala.clients ?? [], clients: wekala.agents ?? [] };
+  }
+
+  /**
    * الحصول على قائمة الوكالات مع الفلترة والتصفح
    */
   static async getWekalat(filters: WekalaFilters = {}): Promise<PaginatedResponse<Wekala>> {
@@ -19,9 +31,12 @@ export class WekalatService {
     const endpoint = queryString ? `/najiz/wekalat?${queryString}` : '/najiz/wekalat';
     
     const response = await apiClient.get<ApiResponse<PaginatedResponse<Wekala>>>(endpoint);
-    
+
     if (response.success && response.data) {
-      return response.data;
+      return {
+        ...response.data,
+        data: (response.data.data ?? []).map(w => this.fixNajizParties(w)),
+      };
     } else {
       throw new Error(response.message || 'فشل في جلب الوكالات');
     }
@@ -32,9 +47,9 @@ export class WekalatService {
    */
   static async getWekala(id: string | number): Promise<Wekala> {
     const response = await apiClient.get<ApiResponse<Wekala>>(`/najiz/wekalat/${id}`);
-    
+
     if (response.success && response.data) {
-      return response.data;
+      return this.fixNajizParties(response.data);
     } else {
       throw new Error(response.message || 'فشل في جلب تفاصيل الوكالة');
     }
