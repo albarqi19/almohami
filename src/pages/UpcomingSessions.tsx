@@ -8,6 +8,7 @@ import {
 	FileText,
 	User,
 	Scale,
+	Swords,
 	ChevronLeft,
 	ChevronRight,
 	Filter,
@@ -26,7 +27,10 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import { AddSessionModal } from '../components/AddSessionModal';
+import DisplaySettingsButton from '../components/DisplaySettingsButton';
+import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
+import { resolveOpponent } from '../utils/partyHelpers';
 import { toHijri } from '../utils/hijriDate';
 import '../styles/sessions-page.css';
 import '../styles/add-session-modal.css';
@@ -66,6 +70,9 @@ interface Session {
 		file_number: string;
 		case_type_arabic: string | null;
 		client_name: string | null;
+		opponent_name?: string | null;
+		plaintiff_name?: string | null;
+		client_role?: string | null;
 		court: string | null;
 		najiz_status: string | null;
 		client_id?: number | null;
@@ -78,6 +85,7 @@ interface Session {
 
 const UpcomingSessions: React.FC = () => {
 	const navigate = useNavigate();
+	const { prefs } = useDisplayPreferences();
 	const [filter, setFilter] = useState<'all' | 'upcoming' | 'today' | 'week'>('upcoming');
 	const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
 	const [searchTerm, setSearchTerm] = useState('');
@@ -728,6 +736,12 @@ const UpcomingSessions: React.FC = () => {
 											</div>
 										) : null;
 									})()}
+									{prefs.showOpponent && resolveOpponent(session.case) && (
+										<div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--color-text-secondary)' }} title="الخصم">
+											<Swords size={11} />
+											<span>{resolveOpponent(session.case)}</span>
+										</div>
+									)}
 								</div>
 							</td>
 							<td>
@@ -1114,6 +1128,7 @@ const UpcomingSessions: React.FC = () => {
 					>
 						<RefreshCw size={18} className={isFetching ? 'animate-spin' : ''} />
 					</button>
+					<DisplaySettingsButton />
 					<button
 						className="icon-btn"
 						onClick={() => setIsAddSessionOpen(true)}

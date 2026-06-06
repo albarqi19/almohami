@@ -19,6 +19,7 @@ import {
 	Eye,
 	Trash2,
 	Scale,
+	Swords,
 	AlertCircle,
 	Folder
 } from 'lucide-react';
@@ -27,8 +28,11 @@ import { CaseService } from '../services';
 import { UserService, type User as UserType } from '../services/UserService';
 import AddCaseModal from '../components/AddCaseModal';
 import OutcomeBadge from '../components/OutcomeBadge';
+import DisplaySettingsButton from '../components/DisplaySettingsButton';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
+import { resolveOpponent } from '../utils/partyHelpers';
 import { apiClient } from '../utils/api';
 
 type ViewMode = 'grid' | 'table' | 'kanban';
@@ -102,6 +106,7 @@ const saveAdvFilters = (f: AdvancedFilters) => {
 const Cases: React.FC = () => {
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
+	const { prefs } = useDisplayPreferences();
 	const [cases, setCases] = useState<Case[]>(() => {
 		try {
 			const cached = localStorage.getItem(CACHE_KEY);
@@ -455,7 +460,7 @@ const Cases: React.FC = () => {
 									</div>
 								</td>
 
-								{/* العمود 2: الأطراف (عميل + محامي) */}
+								{/* العمود 2: الأطراف (عميل + محامي + خصم اختياري) */}
 								<td>
 									<div className="erp-cell">
 										<div className="erp-cell__row">
@@ -466,6 +471,12 @@ const Cases: React.FC = () => {
 											<Scale size={11} className="erp-cell__icon" />
 											<span>{getLawyerName(c)}</span>
 										</div>
+										{prefs.showOpponent && resolveOpponent(c as any) && (
+											<div className="erp-cell__row erp-cell__row--sub" title="الخصم">
+												<Swords size={11} className="erp-cell__icon" />
+												<span>{resolveOpponent(c as any)}</span>
+											</div>
+										)}
 									</div>
 								</td>
 
@@ -723,6 +734,8 @@ const Cases: React.FC = () => {
 					>
 						<RefreshCw size={16} className={softRefreshing ? 'spin-slow' : ''} />
 					</button>
+
+					<DisplaySettingsButton />
 				</div>
 
 				{/* Left: View Switcher + Add Button */}
