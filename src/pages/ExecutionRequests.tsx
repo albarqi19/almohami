@@ -8,111 +8,122 @@ import {
   ChevronRight,
   X,
   Users,
-  FileText,
   Clock,
-  LayoutGrid,
-  List,
   Eye,
   Trash2,
   Banknote,
-  Building,
+  Landmark,
   Gavel,
-  TrendingUp,
   AlertCircle,
+  FileText,
+  Wallet,
+  CircleDollarSign,
+  PauseCircle,
+  CheckCircle2,
+  PlayCircle,
+  XCircle,
+  PieChart as PieIcon,
 } from 'lucide-react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 import { ExecutionRequestService } from '../services/executionRequestService';
 import type { ExecutionRequest, ExecutionRequestStats } from '../types';
 import '../styles/execution-requests-page.css';
 
-// ==================== Status Config ====================
+// ==================== تصنيف الحالات (ألوان عبر متغيرات الثيم) ====================
 
-const STATUS_CONFIG: Record<string, { label: string; class: string; color: string }> = {
-  'قيد التنفيذ': { label: 'قيد التنفيذ', class: 'exec-status-badge--active', color: '#1b998b' },
-  'جارٍ التنفيذ': { label: 'جارٍ التنفيذ', class: 'exec-status-badge--active', color: '#1b998b' },
-  'منفذ': { label: 'منفذ', class: 'exec-status-badge--completed', color: '#0A192F' },
-  'منتهي': { label: 'منتهي', class: 'exec-status-badge--completed', color: '#0A192F' },
-  'موقوف': { label: 'موقوف', class: 'exec-status-badge--stopped', color: '#d97706' },
-  'متعثر': { label: 'متعثر', class: 'exec-status-badge--stopped', color: '#d97706' },
-  'ملغى': { label: 'ملغى', class: 'exec-status-badge--cancelled', color: '#dc2626' },
-  'مرفوض': { label: 'مرفوض', class: 'exec-status-badge--cancelled', color: '#dc2626' },
+type StatusKind = 'active' | 'completed' | 'stopped' | 'cancelled' | 'default';
+
+const statusKind = (status: string): StatusKind => {
+  if (!status) return 'default';
+  if (status.includes('قيد') || status.includes('جار')) return 'active';
+  if (status.includes('منفذ') || status.includes('منتهي')) return 'completed';
+  if (status.includes('موقوف') || status.includes('متعثر')) return 'stopped';
+  if (status.includes('ملغ') || status.includes('مرفوض')) return 'cancelled';
+  return 'default';
 };
 
-const getStatusConfig = (status: string) =>
-  STATUS_CONFIG[status] || { label: status, class: 'exec-status-badge--default', color: '#94a3b8' };
+const STATUS_ICON: Record<StatusKind, React.ReactNode> = {
+  active: <PlayCircle size={13} />,
+  completed: <CheckCircle2 size={13} />,
+  stopped: <PauseCircle size={13} />,
+  cancelled: <XCircle size={13} />,
+  default: <FileText size={13} />,
+};
 
 const PARTY_ROLES: Record<string, string> = {
-  'all': 'الكل',
+  'all': 'كل الصفات',
   '1': 'طلب شخصي',
   '2': 'طلب ضدي',
   '3': 'وكيل طالب تنفيذ',
   '6': 'وكيل منفذ ضده',
 };
 
-// ==================== Helpers ====================
+// ==================== مساعدات ====================
 
 const formatAmount = (amount?: number | null): string => {
-  if (amount === null || amount === undefined) return '-';
-  return new Intl.NumberFormat('ar-SA', {
-    maximumFractionDigits: 0,
-  }).format(amount);
+  if (amount === null || amount === undefined) return '—';
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(amount);
+};
+
+const compactAmount = (amount?: number | null): string => {
+  const v = amount ?? 0;
+  if (v >= 1_000_000) return `${(v / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 2 })} مليون`;
+  if (v >= 1_000) return `${(v / 1_000).toLocaleString('en-US', { maximumFractionDigits: 1 })} ألف`;
+  return v.toLocaleString('en-US');
 };
 
 const formatDate = (value?: string | null): string => {
-  if (!value) return '-';
+  if (!value) return '—';
   try {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
-    return date.toLocaleDateString('ar-SA', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    return date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
   } catch {
     return value;
   }
 };
+
+/** نسبة التحصيل لطلب واحد */
+const collectionPct = (req: { total_amount?: number | null; paid_amount?: number | null }): number | null => {
+  const total = req.total_amount ?? 0;
+  if (total <= 0) return null;
+  return Math.min(100, Math.round(((req.paid_amount ?? 0) / total) * 100));
+};
+
+const pctClass = (p: number | null) => p === null ? '' : p >= 70 ? 'exec-good' : p >= 30 ? 'exec-mid' : 'exec-bad';
 
 // ==================== Cache ====================
 
 const CACHE_KEY = 'execution_requests_data';
 const CACHE_DURATION = 60 * 60 * 1000;
 
-// ==================== Custom Tooltip ====================
+// ==================== شارة الحالة ====================
 
-const ChartTooltip = ({ active, payload }: any) => {
-  if (!active || !payload?.length) return null;
-  const data = payload[0];
+const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+  const kind = statusKind(status);
   return (
-    <div style={{
-      background: 'var(--dashboard-card)',
-      border: '1px solid var(--color-border)',
-      borderRadius: 8,
-      padding: '8px 12px',
-      fontSize: 12,
-      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-    }}>
-      <div style={{ fontWeight: 600, color: 'var(--color-heading)' }}>{data.name}</div>
-      <div style={{ color: 'var(--color-text-secondary)', marginTop: 2 }}>
-        {typeof data.value === 'number' && data.value > 1000
-          ? formatAmount(data.value) + ' ر.س'
-          : data.value}
+    <span className={`exec-badge exec-badge--${kind}`}>
+      {STATUS_ICON[kind]}
+      {status}
+    </span>
+  );
+};
+
+// ==================== شريط تحصيل مصغّر ====================
+
+const CollectBar: React.FC<{ req: ExecutionRequest }> = ({ req }) => {
+  const p = collectionPct(req);
+  if (p === null) return <span className="exec-dim">—</span>;
+  return (
+    <div className="exec-collectbar" title={`محصّل ${formatAmount(req.paid_amount)} من ${formatAmount(req.total_amount)}`}>
+      <div className="exec-collectbar__track">
+        <div className={`exec-collectbar__fill ${pctClass(p)}`} style={{ width: `${p}%` }} />
       </div>
+      <b className={pctClass(p)}>{p}%</b>
     </div>
   );
 };
 
-// ==================== Detail Modal ==
+// ==================== نافذة التفاصيل ====================
 
 interface DetailModalProps {
   request: ExecutionRequest | null;
@@ -123,148 +134,140 @@ interface DetailModalProps {
 const DetailModal: React.FC<DetailModalProps> = ({ request, isOpen, onClose }) => {
   if (!request || !isOpen) return null;
 
-  const statusConfig = getStatusConfig(request.status);
   const parties = Array.isArray(request.parties) ? request.parties : [];
   const decisions = Array.isArray(request.decisions) ? request.decisions : [];
   const steps = Array.isArray(request.steps) ? request.steps : [];
+  const p = collectionPct(request);
 
-  const getPartyDotClass = (role: string) => {
-    if (role.includes('طالب') || role.includes('دائن') || role.includes('creditor')) return 'exec-party-dot--creditor';
-    if (role.includes('ضده') || role.includes('مدين') || role.includes('debtor')) return 'exec-party-dot--debtor';
-    return 'exec-party-dot--attorney';
+  const partyDot = (role: string) => {
+    if (role.includes('طالب') || role.includes('دائن') || role.includes('creditor')) return 'exec-dot--creditor';
+    if (role.includes('ضده') || role.includes('مدين') || role.includes('debtor')) return 'exec-dot--debtor';
+    return 'exec-dot--attorney';
   };
 
   return (
     <div className="exec-overlay" onClick={onClose}>
       <div className="exec-modal" onClick={e => e.stopPropagation()}>
-        {/* Header */}
+        {/* الترويسة */}
         <div className="exec-modal__header">
-          <Scale size={18} className="exec-modal__header-icon" />
-          <span className="exec-modal__num">{request.request_number}</span>
-          <div className="exec-modal__spacer" />
-          <span className={`exec-status-badge ${statusConfig.class}`}>
-            <span className="exec-status-badge__dot" />
-            {statusConfig.label}
-          </span>
-          <button className="exec-modal__close" onClick={onClose}><X size={16} /></button>
+          <Scale size={16} />
+          <div className="exec-modal__title">
+            <b>{request.request_number}</b>
+            <span>{request.court || 'محكمة غير محددة'}{request.department ? ` · ${request.department}` : ''}</span>
+          </div>
+          <StatusBadge status={request.status} />
+          <button className="exec-iconbtn" onClick={onClose}><X size={15} /></button>
         </div>
 
-        {/* Body */}
         <div className="exec-modal__body">
-          {/* Basic Info */}
+          {/* الشريط المالي */}
+          <div className="exec-modal__finance">
+            <div className="exec-modal__fcell">
+              <span>المبلغ الإجمالي</span>
+              <b>{formatAmount(request.total_amount)}</b>
+            </div>
+            <div className="exec-modal__fcell">
+              <span>المحصَّل</span>
+              <b className="exec-good">{formatAmount(request.paid_amount)}</b>
+            </div>
+            <div className="exec-modal__fcell">
+              <span>المتبقي</span>
+              <b className="exec-bad">{formatAmount(request.remaining_amount)}</b>
+            </div>
+            <div className="exec-modal__fcell exec-modal__fcell--bar">
+              <span>نسبة التحصيل</span>
+              {p !== null ? (
+                <div className="exec-collectbar">
+                  <div className="exec-collectbar__track">
+                    <div className={`exec-collectbar__fill ${pctClass(p)}`} style={{ width: `${p}%` }} />
+                  </div>
+                  <b className={pctClass(p)}>{p}%</b>
+                </div>
+              ) : <b>—</b>}
+            </div>
+          </div>
+
+          {/* البيانات الأساسية */}
           <table className="exec-info-table">
             <tbody>
               <tr>
                 <td className="exec-info-table__label">الصفة في الطلب</td>
-                <td>{request.party_role || '-'}</td>
+                <td>{request.party_role || '—'}</td>
                 <td className="exec-info-table__label">نوع السند</td>
-                <td>{request.main_document_type || '-'}</td>
+                <td>{request.main_document_type || '—'}</td>
               </tr>
               <tr>
                 <td className="exec-info-table__label">السند الفرعي</td>
-                <td>{request.sub_document_type || '-'}</td>
+                <td>{request.sub_document_type || '—'}</td>
                 <td className="exec-info-table__label">تاريخ التقديم</td>
                 <td>{request.filing_date_hijri || formatDate(request.filing_date_gregorian)}</td>
               </tr>
               <tr>
                 <td className="exec-info-table__label">المحكمة</td>
-                <td>{request.court || '-'}</td>
+                <td>{request.court || '—'}</td>
                 <td className="exec-info-table__label">الدائرة</td>
-                <td>{request.department || '-'}</td>
+                <td>{request.department || '—'}</td>
               </tr>
             </tbody>
           </table>
 
-          {/* Financial */}
-          <div className="exec-financial-grid">
-            <div className="exec-financial-item">
-              <div className="exec-financial-item__label">المبلغ الإجمالي</div>
-              <div className="exec-financial-item__value">{formatAmount(request.total_amount)}</div>
-            </div>
-            <div className="exec-financial-item">
-              <div className="exec-financial-item__label">المبلغ المستلم</div>
-              <div className="exec-financial-item__value" style={{ color: 'var(--status-green)' }}>
-                {formatAmount(request.paid_amount)}
+          <div className="exec-modal__cols">
+            {/* الأطراف */}
+            {parties.length > 0 && (
+              <div className="exec-section">
+                <div className="exec-section__head">
+                  <Users size={13} /> الأطراف <em>{parties.length}</em>
+                </div>
+                {parties.map((pt, i) => (
+                  <div key={i} className="exec-party">
+                    <span className={`exec-dot ${partyDot(pt.role || '')}`} />
+                    <div>
+                      <b>{pt.name || '—'}</b>
+                      <span>
+                        {pt.role}{pt.id_number ? ` · ${pt.id_number}` : ''}
+                        {pt.nationality ? ` (${pt.nationality})` : ''}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-            <div className="exec-financial-item">
-              <div className="exec-financial-item__label">المبلغ المتبقي</div>
-              <div className="exec-financial-item__value" style={{ color: 'var(--status-red)' }}>
-                {formatAmount(request.remaining_amount)}
+            )}
+
+            {/* القرارات */}
+            {decisions.length > 0 && (
+              <div className="exec-section">
+                <div className="exec-section__head">
+                  <Gavel size={13} /> القرارات <em>{decisions.length}</em>
+                </div>
+                {decisions.map((d: any, i: number) => (
+                  <div key={i} className="exec-party">
+                    <span className="exec-dot exec-dot--attorney" />
+                    <div>
+                      <b>{d.decisionNumber || d.number || `قرار ${i + 1}`}</b>
+                      <span>{d.status || d.statusName || '—'}{d.issueDate ? ` · ${d.issueDate}` : ''}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
           </div>
 
-          {/* Parties */}
-          {parties.length > 0 && (
-            <div className="exec-section">
-              <div className="exec-section__head">
-                <Users size={14} /> بيانات الأطراف
-                <span className="exec-section__badge">{parties.length}</span>
-              </div>
-              <div className="exec-section__body">
-                {parties.map((p, i) => (
-                  <div key={i} className="exec-party-row">
-                    <span className={`exec-party-dot ${getPartyDotClass(p.role || '')}`} />
-                    <div className="exec-party-row__info">
-                      <div className="exec-party-row__name">{p.name || '-'}</div>
-                      <div className="exec-party-row__role">
-                        {p.role}{p.id_number ? ` - ${p.id_number}` : ''}
-                        {p.nationality ? ` (${p.nationality})` : ''}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Decisions */}
-          {decisions.length > 0 && (
-            <div className="exec-section">
-              <div className="exec-section__head">
-                <Gavel size={14} /> القرارات
-                <span className="exec-section__badge">{decisions.length}</span>
-              </div>
-              <div className="exec-section__body">
-                {decisions.map((d: any, i: number) => (
-                  <div key={i} className="exec-party-row">
-                    <span className="exec-party-dot exec-party-dot--attorney" />
-                    <div className="exec-party-row__info">
-                      <div className="exec-party-row__name">
-                        {d.decisionNumber || d.number || `قرار ${i + 1}`}
-                      </div>
-                      <div className="exec-party-row__role">
-                        {d.status || d.statusName || '-'}
-                        {d.issueDate ? ` - ${d.issueDate}` : ''}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Steps / Timeline */}
+          {/* مراحل الطلب */}
           {steps.length > 0 && (
             <div className="exec-section">
               <div className="exec-section__head">
-                <Clock size={14} /> مراحل الطلب
+                <Clock size={13} /> مراحل الطلب <em>{steps.length}</em>
               </div>
-              <div className="exec-section__body">
-                <div className="exec-timeline">
-                  {steps.map((s: any, i: number) => (
-                    <div key={i} className="exec-timeline__item">
-                      <div className="exec-timeline__dot" />
-                      <div className="exec-timeline__title">
-                        {s.stepName || s.name || s.title || `مرحلة ${i + 1}`}
-                      </div>
-                      <div className="exec-timeline__date">
-                        {s.stepDate || s.date || '-'}
-                      </div>
+              <div className="exec-timeline">
+                {steps.map((s: any, i: number) => (
+                  <div key={i} className="exec-timeline__item">
+                    <div className="exec-timeline__dot" />
+                    <div className="exec-timeline__content">
+                      <b>{s.stepName || s.name || s.title || `مرحلة ${i + 1}`}</b>
+                      <span>{s.stepDate || s.date || '—'}</span>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -274,7 +277,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ request, isOpen, onClose }) =
   );
 };
 
-// ==================== Main Component ====================
+// ==================== الصفحة ====================
 
 const ExecutionRequests: React.FC = () => {
   const queryClient = useQueryClient();
@@ -282,14 +285,13 @@ const ExecutionRequests: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [selectedRequest, setSelectedRequest] = useState<ExecutionRequest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [deletingId, setDeletingId] = useState<number | string | null>(null);
   const [requestToDelete, setRequestToDelete] = useState<ExecutionRequest | null>(null);
 
-  // Debounce search input so we don't refetch on every keystroke
+  // تأخير البحث كي لا نعيد الجلب مع كل حرف
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(searchTerm);
@@ -298,10 +300,9 @@ const ExecutionRequests: React.FC = () => {
     return () => clearTimeout(t);
   }, [searchTerm]);
 
-  // Reset page when other filters change
   useEffect(() => { setCurrentPage(1); }, [statusFilter, roleFilter]);
 
-  // Per-filter cache key so each combo has its own snapshot
+  // مفتاح cache لكل تركيبة فلاتر
   const buildCacheKey = (page: number, search: string, status: string, role: string) =>
     `${CACHE_KEY}_${status}_${role}_${search || 'none'}_p${page}`;
 
@@ -316,7 +317,6 @@ const ExecutionRequests: React.FC = () => {
     } catch { return undefined; }
   };
 
-  // Requests list — re-fetched whenever filters or page change
   const {
     data: queryData,
     isLoading,
@@ -349,7 +349,7 @@ const ExecutionRequests: React.FC = () => {
     refetchIntervalInBackground: false,
   });
 
-  // Stats — kept in its own query so filter/page changes don't reload it
+  // الإحصائيات في استعلام مستقل كي لا تُعاد مع تغيير الفلاتر
   const { data: stats } = useQuery<ExecutionRequestStats | null>({
     queryKey: ['execution-requests', 'stats'],
     queryFn: () => ExecutionRequestService.getStatistics(),
@@ -362,7 +362,7 @@ const ExecutionRequests: React.FC = () => {
   const refreshing = isFetching && !isLoading;
   const error = queryError ? (queryError instanceof Error ? queryError.message : 'خطأ في جلب البيانات') : null;
 
-  // Persist each filter/page combo to localStorage for instant next visit
+  // حفظ كل صفحة/فلتر في localStorage لفتح فوري لاحقاً
   useEffect(() => {
     if (!queryData) return;
     try {
@@ -373,13 +373,10 @@ const ExecutionRequests: React.FC = () => {
     } catch { /* quota — ignore */ }
   }, [queryData, currentPage, debouncedSearch, statusFilter, roleFilter]);
 
-  // Convenience aliases to keep the rest of the component unchanged.
-  const fetchData = (page?: number, _forceRefresh = false) => {
+  const fetchData = (page?: number) => {
     if (page && page !== currentPage) setCurrentPage(page);
     else refetch();
   };
-
-  const handleRefresh = () => { refetch(); };
 
   const handleViewRequest = (req: ExecutionRequest) => {
     setSelectedRequest(req);
@@ -392,9 +389,7 @@ const ExecutionRequests: React.FC = () => {
     setDeletingId(id);
     try {
       await ExecutionRequestService.deleteRequest(id);
-      // امسح الـ cache لكل الصفحات وأعد جلب البيانات
       queryClient.invalidateQueries({ queryKey: ['execution-requests'] });
-      // امسح الـ localStorage cache أيضاً
       try {
         Object.keys(localStorage)
           .filter(k => k.startsWith(CACHE_KEY))
@@ -409,320 +404,215 @@ const ExecutionRequests: React.FC = () => {
     }
   };
 
-  // Chart data
-  const pieData = useMemo(() => {
-    if (!stats?.by_status) return [];
-    return stats.by_status.map(s => ({
-      name: s.status,
-      value: s.count,
-      color: getStatusConfig(s.status).color,
+  // ==================== مشتقات الإحصائيات ====================
+
+  const kpis = useMemo(() => {
+    const byKind: Record<StatusKind, number> = { active: 0, completed: 0, stopped: 0, cancelled: 0, default: 0 };
+    (stats?.by_status ?? []).forEach(s => { byKind[statusKind(s.status)] += s.count; });
+    const total = stats?.total_amount ?? 0;
+    const paid = stats?.paid_amount ?? 0;
+    return {
+      total: stats?.total ?? 0,
+      ...byKind,
+      totalAmount: total,
+      paidAmount: paid,
+      remainingAmount: stats?.remaining_amount ?? 0,
+      collectionRate: total > 0 ? Math.round((paid / total) * 100) : null,
+    };
+  }, [stats]);
+
+  const statusBars = useMemo(() => {
+    const list = stats?.by_status ?? [];
+    const max = Math.max(1, ...list.map(s => s.count));
+    return list.map(s => ({ ...s, kind: statusKind(s.status), pct: (s.count / max) * 100 }));
+  }, [stats]);
+
+  const roleBars = useMemo(() => {
+    const list = stats?.by_party_role ?? [];
+    const max = Math.max(1, ...list.map(r => r.count));
+    return list.map(r => ({ ...r, pct: (r.count / max) * 100 }));
+  }, [stats]);
+
+  const courtBars = useMemo(() => {
+    const list = stats?.by_court ?? [];
+    const max = Math.max(1, ...list.map(c => Number(c.remaining_total) || 0));
+    return list.map(c => ({
+      court: c.court || '—',
+      count: c.count,
+      remaining: Number(c.remaining_total) || 0,
+      pct: ((Number(c.remaining_total) || 0) / max) * 100,
     }));
   }, [stats]);
 
-  const barData = useMemo(() => {
-    if (!stats?.by_court) return [];
-    return stats.by_court.map(c => ({
-      name: c.court ? (c.court.length > 20 ? c.court.substring(0, 20) + '...' : c.court) : '-',
-      value: Number(c.remaining_total) || 0,
-    }));
-  }, [stats]);
+  const uniqueStatuses = useMemo(() => (stats?.by_status ?? []).map(s => s.status), [stats]);
 
-  // Unique statuses for filter
-  const uniqueStatuses = useMemo(() => {
-    if (!stats?.by_status) return [];
-    return stats.by_status.map(s => s.status);
-  }, [stats]);
-
-  // ==================== Render ====================
+  // ==================== العرض ====================
 
   return (
-    <div className="exec-page">
-      {/* Header */}
-      <div className="exec-header-bar">
-        <div className="exec-header-bar__start">
-          <div className="exec-header-bar__title">
-            <Scale size={20} />
-            <span>طلبات التنفيذ</span>
-            <span className="exec-header-bar__count">{pagination.total}</span>
-          </div>
+    <div className="exec-page" dir="rtl">
+      {/* ===== الترويسة ===== */}
+      <div className="exec-header">
+        <div className="exec-header__title">
+          <h1><Scale size={19} /> طلبات التنفيذ</h1>
+          <span className="exec-header__sub">{formatAmount(pagination.total)} طلباً · تُسحب من ناجز عبر إضافة Chrome</span>
         </div>
 
-        <div className="exec-header-bar__end">
-          {/* Search */}
+        <div className="exec-header__tools">
           <div className="exec-search">
-            <Search size={15} className="exec-search__icon" />
+            <Search size={14} />
             <input
-              className="exec-search__input"
-              placeholder="بحث بالرقم، المحكمة، الأطراف..."
+              placeholder="بحث بالرقم، المحكمة، الأطراف…"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-
-          {/* Status filter */}
-          <select
-            className="exec-filter-select"
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-          >
+          <select className="exec-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
             <option value="all">كل الحالات</option>
-            {uniqueStatuses.map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
+            {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-
-          {/* Role filter */}
-          <select
-            className="exec-filter-select"
-            value={roleFilter}
-            onChange={e => setRoleFilter(e.target.value)}
-          >
-            {Object.entries(PARTY_ROLES).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
+          <select className="exec-select" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+            {Object.entries(PARTY_ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-
-          {/* View toggle */}
-          <div className="exec-view-toggle">
-            <button
-              className={`exec-view-toggle__btn ${viewMode === 'table' ? 'exec-view-toggle__btn--active' : ''}`}
-              onClick={() => setViewMode('table')}
-            >
-              <List size={16} />
-            </button>
-            <button
-              className={`exec-view-toggle__btn ${viewMode === 'grid' ? 'exec-view-toggle__btn--active' : ''}`}
-              onClick={() => setViewMode('grid')}
-            >
-              <LayoutGrid size={16} />
-            </button>
-          </div>
-
-          {/* Refresh */}
-          <button
-            className={`exec-refresh-btn ${refreshing ? 'exec-refresh-btn--spinning' : ''}`}
-            onClick={handleRefresh}
-            title="تحديث"
-          >
-            <RefreshCw size={16} />
+          <button className="exec-iconbtn exec-iconbtn--bordered" onClick={() => refetch()} title="تحديث">
+            <RefreshCw size={14} className={refreshing ? 'exec-spin' : ''} />
           </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* ===== شريط المؤشرات ===== */}
       {stats && stats.total > 0 && (
-        <div className="exec-stats-section">
-          <div className="exec-amount-card exec-amount-card--remaining">
-            <div className="exec-amount-card__label">إجمالي الأموال قيد التحصيل</div>
-            <div className="exec-amount-card__value">{formatAmount(stats.remaining_amount)}</div>
-            <div className="exec-amount-card__sub">ريال سعودي</div>
-          </div>
-          <div className="exec-amount-card exec-amount-card--total">
-            <div className="exec-amount-card__label">إجمالي المبالغ المحكوم بها</div>
-            <div className="exec-amount-card__value">{formatAmount(stats.total_amount)}</div>
-            <div className="exec-amount-card__sub">ريال سعودي</div>
-          </div>
-          <div className="exec-amount-card exec-amount-card--paid">
-            <div className="exec-amount-card__label">المبالغ المحصّلة</div>
-            <div className="exec-amount-card__value">{formatAmount(stats.paid_amount)}</div>
-            <div className="exec-amount-card__sub">ريال سعودي</div>
+        <div className="exec-kpis">
+          <div className="exec-kpi"><FileText size={14} /><b>{formatAmount(kpis.total)}</b><span>إجمالي الطلبات</span></div>
+          <div className="exec-kpi exec-kpi--active"><PlayCircle size={14} /><b>{formatAmount(kpis.active)}</b><span>قيد التنفيذ</span></div>
+          <div className="exec-kpi"><CheckCircle2 size={14} /><b>{formatAmount(kpis.completed)}</b><span>منفّذة / منتهية</span></div>
+          <div className={`exec-kpi ${kpis.stopped > 0 ? 'exec-kpi--warn' : ''}`}><PauseCircle size={14} /><b>{formatAmount(kpis.stopped)}</b><span>موقوفة / متعثرة</span></div>
+          {kpis.cancelled > 0 && (
+            <div className="exec-kpi"><XCircle size={14} /><b>{formatAmount(kpis.cancelled)}</b><span>ملغاة / مرفوضة</span></div>
+          )}
+          <div className="exec-kpi"><Banknote size={14} /><b title={formatAmount(kpis.totalAmount)}>{compactAmount(kpis.totalAmount)}</b><span>محكوم به (ر.س)</span></div>
+          <div className="exec-kpi exec-kpi--good"><Wallet size={14} /><b title={formatAmount(kpis.paidAmount)}>{compactAmount(kpis.paidAmount)}</b><span>محصَّل (ر.س)</span></div>
+          <div className="exec-kpi exec-kpi--bad"><CircleDollarSign size={14} /><b title={formatAmount(kpis.remainingAmount)}>{compactAmount(kpis.remainingAmount)}</b><span>قيد التحصيل (ر.س)</span></div>
+          <div className="exec-kpi">
+            <b className={pctClass(kpis.collectionRate)}>{kpis.collectionRate !== null ? `${kpis.collectionRate}%` : '—'}</b>
+            <div className="exec-kpi__bar">
+              <div className={`exec-collectbar__fill ${pctClass(kpis.collectionRate)}`} style={{ width: `${kpis.collectionRate ?? 0}%` }} />
+            </div>
+            <span>نسبة التحصيل</span>
           </div>
         </div>
       )}
 
-      {/* Charts */}
-      {stats && stats.total > 0 && (pieData.length > 0 || barData.length > 0) && (
-        <div className="exec-charts-row">
-          {/* Pie Chart - By Status */}
-          {pieData.length > 0 && (
-            <div className="exec-chart-card">
-              <div className="exec-chart-card__title">
-                <TrendingUp size={15} />
-                توزيع الطلبات حسب الحالة
+      {/* ===== لوحات التوزيع ===== */}
+      {stats && stats.total > 0 && (
+        <div className="exec-panels">
+          <section className="exec-panel">
+            <h2><PieIcon size={13} /> الحالات</h2>
+            {statusBars.map(s => (
+              <div key={s.status} className="exec-hrow">
+                <span className="exec-hrow__label">{s.status}</span>
+                <div className="exec-hrow__bar"><div className={`exec-hrow__fill exec-fill--${s.kind}`} style={{ width: `${s.pct}%` }} /></div>
+                <b>{formatAmount(s.count)}</b>
               </div>
-              <div style={{ height: 220 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={85}
-                      paddingAngle={3}
-                      dataKey="value"
-                      animationDuration={800}
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<ChartTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="exec-chart-legend">
-                {pieData.map((entry, i) => (
-                  <div key={i} className="exec-chart-legend__item">
-                    <span className="exec-chart-legend__dot" style={{ background: entry.color }} />
-                    {entry.name} ({entry.value})
-                  </div>
-                ))}
-              </div>
-            </div>
+            ))}
+          </section>
+
+          {roleBars.length > 0 && (
+            <section className="exec-panel">
+              <h2><Users size={13} /> الصفة في الطلبات</h2>
+              {roleBars.map(r => (
+                <div key={r.party_role} className="exec-hrow">
+                  <span className="exec-hrow__label">{r.party_role || '—'}</span>
+                  <div className="exec-hrow__bar"><div className="exec-hrow__fill" style={{ width: `${r.pct}%` }} /></div>
+                  <b>{formatAmount(r.count)}</b>
+                </div>
+              ))}
+            </section>
           )}
 
-          {/* Bar Chart - By Court */}
-          {barData.length > 0 && (
-            <div className="exec-chart-card">
-              <div className="exec-chart-card__title">
-                <Building size={15} />
-                المبالغ حسب المحاكم (ر.س)
-              </div>
-              <div style={{ height: 220 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barData} layout="vertical" margin={{ right: 10, left: 10 }}>
-                    <XAxis type="number" hide />
-                    <YAxis
-                      dataKey="name"
-                      type="category"
-                      width={150}
-                      tick={{ fontSize: 11, fill: 'var(--color-text-secondary)' }}
-                    />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Bar
-                      dataKey="value"
-                      fill="#0A192F"
-                      radius={[0, 4, 4, 0]}
-                      barSize={18}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+          {courtBars.length > 0 && (
+            <section className="exec-panel">
+              <h2><Landmark size={13} /> المتبقي حسب المحكمة <i>ر.س</i></h2>
+              {courtBars.map(c => (
+                <div key={c.court} className="exec-hrow" title={`${c.court}: ${formatAmount(c.remaining)} ر.س متبقية في ${c.count} طلب`}>
+                  <span className="exec-hrow__label">{c.court}</span>
+                  <div className="exec-hrow__bar"><div className="exec-hrow__fill exec-fill--money" style={{ width: `${c.pct}%` }} /></div>
+                  <b>{compactAmount(c.remaining)}</b>
+                </div>
+              ))}
+            </section>
           )}
         </div>
       )}
 
-      {/* Content */}
+      {/* ===== المحتوى ===== */}
       {loading ? (
-        <div className="exec-loading">
-          <div className="exec-spinner" />
-        </div>
+        <div className="exec-loading"><RefreshCw size={16} className="exec-spin" /> جارٍ تحميل طلبات التنفيذ…</div>
       ) : error ? (
         <div className="exec-empty">
-          <AlertCircle size={40} className="exec-empty__icon" />
-          <div className="exec-empty__text">{error}</div>
-          <button className="exec-refresh-btn" onClick={handleRefresh}>
-            <RefreshCw size={14} /> إعادة المحاولة
-          </button>
+          <AlertCircle size={36} />
+          <p>{error}</p>
+          <button className="exec-btn" onClick={() => refetch()}><RefreshCw size={13} /> إعادة المحاولة</button>
         </div>
       ) : requests.length === 0 ? (
         <div className="exec-empty">
-          <Scale size={48} className="exec-empty__icon" />
-          <div className="exec-empty__text">لا توجد طلبات تنفيذ</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-            استخدم إضافة Chrome لسحب الطلبات من ناجز
-          </div>
+          <Scale size={42} />
+          <p>لا توجد طلبات تنفيذ مطابقة</p>
+          <span>استخدم إضافة Chrome لسحب الطلبات من ناجز</span>
         </div>
       ) : (
         <>
-          {/* Table View */}
-          <div className="exec-table-wrapper">
+          <div className="exec-tablewrap">
             <table className="exec-table">
               <thead>
                 <tr>
-                  <th>رقم الطلب</th>
+                  <th>الطلب</th>
                   <th>الصفة</th>
-                  <th>نوع السند</th>
+                  <th>السند</th>
                   <th>المحكمة</th>
                   <th>الحالة</th>
-                  <th>المبلغ الإجمالي</th>
+                  <th>المحكوم به</th>
+                  <th style={{ minWidth: 100 }}>التحصيل</th>
                   <th>المتبقي</th>
-                  <th>الأطراف</th>
-                  <th>التاريخ</th>
-                  <th></th>
+                  <th>الدائن / المدين</th>
+                  <th className="exec-th-actions"></th>
                 </tr>
               </thead>
               <tbody>
                 {requests.map(req => {
-                  const sc = getStatusConfig(req.status);
-                  const creditor = req.parties?.find(p =>
-                    p.role?.includes('طالب') || p.role?.includes('دائن')
-                  );
-                  const debtor = req.parties?.find(p =>
-                    p.role?.includes('ضده') || p.role?.includes('مدين')
-                  );
-
+                  const creditor = req.parties?.find(p => p.role?.includes('طالب') || p.role?.includes('دائن'));
+                  const debtor = req.parties?.find(p => p.role?.includes('ضده') || p.role?.includes('مدين'));
                   return (
                     <tr key={req.id} onClick={() => handleViewRequest(req)}>
                       <td>
-                        <span className="exec-req-number">{req.request_number}</span>
+                        <div className="exec-reqcell">
+                          <b>{req.request_number}</b>
+                          <span>{req.filing_date_hijri || formatDate(req.filing_date_gregorian)}</span>
+                        </div>
+                      </td>
+                      <td><span className="exec-rolechip">{req.party_role || '—'}</span></td>
+                      <td className="exec-td-trunc" title={req.main_document_type || ''}>{req.main_document_type || '—'}</td>
+                      <td className="exec-td-trunc" title={req.court || ''}>{req.court || '—'}</td>
+                      <td><StatusBadge status={req.status} /></td>
+                      <td className="exec-td-num">{formatAmount(req.total_amount)}</td>
+                      <td><CollectBar req={req} /></td>
+                      <td className={`exec-td-num ${req.remaining_amount && req.remaining_amount > 0 ? 'exec-bad' : 'exec-good'}`}>
+                        {formatAmount(req.remaining_amount)}
                       </td>
                       <td>
-                        <span className="exec-role-badge">{req.party_role || '-'}</span>
-                      </td>
-                      <td>{req.main_document_type || '-'}</td>
-                      <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {req.court || '-'}
-                      </td>
-                      <td>
-                        <span className={`exec-status-badge ${sc.class}`}>
-                          <span className="exec-status-badge__dot" />
-                          {sc.label}
-                        </span>
+                        <div className="exec-partiescell">
+                          {creditor && <div><i className="exec-dot exec-dot--creditor" />{creditor.name}</div>}
+                          {debtor && <div><i className="exec-dot exec-dot--debtor" />{debtor.name}</div>}
+                          {!creditor && !debtor && '—'}
+                        </div>
                       </td>
                       <td>
-                        <span className="exec-amount">{formatAmount(req.total_amount)}</span>
-                      </td>
-                      <td>
-                        <span className="exec-amount" style={{
-                          color: req.remaining_amount && req.remaining_amount > 0 ? 'var(--status-red)' : undefined
-                        }}>
-                          {formatAmount(req.remaining_amount)}
-                        </span>
-                      </td>
-                      <td>
-                        {creditor && (
-                          <div className="exec-party-name">
-                            <span className="exec-party-label">الدائن</span>
-                            {creditor.name}
-                          </div>
-                        )}
-                        {debtor && (
-                          <div className="exec-party-name">
-                            <span className="exec-party-label">المدين</span>
-                            {debtor.name}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap', fontSize: 12 }}>
-                        {req.filing_date_hijri || formatDate(req.filing_date_gregorian)}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                          <button
-                            className="exec-refresh-btn"
-                            style={{ padding: 5, border: 'none' }}
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleViewRequest(req);
-                            }}
-                            title="عرض التفاصيل"
-                          >
+                        <div className="exec-actions" onClick={e => e.stopPropagation()}>
+                          <button className="exec-iconbtn" onClick={() => handleViewRequest(req)} title="عرض التفاصيل">
                             <Eye size={14} />
                           </button>
                           <button
-                            className="exec-refresh-btn"
-                            style={{
-                              padding: 5,
-                              border: 'none',
-                              color: 'var(--status-red, #dc2626)'
-                            }}
-                            onClick={e => {
-                              e.stopPropagation();
-                              setRequestToDelete(req);
-                            }}
+                            className="exec-iconbtn exec-iconbtn--danger"
+                            onClick={() => setRequestToDelete(req)}
                             title="حذف الطلب"
                             disabled={deletingId === req.id}
                           >
@@ -737,32 +627,29 @@ const ExecutionRequests: React.FC = () => {
             </table>
           </div>
 
-          {/* Pagination */}
           {pagination.totalPages > 1 && (
             <div className="exec-pagination">
               <button
-                className="exec-pagination__btn"
+                className="exec-btn"
                 disabled={pagination.currentPage <= 1}
                 onClick={() => fetchData(pagination.currentPage - 1)}
               >
-                <ChevronRight size={14} /> السابق
+                <ChevronRight size={13} /> السابق
               </button>
-              <span className="exec-pagination__info">
-                {pagination.currentPage} من {pagination.totalPages}
-              </span>
+              <span>صفحة {pagination.currentPage} من {pagination.totalPages}</span>
               <button
-                className="exec-pagination__btn"
+                className="exec-btn"
                 disabled={pagination.currentPage >= pagination.totalPages}
                 onClick={() => fetchData(pagination.currentPage + 1)}
               >
-                التالي <ChevronLeft size={14} />
+                التالي <ChevronLeft size={13} />
               </button>
             </div>
           )}
         </>
       )}
 
-      {/* Detail Modal */}
+      {/* نافذة التفاصيل */}
       <DetailModal
         request={selectedRequest}
         isOpen={isModalOpen}
@@ -772,68 +659,25 @@ const ExecutionRequests: React.FC = () => {
         }}
       />
 
-      {/* Delete Confirmation */}
+      {/* تأكيد الحذف */}
       {requestToDelete && (
         <div className="exec-overlay" onClick={() => deletingId === null && setRequestToDelete(null)}>
-          <div
-            className="exec-modal"
-            onClick={e => e.stopPropagation()}
-            style={{ maxWidth: 420 }}
-          >
+          <div className="exec-modal exec-modal--confirm" onClick={e => e.stopPropagation()}>
             <div className="exec-modal__header">
-              <AlertCircle size={18} style={{ color: 'var(--status-red, #dc2626)' }} />
-              <span className="exec-modal__num">تأكيد الحذف</span>
-              <div className="exec-modal__spacer" />
-              <button
-                className="exec-modal__close"
-                onClick={() => setRequestToDelete(null)}
-                disabled={deletingId !== null}
-              >
-                <X size={16} />
+              <AlertCircle size={16} className="exec-bad" />
+              <div className="exec-modal__title"><b>تأكيد الحذف</b></div>
+              <button className="exec-iconbtn" onClick={() => setRequestToDelete(null)} disabled={deletingId !== null}>
+                <X size={15} />
               </button>
             </div>
-            <div className="exec-modal__body" style={{ padding: '16px 18px' }}>
-              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: 'var(--color-text)' }}>
-                هل تريد حذف طلب التنفيذ رقم{' '}
-                <strong>{requestToDelete.request_number}</strong>؟
-              </p>
-              <p style={{
-                margin: '8px 0 0',
-                fontSize: 11.5,
-                color: 'var(--color-text-secondary)',
-                lineHeight: 1.5,
-              }}>
-                لن يتم حذفه من ناجز، لكنه سيُحذف من النظام. يمكن إعادة سحبه عبر إضافة Chrome لاحقاً.
-              </p>
-              <div style={{
-                display: 'flex',
-                gap: 8,
-                justifyContent: 'flex-end',
-                marginTop: 16,
-              }}>
-                <button
-                  className="exec-refresh-btn"
-                  onClick={() => setRequestToDelete(null)}
-                  disabled={deletingId !== null}
-                  style={{ padding: '6px 14px', fontSize: 12 }}
-                >
+            <div className="exec-modal__body exec-confirm">
+              <p>هل تريد حذف طلب التنفيذ رقم <strong>{requestToDelete.request_number}</strong>؟</p>
+              <span>لن يُحذف من ناجز، لكنه سيُحذف من النظام. يمكن إعادة سحبه عبر إضافة Chrome لاحقاً.</span>
+              <div className="exec-confirm__actions">
+                <button className="exec-btn" onClick={() => setRequestToDelete(null)} disabled={deletingId !== null}>
                   إلغاء
                 </button>
-                <button
-                  onClick={handleDeleteRequest}
-                  disabled={deletingId !== null}
-                  style={{
-                    padding: '6px 16px',
-                    fontSize: 12,
-                    background: 'var(--status-red, #dc2626)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 6,
-                    cursor: deletingId !== null ? 'wait' : 'pointer',
-                    fontWeight: 600,
-                    fontFamily: 'inherit',
-                  }}
-                >
+                <button className="exec-btn exec-btn--danger" onClick={handleDeleteRequest} disabled={deletingId !== null}>
                   {deletingId !== null ? 'جاري الحذف…' : 'حذف'}
                 </button>
               </div>
