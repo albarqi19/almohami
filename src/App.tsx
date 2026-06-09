@@ -29,6 +29,7 @@ import Documents from './pages/Documents';
 import Activities from './pages/Activities';
 import Reports from './pages/Reports';
 import LawyersReport from './pages/LawyersReport';
+import FirmReport from './pages/FirmReport';
 import MyPerformance from './pages/MyPerformance';
 import Notifications from './pages/Notifications';
 import Admin from './pages/Admin';
@@ -239,6 +240,11 @@ function App() {
               <Route path="reports" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer']}>
                   <Reports />
+                </ProtectedRoute>
+              } />
+              <Route path="firm-report" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner']}>
+                  <FirmReport />
                 </ProtectedRoute>
               } />
               <Route path="lawyers-report" element={

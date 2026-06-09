@@ -34,6 +34,7 @@ export interface SidebarItem {
  */
 export const mainMenuItems: SidebarItem[] = [
   { icon: Home, label: 'لوحة التحكم', path: '/dashboard', permission: null },
+  { icon: TrendingUp, label: 'أداء الشركة', path: '/firm-report', permission: null, roles: ['admin', 'owner', 'partner'] },
   { icon: FileText, label: 'القضايا', path: '/cases', permission: 'cases.view' },
   { icon: FileCheck, label: 'الوكالات', path: '/wekalat', permission: 'wekala.manage' },
   { icon: Calendar, label: 'الجلسات', path: '/sessions', permission: 'sessions.view' },
