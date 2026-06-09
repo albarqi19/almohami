@@ -51,6 +51,7 @@ import ClientDetailPage from './pages/ClientDetailPage';
 import AdminRequests from './pages/AdminRequests';
 import Feedback from './pages/Feedback';
 import WathqInquiryPage from './pages/WathqInquiry';
+import LawsPage from './pages/laws/LawsPage';
 import ClientMessages from './pages/ClientMessages';
 import PersonalNotebook from './pages/NotebookWorkspace';
 
@@ -288,6 +289,11 @@ function App() {
               <Route path="wathq" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'senior_lawyer', 'lawyer']}>
                   <WathqInquiryPage />
+                </ProtectedRoute>
+              } />
+              <Route path="laws" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'senior_lawyer', 'lawyer', 'legal_assistant']}>
+                  <LawsPage />
                 </ProtectedRoute>
               } />
               <Route path="notebook" element={
