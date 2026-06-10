@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -13,81 +14,96 @@ import { AnnouncementProvider } from './contexts/AnnouncementContext';
 import { ZatcaStatusProvider } from './contexts/ZatcaStatusContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Forbidden from './pages/Forbidden';
+import LegacyRedirect from './components/LegacyRedirect';
+import PageLoader from './components/PageLoader';
+import { lazyWithRetry } from './utils/lazyWithRetry';
+
+/* ============================================================
+   الحزمة الأولى (eager) — نقاط الدخول العامة فقط:
+   صفحات الهبوط الثلاث (الرسمية + الموحّدة للشركات + المخصصة
+   التي تُحمَّل كسولاً داخل TenantLandingPage) وصفحات المصادقة.
+   كل ما عداها مؤجل (lazy) فلا يدفع زائر الهبوط ثمن التطبيق كاملاً.
+   ============================================================ */
 import AuthLayout from './components/AuthLayout';
-import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import Cases from './pages/Cases';
-import CaseDetailPage from './pages/CaseDetailPage';
-import UpcomingSessions from './pages/UpcomingSessions';
-import SessionPrep from './pages/SessionPrep';
-import ClientCases from './pages/ClientCases';
-import ClientCaseDetail from './pages/ClientCaseDetail';
-import ClientDocumentsRequired from './pages/ClientDocumentsRequired';
-import Tasks from './pages/Tasks';
-import TaskDetail from './pages/TaskDetail';
-import Documents from './pages/Documents';
-import Activities from './pages/Activities';
-import Reports from './pages/Reports';
-import LawyersReport from './pages/LawyersReport';
-import FirmReport from './pages/FirmReport';
-import MyPerformance from './pages/MyPerformance';
-import Notifications from './pages/Notifications';
-import Admin from './pages/Admin';
-import Statistics from './pages/Statistics';
-import Settings from './pages/Settings';
-import WhatsappSettings from './pages/WhatsappSettings';
 import LoginContent from './pages/LoginContent';
 import RegisterChoiceContent from './pages/RegisterChoiceContent';
 import RegisterTenantContent from './pages/RegisterTenantContent';
 import LandingPage from './pages/LandingPage';
 import TenantLandingPage from './pages/TenantLandingPage';
-import Wekalat from './pages/Wekalat';
-import ExecutionRequests from './pages/ExecutionRequests';
-import AccountStatus from './pages/AccountStatus';
-import SubscriptionPaymentResult from './pages/SubscriptionPaymentResult';
-import LawyerSuspended from './pages/LawyerSuspended';
-import Clients from './pages/Clients';
-import ClientDetailPage from './pages/ClientDetailPage';
-import AdminRequests from './pages/AdminRequests';
-import Feedback from './pages/Feedback';
-import WathqInquiryPage from './pages/WathqInquiry';
-import LawsPage from './pages/laws/LawsPage';
-import ClientMessages from './pages/ClientMessages';
-import PersonalNotebook from './pages/NotebookWorkspace';
+
+/* ============================================================
+   أجزاء مؤجلة (code-splitting) — تُجلب عند أول زيارة لمسارها
+   عبر lazyWithRetry الذي يعيد تحميل الصفحة مرة واحدة لو فشل
+   جلب chunk بعد نشر جديد (اختفاء ملفات الإصدار القديم).
+   ============================================================ */
+const Layout = lazyWithRetry(() => import('./components/Layout'));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const Cases = lazyWithRetry(() => import('./pages/Cases'));
+const CaseDetailPage = lazyWithRetry(() => import('./pages/CaseDetailPage'));
+const UpcomingSessions = lazyWithRetry(() => import('./pages/UpcomingSessions'));
+const SessionPrep = lazyWithRetry(() => import('./pages/SessionPrep'));
+const ClientCases = lazyWithRetry(() => import('./pages/ClientCases'));
+const ClientCaseDetail = lazyWithRetry(() => import('./pages/ClientCaseDetail'));
+const ClientDocumentsRequired = lazyWithRetry(() => import('./pages/ClientDocumentsRequired'));
+const Tasks = lazyWithRetry(() => import('./pages/Tasks'));
+const TaskDetail = lazyWithRetry(() => import('./pages/TaskDetail'));
+const Documents = lazyWithRetry(() => import('./pages/Documents'));
+const Activities = lazyWithRetry(() => import('./pages/Activities'));
+const Reports = lazyWithRetry(() => import('./pages/Reports'));
+const LawyersReport = lazyWithRetry(() => import('./pages/LawyersReport'));
+const FirmReport = lazyWithRetry(() => import('./pages/FirmReport'));
+const MyPerformance = lazyWithRetry(() => import('./pages/MyPerformance'));
+const Notifications = lazyWithRetry(() => import('./pages/Notifications'));
+const Admin = lazyWithRetry(() => import('./pages/Admin'));
+const Statistics = lazyWithRetry(() => import('./pages/Statistics'));
+const Settings = lazyWithRetry(() => import('./pages/Settings'));
+const WhatsappSettings = lazyWithRetry(() => import('./pages/WhatsappSettings'));
+const Wekalat = lazyWithRetry(() => import('./pages/Wekalat'));
+const ExecutionRequests = lazyWithRetry(() => import('./pages/ExecutionRequests'));
+const AccountStatus = lazyWithRetry(() => import('./pages/AccountStatus'));
+const SubscriptionPaymentResult = lazyWithRetry(() => import('./pages/SubscriptionPaymentResult'));
+const LawyerSuspended = lazyWithRetry(() => import('./pages/LawyerSuspended'));
+const Clients = lazyWithRetry(() => import('./pages/Clients'));
+const ClientDetailPage = lazyWithRetry(() => import('./pages/ClientDetailPage'));
+const AdminRequests = lazyWithRetry(() => import('./pages/AdminRequests'));
+const Feedback = lazyWithRetry(() => import('./pages/Feedback'));
+const WathqInquiryPage = lazyWithRetry(() => import('./pages/WathqInquiry'));
+const LawsPage = lazyWithRetry(() => import('./pages/laws/LawsPage'));
+const ClientMessages = lazyWithRetry(() => import('./pages/ClientMessages'));
+const PersonalNotebook = lazyWithRetry(() => import('./pages/NotebookWorkspace'));
 
 // Legal Services Pages
-import LegalServices from './pages/legal-services/LegalServices';
-import LegalServiceDetail from './pages/legal-services/LegalServiceDetail';
+const LegalServices = lazyWithRetry(() => import('./pages/legal-services/LegalServices'));
+const LegalServiceDetail = lazyWithRetry(() => import('./pages/legal-services/LegalServiceDetail'));
 
 // Contracts Pages
-import ContractTemplates from './pages/contracts/ContractTemplates';
-import ContractTemplateEditorPage from './pages/contracts/ContractTemplateEditorPage';
-import ContractBuilder from './pages/contracts/ContractBuilder';
+const ContractTemplates = lazyWithRetry(() => import('./pages/contracts/ContractTemplates'));
+const ContractTemplateEditorPage = lazyWithRetry(() => import('./pages/contracts/ContractTemplateEditorPage'));
+const ContractBuilder = lazyWithRetry(() => import('./pages/contracts/ContractBuilder'));
 
 // [P4·UX-01] وحدة «العقود والمالية» الموحّدة + تبويباتها
-import ContractsFinanceModule from './pages/finance/ContractsFinanceModule';
-import DashboardTab from './pages/finance/tabs/DashboardTab';
-import ContractsTab from './pages/finance/tabs/ContractsTab';
-import InvoicesTab from './pages/finance/tabs/InvoicesTab';
-import PaymentsTab from './pages/finance/tabs/PaymentsTab';
-import CollectionsTab from './pages/finance/tabs/CollectionsTab';
-import ReportsTab from './pages/finance/tabs/ReportsTab';
-import ContractDetailPage from './pages/finance/ContractDetailPage';
-import InvoiceDetailPage from './pages/finance/InvoiceDetailPage';
-import LegacyRedirect from './components/LegacyRedirect';
+const ContractsFinanceModule = lazyWithRetry(() => import('./pages/finance/ContractsFinanceModule'));
+const DashboardTab = lazyWithRetry(() => import('./pages/finance/tabs/DashboardTab'));
+const ContractsTab = lazyWithRetry(() => import('./pages/finance/tabs/ContractsTab'));
+const InvoicesTab = lazyWithRetry(() => import('./pages/finance/tabs/InvoicesTab'));
+const PaymentsTab = lazyWithRetry(() => import('./pages/finance/tabs/PaymentsTab'));
+const CollectionsTab = lazyWithRetry(() => import('./pages/finance/tabs/CollectionsTab'));
+const ReportsTab = lazyWithRetry(() => import('./pages/finance/tabs/ReportsTab'));
+const ContractDetailPage = lazyWithRetry(() => import('./pages/finance/ContractDetailPage'));
+const InvoiceDetailPage = lazyWithRetry(() => import('./pages/finance/InvoiceDetailPage'));
 
 // ZATCA E-Invoicing
-import ZatcaCenter from './pages/zatca/ZatcaCenter';
+const ZatcaCenter = lazyWithRetry(() => import('./pages/zatca/ZatcaCenter'));
 
 // Meetings Pages
-import InternalMeetings from './pages/meetings/InternalMeetings';
-import ClientMeetings from './pages/meetings/ClientMeetings';
-import MyAvailability from './pages/meetings/MyAvailability';
+const InternalMeetings = lazyWithRetry(() => import('./pages/meetings/InternalMeetings'));
+const ClientMeetings = lazyWithRetry(() => import('./pages/meetings/ClientMeetings'));
+const MyAvailability = lazyWithRetry(() => import('./pages/meetings/MyAvailability'));
 
 // Public Booking Page (no auth required)
-import PublicBooking from './pages/booking/PublicBooking';
+const PublicBooking = lazyWithRetry(() => import('./pages/booking/PublicBooking'));
 // Public Service Portal (White-Label, no auth required)
-import ServicePortal from './pages/portal/ServicePortal';
+const ServicePortal = lazyWithRetry(() => import('./pages/portal/ServicePortal'));
 
 // Component to choose between tenant and main landing page
 const SmartLandingPage: React.FC = () => {
@@ -105,6 +121,7 @@ function App() {
         <SubscriptionProvider>
           <UpdateBanner />
           <Router>
+            <Suspense fallback={<PageLoader full />}>
             <Routes>
               <Route path="/" element={<SmartLandingPage />} />
               {/* Auth routes with shared layout */}
@@ -387,6 +404,7 @@ function App() {
                 </TimerProvider>
               } />
             </Routes>
+            </Suspense>
           </Router>
           <ToastContainer position="bottom-left" rtl autoClose={3000} hideProgressBar={false} closeOnClick pauseOnHover theme="light" />
         </SubscriptionProvider>

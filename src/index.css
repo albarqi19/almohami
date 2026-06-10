@@ -3,9 +3,8 @@
 @import './styles/design-system.css';
 @import './styles/auth.css';
 @import './styles/dashboard-theme.css';
-@import './styles/cases-page.css';
-@import './styles/case-detail.css';
-@import './styles/letterhead-settings.css';
+/* أنماط الصفحات (cases-page, case-detail, letterhead-settings) انتقلت
+   إلى صفحاتها لتُحمَّل مع أجزائها المؤجلة بدل الحزمة الأولى */
 
 :root {
   /* === الخلفيات === */

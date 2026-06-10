@@ -60,6 +60,7 @@ import { ActivityService } from '../services/activityService';
 import { DocumentService } from '../services/documentService';
 import { TaskService } from '../services/taskService';
 import type { Case } from '../types';
+import '../styles/case-detail.css';
 import '../styles/case-detail-page.css';
 import '../styles/case-prep-kitchen.css';
 

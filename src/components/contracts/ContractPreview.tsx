@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import '../../styles/letterhead-settings.css';
 import { X, Printer, Download, Loader2, FileText } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { useContractVariables } from '../../hooks/useContractVariables';

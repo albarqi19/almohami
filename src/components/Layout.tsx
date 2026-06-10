@@ -1,5 +1,6 @@
-﻿import React, { useState, createContext, useContext } from 'react';
+﻿import React, { useState, createContext, useContext, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import PageLoader from './PageLoader';
 import { ChevronLeft } from 'lucide-react';
 import ClickUpSidebar from './ClickUpSidebar';
 import FloatingTimer from './FloatingTimer';
@@ -140,7 +141,10 @@ const Layout: React.FC = () => {
               overflow: 'auto'
             }}
           >
-            <Outlet />
+            {/* قشرة التطبيق تبقى ظاهرة أثناء جلب chunk الصفحة المؤجل */}
+            <Suspense fallback={<PageLoader />}>
+              <Outlet />
+            </Suspense>
           </main>
 
           {/* Announcement ticker (channel: ticker) — shown above admin status bar */}
