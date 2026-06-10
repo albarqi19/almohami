@@ -1,603 +1,441 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Scale, Shield, Building2, Gavel, Award, Phone } from 'lucide-react';
-import { useTenant } from '../../contexts/TenantContext';
+import {
+    Phone,
+    Mail,
+    MapPin,
+    Clock,
+    MessageCircle,
+    ChevronRight,
+    ChevronLeft,
+    Scale,
+    Gavel,
+    Building2,
+    IdCard,
+    Globe2,
+    Handshake,
+    ScrollText,
+    Receipt,
+    TrendingUp,
+    FileSignature,
+    ShieldCheck,
+    Award,
+    Lightbulb,
+    Users,
+    LogIn,
+    Instagram,
+    Twitter,
+    Linkedin,
+} from 'lucide-react';
 import useSEO from '../../hooks/useSEO';
+import './alkhibra-landing.css';
 
 /**
- * صفحة هبوط مخصصة لشركة بيوت الخبرة للمحاماة
- * Alkhibra Custom Landing Page
- * Full Responsive Implementation using Inline Styles
+ * صفحة هبوط مخصصة — شركة بيوت الخبرة للمحاماة والاستشارات القانونية
+ * الهوية والمحتوى من موقعهم الرسمي hoelawfirm.com
+ * (الألوان مستخرجة من شعارهم: كحلي #22335a + ذهبي رملي #b3a282)
+ * بلا مكتبات حركة — المحتوى يظهر فوراً (الأفضل لسرعة LCP)
  */
 
-const getStyles = (isMobile: boolean): Record<string, React.CSSProperties> => ({
-  // Page Container
-  page: {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #F8FAFC 0%, #EEF2F7 100%)',
-    fontFamily: '"IBM Plex Sans Arabic", -apple-system, BlinkMacSystemFont, sans-serif',
-    color: '#1B2B48',
-    direction: 'rtl',
-    display: 'flex',
-    flexDirection: 'column',
-    position: 'relative',
-    overflowX: 'hidden',
-  },
+const PHONE = '920016922';
+const PHONE_INTL = '+966920016922';
+const WHATSAPP = 'https://wa.me/+966547432222';
+const EMAIL = 'info@hoelawfirm.com';
 
-  // Navbar
-  navbar: {
-    width: '100%',
-    padding: isMobile ? '15px 20px' : '20px 40px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    background: 'rgba(255, 255, 255, 0.9)',
-    backdropFilter: 'blur(10px)',
-    borderBottom: '1px solid rgba(0,0,0,0.05)',
-    position: 'sticky',
-    top: 0,
-    zIndex: 100,
-  },
+const SERVICES = [
+    { name: 'الاستشارات القانونية', icon: Scale },
+    { name: 'الترافع والتقاضي', icon: Gavel },
+    { name: 'قطاع الأعمال والشركات', icon: Building2 },
+    { name: 'الإقامة المميزة', icon: IdCard },
+    { name: 'الاستثمار الأجنبي', icon: Globe2 },
+    { name: 'التحكيم', icon: Handshake },
+    { name: 'التركات والأوقاف والوصايا', icon: ScrollText },
+    { name: 'الزكاة والضرائب', icon: Receipt },
+    { name: 'قضايا الأوراق المالية', icon: TrendingUp },
+    { name: 'العقود والاتفاقيات', icon: FileSignature },
+];
 
-  logoContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
+const VALUES = [
+    {
+        name: 'الشفافية والنزاهة',
+        desc: 'وضوح تام مع موكلينا في كل مرحلة، والتزام راسخ بأعلى المعايير المهنية والأخلاقية.',
+        icon: ShieldCheck,
+    },
+    {
+        name: 'المهنية والتخصصية',
+        desc: 'فريق من المحامين والمستشارين المتخصصين وفق أفضل المنهجيات والممارسات الدولية.',
+        icon: Award,
+    },
+    {
+        name: 'الإبداع والابتكار',
+        desc: 'حلول قانونية مبتكرة تُصمم خصيصاً لتلبية احتياجات كل موكل.',
+        icon: Lightbulb,
+    },
+    {
+        name: 'العمل بروح الفريق',
+        desc: 'خبرات متكاملة تعمل معاً لخدمة قضيتك من كل زواياها.',
+        icon: Users,
+    },
+];
 
-  logoIcon: {
-    background: '#1B2B48',
-    color: '#C5A059',
-    padding: '8px',
-    borderRadius: '10px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+interface TeamMember {
+    name: string;
+    role: string;
+    photo: string | null;
+    initials: string;
+}
 
-  logoText: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
+const TEAM: TeamMember[] = [
+    { name: 'د. عبدالوهاب الصالح', role: 'المدير العام', photo: '/alkhibra/team/team-abdulwahab.png', initials: 'ع' },
+    { name: 'أ. علي السيهاتي', role: 'نائب المدير العام', photo: '/alkhibra/team/team-ali.png', initials: 'ع' },
+    { name: 'المحامي إبراهيم الزهراني', role: 'مدير فرع الدمام', photo: '/alkhibra/team/team-zahrani.jpg', initials: 'إ' },
+    { name: 'المحامي محمد الدويش', role: 'مدير فرع الجبيل', photo: null, initials: 'م' },
+    { name: 'المحامي عبدالعزيز الصالح', role: 'مدير فرع الأحساء', photo: '/alkhibra/team/team-abdulaziz.jpg', initials: 'ع' },
+    { name: 'المستشار محمد منصور', role: 'مستشار قانوني', photo: '/alkhibra/team/team-mansour.jpg', initials: 'م' },
+    { name: 'المستشار إبراهيم عفيفي', role: 'مستشار قانوني', photo: '/alkhibra/team/team-afifi.jpg', initials: 'إ' },
+    { name: 'أ. عذوب العيد', role: 'مستشارة قانونية', photo: null, initials: 'ع' },
+    { name: 'المحامي الوليد المزين', role: 'محامٍ مرخّص', photo: '/alkhibra/team/team-walid.jpg', initials: 'و' },
+    { name: 'المحامي إبراهيم البارقي', role: 'محامٍ مرخّص', photo: '/alkhibra/team/team-bariqi.jpg', initials: 'إ' },
+    { name: 'المحامي حسن النمر', role: 'محامٍ متدرب', photo: '/alkhibra/team/team-hassan.jpg', initials: 'ح' },
+    { name: 'المحامي سعود الشمري', role: 'محامٍ متدرب', photo: '/alkhibra/team/team-saud.jpg', initials: 'س' },
+    { name: 'أ. أحمد سعد', role: 'مدير الحسابات', photo: '/alkhibra/team/team-ahmed.jpg', initials: 'أ' },
+    { name: 'أ. منير الجنتي', role: 'مدير التسويق', photo: '/alkhibra/team/team-munir.jpg', initials: 'م' },
+    { name: 'أ. محمد خميس', role: 'مدير العلاقات العامة', photo: '/alkhibra/team/team-khamis.jpg', initials: 'م' },
+    { name: 'أ. فيزان خان', role: 'سكرتير تنفيذي', photo: '/alkhibra/team/team-faizan.jpg', initials: 'ف' },
+];
 
-  logoTitle: {
-    fontSize: isMobile ? '16px' : '18px',
-    fontWeight: 700,
-    color: '#1B2B48',
-    lineHeight: 1.2,
-  },
-
-  logoSubtitle: {
-    fontSize: '9px',
-    color: '#C5A059',
-    letterSpacing: '2px',
-    textTransform: 'uppercase',
-    fontFamily: 'serif',
-  },
-
-  // Navigation Links (Hidden on mobile)
-  navLinks: {
-    display: isMobile ? 'none' : 'flex',
-    alignItems: 'center',
-    gap: '30px',
-  },
-
-  navLink: {
-    fontSize: '14px',
-    color: 'rgba(27, 43, 72, 0.7)',
-    textDecoration: 'none',
-    cursor: 'pointer',
-    transition: 'color 0.3s',
-  },
-
-  navButton: {
-    background: '#1B2B48',
-    color: 'white',
-    padding: isMobile ? '8px 16px' : '10px 20px',
-    borderRadius: '8px',
-    border: 'none',
-    fontSize: isMobile ? '12px' : '14px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    boxShadow: '0 4px 15px rgba(27, 43, 72, 0.2)',
-    whiteSpace: 'nowrap',
-  },
-
-  // Hero Section
-  hero: {
-    flex: 1,
-    display: 'grid',
-    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-    gap: isMobile ? '40px' : '60px',
-    maxWidth: '1400px',
-    margin: '0 auto',
-    padding: isMobile ? '40px 20px' : '60px 40px',
-    alignItems: 'center',
-    width: '100%',
-  },
-
-  heroContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: isMobile ? '20px' : '24px',
-    order: isMobile ? 1 : 0, // Ensure text is first on mobile
-  },
-
-  badge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    background: 'rgba(27, 43, 72, 0.05)',
-    border: '1px solid rgba(27, 43, 72, 0.1)',
-    padding: '6px 14px',
-    borderRadius: '50px',
-    width: 'fit-content',
-    fontSize: '11px',
-    fontWeight: 600,
-  },
-
-  mainTitle: {
-    fontSize: isMobile ? '36px' : '56px',
-    fontWeight: 800,
-    color: '#1B2B48',
-    lineHeight: 1.15,
-    margin: 0,
-  },
-
-  subtitleContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
-
-  goldLine: {
-    width: isMobile ? '30px' : '50px',
-    height: '3px',
-    background: '#C5A059',
-    borderRadius: '2px',
-  },
-
-  subtitle: {
-    fontSize: isMobile ? '18px' : '24px',
-    color: '#C5A059',
-    letterSpacing: isMobile ? '2px' : '4px',
-    textTransform: 'uppercase',
-    fontFamily: '"Cinzel", serif',
-    fontWeight: 600,
-    margin: 0,
-  },
-
-  description: {
-    fontSize: isMobile ? '15px' : '17px',
-    color: '#64748B',
-    lineHeight: 1.8,
-    maxWidth: '500px',
-  },
-
-  buttonsContainer: {
-    display: 'flex',
-    flexDirection: isMobile ? 'column' : 'row',
-    gap: '16px',
-    marginTop: '16px',
-    width: isMobile ? '100%' : 'auto',
-  },
-
-  primaryButton: {
-    background: '#1B2B48',
-    color: 'white',
-    padding: '16px 32px',
-    borderRadius: '10px',
-    border: 'none',
-    fontSize: '16px',
-    fontWeight: 700,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px',
-    boxShadow: '0 10px 30px rgba(27, 43, 72, 0.25)',
-    width: isMobile ? '100%' : 'auto',
-  },
-
-  secondaryButton: {
-    background: 'white',
-    color: '#1B2B48',
-    padding: '16px 32px',
-    borderRadius: '10px',
-    border: '1px solid rgba(27, 43, 72, 0.15)',
-    fontSize: '16px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px',
-    width: isMobile ? '100%' : 'auto',
-  },
-
-  stats: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: isMobile ? '20px' : '40px',
-    marginTop: '40px',
-    paddingTop: '30px',
-    borderTop: '1px solid rgba(0,0,0,0.08)',
-    justifyContent: isMobile ? 'space-between' : 'flex-start',
-  },
-
-  statItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    minWidth: isMobile ? '45%' : 'auto',
-  },
-
-  statNumber: {
-    fontSize: isMobile ? '24px' : '28px',
-    fontWeight: 800,
-    color: '#1B2B48',
-  },
-
-  statLabel: {
-    fontSize: '10px',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-    letterSpacing: '2px',
-    marginTop: '4px',
-  },
-
-  // Visual Card
-  heroVisual: {
-    position: 'relative',
-    height: isMobile ? '400px' : '550px',
-    width: '100%',
-    order: isMobile ? 2 : 1, // Visual second on mobile
-    display: isMobile ? 'block' : 'block', // Keep it visible but stacked
-  },
-
-  visualCard: {
-    width: '100%',
-    height: '100%',
-    background: 'linear-gradient(145deg, #1B2B48 0%, #0F1928 100%)',
-    borderRadius: '24px',
-    padding: isMobile ? '24px' : '40px',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    position: 'relative',
-    overflow: 'hidden',
-    boxShadow: '0 30px 60px rgba(27, 43, 72, 0.3)',
-  },
-
-  cardGlow: {
-    position: 'absolute',
-    top: '-100px',
-    right: '-100px',
-    width: '300px',
-    height: '300px',
-    background: 'rgba(197, 160, 89, 0.15)',
-    borderRadius: '50%',
-    filter: 'blur(80px)',
-    pointerEvents: 'none',
-  },
-
-  cardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    position: 'relative',
-    zIndex: 1,
-  },
-
-  iconBox: {
-    background: 'rgba(255, 255, 255, 0.08)',
-    padding: '14px',
-    borderRadius: '14px',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-  },
-
-  cardValues: {
-    position: 'relative',
-    zIndex: 1,
-  },
-
-  valuesLabel: {
-    fontSize: '11px',
-    color: '#C5A059',
-    letterSpacing: '4px',
-    textTransform: 'uppercase',
-    marginBottom: '16px',
-    display: 'block',
-  },
-
-  valuesText: {
-    fontSize: isMobile ? '24px' : '32px',
-    color: 'white',
-    lineHeight: 1.4,
-    fontWeight: 300,
-  },
-
-  valuesBold: {
-    fontWeight: 700,
-    color: '#C5A059',
-  },
-
-  featuresGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '12px',
-    position: 'relative',
-    zIndex: 1,
-  },
-
-  featureCard: {
-    background: 'rgba(255, 255, 255, 0.05)',
-    padding: isMobile ? '12px' : '16px',
-    borderRadius: '12px',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    transition: 'all 0.3s ease',
-  },
-
-  featureTitle: {
-    fontSize: isMobile ? '12px' : '14px',
-    fontWeight: 700,
-    color: 'white',
-    marginTop: '10px',
-    display: 'block',
-  },
-
-  featureEn: {
-    fontSize: '9px',
-    color: 'rgba(255, 255, 255, 0.4)',
-    textTransform: 'uppercase',
-    letterSpacing: '2px',
-    fontFamily: 'serif',
-    display: 'block',
-    marginTop: '4px',
-  },
-
-  // Floating Badge
-  floatingBadge: {
-    position: 'absolute',
-    top: isMobile ? '20px' : '30px',
-    left: isMobile ? '-10px' : '-20px',
-    background: 'white',
-    padding: isMobile ? '12px 16px' : '16px 20px',
-    borderRadius: '14px',
-    boxShadow: '0 15px 40px rgba(0,0,0,0.12)',
-    zIndex: 10,
-  },
-
-  badgeStatus: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-  },
-
-  statusDot: {
-    width: '10px',
-    height: '10px',
-    background: '#22C55E',
-    borderRadius: '50%',
-    boxShadow: '0 0 10px rgba(34, 197, 94, 0.5)',
-  },
-
-  badgeText: {
-    fontSize: '13px',
-    fontWeight: 700,
-    color: '#1B2B48',
-  },
-
-  badgeSubtext: {
-    fontSize: '10px',
-    color: '#94A3B8',
-    marginTop: '4px',
-  },
-
-  // Footer
-  footer: {
-    height: '6px',
-    background: 'linear-gradient(90deg, #1B2B48 0%, #C5A059 50%, #1B2B48 100%)',
-    width: '100%',
-  },
-});
+const BRANCHES = [
+    {
+        city: 'الدمام',
+        hq: true,
+        address: 'حي الأمير محمد بن سعود — شارع الأمير منصور — مجمع الفهد (1) — الدور الثاني — مكتب رقم (10)',
+    },
+    {
+        city: 'الجبيل',
+        hq: false,
+        address: 'الجبيل البلد — برج الأعمال 101 — الدور الثاني — مكتب رقم (201)',
+    },
+    {
+        city: 'الأحساء',
+        hq: false,
+        address: 'الهفوف — حي المحمدية — شارع القطار مقابل مجلس الملحم',
+    },
+];
 
 const AlkhibraLanding: React.FC = () => {
-  const navigate = useNavigate();
-  const { tenant } = useTenant();
+    const navigate = useNavigate();
+    const teamTrackRef = useRef<HTMLDivElement>(null);
 
-  // Responsive State
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    useSEO({
+        title: 'شركة بيوت الخبرة للمحاماة والاستشارات القانونية',
+        description:
+            'شركة بيوت الخبرة للمحاماة والاستشارات القانونية — باقات شاملة ومتكاملة من خدمات المحاماة والاستشارات القانونية في الدمام والجبيل والأحساء.',
+    });
 
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
+    const scrollTeam = (dir: number) => {
+        teamTrackRef.current?.scrollBy({ left: dir * 520, behavior: 'smooth' });
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    return (
+        <div className="bk">
+            {/* ===== الترويسة ===== */}
+            <header className="bk-header">
+                <div className="bk-container bk-header__inner">
+                    <a href="#top" className="bk-brand">
+                        <img src="/alkhibra/logo.png" alt="شعار بيوت الخبرة" />
+                        <span>
+                            <span className="bk-brand__name">بيوت الخبرة</span>
+                            <span className="bk-brand__sub">للمحاماة والاستشارات القانونية</span>
+                        </span>
+                    </a>
 
-  const styles = getStyles(isMobile);
+                    <nav className="bk-nav" aria-label="أقسام الصفحة">
+                        <a href="#services">خدماتنا</a>
+                        <a href="#about">من نحن</a>
+                        <a href="#team">فريقنا</a>
+                        <a href="#branches">فروعنا</a>
+                        <a href="#contact">تواصل معنا</a>
+                    </nav>
 
-  const companyInfo = {
-    nameAr: tenant?.name || 'بيوت الخبرة',
-    nameEn: 'HOUSE OF EXPERTISE',
-    logo: tenant?.logo_url || tenant?.logo,
-  };
-
-  // Dynamic SEO for this tenant
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
-  useSEO({
-    title: `${companyInfo.nameAr} | ${companyInfo.nameEn}`,
-    description: `${companyInfo.nameAr} - مكتب محاماة متخصص في الحماية والتقاضي والشركات والاستشارات القانونية`,
-    image: companyInfo.logo || undefined,
-    url: currentUrl,
-    siteName: companyInfo.nameAr,
-    author: companyInfo.nameAr,
-  });
-
-  const features = [
-    { icon: Shield, title: 'الحماية', en: 'Protection' },
-    { icon: Gavel, title: 'التقاضي', en: 'Litigation' },
-    { icon: Building2, title: 'الشركات', en: 'Corporate' },
-    { icon: Scale, title: 'الاستشارات', en: 'Advisory' },
-  ];
-
-  return (
-    <div style={styles.page}>
-      {/* Navbar */}
-      <nav style={styles.navbar}>
-        <div style={styles.logoContainer}>
-          {companyInfo.logo ? (
-            <img src={companyInfo.logo} alt="Logo" style={{ height: isMobile ? '40px' : '50px', objectFit: 'contain' }} />
-          ) : (
-            <>
-              <div style={styles.logoIcon}>
-                <Scale size={isMobile ? 20 : 24} />
-              </div>
-              <div style={styles.logoText}>
-                <span style={styles.logoTitle}>{companyInfo.nameAr}</span>
-                <span style={styles.logoSubtitle}>Law Firm</span>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Mobile Menu Icon (Visual Only for now, or works as button) */}
-        {isMobile ? (
-          <button style={styles.navButton} onClick={() => navigate('/login')}>
-            الدخول
-          </button>
-        ) : (
-          <div style={styles.navLinks}>
-            <span style={styles.navLink}>الرئيسية</span>
-            <span style={styles.navLink}>مجالات الممارسة</span>
-            <span style={styles.navLink}>فريق العمل</span>
-            <button style={styles.navButton} onClick={() => navigate('/login')}>
-              بوابة العملاء
-            </button>
-          </div>
-        )}
-      </nav>
-
-      {/* Hero Section */}
-      <main style={styles.hero}>
-        {/* Text Content */}
-        <motion.div
-          style={styles.heroContent}
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <div style={styles.badge}>
-            <Award size={14} style={{ color: '#C5A059' }} />
-            <span>التميز القانوني منذ 2004</span>
-          </div>
-
-          <h1 style={styles.mainTitle}>{companyInfo.nameAr}</h1>
-
-          <div style={styles.subtitleContainer}>
-            <div style={styles.goldLine}></div>
-            <h2 style={styles.subtitle}>{companyInfo.nameEn}</h2>
-          </div>
-
-          <p style={styles.description}>
-            نقدم منظومة متكاملة من الخدمات القانونية والاستشارية للشركات والأفراد، يدعمها فريق من النخبة القانونية لضمان حماية مصالحك بدقة واحترافية عالية.
-          </p>
-
-          <div style={styles.buttonsContainer}>
-            <motion.button
-              style={styles.primaryButton}
-              whileHover={{ scale: 1.02, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/login')}
-            >
-              <span>الدخول للمنصة</span>
-              <ChevronLeft size={20} />
-            </motion.button>
-
-            <motion.button
-              style={styles.secondaryButton}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Phone size={18} style={{ color: '#C5A059' }} />
-              <span>تواصل معنا</span>
-            </motion.button>
-          </div>
-
-          <div style={styles.stats}>
-            <div style={styles.statItem}>
-              <span style={styles.statNumber}>20+</span>
-              <span style={styles.statLabel}>Seniors</span>
-            </div>
-            <div style={styles.statItem}>
-              <span style={styles.statNumber}>500+</span>
-              <span style={styles.statLabel}>Cases Won</span>
-            </div>
-            <div style={styles.statItem}>
-              <span style={styles.statNumber}>98%</span>
-              <span style={styles.statLabel}>Success Rate</span>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Visual Card */}
-        <motion.div
-          style={styles.heroVisual}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1, delay: 0.2 }}
-        >
-          <div style={styles.visualCard}>
-            <div style={styles.cardGlow}></div>
-
-            <div style={styles.cardHeader}>
-              <div style={styles.iconBox}>
-                <Scale size={28} color="#C5A059" strokeWidth={1.5} />
-              </div>
-            </div>
-
-            <div style={styles.cardValues}>
-              <span style={styles.valuesLabel}>Core Values</span>
-              <div style={styles.valuesText}>
-                الالتزام.<br />
-                <span style={styles.valuesBold}>الشفافية.</span><br />
-                التفوق.
-              </div>
-            </div>
-
-            <div style={styles.featuresGrid}>
-              {features.map((item, idx) => (
-                <div key={idx} style={styles.featureCard}>
-                  <item.icon size={18} color="#C5A059" />
-                  <span style={styles.featureTitle}>{item.title}</span>
-                  <span style={styles.featureEn}>{item.en}</span>
+                    <div className="bk-header__actions">
+                        <button className="bk-btn bk-btn--outline bk-btn--sm" onClick={() => navigate('/login')}>
+                            <LogIn size={15} />
+                            دخول النظام
+                        </button>
+                        <a className="bk-btn bk-btn--gold bk-btn--sm" href={WHATSAPP} target="_blank" rel="noopener noreferrer">
+                            <MessageCircle size={15} />
+                            استشارة
+                        </a>
+                    </div>
                 </div>
-              ))}
-            </div>
-          </div>
+            </header>
 
-          {/* Floating Badge */}
-          <motion.div
-            style={styles.floatingBadge}
-            animate={{ y: [0, -8, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <div style={styles.badgeStatus}>
-              <div style={styles.statusDot}></div>
-              <span style={styles.badgeText}>متاح الآن</span>
-            </div>
-            <div style={styles.badgeSubtext}>Available for Consultation</div>
-          </motion.div>
-        </motion.div>
-      </main>
+            <main id="top">
+                {/* ===== البطل ===== */}
+                <section className="bk-hero">
+                    <div className="bk-container">
+                        <div className="bk-hero__grid">
+                            <div className="bk-rise">
+                                <span className="bk-hero__tag">المحامون الأكثر ثقة في المملكة العربية السعودية</span>
+                                <h1 className="bk-hero__title">
+                                    بيوت <em>الخبرة</em>
+                                    <br />
+                                    للمحاماة والاستشارات القانونية
+                                </h1>
+                                <p className="bk-hero__subtitle">
+                                    شركة مهنية تأسست في الدمام، تقدم باقات شاملة ومتكاملة من خدمات المحاماة
+                                    والاستشارات القانونية المتقنة والموثوقة، وفق أفضل المنهجيات القانونية وأحدث
+                                    الممارسات والمعايير الدولية.
+                                </p>
+                                <div className="bk-hero__actions">
+                                    <a className="bk-btn bk-btn--whats" href={WHATSAPP} target="_blank" rel="noopener noreferrer">
+                                        <MessageCircle size={18} />
+                                        استشارة عبر واتساب
+                                    </a>
+                                    <a className="bk-btn bk-btn--outline" href={`tel:${PHONE_INTL}`}>
+                                        <Phone size={17} />
+                                        {PHONE}
+                                    </a>
+                                </div>
+                                <div className="bk-hero__facts">
+                                    <div className="bk-fact">
+                                        <b>3 فروع</b>
+                                        <span>في المنطقة الشرقية</span>
+                                    </div>
+                                    <div className="bk-fact">
+                                        <b>10 مجالات</b>
+                                        <span>تخصص قانوني</span>
+                                    </div>
+                                    <div className="bk-fact">
+                                        <b>16+ مختصاً</b>
+                                        <span>محامون ومستشارون</span>
+                                    </div>
+                                </div>
+                            </div>
 
-      {/* Footer Gold Line */}
-      <div style={styles.footer}></div>
-    </div>
-  );
+                            <div className="bk-hero__logo bk-rise bk-rise--2">
+                                <img src="/alkhibra/logo.png" alt="شعار شركة بيوت الخبرة" />
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ===== شريط الرؤية ===== */}
+                <section className="bk-vision">
+                    <div className="bk-container bk-vision__inner">
+                        <span className="bk-vision__label">رؤيتنا</span>
+                        <p className="bk-vision__text">
+                            صناعة أنموذجٍ للتميّز والمصداقية في قطاع المحاماة والاستشارات القانونية
+                        </p>
+                    </div>
+                </section>
+
+                {/* ===== الخدمات ===== */}
+                <section className="bk-services" id="services">
+                    <div className="bk-container">
+                        <div className="bk-head">
+                            <span className="bk-eyebrow">خدماتنا</span>
+                            <h2>عشرة مجالات تخصص… تحت سقف بيتٍ واحد</h2>
+                            <p>خدمات مصممة خصيصاً لتلبية كافة الاحتياجات القانونية للأفراد وقطاع الأعمال.</p>
+                        </div>
+                        <div className="bk-services__grid">
+                            {SERVICES.map((service) => (
+                                <div className="bk-service" key={service.name}>
+                                    <span className="bk-service__icon">
+                                        <service.icon size={21} />
+                                    </span>
+                                    <h3>{service.name}</h3>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* ===== من نحن + القيم ===== */}
+                <section className="bk-about" id="about">
+                    <div className="bk-container">
+                        <div className="bk-about__grid">
+                            <div>
+                                <span className="bk-eyebrow bk-about__eyebrow">من نحن</span>
+                                <h2>بيتُ خبرةٍ سعودي… بمعايير دولية</h2>
+                                <p className="bk-about__text">
+                                    شركة بيوت الخبرة للمحاماة والاستشارات القانونية، شركة مهنية ذات مسؤولية محدودة
+                                    تأسست بمدينة الدمام، نتميز بتقديم باقات شاملة ومتكاملة من خدمات المحاماة
+                                    والاستشارات القانونية المتقنة والموثوقة، عبر توظيف خبرات محامين ومستشارين
+                                    متخصصين يعملون وفق أفضل المنهجيات القانونية وأحدث الممارسات والمعايير الدولية.
+                                </p>
+                                <p className="bk-about__mission">
+                                    <b>رسالتنا:</b> السعي الدائم للريادة والتطوير المستمر، وتلبية احتياجات موكلينا
+                                    بتخصصيةٍ وكفاءة — نسعد بتمثيلهم وتقديم الرعاية القانونية الراقية لهم.
+                                </p>
+                            </div>
+                            <div className="bk-values">
+                                {VALUES.map((value) => (
+                                    <div className="bk-value" key={value.name}>
+                                        <value.icon size={22} />
+                                        <h3>{value.name}</h3>
+                                        <p>{value.desc}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ===== الفريق ===== */}
+                <section className="bk-team" id="team">
+                    <div className="bk-container">
+                        <div className="bk-head bk-head--onnavy">
+                            <span className="bk-eyebrow">فريق العمل</span>
+                            <h2>خبراتٌ تجتمع لخدمة قضيتك</h2>
+                            <p>قيادات وكوادر قانونية وإدارية متخصصة في فروعنا الثلاثة.</p>
+                        </div>
+
+                        <div className="bk-team__controls" aria-hidden>
+                            <button className="bk-team__arrow" onClick={() => scrollTeam(1)} aria-label="السابق">
+                                <ChevronRight size={20} />
+                            </button>
+                            <button className="bk-team__arrow" onClick={() => scrollTeam(-1)} aria-label="التالي">
+                                <ChevronLeft size={20} />
+                            </button>
+                        </div>
+
+                        <div className="bk-team__track" ref={teamTrackRef}>
+                            {TEAM.map((member) => (
+                                <div className="bk-member" key={member.name}>
+                                    <div className="bk-member__photo">
+                                        {member.photo ? (
+                                            <img src={member.photo} alt={member.name} loading="lazy" />
+                                        ) : (
+                                            <span className="bk-member__initials">{member.initials}</span>
+                                        )}
+                                    </div>
+                                    <div className="bk-member__info">
+                                        <p className="bk-member__name">{member.name}</p>
+                                        <p className="bk-member__role">{member.role}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* ===== الفروع ===== */}
+                <section className="bk-branches" id="branches">
+                    <div className="bk-container">
+                        <div className="bk-head">
+                            <span className="bk-eyebrow">فروعنا</span>
+                            <h2>ثلاثة بيوتٍ للخبرة في المنطقة الشرقية</h2>
+                            <p>نخدمك من الدمام والجبيل والأحساء — من الأحد إلى الخميس، 8 صباحاً حتى 4 مساءً.</p>
+                        </div>
+                        <div className="bk-branches__grid">
+                            {BRANCHES.map((branch) => (
+                                <div className={`bk-branch ${branch.hq ? 'bk-branch--hq' : ''}`} key={branch.city}>
+                                    {branch.hq && <span className="bk-branch__badge">المقر الرئيسي</span>}
+                                    <span className="bk-branch__icon">
+                                        <MapPin size={21} />
+                                    </span>
+                                    <h3>{branch.city}</h3>
+                                    <p className="bk-branch__addr">
+                                        <MapPin size={14} />
+                                        {branch.address}
+                                    </p>
+                                    <div className="bk-branch__meta">
+                                        <Clock size={14} />
+                                        الأحد – الخميس · 8:00 ص – 4:00 م
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* ===== التواصل ===== */}
+                <section className="bk-contact" id="contact">
+                    <div className="bk-container">
+                        <div className="bk-contact__card">
+                            <div>
+                                <h2>قضيتك تستحق بيتَ خبرة</h2>
+                                <p>
+                                    تواصل معنا اليوم وسيتولى فريقنا دراسة موضوعك والرد عليك بأسرع وقت — استشارتك
+                                    تبدأ برسالة واحدة.
+                                </p>
+                                <div className="bk-contact__rows">
+                                    <a className="bk-contact__row" href={`tel:${PHONE_INTL}`}>
+                                        <Phone size={17} />
+                                        الرقم الموحد: <b>{PHONE}</b>
+                                    </a>
+                                    <a className="bk-contact__row" href={`mailto:${EMAIL}`}>
+                                        <Mail size={17} />
+                                        <b>{EMAIL}</b>
+                                    </a>
+                                    <span className="bk-contact__row">
+                                        <Clock size={17} />
+                                        الأحد – الخميس · 8:00 صباحاً – 4:00 مساءً
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="bk-contact__cta">
+                                <a className="bk-btn bk-btn--whats" href={WHATSAPP} target="_blank" rel="noopener noreferrer">
+                                    <MessageCircle size={18} />
+                                    راسلنا على واتساب
+                                </a>
+                                <a className="bk-btn bk-btn--gold" href={`tel:${PHONE_INTL}`}>
+                                    <Phone size={17} />
+                                    اتصل بنا الآن
+                                </a>
+                                <div className="bk-contact__socials">
+                                    <a
+                                        className="bk-contact__social"
+                                        href="https://www.instagram.com/houses.of.expertise/"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        aria-label="إنستغرام"
+                                    >
+                                        <Instagram size={18} />
+                                    </a>
+                                    <a
+                                        className="bk-contact__social"
+                                        href="https://x.com/Housesofexp"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        aria-label="إكس"
+                                    >
+                                        <Twitter size={18} />
+                                    </a>
+                                    <a
+                                        className="bk-contact__social"
+                                        href="https://www.linkedin.com/company/houses-of-expertise/"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        aria-label="لينكدإن"
+                                    >
+                                        <Linkedin size={18} />
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            {/* ===== التذييل ===== */}
+            <footer className="bk-footer">
+                <div className="bk-container bk-footer__inner">
+                    <div className="bk-footer__brand">
+                        <img src="/alkhibra/logo.png" alt="" aria-hidden />
+                        <span>بيوت الخبرة للمحاماة والاستشارات القانونية</span>
+                    </div>
+                    <span className="bk-footer__copy">
+                        © {new Date().getFullYear()} جميع الحقوق محفوظة لشركة بيوت الخبرة
+                    </span>
+                    <span className="bk-footer__sys">
+                        تعمل بنظام <a href="https://alraedlaw.com" target="_blank" rel="noopener noreferrer">الرائد لإدارة المحاماة</a>
+                    </span>
+                </div>
+            </footer>
+        </div>
+    );
 };
 
 export default AlkhibraLanding;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, X, Download } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 import { useAppUpdate } from '../hooks/useAppUpdate';
 
 const UpdateBanner: React.FC = () => {
@@ -10,9 +10,9 @@ const UpdateBanner: React.FC = () => {
         <AnimatePresence>
             {isUpdateAvailable && (
                 <motion.div
-                    initial={{ y: -100, opacity: 0 }}
+                    initial={{ y: -60, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: -100, opacity: 0 }}
+                    exit={{ y: -60, opacity: 0 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                     style={{
                         position: 'fixed',
@@ -20,117 +20,85 @@ const UpdateBanner: React.FC = () => {
                         left: 0,
                         right: 0,
                         zIndex: 9999,
-                        padding: '0 16px',
+                        display: 'flex',
+                        justifyContent: 'center',
                         paddingTop: 'env(safe-area-inset-top, 0px)',
+                        pointerEvents: 'none',
                     }}
                 >
                     <div
                         style={{
-                            maxWidth: '600px',
-                            margin: '12px auto',
-                            padding: '14px 18px',
-                            borderRadius: 'var(--radius-md, 16px)',
-                            background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%)',
-                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-                            display: 'flex',
+                            pointerEvents: 'auto',
+                            display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '14px',
+                            gap: '10px',
+                            margin: '10px 16px 0',
+                            padding: '6px 14px 6px 8px',
+                            borderRadius: '999px',
+                            background: 'var(--color-primary)',
+                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.18)',
                             direction: 'rtl',
                         }}
                     >
-                        {/* أيقونة التحديث */}
-                        <div
+                        <span
                             style={{
-                                width: '42px',
-                                height: '42px',
-                                borderRadius: '12px',
-                                background: 'rgba(255, 255, 255, 0.2)',
+                                fontSize: 'var(--font-size-xs, 12px)',
+                                fontWeight: 500,
+                                color: 'white',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            تحديث جديد متاح
+                        </span>
+
+                        <motion.button
+                            whileTap={{ scale: 0.96 }}
+                            onClick={applyUpdate}
+                            disabled={isUpdating}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '5px 12px',
+                                borderRadius: '999px',
+                                background: 'white',
+                                color: 'var(--color-primary)',
+                                fontSize: 'var(--font-size-xs, 12px)',
+                                fontWeight: 600,
+                                border: 'none',
+                                cursor: isUpdating ? 'wait' : 'pointer',
+                                opacity: isUpdating ? 0.7 : 1,
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            <RefreshCw
+                                size={13}
+                                style={{
+                                    animation: isUpdating ? 'spin 1s linear infinite' : 'none',
+                                }}
+                            />
+                            {isUpdating ? 'جاري التحديث...' : 'تحديث'}
+                        </motion.button>
+
+                        <button
+                            onClick={dismissUpdate}
+                            style={{
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                background: 'rgba(255, 255, 255, 0.15)',
+                                border: 'none',
+                                cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 flexShrink: 0,
+                                padding: 0,
                             }}
+                            title="إغلاق (سيظهر لاحقاً)"
                         >
-                            <Download size={22} color="white" />
-                        </div>
-
-                        {/* النص */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div
-                                style={{
-                                    fontSize: 'var(--font-size-sm, 13px)',
-                                    fontWeight: 600,
-                                    color: 'white',
-                                    marginBottom: '2px',
-                                }}
-                            >
-                                🚀 تحديث جديد متاح!
-                            </div>
-                            <div
-                                style={{
-                                    fontSize: 'var(--font-size-xs, 12px)',
-                                    color: 'rgba(255, 255, 255, 0.85)',
-                                }}
-                            >
-                                اضغط للتحديث والحصول على آخر الميزات والتحسينات
-                            </div>
-                        </div>
-
-                        {/* الأزرار */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                            {/* زر التحديث */}
-                            <motion.button
-                                whileHover={{ scale: 1.03 }}
-                                whileTap={{ scale: 0.97 }}
-                                onClick={applyUpdate}
-                                disabled={isUpdating}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    padding: '10px 18px',
-                                    borderRadius: 'var(--radius-xs, 8px)',
-                                    background: 'white',
-                                    color: 'var(--color-primary)',
-                                    fontSize: 'var(--font-size-sm, 13px)',
-                                    fontWeight: 600,
-                                    border: 'none',
-                                    cursor: isUpdating ? 'wait' : 'pointer',
-                                    opacity: isUpdating ? 0.7 : 1,
-                                    transition: 'all 0.2s ease',
-                                }}
-                            >
-                                <RefreshCw
-                                    size={16}
-                                    style={{
-                                        animation: isUpdating ? 'spin 1s linear infinite' : 'none',
-                                    }}
-                                />
-                                {isUpdating ? 'جاري التحديث...' : 'تحديث الآن'}
-                            </motion.button>
-
-                            {/* زر الإغلاق */}
-                            <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={dismissUpdate}
-                                style={{
-                                    width: '32px',
-                                    height: '32px',
-                                    borderRadius: '8px',
-                                    background: 'rgba(255, 255, 255, 0.15)',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'background 0.2s ease',
-                                }}
-                                title="إغلاق (سيظهر لاحقاً)"
-                            >
-                                <X size={18} color="white" />
-                            </motion.button>
-                        </div>
+                            <X size={13} color="white" />
+                        </button>
                     </div>
                 </motion.div>
             )}

@@ -1,0 +1,1134 @@
+/* ============================================================
+   صفحة هبوط شركة بيوت الخبرة للمحاماة والاستشارات القانونية
+   الهوية مستخرجة من شعارهم الرسمي: كحلي #22335a + ذهبي رملي #b3a282
+   كل الكلاسات بادئتها bk- (بيوت الخبرة) — معزولة تماماً
+   ============================================================ */
+
+.bk {
+  --bk-navy: #22335a;
+  --bk-navy-deep: #182643;
+  --bk-navy-soft: #2e4173;
+  --bk-sand: #b3a282;
+  --bk-sand-deep: #97855f;
+  --bk-sand-soft: #cfc2a8;
+  --bk-ivory: #f7f4ee;
+  --bk-ivory-deep: #efeadf;
+  --bk-line: #e3dccc;
+  --bk-white: #ffffff;
+  --bk-text: #22335a;
+  --bk-mute: #6b7280;
+  --bk-on-navy: #f3f1ea;
+  --bk-on-navy-mute: #b9c0d4;
+  --bk-green: #1f9d61;
+
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  background: var(--bk-ivory);
+  color: var(--bk-text);
+  direction: rtl;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+html:has(.bk) {
+  scroll-behavior: smooth;
+}
+
+/* منع أي فيضان أفقي على مستوى الصفحة كاملة */
+html:has(.bk),
+body:has(.bk) {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+.bk *,
+.bk *::before,
+.bk *::after {
+  box-sizing: border-box;
+}
+
+.bk ::selection {
+  background: var(--bk-sand);
+  color: var(--bk-navy-deep);
+}
+
+.bk-container {
+  max-width: 1180px;
+  margin-inline: auto;
+  padding-inline: clamp(20px, 4vw, 48px);
+}
+
+/* حركة دخول خفيفة للبطل فقط — CSS صرف */
+.bk-rise {
+  animation: bk-rise 0.7s ease-out both;
+}
+
+.bk-rise--2 {
+  animation-delay: 0.15s;
+}
+
+@keyframes bk-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- عناوين الأقسام ---------- */
+
+.bk-head {
+  text-align: center;
+  max-width: 700px;
+  margin-inline: auto;
+  margin-bottom: clamp(36px, 5vw, 56px);
+}
+
+.bk-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--bk-sand-deep);
+  margin-bottom: 12px;
+}
+
+.bk-eyebrow::before,
+.bk-eyebrow::after {
+  content: '';
+  width: 32px;
+  height: 1px;
+  background: var(--bk-sand);
+}
+
+.bk-head h2 {
+  font-size: clamp(1.55rem, 3.2vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 0 0 12px;
+  color: var(--bk-navy);
+}
+
+.bk-head p {
+  font-size: clamp(0.95rem, 1.4vw, 1.05rem);
+  line-height: 2;
+  color: var(--bk-mute);
+  margin: 0;
+}
+
+.bk-head--onnavy h2 { color: var(--bk-on-navy); }
+.bk-head--onnavy p { color: var(--bk-on-navy-mute); }
+.bk-head--onnavy .bk-eyebrow { color: var(--bk-sand-soft); }
+
+/* ---------- الأزرار ---------- */
+
+.bk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 0.98rem;
+  line-height: 1;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+  white-space: nowrap;
+}
+
+.bk-btn--gold {
+  background: var(--bk-sand);
+  color: var(--bk-navy-deep);
+}
+
+.bk-btn--gold:hover {
+  background: var(--bk-sand-soft);
+  transform: translateY(-2px);
+}
+
+.bk-btn--navy {
+  background: var(--bk-navy);
+  color: var(--bk-on-navy);
+  border-color: var(--bk-navy);
+}
+
+.bk-btn--navy:hover {
+  background: var(--bk-navy-soft);
+  transform: translateY(-2px);
+}
+
+.bk-btn--outline {
+  border-color: rgba(34, 51, 90, 0.35);
+  color: var(--bk-navy);
+  background: transparent;
+}
+
+.bk-btn--outline:hover {
+  border-color: var(--bk-navy);
+  background: rgba(34, 51, 90, 0.05);
+  transform: translateY(-2px);
+}
+
+.bk-btn--whats {
+  background: var(--bk-green);
+  color: #ffffff;
+}
+
+.bk-btn--whats:hover {
+  background: #178a53;
+  transform: translateY(-2px);
+}
+
+.bk-btn--sm {
+  padding: 10px 18px;
+  font-size: 0.85rem;
+  border-radius: 10px;
+}
+
+/* ============================================================
+   الترويسة
+   ============================================================ */
+
+.bk-header {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 60;
+  background: rgba(247, 244, 238, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--bk-line);
+}
+
+.bk-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-block: 10px;
+}
+
+.bk-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  text-decoration: none;
+}
+
+.bk-brand img {
+  height: 46px;
+  width: auto;
+}
+
+.bk-brand__name {
+  font-weight: 800;
+  font-size: 1.02rem;
+  color: var(--bk-navy);
+  line-height: 1.35;
+}
+
+.bk-brand__sub {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--bk-sand-deep);
+}
+
+.bk-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.bk-nav a {
+  color: var(--bk-navy);
+  opacity: 0.75;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: opacity 0.2s ease;
+}
+
+.bk-nav a:hover {
+  opacity: 1;
+}
+
+.bk-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ============================================================
+   قسم البطل
+   ============================================================ */
+
+.bk-hero {
+  position: relative;
+  padding-top: clamp(110px, 14vh, 150px);
+  padding-bottom: clamp(48px, 7vh, 80px);
+  background: var(--bk-ivory);
+  overflow: hidden;
+}
+
+/* خط بيت الشعار كزخرفة خلفية خافتة */
+.bk-hero::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: -120px;
+  top: -80px;
+  width: 480px;
+  height: 480px;
+  background: url('/alkhibra/logo.png') no-repeat center / contain;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+.bk-hero__grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: clamp(32px, 5vw, 64px);
+  align-items: center;
+}
+
+.bk-hero__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--bk-sand);
+  background: rgba(179, 162, 130, 0.12);
+  color: var(--bk-sand-deep);
+  font-size: 0.82rem;
+  font-weight: 800;
+  margin-bottom: 22px;
+}
+
+.bk-hero__title {
+  font-size: clamp(2rem, 4.4vw, 3.3rem);
+  font-weight: 800;
+  line-height: 1.5;
+  margin: 0 0 18px;
+  color: var(--bk-navy);
+}
+
+.bk-hero__title em {
+  font-style: normal;
+  color: var(--bk-sand-deep);
+}
+
+.bk-hero__subtitle {
+  font-size: clamp(0.97rem, 1.4vw, 1.1rem);
+  line-height: 2.05;
+  color: var(--bk-mute);
+  max-width: 560px;
+  margin: 0 0 30px;
+  text-align: justify;
+}
+
+.bk-hero__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 34px;
+}
+
+.bk-hero__facts {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 3vw, 36px);
+  flex-wrap: wrap;
+}
+
+.bk-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bk-fact b {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--bk-navy);
+}
+
+.bk-fact span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--bk-mute);
+}
+
+/* الشعار الكبير */
+.bk-hero__logo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bk-hero__logo img {
+  width: min(330px, 70%);
+  height: auto;
+}
+
+.bk-hero__logo::after {
+  content: '';
+  position: absolute;
+  inset: 6%;
+  border: 1px dashed rgba(179, 162, 130, 0.45);
+  border-radius: 28px;
+  pointer-events: none;
+}
+
+/* ============================================================
+   شريط الرؤية
+   ============================================================ */
+
+.bk-vision {
+  background: var(--bk-navy);
+  color: var(--bk-on-navy);
+  padding-block: clamp(28px, 4vh, 40px);
+}
+
+.bk-vision__inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  flex-wrap: wrap;
+}
+
+.bk-vision__label {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--bk-sand-soft);
+  border: 1px solid rgba(179, 162, 130, 0.4);
+  border-radius: 999px;
+  padding: 6px 14px;
+  white-space: nowrap;
+}
+
+.bk-vision__text {
+  font-size: clamp(1rem, 1.8vw, 1.25rem);
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.9;
+}
+
+/* ============================================================
+   الخدمات
+   ============================================================ */
+
+.bk-services {
+  padding-block: clamp(64px, 9vh, 100px);
+  background: var(--bk-white);
+}
+
+.bk-services__grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
+.bk-service {
+  position: relative;
+  overflow: hidden;
+  background: var(--bk-ivory);
+  border: 1px solid var(--bk-line);
+  border-radius: 16px;
+  padding: 26px 16px;
+  min-height: 104px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+}
+
+.bk-service:hover {
+  transform: translateY(-4px);
+  border-color: var(--bk-sand);
+  background: #fffdf8;
+}
+
+/* الأيقونة كعلامة مائية في خلفية البطاقة */
+.bk-service__icon {
+  position: absolute;
+  top: -16px;
+  inset-inline-end: -16px;
+  color: var(--bk-sand);
+  opacity: 0.18;
+  transform: rotate(-12deg);
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  z-index: 0;
+}
+
+.bk-service__icon svg {
+  width: 84px;
+  height: 84px;
+  stroke-width: 1.1px;
+}
+
+.bk-service:hover .bk-service__icon {
+  opacity: 0.32;
+  transform: rotate(-4deg) scale(1.06);
+}
+
+.bk-service h3 {
+  position: relative;
+  z-index: 1;
+  font-size: 0.92rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--bk-navy);
+  line-height: 1.7;
+}
+
+/* ============================================================
+   من نحن + القيم
+   ============================================================ */
+
+.bk-about {
+  padding-block: clamp(64px, 9vh, 100px);
+  background: var(--bk-ivory);
+}
+
+.bk-about__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: clamp(28px, 4vw, 56px);
+  align-items: start;
+}
+
+.bk-about__eyebrow {
+  text-align: start;
+}
+
+.bk-about h2 {
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-weight: 800;
+  color: var(--bk-navy);
+  line-height: 1.55;
+  margin: 0 0 16px;
+}
+
+.bk-about__text {
+  font-size: 0.98rem;
+  line-height: 2.1;
+  color: var(--bk-mute);
+  margin: 0 0 22px;
+  text-align: justify;
+}
+
+.bk-about__mission {
+  background: var(--bk-white);
+  border: 1px solid var(--bk-line);
+  border-inline-start: 3px solid var(--bk-sand);
+  border-radius: 12px;
+  padding: 16px 18px;
+  font-size: 0.92rem;
+  line-height: 2;
+  color: var(--bk-navy);
+  margin: 0;
+}
+
+.bk-values {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.bk-value {
+  background: var(--bk-white);
+  border: 1px solid var(--bk-line);
+  border-radius: 14px;
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.bk-value:hover {
+  border-color: var(--bk-sand);
+  transform: translateY(-3px);
+}
+
+.bk-value svg {
+  color: var(--bk-sand-deep);
+}
+
+.bk-value h3 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--bk-navy);
+}
+
+.bk-value p {
+  font-size: 0.8rem;
+  line-height: 1.9;
+  color: var(--bk-mute);
+  margin: 0;
+}
+
+/* ============================================================
+   الفريق — كاروسيل
+   ============================================================ */
+
+.bk-team {
+  padding-block: clamp(64px, 9vh, 100px);
+  background: var(--bk-navy);
+  position: relative;
+  overflow: hidden;
+}
+
+.bk-team::before {
+  content: '';
+  position: absolute;
+  inset-inline-end: -140px;
+  bottom: -120px;
+  width: 520px;
+  height: 520px;
+  background: url('/alkhibra/logo.png') no-repeat center / contain;
+  opacity: 0.04;
+  filter: brightness(4);
+  pointer-events: none;
+}
+
+.bk-team__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+
+.bk-team__arrow {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(247, 244, 238, 0.08);
+  border: 1px solid rgba(179, 162, 130, 0.45);
+  color: var(--bk-sand-soft);
+  cursor: pointer;
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.bk-team__arrow:hover {
+  background: rgba(179, 162, 130, 0.2);
+  transform: scale(1.06);
+}
+
+.bk-team__track {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bk-sand) transparent;
+}
+
+.bk-team__track::-webkit-scrollbar {
+  height: 6px;
+}
+
+.bk-team__track::-webkit-scrollbar-thumb {
+  background: var(--bk-sand-deep);
+  border-radius: 99px;
+}
+
+.bk-member {
+  flex: 0 0 230px;
+  scroll-snap-align: start;
+  background: rgba(247, 244, 238, 0.05);
+  border: 1px solid rgba(179, 162, 130, 0.28);
+  border-radius: 18px;
+  overflow: hidden;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.bk-member:hover {
+  border-color: var(--bk-sand);
+  transform: translateY(-4px);
+}
+
+.bk-member__photo {
+  width: 100%;
+  aspect-ratio: 1 / 1.05;
+  background: linear-gradient(180deg, #2e4173, #22335a);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.bk-member__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.bk-member__initials {
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(179, 162, 130, 0.2);
+  border: 1px solid var(--bk-sand);
+  color: var(--bk-sand-soft);
+  font-size: 1.7rem;
+  font-weight: 800;
+}
+
+.bk-member__info {
+  padding: 14px 16px 16px;
+  text-align: center;
+}
+
+.bk-member__name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--bk-on-navy);
+  margin: 0 0 4px;
+  line-height: 1.6;
+}
+
+.bk-member__role {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--bk-sand-soft);
+  margin: 0;
+}
+
+/* ============================================================
+   الفروع
+   ============================================================ */
+
+.bk-branches {
+  padding-block: clamp(64px, 9vh, 100px);
+  background: var(--bk-white);
+}
+
+.bk-branches__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.bk-branch {
+  background: var(--bk-ivory);
+  border: 1px solid var(--bk-line);
+  border-radius: 18px;
+  padding: 26px 24px;
+  position: relative;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.bk-branch:hover {
+  border-color: var(--bk-sand);
+  transform: translateY(-4px);
+}
+
+.bk-branch--hq {
+  background: var(--bk-navy);
+  border-color: var(--bk-navy);
+}
+
+.bk-branch__badge {
+  position: absolute;
+  top: 18px;
+  inset-inline-end: 20px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: var(--bk-navy-deep);
+  background: var(--bk-sand);
+  padding: 4px 11px;
+  border-radius: 999px;
+}
+
+.bk-branch__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: var(--bk-navy);
+  color: var(--bk-sand-soft);
+  margin-bottom: 14px;
+}
+
+.bk-branch--hq .bk-branch__icon {
+  background: rgba(179, 162, 130, 0.18);
+  border: 1px solid rgba(179, 162, 130, 0.4);
+}
+
+.bk-branch h3 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin: 0 0 10px;
+  color: var(--bk-navy);
+}
+
+.bk-branch--hq h3 {
+  color: var(--bk-on-navy);
+}
+
+.bk-branch__addr {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.86rem;
+  line-height: 1.95;
+  color: var(--bk-mute);
+  margin: 0 0 12px;
+}
+
+.bk-branch--hq .bk-branch__addr {
+  color: var(--bk-on-navy-mute);
+}
+
+.bk-branch__addr svg {
+  flex-shrink: 0;
+  margin-top: 5px;
+  color: var(--bk-sand-deep);
+}
+
+.bk-branch__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--bk-navy);
+}
+
+.bk-branch--hq .bk-branch__meta {
+  color: var(--bk-sand-soft);
+}
+
+.bk-branch__meta svg {
+  color: var(--bk-sand-deep);
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   التواصل
+   ============================================================ */
+
+.bk-contact {
+  padding-block: clamp(64px, 9vh, 100px);
+  background: var(--bk-ivory);
+}
+
+.bk-contact__card {
+  background: var(--bk-navy);
+  border-radius: 24px;
+  padding: clamp(36px, 5vw, 60px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(24px, 4vw, 48px);
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.bk-contact__card::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: -100px;
+  top: -100px;
+  width: 380px;
+  height: 380px;
+  background: url('/alkhibra/logo.png') no-repeat center / contain;
+  opacity: 0.05;
+  filter: brightness(4);
+  pointer-events: none;
+}
+
+.bk-contact__card h2 {
+  position: relative;
+  font-size: clamp(1.4rem, 2.8vw, 2rem);
+  font-weight: 800;
+  color: var(--bk-on-navy);
+  margin: 0 0 10px;
+  line-height: 1.6;
+}
+
+.bk-contact__card > div > p {
+  position: relative;
+  font-size: 0.95rem;
+  line-height: 2;
+  color: var(--bk-on-navy-mute);
+  margin: 0 0 24px;
+  max-width: 480px;
+}
+
+.bk-contact__rows {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bk-contact__row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--bk-on-navy);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.bk-contact__row:hover {
+  color: var(--bk-sand-soft);
+}
+
+.bk-contact__row svg {
+  color: var(--bk-sand-soft);
+  flex-shrink: 0;
+}
+
+.bk-contact__row b {
+  direction: ltr;
+  unicode-bidi: embed;
+}
+
+.bk-contact__cta {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 230px;
+}
+
+.bk-contact__socials {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.bk-contact__social {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(247, 244, 238, 0.08);
+  border: 1px solid rgba(179, 162, 130, 0.4);
+  color: var(--bk-sand-soft);
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.bk-contact__social:hover {
+  background: rgba(179, 162, 130, 0.22);
+  transform: translateY(-3px);
+}
+
+/* ============================================================
+   التذييل
+   ============================================================ */
+
+.bk-footer {
+  background: var(--bk-navy-deep);
+  color: var(--bk-on-navy-mute);
+  padding-block: 30px;
+}
+
+.bk-footer__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.bk-footer__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bk-footer__brand img {
+  height: 40px;
+  width: auto;
+  filter: brightness(0) invert(0.92);
+  opacity: 0.9;
+}
+
+.bk-footer__brand span {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--bk-on-navy);
+}
+
+.bk-footer__copy {
+  font-size: 0.76rem;
+}
+
+.bk-footer__sys {
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.bk-footer__sys a {
+  color: var(--bk-sand-soft);
+  text-decoration: none;
+}
+
+.bk-footer__sys a:hover {
+  text-decoration: underline;
+}
+
+/* ============================================================
+   استجابة الشاشات
+   ============================================================ */
+
+@media (max-width: 1024px) {
+  .bk-services__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .bk-hero__grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .bk-hero__subtitle {
+    margin-inline: auto;
+    text-align: justify;
+    text-align-last: center;
+  }
+
+  .bk-hero__actions,
+  .bk-hero__facts {
+    justify-content: center;
+  }
+
+  .bk-hero__logo {
+    order: -1;
+  }
+
+  .bk-hero__logo img {
+    width: min(220px, 55%);
+  }
+
+  .bk-about__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bk-branches__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bk-contact__card {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .bk-contact__card > div > p {
+    margin-inline: auto;
+  }
+
+  .bk-contact__rows {
+    align-items: center;
+  }
+
+  .bk-contact__cta {
+    margin-inline: auto;
+  }
+}
+
+@media (max-width: 860px) {
+  .bk-nav {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  /* هيدر مضغوط يتسع لشاشة 360px */
+  .bk-header__inner {
+    gap: 8px;
+  }
+
+  .bk-brand {
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .bk-brand__name {
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+
+  .bk-brand__sub {
+    display: none;
+  }
+
+  .bk-brand img {
+    height: 34px;
+  }
+
+  .bk-header__actions {
+    gap: 6px;
+  }
+
+  .bk-header .bk-btn--sm {
+    padding: 8px 10px;
+    font-size: 0.72rem;
+    gap: 5px;
+    border-radius: 9px;
+  }
+
+  .bk-services__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .bk-values {
+    grid-template-columns: 1fr;
+  }
+
+  .bk-member {
+    flex-basis: 200px;
+  }
+
+  .bk-hero__facts {
+    gap: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:has(.bk) {
+    scroll-behavior: auto;
+  }
+
+  .bk-rise {
+    animation: none !important;
+  }
+
+  .bk *,
+  .bk *::before,
+  .bk *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
