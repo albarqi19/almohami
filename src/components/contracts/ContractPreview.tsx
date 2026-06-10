@@ -23,6 +23,14 @@ const A4_HEIGHT_MM = 297;
 const A4_WIDTH_MM = 210;
 const MM_TO_PX = 3.7795275591; // 1mm = 3.78px at 96dpi
 
+// chips المتغيرات (التظليل الأزرق) من محرر القوالب ستايل تحريري فقط —
+// تُفكّ أغلفتها هنا لتندمج القيم مع النص في المعاينة والطباعة والـ PDF
+const unwrapVariableMentions = (html: string): string =>
+  html.replace(
+    /<span\b[^>]*(?:contract-variable-mention|data-type\s*=\s*["']mention["'])[^>]*>([\s\S]*?)<\/span>/gi,
+    '$1'
+  );
+
 const ContractPreview: React.FC<ContractPreviewProps> = ({
   isOpen = true,
   onClose,
@@ -46,7 +54,7 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
   const measureRef = useRef<HTMLDivElement>(null);
 
   const title = titleProp || contractTitle || 'معاينة العقد';
-  const safeContent = content || '';
+  const safeContent = unwrapVariableMentions(content || '');
   const previewContent = replaceVariables(safeContent, variables || {});
 
   // Get letterhead settings
@@ -240,33 +248,37 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
     `,
   });
 
-  // Download PDF
+  // Download PDF — كل ورقة A4 تُلتقط وحدها وتوضع في صفحة PDF واحدة بالضبط؛
+  // التقاط الحاوية كلها دفعة واحدة (html2pdf سابقاً) كان يُدخل فجوات الـ gap
+  // وفروق التقريب في التقطيع فتظهر صفحة فارغة بعد كل صفحة محتوى.
   const handleDownload = async () => {
     if (!printRef.current) return;
 
+    const papers = Array.from(
+      printRef.current.querySelectorAll<HTMLElement>('.contract-preview-paper')
+    );
+    if (papers.length === 0) return;
+
     const filename = `${title}${contractNumber ? `-${contractNumber}` : ''}.pdf`;
-    const opt = {
-      margin: 0,
-      filename,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      },
-      jsPDF: {
-        unit: 'mm' as const,
-        format: 'a4' as const,
-        orientation: 'portrait' as const,
-      },
-    };
 
     try {
-      // تُحمّل html2pdf عند الطلب فقط لتخفيف الحزمة الأولية
-      // @ts-ignore
-      const html2pdf = (await import('html2pdf.js')).default;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (html2pdf as any)().set(opt).from(printRef.current).save();
+      // تُحمّل مكتبات التوليد عند الطلب فقط لتخفيف الحزمة الأولية
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
+
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      for (let i = 0; i < papers.length; i++) {
+        const canvas = await html2canvas(papers[i], {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+        });
+        if (i > 0) pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM);
+      }
+      pdf.save(filename);
     } catch (error) {
       console.error('PDF generation error:', error);
       alert('حدث خطأ أثناء إنشاء ملف PDF');
