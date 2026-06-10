@@ -1,5 +1,6 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');
+/* الخط مستضاف محلياً (public/fonts) بدل Google Fonts — يوفر سلسلة اتصالات خارجية حاجبة للرسم */
+@import './styles/fonts.css';
 @import './styles/design-system.css';
 @import './styles/auth.css';
 @import './styles/dashboard-theme.css';
