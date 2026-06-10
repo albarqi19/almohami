@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-    Scale,
     Building2,
     User,
     Mail,
@@ -16,8 +15,10 @@ import {
     Check,
     AlertCircle,
     Loader2,
+    Info,
 } from 'lucide-react';
 import { apiClient } from '../utils/api';
+import AnimatedBrandMark from '../components/AnimatedBrandMark';
 
 interface TenantFormData {
     company_name: string;
@@ -116,9 +117,21 @@ const RegisterTenantContent: React.FC = () => {
         }
     };
 
+    const SLUG_MAX = 30;
+
     const validateStep1 = (): boolean => {
         const newErrors: FormErrors = {};
         if (!formData.company_name.trim()) newErrors.company_name = 'اسم الشركة مطلوب';
+
+        const slug = formData.company_slug.trim();
+        if (!slug) {
+            newErrors.company_slug = 'المعرّف الفريد مطلوب — يتولّد تلقائياً من اسم الشركة ويمكنك تعديله';
+        } else if (!/^[a-z0-9-]+$/.test(slug)) {
+            newErrors.company_slug = 'المعرّف يقبل أحرفاً إنجليزية صغيرة وأرقاماً وشرطات فقط';
+        } else if (slug.length > SLUG_MAX) {
+            newErrors.company_slug = `المعرّف طويل جداً — اختصره إلى ${SLUG_MAX} حرفاً أو أقل ليكون رابطك سهل التذكر`;
+        }
+
         if (!formData.company_email.trim()) {
             newErrors.company_email = 'البريد الإلكتروني مطلوب';
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.company_email)) {
@@ -257,10 +270,10 @@ const RegisterTenantContent: React.FC = () => {
             transition={{ duration: 0.3 }}
         >
             <header className="auth-card__brand">
-                <span className="auth-card__logo"><Scale size={28} /></span>
+                <span className="auth-card__logo"><AnimatedBrandMark size={36} /></span>
                 <div>
                     <h1 className="auth-card__title">تسجيل شركة محاماة</h1>
-                    <p className="auth-card__subtitle">الخطوة {step} من 3</p>
+                    <p className="auth-card__subtitle">الخطوة {step} من 3 — {steps[step - 1].title}</p>
                 </div>
             </header>
 
@@ -301,27 +314,44 @@ const RegisterTenantContent: React.FC = () => {
                         </div>
 
                         <div className="form-field">
-                            <label className="form-label" htmlFor="company_slug">المعرّف الفريد <span className="form-optional">(اختياري)</span></label>
+                            <label className="form-label" htmlFor="company_slug">
+                                المعرّف الفريد <span className="form-required">*</span>
+                                <span className="auth-info" tabIndex={0} role="note" aria-label="ما هو المعرّف الفريد؟">
+                                    <Info size={12} />
+                                    <span className="auth-info__tip">
+                                        هذا عنوان مكتبك على الإنترنت — يدخل منه فريقك وعملاؤك إلى النظام. اجعله قصيراً وسهل التذكر.
+                                    </span>
+                                </span>
+                            </label>
                             <div className="auth-field">
-                                <input id="company_slug" name="company_slug" type="text" className="input" placeholder="يتم توليده تلقائياً" value={formData.company_slug} onChange={handleInputChange} dir="ltr" />
+                                <input id="company_slug" name="company_slug" type="text" className={`input ${errors.company_slug ? 'input--error' : ''}`} placeholder="يتولّد تلقائياً من اسم الشركة" value={formData.company_slug} onChange={handleInputChange} dir="ltr" maxLength={50} />
                             </div>
-                            <span className="form-hint">سيكون رابطك: {formData.company_slug || 'your-company'}.example.com</span>
+                            {errors.company_slug && <span className="form-error">{errors.company_slug}</span>}
+                            <span className="form-hint">
+                                هذا سيكون رابط مكتبك الخاص: <b dir="ltr">{formData.company_slug || 'your-company'}.alraedlaw.com</b>
+                            </span>
+                            {!errors.company_slug && formData.company_slug.length > SLUG_MAX && (
+                                <span className="form-warn">
+                                    المعرّف طويل ({formData.company_slug.length} حرفاً) — اختصره ليكون رابطك أسهل في الكتابة والتذكر
+                                </span>
+                            )}
                         </div>
 
-                        <div className="form-field">
-                            <label className="form-label" htmlFor="company_email">البريد الإلكتروني <span className="form-required">*</span></label>
-                            <div className="auth-field">
-                                <span className="auth-field__icon"><Mail size={18} /></span>
-                                <input id="company_email" name="company_email" type="email" className={`input auth-field__input--with-icon ${errors.company_email ? 'input--error' : ''}`} placeholder="info@example.com" value={formData.company_email} onChange={handleInputChange} dir="ltr" />
+                        <div className="form-row">
+                            <div className="form-field">
+                                <label className="form-label" htmlFor="company_email">البريد الإلكتروني <span className="form-required">*</span></label>
+                                <div className="auth-field">
+                                    <span className="auth-field__icon"><Mail size={18} /></span>
+                                    <input id="company_email" name="company_email" type="email" className={`input auth-field__input--with-icon ${errors.company_email ? 'input--error' : ''}`} placeholder="info@example.com" value={formData.company_email} onChange={handleInputChange} dir="ltr" />
+                                </div>
+                                {errors.company_email && <span className="form-error">{errors.company_email}</span>}
                             </div>
-                            {errors.company_email && <span className="form-error">{errors.company_email}</span>}
-                        </div>
-
-                        <div className="form-field">
-                            <label className="form-label" htmlFor="company_phone">رقم الجوال <span className="form-optional">(اختياري)</span></label>
-                            <div className="auth-field">
-                                <span className="auth-field__icon"><Phone size={18} /></span>
-                                <input id="company_phone" name="company_phone" type="tel" className="input auth-field__input--with-icon" placeholder="05xxxxxxxx" value={formData.company_phone} onChange={handleInputChange} dir="ltr" />
+                            <div className="form-field">
+                                <label className="form-label" htmlFor="company_phone">رقم الجوال <span className="form-optional">(اختياري)</span></label>
+                                <div className="auth-field">
+                                    <span className="auth-field__icon"><Phone size={18} /></span>
+                                    <input id="company_phone" name="company_phone" type="tel" className="input auth-field__input--with-icon" placeholder="05xxxxxxxx" value={formData.company_phone} onChange={handleInputChange} dir="ltr" />
+                                </div>
                             </div>
                         </div>
 
@@ -344,13 +374,31 @@ const RegisterTenantContent: React.FC = () => {
                             {errors.owner_name && <span className="form-error">{errors.owner_name}</span>}
                         </div>
 
-                        <div className="form-field">
-                            <label className="form-label" htmlFor="owner_national_id">رقم الهوية <span className="form-required">*</span></label>
-                            <div className="auth-field">
-                                <span className="auth-field__icon"><IdCard size={18} /></span>
-                                <input id="owner_national_id" name="owner_national_id" type="text" className={`input auth-field__input--with-icon ${errors.owner_national_id ? 'input--error' : ''}`} placeholder="10 أرقام" value={formData.owner_national_id} onChange={handleInputChange} maxLength={10} inputMode="numeric" dir="ltr" />
+                        <div className="form-row">
+                            <div className="form-field">
+                                <label className="form-label" htmlFor="owner_national_id">
+                                    رقم الهوية <span className="form-required">*</span>
+                                    <span className="auth-info" tabIndex={0} role="note" aria-label="لماذا نطلب رقم الهوية؟">
+                                        <Info size={12} />
+                                        <span className="auth-info__tip">
+                                            نستخدم رقم الهوية لربط قضاياك وجلساتك من ناجز بحسابك تلقائياً — وبياناتك مشفّرة ومحفوظة بأمان.
+                                        </span>
+                                    </span>
+                                </label>
+                                <div className="auth-field">
+                                    <span className="auth-field__icon"><IdCard size={18} /></span>
+                                    <input id="owner_national_id" name="owner_national_id" type="text" className={`input auth-field__input--with-icon ${errors.owner_national_id ? 'input--error' : ''}`} placeholder="10 أرقام" value={formData.owner_national_id} onChange={handleInputChange} maxLength={10} inputMode="numeric" dir="ltr" />
+                                </div>
+                                {errors.owner_national_id && <span className="form-error">{errors.owner_national_id}</span>}
                             </div>
-                            {errors.owner_national_id && <span className="form-error">{errors.owner_national_id}</span>}
+                            <div className="form-field">
+                                <label className="form-label" htmlFor="owner_phone">رقم الجوال <span className="form-required">*</span></label>
+                                <div className="auth-field">
+                                    <span className="auth-field__icon"><Phone size={18} /></span>
+                                    <input id="owner_phone" name="owner_phone" type="tel" className={`input auth-field__input--with-icon ${errors.owner_phone ? 'input--error' : ''}`} placeholder="05xxxxxxxx" value={formData.owner_phone} onChange={handleInputChange} dir="ltr" maxLength={10} inputMode="numeric" />
+                                </div>
+                                {errors.owner_phone && <span className="form-error">{errors.owner_phone}</span>}
+                            </div>
                         </div>
 
                         <div className="form-field">
@@ -381,15 +429,6 @@ const RegisterTenantContent: React.FC = () => {
                                 </div>
                                 {errors.owner_pin_confirmation && <span className="form-error">{errors.owner_pin_confirmation}</span>}
                             </div>
-                        </div>
-
-                        <div className="form-field">
-                            <label className="form-label" htmlFor="owner_phone">رقم الجوال <span className="form-required">*</span></label>
-                            <div className="auth-field">
-                                <span className="auth-field__icon"><Phone size={18} /></span>
-                                <input id="owner_phone" name="owner_phone" type="tel" className={`input auth-field__input--with-icon ${errors.owner_phone ? 'input--error' : ''}`} placeholder="05xxxxxxxx" value={formData.owner_phone} onChange={handleInputChange} dir="ltr" maxLength={10} inputMode="numeric" />
-                            </div>
-                            {errors.owner_phone && <span className="form-error">{errors.owner_phone}</span>}
                         </div>
 
                         <div className="auth-form__actions">

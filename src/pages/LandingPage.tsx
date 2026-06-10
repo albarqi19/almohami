@@ -25,8 +25,6 @@ import {
   Video,
   PenLine,
   Microscope,
-  ScrollText,
-  Lightbulb,
   BrainCircuit,
   Swords,
   BadgeCheck,
@@ -102,29 +100,6 @@ const AI_ENGINES = [
   { name: 'محاكي الخصم', desc: 'يتقمص محامي الطرف الآخر ويكشف ثغراتك', icon: Swords },
   { name: 'المدقق القانوني', desc: 'يصقل الصياغة لغوياً وقانونياً', icon: BadgeCheck },
   { name: 'مراجع الامتثال', desc: 'يطابق المذكرة مع الأنظمة السعودية', icon: Gavel },
-];
-
-const AI_TOOLS = [
-  {
-    cat: 'تحسين الصياغة',
-    icon: PenLine,
-    tools: ['الصياغة القانونية الرصينة', 'التبسيط بلغة العميل', 'الصياغة الحكومية الرسمية'],
-  },
-  {
-    cat: 'التحليل القانوني',
-    icon: Microscope,
-    tools: ['كشف المخاطر والثغرات', 'التدقيق القانوني واللغوي', 'التدقيق بالتمييز البصري', 'اقتراح البنود المفقودة'],
-  },
-  {
-    cat: 'التلخيص والإيجاز',
-    icon: ScrollText,
-    tools: ['الملخص التنفيذي', 'استخراج الالتزامات جدولاً'],
-  },
-  {
-    cat: 'الدعم الابتكاري',
-    icon: Lightbulb,
-    tools: ['تفنيد حجج الخصم', 'اقتراح الشروط الجزائية', 'محاكاة الأثر المالي'],
-  },
 ];
 
 const INTEGRATIONS = [
@@ -366,7 +341,6 @@ const LandingPage: React.FC = () => {
             <div className="rl-hero__grid">
               <motion.div initial="hidden" animate="show" variants={stagger}>
                 <motion.span className="rl-hero__tag" variants={fadeUp}>
-                  <Sparkles size={15} />
                   منصة سعودية متكاملة لمكاتب وشركات المحاماة
                 </motion.span>
 
@@ -854,28 +828,6 @@ const LandingPage: React.FC = () => {
               </motion.div>
             </div>
 
-            {/* الأدوات الاثنتا عشرة */}
-            <motion.div
-              className="rl-tools"
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: '-60px' }}
-              variants={stagger}
-            >
-              {AI_TOOLS.map((col) => (
-                <motion.div className="rl-tools__col" key={col.cat} variants={fadeUp}>
-                  <span className="rl-tools__cat">
-                    <col.icon size={17} />
-                    {col.cat}
-                  </span>
-                  {col.tools.map((tool) => (
-                    <span className="rl-tool" key={tool}>
-                      {tool}
-                    </span>
-                  ))}
-                </motion.div>
-              ))}
-            </motion.div>
           </div>
         </section>
 

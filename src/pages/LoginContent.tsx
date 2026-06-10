@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Scale,
     IdCard,
     Lock,
     Eye,
@@ -13,6 +12,7 @@ import {
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTenant } from '../contexts/TenantContext';
+import AnimatedBrandMark from '../components/AnimatedBrandMark';
 
 interface LoginForm {
     nationalId: string;
@@ -227,11 +227,11 @@ const LoginContent: React.FC = () => {
                 ) : (
                     <>
                         <span className="auth-card__logo" aria-hidden="true">
-                            <Scale size={32} />
+                            <AnimatedBrandMark size={36} />
                         </span>
                         <div>
-                            <h1 id="login-title" className="auth-card__title">نظام إدارة المحاماة</h1>
-                            <p className="auth-card__subtitle">سجّل دخولك للوصول إلى القضايا، المهام، والتقارير الفورية</p>
+                            <h1 id="login-title" className="auth-card__title">تسجيل الدخول</h1>
+                            <p className="auth-card__subtitle">أدخل رقم هويتك ورقمك السري للمتابعة</p>
                         </div>
                     </>
                 )}
@@ -372,25 +372,12 @@ const LoginContent: React.FC = () => {
                         exit={{ opacity: 0, x: 20 }}
                         transition={{ duration: 0.2 }}
                     >
-                        <div className="auth-2fa-header" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                            <div style={{
-                                width: '64px',
-                                height: '64px',
-                                borderRadius: '50%',
-                                background: 'var(--primary-lighter, #e8f4fd)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                margin: '0 auto 1rem'
-                            }}>
-                                <ShieldCheck size={32} style={{ color: 'var(--primary, #2563eb)' }} />
+                        <div className="auth-2fa-header">
+                            <div className="auth-2fa-badge">
+                                <ShieldCheck size={30} />
                             </div>
-                            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-                                المصادقة الثنائية
-                            </h2>
-                            <p style={{ color: 'var(--text-secondary, #6b7280)', fontSize: '0.875rem' }}>
-                                أدخل رمز التحقق من تطبيق Google Authenticator
-                            </p>
+                            <h2 className="auth-2fa-title">المصادقة الثنائية</h2>
+                            <p className="auth-2fa-desc">أدخل رمز التحقق من تطبيق Google Authenticator</p>
                         </div>
 
                         <div className="form-field">
@@ -403,7 +390,7 @@ const LoginContent: React.FC = () => {
                                     ref={codeInputRef}
                                     id="2fa-code"
                                     type="text"
-                                    className="input auth-field__input--with-icon"
+                                    className="input auth-field__input--with-icon auth-2fa-input"
                                     placeholder="أدخل الرمز المكون من 6 أرقام"
                                     inputMode="numeric"
                                     pattern="[0-9]*"
@@ -415,12 +402,6 @@ const LoginContent: React.FC = () => {
                                         ...prev,
                                         code: e.target.value.replace(/\D/g, '').slice(0, 6)
                                     }))}
-                                    style={{
-                                        textAlign: 'center',
-                                        letterSpacing: '0.5em',
-                                        fontSize: '1.25rem',
-                                        fontWeight: '600'
-                                    }}
                                 />
                             </div>
                         </div>
@@ -445,9 +426,8 @@ const LoginContent: React.FC = () => {
 
                         <button
                             type="button"
-                            className="button button--ghost auth-submit"
+                            className="button button--ghost auth-submit auth-2fa-back"
                             onClick={handleBack}
-                            style={{ marginTop: '0.5rem' }}
                         >
                             <ArrowRight size={18} />
                             العودة لتسجيل الدخول

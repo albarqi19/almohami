@@ -956,3 +956,646 @@
     flex-direction: column;
   }
 }
+
+/* ========================================
+   عناصر المصادقة الثنائية (أساسي — لكل النطاقات)
+   ======================================== */
+
+.auth-2fa-header {
+  text-align: center;
+  margin-bottom: var(--space-5);
+}
+
+.auth-2fa-badge {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background-color: rgba(15, 23, 42, 0.07);
+  color: #0f172a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-4);
+}
+
+.auth-2fa-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-heading);
+  margin-bottom: var(--space-2);
+}
+
+.auth-2fa-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.auth-2fa-input {
+  text-align: center;
+  letter-spacing: 0.5em;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.auth-2fa-back {
+  margin-top: var(--space-2);
+}
+
+/* ========================================
+   زر معلومات بتلميح منبثق (hover/focus)
+   ======================================== */
+
+.auth-info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: rgba(21, 42, 53, 0.1);
+  color: #152a35;
+  margin-inline-start: 6px;
+  vertical-align: middle;
+  cursor: help;
+  outline: none;
+}
+
+.auth-info__tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(5px);
+  width: 240px;
+  background: #152a35;
+  color: #f6f1e6;
+  font-size: 0.73rem;
+  font-weight: 400;
+  line-height: 1.95;
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.auth-info__tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #152a35;
+}
+
+.auth-info:hover .auth-info__tip,
+.auth-info:focus .auth-info__tip,
+.auth-info:focus-visible .auth-info__tip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* تحذير غير مانع (المعرّف الطويل) */
+.form-warn {
+  font-size: var(--font-size-xs);
+  color: #a16207;
+  font-weight: 700;
+  line-height: 1.8;
+}
+
+/* ============================================================
+   هوية «الديوان» — النطاق الرئيسي فقط (auth-page--brand)
+   رملي + بترولي + فلات — نطاقات المكاتب (--tenant) لا تتأثر
+   ============================================================ */
+
+.auth-page--brand {
+  /* لوحة الألوان */
+  --br-ink-950: #102028;
+  --br-ink-900: #152a35;
+  --br-ink-800: #1f3c4d;
+  --br-sand: #c5a472;
+  --br-sand-deep: #b8955f;
+  --br-on-sand: #1a160e;
+  --br-on-sand-mute: rgba(26, 22, 14, 0.72);
+  --br-gold-400: #d9b873;
+  --br-gold-500: #c9a35d;
+  --br-gold-700: #8c6d3f;
+  --br-paper: #f6f1e6;
+  --br-paper-card: #fdfaf1;
+  --br-paper-line: #e4d9c0;
+  --br-text-ink: #16202f;
+  --br-text-mute: #5d6675;
+  --br-green: #14724a;
+
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  background-color: var(--br-paper);
+  background-image: none;
+}
+
+/* ---------- جانب النموذج ---------- */
+
+.auth-page--brand .auth-page__panel {
+  background: var(--br-paper);
+}
+
+.auth-panel__inner {
+  width: min(100%, 560px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.auth-home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--br-gold-700);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.auth-home-link:hover {
+  color: var(--br-on-sand);
+}
+
+.auth-page--brand .auth-card {
+  width: 100%;
+  background-color: var(--br-paper-card);
+  border: 1px solid var(--br-paper-line);
+  border-radius: 20px;
+  box-shadow: none;
+}
+
+/* شعار النموذج: رسم داكن مجرد — بلا خلفية ولا إطار */
+.auth-page--brand .auth-card__logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 0;
+  background: none;
+  border: none;
+  color: var(--br-ink-900);
+}
+
+/* حركة «الانتظار» — موجة هادئة تسري عبر طبقات الشعار، كل طبقة بمسار مستقل */
+.brand-mark-anim {
+  overflow: visible;
+}
+
+.brand-mark-anim path {
+  transform-box: view-box;
+  transform-origin: center;
+}
+
+.brand-mark-anim__top {
+  animation: brand-layer-float 3.4s ease-in-out infinite;
+}
+
+.brand-mark-anim__mid {
+  animation: brand-layer-float 3.4s ease-in-out infinite 0.4s;
+}
+
+.brand-mark-anim__bot {
+  animation: brand-layer-float 3.4s ease-in-out infinite 0.8s;
+}
+
+@keyframes brand-layer-float {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-1.7px);
+    opacity: 0.72;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-mark-anim path {
+    animation: none !important;
+  }
+}
+
+.auth-page--brand .auth-card__title {
+  color: var(--br-text-ink);
+  font-weight: 700;
+}
+
+.auth-page--brand .auth-card__subtitle {
+  color: var(--br-text-mute);
+}
+
+/* إيقاع فراغات موحّد للنموذج */
+.auth-page--brand .auth-form {
+  gap: var(--space-5);
+}
+
+.auth-page--brand .form-field {
+  gap: 7px;
+}
+
+.auth-page--brand .form-row {
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.auth-page--brand .auth-form__actions {
+  margin-top: var(--space-2);
+}
+
+.auth-page--brand .auth-form__actions .button {
+  min-height: 46px;
+  padding-inline: var(--space-6);
+}
+
+.auth-page--brand .form-hint,
+.auth-page--brand .form-error {
+  margin-top: 1px;
+  line-height: 1.7;
+}
+
+/* الحقول — ارتفاع ثابت وعرض كامل لكل الحقول بلا استثناء */
+.auth-page--brand .auth-field {
+  display: block;
+  width: 100%;
+}
+
+.auth-page--brand .input {
+  background-color: #ffffff;
+  border: 1px solid var(--br-paper-line);
+  border-radius: 12px;
+  color: var(--br-text-ink);
+  height: 48px;
+  padding-block: 0;
+  width: 100%;
+}
+
+/* مواضع فيزيائية ثابتة: الأيقونة يمين الحقل دائماً، وزر الإظهار يساره دائماً
+   (تمنع انقلاب الاتجاهات في الحقول ذات dir=ltr) */
+.auth-page--brand .auth-field__icon {
+  inset-inline: auto;
+  right: 14px;
+  left: auto;
+}
+
+.auth-page--brand .auth-field__toggle {
+  inset-inline: auto;
+  left: 10px;
+  right: auto;
+}
+
+.auth-page--brand .auth-field .input {
+  padding-right: 14px;
+  padding-left: 14px;
+}
+
+.auth-page--brand .auth-field .auth-field__input--with-icon {
+  padding-right: 42px;
+}
+
+.auth-page--brand .auth-field .auth-field__input--with-toggle {
+  padding-left: 40px;
+}
+
+.auth-page--brand .input::placeholder {
+  color: #a8a092;
+}
+
+.auth-page--brand .input:focus {
+  border-color: var(--br-gold-500);
+  box-shadow: 0 0 0 3px rgba(201, 163, 93, 0.18);
+}
+
+.auth-page--brand .input--error {
+  border-color: var(--color-error);
+}
+
+.auth-page--brand .form-label {
+  color: var(--br-text-ink);
+  font-weight: 700;
+}
+
+.auth-page--brand .form-hint {
+  color: var(--br-text-mute);
+}
+
+.auth-page--brand .form-hint b {
+  color: var(--br-gold-700);
+}
+
+.auth-page--brand .auth-field__icon,
+.auth-page--brand .auth-field__toggle {
+  color: #a8a092;
+}
+
+.auth-page--brand .auth-field__toggle:hover,
+.auth-page--brand .auth-field__toggle:focus-visible {
+  color: var(--br-ink-900);
+}
+
+/* الأزرار */
+.auth-page--brand .button--primary {
+  background: var(--br-ink-900);
+  border-color: var(--br-ink-900);
+  color: var(--br-paper);
+  border-radius: 12px;
+  box-shadow: none;
+  font-weight: 700;
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.auth-page--brand .button--primary:hover:not(:disabled) {
+  background: var(--br-ink-800);
+  transform: translateY(-2px);
+  filter: none;
+}
+
+.auth-page--brand .button--ghost {
+  border: 1px solid rgba(26, 22, 14, 0.25);
+  color: var(--br-text-ink);
+  background: transparent;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.auth-page--brand .button--ghost:hover:not(:disabled) {
+  background: rgba(26, 22, 14, 0.05);
+  border-color: rgba(26, 22, 14, 0.45);
+}
+
+.auth-page--brand .auth-checkbox input {
+  accent-color: var(--br-ink-900);
+}
+
+.auth-page--brand .auth-link,
+.auth-page--brand .auth-register-prompt a {
+  color: var(--br-gold-700);
+}
+
+.auth-page--brand .auth-divider span {
+  background-color: var(--br-paper-card);
+}
+
+.auth-page--brand .auth-divider::before,
+.auth-page--brand .auth-divider::after {
+  background-color: var(--br-paper-line);
+}
+
+/* مؤشر الخطوات */
+.auth-page--brand .auth-step__number {
+  width: 28px;
+  height: 28px;
+  background-color: #efe7d4;
+  color: var(--br-text-mute);
+  font-weight: 800;
+}
+
+.auth-page--brand .auth-step--active .auth-step__number {
+  background-color: var(--br-ink-900);
+  color: var(--br-gold-400);
+}
+
+.auth-page--brand .auth-step--completed .auth-step__number {
+  background-color: var(--br-green);
+  color: #ffffff;
+}
+
+.auth-page--brand .auth-step--active .auth-step__title {
+  color: var(--br-text-ink);
+  font-weight: 700;
+}
+
+.auth-page--brand .auth-step__line {
+  flex: 1;
+  max-width: 48px;
+  background-color: var(--br-paper-line);
+}
+
+.auth-page--brand .auth-step__line--active {
+  background-color: var(--br-green);
+}
+
+/* بطاقتا اختيار الحساب — ستايل Bento مع علامة مائية */
+.auth-page--brand .auth-choice__card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--br-paper-line);
+  background-color: #ffffff;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.auth-page--brand .auth-choice__card:hover {
+  transform: translateY(-4px);
+  border-color: var(--br-gold-500);
+  box-shadow: none;
+}
+
+.auth-page--brand .auth-choice__icon {
+  position: absolute;
+  top: -20px;
+  inset-inline-end: -20px;
+  width: auto;
+  height: auto;
+  background: none;
+  color: var(--br-gold-500);
+  opacity: 0.14;
+  transform: rotate(-12deg);
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  z-index: 0;
+}
+
+.auth-page--brand .auth-choice__icon svg {
+  width: 104px;
+  height: 104px;
+  stroke-width: 1.1px;
+}
+
+.auth-page--brand .auth-choice__card:hover .auth-choice__icon {
+  background: none;
+  color: var(--br-gold-500);
+  opacity: 0.24;
+  transform: rotate(-4deg) scale(1.05);
+}
+
+.auth-page--brand .auth-choice__title,
+.auth-page--brand .auth-choice__desc,
+.auth-page--brand .auth-choice__action {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-page--brand .auth-choice__title {
+  color: var(--br-text-ink);
+  font-weight: 700;
+}
+
+.auth-page--brand .auth-choice__desc {
+  color: var(--br-text-mute);
+  line-height: 1.9;
+}
+
+.auth-page--brand .auth-choice__action {
+  color: var(--br-gold-700);
+  font-weight: 800;
+}
+
+.auth-page--brand .auth-choice__card--disabled {
+  opacity: 0.55;
+}
+
+/* ملخص المراجعة */
+.auth-page--brand .auth-summary__section-title {
+  color: var(--br-gold-700);
+  font-weight: 800;
+  border-bottom-color: var(--br-paper-line);
+}
+
+.auth-page--brand .auth-summary__item {
+  background: #ffffff;
+  border: 1px solid var(--br-paper-line);
+  border-radius: 10px;
+  padding: 9px 13px;
+}
+
+.auth-page--brand .auth-summary__label {
+  color: var(--br-text-mute);
+}
+
+.auth-page--brand .auth-summary__value {
+  color: var(--br-text-ink);
+  font-weight: 700;
+}
+
+/* المصادقة الثنائية بهوية الديوان */
+.auth-page--brand .auth-2fa-badge {
+  background-color: rgba(21, 42, 53, 0.08);
+  color: var(--br-ink-900);
+}
+
+.auth-page--brand .auth-2fa-input:focus {
+  border-color: var(--br-gold-500);
+}
+
+/* التنبيهات */
+.auth-page--brand .auth-alert--success {
+  background-color: rgba(20, 114, 74, 0.1);
+  border-color: rgba(20, 114, 74, 0.3);
+  color: var(--br-green);
+}
+
+/* ---------- جانب الهوية: الكتلة الرملية ---------- */
+
+.auth-page--brand .auth-hero {
+  background: var(--br-sand);
+  color: var(--br-on-sand);
+  padding: clamp(40px, 4.5vw, 64px);
+}
+
+/* زخرفة الخاتم الداكنة */
+.auth-page--brand .auth-hero::after {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%23102028' stroke-width='1'%3E%3Crect x='25' y='25' width='70' height='70'/%3E%3Crect x='25' y='25' width='70' height='70' transform='rotate(45 60 60)'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 120px 120px;
+  opacity: 0.05;
+}
+
+.auth-page--brand .auth-hero__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 15px;
+  background-color: var(--br-ink-900);
+  color: var(--br-gold-400);
+  border: 1.5px solid var(--br-gold-500);
+}
+
+.auth-page--brand .auth-hero__brand-name {
+  color: var(--br-on-sand);
+  font-weight: 700;
+}
+
+.auth-page--brand .auth-hero__brand-copy {
+  color: var(--br-on-sand-mute);
+}
+
+.auth-page--brand .auth-hero__title {
+  color: var(--br-on-sand);
+  font-size: clamp(1.7rem, 2.4vw, 2.3rem);
+  line-height: 1.55;
+  font-weight: 700;
+}
+
+.auth-page--brand .auth-hero__subtitle {
+  color: var(--br-on-sand-mute);
+  line-height: 2;
+  max-width: 460px;
+  margin-inline: auto;
+}
+
+/* النص في منتصف الكتلة الرملية — الشعار يبقى أعلى */
+.auth-page--brand .auth-hero__center {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  padding-bottom: var(--space-8);
+}
+
+.auth-page--brand .auth-hero__center .auth-hero__title {
+  margin-top: 0;
+}
+
+/* ---------- الجوال ---------- */
+
+@media (max-width: 1023px) {
+  .auth-page--brand .auth-page__panel {
+    padding: var(--space-6) var(--space-4);
+    align-items: flex-start;
+  }
+
+  .auth-panel__inner {
+    width: 100%;
+  }
+
+  .auth-page--brand .auth-card {
+    padding: var(--space-6) var(--space-5);
+  }
+}
+
+@media (max-width: 540px) {
+  .auth-page--brand .auth-card {
+    padding: var(--space-5) var(--space-4);
+    border-radius: 16px;
+  }
+
+  .auth-page--brand .auth-card__logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .auth-page--brand .auth-card__title {
+    font-size: var(--font-size-xl);
+  }
+
+  /* أزرار التنقل بين الخطوات بعرض متساوٍ */
+  .auth-page--brand .auth-form__actions {
+    gap: var(--space-3);
+  }
+
+  .auth-page--brand .auth-form__actions .button {
+    flex: 1;
+    justify-content: center;
+  }
+}

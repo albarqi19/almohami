@@ -697,15 +697,36 @@ html:has(.rl) {
 .rl-cell--5 { grid-column: span 5; }
 .rl-cell--4 { grid-column: span 4; }
 
+/* أيقونة البطاقة كعلامة مائية فنية في الخلفية */
 .rl-cell__icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 13px;
-  display: grid;
-  place-items: center;
-  background: var(--rl-ink-900);
-  color: var(--rl-gold-300);
-  flex-shrink: 0;
+  position: absolute;
+  top: -26px;
+  inset-inline-end: -26px;
+  color: var(--rl-gold-500);
+  opacity: 0.13;
+  transform: rotate(-12deg);
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  z-index: 0;
+}
+
+.rl-cell__icon svg {
+  width: 128px;
+  height: 128px;
+  stroke-width: 1.1px;
+}
+
+.rl-cell:hover .rl-cell__icon {
+  opacity: 0.22;
+  transform: rotate(-4deg) scale(1.05);
+}
+
+/* المحتوى فوق العلامة المائية */
+.rl-cell > h3,
+.rl-cell > p,
+.rl-cell > .rl-cell__visual {
+  position: relative;
+  z-index: 1;
 }
 
 .rl-cell h3 {
@@ -1082,34 +1103,51 @@ html:has(.rl) {
   margin-inline-end: 8px;
 }
 
-/* مرئيات مصغرة: خطوات الخدمة القانونية */
+/* مرئيات مصغرة: خطوات الخدمة القانونية — سطر واحد دائماً */
 .rl-mini-steps {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 5px;
+  flex-wrap: nowrap;
 }
 
 .rl-mini-step {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 5px;
   background: #fff;
   border: 1px solid #ece2c8;
   border-radius: 999px;
-  padding: 8px 14px;
-  font-size: 0.76rem;
+  padding: 7px 10px;
+  font-size: 0.7rem;
   font-weight: 800;
   color: var(--rl-text-ink);
+  white-space: nowrap;
 }
 
 .rl-mini-step svg {
   color: var(--rl-gold-600);
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 .rl-mini-steps > svg {
   color: #cabd9b;
+  width: 12px;
+  height: 12px;
   flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .rl-mini-step {
+    font-size: 0.64rem;
+    padding: 6px 8px;
+  }
+
+  .rl-mini-step svg {
+    display: none;
+  }
 }
 
 /* ============================================================
@@ -1317,7 +1355,7 @@ html:has(.rl) {
 
 /* خط المحركات الخمسة */
 .rl-engines {
-  margin-bottom: clamp(48px, 7vh, 72px);
+  margin-bottom: 0;
 }
 
 .rl-engines__title {
@@ -1393,50 +1431,6 @@ html:has(.rl) {
   max-width: 150px;
 }
 
-/* شبكة الأدوات */
-.rl-tools {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-}
-
-.rl-tools__col {
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  padding: 20px;
-}
-
-.rl-tools__cat {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-weight: 800;
-  font-size: 0.92rem;
-  color: var(--rl-gold-300);
-  margin-bottom: 16px;
-}
-
-.rl-tools__cat svg { flex-shrink: 0; }
-
-.rl-tool {
-  display: block;
-  font-size: 0.83rem;
-  font-weight: 700;
-  color: var(--rl-text-on-ink-mute);
-  padding: 8px 12px;
-  border-radius: 9px;
-  border: 1px solid transparent;
-  transition: all 0.2s ease;
-  margin-bottom: 5px;
-}
-
-.rl-tool:hover {
-  color: var(--rl-text-on-ink);
-  background: rgba(201, 163, 93, 0.08);
-  border-color: rgba(201, 163, 93, 0.25);
-}
-
 /* ============================================================
    التكاملات
    ============================================================ */
@@ -1486,15 +1480,34 @@ html:has(.rl) {
   margin-bottom: 13px;
 }
 
+/* أيقونة التكامل كعلامة مائية فنية في الخلفية */
 .rl-integration__icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 13px;
-  display: grid;
-  place-items: center;
-  background: var(--rl-ink-900);
-  color: var(--rl-gold-300);
-  flex-shrink: 0;
+  position: absolute;
+  top: -26px;
+  inset-inline-end: -26px;
+  color: var(--rl-gold-500);
+  opacity: 0.13;
+  transform: rotate(-12deg);
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  z-index: 0;
+}
+
+.rl-integration__icon svg {
+  width: 128px;
+  height: 128px;
+  stroke-width: 1.1px;
+}
+
+.rl-integration:hover .rl-integration__icon {
+  opacity: 0.22;
+  transform: rotate(-4deg) scale(1.05);
+}
+
+.rl-integration__head h3,
+.rl-integration > p {
+  position: relative;
+  z-index: 1;
 }
 
 .rl-integration h3 {
@@ -1910,10 +1923,6 @@ html:has(.rl) {
     grid-template-columns: 1fr;
   }
 
-  .rl-tools {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .rl-integrations__grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -2013,10 +2022,6 @@ html:has(.rl) {
   .rl-demo__arrow {
     transform: rotate(-90deg);
     margin-inline: auto;
-  }
-
-  .rl-tools {
-    grid-template-columns: 1fr;
   }
 
   .rl-integrations__grid {

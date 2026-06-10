@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Outlet, useLocation } from 'react-router-dom';
-import { Scale, Sparkles } from 'lucide-react';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Scale, Layers, ArrowRight } from 'lucide-react';
 import { useTenant } from '../contexts/TenantContext';
 import '../styles/auth.css';
 
@@ -40,20 +40,20 @@ const AuthLayout: React.FC = () => {
     const getHeroContent = () => {
         if (location.pathname === '/register') {
             return {
-                title: 'انضم إلى منصة إدارة المحاماة الذكية',
-                subtitle: 'ابدأ رحلتك في رقمنة مكتبك القانوني مع نظام متكامل يدعم كل احتياجاتك المهنية'
+                title: 'مكتبُ محاماةٍ متكامل يبدأ من هنا',
+                subtitle: 'سجّل مكتبك وانطلق بفترة تجريبية مجانية بكامل المزايا — قضايا وجلسات ومذكرات وعقود وبوابة عملاء.'
             };
         }
         if (location.pathname === '/register/tenant') {
             return {
-                title: 'ابدأ رحلتك الرقمية',
-                subtitle: 'سجّل مكتبك واحصل على فترة تجريبية مجانية لمدة 14 يوماً مع جميع الميزات'
+                title: 'أنشئ ديوان مكتبك في دقائق',
+                subtitle: 'ثلاث خطوات فقط: بيانات المكتب، بيانات المالك، ثم التأكيد — وتبدأ تجربتك المجانية فوراً.'
             };
         }
         // Default for login
         return {
-            title: 'ترسيخ الثقة مع كل جلسة وكل قضية',
-            subtitle: 'لوحة تحكم موحدة للفرق القانونية والعملاء، مع أدوات متقدمة لتتبع القضايا، تنظيم المهام، وتحليل الأداء.'
+            title: 'كلُّ ما في مكتبك… في ديوانٍ رقميٍّ واحد',
+            subtitle: 'سجّل دخولك لتتابع قضاياك وجلساتك ومهامك وفواتيرك من لوحة واحدة — بذكاءٍ اصطناعي يفهم القانون السعودي.'
         };
     };
 
@@ -98,12 +98,18 @@ const AuthLayout: React.FC = () => {
         );
     }
 
-    // Default layout for main site
+    // Default layout for main site — هوية «الديوان» الجديدة
     return (
-        <div className="auth-page" aria-labelledby="auth-title">
+        <div className="auth-page auth-page--brand" aria-labelledby="auth-title">
             {/* Left Panel - Form Content (changes with route) */}
             <section className="auth-page__panel" role="presentation">
-                <Outlet />
+                <div className="auth-panel__inner">
+                    <Link to="/" className="auth-home-link">
+                        <ArrowRight size={15} />
+                        العودة للرئيسية
+                    </Link>
+                    <Outlet />
+                </div>
             </section>
 
             {/* Right Panel - Hero (stays fixed, only content changes) */}
@@ -112,13 +118,15 @@ const AuthLayout: React.FC = () => {
                     <div className="auth-hero__section">
                         <div className="auth-hero__brand">
                             <span className="auth-hero__icon">
-                                <Sparkles size={32} />
+                                <Layers size={26} />
                             </span>
                             <div>
-                                <p className="auth-hero__brand-name">منصة المحاماة الذكية</p>
-                                <p className="auth-hero__brand-copy">حل رقمي متكامل لإدارة مكاتب المحاماة الحديثة</p>
+                                <p className="auth-hero__brand-name">نظام الرائد</p>
+                                <p className="auth-hero__brand-copy">نظام إدارة مكاتب المحاماة</p>
                             </div>
                         </div>
+                    </div>
+                    <div className="auth-hero__center">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={location.pathname}

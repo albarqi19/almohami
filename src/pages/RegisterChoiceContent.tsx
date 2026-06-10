@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Scale, Building2, User, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Building2, User, ArrowRight, ArrowLeft } from 'lucide-react';
+import AnimatedBrandMark from '../components/AnimatedBrandMark';
 
 /**
  * RegisterChoiceContent - محتوى صفحة اختيار نوع الحساب
@@ -23,7 +24,7 @@ const RegisterChoiceContent: React.FC = () => {
         >
             <header className="auth-card__brand">
                 <span className="auth-card__logo" aria-hidden="true">
-                    <Scale size={28} />
+                    <AnimatedBrandMark size={36} />
                 </span>
                 <div>
                     <h1 id="register-choice-title" className="auth-card__title">إنشاء حساب جديد</h1>
