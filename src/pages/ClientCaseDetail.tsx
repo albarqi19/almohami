@@ -23,7 +23,7 @@ import { MessageService } from '../services/messageService';
 import { ActivityService } from '../services/activityService';
 import type { TimelineItem } from '../services/activityService';
 import type { Case, Document } from '../types';
-import '../styles/client-case-detail.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const ClientCaseDetail: React.FC = () => {
   const { caseId } = useParams<{ caseId: string }>();

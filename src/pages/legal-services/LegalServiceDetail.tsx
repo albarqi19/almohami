@@ -74,7 +74,7 @@ import {
   CONVERTIBLE_SERVICE_TYPES,
 } from '../../types/legalServices';
 import { WorkspaceRegistry } from '../../components/legal-services/workspaces';
-import '../../styles/legal-service-detail.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

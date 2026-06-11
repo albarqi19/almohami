@@ -32,7 +32,7 @@ import {
   Loader2,
   Info
 } from 'lucide-react';
-import '../styles/whatsapp-settings.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // ── Types ──
 

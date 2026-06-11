@@ -15,7 +15,7 @@ import {
   History,
   Activity
 } from 'lucide-react';
-import '../styles/timeline.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 export interface TimelineEvent {
   id: string;

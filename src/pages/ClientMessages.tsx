@@ -18,7 +18,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { MessageService, type Conversation, type Message, type Recipient } from '../services/messageService';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
-import '../styles/client-messages.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const ClientMessages: React.FC = () => {
   const { user } = useAuth();

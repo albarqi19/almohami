@@ -11,7 +11,7 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { WekalatService } from '../services/wekalatService';
-import '../styles/add-wekala-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface AddWekalaModalProps {
   isOpen: boolean;

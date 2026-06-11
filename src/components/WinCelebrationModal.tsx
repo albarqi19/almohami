@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, X, Sparkles, FileText, Calendar, Building2, Hash } from 'lucide-react';
 import type { Case } from '../types';
 import { apiClient } from '../utils/api';
-import '../styles/win-celebration-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface Props {
   caseData: Case;

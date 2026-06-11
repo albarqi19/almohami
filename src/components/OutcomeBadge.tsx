@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trophy, X as XIcon, HandshakeIcon, Ban, Scale, HelpCircle } from 'lucide-react';
-import '../styles/outcome-badge.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface OutcomeBadgeProps {
   outcome?: 'won' | 'lost' | 'settled' | 'appealed' | 'dismissed' | null;

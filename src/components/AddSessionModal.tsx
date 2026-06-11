@@ -11,7 +11,7 @@ import {
   Users,
 } from 'lucide-react';
 import { apiClient } from '../utils/api';
-import '../styles/add-session-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface AddSessionModalProps {
   isOpen: boolean;

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, Scale, Activity, Plus } from 'lucide-react';
 import PermissionManagementShell from '../components/permissions/PermissionManagementShell';
 import { apiClient } from '../utils/api';
-import '../styles/admin-page.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface UserStats {
   total: number;

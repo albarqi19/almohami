@@ -1,4 +1,7 @@
-﻿import React, { useState, createContext, useContext, Suspense } from 'react';
+﻿/* ⚠️ يجب أن يبقى أول استيراد: يثبّت ترتيب حقن كل ستايلات التطبيق الداخلي
+   قبل أي مكوّن — انظر التوثيق داخل appStyles.ts */
+import '../styles/appStyles';
+import React, { useState, createContext, useContext, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import PageLoader from './PageLoader';
 import { ChevronLeft } from 'lucide-react';

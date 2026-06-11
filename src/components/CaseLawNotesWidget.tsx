@@ -4,7 +4,7 @@ import { Bookmark, X, BookOpen } from 'lucide-react';
 import { notebookService } from '../services/notebookService';
 import type { PersonalNote } from '../services/notebookService';
 import LawSearchModal from './LawSearchModal';
-import '../styles/case-law-notes-widget.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const extractText = (content: string): string => {
   try {

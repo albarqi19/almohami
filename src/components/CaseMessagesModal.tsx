@@ -15,7 +15,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { MessageService, type Message, type Recipient } from '../services/messageService';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
-import '../styles/case-messages-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface CaseMessagesModalProps {
   isOpen: boolean;

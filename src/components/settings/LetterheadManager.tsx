@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import '../../styles/letterhead-settings.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 import {
   Plus,
   FileText,

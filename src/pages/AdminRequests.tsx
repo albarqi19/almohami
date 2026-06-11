@@ -27,7 +27,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { AdminRequestService, RequestTypeService } from '../services/adminRequestService';
 import type { AdminRequest, RequestType, CreateAdminRequestForm, AdminRequestContext } from '../services/adminRequestService';
 import { Briefcase, History, AlertTriangle, Loader2, ChevronDown, ChevronLeft } from 'lucide-react';
-import '../styles/admin-requests.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // Status config
 const STATUS_CONFIG: Record<string, { label: string; class: string }> = {

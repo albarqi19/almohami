@@ -24,7 +24,7 @@ import { convertToHTML, detectContentType } from '../utils/contentConverter';
 import type { TextAnnotation } from '../types/textAnnotations';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import '../styles/legal-memo-workspace.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // تحديد المذكرات التي تتطلب وثائق مرفقة
 const MEMO_DOCUMENT_REQUIREMENTS: Record<string, {

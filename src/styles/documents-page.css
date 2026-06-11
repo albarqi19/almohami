@@ -66,7 +66,10 @@
     transform: translateY(-1px);
 }
 
-.btn-secondary {
+/* بادئة docs- لعزل كلاسات الصفحة عن التعريفات العامة المتصادمة
+   (btn-secondary/search-box/search-input/empty-state معرّفة بأشكال أخرى
+   في ملفات صفحات أخرى وتغلب نسختنا في ترتيب الحقن) */
+.docs-btn-secondary {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -81,7 +84,7 @@
     transition: all 0.2s;
 }
 
-.btn-secondary:hover {
+.docs-btn-secondary:hover {
     background-color: var(--quiet-gray-100);
 }
 
@@ -325,14 +328,15 @@
     margin-bottom: 24px;
 }
 
-.search-box {
+.docs-search-box {
     position: relative;
     width: 300px;
 }
 
-.search-input {
+.docs-search-input {
     width: 100%;
-    padding: 10px 12px 10px 36px;
+    /* RTL: الأيقونة على اليمين (right:12) — المساحة الكبيرة يجب أن تكون يمين النص */
+    padding: 10px 36px 10px 12px;
     border: 1px solid var(--color-border);
     border-radius: 8px;
     background-color: var(--color-surface);
@@ -341,7 +345,7 @@
     transition: all 0.2s;
 }
 
-.search-input:focus {
+.docs-search-input:focus {
     border-color: var(--law-navy);
     box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
 }
@@ -495,7 +499,7 @@
 }
 
 /* Empty State */
-.empty-state {
+.docs-empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -505,7 +509,7 @@
     color: var(--color-text-secondary);
 }
 
-.empty-icon {
+.docs-empty-icon {
     width: 64px;
     height: 64px;
     background-color: var(--quiet-gray-100);

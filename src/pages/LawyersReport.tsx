@@ -8,7 +8,7 @@ import PresenceIndicator from '../components/PresenceIndicator';
 import type { PresenceStatus } from '../components/PresenceIndicator';
 import { apiClient } from '../utils/api';
 import type { BucketCounts, PerformanceBreakdown } from '../utils/lawyerExportHelpers';
-import '../styles/lawyers-report.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface LawyerReportRow {
   id: number;

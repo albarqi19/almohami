@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { NotificationService } from '../services/notificationService';
 import type { Notification, NotificationStats } from '../services/notificationService';
-import '../styles/notifications-page.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // ==================== Helper Functions ====================
 

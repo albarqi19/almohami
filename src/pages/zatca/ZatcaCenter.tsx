@@ -10,7 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { ZatcaPageHead } from '../../components/zatca/ZatcaPageShell';
 import ZatcaOnboardingWizard from '../../components/zatca/ZatcaOnboardingWizard';
 import ZatcaDashboard from '../../components/zatca/ZatcaDashboard';
-import '../../styles/zatca.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const ZatcaCenter: React.FC = () => {
   const { available, enabled, environment, isLoading } = useZatcaFeature();

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { BookOpen, X, Send, Briefcase } from 'lucide-react';
 import { notebookService } from '../services/notebookService';
 import type { CreateNoteData } from '../services/notebookService';
-import '../styles/notebook-widget.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface FloatingWidgetProps {
     defaultCaseId?: number;

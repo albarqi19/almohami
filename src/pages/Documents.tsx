@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -51,7 +51,7 @@ import { CaseService } from '../services/caseService';
 import { CloudStorageService } from '../services/cloudStorageService';
 import type { CloudStorageStatus, CloudStorageFile } from '../services/cloudStorageService';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
-import '../styles/documents-page.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const CACHE_KEY = 'documents_data';
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
@@ -827,7 +827,7 @@ const Documents: React.FC = () => {
                 </div>
                 <div className="docs-actions">
                     <button
-                        className="btn-secondary"
+                        className="docs-btn-secondary"
                         onClick={() => setShowCreateMemo(true)}
                     >
                         <FileText size={16} />
@@ -999,10 +999,10 @@ const Documents: React.FC = () => {
                     <div className="docs-list-panel">
                         {/* Toolbar */}
                         <div className="docs-toolbar">
-                            <div className="search-box">
+                            <div className="docs-search-box">
                                 <Search size={16} style={{ position: 'absolute', right: 12, top: 12, color: 'var(--color-text-secondary)' }} />
                                 <input
-                                    className="search-input"
+                                    className="docs-search-input"
                                     placeholder="بحث عن ملف..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -1010,7 +1010,7 @@ const Documents: React.FC = () => {
                             </div>
 
                             <div style={{ display: 'flex', gap: 12 }}>
-                                <button className="btn-secondary" style={{ padding: '8px' }}>
+                                <button className="docs-btn-secondary" style={{ padding: '8px' }}>
                                     <Filter size={16} /> تصفية
                                 </button>
                                 <div className="view-toggles">
@@ -1266,8 +1266,8 @@ const Documents: React.FC = () => {
 
                                 {/* Empty OneDrive State */}
                                 {!oneDriveLoading && oneDriveFiles.length === 0 && (
-                                    <div className="empty-state">
-                                        <div className="empty-icon">
+                                    <div className="docs-empty-state">
+                                        <div className="docs-empty-icon">
                                             <Cloud size={32} className="text-blue-300" />
                                         </div>
                                         <h3>لا توجد ملفات</h3>
@@ -1278,8 +1278,8 @@ const Documents: React.FC = () => {
                         )}
 
                         {!loading && !showOneDriveFiles && filteredDocuments.length === 0 && (
-                            <div className="empty-state">
-                                <div className="empty-icon">
+                            <div className="docs-empty-state">
+                                <div className="docs-empty-icon">
                                     <Folder size={32} />
                                 </div>
                                 <h3>لا توجد ملفات</h3>

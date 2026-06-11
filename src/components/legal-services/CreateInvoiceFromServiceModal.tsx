@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, FileText, Loader2 } from 'lucide-react';
 import { LegalServiceService } from '../../services/legalServiceService';
-import '../../styles/add-service-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

@@ -6,7 +6,7 @@ import {
 import { notebookService } from '../services/notebookService';
 import type { PersonalNote, NoteStatistics, CreateNoteData } from '../services/notebookService';
 import { CaseService } from '../services/caseService';
-import '../styles/notebook-page.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface NoteModalProps {
     isOpen: boolean;

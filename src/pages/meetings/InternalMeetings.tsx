@@ -1,47 +1,154 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Users,
   Plus,
-  Calendar,
   Clock,
   MapPin,
   Video,
   RefreshCw,
   Search,
-  Filter,
   MoreVertical,
   Edit2,
   Trash2,
   XCircle,
-  Play,
-  CheckCircle,
   FileText,
-  ChevronLeft,
-  ChevronRight,
-  ExternalLink,
-  User,
-  Table,
-  LayoutGrid,
-  Columns
+  CalendarClock,
+  CalendarDays,
+  AlertTriangle,
+  Radio,
+  History,
+  ChevronDown,
+  ChevronUp,
+  User as UserIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   internalMeetingService,
   type InternalMeeting,
-  type SmartButtonState
+  type SmartButtonState,
 } from '../../services/meetingService';
 import CreateInternalMeetingModal from '../../components/meetings/CreateInternalMeetingModal';
 import MeetingSummaryModal from '../../components/meetings/MeetingSummaryModal';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
+
+/* ===================== مساعدات ===================== */
+
+const startOfDay = (d: Date) => {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+};
+const addDays = (d: Date, n: number) => {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+};
+
+const fmtTime = (dateStr: string) =>
+  new Date(dateStr).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+
+const fmtDayDate = (dateStr: string) =>
+  new Date(dateStr).toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'short' });
+
+const fmtShortDate = (dateStr: string) =>
+  new Date(dateStr).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short', year: 'numeric' });
+
+/** تسمية نسبية لليوم: اليوم / غداً / الخميس 12 يونيو */
+const relativeDay = (dateStr: string): string => {
+  const today = startOfDay(new Date());
+  const d = startOfDay(new Date(dateStr));
+  const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
+  if (diff === 0) return 'اليوم';
+  if (diff === 1) return 'غداً';
+  return fmtDayDate(dateStr);
+};
+
+const STATUS_LABELS: Record<InternalMeeting['status'], string> = {
+  scheduled: 'مجدول',
+  in_progress: 'جارٍ الآن',
+  completed: 'مكتمل',
+  cancelled: 'ملغي',
+};
+
+const StatusBadge: React.FC<{ status: InternalMeeting['status'] }> = ({ status }) => (
+  <span className={`im-badge im-badge--${status}`}>{STATUS_LABELS[status]}</span>
+);
+
+/* ===================== تجميع زمني ===================== */
+
+type GroupKey = 'live' | 'today' | 'tomorrow' | 'week' | 'later' | 'missed' | 'needs_summary' | 'past';
+
+interface Group {
+  key: GroupKey;
+  title: string;
+  icon: React.ReactNode;
+  meetings: InternalMeeting[];
+  tone?: 'live' | 'warn' | 'dim';
+  hint?: string;
+}
+
+const groupMeetings = (meetings: InternalMeeting[]): Group[] => {
+  const now = new Date();
+  const today = startOfDay(now);
+  const tomorrow = addDays(today, 1);
+  const dayAfter = addDays(today, 2);
+  const weekEnd = addDays(today, 7);
+
+  const g: Record<GroupKey, InternalMeeting[]> = {
+    live: [], today: [], tomorrow: [], week: [], later: [],
+    missed: [], needs_summary: [], past: [],
+  };
+
+  for (const m of meetings) {
+    const at = new Date(m.scheduled_at);
+    if (m.status === 'in_progress') g.live.push(m);
+    else if (m.status === 'completed' && !m.summary) g.needs_summary.push(m);
+    else if (m.status === 'completed' || m.status === 'cancelled') g.past.push(m);
+    else if (m.status === 'scheduled') {
+      const endAt = new Date(at.getTime() + (m.duration_minutes || 60) * 60000);
+      if (endAt < now) g.missed.push(m);            // مجدول فات وقته ولم يُعقد
+      else if (at < tomorrow) g.today.push(m);
+      else if (at < dayAfter) g.tomorrow.push(m);
+      else if (at < weekEnd) g.week.push(m);
+      else g.later.push(m);
+    }
+  }
+
+  const asc = (a: InternalMeeting, b: InternalMeeting) =>
+    new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime();
+  const desc = (a: InternalMeeting, b: InternalMeeting) => -asc(a, b);
+  (['live', 'today', 'tomorrow', 'week', 'later'] as GroupKey[]).forEach(k => g[k].sort(asc));
+  (['missed', 'needs_summary', 'past'] as GroupKey[]).forEach(k => g[k].sort(desc));
+
+  const defs: Group[] = [
+    { key: 'live', title: 'جارية الآن', icon: <Radio size={14} />, meetings: g.live, tone: 'live' },
+    { key: 'today', title: 'اليوم', icon: <CalendarClock size={14} />, meetings: g.today },
+    { key: 'tomorrow', title: 'غداً', icon: <CalendarDays size={14} />, meetings: g.tomorrow },
+    { key: 'week', title: 'هذا الأسبوع', icon: <CalendarDays size={14} />, meetings: g.week },
+    { key: 'later', title: 'لاحقاً', icon: <CalendarDays size={14} />, meetings: g.later },
+    {
+      key: 'missed', title: 'فائتة دون انعقاد', icon: <AlertTriangle size={14} />, meetings: g.missed, tone: 'warn',
+      hint: 'اجتماعات مجدولة مضى وقتها ولم تُبدأ — ابدأها متأخرة أو ألغِها أو أعد جدولتها',
+    },
+    {
+      key: 'needs_summary', title: 'بانتظار الملخص', icon: <FileText size={14} />, meetings: g.needs_summary, tone: 'warn',
+      hint: 'اجتماعات انعقدت ولم يُوثَّق ملخصها بعد — لا تضيع قراراتها',
+    },
+    { key: 'past', title: 'السابقة', icon: <History size={14} />, meetings: g.past, tone: 'dim' },
+  ];
+
+  return defs.filter(d => d.meetings.length > 0);
+};
+
+/* ===================== الصفحة ===================== */
 
 const InternalMeetings: React.FC = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
-  // State
   const [meetings, setMeetings] = useState<InternalMeeting[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -50,30 +157,22 @@ const InternalMeetings: React.FC = () => {
   const [selectedMeeting, setSelectedMeeting] = useState<InternalMeeting | null>(null);
   const [buttonStates, setButtonStates] = useState<Record<number, SmartButtonState>>({});
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'kanban' | 'cards'>('table');
-  const [timeFilter, setTimeFilter] = useState<'all' | 'today' | 'tomorrow' | 'week' | 'upcoming'>('upcoming');
+  const [pastCollapsed, setPastCollapsed] = useState(true);
 
-  // Fetch meetings
-  const fetchMeetings = useCallback(async () => {
+  const fetchMeetings = useCallback(async (isRefresh = false) => {
     try {
-      setLoading(true);
+      isRefresh ? setRefreshing(true) : setLoading(true);
       setError(null);
-      const params: any = {};
-      if (statusFilter !== 'all') params.status = statusFilter;
-      const data = await internalMeetingService.getAll(params);
+      const data = await internalMeetingService.getAll({});
       setMeetings(data);
 
-      // Fetch button states for scheduled meetings
-      const scheduledMeetings = data.filter(m => m.status === 'scheduled' || m.status === 'in_progress');
+      const actionable = data.filter(m => m.status === 'scheduled' || m.status === 'in_progress');
       const states: Record<number, SmartButtonState> = {};
       await Promise.all(
-        scheduledMeetings.map(async (meeting) => {
+        actionable.map(async meeting => {
           try {
-            const state = await internalMeetingService.getButtonState(meeting.id);
-            states[meeting.id] = state;
-          } catch (e) {
-            // Ignore errors for individual button states
-          }
+            states[meeting.id] = await internalMeetingService.getButtonState(meeting.id);
+          } catch { /* تجاهل فشل زر واحد */ }
         })
       );
       setButtonStates(states);
@@ -82,130 +181,67 @@ const InternalMeetings: React.FC = () => {
       setError('حدث خطأ في جلب الاجتماعات');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [statusFilter]);
+  }, []);
 
-  useEffect(() => {
-    fetchMeetings();
-  }, [fetchMeetings]);
+  useEffect(() => { fetchMeetings(); }, [fetchMeetings]);
 
-  // Close dropdown when clicking outside
+  // إغلاق قائمة الإجراءات عند النقر خارجها
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (activeMenu !== null) {
-        const target = e.target as HTMLElement;
-        if (!target.closest('.dropdown')) {
-          setActiveMenu(null);
-        }
+      if (activeMenu !== null && !(e.target as HTMLElement).closest('.im-dropdown')) {
+        setActiveMenu(null);
       }
     };
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [activeMenu]);
 
-  // Filter meetings
-  const filteredMeetings = meetings.filter(meeting => {
-    // Search filter
+  /* ----- الفلاتر ----- */
+  const filteredMeetings = useMemo(() => meetings.filter(m => {
+    if (statusFilter !== 'all' && m.status !== statusFilter) return false;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      const matchesTitle = meeting.title.toLowerCase().includes(term);
-      const matchesAgenda = meeting.agenda?.toLowerCase().includes(term);
-      if (!matchesTitle && !matchesAgenda) return false;
+      const inTitle = m.title.toLowerCase().includes(term);
+      const inAgenda = m.agenda?.toLowerCase().includes(term);
+      const inParticipant = m.participants?.some(p => p.user?.name?.toLowerCase().includes(term));
+      if (!inTitle && !inAgenda && !inParticipant) return false;
     }
-
-    // Time filter
-    if (timeFilter !== 'all') {
-      const meetingDate = new Date(meeting.scheduled_at);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const nextWeek = new Date(today);
-      nextWeek.setDate(nextWeek.getDate() + 7);
-
-      switch (timeFilter) {
-        case 'today':
-          const todayEnd = new Date(today);
-          todayEnd.setHours(23, 59, 59, 999);
-          if (meetingDate < today || meetingDate > todayEnd) return false;
-          break;
-        case 'tomorrow':
-          const tomorrowEnd = new Date(tomorrow);
-          tomorrowEnd.setHours(23, 59, 59, 999);
-          if (meetingDate < tomorrow || meetingDate > tomorrowEnd) return false;
-          break;
-        case 'week':
-          if (meetingDate < today || meetingDate > nextWeek) return false;
-          break;
-        case 'upcoming':
-          if (meetingDate < today) return false;
-          break;
-      }
-    }
-
     return true;
-  });
+  }), [meetings, searchTerm, statusFilter]);
 
-  // Helpers
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ar-SA', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
+  const groups = useMemo(() => groupMeetings(filteredMeetings), [filteredMeetings]);
 
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString('ar-SA', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
-      scheduled: { label: 'مجدول', color: '#3B82F6', bg: '#EFF6FF' },
-      in_progress: { label: 'جاري', color: '#F59E0B', bg: '#FFFBEB' },
-      completed: { label: 'مكتمل', color: '#10B981', bg: '#ECFDF5' },
-      cancelled: { label: 'ملغي', color: '#EF4444', bg: '#FEF2F2' },
+  /* ----- مؤشرات ----- */
+  const kpis = useMemo(() => {
+    const now = new Date();
+    const today = startOfDay(now);
+    const weekEnd = addDays(today, 7);
+    const scheduled = meetings.filter(m => m.status === 'scheduled' && new Date(m.scheduled_at) >= now);
+    return {
+      live: meetings.filter(m => m.status === 'in_progress').length,
+      today: scheduled.filter(m => new Date(m.scheduled_at) < addDays(today, 1)).length,
+      week: scheduled.filter(m => new Date(m.scheduled_at) < weekEnd).length,
+      upcoming: scheduled.length,
+      needsSummary: meetings.filter(m => m.status === 'completed' && !m.summary).length,
+      completed: meetings.filter(m => m.status === 'completed').length,
     };
-    const config = statusConfig[status] || statusConfig.scheduled;
-    return (
-      <span
-        style={{
-          padding: '4px 10px',
-          borderRadius: '12px',
-          fontSize: '12px',
-          fontWeight: 500,
-          color: config.color,
-          backgroundColor: config.bg,
-        }}
-      >
-        {config.label}
-      </span>
-    );
-  };
+  }, [meetings]);
 
-  // Actions
+  const nextMeeting = useMemo(() => {
+    const now = new Date();
+    return meetings
+      .filter(m => m.status === 'scheduled' && new Date(m.scheduled_at) >= now)
+      .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())[0] ?? null;
+  }, [meetings]);
+
+  /* ----- إجراءات ----- */
   const handleStartMeeting = async (meeting: InternalMeeting) => {
     try {
       await internalMeetingService.start(meeting.id);
-      fetchMeetings();
-    } catch (err) {
-      console.error('Error starting meeting:', err);
-    }
-  };
-
-  const handleCompleteMeeting = async (meeting: InternalMeeting) => {
-    try {
-      await internalMeetingService.complete(meeting.id);
-      fetchMeetings();
-    } catch (err) {
-      console.error('Error completing meeting:', err);
-    }
+      fetchMeetings(true);
+    } catch (err) { console.error('Error starting meeting:', err); }
   };
 
   const handleCancelMeeting = async (meeting: InternalMeeting) => {
@@ -213,10 +249,8 @@ const InternalMeetings: React.FC = () => {
     if (reason) {
       try {
         await internalMeetingService.cancel(meeting.id, reason);
-        fetchMeetings();
-      } catch (err) {
-        console.error('Error cancelling meeting:', err);
-      }
+        fetchMeetings(true);
+      } catch (err) { console.error('Error cancelling meeting:', err); }
     }
   };
 
@@ -224,10 +258,8 @@ const InternalMeetings: React.FC = () => {
     if (confirm('هل أنت متأكد من حذف هذا الاجتماع؟')) {
       try {
         await internalMeetingService.delete(meeting.id);
-        fetchMeetings();
-      } catch (err) {
-        console.error('Error deleting meeting:', err);
-      }
+        fetchMeetings(true);
+      } catch (err) { console.error('Error deleting meeting:', err); }
     }
   };
 
@@ -236,75 +268,47 @@ const InternalMeetings: React.FC = () => {
     setShowSummaryModal(true);
   };
 
-  // Smart Button Renderer
+  /* ----- الزر الذكي ----- */
   const renderSmartButton = (meeting: InternalMeeting) => {
-    const state = buttonStates[meeting.id];
-
     if (meeting.status === 'completed') {
       return (
-        <button
-          className="smart-btn smart-btn--view"
-          onClick={() => handleOpenSummary(meeting)}
-        >
-          <FileText size={14} />
-          عرض الملخص
+        <button className="im-smart im-smart--view" onClick={() => handleOpenSummary(meeting)}>
+          <FileText size={13} /> {meeting.summary ? 'عرض الملخص' : 'كتابة الملخص'}
         </button>
       );
     }
-
     if (meeting.status === 'cancelled') {
-      return (
-        <span className="text-gray-400 text-sm">ملغي</span>
-      );
+      return <span className="im-dim">{meeting.cancellation_reason ? `ملغي — ${meeting.cancellation_reason}` : 'ملغي'}</span>;
     }
 
-    if (!state) {
-      return (
-        <span className="text-gray-400 text-sm">جاري التحميل...</span>
-      );
-    }
+    const state = buttonStates[meeting.id];
+    if (!state) return <span className="im-dim">…</span>;
 
     switch (state.status) {
       case 'upcoming':
-        return (
-          <button className="smart-btn smart-btn--upcoming" disabled>
-            <Clock size={14} />
-            قريباً
-          </button>
-        );
+        return <button className="im-smart" disabled><Clock size={13} /> قريباً</button>;
       case 'join':
         return (
           <button
-            className="smart-btn smart-btn--join"
+            className="im-smart im-smart--join"
             onClick={() => {
-              if (meeting.video_meeting_url) {
-                window.open(meeting.video_meeting_url, '_blank');
-              }
+              if (meeting.video_meeting_url) window.open(meeting.video_meeting_url, '_blank');
               handleStartMeeting(meeting);
             }}
           >
-            <Video size={14} />
-            دخول الاجتماع
+            <Video size={13} /> دخول الاجتماع
           </button>
         );
       case 'write_summary':
         return (
-          <button
-            className="smart-btn smart-btn--summary"
-            onClick={() => handleOpenSummary(meeting)}
-          >
-            <FileText size={14} />
-            كتابة الملخص
+          <button className="im-smart im-smart--summary" onClick={() => handleOpenSummary(meeting)}>
+            <FileText size={13} /> كتابة الملخص
           </button>
         );
       case 'view_summary':
         return (
-          <button
-            className="smart-btn smart-btn--view"
-            onClick={() => handleOpenSummary(meeting)}
-          >
-            <FileText size={14} />
-            عرض الملخص
+          <button className="im-smart im-smart--view" onClick={() => handleOpenSummary(meeting)}>
+            <FileText size={13} /> عرض الملخص
           </button>
         );
       default:
@@ -312,1185 +316,214 @@ const InternalMeetings: React.FC = () => {
     }
   };
 
-  return (
-    <div className="meetings-page">
-      {/* Header */}
-      <header className="meetings-header">
-        <div className="meetings-header__start">
-          <div className="meetings-header__title">
-            <Users size={22} />
-            <span>الاجتماعات</span>
-          </div>
-          <div className="meetings-header__stats">
-            <span className="stat-badge">
-              {meetings.filter(m => m.status === 'scheduled').length} مجدول
-            </span>
-            <span className="stat-badge stat-badge--success">
-              {meetings.filter(m => m.status === 'completed').length} مكتمل
-            </span>
-          </div>
-        </div>
-
-        <div className="meetings-header__actions">
-          <button
-            className="icon-btn"
-            onClick={fetchMeetings}
-            disabled={loading}
-            title="تحديث"
-          >
-            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-          </button>
-
-          {isAdmin && (
-            <button
-              className="primary-btn"
-              onClick={() => setShowCreateModal(true)}
-            >
-              <Plus size={18} />
-              اجتماع جديد
+  const renderAdminMenu = (meeting: InternalMeeting) => {
+    if (!isAdmin || meeting.status !== 'scheduled') return null;
+    return (
+      <div className="im-dropdown">
+        <button
+          className="im-iconbtn"
+          onClick={() => setActiveMenu(activeMenu === meeting.id ? null : meeting.id)}
+        >
+          <MoreVertical size={15} />
+        </button>
+        {activeMenu === meeting.id && (
+          <div className="im-dropdown__menu">
+            <button onClick={() => { setSelectedMeeting(meeting); setShowCreateModal(true); setActiveMenu(null); }}>
+              <Edit2 size={13} /> تعديل
             </button>
+            <button onClick={() => { handleCancelMeeting(meeting); setActiveMenu(null); }}>
+              <XCircle size={13} /> إلغاء
+            </button>
+            <button className="im-danger" onClick={() => { handleDeleteMeeting(meeting); setActiveMenu(null); }}>
+              <Trash2 size={13} /> حذف
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /* ----- صف الاجتماع ----- */
+  const renderRow = (meeting: InternalMeeting, showRelativeDay = true) => (
+    <div key={meeting.id} className={`im-row ${meeting.status === 'cancelled' ? 'im-row--cancelled' : ''}`}>
+      <div className="im-row__time">
+        <b>{fmtTime(meeting.scheduled_at)}</b>
+        <span>{showRelativeDay ? relativeDay(meeting.scheduled_at) : fmtShortDate(meeting.scheduled_at)}</span>
+        <em>{meeting.duration_minutes} دقيقة</em>
+      </div>
+
+      <div className="im-row__main">
+        <div className="im-row__title">
+          {meeting.title}
+          {meeting.status === 'completed' && !meeting.summary && (
+            <span className="im-chip im-chip--warn"><AlertTriangle size={10} /> بلا ملخص</span>
           )}
         </div>
-      </header>
-
-      {/* Filters */}
-      <div className="meetings-filters">
-        <div className="search-box">
-          <Search size={16} />
-          <input
-            type="text"
-            placeholder="بحث في الاجتماعات..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        <div className="time-filters">
-          {[
-            { key: 'upcoming', label: 'القادمة', icon: '📅' },
-            { key: 'today', label: 'اليوم', icon: '🌟' },
-            { key: 'tomorrow', label: 'غداً', icon: '☀️' },
-            { key: 'week', label: 'الأسبوع', icon: '📆' },
-            { key: 'all', label: 'الكل', icon: '📋' },
-          ].map(tab => (
-            <button
-              key={tab.key}
-              className={`time-filter ${timeFilter === tab.key ? 'time-filter--active' : ''}`}
-              onClick={() => setTimeFilter(tab.key as any)}
-            >
-              <span className="time-filter__icon">{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="filter-tabs">
-          {[
-            { key: 'all', label: 'الكل' },
-            { key: 'scheduled', label: 'مجدول' },
-            { key: 'in_progress', label: 'جاري' },
-            { key: 'completed', label: 'مكتمل' },
-            { key: 'cancelled', label: 'ملغي' },
-          ].map(tab => (
-            <button
-              key={tab.key}
-              className={`filter-tab ${statusFilter === tab.key ? 'filter-tab--active' : ''}`}
-              onClick={() => setStatusFilter(tab.key)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="view-toggle">
-          <button
-            className={`view-toggle-btn ${viewMode === 'table' ? 'view-toggle-btn--active' : ''}`}
-            onClick={() => setViewMode('table')}
-            title="عرض جدول"
-          >
-            <Table size={16} />
-          </button>
-          <button
-            className={`view-toggle-btn ${viewMode === 'kanban' ? 'view-toggle-btn--active' : ''}`}
-            onClick={() => setViewMode('kanban')}
-            title="عرض كانبان"
-          >
-            <Columns size={16} />
-          </button>
-          <button
-            className={`view-toggle-btn ${viewMode === 'cards' ? 'view-toggle-btn--active' : ''}`}
-            onClick={() => setViewMode('cards')}
-            title="عرض بطاقات"
-          >
-            <LayoutGrid size={16} />
-          </button>
+        {meeting.agenda && <div className="im-row__agenda">{meeting.agenda}</div>}
+        <div className="im-row__meta">
+          {meeting.creator?.name && <span><UserIcon size={11} /> {meeting.creator.name}</span>}
+          {meeting.video_meeting_url ? (
+            <span className="im-type im-type--remote"><Video size={11} /> عن بُعد</span>
+          ) : (
+            <span className="im-type"><MapPin size={11} /> {meeting.location || 'حضوري'}</span>
+          )}
         </div>
       </div>
 
-      {/* Content */}
-      {loading ? (
-        <div className="loading-state">
-          <RefreshCw size={32} className="animate-spin" />
-          <p>جاري تحميل الاجتماعات...</p>
+      <div className="im-row__people" title={meeting.participants?.map(p => p.user?.name).filter(Boolean).join('، ')}>
+        {meeting.participants?.slice(0, 4).map(p => (
+          <span key={p.id} className="im-avatar">{p.user?.name?.charAt(0) || '؟'}</span>
+        ))}
+        {meeting.participants && meeting.participants.length > 4 && (
+          <span className="im-avatar im-avatar--more">+{meeting.participants.length - 4}</span>
+        )}
+        <span className="im-people-count">{meeting.participants?.length ?? 0}</span>
+      </div>
+
+      <div className="im-row__status"><StatusBadge status={meeting.status} /></div>
+
+      <div className="im-row__actions">
+        {renderSmartButton(meeting)}
+        {renderAdminMenu(meeting)}
+      </div>
+    </div>
+  );
+
+  /* ===================== العرض ===================== */
+
+  return (
+    <div className="im-page" dir="rtl">
+      {/* الترويسة */}
+      <div className="im-header">
+        <div>
+          <h1><Users size={19} /> الاجتماعات الداخلية</h1>
+          <span className="im-header__sub">
+            لفريق المكتب فقط (المحامون والموظفون) — مواعيد العملاء لها صفحتها المستقلة
+          </span>
         </div>
+        <div className="im-header__tools">
+          <div className="im-search">
+            <Search size={14} />
+            <input
+              placeholder="بحث بالعنوان أو الأجندة أو مشارك…"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <select className="im-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <option value="all">كل الحالات</option>
+            <option value="scheduled">مجدول</option>
+            <option value="in_progress">جارٍ</option>
+            <option value="completed">مكتمل</option>
+            <option value="cancelled">ملغي</option>
+          </select>
+          <button className="im-iconbtn im-iconbtn--bordered" onClick={() => fetchMeetings(true)} disabled={refreshing} title="تحديث">
+            <RefreshCw size={14} className={refreshing ? 'im-spin' : ''} />
+          </button>
+          {isAdmin && (
+            <button className="im-primary" onClick={() => setShowCreateModal(true)}>
+              <Plus size={15} /> اجتماع جديد
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* المؤشرات */}
+      {!loading && meetings.length > 0 && (
+        <div className="im-kpis">
+          {kpis.live > 0 && (
+            <div className="im-kpi im-kpi--live"><Radio size={14} /><b>{kpis.live}</b><span>جارية الآن</span></div>
+          )}
+          <div className="im-kpi"><CalendarClock size={14} /><b>{kpis.today}</b><span>اليوم</span></div>
+          <div className="im-kpi"><CalendarDays size={14} /><b>{kpis.week}</b><span>هذا الأسبوع</span></div>
+          <div className="im-kpi"><Clock size={14} /><b>{kpis.upcoming}</b><span>قادمة إجمالاً</span></div>
+          <div className={`im-kpi ${kpis.needsSummary > 0 ? 'im-kpi--warn' : ''}`}>
+            <FileText size={14} /><b>{kpis.needsSummary}</b><span>بانتظار الملخص</span>
+          </div>
+          <div className="im-kpi"><History size={14} /><b>{kpis.completed}</b><span>مكتملة</span></div>
+        </div>
+      )}
+
+      {/* الاجتماع التالي */}
+      {!loading && nextMeeting && !searchTerm && statusFilter === 'all' && (
+        <div className="im-next">
+          <div className="im-next__label"><CalendarClock size={14} /> اجتماعك التالي</div>
+          <div className="im-next__info">
+            <b>{nextMeeting.title}</b>
+            <span>
+              {relativeDay(nextMeeting.scheduled_at)} · {fmtTime(nextMeeting.scheduled_at)} · {nextMeeting.duration_minutes} دقيقة
+              {nextMeeting.video_meeting_url ? ' · عن بُعد' : nextMeeting.location ? ` · ${nextMeeting.location}` : ''}
+              {' · '}{nextMeeting.participants?.length ?? 0} مشاركاً
+            </span>
+          </div>
+          <div className="im-next__action">{renderSmartButton(nextMeeting)}</div>
+        </div>
+      )}
+
+      {/* المحتوى */}
+      {loading ? (
+        <div className="im-state"><RefreshCw size={16} className="im-spin" /> جارٍ تحميل الاجتماعات…</div>
       ) : error ? (
-        <div className="error-state">
+        <div className="im-state im-state--error">
           <XCircle size={32} />
           <p>{error}</p>
-          <button onClick={fetchMeetings}>إعادة المحاولة</button>
+          <button className="im-btn" onClick={() => fetchMeetings()}>إعادة المحاولة</button>
         </div>
       ) : filteredMeetings.length === 0 ? (
-        <div className="empty-state">
-          <Users size={48} />
-          <h3>لا توجد اجتماعات</h3>
-          <p>لا توجد اجتماعات تطابق معايير البحث</p>
-          {isAdmin && (
-            <button
-              className="primary-btn"
-              onClick={() => setShowCreateModal(true)}
-            >
-              <Plus size={18} />
-              إنشاء اجتماع جديد
+        <div className="im-state">
+          <Users size={42} />
+          <p>{meetings.length === 0 ? 'لا توجد اجتماعات بعد' : 'لا نتائج مطابقة للبحث أو الفلتر'}</p>
+          {isAdmin && meetings.length === 0 && (
+            <button className="im-primary" onClick={() => setShowCreateModal(true)}>
+              <Plus size={15} /> إنشاء أول اجتماع
             </button>
           )}
         </div>
       ) : (
-        <>
-          {/* Table View */}
-          {viewMode === 'table' && (
-            <div className="meetings-table-wrapper">
-              <table className="meetings-table-view">
-                <thead>
-                  <tr>
-                    <th>العنوان</th>
-                    <th>التاريخ والوقت</th>
-                    <th>المدة</th>
-                    <th>النوع</th>
-                    <th>المشاركون</th>
-                    <th>الحالة</th>
-                    <th>الإجراءات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMeetings.map(meeting => (
-                    <tr key={meeting.id}>
-                      <td>
-                        <div className="table-meeting-title">
-                          <strong>{meeting.title}</strong>
-                          {meeting.agenda && <span className="table-agenda">{meeting.agenda.substring(0, 50)}...</span>}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="table-datetime">
-                          <span>{formatDate(meeting.scheduled_at)}</span>
-                          <span className="table-time">{formatTime(meeting.scheduled_at)}</span>
-                        </div>
-                      </td>
-                      <td>{meeting.duration_minutes} دقيقة</td>
-                      <td>
-                        {meeting.video_meeting_url ? (
-                          <span className="type-chip type-chip--remote"><Video size={12} /> عن بعد</span>
-                        ) : (
-                          <span className="type-chip type-chip--physical"><MapPin size={12} /> حضوري</span>
-                        )}
-                      </td>
-                      <td>
-                        <div className="table-participants">
-                          {meeting.participants?.slice(0, 3).map((p, idx) => (
-                            <div key={p.id} className="mini-avatar" title={p.user?.name}>
-                              {p.user?.name?.charAt(0) || '?'}
-                            </div>
-                          ))}
-                          {meeting.participants && meeting.participants.length > 3 && (
-                            <span className="more-count">+{meeting.participants.length - 3}</span>
-                          )}
-                        </div>
-                      </td>
-                      <td>{getStatusBadge(meeting.status)}</td>
-                      <td>
-                        <div className="table-actions-cell">
-                          {renderSmartButton(meeting)}
-                          {isAdmin && meeting.status === 'scheduled' && (
-                            <div className="dropdown">
-                              <button
-                                className="icon-btn-sm"
-                                onClick={() => setActiveMenu(activeMenu === meeting.id ? null : meeting.id)}
-                              >
-                                <MoreVertical size={16} />
-                              </button>
-                              {activeMenu === meeting.id && (
-                                <div className="dropdown-menu">
-                                  <button onClick={() => {
-                                    setSelectedMeeting(meeting);
-                                    setShowCreateModal(true);
-                                    setActiveMenu(null);
-                                  }}>
-                                    <Edit2 size={14} />
-                                    تعديل
-                                  </button>
-                                  <button onClick={() => {
-                                    handleCancelMeeting(meeting);
-                                    setActiveMenu(null);
-                                  }}>
-                                    <XCircle size={14} />
-                                    إلغاء
-                                  </button>
-                                  <button
-                                    className="text-red-500"
-                                    onClick={() => {
-                                      handleDeleteMeeting(meeting);
-                                      setActiveMenu(null);
-                                    }}
-                                  >
-                                    <Trash2 size={14} />
-                                    حذف
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Kanban View */}
-          {viewMode === 'kanban' && (
-            <div className="kanban-board">
-              {[
-                { key: 'scheduled', label: 'المجدولة', color: '#3B82F6' },
-                { key: 'in_progress', label: 'الجارية', color: '#F59E0B' },
-                { key: 'completed', label: 'المكتملة', color: '#10B981' },
-                { key: 'cancelled', label: 'الملغية', color: '#EF4444' },
-              ].map(column => {
-                const columnMeetings = filteredMeetings.filter(m => m.status === column.key);
-                return (
-                  <div key={column.key} className="kanban-column">
-                    <div className="kanban-column__header" style={{ borderColor: column.color }}>
-                      <span className="kanban-column__title">{column.label}</span>
-                      <span className="kanban-column__count" style={{ background: column.color }}>
-                        {columnMeetings.length}
-                      </span>
-                    </div>
-                    <div className="kanban-column__content">
-                      {columnMeetings.map(meeting => (
-                        <div key={meeting.id} className="kanban-card">
-                          <h4>{meeting.title}</h4>
-                          <div className="kanban-card__info">
-                            <span><Calendar size={12} /> {formatDate(meeting.scheduled_at)}</span>
-                            <span><Clock size={12} /> {formatTime(meeting.scheduled_at)}</span>
-                          </div>
-                          {meeting.participants && meeting.participants.length > 0 && (
-                            <div className="kanban-card__participants">
-                              {meeting.participants.slice(0, 3).map(p => (
-                                <div key={p.id} className="mini-avatar" title={p.user?.name}>
-                                  {p.user?.name?.charAt(0) || '?'}
-                                </div>
-                              ))}
-                              {meeting.participants.length > 3 && (
-                                <span className="more-count">+{meeting.participants.length - 3}</span>
-                              )}
-                            </div>
-                          )}
-                          <div className="kanban-card__actions">
-                            {renderSmartButton(meeting)}
-                          </div>
-                        </div>
-                      ))}
-                      {columnMeetings.length === 0 && (
-                        <div className="kanban-empty">لا توجد اجتماعات</div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Cards View (Original) */}
-          {viewMode === 'cards' && (
-            <div className="meetings-grid">
-              {filteredMeetings.map(meeting => (
-                <div key={meeting.id} className="meeting-card">
-                  <div className="meeting-card__header">
-                    <h3 className="meeting-card__title">{meeting.title}</h3>
-                    <div className="meeting-card__actions">
-                      {getStatusBadge(meeting.status)}
-                      {isAdmin && meeting.status === 'scheduled' && (
-                        <div className="dropdown">
-                          <button
-                            className="icon-btn-sm"
-                            onClick={() => setActiveMenu(activeMenu === meeting.id ? null : meeting.id)}
-                          >
-                            <MoreVertical size={16} />
-                          </button>
-                          {activeMenu === meeting.id && (
-                            <div className="dropdown-menu">
-                              <button onClick={() => {
-                                setSelectedMeeting(meeting);
-                                setShowCreateModal(true);
-                                setActiveMenu(null);
-                              }}>
-                                <Edit2 size={14} />
-                                تعديل
-                              </button>
-                              <button onClick={() => {
-                                handleCancelMeeting(meeting);
-                                setActiveMenu(null);
-                              }}>
-                                <XCircle size={14} />
-                                إلغاء
-                              </button>
-                              <button
-                                className="text-red-500"
-                                onClick={() => {
-                                  handleDeleteMeeting(meeting);
-                                  setActiveMenu(null);
-                                }}
-                              >
-                                <Trash2 size={14} />
-                                حذف
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {meeting.agenda && (
-                    <p className="meeting-card__agenda">{meeting.agenda}</p>
+        groups.map(group => {
+          const collapsed = group.key === 'past' && pastCollapsed;
+          return (
+            <section key={group.key} className={`im-group ${group.tone ? `im-group--${group.tone}` : ''}`}>
+              <header
+                className="im-group__head"
+                onClick={group.key === 'past' ? () => setPastCollapsed(c => !c) : undefined}
+                style={group.key === 'past' ? { cursor: 'pointer' } : undefined}
+              >
+                {group.icon}
+                <h2>{group.title}</h2>
+                <span className="im-group__count">{group.meetings.length}</span>
+                {group.hint && <span className="im-group__hint">{group.hint}</span>}
+                {group.key === 'past' && (
+                  <span className="im-group__toggle">{pastCollapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}</span>
+                )}
+              </header>
+              {!collapsed && (
+                <div className="im-group__rows">
+                  {group.meetings.map(m =>
+                    renderRow(m, ['live', 'today', 'tomorrow', 'week'].includes(group.key))
                   )}
-
-                  <div className="meeting-card__info">
-                    <div className="info-item">
-                      <Calendar size={14} />
-                      <span>{formatDate(meeting.scheduled_at)}</span>
-                    </div>
-                    <div className="info-item">
-                      <Clock size={14} />
-                      <span>{formatTime(meeting.scheduled_at)} ({meeting.duration_minutes} دقيقة)</span>
-                    </div>
-                    {meeting.location && (
-                      <div className="info-item">
-                        <MapPin size={14} />
-                        <span>{meeting.location}</span>
-                      </div>
-                    )}
-                    {meeting.video_meeting_url && (
-                      <div className="info-item">
-                        <Video size={14} />
-                        <a href={meeting.video_meeting_url} target="_blank" rel="noopener noreferrer">
-                          رابط الاجتماع
-                          <ExternalLink size={12} />
-                        </a>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Participants */}
-                  <div className="meeting-card__participants">
-                    <span className="label">المشاركون:</span>
-                    <div className="participants-list">
-                      {meeting.participants?.slice(0, 4).map((p, idx) => (
-                        <div
-                          key={p.id}
-                          className="participant-avatar"
-                          title={p.user?.name}
-                          style={{ zIndex: 10 - idx }}
-                        >
-                          {p.user?.name?.charAt(0) || '?'}
-                        </div>
-                      ))}
-                      {meeting.participants && meeting.participants.length > 4 && (
-                        <div className="participant-avatar participant-avatar--more">
-                          +{meeting.participants.length - 4}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Smart Button */}
-                  <div className="meeting-card__footer">
-                    {renderSmartButton(meeting)}
-                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </>
+              )}
+            </section>
+          );
+        })
       )}
 
-      {/* Modals */}
+      {/* النوافذ */}
       {showCreateModal && (
         <CreateInternalMeetingModal
           meeting={selectedMeeting}
-          onClose={() => {
-            setShowCreateModal(false);
-            setSelectedMeeting(null);
-          }}
-          onSuccess={() => {
-            setShowCreateModal(false);
-            setSelectedMeeting(null);
-            fetchMeetings();
-          }}
+          onClose={() => { setShowCreateModal(false); setSelectedMeeting(null); }}
+          onSuccess={() => { setShowCreateModal(false); setSelectedMeeting(null); fetchMeetings(true); }}
         />
       )}
-
       {showSummaryModal && selectedMeeting && (
         <MeetingSummaryModal
           meeting={selectedMeeting}
-          onClose={() => {
-            setShowSummaryModal(false);
-            setSelectedMeeting(null);
-          }}
-          onSave={() => {
-            setShowSummaryModal(false);
-            setSelectedMeeting(null);
-            fetchMeetings();
-          }}
+          onClose={() => { setShowSummaryModal(false); setSelectedMeeting(null); }}
+          onSave={() => { setShowSummaryModal(false); setSelectedMeeting(null); fetchMeetings(true); }}
         />
       )}
-
-      <style>{`
-        .meetings-page {
-          padding: 0;
-          min-height: 100vh;
-          background: var(--color-surface-subtle);
-        }
-
-        .meetings-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 16px 24px;
-          background: var(--color-surface);
-          border-bottom: 1px solid var(--color-border, #e5e7eb);
-          position: sticky;
-          top: 0;
-          z-index: 10;
-        }
-
-        .meetings-header__start {
-          display: flex;
-          align-items: center;
-          gap: 20px;
-        }
-
-        .meetings-header__title {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-size: 18px;
-          font-weight: 600;
-          color: var(--color-text);
-        }
-
-        .meetings-header__stats {
-          display: flex;
-          gap: 8px;
-        }
-
-        .stat-badge {
-          padding: 4px 10px;
-          border-radius: 12px;
-          font-size: 12px;
-          background: var(--color-surface-subtle);
-          color: var(--color-text-secondary);
-        }
-
-        .stat-badge--success {
-          background: #ECFDF5;
-          color: #10B981;
-        }
-
-        .meetings-header__actions {
-          display: flex;
-          gap: 10px;
-        }
-
-        .icon-btn {
-          width: 36px;
-          height: 36px;
-          border-radius: 8px;
-          border: 1px solid var(--color-border, #e5e7eb);
-          background: var(--color-surface);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          color: var(--color-text-secondary);
-          transition: all 0.15s;
-        }
-
-        .icon-btn:hover {
-          background: var(--color-surface-subtle);
-        }
-
-        .icon-btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .primary-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 16px;
-          border-radius: 8px;
-          border: none;
-          background: var(--law-navy, #1E3A5F);
-          color: white;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-
-        .primary-btn:hover {
-          background: #2d4a6f;
-        }
-
-        .meetings-filters {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          padding: 12px 24px;
-          background: var(--color-surface);
-          border-bottom: 1px solid var(--color-border, #e5e7eb);
-          flex-wrap: wrap;
-        }
-
-        .time-filters {
-          display: flex;
-          gap: 4px;
-        }
-
-        .time-filter {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 6px 12px;
-          border-radius: 6px;
-          border: none;
-          background: transparent;
-          font-size: 13px;
-          color: var(--color-text-secondary);
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-
-        .time-filter:hover {
-          background: var(--color-surface-subtle);
-        }
-
-        .time-filter--active {
-          background: var(--color-primary-soft, rgba(10, 25, 47, 0.1));
-          color: var(--color-primary, #0A192F);
-          font-weight: 500;
-        }
-
-        .time-filter__icon {
-          font-size: 14px;
-        }
-
-        .search-box {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 8px 12px;
-          border-radius: 8px;
-          border: 1px solid var(--color-border, #e5e7eb);
-          background: var(--color-surface-subtle);
-          width: 280px;
-        }
-
-        .search-box input {
-          border: none;
-          background: none;
-          flex: 1;
-          font-size: 14px;
-          outline: none;
-        }
-
-        .search-box svg {
-          color: var(--color-text-secondary);
-        }
-
-        .filter-tabs {
-          display: flex;
-          gap: 4px;
-        }
-
-        .filter-tab {
-          padding: 6px 14px;
-          border-radius: 6px;
-          border: 1px solid transparent;
-          background: transparent;
-          font-size: 13px;
-          color: var(--color-text-secondary);
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-
-        .filter-tab:hover {
-          background: var(--color-surface-subtle);
-        }
-
-        .filter-tab--active {
-          background: var(--law-navy, #1E3A5F);
-          color: white;
-          border-color: var(--law-navy, #1E3A5F);
-        }
-
-        .meetings-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-          gap: 16px;
-          padding: 24px;
-        }
-
-        .meeting-card {
-          background: var(--color-surface);
-          border-radius: 12px;
-          border: 1px solid var(--color-border, #e5e7eb);
-          padding: 16px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          transition: all 0.15s;
-        }
-
-        .meeting-card:hover {
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        .meeting-card__header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-        }
-
-        .meeting-card__title {
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--color-text);
-          margin: 0;
-        }
-
-        .meeting-card__actions {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .meeting-card__agenda {
-          font-size: 13px;
-          color: var(--color-text-secondary);
-          margin: 0;
-          line-height: 1.5;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        .meeting-card__info {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .info-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 13px;
-          color: var(--color-text-secondary);
-        }
-
-        .info-item a {
-          color: var(--law-navy, #1E3A5F);
-          text-decoration: none;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .info-item a:hover {
-          text-decoration: underline;
-        }
-
-        .meeting-card__participants {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding-top: 8px;
-          border-top: 1px solid var(--color-border, #e5e7eb);
-        }
-
-        .meeting-card__participants .label {
-          font-size: 12px;
-          color: var(--color-text-secondary);
-        }
-
-        .participants-list {
-          display: flex;
-        }
-
-        .participant-avatar {
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          background: var(--law-navy, #1E3A5F);
-          color: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 11px;
-          font-weight: 600;
-          margin-right: -8px;
-          border: 2px solid white;
-        }
-
-        .participant-avatar--more {
-          background: var(--color-surface-subtle);
-          color: var(--color-text-secondary);
-        }
-
-        .meeting-card__footer {
-          padding-top: 12px;
-          border-top: 1px solid var(--color-border, #e5e7eb);
-        }
-
-        .smart-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          width: 100%;
-          padding: 10px;
-          border-radius: 8px;
-          border: none;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-
-        .smart-btn--upcoming {
-          background: var(--color-surface-subtle);
-          color: var(--color-text-secondary);
-          cursor: not-allowed;
-        }
-
-        .smart-btn--join {
-          background: #10B981;
-          color: white;
-        }
-
-        .smart-btn--join:hover {
-          background: #059669;
-        }
-
-        .smart-btn--summary {
-          background: var(--law-navy, #1E3A5F);
-          color: white;
-        }
-
-        .smart-btn--summary:hover {
-          background: #2d4a6f;
-        }
-
-        .smart-btn--view {
-          background: #EFF6FF;
-          color: #3B82F6;
-        }
-
-        .smart-btn--view:hover {
-          background: #DBEAFE;
-        }
-
-        .dropdown {
-          position: relative;
-        }
-
-        .icon-btn-sm {
-          width: 28px;
-          height: 28px;
-          border-radius: 6px;
-          border: none;
-          background: transparent;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          color: var(--color-text-secondary);
-        }
-
-        .icon-btn-sm:hover {
-          background: var(--color-surface-subtle);
-        }
-
-        .dropdown-menu {
-          position: absolute;
-          top: 100%;
-          right: 0;
-          background: var(--color-surface);
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          border: 1px solid var(--color-border, #e5e7eb);
-          min-width: 140px;
-          z-index: 100;
-          overflow: visible;
-        }
-
-        .dropdown-menu button {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          width: 100%;
-          padding: 10px 14px;
-          border: none;
-          background: none;
-          font-size: 13px;
-          color: var(--color-text);
-          cursor: pointer;
-          text-align: right;
-        }
-
-        .dropdown-menu button:hover {
-          background: var(--color-surface-subtle);
-        }
-
-        .dropdown-menu button.text-red-500 {
-          color: #EF4444;
-        }
-
-        .loading-state,
-        .error-state,
-        .empty-state {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 60px 20px;
-          text-align: center;
-          color: var(--color-text-secondary);
-        }
-
-        .loading-state svg,
-        .error-state svg,
-        .empty-state svg {
-          opacity: 0.3;
-          margin-bottom: 16px;
-        }
-
-        .error-state {
-          color: #EF4444;
-        }
-
-        .error-state button,
-        .empty-state button {
-          margin-top: 16px;
-        }
-
-        .animate-spin {
-          animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
-        /* View Toggle */
-        .view-toggle {
-          display: flex;
-          border: 1px solid var(--color-border, #e5e7eb);
-          border-radius: 8px;
-          overflow: hidden;
-          margin-right: auto;
-        }
-
-        .view-toggle-btn {
-          width: 36px;
-          height: 32px;
-          border: none;
-          background: var(--color-surface);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          color: var(--color-text-secondary);
-          transition: all 0.15s;
-        }
-
-        .view-toggle-btn:hover {
-          background: var(--color-surface-subtle);
-        }
-
-        .view-toggle-btn--active {
-          background: var(--color-primary, #0A192F);
-          color: white;
-        }
-
-        /* Table View */
-        .meetings-table-wrapper {
-          padding: 0;
-          overflow: visible;
-        }
-
-        .meetings-table-view {
-          width: 100%;
-          border-collapse: collapse;
-          background: var(--color-surface);
-        }
-
-        .meetings-table-view th,
-        .meetings-table-view td {
-          padding: 14px 16px;
-          text-align: right;
-          border-bottom: 1px solid var(--color-border, #e5e7eb);
-        }
-
-        .meetings-table-view th {
-          background: var(--color-surface-subtle);
-          font-size: 12px;
-          font-weight: 600;
-          color: var(--color-text-secondary);
-          text-transform: uppercase;
-        }
-
-        .meetings-table-view tr:hover {
-          background: var(--color-surface-subtle);
-        }
-
-        .table-meeting-title {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .table-meeting-title strong {
-          color: var(--color-text);
-        }
-
-        .table-agenda {
-          font-size: 12px;
-          color: var(--color-text-secondary);
-        }
-
-        .table-datetime {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-
-        .table-time {
-          font-size: 12px;
-          color: var(--color-text-secondary);
-        }
-
-        .type-chip {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          padding: 4px 8px;
-          border-radius: 6px;
-          font-size: 12px;
-        }
-
-        .type-chip--remote {
-          background: #EFF6FF;
-          color: #3B82F6;
-        }
-
-        .type-chip--physical {
-          background: #ECFDF5;
-          color: #10B981;
-        }
-
-        .table-participants {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .mini-avatar {
-          width: 26px;
-          height: 26px;
-          border-radius: 50%;
-          background: var(--color-primary, #0A192F);
-          color: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 11px;
-          font-weight: 600;
-        }
-
-        .more-count {
-          font-size: 12px;
-          color: var(--color-text-secondary);
-          margin-right: 4px;
-        }
-
-        .table-actions-cell {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        /* Kanban View */
-        .kanban-board {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
-          padding: 24px;
-          min-height: calc(100vh - 200px);
-        }
-
-        .kanban-column {
-          background: var(--color-surface-subtle);
-          border-radius: 12px;
-          display: flex;
-          flex-direction: column;
-          min-height: 300px;
-        }
-
-        .kanban-column__header {
-          padding: 16px;
-          border-bottom: 3px solid;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .kanban-column__title {
-          font-weight: 600;
-          font-size: 14px;
-          color: var(--color-text);
-        }
-
-        .kanban-column__count {
-          padding: 2px 8px;
-          border-radius: 10px;
-          font-size: 12px;
-          font-weight: 600;
-          color: white;
-        }
-
-        .kanban-column__content {
-          flex: 1;
-          padding: 12px;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          overflow-y: auto;
-        }
-
-        .kanban-card {
-          background: var(--color-surface);
-          border-radius: 10px;
-          padding: 14px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .kanban-card h4 {
-          font-size: 14px;
-          font-weight: 600;
-          margin: 0;
-          color: var(--color-text);
-        }
-
-        .kanban-card__info {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          font-size: 12px;
-          color: var(--color-text-secondary);
-        }
-
-        .kanban-card__info span {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .kanban-card__participants {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .kanban-card__actions {
-          border-top: 1px solid var(--color-border, #e5e7eb);
-          padding-top: 10px;
-          margin-top: 4px;
-        }
-
-        .kanban-empty {
-          text-align: center;
-          padding: 20px;
-          font-size: 13px;
-          color: var(--color-text-secondary);
-          opacity: 0.6;
-        }
-
-        @media (max-width: 1200px) {
-          .kanban-board {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        @media (max-width: 768px) {
-          .kanban-board {
-            grid-template-columns: 1fr;
-            padding: 16px;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .meetings-header {
-            flex-direction: column;
-            gap: 12px;
-            align-items: stretch;
-          }
-
-          .meetings-header__start {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
-          }
-
-          .meetings-filters {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .search-box {
-            width: 100%;
-          }
-
-          .filter-tabs {
-            overflow-x: auto;
-            padding-bottom: 4px;
-          }
-
-          .meetings-grid {
-            grid-template-columns: 1fr;
-            padding: 16px;
-          }
-        }
-      `}</style>
     </div>
   );
 };

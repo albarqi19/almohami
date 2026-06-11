@@ -32,9 +32,7 @@ import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
 import { resolveOpponent } from '../utils/partyHelpers';
 import { toHijri } from '../utils/hijriDate';
-import '../styles/sessions-page.css';
-import '../styles/add-session-modal.css';
-import '../styles/case-wekalat-panel.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 
 interface Session {

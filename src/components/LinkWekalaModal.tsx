@@ -3,8 +3,7 @@ import { X, Link2, Search, AlertCircle, Scroll } from 'lucide-react';
 import { WekalatService } from '../services/wekalatService';
 import { CaseWekalaService } from '../services/caseWekalaService';
 import type { Wekala } from '../types';
-import '../styles/case-wekalat-panel.css';
-import '../styles/share-case-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface Props {
     isOpen: boolean;

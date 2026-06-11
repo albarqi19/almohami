@@ -18,7 +18,7 @@ import {
   Timer,
   UserCheck
 } from 'lucide-react';
-import '../styles/statistics-page.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const Statistics: React.FC = () => {
   const [timeFilter, setTimeFilter] = useState<'month' | 'year' | 'detailed'>('month');

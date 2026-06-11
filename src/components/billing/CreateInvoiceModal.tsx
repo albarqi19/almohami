@@ -16,7 +16,7 @@ import { UserService } from '../../services/UserService';
 import { CaseService } from '../../services/caseService';
 import { apiClient } from '../../utils/api';
 import type { User as UserType, Case } from '../../types';
-import '../../styles/add-session-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface LineItemRow {
   description: string;

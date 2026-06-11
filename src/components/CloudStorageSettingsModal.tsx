@@ -19,7 +19,7 @@ import {
     RefreshCw
 } from 'lucide-react';
 import type { CloudStorageStatus } from '../services/cloudStorageService';
-import '../styles/task-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface CloudStorageSettingsModalProps {
     isOpen: boolean;

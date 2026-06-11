@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { NotificationService, type Notification as ApiNotification } from '../services/notificationService';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
-import '../styles/notification-center.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface NotificationCenterProps {
   isOpen: boolean;

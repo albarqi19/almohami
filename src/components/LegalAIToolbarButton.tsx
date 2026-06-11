@@ -5,6 +5,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+// كلاسات legal-ai-* معرّفة في styles/legal-ai-tools.css ويُحمَّل مركزياً عبر
+// styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك). لا تستورد الستايل
+// هنا حتى لا ينفصل عن حزمة الستايلات الموحّدة
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { LegalAIToolInfo, LegalAIResponse } from '../services/legalAIService';

@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Scale, ExternalLink, BookOpen, Loader2, FileText, Hash, ChevronLeft, ArrowRight, ChevronDown, Navigation, BookMarked, Check } from 'lucide-react';
 import { notebookService } from '../services/notebookService';
-import '../styles/law-search-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface LawSearchModalProps {
   isOpen: boolean;

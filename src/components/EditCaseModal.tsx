@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import type { Case } from '../types';
 import { apiClient } from '../utils/api';
-import '../styles/add-appointment-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface EditCaseModalProps {
   isOpen: boolean;

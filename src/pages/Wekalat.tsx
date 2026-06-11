@@ -35,9 +35,7 @@ import { AddWekalaModal } from '../components/AddWekalaModal';
 import { useAuth } from '../contexts/AuthContext';
 import { Link as RouterLink } from 'react-router-dom';
 import type { Wekala, WekalaParty, WekalaPermission } from '../types';
-import '../styles/wekalat-page.css';
-import '../styles/add-wekala-modal.css';
-import '../styles/case-wekalat-panel.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // ==================== Types ====================
 

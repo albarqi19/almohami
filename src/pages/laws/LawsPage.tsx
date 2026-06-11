@@ -4,7 +4,7 @@ import { BookOpen, BotMessageSquare, TextSearch } from 'lucide-react';
 import LawChat from '../../components/laws/LawChat';
 import LawSmartSearch from '../../components/laws/LawSmartSearch';
 import LawBrowse from '../../components/laws/LawBrowse';
-import '../../styles/laws-page.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 export type LawsTab = 'chat' | 'search' | 'browse';
 

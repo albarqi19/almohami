@@ -26,7 +26,7 @@ import ClientManagementService from '../services/clientManagementService';
 import type { Client } from '../services/clientManagementService';
 import { useAuth } from '../contexts/AuthContext';
 import AddClientModal from '../components/AddClientModal';
-import '../styles/clients-page.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // Pagination response type
 interface PaginatedClientsResponse {

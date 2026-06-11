@@ -66,7 +66,7 @@ import {
 import type { CreateLegalServiceData, ServiceType } from '../../types/legalServices';
 import { LegalServiceService } from '../../services/legalServiceService';
 import { apiClient } from '../../utils/api';
-import '../../styles/add-service-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 

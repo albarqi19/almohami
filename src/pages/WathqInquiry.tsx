@@ -37,7 +37,7 @@ import {
     HIDDEN_FIELDS,
 } from '../services/wathqService';
 import type { WathqInquiry as WathqInquiryType } from '../services/wathqService';
-import '../styles/wathq-inquiry.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // === Helper Functions ===
 const formatDateTime = (value?: string | null): string => {

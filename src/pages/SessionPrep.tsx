@@ -22,7 +22,7 @@ import { ActionQueuePanel } from '../components/session-prep/ActionQueuePanel';
 import { AIBriefSlideOver } from '../components/session-prep/AIBriefSlideOver';
 import { ImportDefaultsDialog } from '../components/session-prep/ImportDefaultsDialog';
 import type { ReadinessBreakdownItem } from '../components/session-prep/ReadinessBadge';
-import '../styles/session-prep.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const SessionPrep: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();

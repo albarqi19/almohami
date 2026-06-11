@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import recordGrantService from '../../services/recordGrantService';
 import { Drawer } from './ui/Drawer';
 import { Field } from './ui/DensePanel';
-import '../../styles/erp-permissions.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface ShareCaseDrawerProps {
   open: boolean;

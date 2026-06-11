@@ -13,7 +13,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import '../../styles/dashboard-theme.css';
-import '../../styles/welcome-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // Import Widgets
 import DashboardWidget from './DashboardWidget';

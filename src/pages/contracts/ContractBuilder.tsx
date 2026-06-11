@@ -38,7 +38,7 @@ import type {
   ScopeType,
   ContractType,
 } from '../../types/contracts';
-import '../../styles/contract-builder.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface Client {
   id: number;
@@ -209,6 +209,29 @@ const ContractBuilder: React.FC = () => {
     },
   });
 
+  // [TAX-02] إعدادات الفوترة: مكتب غير مسجّل ضريبياً → الباك يفرض ضريبة 0 على
+  // العقد، فنُطابق المعاينة والملخّص المالي هنا (نفس نمط CreateInvoiceModal).
+  const { data: billingSettings } = useQuery({
+    queryKey: ['billingSettings'],
+    queryFn: async () => {
+      const res = await apiClient.get<{ data: { settings: Record<string, { value: unknown }> } }>(
+        '/advanced-settings/group/billing'
+      );
+      const settings = res?.data?.settings || {};
+      return {
+        isVatRegistered: Boolean(settings.is_vat_registered?.value),
+        defaultVatRate: settings.default_vat_rate?.value != null ? Number(settings.default_vat_rate.value) : 15,
+      };
+    },
+  });
+  const isVatRegistered = billingSettings?.isVatRegistered ?? true;
+
+  useEffect(() => {
+    if (billingSettings && !billingSettings.isVatRegistered) {
+      setVatRate(0);
+    }
+  }, [billingSettings]);
+
   // تحميل القالب من URL
   useEffect(() => {
     const templateId = searchParams.get('template');
@@ -272,7 +295,8 @@ const ContractBuilder: React.FC = () => {
     setContractContent(template.content || '');
     setContractTitle(template.name);
     setScopeType(template.scope_type);
-    setVatRate(template.default_vat_rate);
+    // [TAX-02] غير المسجّل ضريبياً يبقى على 0 مهما كانت نسبة القالب.
+    setVatRate(isVatRegistered ? template.default_vat_rate : 0);
     if (template.default_payment_terms) {
       setPaymentTerms(template.default_payment_terms);
     }
@@ -797,6 +821,8 @@ const ContractBuilder: React.FC = () => {
                         type="number"
                         value={vatRate}
                         onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
+                        disabled={!isVatRegistered}
+                        title={!isVatRegistered ? 'الشركة غير مسجّلة في ضريبة القيمة المضافة' : ''}
                       />
                     </div>
                     <div className="form-group">

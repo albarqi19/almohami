@@ -20,7 +20,7 @@ import { WekalatService } from '../services/wekalatService';
 import type { Wekala } from '../types';
 import LinkWekalaModal from './LinkWekalaModal';
 import { WekalaModal } from '../pages/Wekalat';
-import '../styles/case-wekalat-panel.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface Props {
     caseId: number | string;

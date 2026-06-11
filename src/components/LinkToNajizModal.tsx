@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { CaseService } from '../services/caseService';
 import type { Case } from '../types';
-import '../styles/link-to-najiz-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface LinkToNajizModalProps {
   isOpen: boolean;

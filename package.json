@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "node scripts/update-sw-version.js && tsc -b && vite build",
     "lint": "eslint .",
+    "css:audit": "node scripts/css-audit.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

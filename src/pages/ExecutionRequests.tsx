@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { ExecutionRequestService } from '../services/executionRequestService';
 import type { ExecutionRequest, ExecutionRequestStats } from '../types';
-import '../styles/execution-requests-page.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // ==================== تصنيف الحالات (ألوان عبر متغيرات الثيم) ====================
 

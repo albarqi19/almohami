@@ -18,7 +18,7 @@ import EditClientInfoModal from '../components/EditClientInfoModal';
 import ClientExportModal from '../components/ClientExportModal';
 import LogCommunicationModal from '../components/LogCommunicationModal';
 import ClientQuickActionsBar from '../components/ClientQuickActionsBar';
-import '../styles/client-detail.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'communications' | 'activities';
 

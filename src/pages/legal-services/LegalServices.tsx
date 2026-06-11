@@ -35,7 +35,7 @@ import type {
 } from '../../types/legalServices';
 import { SERVICE_TYPE_LABELS, PRIORITY_LABELS } from '../../types/legalServices';
 import AddServiceModal from '../../components/legal-services/AddServiceModal';
-import '../../styles/legal-services-page.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // ── Icon map for service types ──────────────────────────────────────────────
 

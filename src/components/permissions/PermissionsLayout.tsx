@@ -3,7 +3,7 @@ import {
   Users, Shield, Grid3x3, Share2, History,
   type LucideIcon,
 } from 'lucide-react';
-import '../../styles/erp-permissions.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 export type SectionKey = 'users' | 'roles' | 'matrix' | 'grants' | 'audit';
 

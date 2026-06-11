@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { CloudStorageService } from '../services/cloudStorageService';
 import type { CloudStorageFile, CloudStorageStatus } from '../services/cloudStorageService';
-import '../styles/task-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface CloudFilePickerModalProps {
     isOpen: boolean;

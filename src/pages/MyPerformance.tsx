@@ -5,7 +5,7 @@ import LawyerDetailContent from '../components/LawyerDetailContent';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../utils/api';
 import type { LawyerReportData } from '../utils/lawyerExportHelpers';
-import '../styles/lawyers-report.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 /**
  * "أدائي" — صفحة الأداء الشخصي للمحامي / المساعد القانوني.

@@ -12,7 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { CaseService } from '../services/caseService';
 import type { Case } from '../types';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
-import '../styles/client-cases.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const ClientCases: React.FC = () => {
   const { user } = useAuth();

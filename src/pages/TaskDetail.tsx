@@ -32,7 +32,7 @@ import SubtasksList from '../components/SubtasksList';
 import MentionInput from '../components/MentionInput';
 import { TasksCache } from '../utils/tasksCache';
 import type { Task, TaskComment, TaskStatus, Priority } from '../types';
-import '../styles/task-detail.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   todo: { label: 'لم تبدأ', color: '#64748b' },

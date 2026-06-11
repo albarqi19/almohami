@@ -13,8 +13,7 @@ import LegalAIToolbarButton from '../components/LegalAIToolbarButton';
 import NotebookAssistantWidget from '../components/NotebookAssistantWidget';
 import { convertToHTML, detectContentType } from '../utils/contentConverter';
 import type { TextAnnotation } from '../types/textAnnotations';
-import '../styles/notebook-workspace-notion.css';
-import '../styles/legal-ai-tools.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface CaseOption {
     id: number;

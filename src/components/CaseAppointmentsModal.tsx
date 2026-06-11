@@ -18,7 +18,7 @@ import { appointmentService } from '../services/appointmentService';
 import { AddAppointmentModal } from './AddAppointmentModal';
 import { useModalTour } from '../hooks/useModalTour';
 import type { Appointment, AppointmentType, AppointmentStatus, Case } from '../types';
-import '../styles/case-appointments-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface CaseAppointmentsModalProps {
   isOpen: boolean;

@@ -46,9 +46,7 @@ import MicrosoftIntegrationSettings from '../components/settings/MicrosoftIntegr
 import EmailIntegrationSection from '../components/settings/EmailIntegrationSection';
 import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
-import '../styles/settings-page.css';
-import '../styles/session-defaults-settings.css';
-import '../styles/session-workflow-settings.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface SettingsTab {
   id: string;

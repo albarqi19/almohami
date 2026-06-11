@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import type { Activity } from '../types';
 import { ActivityService } from '../services/activityService';
-import '../styles/activities-page.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const Activities: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);

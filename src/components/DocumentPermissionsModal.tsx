@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { CloudStorageService, type AccessUser } from '../services/cloudStorageService';
 import { UserService } from '../services/UserService';
-import '../styles/task-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface DocumentPermissionsModalProps {
     isOpen: boolean;

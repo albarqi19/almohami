@@ -55,14 +55,11 @@ import type { TimelineEvent } from '../components/Timeline';
 import { apiClient } from '../utils/api';
 import { toHijri } from '../utils/hijriDate';
 import { CaseService } from '../services/caseService';
-import '../styles/send-dabt-modal.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 import { ActivityService } from '../services/activityService';
 import { DocumentService } from '../services/documentService';
 import { TaskService } from '../services/taskService';
 import type { Case } from '../types';
-import '../styles/case-detail.css';
-import '../styles/case-detail-page.css';
-import '../styles/case-prep-kitchen.css';
 
 const CaseDetailPage: React.FC = () => {
   const { caseId } = useParams<{ caseId: string }>();

@@ -13,7 +13,7 @@ import {
   PieChart,
   Users
 } from 'lucide-react';
-import '../styles/reports-page.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // Mock data
 const mockReportsData = {

@@ -9,7 +9,7 @@ import {
     FeedbackService, FEEDBACK_TYPES, resolutionStatusClass,
     type FeedbackItem, type FeedbackScore, type FeedbackType, type FeedbackAttachment,
 } from '../services/feedbackService';
-import '../styles/feedback-page.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const CATEGORY_OPTIONS: Array<{ value: string; label: string }> = [
     { value: 'UI', label: 'الواجهة' },

@@ -217,16 +217,18 @@ const ContractDetailPage: React.FC = () => {
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <span className="fin-line__amount">{formatSAR(term.calculated_amount ?? term.amount)}</span>
-                    {canManageInvoices && term.status === 'pending' && (
+                    {/* [CTR-22] الفوترة مشروعة للمعلّق والمتأخر (overdue = متأخر لم يُفوتَر بعد). */}
+                    {canManageInvoices && ['pending', 'overdue'].includes(term.status) && (
                       <button type="button" className="fin-btn fin-btn--ghost fin-btn--sm" disabled={genInvoiceMutation.isPending} onClick={() => genInvoiceMutation.mutate(term.id)} title="إنشاء فاتورة">
                         <Receipt size={13} /> فوترة
                       </button>
                     )}
-                    {canEdit && (
-                      <>
-                        <button type="button" className="fin-btn fin-btn--ghost fin-btn--icon" onClick={() => setTermForm(term)} aria-label="تعديل"><Edit2 size={13} /></button>
-                        <button type="button" className="fin-btn fin-btn--ghost fin-btn--icon" onClick={() => deleteTermMutation.mutate(term.id)} aria-label="حذف"><Trash2 size={13} /></button>
-                      </>
+                    {/* [CTR-22] شرط مفوتر/مدفوع لقطة مجمَّدة — الباك يرفض تعديله/حذفه. */}
+                    {canEdit && ['pending', 'overdue'].includes(term.status) && (
+                      <button type="button" className="fin-btn fin-btn--ghost fin-btn--icon" onClick={() => setTermForm(term)} aria-label="تعديل"><Edit2 size={13} /></button>
+                    )}
+                    {canEdit && ['pending', 'overdue', 'cancelled'].includes(term.status) && (
+                      <button type="button" className="fin-btn fin-btn--ghost fin-btn--icon" onClick={() => deleteTermMutation.mutate(term.id)} aria-label="حذف"><Trash2 size={13} /></button>
                     )}
                   </div>
                 </div>

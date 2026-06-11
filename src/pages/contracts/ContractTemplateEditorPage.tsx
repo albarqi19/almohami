@@ -23,7 +23,7 @@ import type {
   ScopeType,
   CreatePaymentTermData,
 } from '../../types/contracts';
-import '../../styles/contract-builder.css';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const CONTRACT_TYPES: { value: ContractType; label: string }[] = [
   { value: 'representation', label: 'تمثيل قانوني' },

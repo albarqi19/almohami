@@ -87,8 +87,9 @@ const CreateInternalMeetingModal: React.FC<Props> = ({ meeting, onClose, onSucce
   useEffect(() => {
     const fetchUsers = async () => {
       try {
+        // فريق المكتب كاملاً (بلا عملاء) — limit مرتفع لأن الرد paginated
         const response = await apiClient.get<{ success: boolean; data: { data: UserOption[] } | UserOption[] }>(
-          '/users?roles=admin,lawyer,legal_assistant'
+          '/users?roles=admin,owner,partner,lawyer,senior_lawyer,legal_assistant,accountant&limit=200'
         );
         let usersData: UserOption[] = [];
         if (response.data && 'data' in response.data && Array.isArray((response.data as any).data)) {
@@ -169,7 +170,10 @@ const CreateInternalMeetingModal: React.FC<Props> = ({ meeting, onClose, onSucce
   };
 
   const getRoleLabel = (role: string) => {
-    const labels: Record<string, string> = { admin: 'مدير', lawyer: 'محامي', legal_assistant: 'مساعد قانوني' };
+    const labels: Record<string, string> = {
+      admin: 'مدير', owner: 'مالك', partner: 'شريك', lawyer: 'محامي',
+      senior_lawyer: 'محامٍ أول', legal_assistant: 'مساعد قانوني', accountant: 'محاسب',
+    };
     return labels[role] || role;
   };
 
