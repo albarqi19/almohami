@@ -28,6 +28,7 @@ import {
   ArrowUp,
   ArrowDown,
   Settings,
+  Trash2,
 } from 'lucide-react';
 import { WekalatService } from '../services/wekalatService';
 import { CaseWekalaService, type WekalaCaseItem } from '../services/caseWekalaService';
@@ -492,6 +493,29 @@ const Wekalat: React.FC = () => {
     }
   };
 
+  // حذف وكالة (المستوردة من ناجز تُستبعد من المزامنة فلا يعيدها الاستيراد)
+  const [wekalaToDelete, setWekalaToDelete] = useState<Wekala | null>(null);
+  const [deletingWekala, setDeletingWekala] = useState(false);
+
+  const handleDeleteWekala = async () => {
+    if (!wekalaToDelete) return;
+    setDeletingWekala(true);
+    try {
+      await WekalatService.deleteWekala(wekalaToDelete.id);
+      queryClient.invalidateQueries({ queryKey: ['wekalat'] });
+      try {
+        Object.keys(localStorage)
+          .filter(k => k.startsWith(CACHE_KEY))
+          .forEach(k => localStorage.removeItem(k));
+      } catch { /* ignore */ }
+      setWekalaToDelete(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'فشل في حذف الوكالة');
+    } finally {
+      setDeletingWekala(false);
+    }
+  };
+
   // Stats
   const stats = useMemo(() => ({
     approved: wekalat.filter(w => w.status === 'معتمدة').length,
@@ -682,6 +706,14 @@ const Wekalat: React.FC = () => {
                     >
                       <Eye size={16} />
                     </button>
+                    <button
+                      className="wekala-action-btn"
+                      style={{ color: '#dc2626' }}
+                      onClick={(e) => { e.stopPropagation(); setWekalaToDelete(w); }}
+                      title="حذف الوكالة"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -772,6 +804,14 @@ const Wekalat: React.FC = () => {
                   </span>
                 );
               })()}
+              <button
+                className="wekala-action-btn"
+                style={{ color: '#dc2626', marginInlineStart: 'auto' }}
+                onClick={(e) => { e.stopPropagation(); setWekalaToDelete(w); }}
+                title="حذف الوكالة"
+              >
+                <Trash2 size={14} />
+              </button>
             </div>
           </div>
         );
@@ -1004,6 +1044,48 @@ const Wekalat: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         onWekalaAdded={() => fetchWekalat(1, true)}
       />
+
+      {/* تأكيد حذف وكالة */}
+      {wekalaToDelete && (
+        <div className="wk-overlay" onClick={() => !deletingWekala && setWekalaToDelete(null)}>
+          <div className="wk-modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+            <div className="wk-header">
+              <AlertCircle size={16} style={{ color: '#dc2626' }} />
+              <span className="wk-header__num">تأكيد حذف الوكالة {wekalaToDelete.number}</span>
+              <div className="wk-header__spacer" />
+              <button className="wk-close" onClick={() => setWekalaToDelete(null)} disabled={deletingWekala}>
+                <X size={15} />
+              </button>
+            </div>
+            <div className="wk-body" style={{ padding: '14px 16px', fontSize: 13, lineHeight: 1.8 }}>
+              <p style={{ margin: 0 }}>هل تريد حذف هذه الوكالة من النظام؟</p>
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--color-text-secondary, #6b7280)' }}>
+                {(wekalaToDelete as any).source !== 'manual'
+                  ? 'لن تُحذف من ناجز نفسه، وستُستبعد من المزامنة — لن يُعيدها الاستيراد التلقائي مرة أخرى.'
+                  : 'هذا الإجراء لا يمكن التراجع عنه.'}
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+                <button
+                  className="btn-secondary"
+                  style={{ fontSize: 12, padding: '6px 14px' }}
+                  onClick={() => setWekalaToDelete(null)}
+                  disabled={deletingWekala}
+                >
+                  إلغاء
+                </button>
+                <button
+                  className="btn-primary"
+                  style={{ fontSize: 12, padding: '6px 14px', background: '#dc2626', borderColor: '#dc2626' }}
+                  onClick={handleDeleteWekala}
+                  disabled={deletingWekala}
+                >
+                  {deletingWekala ? 'جاري الحذف…' : 'حذف'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Animation Styles */}
       <style>{`
