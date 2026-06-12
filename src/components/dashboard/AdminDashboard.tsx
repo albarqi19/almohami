@@ -17,7 +17,6 @@ import '../../styles/dashboard-theme.css';
 
 // Import Widgets
 import DashboardWidget from './DashboardWidget';
-import CasesListWidget from './widgets/CasesListWidget';
 import SessionsWidget from './widgets/SessionsWidget';
 import UpcomingDeadlinesWidget from './widgets/UpcomingDeadlinesWidget';
 import ActivityFeedWidget from './widgets/ActivityFeedWidget';
@@ -25,7 +24,7 @@ import WelcomeModal from '../WelcomeModal';
 
 // Import Dashboard Service
 import { DashboardService } from '../../services/dashboardService';
-import type { DashboardStats, RecentCase, UpcomingSession, RecentActivity } from '../../services/dashboardService';
+import type { DashboardStats, UpcomingSession, RecentActivity } from '../../services/dashboardService';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { apiClient } from '../../utils/api';
 
@@ -39,7 +38,6 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 دقائق
 
 interface DashboardData {
     stats: DashboardStats;
-    recentCases: RecentCase[];
     upcomingSessions: UpcomingSession[];
     recentActivities: RecentActivity[];
 }
@@ -82,16 +80,14 @@ const AdminDashboard: React.FC = () => {
 
         try {
             // جلب كل البيانات بالتوازي
-            const [stats, recentCases, upcomingSessions, recentActivities] = await Promise.all([
+            const [stats, upcomingSessions, recentActivities] = await Promise.all([
                 DashboardService.getStats(),
-                DashboardService.getRecentCases(5),
                 DashboardService.getUpcomingSessions(5),
                 DashboardService.getRecentActivities(10)
             ]);
 
             const newData: DashboardData = {
                 stats,
-                recentCases,
                 upcomingSessions,
                 recentActivities
             };
@@ -350,18 +346,14 @@ const AdminDashboard: React.FC = () => {
 
             {/* Widgets Grid - Equal Height */}
             <div className="widget-grid--equal">
-                {/* Cases Widget */}
+                {/* المهل النظامية في صدارة اللوحة — موعد فائت أخطر من قائمة قضايا
+                    متاحة أصلاً من القائمة الجانبية (قرار المالك 2026-06-13) */}
                 <DashboardWidget
-                    title="القضايا النشطة"
-                    icon="📋"
-                    iconBg="var(--law-navy-light)"
-                    onRefresh={handleRefresh}
+                    title="المهل النظامية"
+                    icon="⏳"
+                    iconBg="var(--status-red-light)"
                 >
-                    <CasesListWidget
-                        cases={dashboardData?.recentCases}
-                        onCaseClick={(c) => navigate(`/cases/${c.id}`)}
-                        limit={4}
-                    />
+                    <UpcomingDeadlinesWidget />
                 </DashboardWidget>
 
                 {/* Sessions Widget */}
@@ -371,15 +363,6 @@ const AdminDashboard: React.FC = () => {
                     iconBg="var(--status-orange-light)"
                 >
                     <SessionsWidget sessions={dashboardData?.upcomingSessions} />
-                </DashboardWidget>
-
-                {/* المهل النظامية — عدادات تنازلية لمهل الاعتراض والمدد الإجرائية */}
-                <DashboardWidget
-                    title="المهل النظامية"
-                    icon="⏳"
-                    iconBg="var(--status-red-light, #fee2e2)"
-                >
-                    <UpcomingDeadlinesWidget />
                 </DashboardWidget>
 
                 {/* Activity Widget */}

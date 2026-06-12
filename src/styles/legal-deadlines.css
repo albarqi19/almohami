@@ -495,16 +495,11 @@ body.dark .legal-deadlines__case-link { color: var(--quiet-gray-700); }
   padding: 8px 10px;
   border-radius: 8px;
   background: var(--quiet-gray-100);
-  border-inline-start: 3px solid var(--status-green);
   cursor: pointer;
   transition: background var(--transition-fast, 100ms ease);
 }
 
 .deadlines-widget__item:hover { background: var(--quiet-gray-200); }
-.deadlines-widget__item--upcoming { border-inline-start-color: var(--status-orange); }
-.deadlines-widget__item--warning,
-.deadlines-widget__item--critical,
-.deadlines-widget__item--expired { border-inline-start-color: var(--status-red); }
 
 .deadlines-widget__item-title {
   font-size: 11.5px;
