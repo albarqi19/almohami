@@ -1,5 +1,26 @@
 import { apiClient } from '../utils/api';
 
+/**
+ * لغة التواصل المفضلة للعميل — رسائل النظام (الإفادات، التحديثات، التذكيرات)
+ * تُرسل دائماً بالعربية، وإن كانت لغة العميل غير العربية تُلحق ترجمة قانونية
+ * آلية بلغته أسفل النص العربي. يجب أن تطابق القائمة المدعومة في الباك اند
+ * (MessageTranslationService::SUPPORTED_LANGUAGES).
+ */
+export const CLIENT_LANGUAGES: ReadonlyArray<{ value: string; label: string }> = [
+    { value: 'ar', label: 'العربية (الافتراضي)' },
+    { value: 'en', label: 'الإنجليزية — English' },
+    { value: 'ur', label: 'الأردو — اردو' },
+    { value: 'hi', label: 'الهندية — हिन्दी' },
+    { value: 'bn', label: 'البنغالية — বাংলা' },
+    { value: 'fil', label: 'الفلبينية — Filipino' },
+    { value: 'id', label: 'الإندونيسية — Indonesia' },
+    { value: 'tr', label: 'التركية — Türkçe' },
+    { value: 'fr', label: 'الفرنسية — Français' },
+];
+
+export const clientLanguageLabel = (code?: string | null): string =>
+    CLIENT_LANGUAGES.find(l => l.value === (code || 'ar'))?.label ?? code ?? 'العربية (الافتراضي)';
+
 // Types
 export interface Client {
     id: number;
@@ -11,6 +32,7 @@ export interface Client {
     is_active: boolean;
     assigned_cases_count?: number;
     created_at: string;
+    preferred_language?: string | null;
 
     // Legal entity profile (for the redesigned ClientDetailPage)
     entity_type?: 'individual' | 'company' | 'organization' | null;
@@ -83,6 +105,7 @@ export type UpdateClientPayload = {
     internal_notes?: string;
     name?: string;
     phone?: string;
+    preferred_language?: string;
     entity_type?: 'individual' | 'company' | 'organization' | null;
     commercial_registration?: string | null;
     vat_number?: string | null;
@@ -160,6 +183,7 @@ export class ClientManagementService {
         national_id: string;
         email?: string;
         phone?: string;
+        preferred_language?: string;
         entity_type?: 'individual' | 'company' | 'organization';
         classification?: 'vip' | 'regular' | 'one_time';
         commercial_registration?: string;

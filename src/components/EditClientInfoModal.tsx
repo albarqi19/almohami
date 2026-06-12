@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, X, Loader2 } from 'lucide-react';
 import Modal from './Modal';
 import ClientManagementService, {
+  CLIENT_LANGUAGES,
   type Client,
   type UpdateClientPayload,
 } from '../services/clientManagementService';
@@ -82,7 +83,7 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
           <Field label="الجوال" hint="يجب أن يبدأ بـ 05">
             <input type="tel" dir="ltr" value={form.phone ?? ''} onChange={(e) => set('phone', e.target.value)} placeholder="05xxxxxxxx" />
           </Field>
-          <Field label="التصنيف" span={isCompany ? 1 : 2}>
+          <Field label="التصنيف">
             <select value={form.classification ?? ''} onChange={(e) => set('classification', (e.target.value || undefined) as any)}>
               <option value="">— غير محدد —</option>
               <option value="vip">VIP</option>
@@ -90,6 +91,36 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
               <option value="one_time">لمرة واحدة</option>
             </select>
           </Field>
+          <Field label="لغة العميل">
+            <select value={form.preferred_language ?? 'ar'} onChange={(e) => set('preferred_language', e.target.value)}>
+              {CLIENT_LANGUAGES.map(l => (
+                <option key={l.value} value={l.value}>{l.label}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
+        {/* Helper info — لغة العميل ومقصدها (نفس ستايل صندوق وجهة رسالة الترحيب) */}
+        <div style={{
+          marginTop: '8px',
+          padding: '10px 12px',
+          backgroundColor: 'rgba(59, 130, 246, 0.06)',
+          border: '1px solid rgba(59, 130, 246, 0.2)',
+          borderRadius: '6px',
+          fontSize: '12px',
+          color: 'var(--color-text-secondary)',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '8px',
+          lineHeight: 1.6,
+        }}>
+          <span style={{ color: '#3b82f6', flexShrink: 0, fontWeight: 700 }}>ⓘ</span>
+          <div>
+            <strong style={{ color: 'var(--color-text)' }}>لغة العميل:</strong>{' '}
+            رسائل النظام (الإفادات، تحديثات القضية، التذكيرات) تُرسل دائماً{' '}
+            <strong style={{ color: 'var(--color-text)' }}>بالعربية</strong>. إذا كانت لغة العميل غير العربية،
+            تُضاف تحت النص العربي ترجمة قانونية آلية بلغته. الأصل والافتراضي: العربية.
+          </div>
         </div>
 
         {isCompany && (
@@ -158,6 +189,7 @@ function buildInitial(client: Client): UpdateClientPayload {
   return {
     name: client.name ?? '',
     phone: client.phone ?? '',
+    preferred_language: client.preferred_language ?? 'ar',
     entity_type: client.entity_type ?? 'individual',
     commercial_registration: client.commercial_registration ?? '',
     vat_number: client.vat_number ?? '',

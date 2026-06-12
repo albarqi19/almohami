@@ -6,7 +6,7 @@ import {
   Briefcase, Calendar, ListTodo, FolderOpen, FileSignature, MessageSquare,
   Activity, Building2, Hash, FileText, Clock, MapPin, ExternalLink, Save,
 } from 'lucide-react';
-import ClientManagementService, { type Client, type ClientCommunication } from '../services/clientManagementService';
+import ClientManagementService, { clientLanguageLabel, type Client, type ClientCommunication } from '../services/clientManagementService';
 import { UserService, type User as UserType } from '../services/UserService';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
 import {
@@ -413,6 +413,7 @@ const ClientDetailPage: React.FC = () => {
             <InfoRow label="الجوال" value={client.phone} dir="ltr" />
             <InfoRow label="الهوية" value={client.national_id} />
             <InfoRow label="البريد الإلكتروني" value={client.email} dir="ltr" />
+            <InfoRow label="لغة العميل" value={clientLanguageLabel(client.preferred_language)} />
             {isCompany && (
               <>
                 <div className="client-side__divider" />

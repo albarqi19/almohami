@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Building2, X } from 'lucide-react';
-import ClientManagementService from '../services/clientManagementService';
+import ClientManagementService, { CLIENT_LANGUAGES } from '../services/clientManagementService';
 
 interface AddClientModalProps {
   isOpen: boolean;
@@ -54,6 +54,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
   const [form, setForm] = useState({
     entity_type: 'individual' as EntityType,
     classification: '' as '' | 'vip' | 'regular' | 'one_time',
+    preferred_language: 'ar',
     name: '',
     national_id: '',
     email: '',
@@ -88,6 +89,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
     if (form.email) payload.email = form.email.trim();
     if (form.phone) payload.phone = form.phone.trim();
     if (form.classification) payload.classification = form.classification;
+    payload.preferred_language = form.preferred_language || 'ar';
 
     // تحقّق الرقم الضريبي (VAT) — مطلوب للفوترة الإلكترونية B2B: 15 رقماً يبدأ وينتهي بـ 3.
     if (isCompany && form.vat_number.trim() && !/^3\d{13}3$/.test(form.vat_number.trim())) {
@@ -357,6 +359,18 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
                     <option value="one_time">لمرة واحدة</option>
                   </select>
                 </div>
+                <div>
+                  <label style={fieldLabelStyle}>لغة العميل</label>
+                  <select
+                    value={form.preferred_language}
+                    onChange={(e) => set('preferred_language', e.target.value)}
+                    style={fieldInputStyle}
+                  >
+                    {CLIENT_LANGUAGES.map(l => (
+                      <option key={l.value} value={l.value}>{l.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -499,6 +513,29 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
                     سيتم توليد PIN وإرساله عبر واتساب على رقم الهاتف المُسجَّل أعلاه.
                   </>
                 )}
+              </div>
+            </div>
+
+            {/* Helper info — لغة العميل ومقصدها */}
+            <div style={{
+              marginTop: '8px',
+              padding: '10px 12px',
+              backgroundColor: 'rgba(59, 130, 246, 0.06)',
+              border: '1px solid rgba(59, 130, 246, 0.2)',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: 'var(--color-text-secondary)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '8px',
+              lineHeight: 1.6,
+            }}>
+              <span style={{ color: '#3b82f6', flexShrink: 0, fontWeight: 700 }}>ⓘ</span>
+              <div>
+                <strong style={{ color: 'var(--color-text)' }}>لغة العميل:</strong>{' '}
+                رسائل النظام (الإفادات، تحديثات القضية، التذكيرات) تُرسل دائماً{' '}
+                <strong style={{ color: 'var(--color-text)' }}>بالعربية</strong>. إذا كانت لغة العميل غير العربية،
+                تُضاف تحت النص العربي ترجمة قانونية آلية بلغته. الأصل والافتراضي: العربية.
               </div>
             </div>
           </form>
