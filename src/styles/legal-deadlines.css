@@ -10,18 +10,18 @@
    أحمر (critical ينبض) · expired أحمر صلب · suggested بنفسجي (ذكاء)
    ═══════════════════════════════════════════════════════ */
 
+/* عرض كامل بلا توسيط — لا فراغات على الجانبين (قرار المالك) */
 .legal-deadlines {
-  padding: 16px 20px 40px;
-  max-width: 1240px;
-  margin: 0 auto;
+  padding: 14px 18px 40px;
+  width: 100%;
   color: var(--quiet-gray-900);
   font-size: 13px;
 }
 
-/* ─── التخطيط: شريط جانبي يمين + عمود رئيسي ─── */
+/* ─── التخطيط: شريط جانبي يمين + عمود رئيسي يمتد ─── */
 .legal-deadlines__layout {
   display: grid;
-  grid-template-columns: 232px 1fr;
+  grid-template-columns: 248px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
