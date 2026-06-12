@@ -17,7 +17,7 @@ import {
   Quote,
   ScrollText,
   Search,
-  Sparkles,
+  Lightbulb,
   Swords,
   X,
 } from 'lucide-react';
@@ -240,7 +240,7 @@ const LegalDeadlines: React.FC = () => {
   const VIEWS: Array<{ key: ViewKey; label: string; icon: React.ReactNode; count: number }> = [
     { key: 'overview', label: 'النظرة العامة', icon: <LayoutGrid size={15} />, count: stats.open },
     { key: 'open', label: 'المفتوحة', icon: <AlarmClock size={15} />, count: stats.open },
-    { key: 'suggested', label: 'مقترحات الذكاء', icon: <Sparkles size={15} />, count: stats.suggested },
+    { key: 'suggested', label: 'مقترحات الرائد', icon: <Lightbulb size={15} />, count: stats.suggested },
     { key: 'missed', label: 'الفائتة', icon: <AlertTriangle size={15} />, count: stats.missed },
     { key: 'completed', label: 'المنجزة', icon: <CheckCircle2 size={15} />, count: stats.completed },
     { key: 'waived', label: 'المتنازل عنها', icon: <Ban size={15} />, count: stats.waived },
@@ -422,11 +422,11 @@ const LegalDeadlines: React.FC = () => {
               {groups.suggested.length > 0 && (
                 <section className="legal-deadlines__section legal-deadlines__section--suggested">
                   <h3 className="legal-deadlines__section-title">
-                    <Sparkles size={16} />
+                    <Lightbulb size={16} />
                     مهل محتملة من ضبوط الجلسات — تحتاج مراجعتك ({groups.suggested.length})
                   </h3>
                   <p className="legal-deadlines__section-hint">
-                    استخرجها الذكاء من نص الضبط مع الاقتباس الحرفي. لا تُرسل تنبيهات قبل تأكيدك.
+                    استخرجها الرائد من نص الضبط مع الاقتباس الحرفي. لا تُرسل تنبيهات قبل تأكيدك.
                   </p>
                   {renderCards(groups.suggested, '')}
                 </section>
@@ -454,7 +454,7 @@ const LegalDeadlines: React.FC = () => {
             <section className="legal-deadlines__section">
               {view === 'suggested' && (
                 <p className="legal-deadlines__section-hint">
-                  استخرجها الذكاء من نص الضبط مع الاقتباس الحرفي. لا تُرسل تنبيهات قبل تأكيدك.
+                  استخرجها الرائد من نص الضبط مع الاقتباس الحرفي. لا تُرسل تنبيهات قبل تأكيدك.
                 </p>
               )}
               {renderCards(

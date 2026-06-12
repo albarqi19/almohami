@@ -3,7 +3,7 @@
 // مع تنبيه بالمقترحات التي تنتظر تأكيد المحامي.
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Lightbulb } from 'lucide-react';
 import deadlineService, { type DeadlineSummary } from '../../../services/deadlineService';
 import { daysLabel } from '../../../pages/LegalDeadlines';
 
@@ -68,7 +68,7 @@ const UpcomingDeadlinesWidget: React.FC = () => {
 
       {suggestedCount > 0 && (
         <div className="deadlines-widget__suggested-note" onClick={() => navigate('/deadlines')}>
-          <Sparkles size={13} />
+          <Lightbulb size={13} />
           {suggestedCount === 1 ? 'مهلة محتملة من ضبط جلسة تنتظر تأكيدك' : `${suggestedCount} مهل محتملة تنتظر تأكيدك`}
         </div>
       )}
