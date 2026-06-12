@@ -41,6 +41,7 @@ const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
 const Cases = lazyWithRetry(() => import('./pages/Cases'));
 const CaseDetailPage = lazyWithRetry(() => import('./pages/CaseDetailPage'));
 const UpcomingSessions = lazyWithRetry(() => import('./pages/UpcomingSessions'));
+const LegalDeadlines = lazyWithRetry(() => import('./pages/LegalDeadlines'));
 const SessionPrep = lazyWithRetry(() => import('./pages/SessionPrep'));
 const ClientCases = lazyWithRetry(() => import('./pages/ClientCases'));
 const ClientCaseDetail = lazyWithRetry(() => import('./pages/ClientCaseDetail'));
@@ -181,6 +182,12 @@ function App() {
               <Route path="sessions/:sessionId/prep" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <SessionPrep />
+                </ProtectedRoute>
+              } />
+              {/* المهل النظامية — عدادات تنازلية لمهل الاعتراض والمدد (ملاحظتا عميل #21 و#23) */}
+              <Route path="deadlines" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                  <LegalDeadlines />
                 </ProtectedRoute>
               } />
               <Route path="wekalat" element={

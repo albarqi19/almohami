@@ -19,6 +19,7 @@ import '../../styles/dashboard-theme.css';
 import DashboardWidget from './DashboardWidget';
 import CasesListWidget from './widgets/CasesListWidget';
 import SessionsWidget from './widgets/SessionsWidget';
+import UpcomingDeadlinesWidget from './widgets/UpcomingDeadlinesWidget';
 import ActivityFeedWidget from './widgets/ActivityFeedWidget';
 import WelcomeModal from '../WelcomeModal';
 
@@ -370,6 +371,15 @@ const AdminDashboard: React.FC = () => {
                     iconBg="var(--status-orange-light)"
                 >
                     <SessionsWidget sessions={dashboardData?.upcomingSessions} />
+                </DashboardWidget>
+
+                {/* المهل النظامية — عدادات تنازلية لمهل الاعتراض والمدد الإجرائية */}
+                <DashboardWidget
+                    title="المهل النظامية"
+                    icon="⏳"
+                    iconBg="var(--status-red-light, #fee2e2)"
+                >
+                    <UpcomingDeadlinesWidget />
                 </DashboardWidget>
 
                 {/* Activity Widget */}

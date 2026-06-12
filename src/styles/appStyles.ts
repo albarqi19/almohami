@@ -92,3 +92,4 @@ import './availability.css';
 
 /* ملفات أُضيفت بعد التقسيم — تُلحق في النهاية */
 import './internal-meetings.css';
+import './legal-deadlines.css';

@@ -14,6 +14,7 @@ import {
   CheckSquare,
   Users,
   Clock,
+  AlarmClock,
   Building,
   Video,
   ExternalLink,
@@ -57,9 +58,34 @@ import { toHijri } from '../utils/hijriDate';
 import { CaseService } from '../services/caseService';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 import { ActivityService } from '../services/activityService';
+import deadlineService, { type LegalDeadline } from '../services/deadlineService';
 import { DocumentService } from '../services/documentService';
 import { TaskService } from '../services/taskService';
 import type { Case } from '../types';
+
+// العداد الحي لمهلة الاعتراض — live_remaining_objection_days يحسبه الباك من
+// objection_due_date عند كل قراءة، لأن remaining_objection_days المخزن snapshot
+// لحظة الاستيراد ويَقدُم مع الوقت (كان يعرض أرقاماً قديمة خاطئة)
+const objectionDaysLeft = (j: any): number | null => {
+  const live = j?.live_remaining_objection_days;
+  if (live !== undefined && live !== null) return live;
+  return j?.remaining_objection_days ?? null;
+};
+
+const canStillObjectOn = (j: any): boolean => {
+  if (!j?.available_for_objection) return false;
+  const live = j?.live_remaining_objection_days;
+  if (live !== undefined && live !== null) return live >= 0;
+  return (j?.remaining_objection_days ?? 0) > 0;
+};
+
+const objectionDaysLabel = (days: number | null): string => {
+  if (days === null) return '';
+  if (days === 0) return 'اليوم آخر يوم للاعتراض!';
+  if (days === 1) return 'متبقي يوم واحد للاعتراض';
+  if (days === 2) return 'متبقي يومان للاعتراض';
+  return `متبقي ${days} ${days <= 10 ? 'أيام' : 'يوماً'} للاعتراض`;
+};
 
 const CaseDetailPage: React.FC = () => {
   const { caseId } = useParams<{ caseId: string }>();
@@ -90,9 +116,19 @@ const CaseDetailPage: React.FC = () => {
   const [showWekalatModal, setShowWekalatModal] = useState(false);
   const [documentsCount, setDocumentsCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
+  const [caseDeadlines, setCaseDeadlines] = useState<LegalDeadline[]>([]);
 
   // Ref to prevent duplicate fetches
   const hasFetchedRef = useRef<string | null>(null);
+
+  // المهل النظامية المفتوحة لهذه القضية — لشريط الإنذار أعلى الصفحة
+  useEffect(() => {
+    if (!caseId) return;
+    deadlineService
+      .list({ case_id: Number(caseId), status: 'active,in_progress' })
+      .then(setCaseDeadlines)
+      .catch(() => setCaseDeadlines([])); // 403 لمن لا يملك deadlines.view — الشريط اختياري
+  }, [caseId]);
 
   useEffect(() => {
     // Skip if already fetched for this caseId
@@ -510,6 +546,32 @@ const CaseDetailPage: React.FC = () => {
         </div>
       </div>
 
+      {/* شريط إنذار المهل النظامية — لا يمكن تفويته عند وجود مهلة ≤ 7 أيام */}
+      {(() => {
+        const urgent = caseDeadlines
+          .filter((d) => d.days_remaining !== null && d.days_remaining <= 7)
+          .sort((a, b) => (a.days_remaining ?? 0) - (b.days_remaining ?? 0))[0];
+        if (!urgent) return null;
+        const days = urgent.days_remaining ?? 0;
+        const daysText =
+          days < 0 ? 'فاتت المهلة' :
+          days === 0 ? '⏳ اليوم آخر يوم' :
+          days === 1 ? '⏳ متبقي يوم واحد' :
+          days === 2 ? '⏳ متبقي يومان' : `⏳ متبقي ${days} أيام`;
+        return (
+          <div className="case-deadline-banner">
+            <AlarmClock size={20} className="case-deadline-banner__icon" />
+            <div className="case-deadline-banner__text">
+              <strong>{daysText}</strong> على «{urgent.title}» — آخر يوم{' '}
+              {new Date(urgent.due_date).toLocaleDateString('ar-SA-u-ca-gregory', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </div>
+            <Link to="/deadlines" className="case-deadline-banner__link">
+              صفحة المهل النظامية
+            </Link>
+          </div>
+        );
+      })()}
+
       {/* Two Column Layout */}
       <div className="case-detail-layout">
         {/* Main Content */}
@@ -809,7 +871,8 @@ const CaseDetailPage: React.FC = () => {
                 <div className="case-judgements-list">
                   {caseData.judgements.map((judgement: any, idx: number) => {
                     const isFinal = judgement.judgement_type === 'نهائي';
-                    const canObject = judgement.available_for_objection && judgement.remaining_objection_days > 0;
+                    const canObject = canStillObjectOn(judgement);
+                    const objectionDays = objectionDaysLeft(judgement);
                     return (
                       <div key={`judgement-${idx}`} className="case-judgement-item">
                         <div className="case-judgement-item__header">
@@ -828,7 +891,7 @@ const CaseDetailPage: React.FC = () => {
                           {judgement.sak_date && <span><Calendar size={12} /> {new Date(judgement.sak_date).toLocaleDateString('ar-SA')}</span>}
                           {canObject && (
                             <span className="case-judgement-item__objection">
-                              <Clock size={12} /> متبقي {judgement.remaining_objection_days} يوم للاعتراض
+                              <Clock size={12} /> {objectionDaysLabel(objectionDays)}
                             </span>
                           )}
                         </div>
@@ -1362,7 +1425,7 @@ const CaseDetailPage: React.FC = () => {
         const reasons = j.reasons || null;
         const text = j.text || j.session_judgement || null;
         const isFinal = j.judgement_type === 'نهائي';
-        const canObject = j.available_for_objection && (j.remaining_objection_days ?? 0) > 0;
+        const canObject = canStillObjectOn(j);
 
         const tabs = [
           text && { key: 'text', label: 'المنطوق', body: text, icon: '⚖️' },
@@ -1405,7 +1468,7 @@ const CaseDetailPage: React.FC = () => {
                   )}
                   {canObject && (
                     <span className="jm-badge jm-badge--objection">
-                      اعتراض: {j.remaining_objection_days} يوم
+                      اعتراض: {objectionDaysLeft(j)} يوم
                     </span>
                   )}
                 </div>
