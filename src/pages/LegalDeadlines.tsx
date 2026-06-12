@@ -92,6 +92,8 @@ const DeadlineCard: React.FC<DeadlineCardProps> = ({ deadline: d, busy, onAction
 
         <h4 className="legal-deadlines__card-title">{d.title}</h4>
 
+        {d.description && <p className="legal-deadlines__card-desc">{d.description}</p>}
+
         <div className="legal-deadlines__card-meta">
           <span>📅 آخر يوم: {formatDue(d.due_date)}</span>
           {d.case && (
@@ -423,10 +425,10 @@ const LegalDeadlines: React.FC = () => {
                 <section className="legal-deadlines__section legal-deadlines__section--suggested">
                   <h3 className="legal-deadlines__section-title">
                     <Lightbulb size={16} />
-                    مهل محتملة من ضبوط الجلسات — تحتاج مراجعتك ({groups.suggested.length})
+                    مهل محتملة — تحتاج مراجعتك ({groups.suggested.length})
                   </h3>
                   <p className="legal-deadlines__section-hint">
-                    استخرجها الرائد من نص الضبط مع الاقتباس الحرفي. لا تُرسل تنبيهات قبل تأكيدك.
+                    التقطها الرائد من أحكام ناجز وضبوط الجلسات. لا تُرسل تنبيهات قبل تأكيدك.
                   </p>
                   {renderCards(groups.suggested, '')}
                 </section>
@@ -454,7 +456,7 @@ const LegalDeadlines: React.FC = () => {
             <section className="legal-deadlines__section">
               {view === 'suggested' && (
                 <p className="legal-deadlines__section-hint">
-                  استخرجها الرائد من نص الضبط مع الاقتباس الحرفي. لا تُرسل تنبيهات قبل تأكيدك.
+                  التقطها الرائد من أحكام ناجز وضبوط الجلسات. لا تُرسل تنبيهات قبل تأكيدك.
                 </p>
               )}
               {renderCards(

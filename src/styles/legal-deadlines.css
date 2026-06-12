@@ -322,6 +322,13 @@ body.dark .legal-deadlines__view-btn.is-active { color: var(--quiet-gray-900); }
   margin: 0 0 5px;
 }
 
+.legal-deadlines__card-desc {
+  font-size: 11px;
+  color: var(--quiet-gray-600);
+  margin: 0 0 5px;
+  line-height: 1.7;
+}
+
 .legal-deadlines__card-meta {
   display: flex;
   align-items: center;
@@ -640,11 +647,35 @@ body.dark .legal-deadlines__case-link { color: var(--quiet-gray-700); }
   display: block;
 }
 
-.deadlines-widget__item-case {
+.deadlines-widget__item-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 3px;
+  min-width: 0;
+}
+
+.deadlines-widget__case-number {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 10.5px;
+  font-family: inherit;
+  color: var(--law-navy);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+body.dark .deadlines-widget__case-number { color: var(--quiet-gray-700); }
+
+.deadlines-widget__assignee {
   font-size: 10.5px;
   color: var(--quiet-gray-600);
-  display: block;
-  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .deadlines-widget__days {
@@ -683,20 +714,16 @@ body.dark .legal-deadlines__case-link { color: var(--quiet-gray-700); }
 }
 
 /* ─── شريط الإنذار في صفحة القضية ─── */
+/* شريط مربع مندمج مع ترويسة القضية فوقه (لا حواف دائرية — قرار المالك)
+   دائم الظهور بلون متدرج: أخضر بعيد / برتقالي ≤7 / أحمر ≤3 أو فائتة */
 .case-deadline-banner {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: var(--status-red-light);
-  border: 1px solid var(--status-red);
-  border-inline-start: 4px solid var(--status-red);
-  border-radius: 10px;
-  padding: 10px 14px;
-  margin-bottom: 12px;
+  padding: 9px 20px;
+  margin: 0;
   flex-wrap: wrap;
 }
-
-.case-deadline-banner__icon { color: var(--status-red); flex-shrink: 0; }
 
 .case-deadline-banner__text {
   flex: 1;
@@ -705,19 +732,52 @@ body.dark .legal-deadlines__case-link { color: var(--quiet-gray-700); }
   min-width: 200px;
 }
 
-.case-deadline-banner__text strong { font-weight: 800; color: var(--status-red); }
+.case-deadline-banner__text strong { font-weight: 800; }
+
+.case-deadline-banner__icon { flex-shrink: 0; }
 
 .case-deadline-banner__link {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--status-red);
   background: var(--dashboard-card);
-  border: 1px solid var(--status-red);
   border-radius: 7px;
   padding: 6px 12px;
   cursor: pointer;
   white-space: nowrap;
   text-decoration: none;
+}
+
+.case-deadline-banner--red { background: var(--status-red-light); border-bottom: 1px solid var(--status-red); }
+.case-deadline-banner--red .case-deadline-banner__icon,
+.case-deadline-banner--red .case-deadline-banner__text strong { color: var(--status-red); }
+.case-deadline-banner--red .case-deadline-banner__link { color: var(--status-red); border: 1px solid var(--status-red); }
+
+.case-deadline-banner--orange { background: var(--status-orange-light); border-bottom: 1px solid var(--status-orange); }
+.case-deadline-banner--orange .case-deadline-banner__icon,
+.case-deadline-banner--orange .case-deadline-banner__text strong { color: var(--status-orange); }
+.case-deadline-banner--orange .case-deadline-banner__link { color: var(--status-orange); border: 1px solid var(--status-orange); }
+
+.case-deadline-banner--green { background: var(--status-green-light); border-bottom: 1px solid var(--status-green); }
+.case-deadline-banner--green .case-deadline-banner__icon,
+.case-deadline-banner--green .case-deadline-banner__text strong { color: var(--status-green); }
+.case-deadline-banner--green .case-deadline-banner__link { color: var(--status-green); border: 1px solid var(--status-green); }
+
+/* مهلة على الخصم — أزرق محايد (اقترابها ليس إنذاراً لنا) */
+.case-deadline-banner--blue { background: var(--status-blue-light); border-bottom: 1px solid var(--status-blue); }
+.case-deadline-banner--blue .case-deadline-banner__icon,
+.case-deadline-banner--blue .case-deadline-banner__text strong { color: var(--status-blue); }
+.case-deadline-banner--blue .case-deadline-banner__link { color: var(--status-blue); border: 1px solid var(--status-blue); }
+
+/* شارة «تجريبي» في عنوان ويدجت اللوحة */
+.deadlines-beta-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  background: var(--status-purple-light);
+  color: var(--status-purple);
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-inline-start: 6px;
+  vertical-align: middle;
 }
 
 /* ─── استجابة الجوال ─── */

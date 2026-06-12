@@ -546,22 +546,31 @@ const CaseDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* شريط إنذار المهل النظامية — لا يمكن تفويته عند وجود مهلة ≤ 7 أيام */}
+      {/* شريط المهل النظامية — دائم الظهور: مهلة المحامي أولاً بألوان متدرجة
+          (أخضر بعيد / برتقالي ≤7 / أحمر ≤3)، وإن لم توجد فمهلة الخصم بأزرق
+          محايد وعنوان صريح «مهلة على الخصم» (اقترابها ليس إنذاراً لنا) */}
       {(() => {
-        const urgent = caseDeadlines
-          .filter((d) => d.days_remaining !== null && d.days_remaining <= 7)
-          .sort((a, b) => (a.days_remaining ?? 0) - (b.days_remaining ?? 0))[0];
+        const open = caseDeadlines.filter((d) => d.days_remaining !== null);
+        const nearest = (list: typeof open) =>
+          [...list].sort((a, b) => (a.days_remaining ?? 0) - (b.days_remaining ?? 0))[0];
+        const mine = nearest(open.filter((d) => d.obligated_party !== 'opponent'));
+        const theirs = nearest(open.filter((d) => d.obligated_party === 'opponent'));
+        const urgent = mine ?? theirs;
         if (!urgent) return null;
+        const isOpponent = !mine;
         const days = urgent.days_remaining ?? 0;
+        const tone = isOpponent ? 'blue' : days <= 3 ? 'red' : days <= 7 ? 'orange' : 'green';
         const daysText =
           days < 0 ? 'فاتت المهلة' :
           days === 0 ? '⏳ اليوم آخر يوم' :
           days === 1 ? '⏳ متبقي يوم واحد' :
-          days === 2 ? '⏳ متبقي يومان' : `⏳ متبقي ${days} أيام`;
+          days === 2 ? '⏳ متبقي يومان' :
+          days <= 10 ? `⏳ متبقي ${days} أيام` : `⏳ متبقي ${days} يوماً`;
         return (
-          <div className="case-deadline-banner">
+          <div className={`case-deadline-banner case-deadline-banner--${tone}`}>
             <AlarmClock size={20} className="case-deadline-banner__icon" />
             <div className="case-deadline-banner__text">
+              {isOpponent && <strong>مهلة على الخصم: </strong>}
               <strong>{daysText}</strong> على «{urgent.title}» — آخر يوم{' '}
               {new Date(urgent.due_date).toLocaleDateString('ar-SA-u-ca-gregory', { day: 'numeric', month: 'long', year: 'numeric' })}
             </div>

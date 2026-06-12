@@ -48,15 +48,25 @@ const UpcomingDeadlinesWidget: React.FC = () => {
             <div
               key={d.id}
               className={`deadlines-widget__item deadlines-widget__item--${urgency}`}
-              onClick={() => navigate(d.case_id ? `/cases/${d.case_id}` : '/deadlines')}
+              onClick={() => navigate('/deadlines')}
             >
               <div style={{ minWidth: 0, flex: 1 }}>
                 <span className="deadlines-widget__item-title">{d.title}</span>
-                {d.case && (
-                  <span className="deadlines-widget__item-case">
-                    {d.case.file_number || d.case.title}
-                  </span>
-                )}
+                <span className="deadlines-widget__item-meta">
+                  {d.case && (
+                    <button
+                      className="deadlines-widget__case-number"
+                      title={d.case.title}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/cases/${d.case!.id}`);
+                      }}
+                    >
+                      📂 {d.case.file_number || d.case.title}
+                    </button>
+                  )}
+                  {d.assignee && <span className="deadlines-widget__assignee">👤 {d.assignee.name}</span>}
+                </span>
               </div>
               <span className={`deadlines-widget__days deadlines-widget__days--${urgency}`}>
                 {daysLabel(d.days_remaining)}

@@ -11,7 +11,7 @@ import {
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
 interface DashboardWidgetProps {
-    title: string;
+    title: ReactNode;
     icon?: ReactNode;
     iconBg?: string;
     children: ReactNode;

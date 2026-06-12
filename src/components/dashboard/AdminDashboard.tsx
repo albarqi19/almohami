@@ -349,7 +349,7 @@ const AdminDashboard: React.FC = () => {
                 {/* المهل النظامية في صدارة اللوحة — موعد فائت أخطر من قائمة قضايا
                     متاحة أصلاً من القائمة الجانبية (قرار المالك 2026-06-13) */}
                 <DashboardWidget
-                    title="المهل النظامية"
+                    title={<>المهل النظامية <span className="deadlines-beta-tag">تجريبي</span></>}
                     icon="⏳"
                     iconBg="var(--status-red-light)"
                 >
