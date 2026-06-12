@@ -20,6 +20,7 @@ import {
   Lightbulb,
   Bell,
   GraduationCap,
+  MoreHorizontal,
   Tag,
   User,
   Briefcase,
@@ -163,6 +164,12 @@ const SERVICE_TYPES: ServiceTypeMeta[] = [
     type: 'training',
     icon: <GraduationCap size={20} />,
     description: 'التدريب القانوني وبناء القدرات',
+    enabled: true,
+  },
+  {
+    type: 'other',
+    icon: <MoreHorizontal size={20} />,
+    description: 'خدمة قانونية خارج التصنيفات المعتمدة',
     enabled: true,
   },
 ];
@@ -1290,6 +1297,12 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
       {formData.service_type === 'ip' && renderStep3Ip()}
       {formData.service_type === 'legal_notices' && renderStep3LegalNotices()}
       {formData.service_type === 'training' && renderStep3Training()}
+      {formData.service_type === 'other' && (
+        <div className="asm-section-header">
+          <MoreHorizontal size={16} className="asm-section-icon" />
+          <span>لا توجد تفاصيل إضافية لهذا النوع — اكتب طبيعة الخدمة في حقل الوصف بالخطوة السابقة</span>
+        </div>
+      )}
     </div>
   );
 

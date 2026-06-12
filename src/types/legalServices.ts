@@ -12,7 +12,8 @@ export type ServiceType =
   | 'due_diligence'
   | 'ip'
   | 'legal_notices'
-  | 'training';
+  | 'training'
+  | 'other';
 
 export type ServicePriority = 'low' | 'medium' | 'high' | 'urgent';
 export type BillingType = 'hourly' | 'flat_fee' | 'milestone' | 'retainer';
@@ -1006,6 +1007,7 @@ export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   ip: 'ملكية فكرية',
   legal_notices: 'إنذارات قانونية',
   training: 'تدريب قانوني',
+  other: 'أخرى',
 };
 
 export const PRIORITY_LABELS: Record<ServicePriority, string> = {

@@ -25,6 +25,7 @@ import {
   Lightbulb,
   Bell,
   GraduationCap,
+  MoreHorizontal,
 } from 'lucide-react';
 
 import { LegalServiceService } from '../../services/legalServiceService';
@@ -52,6 +53,7 @@ const SERVICE_TYPE_ICONS: Record<ServiceType, React.ElementType> = {
   ip:                Lightbulb,
   legal_notices:     Bell,
   training:          GraduationCap,
+  other:             MoreHorizontal,
 };
 
 // ── Colour mappings ──────────────────────────────────────────────────────────
@@ -69,6 +71,7 @@ const TYPE_PILL_CLASS: Record<string, string> = {
   ip:                'ls-type-pill--notarization',
   legal_notices:     'ls-type-pill--other',
   training:          'ls-type-pill--other',
+  other:             'ls-type-pill--other',
 };
 
 const CARD_ICON_CLASS: Record<string, string> = {
