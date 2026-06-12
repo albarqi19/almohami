@@ -112,6 +112,9 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
               <Field label="الممثل القانوني">
                 <input type="text" value={form.legal_representative ?? ''} onChange={(e) => set('legal_representative', e.target.value)} />
               </Field>
+              <Field label="هوية الممثل" hint="تُستخدم لربط وكالات الشركة تلقائياً" span={2}>
+                <input type="text" dir="ltr" maxLength={20} inputMode="numeric" placeholder="1XXXXXXXXX" value={form.legal_representative_nid ?? ''} onChange={(e) => set('legal_representative_nid', e.target.value)} />
+              </Field>
             </div>
 
             <div className="edit-client-modal__divider">جهة الاتصال (Point of Contact)</div>
@@ -161,6 +164,7 @@ function buildInitial(client: Client): UpdateClientPayload {
     national_address: client.national_address ?? '',
     industry: client.industry ?? '',
     legal_representative: client.legal_representative ?? '',
+    legal_representative_nid: client.legal_representative_nid ?? '',
     point_of_contact_name: client.point_of_contact_name ?? '',
     point_of_contact_phone: client.point_of_contact_phone ?? '',
     point_of_contact_email: client.point_of_contact_email ?? '',

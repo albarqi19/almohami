@@ -421,6 +421,7 @@ const ClientDetailPage: React.FC = () => {
                 <InfoRow label="العنوان الوطني" value={client.national_address} />
                 <InfoRow label="الصناعة" value={client.industry} />
                 <InfoRow label="الممثل القانوني" value={client.legal_representative} />
+                <InfoRow label="هوية الممثل" value={client.legal_representative_nid} dir="ltr" />
               </>
             )}
           </SideCard>

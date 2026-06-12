@@ -19,6 +19,7 @@ export interface Client {
     national_address?: string | null;
     industry?: string | null;
     legal_representative?: string | null;
+    legal_representative_nid?: string | null;
     point_of_contact_name?: string | null;
     point_of_contact_phone?: string | null;
     point_of_contact_email?: string | null;
@@ -88,6 +89,7 @@ export type UpdateClientPayload = {
     national_address?: string | null;
     industry?: string | null;
     legal_representative?: string | null;
+    legal_representative_nid?: string | null;
     point_of_contact_name?: string | null;
     point_of_contact_phone?: string | null;
     point_of_contact_email?: string | null;
@@ -152,6 +154,7 @@ export class ClientManagementService {
         national_address?: string;
         industry?: string;
         legal_representative?: string;
+        legal_representative_nid?: string;
         point_of_contact_name?: string;
         point_of_contact_phone?: string;
         point_of_contact_email?: string;
