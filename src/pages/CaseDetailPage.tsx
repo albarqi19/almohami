@@ -950,6 +950,20 @@ const CaseDetailPage: React.FC = () => {
                     ) : (
                       caseData.client_name
                     )}
+                    {((caseData as any).extra_clients?.length ?? 0) > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowClientPhoneModal(true)}
+                        title="عرض كل عملاء القضية"
+                        style={{
+                          marginInlineStart: 6, padding: '1px 8px', fontSize: 11, fontWeight: 600,
+                          background: 'var(--law-navy-light, rgba(30,58,95,.08))', color: 'var(--law-navy)',
+                          border: '1px solid var(--color-border)', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >
+                        وآخرون +{(caseData as any).extra_clients.length}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

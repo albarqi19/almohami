@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, Loader2, Send, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, Loader2, Send, FileText, Users } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Modal from '../Modal';
 import { useCreateDocumentRequest } from '../../hooks/useDocumentRequests';
@@ -10,6 +10,8 @@ import {
   type DocumentRequestPriority,
   type ExpectedDocumentType,
 } from '../../types/documentRequests';
+import { ClientManagementService } from '../../services/clientManagementService';
+import type { CaseLinkedClient } from '../../services/clientManagementService';
 
 interface Props {
   isOpen: boolean;
@@ -74,6 +76,24 @@ const CreateDocumentRequestModal: React.FC<Props> = ({
   const [priority, setPriority] = useState<DocumentRequestPriority>('medium');
   const [items, setItems] = useState<ItemFormState[]>([newItem(1)]);
 
+  // مستلمو الطلب — القضية قد تكون متعددة الموكلين: عميل محدد أو عدة أو الكل
+  const [caseClients, setCaseClients] = useState<CaseLinkedClient[]>([]);
+  const [selectedClientIds, setSelectedClientIds] = useState<number[]>([clientId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelectedClientIds([clientId]);
+    ClientManagementService.getCaseLinkedClients(caseId)
+      .then(setCaseClients)
+      .catch(() => setCaseClients([]));
+  }, [isOpen, caseId, clientId]);
+
+  const toggleClient = (id: number) => {
+    setSelectedClientIds((curr) =>
+      curr.includes(id) ? curr.filter((c) => c !== id) : [...curr, id]
+    );
+  };
+
   const createMutation = useCreateDocumentRequest(caseId);
 
   const resetForm = () => {
@@ -83,6 +103,7 @@ const CreateDocumentRequestModal: React.FC<Props> = ({
     setDueDate('');
     setPriority('medium');
     setItems([newItem(1)]);
+    setSelectedClientIds([clientId]);
   };
 
   const handleClose = () => {
@@ -111,6 +132,7 @@ const CreateDocumentRequestModal: React.FC<Props> = ({
 
   const validate = (): string | null => {
     if (!title.trim()) return 'العنوان مطلوب';
+    if (selectedClientIds.length === 0) return 'اختر مستلماً واحداً على الأقل';
     if (items.length === 0) return 'أضف بنداً واحداً على الأقل';
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
@@ -130,9 +152,9 @@ const CreateDocumentRequestModal: React.FC<Props> = ({
     }
 
     try {
-      const created = await createMutation.mutateAsync({
+      // طلب مستقل لكل مستلم — كل عميل يرى طلبه ويرفع وثائقه باسمه
+      const payloadBase = {
         case_id: caseId,
-        client_id: clientId,
         title: title.trim(),
         client_message: clientMessage.trim() || undefined,
         internal_notes: internalNotes.trim() || undefined,
@@ -146,17 +168,24 @@ const CreateDocumentRequestModal: React.FC<Props> = ({
           min_files: it.min_files ?? 1,
           max_files: it.max_files ?? undefined,
         })),
-      });
+      };
 
-      if (sendNow) {
-        // dispatch send بعد الإنشاء
-        // نستخدم hook factory لإنشاء mutation ad-hoc
-        await DocumentRequestService_send_inline(created.id);
-        toast.success('تم إنشاء الطلب وإرساله للعميل');
-      } else {
-        toast.success('تم حفظ الطلب كمسودة');
+      const createdIds: number[] = [];
+      for (const cid of selectedClientIds) {
+        const created = await createMutation.mutateAsync({ ...payloadBase, client_id: cid });
+        if (sendNow) {
+          await DocumentRequestService_send_inline(created.id);
+        }
+        createdIds.push(created.id);
       }
-      onCreated?.(created.id);
+
+      const n = createdIds.length;
+      if (sendNow) {
+        toast.success(n > 1 ? `تم إنشاء وإرسال ${n} طلبات للعملاء` : 'تم إنشاء الطلب وإرساله للعميل');
+      } else {
+        toast.success(n > 1 ? `تم حفظ ${n} طلبات كمسودات` : 'تم حفظ الطلب كمسودة');
+      }
+      onCreated?.(createdIds[0]);
       resetForm();
       onClose();
     } catch (e: unknown) {
@@ -174,6 +203,52 @@ const CreateDocumentRequestModal: React.FC<Props> = ({
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="طلب وثائق جديد من العميل" size="xl" zIndex={80}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {/* المستلمون — يظهر عند تعدد عملاء القضية */}
+        {caseClients.length > 1 && (
+          <div>
+            <label style={labelStyle}>
+              <Users size={12} style={{ verticalAlign: 'middle', marginInlineEnd: 4 }} />
+              المستلمون * (عميل محدد، عدة عملاء، أو الكل)
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedClientIds(
+                    selectedClientIds.length === caseClients.length ? [] : caseClients.map((c) => c.id)
+                  )
+                }
+                style={{
+                  ...inputStyle, width: 'auto', cursor: 'pointer', fontWeight: 600,
+                  background: selectedClientIds.length === caseClients.length ? 'var(--law-navy, #1e3a5f)' : 'var(--color-surface)',
+                  color: selectedClientIds.length === caseClients.length ? '#fff' : 'var(--color-text)',
+                }}
+              >
+                الكل ({caseClients.length})
+              </button>
+              {caseClients.map((c) => {
+                const active = selectedClientIds.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => toggleClient(c.id)}
+                    title={c.phone ? c.phone : 'بدون رقم جوال — لن تصله رسالة واتساب'}
+                    style={{
+                      ...inputStyle, width: 'auto', cursor: 'pointer',
+                      background: active ? 'var(--law-navy-light, rgba(30,58,95,.12))' : 'var(--color-surface)',
+                      borderColor: active ? 'var(--law-navy, #1e3a5f)' : 'var(--color-border)',
+                      fontWeight: active ? 600 : 400,
+                    }}
+                  >
+                    {c.name}{c.is_primary ? ' ★' : ''}{!c.phone ? ' ⚠' : ''}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* الصف 1: عنوان + أولوية + موعد */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '12px' }}>
           <div>

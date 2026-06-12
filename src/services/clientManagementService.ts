@@ -96,6 +96,19 @@ export type UpdateClientPayload = {
     relationship_manager_id?: number | null;
 };
 
+/** عميل مرتبط بقضية (متعددة الموكلين) */
+export interface CaseLinkedClient {
+    id: number;
+    name: string;
+    phone: string | null;
+    email: string | null;
+    national_id: string | null;
+    entity_type: string | null;
+    is_active: boolean;
+    is_primary: boolean;
+    source: string;
+}
+
 // Client Management Service
 export class ClientManagementService {
     /**
@@ -184,6 +197,24 @@ export class ClientManagementService {
     static async getCaseClients(caseId: number | string): Promise<CaseClientsResponse> {
         const response = await apiClient.get<any>(`/client-management/case/${caseId}`);
         return response.data;
+    }
+
+    /**
+     * عملاء القضية المرتبطون (الرئيسي + الإضافيون) — قضايا متعددة الموكلين
+     */
+    static async getCaseLinkedClients(caseId: number | string): Promise<CaseLinkedClient[]> {
+        const response = await apiClient.get<any>(`/cases/${caseId}/clients`);
+        return response.data ?? [];
+    }
+
+    /** ربط عميل إضافي بالقضية */
+    static async addCaseClient(caseId: number | string, clientId: number): Promise<void> {
+        await apiClient.post<any>(`/cases/${caseId}/clients`, { client_id: clientId });
+    }
+
+    /** فك ربط عميل إضافي عن القضية */
+    static async removeCaseClient(caseId: number | string, clientId: number): Promise<void> {
+        await apiClient.delete<any>(`/cases/${caseId}/clients/${clientId}`);
     }
 
     /**
