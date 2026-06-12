@@ -15,7 +15,6 @@ import {
   MessageSquare,
   Calendar,
   FileCheck,
-  AlarmClock,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../contexts/AuthContext';
@@ -28,7 +27,6 @@ const Sidebar: React.FC = () => {
     { icon: FileText, label: 'القضايا', path: '/cases', roles: ['admin', 'lawyer', 'legal_assistant'] },
     { icon: FileCheck, label: 'الوكالات', path: '/wekalat', roles: ['admin', 'lawyer', 'legal_assistant'] },
     { icon: Calendar, label: 'الجلسات القادمة', path: '/sessions', roles: ['admin', 'lawyer', 'legal_assistant'] },
-    { icon: AlarmClock, label: 'المهل النظامية', path: '/deadlines', roles: ['admin', 'lawyer', 'legal_assistant'] },
     { icon: CheckSquare, label: 'المهام', path: '/tasks', roles: ['admin', 'lawyer', 'legal_assistant'] },
     { icon: FileText, label: 'قضاياي', path: '/my-cases', roles: ['client'] },
     { icon: MessageSquare, label: 'رسائلي', path: '/my-messages', roles: ['client'] },

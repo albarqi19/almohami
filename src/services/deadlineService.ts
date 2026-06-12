@@ -52,7 +52,7 @@ export interface LegalDeadline {
   days_remaining: number | null;
   urgency: DeadlineUrgency | null;
   created_at: string;
-  case?: { id: number; title: string; case_number: string | null } | null;
+  case?: { id: number; title: string; file_number: string | null } | null;
   assignee?: { id: number; name: string } | null;
   type?: { id: number; name: string; legal_reference: string | null } | null;
 }

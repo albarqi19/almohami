@@ -91,7 +91,7 @@ const DeadlineCard: React.FC<DeadlineCardProps> = ({ deadline: d, busy, onAction
           <span>📅 آخر يوم: {formatDue(d.due_date)}</span>
           {d.case && (
             <button className="legal-deadlines__case-link" onClick={() => onOpenCase(d.case!.id)}>
-              📂 {d.case.case_number || d.case.title}
+              📂 {d.case.file_number || d.case.title}
             </button>
           )}
           {d.assignee && <span>👤 {d.assignee.name}</span>}
@@ -177,7 +177,7 @@ const LegalDeadlines: React.FC = () => {
   // مودال الإضافة
   const [showAdd, setShowAdd] = useState(false);
   const [types, setTypes] = useState<DeadlineType[]>([]);
-  const [cases, setCases] = useState<Array<{ id: number; title: string; case_number?: string | null }>>([]);
+  const [cases, setCases] = useState<Array<{ id: number; title: string; file_number?: string | null }>>([]);
   const [addForm, setAddForm] = useState<CreateDeadlinePayload>({});
   const [addMode, setAddMode] = useState<'template' | 'manual'>('template');
   const [saving, setSaving] = useState(false);
@@ -257,7 +257,7 @@ const LegalDeadlines: React.FC = () => {
           ? Promise.resolve(cases)
           : CaseService.getCases({ per_page: 200 } as any).then((r: any) => {
               const list = Array.isArray(r) ? r : r?.data ?? [];
-              return list.map((x: any) => ({ id: Number(x.id), title: x.title, case_number: x.case_number ?? x.caseNumber }));
+              return list.map((x: any) => ({ id: Number(x.id), title: x.title, file_number: x.file_number ?? x.fileNumber }));
             }),
       ]);
       setTypes(t);
@@ -520,7 +520,7 @@ const LegalDeadlines: React.FC = () => {
                   <option value="">— بدون قضية —</option>
                   {cases.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.case_number ? `${c.case_number} — ` : ''}{c.title}
+                      {c.file_number ? `${c.file_number} — ` : ''}{c.title}
                     </option>
                   ))}
                 </select>

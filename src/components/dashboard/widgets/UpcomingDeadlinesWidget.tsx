@@ -54,7 +54,7 @@ const UpcomingDeadlinesWidget: React.FC = () => {
                 <span className="deadlines-widget__item-title">{d.title}</span>
                 {d.case && (
                   <span className="deadlines-widget__item-case">
-                    {d.case.case_number || d.case.title}
+                    {d.case.file_number || d.case.title}
                   </span>
                 )}
               </div>

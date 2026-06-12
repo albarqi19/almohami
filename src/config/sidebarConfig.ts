@@ -2,7 +2,7 @@ import {
   Home, FileText, FileCheck, Calendar, Scale, Briefcase, Users, Clock, CheckSquare,
   BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature, Receipt, CreditCard,
   TrendingUp, Bell, Settings, ClipboardList, BarChart3, FolderUp, QrCode, Lightbulb,
-  Landmark,
+  Landmark, AlarmClock,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -39,6 +39,7 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: FileText, label: 'القضايا', path: '/cases', permission: 'cases.view' },
   { icon: FileCheck, label: 'الوكالات', path: '/wekalat', permission: 'wekala.manage' },
   { icon: Calendar, label: 'الجلسات', path: '/sessions', permission: 'sessions.view' },
+  { icon: AlarmClock, label: 'المهل النظامية', path: '/deadlines', permission: 'deadlines.view' },
   { icon: Scale, label: 'طلبات التنفيذ', path: '/execution-requests', permission: 'cases.view' },
   { icon: Briefcase, label: 'الخدمات القانونية', path: '/legal-services', permission: 'cases.view' },
   { icon: Users, label: 'الاجتماعات', path: '/meetings/internal', permission: 'meetings.view' },

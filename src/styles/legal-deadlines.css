@@ -1,14 +1,21 @@
 /* ═══════════════════════════════════════════════════════
-   المهل النظامية — صفحة + بطاقات + مودالات
+   المهل النظامية — صفحة + بطاقات + مودالات + ويدجت + شريط القضية
    (ملاحظتا عميل #21 و#23)
-   إشارات المرور: expired/critical أحمر · warning برتقالي ·
-   upcoming أصفر · normal أخضر · suggested بنفسجي (ذكاء)
+
+   كل الألوان عبر متغيرات الثيمات الثلاثة (dashboard-theme.css):
+   :root / body.dark / body.classic — quiet-gray-* + dashboard-card +
+   status-* + law-navy/gold. لا ألوان hex صلبة إلا داخل المتغيرات.
+
+   إشارات المرور: normal أخضر · upcoming برتقالي · warning/critical
+   أحمر (critical ينبض) · expired أحمر صلب · suggested بنفسجي (ذكاء)
    ═══════════════════════════════════════════════════════ */
 
 .legal-deadlines {
-  padding: 20px 24px 48px;
-  max-width: 980px;
+  padding: 16px 20px 40px;
+  max-width: 1020px;
   margin: 0 auto;
+  color: var(--quiet-gray-900);
+  font-size: 13px;
 }
 
 /* ─── الترويسة ─── */
@@ -16,23 +23,25 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 14px;
+  margin-bottom: 12px;
 }
 
 .legal-deadlines__title {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--text-primary, #1e293b);
-  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--quiet-gray-900);
+  margin: 0 0 3px;
 }
 
+.legal-deadlines__title svg { color: var(--law-navy); }
+
 .legal-deadlines__subtitle {
-  font-size: 0.8rem;
-  color: var(--text-secondary, #64748b);
+  font-size: 11px;
+  color: var(--quiet-gray-600);
   margin: 0;
 }
 
@@ -40,8 +49,8 @@
 .legal-deadlines__toolbar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
 }
 
@@ -49,93 +58,92 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--bg-card, #fff);
-  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--dashboard-card);
+  border: 1px solid var(--quiet-gray-300);
   border-radius: 8px;
-  padding: 7px 12px;
+  padding: 6px 11px;
   flex: 1;
   min-width: 220px;
-  color: var(--text-secondary, #64748b);
+  color: var(--quiet-gray-500);
+  transition: border-color var(--transition-fast, 100ms ease);
 }
+
+.legal-deadlines__search:focus-within { border-color: var(--law-navy); }
 
 .legal-deadlines__search input {
   border: none;
   outline: none;
   background: transparent;
   flex: 1;
-  font-size: 0.85rem;
-  color: var(--text-primary, #1e293b);
+  font-size: 12.5px;
+  font-family: inherit;
+  color: var(--quiet-gray-900);
 }
+
+.legal-deadlines__search input::placeholder { color: var(--quiet-gray-500); }
 
 .legal-deadlines__mine-toggle {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.82rem;
-  color: var(--text-secondary, #64748b);
+  font-size: 12px;
+  color: var(--quiet-gray-600);
   cursor: pointer;
   white-space: nowrap;
 }
 
+.legal-deadlines__mine-toggle input { accent-color: var(--law-navy); }
+
 /* ─── الأقسام ─── */
-.legal-deadlines__section {
-  margin-bottom: 26px;
-}
+.legal-deadlines__section { margin-bottom: 22px; }
 
 .legal-deadlines__section-title {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 0.95rem;
+  font-size: 13.5px;
   font-weight: 700;
-  color: var(--text-primary, #1e293b);
-  margin: 0 0 6px;
+  color: var(--quiet-gray-800);
+  margin: 0 0 5px;
 }
 
 .legal-deadlines__section-hint {
-  font-size: 0.76rem;
-  color: var(--text-secondary, #64748b);
-  margin: 0 0 10px;
+  font-size: 11px;
+  color: var(--quiet-gray-600);
+  margin: 0 0 9px;
 }
 
-.legal-deadlines__section--suggested .legal-deadlines__section-title {
-  color: #7c3aed;
-}
-
-.legal-deadlines__section--missed .legal-deadlines__section-title {
-  color: #dc2626;
-}
+.legal-deadlines__section--suggested .legal-deadlines__section-title { color: var(--status-purple); }
+.legal-deadlines__section--missed .legal-deadlines__section-title { color: var(--status-red); }
 
 /* ─── البطاقة ─── */
 .legal-deadlines__card {
   display: flex;
   justify-content: space-between;
-  gap: 14px;
-  background: var(--bg-card, #fff);
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-inline-start: 4px solid #22c55e;
+  gap: 12px;
+  background: var(--dashboard-card);
+  border: 1px solid var(--quiet-gray-200);
+  border-inline-start: 4px solid var(--status-green);
   border-radius: 10px;
-  padding: 13px 16px;
-  margin-bottom: 10px;
+  padding: 11px 14px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-xs);
 }
 
-.legal-deadlines__card--upcoming { border-inline-start-color: #eab308; }
-.legal-deadlines__card--warning  { border-inline-start-color: #f97316; }
-.legal-deadlines__card--critical { border-inline-start-color: #dc2626; }
-.legal-deadlines__card--expired  { border-inline-start-color: #991b1b; background: #fef2f2; }
-.legal-deadlines__card--suggested {
-  border-inline-start-color: #7c3aed;
-  background: linear-gradient(to left, rgba(124, 58, 237, 0.04), transparent);
-}
+.legal-deadlines__card--upcoming { border-inline-start-color: var(--status-orange); }
+.legal-deadlines__card--warning  { border-inline-start-color: var(--status-red); }
+.legal-deadlines__card--critical { border-inline-start-color: var(--status-red); }
+.legal-deadlines__card--expired  { border-inline-start-color: var(--status-red); background: var(--status-red-light); }
+.legal-deadlines__card--suggested { border-inline-start-color: var(--status-purple); background: var(--status-purple-light); }
 
 .legal-deadlines__card-main { flex: 1; min-width: 0; }
 
 .legal-deadlines__card-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 /* العداد التنازلي */
@@ -143,108 +151,118 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.78rem;
+  font-size: 11.5px;
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 999px;
-  background: #dcfce7;
-  color: #166534;
+  background: var(--status-green-light);
+  color: var(--status-green);
 }
 
-.legal-deadlines__countdown--upcoming { background: #fef9c3; color: #854d0e; }
-.legal-deadlines__countdown--warning  { background: #ffedd5; color: #9a3412; }
-.legal-deadlines__countdown--critical { background: #fee2e2; color: #991b1b; animation: ld-pulse 1.6s ease-in-out infinite; }
-.legal-deadlines__countdown--expired  { background: #991b1b; color: #fff; }
+.legal-deadlines__countdown--upcoming { background: var(--status-orange-light); color: var(--status-orange); }
+.legal-deadlines__countdown--warning  { background: var(--status-red-light); color: var(--status-red); }
+.legal-deadlines__countdown--critical {
+  background: var(--status-red-light);
+  color: var(--status-red);
+  animation: ld-pulse 1.6s ease-in-out infinite;
+}
+.legal-deadlines__countdown--expired { background: var(--status-red); color: #fff; }
 
 @keyframes ld-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.35); }
-  50% { box-shadow: 0 0 0 5px rgba(220, 38, 38, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 var(--status-red-light); }
+  50% { box-shadow: 0 0 0 5px transparent; }
 }
 
 .legal-deadlines__source-badge,
 .legal-deadlines__opponent-badge,
 .legal-deadlines__progress-badge {
-  font-size: 0.7rem;
+  font-size: 10.5px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--bg-secondary, #f1f5f9);
-  color: var(--text-secondary, #64748b);
+  background: var(--quiet-gray-100);
+  color: var(--quiet-gray-600);
 }
 
-.legal-deadlines__opponent-badge { background: #e0f2fe; color: #075985; }
-.legal-deadlines__progress-badge { background: #dbeafe; color: #1d4ed8; }
+.legal-deadlines__opponent-badge { background: var(--status-blue-light); color: var(--status-blue); }
+.legal-deadlines__progress-badge { background: var(--status-blue-light); color: var(--status-blue); font-weight: 600; }
 
 .legal-deadlines__card-title {
-  font-size: 0.92rem;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--text-primary, #1e293b);
-  margin: 0 0 6px;
+  color: var(--quiet-gray-900);
+  margin: 0 0 5px;
 }
 
 .legal-deadlines__card-meta {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
-  font-size: 0.76rem;
-  color: var(--text-secondary, #64748b);
+  font-size: 11px;
+  color: var(--quiet-gray-600);
 }
 
 .legal-deadlines__case-link {
   background: none;
   border: none;
   padding: 0;
-  font-size: 0.76rem;
-  color: var(--primary-color, #2563eb);
+  font-size: 11px;
+  font-family: inherit;
+  color: var(--law-navy);
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-/* المرجع النظامي */
+body.dark .legal-deadlines__case-link { color: var(--quiet-gray-700); }
+
+/* المرجع النظامي — ذهبي (هوية قانونية) */
 .legal-deadlines__reference {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.72rem;
-  color: #0f766e;
-  background: #f0fdfa;
+  font-size: 10.5px;
+  color: var(--law-gold);
+  background: var(--law-gold-light);
   border-radius: 6px;
   padding: 4px 8px;
-  margin-top: 7px;
+  margin-top: 6px;
   width: fit-content;
 }
 
-.legal-deadlines__reference em { color: #b45309; font-style: normal; }
+.legal-deadlines__reference em { color: var(--status-orange); font-style: normal; }
 
 /* اقتباس الضبط الحرفي */
 .legal-deadlines__quote {
   display: flex;
   gap: 6px;
-  font-size: 0.78rem;
-  line-height: 1.7;
-  color: #4c1d95;
-  background: #f5f3ff;
-  border-inline-start: 3px solid #a78bfa;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--quiet-gray-800);
+  background: var(--dashboard-card);
+  border: 1px solid var(--quiet-gray-200);
+  border-inline-start: 3px solid var(--status-purple);
   border-radius: 6px;
-  padding: 8px 10px;
-  margin: 8px 0 0;
+  padding: 7px 10px;
+  margin: 7px 0 0;
 }
 
+.legal-deadlines__quote svg { color: var(--status-purple); flex-shrink: 0; margin-top: 3px; }
+
 .legal-deadlines__waive-reason {
-  font-size: 0.75rem;
-  color: #92400e;
-  background: #fffbeb;
+  font-size: 11px;
+  color: var(--status-orange);
+  background: var(--status-orange-light);
   border-radius: 6px;
   padding: 5px 9px;
-  margin-top: 7px;
+  margin-top: 6px;
 }
 
 /* ─── الأزرار ─── */
 .legal-deadlines__card-actions {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   justify-content: center;
   flex-shrink: 0;
 }
@@ -254,24 +272,34 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 0.78rem;
+  font-size: 11.5px;
   font-weight: 600;
-  padding: 7px 13px;
-  border-radius: 8px;
+  font-family: inherit;
+  padding: 6px 12px;
+  border-radius: 7px;
   border: 1px solid transparent;
   cursor: pointer;
   white-space: nowrap;
-  transition: filter 0.15s, background 0.15s;
+  transition: filter var(--transition-fast, 100ms ease), background var(--transition-fast, 100ms ease);
 }
 
 .legal-deadlines__btn:disabled { opacity: 0.55; cursor: not-allowed; }
-.legal-deadlines__btn:not(:disabled):hover { filter: brightness(0.95); }
+.legal-deadlines__btn:not(:disabled):hover { filter: brightness(1.06); }
 
-.legal-deadlines__btn--primary  { background: var(--primary-color, #2563eb); color: #fff; }
-.legal-deadlines__btn--complete { background: #16a34a; color: #fff; }
-.legal-deadlines__btn--confirm  { background: #7c3aed; color: #fff; }
-.legal-deadlines__btn--waive    { background: #fff7ed; color: #9a3412; border-color: #fdba74; }
-.legal-deadlines__btn--ghost    { background: transparent; color: var(--text-secondary, #64748b); border-color: var(--border-color, #e2e8f0); }
+.legal-deadlines__btn--primary  { background: var(--law-navy); color: #fff; }
+.legal-deadlines__btn--complete { background: var(--status-green); color: #fff; }
+.legal-deadlines__btn--confirm  { background: var(--status-purple); color: #fff; }
+.legal-deadlines__btn--waive {
+  background: var(--status-orange-light);
+  color: var(--status-orange);
+  border-color: var(--status-orange);
+}
+.legal-deadlines__btn--ghost {
+  background: transparent;
+  color: var(--quiet-gray-600);
+  border-color: var(--quiet-gray-300);
+}
+.legal-deadlines__btn--ghost:not(:disabled):hover { background: var(--quiet-gray-100); filter: none; }
 
 /* ─── الأرشيف ─── */
 .legal-deadlines__archive-toggle {
@@ -280,25 +308,26 @@
   gap: 6px;
   background: none;
   border: none;
-  font-size: 0.85rem;
+  font-size: 12.5px;
   font-weight: 600;
-  color: var(--text-secondary, #64748b);
+  font-family: inherit;
+  color: var(--quiet-gray-600);
   cursor: pointer;
   padding: 4px 0;
   margin-bottom: 8px;
 }
 
-.legal-deadlines__section--archive .legal-deadlines__card { opacity: 0.75; }
+.legal-deadlines__section--archive .legal-deadlines__card { opacity: 0.72; }
 
 /* ─── حالات عامة ─── */
 .legal-deadlines__empty {
   text-align: center;
-  font-size: 0.85rem;
-  color: var(--text-secondary, #64748b);
-  background: var(--bg-card, #fff);
-  border: 1px dashed var(--border-color, #e2e8f0);
+  font-size: 12px;
+  color: var(--quiet-gray-600);
+  background: var(--dashboard-card);
+  border: 1px dashed var(--quiet-gray-300);
   border-radius: 10px;
-  padding: 28px 16px;
+  padding: 26px 14px;
 }
 
 .legal-deadlines__loading {
@@ -306,9 +335,9 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 48px 0;
-  color: var(--text-secondary, #64748b);
-  font-size: 0.85rem;
+  padding: 44px 0;
+  color: var(--quiet-gray-600);
+  font-size: 12.5px;
 }
 
 .legal-deadlines__spinner { animation: ld-spin 1s linear infinite; }
@@ -316,20 +345,20 @@
 @keyframes ld-spin { to { transform: rotate(360deg); } }
 
 .legal-deadlines__error {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+  background: var(--status-red-light);
+  color: var(--status-red);
+  border: 1px solid var(--status-red);
   border-radius: 8px;
-  padding: 9px 13px;
-  font-size: 0.8rem;
-  margin-bottom: 14px;
+  padding: 8px 12px;
+  font-size: 12px;
+  margin-bottom: 12px;
 }
 
 /* ─── المودالات ─── */
 .legal-deadlines__modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(9, 30, 66, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -338,69 +367,80 @@
 }
 
 .legal-deadlines__modal {
-  background: var(--bg-card, #fff);
+  background: var(--dashboard-card);
+  border: 1px solid var(--quiet-gray-200);
   border-radius: 12px;
-  padding: 20px 22px;
+  padding: 18px 20px;
   width: 100%;
-  max-width: 440px;
+  max-width: 430px;
   max-height: 88vh;
   overflow-y: auto;
+  box-shadow: var(--shadow-md);
 }
 
-.legal-deadlines__modal--wide { max-width: 560px; }
+.legal-deadlines__modal--wide { max-width: 540px; }
 
 .legal-deadlines__modal h3 {
-  margin: 0 0 6px;
-  font-size: 1rem;
-  color: var(--text-primary, #1e293b);
+  margin: 0 0 5px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--quiet-gray-900);
 }
 
 .legal-deadlines__modal-hint {
-  font-size: 0.78rem;
-  color: var(--text-secondary, #64748b);
-  margin: 0 0 12px;
+  font-size: 11.5px;
+  color: var(--quiet-gray-600);
+  margin: 0 0 11px;
   line-height: 1.7;
 }
 
 .legal-deadlines__modal textarea {
   width: 100%;
-  border: 1px solid var(--border-color, #e2e8f0);
+  border: 1px solid var(--quiet-gray-300);
   border-radius: 8px;
-  padding: 9px 11px;
-  font-size: 0.83rem;
+  padding: 8px 10px;
+  font-size: 12.5px;
   font-family: inherit;
   resize: vertical;
+  background: var(--dashboard-card);
+  color: var(--quiet-gray-900);
 }
+
+.legal-deadlines__modal textarea:focus { outline: none; border-color: var(--law-navy); }
 
 .legal-deadlines__modal-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-start;
-  margin-top: 14px;
+  margin-top: 13px;
 }
 
 /* تبويبا وضع الإضافة */
 .legal-deadlines__mode-tabs {
   display: flex;
   gap: 6px;
-  margin-bottom: 14px;
+  margin-bottom: 13px;
 }
 
 .legal-deadlines__mode-tabs button {
   flex: 1;
-  font-size: 0.78rem;
+  font-size: 11.5px;
   font-weight: 600;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color, #e2e8f0);
+  font-family: inherit;
+  padding: 7px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--quiet-gray-300);
   background: transparent;
-  color: var(--text-secondary, #64748b);
+  color: var(--quiet-gray-600);
   cursor: pointer;
+  transition: background var(--transition-fast, 100ms ease);
 }
 
+.legal-deadlines__mode-tabs button:hover { background: var(--quiet-gray-100); }
+
 .legal-deadlines__mode-tabs button.is-active {
-  background: var(--primary-color, #2563eb);
-  border-color: var(--primary-color, #2563eb);
+  background: var(--law-navy);
+  border-color: var(--law-navy);
   color: #fff;
 }
 
@@ -408,33 +448,36 @@
 .legal-deadlines__form {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 10px;
 }
 
 .legal-deadlines__form label {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.78rem;
+  font-size: 11.5px;
   font-weight: 600;
-  color: var(--text-primary, #1e293b);
+  color: var(--quiet-gray-800);
 }
 
 .legal-deadlines__form input,
 .legal-deadlines__form select {
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 0.83rem;
+  border: 1px solid var(--quiet-gray-300);
+  border-radius: 7px;
+  padding: 7px 9px;
+  font-size: 12.5px;
   font-family: inherit;
-  background: var(--bg-card, #fff);
-  color: var(--text-primary, #1e293b);
+  background: var(--dashboard-card);
+  color: var(--quiet-gray-900);
 }
 
+.legal-deadlines__form input:focus,
+.legal-deadlines__form select:focus { outline: none; border-color: var(--law-navy); }
+
 .legal-deadlines__calc-note {
-  font-size: 0.72rem;
-  color: #0f766e;
-  background: #f0fdfa;
+  font-size: 10.5px;
+  color: var(--law-gold);
+  background: var(--law-gold-light);
   border-radius: 6px;
   padding: 7px 10px;
   margin: 0;
@@ -442,75 +485,76 @@
 }
 
 /* ─── ويدجت لوحة التحكم ─── */
-.deadlines-widget__list { display: flex; flex-direction: column; gap: 8px; }
+.deadlines-widget__list { display: flex; flex-direction: column; gap: 7px; }
 
 .deadlines-widget__item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 9px 11px;
+  padding: 8px 10px;
   border-radius: 8px;
-  background: var(--bg-secondary, #f8fafc);
-  border-inline-start: 3px solid #22c55e;
+  background: var(--quiet-gray-100);
+  border-inline-start: 3px solid var(--status-green);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--transition-fast, 100ms ease);
 }
 
-.deadlines-widget__item:hover { background: var(--bg-hover, #f1f5f9); }
-.deadlines-widget__item--upcoming { border-inline-start-color: #eab308; }
-.deadlines-widget__item--warning  { border-inline-start-color: #f97316; }
-.deadlines-widget__item--critical { border-inline-start-color: #dc2626; }
-.deadlines-widget__item--expired  { border-inline-start-color: #991b1b; }
+.deadlines-widget__item:hover { background: var(--quiet-gray-200); }
+.deadlines-widget__item--upcoming { border-inline-start-color: var(--status-orange); }
+.deadlines-widget__item--warning,
+.deadlines-widget__item--critical,
+.deadlines-widget__item--expired { border-inline-start-color: var(--status-red); }
 
 .deadlines-widget__item-title {
-  font-size: 0.78rem;
+  font-size: 11.5px;
   font-weight: 600;
-  color: var(--text-primary, #1e293b);
+  color: var(--quiet-gray-900);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: block;
 }
 
 .deadlines-widget__item-case {
-  font-size: 0.7rem;
-  color: var(--text-secondary, #64748b);
+  font-size: 10.5px;
+  color: var(--quiet-gray-600);
   display: block;
   margin-top: 2px;
 }
 
 .deadlines-widget__days {
-  font-size: 0.72rem;
+  font-size: 10.5px;
   font-weight: 700;
   white-space: nowrap;
   padding: 3px 9px;
   border-radius: 999px;
-  background: #dcfce7;
-  color: #166534;
+  background: var(--status-green-light);
+  color: var(--status-green);
 }
 
-.deadlines-widget__days--upcoming { background: #fef9c3; color: #854d0e; }
-.deadlines-widget__days--warning  { background: #ffedd5; color: #9a3412; }
-.deadlines-widget__days--critical { background: #fee2e2; color: #991b1b; }
-.deadlines-widget__days--expired  { background: #991b1b; color: #fff; }
+.deadlines-widget__days--upcoming { background: var(--status-orange-light); color: var(--status-orange); }
+.deadlines-widget__days--warning,
+.deadlines-widget__days--critical { background: var(--status-red-light); color: var(--status-red); }
+.deadlines-widget__days--expired { background: var(--status-red); color: #fff; }
 
 .deadlines-widget__empty {
   text-align: center;
-  font-size: 0.78rem;
-  color: var(--text-secondary, #64748b);
-  padding: 22px 10px;
+  font-size: 11.5px;
+  color: var(--quiet-gray-600);
+  padding: 20px 10px;
 }
 
 .deadlines-widget__suggested-note {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.73rem;
-  color: #7c3aed;
-  background: #f5f3ff;
+  font-size: 11px;
+  color: var(--status-purple);
+  background: var(--status-purple-light);
   border-radius: 7px;
   padding: 6px 10px;
-  margin-top: 8px;
+  margin-top: 7px;
   cursor: pointer;
 }
 
@@ -519,41 +563,42 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: linear-gradient(to left, #fef2f2, #fff7ed);
-  border: 1px solid #fecaca;
-  border-inline-start: 4px solid #dc2626;
+  background: var(--status-red-light);
+  border: 1px solid var(--status-red);
+  border-inline-start: 4px solid var(--status-red);
   border-radius: 10px;
-  padding: 11px 15px;
-  margin-bottom: 14px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
 }
 
-.case-deadline-banner__icon { color: #dc2626; flex-shrink: 0; }
+.case-deadline-banner__icon { color: var(--status-red); flex-shrink: 0; }
 
 .case-deadline-banner__text {
   flex: 1;
-  font-size: 0.83rem;
-  color: #7f1d1d;
+  font-size: 12.5px;
+  color: var(--quiet-gray-900);
   min-width: 200px;
 }
 
-.case-deadline-banner__text strong { font-weight: 700; }
+.case-deadline-banner__text strong { font-weight: 800; color: var(--status-red); }
 
 .case-deadline-banner__link {
-  font-size: 0.76rem;
+  font-size: 11.5px;
   font-weight: 600;
-  color: #b91c1c;
-  background: #fff;
-  border: 1px solid #fca5a5;
+  color: var(--status-red);
+  background: var(--dashboard-card);
+  border: 1px solid var(--status-red);
   border-radius: 7px;
   padding: 6px 12px;
   cursor: pointer;
   white-space: nowrap;
+  text-decoration: none;
 }
 
 /* ─── استجابة الجوال ─── */
 @media (max-width: 640px) {
-  .legal-deadlines { padding: 14px 12px 40px; }
+  .legal-deadlines { padding: 12px 12px 36px; }
   .legal-deadlines__card { flex-direction: column; }
   .legal-deadlines__card-actions { flex-direction: row; flex-wrap: wrap; }
 }
