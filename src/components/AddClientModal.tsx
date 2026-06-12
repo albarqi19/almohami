@@ -64,6 +64,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
     national_address: '',
     industry: '',
     legal_representative: '',
+    legal_representative_nid: '',
     point_of_contact_name: '',
     point_of_contact_phone: '',
     point_of_contact_email: '',
@@ -104,6 +105,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
       if (form.national_address) payload.national_address = form.national_address.trim();
       if (form.industry) payload.industry = form.industry.trim();
       if (form.legal_representative) payload.legal_representative = form.legal_representative.trim();
+      if (form.legal_representative_nid) payload.legal_representative_nid = form.legal_representative_nid.trim();
       if (form.point_of_contact_name) payload.point_of_contact_name = form.point_of_contact_name.trim();
       if (form.point_of_contact_phone) payload.point_of_contact_phone = form.point_of_contact_phone.trim();
       if (form.point_of_contact_email) payload.point_of_contact_email = form.point_of_contact_email.trim();
@@ -433,6 +435,22 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
                         onChange={(e) => set('legal_representative', e.target.value)}
                         style={fieldInputStyle}
                       />
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>هوية الممثل</label>
+                      <input
+                        type="text"
+                        dir="ltr"
+                        inputMode="numeric"
+                        maxLength={20}
+                        placeholder="1XXXXXXXXX"
+                        value={form.legal_representative_nid}
+                        onChange={(e) => set('legal_representative_nid', e.target.value)}
+                        style={fieldInputStyle}
+                      />
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-secondary, #6b7280)' }}>
+                        تُستخدم لربط وكالات الشركة تلقائياً
+                      </span>
                     </div>
                     <div style={{ gridColumn: '1 / -1' }}>
                       <label style={fieldLabelStyle}>العنوان الوطني</label>
