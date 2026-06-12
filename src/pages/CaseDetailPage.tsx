@@ -950,7 +950,7 @@ const CaseDetailPage: React.FC = () => {
                     ) : (
                       caseData.client_name
                     )}
-                    {((caseData as any).extra_clients?.length ?? 0) > 0 && (
+                    {((caseData as any).extra_clients?.length ?? 0) > 0 ? (
                       <button
                         type="button"
                         onClick={() => setShowClientPhoneModal(true)}
@@ -962,6 +962,19 @@ const CaseDetailPage: React.FC = () => {
                         }}
                       >
                         وآخرون +{(caseData as any).extra_clients.length}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowClientPhoneModal(true)}
+                        title="عملاء القضية — عرض وإضافة موكلين آخرين من أطراف الدعوى"
+                        style={{
+                          marginInlineStart: 6, padding: '1px 8px', fontSize: 11, fontWeight: 600,
+                          background: 'transparent', color: 'var(--law-navy)',
+                          border: '1px dashed var(--color-border)', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >
+                        + عملاء
                       </button>
                     )}
                   </div>
