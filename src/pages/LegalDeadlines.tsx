@@ -1,22 +1,24 @@
 // صفحة «المهل النظامية» — عدادات تنازلية لمهل الاعتراض والمدد الإجرائية
 // (ملاحظتا عميل #21 و#23)
 //
-// الأقسام: مقترحة من الذكاء (تأكيد/رفض) → فائتة → مفتوحة (إشارات مرور) → مؤرشفة
+// التخطيط: شريط جانبي يمين (إحصائيات + فلاتر العرض) + عمود رئيسي للبطاقات.
+// العروض: نظرة عامة (مقترحة + فائتة + مفتوحة) أو شريحة واحدة من الشريط الجانبي.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlarmClock,
   AlertTriangle,
+  Ban,
   Check,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
+  LayoutGrid,
   Loader2,
   Plus,
   Quote,
   ScrollText,
   Search,
   Sparkles,
+  Swords,
   X,
 } from 'lucide-react';
 import deadlineService, {
@@ -55,6 +57,8 @@ const formatDue = (dueDate: string): string => {
   return hijri ? `${greg} (${hijri})` : greg;
 };
 
+type ViewKey = 'overview' | 'open' | 'suggested' | 'missed' | 'completed' | 'waived' | 'opponent';
+
 // ═══════════════════════════════════════════════════════
 //  بطاقة مهلة واحدة
 // ═══════════════════════════════════════════════════════
@@ -76,6 +80,7 @@ const DeadlineCard: React.FC<DeadlineCardProps> = ({ deadline: d, busy, onAction
     <div className={`legal-deadlines__card legal-deadlines__card--${urgency} ${isSuggested ? 'legal-deadlines__card--suggested' : ''}`}>
       <div className="legal-deadlines__card-main">
         <div className="legal-deadlines__card-head">
+          <span className={`legal-deadlines__dot legal-deadlines__dot--${isSuggested ? 'suggested' : urgency}`} />
           <span className={`legal-deadlines__countdown legal-deadlines__countdown--${urgency}`}>
             <AlarmClock size={14} />
             {daysLabel(d.days_remaining)}
@@ -167,7 +172,7 @@ const LegalDeadlines: React.FC = () => {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [mineOnly, setMineOnly] = useState(false);
   const [search, setSearch] = useState('');
-  const [showArchive, setShowArchive] = useState(false);
+  const [view, setView] = useState<ViewKey>('overview');
   const [error, setError] = useState<string | null>(null);
 
   // مودال التنازل (المبرر إلزامي — حماية للمكتب)
@@ -205,14 +210,42 @@ const LegalDeadlines: React.FC = () => {
   }, [load]);
 
   const groups = useMemo(() => {
-    const suggested = deadlines.filter((d) => d.status === 'suggested' && (d.days_remaining ?? -1) >= 0);
-    const missed = deadlines.filter((d) => d.status === 'missed');
     const open = deadlines
       .filter((d) => d.status === 'active' || d.status === 'in_progress')
       .sort((a, b) => (a.due_date < b.due_date ? -1 : 1));
-    const archived = deadlines.filter((d) => d.status === 'completed' || d.status === 'waived');
-    return { suggested, missed, open, archived };
+
+    return {
+      suggested: deadlines.filter((d) => d.status === 'suggested' && (d.days_remaining ?? -1) >= 0),
+      missed: deadlines.filter((d) => d.status === 'missed'),
+      open,
+      completed: deadlines.filter((d) => d.status === 'completed'),
+      waived: deadlines.filter((d) => d.status === 'waived'),
+      opponent: open.filter((d) => d.obligated_party === 'opponent'),
+    };
   }, [deadlines]);
+
+  const stats = useMemo(
+    () => ({
+      open: groups.open.length,
+      dueSoon: groups.open.filter((d) => d.days_remaining !== null && d.days_remaining >= 0 && d.days_remaining <= 3).length,
+      suggested: groups.suggested.length,
+      missed: groups.missed.length,
+      completed: groups.completed.length,
+      waived: groups.waived.length,
+      opponent: groups.opponent.length,
+    }),
+    [groups]
+  );
+
+  const VIEWS: Array<{ key: ViewKey; label: string; icon: React.ReactNode; count: number }> = [
+    { key: 'overview', label: 'النظرة العامة', icon: <LayoutGrid size={15} />, count: stats.open },
+    { key: 'open', label: 'المفتوحة', icon: <AlarmClock size={15} />, count: stats.open },
+    { key: 'suggested', label: 'مقترحات الذكاء', icon: <Sparkles size={15} />, count: stats.suggested },
+    { key: 'missed', label: 'الفائتة', icon: <AlertTriangle size={15} />, count: stats.missed },
+    { key: 'completed', label: 'المنجزة', icon: <CheckCircle2 size={15} />, count: stats.completed },
+    { key: 'waived', label: 'المتنازل عنها', icon: <Ban size={15} />, count: stats.waived },
+    { key: 'opponent', label: 'مهل الخصوم', icon: <Swords size={15} />, count: stats.opponent },
+  ];
 
   const handleAction = async (d: LegalDeadline, action: string) => {
     if (action === 'waive') {
@@ -289,6 +322,15 @@ const LegalDeadlines: React.FC = () => {
       ? !!addForm.deadline_type_id && !!addForm.start_date && !!(selectedType?.period_days || addForm.period_days)
       : !!addForm.title && !!addForm.due_date;
 
+  const openCase = (id: number) => navigate(`/cases/${id}`);
+
+  const renderCards = (list: LegalDeadline[], emptyText: string) =>
+    list.length === 0 ? (
+      <div className="legal-deadlines__empty">{emptyText}</div>
+    ) : (
+      list.map((d) => <DeadlineCard key={d.id} deadline={d} busy={busyId === d.id} onAction={handleAction} onOpenCase={openCase} />)
+    );
+
   return (
     <div className="legal-deadlines">
       {/* ─── الترويسة ─── */}
@@ -307,92 +349,127 @@ const LegalDeadlines: React.FC = () => {
         </button>
       </div>
 
-      {/* ─── الفلاتر ─── */}
-      <div className="legal-deadlines__toolbar">
-        <div className="legal-deadlines__search">
-          <Search size={15} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="بحث بعنوان المهلة أو القضية..."
-          />
-        </div>
-        <label className="legal-deadlines__mine-toggle">
-          <input type="checkbox" checked={mineOnly} onChange={(e) => setMineOnly(e.target.checked)} />
-          المسندة إليّ فقط
-        </label>
-      </div>
+      <div className="legal-deadlines__layout">
+        {/* ─── الشريط الجانبي: إحصائيات + فلاتر ─── */}
+        <aside className="legal-deadlines__sidebar">
+          <div className="legal-deadlines__kpis">
+            <div className="legal-deadlines__kpi legal-deadlines__kpi--navy">
+              <span className="legal-deadlines__kpi-value">{stats.open}</span>
+              <span className="legal-deadlines__kpi-label">مفتوحة</span>
+            </div>
+            <div className="legal-deadlines__kpi legal-deadlines__kpi--red">
+              <span className="legal-deadlines__kpi-value">{stats.dueSoon}</span>
+              <span className="legal-deadlines__kpi-label">خلال ٣ أيام</span>
+            </div>
+            <div className="legal-deadlines__kpi legal-deadlines__kpi--purple">
+              <span className="legal-deadlines__kpi-value">{stats.suggested}</span>
+              <span className="legal-deadlines__kpi-label">مقترحة</span>
+            </div>
+            <div className="legal-deadlines__kpi legal-deadlines__kpi--red">
+              <span className="legal-deadlines__kpi-value">{stats.missed}</span>
+              <span className="legal-deadlines__kpi-label">فائتة</span>
+            </div>
+            <div className="legal-deadlines__kpi legal-deadlines__kpi--green">
+              <span className="legal-deadlines__kpi-value">{stats.completed}</span>
+              <span className="legal-deadlines__kpi-label">منجزة</span>
+            </div>
+            <div className="legal-deadlines__kpi legal-deadlines__kpi--orange">
+              <span className="legal-deadlines__kpi-value">{stats.waived}</span>
+              <span className="legal-deadlines__kpi-label">متنازل عنها</span>
+            </div>
+          </div>
 
-      {error && <div className="legal-deadlines__error">{error}</div>}
-
-      {loading ? (
-        <div className="legal-deadlines__loading">
-          <Loader2 className="legal-deadlines__spinner" size={28} />
-          جارٍ تحميل المهل...
-        </div>
-      ) : (
-        <>
-          {/* ─── مقترحة من الذكاء ─── */}
-          {groups.suggested.length > 0 && (
-            <section className="legal-deadlines__section legal-deadlines__section--suggested">
-              <h3 className="legal-deadlines__section-title">
-                <Sparkles size={16} />
-                مهل محتملة من ضبوط الجلسات — تحتاج مراجعتك ({groups.suggested.length})
-              </h3>
-              <p className="legal-deadlines__section-hint">
-                استخرجها الذكاء من نص الضبط مع الاقتباس الحرفي. لا تُرسل تنبيهات قبل تأكيدك.
-              </p>
-              {groups.suggested.map((d) => (
-                <DeadlineCard key={d.id} deadline={d} busy={busyId === d.id} onAction={handleAction} onOpenCase={(id) => navigate(`/cases/${id}`)} />
-              ))}
-            </section>
-          )}
-
-          {/* ─── فائتة ─── */}
-          {groups.missed.length > 0 && (
-            <section className="legal-deadlines__section legal-deadlines__section--missed">
-              <h3 className="legal-deadlines__section-title">
-                <AlertTriangle size={16} />
-                مهل فائتة ({groups.missed.length})
-              </h3>
-              {groups.missed.map((d) => (
-                <DeadlineCard key={d.id} deadline={d} busy={busyId === d.id} onAction={handleAction} onOpenCase={(id) => navigate(`/cases/${id}`)} />
-              ))}
-            </section>
-          )}
-
-          {/* ─── المفتوحة ─── */}
-          <section className="legal-deadlines__section">
-            <h3 className="legal-deadlines__section-title">
-              <AlarmClock size={16} />
-              مهل مفتوحة ({groups.open.length})
-            </h3>
-            {groups.open.length === 0 ? (
-              <div className="legal-deadlines__empty">
-                لا مهل مفتوحة حالياً — المهل تُنشأ تلقائياً من أحكام ناجز وضبوط الجلسات، أو أضفها يدوياً.
-              </div>
-            ) : (
-              groups.open.map((d) => (
-                <DeadlineCard key={d.id} deadline={d} busy={busyId === d.id} onAction={handleAction} onOpenCase={(id) => navigate(`/cases/${id}`)} />
-              ))
-            )}
-          </section>
-
-          {/* ─── الأرشيف ─── */}
-          {groups.archived.length > 0 && (
-            <section className="legal-deadlines__section legal-deadlines__section--archive">
-              <button className="legal-deadlines__archive-toggle" onClick={() => setShowArchive(!showArchive)}>
-                {showArchive ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                منجزة ومتنازَل عنها ({groups.archived.length})
+          <nav className="legal-deadlines__views">
+            {VIEWS.map((v) => (
+              <button
+                key={v.key}
+                className={`legal-deadlines__view-btn ${view === v.key ? 'is-active' : ''}`}
+                onClick={() => setView(v.key)}
+              >
+                {v.icon}
+                <span className="legal-deadlines__view-label">{v.label}</span>
+                <span className="legal-deadlines__view-count">{v.count}</span>
               </button>
-              {showArchive &&
-                groups.archived.map((d) => (
-                  <DeadlineCard key={d.id} deadline={d} busy={busyId === d.id} onAction={handleAction} onOpenCase={(id) => navigate(`/cases/${id}`)} />
-                ))}
+            ))}
+          </nav>
+
+          <label className="legal-deadlines__mine-toggle">
+            <input type="checkbox" checked={mineOnly} onChange={(e) => setMineOnly(e.target.checked)} />
+            المسندة إليّ فقط
+          </label>
+        </aside>
+
+        {/* ─── العمود الرئيسي ─── */}
+        <main className="legal-deadlines__main">
+          <div className="legal-deadlines__search">
+            <Search size={15} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="بحث بعنوان المهلة أو القضية..."
+            />
+          </div>
+
+          {error && <div className="legal-deadlines__error">{error}</div>}
+
+          {loading ? (
+            <div className="legal-deadlines__loading">
+              <Loader2 className="legal-deadlines__spinner" size={28} />
+              جارٍ تحميل المهل...
+            </div>
+          ) : view === 'overview' ? (
+            <>
+              {groups.suggested.length > 0 && (
+                <section className="legal-deadlines__section legal-deadlines__section--suggested">
+                  <h3 className="legal-deadlines__section-title">
+                    <Sparkles size={16} />
+                    مهل محتملة من ضبوط الجلسات — تحتاج مراجعتك ({groups.suggested.length})
+                  </h3>
+                  <p className="legal-deadlines__section-hint">
+                    استخرجها الذكاء من نص الضبط مع الاقتباس الحرفي. لا تُرسل تنبيهات قبل تأكيدك.
+                  </p>
+                  {renderCards(groups.suggested, '')}
+                </section>
+              )}
+
+              {groups.missed.length > 0 && (
+                <section className="legal-deadlines__section legal-deadlines__section--missed">
+                  <h3 className="legal-deadlines__section-title">
+                    <AlertTriangle size={16} />
+                    مهل فائتة ({groups.missed.length})
+                  </h3>
+                  {renderCards(groups.missed, '')}
+                </section>
+              )}
+
+              <section className="legal-deadlines__section">
+                <h3 className="legal-deadlines__section-title">
+                  <AlarmClock size={16} />
+                  مهل مفتوحة ({groups.open.length})
+                </h3>
+                {renderCards(groups.open, 'لا مهل مفتوحة حالياً — المهل تُنشأ تلقائياً من أحكام ناجز وضبوط الجلسات، أو أضفها يدوياً.')}
+              </section>
+            </>
+          ) : (
+            <section className="legal-deadlines__section">
+              {view === 'suggested' && (
+                <p className="legal-deadlines__section-hint">
+                  استخرجها الذكاء من نص الضبط مع الاقتباس الحرفي. لا تُرسل تنبيهات قبل تأكيدك.
+                </p>
+              )}
+              {renderCards(
+                (groups as Record<string, LegalDeadline[]>)[view] ?? [],
+                view === 'open' ? 'لا مهل مفتوحة حالياً.'
+                : view === 'suggested' ? 'لا مقترحات بانتظار المراجعة.'
+                : view === 'missed' ? 'لا مهل فائتة — ممتاز 👏'
+                : view === 'completed' ? 'لا مهل منجزة بعد.'
+                : view === 'waived' ? 'لا مهل متنازل عنها.'
+                : 'لا مهل مفتوحة على الخصوم.'
+              )}
             </section>
           )}
-        </>
-      )}
+        </main>
+      </div>
 
       {/* ─── مودال التنازل (مبرر إلزامي) ─── */}
       {waiveTarget && (

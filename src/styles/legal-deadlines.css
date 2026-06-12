@@ -12,10 +12,125 @@
 
 .legal-deadlines {
   padding: 16px 20px 40px;
-  max-width: 1020px;
+  max-width: 1240px;
   margin: 0 auto;
   color: var(--quiet-gray-900);
   font-size: 13px;
+}
+
+/* ─── التخطيط: شريط جانبي يمين + عمود رئيسي ─── */
+.legal-deadlines__layout {
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.legal-deadlines__sidebar {
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--dashboard-card);
+  border: 1px solid var(--quiet-gray-200);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: var(--shadow-xs);
+}
+
+.legal-deadlines__main { min-width: 0; }
+
+/* الإحصائيات المصغرة */
+.legal-deadlines__kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.legal-deadlines__kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  background: var(--quiet-gray-100);
+}
+
+.legal-deadlines__kpi-value {
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.legal-deadlines__kpi-label {
+  font-size: 10px;
+  color: var(--quiet-gray-600);
+}
+
+.legal-deadlines__kpi--navy .legal-deadlines__kpi-value { color: var(--law-navy); }
+.legal-deadlines__kpi--red .legal-deadlines__kpi-value { color: var(--status-red); }
+.legal-deadlines__kpi--purple .legal-deadlines__kpi-value { color: var(--status-purple); }
+.legal-deadlines__kpi--green .legal-deadlines__kpi-value { color: var(--status-green); }
+.legal-deadlines__kpi--orange .legal-deadlines__kpi-value { color: var(--status-orange); }
+
+body.dark .legal-deadlines__kpi--navy .legal-deadlines__kpi-value { color: var(--quiet-gray-800); }
+
+/* قائمة العروض (الفلاتر) */
+.legal-deadlines__views {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid var(--quiet-gray-200);
+  padding-top: 10px;
+}
+
+.legal-deadlines__view-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--quiet-gray-700);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: start;
+  transition: background var(--transition-fast, 100ms ease);
+}
+
+.legal-deadlines__view-btn:hover { background: var(--quiet-gray-100); }
+
+.legal-deadlines__view-btn.is-active {
+  background: var(--law-navy-light);
+  color: var(--law-navy);
+}
+
+body.dark .legal-deadlines__view-btn.is-active { color: var(--quiet-gray-900); }
+
+.legal-deadlines__view-btn svg { flex-shrink: 0; }
+
+.legal-deadlines__view-label { flex: 1; }
+
+.legal-deadlines__view-count {
+  font-size: 10.5px;
+  font-weight: 700;
+  background: var(--quiet-gray-200);
+  color: var(--quiet-gray-700);
+  border-radius: 999px;
+  padding: 1px 7px;
+  min-width: 22px;
+  text-align: center;
+}
+
+.legal-deadlines__view-btn.is-active .legal-deadlines__view-count {
+  background: var(--law-navy);
+  color: #fff;
 }
 
 /* ─── الترويسة ─── */
@@ -45,16 +160,9 @@
   margin: 0;
 }
 
-/* ─── شريط الأدوات ─── */
-.legal-deadlines__toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
+/* ─── البحث ─── */
 .legal-deadlines__search {
+  margin-bottom: 14px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -90,6 +198,8 @@
   color: var(--quiet-gray-600);
   cursor: pointer;
   white-space: nowrap;
+  border-top: 1px solid var(--quiet-gray-200);
+  padding-top: 10px;
 }
 
 .legal-deadlines__mine-toggle input { accent-color: var(--law-navy); }
@@ -123,18 +233,37 @@
   gap: 12px;
   background: var(--dashboard-card);
   border: 1px solid var(--quiet-gray-200);
-  border-inline-start: 4px solid var(--status-green);
   border-radius: 10px;
   padding: 11px 14px;
   margin-bottom: 8px;
   box-shadow: var(--shadow-xs);
 }
 
-.legal-deadlines__card--upcoming { border-inline-start-color: var(--status-orange); }
-.legal-deadlines__card--warning  { border-inline-start-color: var(--status-red); }
-.legal-deadlines__card--critical { border-inline-start-color: var(--status-red); }
-.legal-deadlines__card--expired  { border-inline-start-color: var(--status-red); background: var(--status-red-light); }
-.legal-deadlines__card--suggested { border-inline-start-color: var(--status-purple); background: var(--status-purple-light); }
+.legal-deadlines__card--expired  { background: var(--status-red-light); }
+.legal-deadlines__card--suggested { background: var(--status-purple-light); }
+
+/* نقطة الحالة — بديل الشريط الجانبي (قرار المالك: الشريط «قبيح») */
+.legal-deadlines__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--status-green);
+}
+
+.legal-deadlines__dot--upcoming { background: var(--status-orange); }
+.legal-deadlines__dot--warning,
+.legal-deadlines__dot--expired { background: var(--status-red); }
+.legal-deadlines__dot--critical {
+  background: var(--status-red);
+  animation: ld-dot-pulse 1.4s ease-in-out infinite;
+}
+.legal-deadlines__dot--suggested { background: var(--status-purple); }
+
+@keyframes ld-dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--status-red-light); }
+  50% { box-shadow: 0 0 0 4px var(--status-red-light); }
+}
 
 .legal-deadlines__card-main { flex: 1; min-width: 0; }
 
@@ -592,6 +721,13 @@ body.dark .legal-deadlines__case-link { color: var(--quiet-gray-700); }
 }
 
 /* ─── استجابة الجوال ─── */
+@media (max-width: 860px) {
+  .legal-deadlines__layout { grid-template-columns: 1fr; }
+  .legal-deadlines__sidebar { position: static; }
+  .legal-deadlines__views { flex-direction: row; flex-wrap: wrap; }
+  .legal-deadlines__view-btn { width: auto; }
+}
+
 @media (max-width: 640px) {
   .legal-deadlines { padding: 12px 12px 36px; }
   .legal-deadlines__card { flex-direction: column; }
