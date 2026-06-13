@@ -17,6 +17,20 @@ export type AnnouncementChannel =
   | 'toast'
   | 'dashboard_card';
 
+export type MotionSpeed = 'slow' | 'normal' | 'fast';
+
+/**
+ * Per-announcement motion/effect customization. All fields optional;
+ * a null/empty config falls back to automatic per-severity behavior.
+ */
+export interface AnnouncementMotion {
+  type?: 'none' | 'pulse' | 'bounce' | 'shake' | 'shimmer';
+  speed?: MotionSpeed;
+  glow?: boolean;
+  glowSpeed?: MotionSpeed;
+  intensity?: 'soft' | 'normal' | 'strong';
+}
+
 export interface Announcement {
   id: number;
   title: string;
@@ -26,6 +40,7 @@ export interface Announcement {
   severity: AnnouncementSeverity;
   custom_bg?: string | null;
   custom_fg?: string | null;
+  motion?: AnnouncementMotion | null;
   cta_label?: string | null;
   cta_url?: string | null;
   cta_open_mode?: 'new_tab' | 'same_tab' | 'modal';

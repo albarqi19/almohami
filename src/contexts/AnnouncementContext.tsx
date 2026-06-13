@@ -6,7 +6,7 @@ interface AnnouncementContextValue {
   active: Announcement[];
   byChannel: (channel: AnnouncementChannel) => Announcement[];
   dismiss: (id: number) => Promise<void>;
-  track: (id: number, action: 'seen' | 'click') => Promise<void>;
+  track: (id: number, action: 'seen' | 'click') => void;
   refetch: () => Promise<void>;
   isSeenInSession: (id: number) => boolean;
   markSeen: (a: Announcement) => void;
@@ -40,12 +40,25 @@ const writeMap = (key: string, map: Record<number, string>, storage: Storage) =>
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
+/**
+ * Run a fire-and-forget task when the browser is idle, so analytics writes
+ * never compete with the user's interactions. Falls back to a microtask-ish
+ * timeout where requestIdleCallback is unavailable (Safari).
+ */
+const runWhenIdle = (fn: () => void) => {
+  const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback;
+  if (typeof ric === 'function') ric(fn, { timeout: 2000 });
+  else setTimeout(fn, 0);
+};
+
 export const AnnouncementProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [active, setActive] = useState<Announcement[]>([]);
   const sessionSeenRef = useRef<Set<number>>(readSet(SESSION_SEEN_KEY, sessionStorage));
   const onceSeenRef = useRef<Set<number>>(readSet(ONCE_SEEN_KEY, localStorage));
   const dailySeenRef = useRef<Record<number, string>>(readMap(DAILY_SEEN_KEY, localStorage));
+  // Ids whose 'seen' beacon already fired this page-load — dedup network/DB writes.
+  const seenSentRef = useRef<Set<number>>(new Set());
 
   const fetchActive = useCallback(async () => {
     if (!user) {
@@ -96,8 +109,18 @@ export const AnnouncementProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setActive((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
-  const track = useCallback(async (id: number, action: 'seen' | 'click') => {
-    await AnnouncementService.track(id, action);
+  const track = useCallback((id: number, action: 'seen' | 'click') => {
+    if (action === 'seen') {
+      // A view is recorded at most once per page-load, and only while the
+      // browser is idle — so impression tracking never blocks the UI or
+      // hammers the API on every re-render / across multiple channels.
+      if (seenSentRef.current.has(id)) return;
+      seenSentRef.current.add(id);
+      runWhenIdle(() => { void AnnouncementService.track(id, 'seen'); });
+      return;
+    }
+    // Clicks are rare and meaningful → fire immediately (still non-blocking).
+    void AnnouncementService.track(id, 'click');
   }, []);
 
   const isSeenInSession = useCallback((id: number) => sessionSeenRef.current.has(id), []);
