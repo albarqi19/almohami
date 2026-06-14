@@ -24,6 +24,7 @@ import {
 	FileImage,
 	FileSpreadsheet,
 	Plus,
+	Trash2,
 } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import { AddSessionModal } from '../components/AddSessionModal';
@@ -147,6 +148,23 @@ const UpcomingSessions: React.FC = () => {
 	const loading = isLoading;
 	const error = queryError ? 'خطأ في جلب الجلسات' : null;
 	const fetchSessions = () => { refetch(); };
+
+	// حذف جلسة يدوية (الباك يرفض حذف جلسات ناجز)
+	const [deletingId, setDeletingId] = useState<number | null>(null);
+	const handleDeleteSession = async (session: Session) => {
+		if (session.source !== 'manual') return;
+		const caseTitle = session.case?.title ? `«${session.case.title}»` : '';
+		if (!window.confirm(`هل أنت متأكد من حذف هذه الجلسة اليدوية ${caseTitle}؟ لا يمكن التراجع.`)) return;
+		setDeletingId(session.id);
+		try {
+			await apiClient.delete<{ success: boolean; message: string }>(`/sessions/${session.id}`);
+			await refetch();
+		} catch (err: any) {
+			alert(err?.response?.data?.message || err?.response?.data?.error || 'تعذّر حذف الجلسة');
+		} finally {
+			setDeletingId(null);
+		}
+	};
 
 	// Close export menu when clicking outside
 	useEffect(() => {
@@ -754,6 +772,32 @@ const UpcomingSessions: React.FC = () => {
 								</span>
 								{session.source === 'manual' && (
 									<span className="session-source-badge session-source-badge--manual" style={{ marginRight: 4 }}>يدوية</span>
+								)}
+								{session.source === 'manual' && (
+									<button
+										type="button"
+										className="session-delete-btn"
+										title="حذف الجلسة اليدوية"
+										disabled={deletingId === session.id}
+										onClick={(e) => { e.stopPropagation(); handleDeleteSession(session); }}
+										style={{
+											marginRight: 6,
+											display: 'inline-flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											padding: 4,
+											border: 'none',
+											background: 'transparent',
+											color: 'var(--status-red)',
+											cursor: deletingId === session.id ? 'wait' : 'pointer',
+											opacity: deletingId === session.id ? 0.5 : 1,
+											verticalAlign: 'middle',
+										}}
+									>
+										{deletingId === session.id
+											? <RefreshCw size={14} className="animate-spin" />
+											: <Trash2 size={14} />}
+									</button>
 								)}
 							</td>
 							<td>
