@@ -1368,6 +1368,43 @@ const WhatsappSettings: React.FC = () => {
             {activeTab === 'notifications' && (
               <div className="wa-tab-content">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* خيارات رسائل الجلسات — إعداد على مستوى المكتب */}
+                  <div className="wa-card">
+                    <div className="wa-card__header">
+                      <div className="wa-card__header-title">
+                        <Bell size={16} />
+                        <span>خيارات رسائل الجلسات</span>
+                      </div>
+                    </div>
+                    <div className="wa-card__body">
+                      <div className="whatsapp-notification-item" style={{ margin: 0 }}>
+                        <div className="whatsapp-notification-item__info">
+                          <div className="whatsapp-notification-item__title">إظهار اسم الخصم في رسائل تذكير الجلسات</div>
+                          <div className="whatsapp-notification-item__desc">
+                            عند التفعيل، يُضاف «⚖️ الخصم: …» إلى رسالة تذكير الجلسات المُرسَلة للمحامين (متوفّر فقط للقضايا التي يوجد بها اسم خصم).
+                          </div>
+                        </div>
+                        <div className="whatsapp-notification-item__actions">
+                          <label className="whatsapp-toggle">
+                            <input
+                              type="checkbox"
+                              className="whatsapp-toggle__checkbox"
+                              checked={!!settings.notification_settings?.show_opponent_in_hearings}
+                              onChange={e => setSettings({
+                                ...settings,
+                                notification_settings: {
+                                  ...settings.notification_settings,
+                                  show_opponent_in_hearings: e.target.checked,
+                                },
+                              })}
+                            />
+                            <span className="whatsapp-toggle__text">تفعيل</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {NOTIFICATION_GROUPS.map((grp, gIdx) => (
                     <div key={gIdx} className="wa-card">
                       <div className="wa-card__header">

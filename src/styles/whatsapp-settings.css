@@ -98,6 +98,9 @@
 .whatsapp-layout {
     display: flex;
     flex: 1;
+    /* min-height:0 ضروري كي ينكمش الأطفال (whatsapp-main) لارتفاع الأب فيظهر التمرير
+       بدل أن يتمدد الـ layout مع المحتوى ويُقصّ بفعل overflow:hidden على الصفحة */
+    min-height: 0;
 }
 
 .whatsapp-sidebar {
