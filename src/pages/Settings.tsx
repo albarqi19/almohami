@@ -4,12 +4,8 @@ import {
   User,
   Bell,
   Shield,
-  Palette,
   Globe,
   Database,
-  Monitor,
-  Moon,
-  Sun,
   Settings as SettingsIcon,
   Cloud,
   Link,
@@ -88,9 +84,7 @@ const Settings: React.FC = () => {
     { id: 'notifications', label: 'الإشعارات', icon: Bell, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { id: 'najiz', label: 'إعدادات ناجز', icon: Cloud, roles: ['admin'] },
     { id: 'profile', label: 'الملف الشخصي', icon: User, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
-    { id: 'appearance', label: 'المظهر', icon: Palette, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { id: 'privacy', label: 'الخصوصية والأمان', icon: Shield, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
-    { id: 'language', label: 'اللغة والمنطقة', icon: Globe, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { id: 'system', label: 'النظام', icon: Database, roles: ['admin'] },
     { id: 'company', label: 'إعدادات الشركة', icon: Building2, roles: ['admin'] },
     { id: 'branding', label: 'هوية الشركة', icon: Image, roles: ['admin'] },
@@ -719,50 +713,6 @@ const Settings: React.FC = () => {
           </div>
         );
 
-      case 'appearance':
-        return (
-          <div className="settings-section">
-            <div className="settings-section__header">
-              <div className="settings-section__icon">
-                <Palette size={14} />
-              </div>
-              <span className="settings-section__title">المظهر والثيم</span>
-            </div>
-            <div className="settings-section__content">
-              <div style={{ marginBottom: '20px' }}>
-                <label className="settings-field__label" style={{ marginBottom: '10px', display: 'block' }}>وضع الألوان</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {[
-                    { id: 'light', label: 'فاتح', icon: Sun },
-                    { id: 'dark', label: 'داكن', icon: Moon },
-                    { id: 'system', label: 'حسب النظام', icon: Monitor }
-                  ].map((theme) => (
-                    <label key={theme.id} className="settings-radio-option">
-                      <input
-                        type="radio"
-                        name="theme"
-                        value={theme.id}
-                        defaultChecked={theme.id === 'light'}
-                      />
-                      <theme.icon className="settings-radio-option__icon" />
-                      <span className="settings-radio-option__text">{theme.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="settings-field">
-                <label className="settings-field__label">حجم الخط</label>
-                <select className="settings-field__select" style={{ width: '150px' }}>
-                  <option value="small">صغير</option>
-                  <option value="medium" selected>متوسط</option>
-                  <option value="large">كبير</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        );
-
       case 'privacy':
         // Handle PIN change for clients
         const handlePinChange = async () => {
@@ -906,47 +856,6 @@ const Settings: React.FC = () => {
               <TwoFactorSettings />
             )}
           </>
-        );
-
-      case 'language':
-        return (
-          <div className="settings-section">
-            <div className="settings-section__header">
-              <div className="settings-section__icon">
-                <Globe size={14} />
-              </div>
-              <span className="settings-section__title">اللغة والمنطقة</span>
-            </div>
-            <div className="settings-section__content">
-              <div className="settings-form-grid">
-                <div className="settings-field">
-                  <label className="settings-field__label">اللغة</label>
-                  <select className="settings-field__select">
-                    <option value="ar" selected>العربية</option>
-                    <option value="en">English</option>
-                  </select>
-                </div>
-
-                <div className="settings-field">
-                  <label className="settings-field__label">المنطقة الزمنية</label>
-                  <select className="settings-field__select">
-                    <option value="Asia/Riyadh" selected>توقيت السعودية (GMT+3)</option>
-                    <option value="Asia/Dubai">توقيت الإمارات (GMT+4)</option>
-                    <option value="Asia/Kuwait">توقيت الكويت (GMT+3)</option>
-                  </select>
-                </div>
-
-                <div className="settings-field">
-                  <label className="settings-field__label">تنسيق التاريخ</label>
-                  <select className="settings-field__select">
-                    <option value="hijri">هجري</option>
-                    <option value="gregorian" selected>ميلادي</option>
-                    <option value="both">هجري وميلادي</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
         );
 
       case 'system':
@@ -2343,9 +2252,7 @@ const Settings: React.FC = () => {
                 💡 {activeTab === 'notifications' && 'إعدادات الإشعارات'}
                 {activeTab === 'najiz' && 'إعدادات ناجز'}
                 {activeTab === 'profile' && 'الملف الشخصي'}
-                {activeTab === 'appearance' && 'المظهر'}
                 {activeTab === 'privacy' && 'الخصوصية والأمان'}
-                {activeTab === 'language' && 'اللغة والمنطقة'}
                 {activeTab === 'system' && 'إعدادات النظام'}
                 {activeTab === 'company' && 'إعدادات الشركة'}
                 {activeTab === 'branding' && 'هوية الشركة'}
@@ -2357,9 +2264,7 @@ const Settings: React.FC = () => {
                 {activeTab === 'notifications' && 'تحكم في كيفية استلام التنبيهات والإشعارات من النظام.'}
                 {activeTab === 'najiz' && 'إدارة اتصال ناجز وخيارات الاستيراد التلقائي.'}
                 {activeTab === 'profile' && 'تحديث معلوماتك الشخصية وبيانات الاتصال.'}
-                {activeTab === 'appearance' && 'تخصيص مظهر النظام والألوان.'}
                 {activeTab === 'privacy' && 'إدارة إعدادات الأمان وكلمة المرور.'}
-                {activeTab === 'language' && 'تغيير اللغة والمنطقة الزمنية.'}
                 {activeTab === 'system' && 'إدارة النسخ الاحتياطي وتصدير البيانات.'}
                 {activeTab === 'company' && 'تحديث معلومات شركتك مثل الاسم والبريد والعنوان.'}
                 {activeTab === 'branding' && 'خصص مظهر صفحة تسجيل الدخول الخاصة بشركتك.'}
@@ -2375,9 +2280,7 @@ const Settings: React.FC = () => {
                 {activeTab === 'notifications' && 'فعّل إشعارات الجلسات لتذكيرك بمواعيد الجلسات القادمة'}
                 {activeTab === 'najiz' && 'تأكد من صحة بيانات اتصال ناجز قبل الاستيراد'}
                 {activeTab === 'profile' && 'تأكد من تحديث رقم الهاتف لاستقبال الإشعارات'}
-                {activeTab === 'appearance' && 'جرب الوضع الداكن لتقليل إجهاد العين'}
                 {activeTab === 'privacy' && 'غيّر كلمة المرور بشكل دوري لحماية حسابك'}
-                {activeTab === 'language' && 'اختر المنطقة الزمنية المناسبة لعرض مواعيد الجلسات بشكل صحيح'}
                 {activeTab === 'system' && 'قم بعمل نسخ احتياطي دوري للحفاظ على بياناتك'}
                 {activeTab === 'company' && 'تحديث بيانات الشركة يظهر في الفواتير والتقارير'}
                 {activeTab === 'branding' && 'رابط شركتك المخصص: company-slug.alraedlaw.com'}
