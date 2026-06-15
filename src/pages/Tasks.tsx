@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -15,7 +15,10 @@ import {
   Layers,
   Archive,
   Trash2,
-  Pencil
+  Pencil,
+  MessageSquare,
+  CheckSquare,
+  Tag
 } from 'lucide-react';
 import {
   DndContext,
@@ -59,7 +62,24 @@ const TASK_STATUSES: { key: TaskStatus; label: string; color: string }[] = [
 type GroupBy = 'status' | 'assignee';
 
 // --- Draggable Card Component ---
-const SortableTaskCard = ({ task, user, onClick }: { task: Task, user?: { name: string }, onClick: () => void }) => {
+const PRIORITY_META: Record<string, { label: string; color: string }> = {
+  urgent: { label: 'عاجل', color: '#ef4444' },
+  high:   { label: 'مرتفع', color: '#f97316' },
+  medium: { label: 'متوسط', color: '#f59e0b' },
+  low:    { label: 'منخفض', color: '#3b82f6' },
+};
+
+const SortableTaskCard = ({
+  task,
+  user,
+  onOpen,
+  onOpenMenu
+}: {
+  task: Task;
+  user?: { name: string };
+  onOpen: () => void;
+  onOpenMenu: (e: React.MouseEvent, task: Task) => void;
+}) => {
   const {
     attributes,
     listeners,
@@ -69,16 +89,22 @@ const SortableTaskCard = ({ task, user, onClick }: { task: Task, user?: { name: 
     isDragging
   } = useSortable({ id: task.id, data: { ...task } });
 
+  // الضغط على الكرت يوسّعه لإظهار الوصف (لا ينتقل للصفحة — الفتح عبر زر مخصّص)
+  const [expanded, setExpanded] = useState(false);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const getPriorityIcon = (priority: Priority) => {
-    const color = priority === 'high' ? '#ef4444' : priority === 'medium' ? '#f59e0b' : '#3b82f6';
-    return <Flag size={14} color={color} fill={color} />;
-  };
+  const prio = PRIORITY_META[task.priority] ?? PRIORITY_META.medium;
+  const dueDateObj = task.dueDate ? new Date(task.dueDate) : null;
+  const isOverdue = dueDateObj && dueDateObj < new Date() && task.status !== 'completed' && task.status !== 'cancelled';
+  const isDueToday = dueDateObj && dueDateObj.toDateString() === new Date().toDateString();
+  const dueDateStr = dueDateObj
+    ? dueDateObj.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' })
+    : '';
 
   return (
     <div
@@ -86,31 +112,114 @@ const SortableTaskCard = ({ task, user, onClick }: { task: Task, user?: { name: 
       style={style}
       {...attributes}
       {...listeners}
-      className="task-card"
-      onClick={onClick}
+      className={`task-card task-card--erp${expanded ? ' task-card--open' : ''}`}
+      onClick={() => setExpanded(v => !v)}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-
-        <div style={{ transform: 'scale(0.8)' }}>{getPriorityIcon(task.priority)}</div>
+      <div className="task-card-header">
+        <span className={`task-prio-badge prio-${task.priority}`} style={{ borderColor: prio.color, color: prio.color }}>
+          <span className="task-prio-dot" style={{ background: prio.color }} />
+          {prio.label}
+        </span>
+        <div className="task-card-actions" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="task-card-action-btn menu-trigger"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenMenu(e, task);
+            }}
+            title="إجراءات سريعة"
+          >
+            <MoreHorizontal size={14} />
+          </button>
+          <ChevronDown size={14} className="task-card-caret" />
+        </div>
       </div>
+
+      {task.case && (
+        <div
+          className="task-card-case-badge"
+          title={task.case.title}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <Layers size={11} className="case-icon" />
+          <span className="case-text">
+            {task.case.file_number ? `${task.case.file_number} - ` : ''}
+            {task.case.title}
+          </span>
+        </div>
+      )}
 
       <div className="task-card-title">{task.title}</div>
 
+      {task.tags && task.tags.length > 0 && (
+        <div className="task-card-tags">
+          {task.tags.map(tag => (
+            <span key={tag} className="task-card-tag">
+              <Tag size={9} />
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="task-card-footer">
-        <div className="task-card-meta">
+        <div className="task-card-meta-left">
           {task.dueDate && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Clock size={12} />
-              {new Date(task.dueDate).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' })}
+            <span className={`tcm-badge due-date ${isOverdue ? 'overdue' : isDueToday ? 'today' : ''}`} title={isOverdue ? 'متأخرة!' : isDueToday ? 'تستحق اليوم' : 'تاريخ الاستحقاق'}>
+              <Clock size={11} />
+              <span>{dueDateStr}</span>
+            </span>
+          )}
+          {task.subtasks_total !== undefined && task.subtasks_total > 0 && (
+            <span className="tcm-badge subtasks" title="المهام الفرعية">
+              <CheckSquare size={11} />
+              <span>{task.subtasks_completed || 0}/{task.subtasks_total}</span>
+            </span>
+          )}
+          {task.comments_count !== undefined && task.comments_count > 0 && (
+            <span className="tcm-badge comments" title="التعليقات">
+              <MessageSquare size={11} />
+              <span>{task.comments_count}</span>
             </span>
           )}
         </div>
-        {user && (
-          <div className="assignee-avatar" title={user.name}>
-            {user.name.charAt(0)}
-          </div>
-        )}
+        <div className="task-card-meta-right" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+          {user ? (
+            <span className="task-card-assignee-badge" title={user.name}>
+              <span className="assignee-avatar assignee-avatar--sm">
+                {user.name.charAt(0)}
+              </span>
+              <span className="assignee-name">{user.name}</span>
+            </span>
+          ) : (
+            <span className="task-card-assignee-badge unassigned" title="غير مسندة">
+              <span className="assignee-avatar assignee-avatar--sm unassigned">
+                ?
+              </span>
+              <span className="assignee-name">غير معين</span>
+            </span>
+          )}
+        </div>
       </div>
+
+      {expanded && (
+        <div className="task-card-expand" onClick={(e) => e.stopPropagation()}>
+          <p className={`task-card-desc${task.description ? '' : ' is-empty'}`}>
+            {task.description || 'لا يوجد وصف لهذه المهمة'}
+          </p>
+          <button
+            type="button"
+            className="task-card-open"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onOpen(); }}
+          >
+            فتح التفاصيل
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -121,12 +230,12 @@ const DroppableColumn = ({ id, title, count, color, children }: { id: string, ti
 
   return (
     <div ref={setNodeRef} className="board-column">
-      <div className="board-column-header">
+      <div className="board-column-header" style={{ borderTop: `3px solid ${color}`, paddingTop: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ display: 'block', width: '8px', height: '8px', borderRadius: '50%', background: color }}></span>
           {title}
         </div>
-        <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+        <span className="board-column-header-count">
           {count}
         </span>
       </div>
@@ -145,6 +254,13 @@ const Tasks: React.FC = () => {
   // استخدام الكاش المركزي
   const [tasks, setTasks] = useState<Task[]>(() => TasksCache.get());
   const [loading, setLoading] = useState(() => TasksCache.get().length === 0);
+
+  // تحميل تدريجي: نجلب حتى loadedCount مهمة في طلب واحد (per_page).
+  // ref كي تقرأ loadTasks أحدث قيمة حتى من إغلاق التحديث التلقائي.
+  const PAGE_SIZE = 50;
+  const loadedCountRef = useRef(PAGE_SIZE);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
   const [groupBy, setGroupBy] = useState<GroupBy>('status');
   const [users, setUsers] = useState<{ [key: string]: { name: string; avatar?: string | null } }>(() => UsersCache.get());
@@ -159,6 +275,7 @@ const Tasks: React.FC = () => {
   // Filters
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'priority' | 'dueDate' | 'title' | 'createdAt'>('priority');
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -177,15 +294,28 @@ const Tasks: React.FC = () => {
   const loadTasks = async () => {
     try {
       if (tasks.length === 0) setLoading(true);
-      const response = await TaskService.getTasks({});
+      const response = await TaskService.getTasks({ per_page: loadedCountRef.current });
       const tasksData = response.data || [];
       setTasks(tasksData);
+      setTotalCount((response as any).total ?? tasksData.length);
       // حفظ في الكاش المركزي
       TasksCache.set(tasksData);
     } catch (error) {
       console.error('Error loading tasks:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // تحميل دفعة إضافية: نزيد الحدّ ونعيد الجلب (طلب واحد يجلب كل المحمَّل
+  // محدَّثاً، فيبقى الكانبان متكاملاً والتحديث التلقائي يحافظ على ما حُمّل).
+  const loadMore = async () => {
+    loadedCountRef.current += PAGE_SIZE;
+    setLoadingMore(true);
+    try {
+      await loadTasks();
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -263,10 +393,37 @@ const Tasks: React.FC = () => {
   };
 
   const getFilteredTasks = () => {
-    return tasks.filter(task => {
+    const filtered = tasks.filter(task => {
       const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
       return matchesSearch && matchesStatus;
+    });
+
+    const PRIORITY_RANK: Record<string, number> = {
+      urgent: 4,
+      high: 3,
+      medium: 2,
+      low: 1
+    };
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'priority') {
+        const rankA = PRIORITY_RANK[a.priority] ?? 2;
+        const rankB = PRIORITY_RANK[b.priority] ?? 2;
+        return rankB - rankA; // highest priority first
+      }
+      if (sortBy === 'dueDate') {
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      }
+      if (sortBy === 'title') {
+        return a.title.localeCompare(b.title, 'ar');
+      }
+      if (sortBy === 'createdAt') {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      return 0;
     });
   };
 
@@ -489,28 +646,16 @@ const Tasks: React.FC = () => {
                     key={task.id}
                     task={task}
                     user={task.assignedTo ? users[task.assignedTo] : undefined}
-                    onClick={() => navigate(`/tasks/${task.id}`)}
+                    onOpen={() => navigate(`/tasks/${task.id}`)}
+                    onOpenMenu={(e, t) => openTaskMenu(e, t)}
                   />
                 ))}
               </SortableContext>
 
               <button
+                type="button"
+                className="task-add-btn"
                 onClick={() => setIsAddModalOpen(true)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px',
-                  background: 'transparent',
-                  border: '1px dashed var(--color-border)',
-                  borderRadius: '8px',
-                  color: 'var(--color-text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  justifyContent: 'center',
-                  marginTop: 'auto'
-                }}
               >
                 <Plus size={14} /> إضافة مهمة
               </button>
@@ -556,6 +701,21 @@ const Tasks: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="tasks-toolbar__search-input"
           />
+        </div>
+
+        {/* Sorting Dropdown */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>ترتيب حسب:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="tasks-toolbar__select"
+          >
+            <option value="priority">الأولوية</option>
+            <option value="dueDate">تاريخ الاستحقاق</option>
+            <option value="createdAt">تاريخ الإنشاء</option>
+            <option value="title">العنوان</option>
+          </select>
         </div>
 
         {/* Group By (List view only) */}
@@ -638,6 +798,29 @@ const Tasks: React.FC = () => {
         </div>
       ) : (
         viewMode === 'list' ? renderListView() : renderBoardView()
+      )}
+
+      {/* تحميل تدريجي: يظهر حين تبقّى مهام غير محمَّلة (يحافظ على تكامل الكانبان) */}
+      {!loading && tasks.length < totalCount && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0' }}>
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            style={{
+              padding: '10px 28px',
+              borderRadius: '8px',
+              border: '1px solid var(--color-primary)',
+              background: 'transparent',
+              color: 'var(--color-primary)',
+              cursor: loadingMore ? 'default' : 'pointer',
+              fontSize: '13px',
+              fontWeight: 600,
+              opacity: loadingMore ? 0.6 : 1,
+            }}
+          >
+            {loadingMore ? 'جاري التحميل…' : `تحميل المزيد (${totalCount - tasks.length} متبقية)`}
+          </button>
+        </div>
       )}
 
       <AddTaskModal

@@ -11,6 +11,7 @@ export interface TaskFilters {
   search?: string;
   page?: number;
   limit?: number;
+  per_page?: number;
 }
 
 export class TaskService {

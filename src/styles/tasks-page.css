@@ -2,10 +2,16 @@
    Tasks Page - ClickUp Minimal Style
    ==================================================== */
 
+/* Prevent main layout scroll when on the tasks page to allow independent column scrolling */
+.app-content:has(.tasks-page) {
+    overflow: hidden !important;
+}
+
 .tasks-page {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: 100%;
+    overflow: hidden;
     background: var(--dashboard-bg);
 }
 
@@ -440,73 +446,121 @@ body.classic .priority-low {
 
 /* ==================== Board View (Kanban) ==================== */
 .board-view {
-    padding: 0 20px 20px 20px;
+    padding: 12px 20px 20px 20px;
     display: flex;
     gap: 16px;
     overflow-x: auto;
-    height: calc(100vh - 140px);
+    overflow-y: hidden;
+    height: 100%;
+    min-height: 0;
 }
 
 .board-column {
-    min-width: 280px;
-    max-width: 280px;
+    min-width: 290px;
+    max-width: 290px;
     display: flex;
     flex-direction: column;
     height: 100%;
+    min-height: 0;
+    background: var(--quiet-gray-50);
+    border-radius: 12px;
+    padding: 12px 10px;
+    border: 1px solid var(--color-border);
+}
+
+body.dark .board-column {
+    background: rgba(30, 41, 59, 0.2);
 }
 
 .board-column-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 4px;
+    padding: 2px 4px 8px 4px;
     margin-bottom: 8px;
     font-weight: 600;
-    color: var(--color-text-secondary);
+    color: var(--color-heading);
     font-size: 13px;
+    border-bottom: 2px solid var(--color-border);
+}
+
+.board-column-header-count {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    background: var(--quiet-gray-200);
+    padding: 1.5px 7px;
+    border-radius: 20px;
+    min-width: 18px;
+    text-align: center;
+}
+
+body.dark .board-column-header-count {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .board-column-content {
     flex: 1;
     overflow-y: auto;
-    padding-right: 4px;
-    /* Space for scrollbar */
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.task-card {
-    background: var(--dashboard-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 14px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-    cursor: pointer;
-    transition: all 0.2s;
+    padding-right: 2px;
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
+/* ── Select Dropdown for Sorting ── */
+.tasks-toolbar__select {
+    padding: 6px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 12px;
+    outline: none;
+    background: var(--dashboard-card);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-weight: 500;
+}
+
+.tasks-toolbar__select:focus {
+    border-color: var(--law-navy);
+    box-shadow: 0 0 0 2px var(--law-navy-light);
+}
+
+/* ── كرت المهمة (كانبان) — تصميم ERP عصري مكدس ───── */
+.task-card {
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    box-shadow: 0 1px 2.5px rgba(0, 0, 0, 0.03);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+}
+
 .task-card:hover {
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2.0px);
     border-color: var(--law-navy-light);
 }
 
 .task-card-title {
-    font-weight: 500;
-    font-size: 14px;
+    font-weight: 600;
+    font-size: 12.5px;
     color: var(--color-heading);
-    line-height: 1.4;
+    line-height: 1.35;
+    margin: 0;
 }
 
 .task-card-meta {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 11px;
+    gap: 6px;
+    font-size: 10.5px;
     color: var(--color-text-secondary);
 }
 
@@ -514,22 +568,368 @@ body.classic .priority-low {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 4px;
-    padding-top: 8px;
-    border-top: 1px solid var(--quiet-gray-100);
+    margin-top: 2px;
+    padding-top: 6px;
+    border-top: 1px solid var(--color-border);
+    gap: 6px;
 }
 
 .assignee-avatar {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: var(--quiet-gray-200);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 600;
     color: var(--color-text);
+}
+
+/* ERP Modern Stacking Layout classes */
+.task-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.task-prio-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1.5px 5.5px;
+    font-size: 9px;
+    font-weight: 600;
+    border: 1px solid;
+    border-radius: 4px;
+    background: transparent;
+    line-height: 1;
+}
+
+.task-prio-dot {
+    width: 5.5px;
+    height: 5.5px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Priority soft colors mapping */
+.prio-urgent {
+    background: rgba(239, 68, 68, 0.04) !important;
+}
+.prio-high {
+    background: rgba(249, 115, 22, 0.04) !important;
+}
+.prio-medium {
+    background: rgba(245, 158, 11, 0.04) !important;
+}
+.prio-low {
+    background: rgba(59, 130, 246, 0.04) !important;
+}
+
+body.dark .prio-urgent {
+    background: rgba(239, 68, 68, 0.12) !important;
+}
+body.dark .prio-high {
+    background: rgba(249, 115, 22, 0.12) !important;
+}
+body.dark .prio-medium {
+    background: rgba(245, 158, 11, 0.12) !important;
+}
+body.dark .prio-low {
+    background: rgba(59, 130, 246, 0.12) !important;
+}
+
+.task-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+}
+
+.task-card:hover .task-card-actions {
+    opacity: 1;
+}
+
+.task-card-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.12s;
+}
+
+.task-card-action-btn:hover {
+    background: var(--quiet-gray-100);
+    border-color: var(--color-border);
+    color: var(--color-text);
+}
+
+.task-card-caret {
+    color: var(--color-text-secondary);
+    transition: transform 0.2s ease;
+}
+
+.task-card--open .task-card-caret {
+    transform: rotate(180deg);
+}
+
+.task-card-case-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(37, 99, 235, 0.04);
+    color: var(--color-primary, #2563eb);
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-size: 9.5px;
+    font-weight: 500;
+    width: fit-content;
+    max-width: 100%;
+    border: 1px solid rgba(37, 99, 235, 0.06);
+    transition: background 0.15s;
+}
+
+.task-card-case-badge:hover {
+    background: rgba(37, 99, 235, 0.08);
+}
+
+body.dark .task-card-case-badge {
+    background: rgba(90, 165, 247, 0.08);
+    color: #5aa5f7;
+    border-color: rgba(90, 165, 247, 0.12);
+}
+
+.task-card-case-badge .case-icon {
+    flex-shrink: 0;
+    opacity: 0.8;
+}
+
+.task-card-case-badge .case-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.task-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 1px;
+}
+
+.task-card-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: var(--quiet-gray-50);
+    color: var(--color-text-secondary);
+    padding: 1px 4.5px;
+    border-radius: 4px;
+    font-size: 8.5px;
+    font-weight: 500;
+    border: 1px solid var(--color-border);
+}
+
+.task-card-meta-left {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+}
+
+.tcm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3.5px;
+    font-size: 9.5px;
+    color: var(--color-text-secondary);
+    padding: 1px 4.5px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background: var(--quiet-gray-50);
+    border-color: var(--color-border);
+}
+
+.tcm-badge.due-date.overdue {
+    background: rgba(239, 68, 68, 0.04);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.1);
+    font-weight: 600;
+}
+
+body.dark .tcm-badge.due-date.overdue {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ff7b8a;
+    border-color: rgba(239, 68, 68, 0.18);
+}
+
+.tcm-badge.due-date.today {
+    background: rgba(245, 158, 11, 0.04);
+    color: #d97706;
+    border-color: rgba(245, 158, 11, 0.1);
+    font-weight: 600;
+}
+
+body.dark .tcm-badge.due-date.today {
+    background: rgba(245, 158, 11, 0.1);
+    color: #fbc46d;
+    border-color: rgba(245, 158, 11, 0.18);
+}
+
+.task-card-meta-right {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* ── Assignee Badge with Name & Avatar ── */
+.task-card-assignee-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--quiet-gray-50);
+    border: 1px solid var(--color-border);
+    padding: 1.5px 5px;
+    border-radius: 12px;
+    max-width: 130px;
+    transition: all 0.15s;
+}
+
+.task-card-assignee-badge:hover {
+    background: var(--quiet-gray-100);
+    border-color: var(--color-border-strong);
+}
+
+.task-card-assignee-badge.unassigned {
+    border-style: dashed;
+    opacity: 0.65;
+}
+
+.task-card-assignee-badge .assignee-name {
+    font-size: 9.5px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.task-card-assignee-badge:hover .assignee-name {
+    color: var(--color-text);
+}
+
+.assignee-avatar-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.assignee-avatar--sm {
+    width: 16px;
+    height: 16px;
+    font-size: 8px;
+    border-radius: 50%;
+    background: var(--color-primary, #2563eb);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    box-shadow: 0 0.5px 1.5px rgba(0,0,0,0.05);
+}
+
+.assignee-avatar--sm.unassigned {
+    background: var(--quiet-gray-100);
+    color: var(--color-text-secondary);
+    border: 1px dashed var(--color-border);
+}
+
+body.dark .assignee-avatar--sm {
+    background: #3b82f6;
+}
+
+.task-card-expand {
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: taskExpandIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes taskExpandIn {
+    from { opacity: 0; transform: translateY(-3px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.task-card-desc {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-text);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.task-card-desc.is-empty {
+    font-style: italic;
+    color: var(--color-text-secondary);
+    opacity: 0.7;
+}
+
+.task-card-open {
+    align-self: flex-start;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--law-navy, var(--color-primary));
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.task-card-open:hover {
+    background: var(--quiet-gray-100);
+    border-color: var(--law-navy-light, var(--color-primary));
+}
+
+/* زر الإضافة ملتصق بأسفل العمود — يبقى ظاهراً دون تمرير */
+.task-add-btn {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px;
+    margin-top: auto;
+    background: var(--dashboard-card);
+    border: 1px dashed var(--color-border);
+    border-radius: 8px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.task-add-btn:hover {
+    border-color: var(--law-navy-light, var(--color-primary));
+    color: var(--law-navy, var(--color-primary));
 }
 
 /* ==================== Loading & Empty States ==================== */
