@@ -121,11 +121,24 @@ const SmartUploadModal: React.FC<SmartUploadModalProps> = ({
     setEditableKeywords([]);
   };
 
+  // الحد الأقصى لحجم الوثيقة — يطابق حدّ الباك اند (20MB) لأسباب الذاكرة وحدّ مزوّد الذكاء
+  const MAX_FILE_SIZE_MB = 20;
+
+  const validateAndSetFile = (file: File) => {
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      setError(`حجم الملف (${sizeMB} ميجابايت) يتجاوز الحد الأقصى المسموح (${MAX_FILE_SIZE_MB} ميجابايت). الرجاء رفع ملف أصغر.`);
+      setSelectedFile(null);
+      return;
+    }
+    setError(null);
+    setSelectedFile(file);
+  };
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
-      setError(null);
+      validateAndSetFile(file);
     }
   };
 
@@ -358,15 +371,18 @@ const SmartUploadModal: React.FC<SmartUploadModalProps> = ({
               e.preventDefault();
               const files = e.dataTransfer.files;
               if (files[0]) {
-                setSelectedFile(files[0]);
+                validateAndSetFile(files[0]);
               }
             }}>
               <Upload size={36} style={{ color: 'var(--color-primary)', marginBottom: '12px' }} />
               <h3 style={{ margin: '0 0 8px 0', color: 'var(--color-text)' }}>
                 رفع الوثيقة للتحليل
               </h3>
-              <p style={{ color: 'var(--color-text-secondary)', marginBottom: '20px' }}>
+              <p style={{ color: 'var(--color-text-secondary)', marginBottom: '8px' }}>
                 سيتم تحليل الوثيقة لاستخراج العنوان والتفاصيل تلقائياً
+              </p>
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)', marginBottom: '20px' }}>
+                الصيغ المدعومة: PDF، Word، JPG، PNG · الحد الأقصى لحجم الملف: {MAX_FILE_SIZE_MB} ميجابايت
               </p>
               
               <input

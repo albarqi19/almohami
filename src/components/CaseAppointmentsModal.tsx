@@ -12,24 +12,28 @@ import {
   Video,
   Gavel,
   CalendarClock,
-  HelpCircle
+  HelpCircle,
+  FileText
 } from 'lucide-react';
 import { appointmentService } from '../services/appointmentService';
 import { AddAppointmentModal } from './AddAppointmentModal';
 import { useModalTour } from '../hooks/useModalTour';
-import type { Appointment, AppointmentType, AppointmentStatus, Case } from '../types';
+import type { Appointment, AppointmentType, AppointmentStatus, Case, CaseSession } from '../types';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface CaseAppointmentsModalProps {
   isOpen: boolean;
   onClose: () => void;
   caseData: Case;
+  /** فتح مودل «ضبط الجلسة» في الصفحة الأم (يُعاد استخدام نفس المودل بدل تكراره) */
+  onShowDabt?: (session: CaseSession) => void;
 }
 
 export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
   isOpen,
   onClose,
-  caseData
+  caseData,
+  onShowDabt
 }) => {
   const { startTour, hasTour } = useModalTour('modal:case-appointments', isOpen);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -255,18 +259,31 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
                               </span>
                             </td>
                             <td>
-                              {session.video_conference_url ? (
-                                <a
-                                  href={session.video_conference_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="cam-erp-btn cam-erp-btn--primary"
-                                >
-                                  <Video size={11} /> انضمام
-                                </a>
-                              ) : (
-                                <span className="cam-erp-cell__sub">—</span>
-                              )}
+                              <div className="cam-erp-actions">
+                                {session.video_conference_url && (
+                                  <a
+                                    href={session.video_conference_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="cam-erp-btn cam-erp-btn--primary"
+                                  >
+                                    <Video size={11} /> انضمام
+                                  </a>
+                                )}
+                                {/* زر ضبط الجلسة — يظهر متى توفّر نص الضبط (يفتح المودل في الصفحة الأم) */}
+                                {session.session_text && onShowDabt && (
+                                  <button
+                                    className="cam-erp-btn"
+                                    onClick={() => onShowDabt(session)}
+                                    title="عرض ضبط الجلسة"
+                                  >
+                                    <FileText size={11} /> الضبط
+                                  </button>
+                                )}
+                                {!session.video_conference_url && !(session.session_text && onShowDabt) && (
+                                  <span className="cam-erp-cell__sub">—</span>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );

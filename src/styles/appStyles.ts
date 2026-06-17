@@ -29,6 +29,7 @@ import './case-detail.css';
 import './letterhead-settings.css';
 import './notebook-widget.css';
 import './law-search-modal.css';
+import './precedent-modal.css';
 import './case-law-notes-widget.css';
 import './notification-center.css';
 import './add-session-modal.css';

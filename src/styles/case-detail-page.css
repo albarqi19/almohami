@@ -226,6 +226,10 @@ body.dark .case-header-tab {
     color: #0d9488;
 }
 
+.case-header-tab__icon--gold {
+    color: var(--law-gold, #B8860B);
+}
+
 .case-header-tab__count {
     font-weight: 600;
     color: var(--color-heading);

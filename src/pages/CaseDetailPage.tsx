@@ -30,6 +30,7 @@ import {
   Scroll,
   Sparkles,
   ClipboardList,
+  Gavel,
   X as XIcon
 } from 'lucide-react';
 import Timeline from '../components/Timeline';
@@ -46,6 +47,7 @@ import LinkToNajizModal from '../components/LinkToNajizModal';
 import LegalMemoWorkspace from '../components/LegalMemoWorkspace';
 import CasePrepKitchen from '../components/CasePrepKitchen';
 import LawSearchModal from '../components/LawSearchModal';
+import PrecedentSearchModal from '../components/PrecedentSearchModal';
 import CaseWekalatPanel from '../components/CaseWekalatPanel';
 import { SendDabtPreferencesModal, type NotifyMode } from '../components/SendDabtPreferencesModal';
 import OutcomeBadge from '../components/OutcomeBadge';
@@ -113,6 +115,7 @@ const CaseDetailPage: React.FC = () => {
   const [showLinkNajizModal, setShowLinkNajizModal] = useState(false);
   const [canLinkToNajiz, setCanLinkToNajiz] = useState(false);
   const [showLawSearch, setShowLawSearch] = useState(false);
+  const [showPrecedents, setShowPrecedents] = useState(false);
   const [showWekalatModal, setShowWekalatModal] = useState(false);
   const [documentsCount, setDocumentsCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
@@ -512,6 +515,12 @@ const CaseDetailPage: React.FC = () => {
                 if (total > 0) return <span className="case-header-tab__count">{total}</span>;
                 return null;
               })()}
+            </button>
+            <button className="case-header-tab" onClick={() => setShowPrecedents(true)} data-tour="case-precedents-btn">
+              <span className="case-header-tab__icon case-header-tab__icon--gold">
+                <Gavel size={14} />
+              </span>
+              السوابق القضائية
             </button>
           </div>
 
@@ -1249,6 +1258,14 @@ const CaseDetailPage: React.FC = () => {
         caseId={Number(caseData.id)}
       />
 
+      {/* راج — السوابق القضائية */}
+      <PrecedentSearchModal
+        isOpen={showPrecedents}
+        onClose={() => setShowPrecedents(false)}
+        caseId={Number(caseData.id)}
+        caseTitle={caseData.title}
+      />
+
       {/* Modals */}
       <EditCaseModal
         isOpen={showEditModal}
@@ -1297,6 +1314,7 @@ const CaseDetailPage: React.FC = () => {
         isOpen={showAppointmentsModal}
         onClose={() => setShowAppointmentsModal(false)}
         caseData={caseData}
+        onShowDabt={(session) => setSelectedDabtSession(session)}
       />
 
       <QuickActionsModal
