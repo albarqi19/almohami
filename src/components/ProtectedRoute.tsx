@@ -123,7 +123,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // ─── Legacy: role-based gate (during transition) ───
-  if (allowedRoles && user.role && !allowedRoles.includes(user.role)) {
+  // هذا الحارس القديم يحكم الأدوار النظامية فقط بأسمائها. الأدوار المخصّصة
+  // (مثل advisor) لا يعرفها، فتُحكَم بالصلاحيات بدلاً منه: requiredPermission/
+  // anyOfPermissions أعلاه + إخفاء عناصر السايدبار حسب الصلاحية + فرض الباك إند.
+  // بدون استثنائها كان أي دور مخصّص يُحجب رغم امتلاكه الصلاحية (ملاحظة العميل #58).
+  const SYSTEM_ROLE_NAMES = ['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant', 'accountant', 'secretary', 'client', 'super_admin'];
+  const isSystemRole = !!user.role && SYSTEM_ROLE_NAMES.includes(String(user.role));
+  if (allowedRoles && user.role && isSystemRole && !allowedRoles.includes(user.role)) {
     console.warn('ProtectedRoute: User role not allowed', {
       userRole: user.role, allowedRoles, userId: user.id,
     });
