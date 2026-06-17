@@ -315,6 +315,22 @@ body.dark .legal-deadlines__view-btn.is-active { color: var(--quiet-gray-900); }
 .legal-deadlines__opponent-badge { background: var(--status-blue-light); color: var(--status-blue); }
 .legal-deadlines__progress-badge { background: var(--status-blue-light); color: var(--status-blue); font-weight: 600; }
 
+/* ── مهلة على الخصم: محيّدة بصرياً (معلومة تكتيكية للمتابعة فقط، بلا إنذار) ──
+   البطاقة (card--opponent) بلا قاعدة خاصة عمداً → تبقى بخلفية --dashboard-card المحايدة */
+.legal-deadlines__dot--opponent { background: var(--quiet-gray-400); animation: none; }
+.legal-deadlines__countdown--opponent {
+  background: var(--quiet-gray-100);
+  color: var(--quiet-gray-600);
+  font-weight: 600;
+  animation: none;
+}
+.legal-deadlines__opponent-note {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--quiet-gray-500);
+  margin: 6px 0 0;
+}
+
 .legal-deadlines__card-title {
   font-size: 13px;
   font-weight: 700;

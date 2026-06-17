@@ -11,6 +11,7 @@ import {
   Ban,
   Check,
   CheckCircle2,
+  Hourglass,
   LayoutGrid,
   Loader2,
   Plus,
@@ -50,6 +51,17 @@ export const daysLabel = (days: number | null): string => {
   return `متبقي ${days} يوماً`;
 };
 
+// عدّاد مهلة الخصم — يُؤطَّر كملاحظة لا كإنذار («أمام الخصم» لا «متبقي لك»)
+export const opponentDaysLabel = (days: number | null): string => {
+  if (days === null) return '—';
+  if (days < 0) return 'انقضت مهلة الخصم';
+  if (days === 0) return 'آخر يوم أمام الخصم';
+  if (days === 1) return 'أمام الخصم يوم واحد';
+  if (days === 2) return 'أمام الخصم يومان';
+  if (days <= 10) return `أمام الخصم ${days} أيام`;
+  return `أمام الخصم ${days} يوماً`;
+};
+
 const formatDue = (dueDate: string): string => {
   const d = new Date(dueDate);
   const greg = d.toLocaleDateString('ar-SA-u-ca-gregory', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -75,15 +87,17 @@ const DeadlineCard: React.FC<DeadlineCardProps> = ({ deadline: d, busy, onAction
   const isSuggested = d.status === 'suggested';
   const isOpen = d.status === 'active' || d.status === 'in_progress';
   const isOpponent = d.obligated_party === 'opponent';
+  // مهلة الخصم: معلومة تكتيكية للمتابعة فقط — تُحيّد بصرياً ولا تُعرض كإنذار إلحاح
+  const displayUrgency = isOpponent ? 'opponent' : urgency;
 
   return (
-    <div className={`legal-deadlines__card legal-deadlines__card--${urgency} ${isSuggested ? 'legal-deadlines__card--suggested' : ''}`}>
+    <div className={`legal-deadlines__card legal-deadlines__card--${displayUrgency} ${isSuggested ? 'legal-deadlines__card--suggested' : ''}`}>
       <div className="legal-deadlines__card-main">
         <div className="legal-deadlines__card-head">
-          <span className={`legal-deadlines__dot legal-deadlines__dot--${isSuggested ? 'suggested' : urgency}`} />
-          <span className={`legal-deadlines__countdown legal-deadlines__countdown--${urgency}`}>
-            <AlarmClock size={14} />
-            {daysLabel(d.days_remaining)}
+          <span className={`legal-deadlines__dot legal-deadlines__dot--${isSuggested ? 'suggested' : displayUrgency}`} />
+          <span className={`legal-deadlines__countdown legal-deadlines__countdown--${displayUrgency}`}>
+            {isOpponent ? <Hourglass size={14} /> : <AlarmClock size={14} />}
+            {isOpponent ? opponentDaysLabel(d.days_remaining) : daysLabel(d.days_remaining)}
           </span>
           <span className="legal-deadlines__source-badge">{SOURCE_LABELS[d.source] ?? d.source}</span>
           {isOpponent && <span className="legal-deadlines__opponent-badge">مهلة على الخصم</span>}
@@ -103,6 +117,12 @@ const DeadlineCard: React.FC<DeadlineCardProps> = ({ deadline: d, busy, onAction
           )}
           {d.assignee && <span>👤 {d.assignee.name}</span>}
         </div>
+
+        {isOpponent && (
+          <p className="legal-deadlines__opponent-note">
+            تُغلق تلقائياً عند انقضائها — للمتابعة والاستعداد فقط، لا إجراء مطلوب منك.
+          </p>
+        )}
 
         {d.legal_reference && (
           <div className="legal-deadlines__reference">
@@ -136,7 +156,7 @@ const DeadlineCard: React.FC<DeadlineCardProps> = ({ deadline: d, busy, onAction
           </>
         )}
 
-        {isOpen && (
+        {isOpen && !isOpponent && (
           <>
             <button className="legal-deadlines__btn legal-deadlines__btn--complete" disabled={busy} onClick={() => onAction(d, 'complete')}>
               <CheckCircle2 size={15} /> تم: {d.action_label || 'إنجاز الإجراء'}
