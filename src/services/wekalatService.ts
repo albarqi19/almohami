@@ -129,7 +129,7 @@ export class WekalatService {
    */
   static async getVisibilitySetting(): Promise<string> {
     try {
-      const response = await apiClient.get<ApiResponse<{ key: string; value: string }>>('/advanced-settings/wekala_visibility');
+      const response = await apiClient.get<ApiResponse<{ key: string; value: string }>>('/tenant/advanced-settings/wekala_visibility');
       return response.success && response.data ? response.data.value : 'all';
     } catch {
       return 'all';
@@ -140,7 +140,7 @@ export class WekalatService {
    * تحديث إعداد خصوصية الوكالات
    */
   static async updateVisibilitySetting(value: 'all' | 'assigned'): Promise<boolean> {
-    const response = await apiClient.put<ApiResponse<void>>('/advanced-settings/wekala_visibility', { value });
+    const response = await apiClient.put<ApiResponse<void>>('/tenant/advanced-settings/wekala_visibility', { value });
     if (!response.success) {
       throw new Error(response.message || 'فشل في تحديث الإعداد');
     }

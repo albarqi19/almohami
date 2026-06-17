@@ -215,7 +215,7 @@ const ContractBuilder: React.FC = () => {
     queryKey: ['billingSettings'],
     queryFn: async () => {
       const res = await apiClient.get<{ data: { settings: Record<string, { value: unknown }> } }>(
-        '/advanced-settings/group/billing'
+        '/tenant/advanced-settings/group/billing'
       );
       const settings = res?.data?.settings || {};
       return {
