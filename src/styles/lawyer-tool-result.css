@@ -1,0 +1,186 @@
+/*
+ * LawyerToolResultView — عرض أدوات المحامي (مضغوط ERP، مرتّب).
+ * يكمّل memo-engine-result.css (يعيد استخدام .merv-* للتقرير والشارات والدرج).
+ *
+ * دعم الثيمات الثلاثة: كل الألوان من متغيّرات dashboard-theme.css عبر توكِن --c + color-mix.
+ * لا hex صلب.
+ */
+
+.ltv { font-size: 12.5px; line-height: 1.55; color: var(--quiet-gray-800); text-align: right; }
+
+/* توكِنات الشدّة (تُورَّث) */
+.ltv .sev-critical, .ltv .sev-high { --c: var(--status-red); }
+.ltv .sev-medium { --c: var(--status-orange); }
+.ltv .sev-low { --c: var(--status-blue); }
+.ltv .sev-info { --c: var(--quiet-gray-400); }
+
+/* ═══ الأقسام ═══ */
+.ltv-sec { margin-top: 14px; }
+.ltv-sec-h {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+  font-size: 11px; font-weight: 800; letter-spacing: .2px;
+  color: var(--quiet-gray-500); text-transform: uppercase;
+}
+.ltv-count {
+  margin-inline-start: auto; min-width: 18px; padding: 0 6px; height: 16px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 9px; font-size: 10px; font-weight: 700;
+  color: var(--quiet-gray-600); background: var(--quiet-gray-100);
+}
+.ltv-sec--warn .ltv-sec-h { color: var(--status-orange); }
+
+/* ═══ شريط التأريض المصغّر ═══ */
+.ltv-grounding {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 10px; margin-bottom: 10px;
+  border-radius: 7px; font-size: 11.5px; font-weight: 600;
+}
+.ltv-grounding .ltv-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.ltv-grounding.grounded { color: var(--status-green); background: color-mix(in srgb, var(--status-green) 10%, transparent); }
+.ltv-grounding.uncertain {
+  color: var(--status-orange);
+  background: color-mix(in srgb, var(--status-orange) 11%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--status-orange) 45%, transparent);
+}
+
+/* ═══ بطاقات الخصم / السيناريوهات ═══ */
+.ltv-cards { display: flex; flex-direction: column; gap: 8px; }
+.ltv-scenarios { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ltv-card {
+  padding: 9px 11px; border-radius: 8px;
+  background: var(--quiet-gray-50);
+  border-inline-start: 3px solid var(--c, var(--status-blue));
+}
+.ltv-scenarios .ltv-card { border-inline-start: 0; border-top: 3px solid var(--c, var(--status-blue)); }
+.ltv-card.unv {
+  border-inline-start-style: dashed;
+  background: color-mix(in srgb, var(--status-orange) 6%, transparent);
+}
+.ltv-card-claim { display: flex; align-items: flex-start; gap: 7px; font-weight: 700; }
+.ltv-card-claim-txt { flex: 1; min-width: 0; }
+.ltv-card-resp { margin-top: 5px; font-size: 12px; color: var(--quiet-gray-700); }
+.ltv-ests { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.ltv-est {
+  font-size: 11px; padding: 2px 8px; border-radius: 7px;
+  color: var(--quiet-gray-700); background: var(--quiet-gray-100);
+}
+.ltv-est b { color: var(--quiet-gray-800); }
+.ltv-est.est {
+  color: var(--status-orange);
+  background: color-mix(in srgb, var(--status-orange) 10%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--status-orange) 38%, transparent);
+}
+.ltv-est.est b { color: var(--status-orange); }
+
+/* وسم الاجتهادي */
+.ltv-unv-tag {
+  flex-shrink: 0; margin-inline-start: auto;
+  padding: 1px 7px; border-radius: 9px;
+  font-size: 9.5px; font-weight: 800;
+  color: var(--status-orange);
+  background: color-mix(in srgb, var(--status-orange) 12%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--status-orange) 40%, transparent);
+}
+
+/* ═══ خيارات الشرط الجزائي ═══ */
+.ltv-options { display: flex; flex-direction: column; gap: 9px; }
+.ltv-opt {
+  padding: 9px 11px; border-radius: 8px;
+  background: var(--quiet-gray-50);
+  border-inline-start: 3px solid var(--law-gold);
+}
+.ltv-opt-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.ltv-opt-label {
+  font-size: 11px; font-weight: 800; padding: 1px 9px; border-radius: 10px;
+  color: var(--law-navy); background: color-mix(in srgb, var(--law-navy) 9%, transparent);
+}
+.ltv-opt-actions { display: flex; gap: 5px; margin-inline-start: auto; }
+.ltv-opt-text { font-size: 12.5px; line-height: 1.85; white-space: pre-wrap; color: var(--quiet-gray-800); }
+
+/* ═══ معاينة الصياغة البديلة ═══ */
+.ltv-rw-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-bottom: 8px; }
+.ltv-register {
+  font-size: 10px; font-weight: 700; padding: 1px 9px; border-radius: 10px;
+  color: var(--law-navy); background: color-mix(in srgb, var(--law-navy) 9%, transparent);
+}
+.ltv-changes { font-size: 11px; color: var(--quiet-gray-500); }
+.ltv-rw-new {
+  padding: 11px 13px; border-radius: 9px;
+  background: color-mix(in srgb, var(--law-gold) 7%, transparent);
+  border-inline-start: 3px solid var(--law-gold);
+  font-size: 13px; line-height: 1.95; white-space: pre-wrap;
+  color: var(--quiet-gray-800);
+}
+.ltv-rw-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+
+/* ═══ أزرار ═══ */
+.ltv-btn {
+  padding: 4px 14px; border-radius: 13px; cursor: pointer;
+  font-size: 11.5px; font-weight: 700; font-family: inherit;
+  color: var(--quiet-gray-700); background: var(--quiet-gray-100);
+  border: 1px solid var(--quiet-gray-200); transition: background .15s;
+}
+.ltv-btn:hover { background: var(--quiet-gray-200); }
+.ltv-btn.primary {
+  color: var(--law-gold);
+  background: color-mix(in srgb, var(--law-gold) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--law-gold) 40%, transparent);
+}
+.ltv-btn.primary:hover { background: color-mix(in srgb, var(--law-gold) 24%, transparent); }
+
+/* ═══ قائمة يلزم التحقّق ═══ */
+.ltv-uncertain { margin: 0; padding-inline-start: 16px; }
+.ltv-uncertain li { margin-bottom: 3px; color: var(--status-orange); font-size: 12px; }
+
+/* ═══ جواب المساعد المستندي ═══ */
+.ltv-answer {
+  padding: 11px 13px; border-radius: 9px;
+  background: var(--quiet-gray-50); border-inline-start: 3px solid var(--law-navy);
+  font-size: 13px; line-height: 1.9; white-space: pre-wrap; color: var(--quiet-gray-800);
+}
+
+.ltv-chips { margin-top: 7px; }
+
+/* ═══ مودال النتيجة (موسّع، يستضيف LawyerToolResultView) ═══ */
+.ltv-modal-overlay {
+  position: fixed; inset: 0; z-index: 1100;
+  display: flex; align-items: center; justify-content: center; padding: 18px;
+  background: color-mix(in srgb, var(--law-navy) 42%, transparent);
+  backdrop-filter: blur(2px);
+}
+.ltv-modal {
+  width: min(760px, 96vw); max-height: 88vh;
+  display: flex; flex-direction: column;
+  background: var(--dashboard-card); color: var(--quiet-gray-800);
+  border: 1px solid var(--quiet-gray-200); border-radius: 13px;
+  box-shadow: 0 20px 55px color-mix(in srgb, var(--law-navy) 32%, transparent);
+  overflow: hidden;
+}
+.ltv-modal-head {
+  display: flex; align-items: center; gap: 9px;
+  padding: 11px 16px; border-bottom: 1px solid var(--quiet-gray-200);
+  background: color-mix(in srgb, var(--law-navy) 5%, transparent);
+}
+.ltv-modal-icon { font-size: 16px; }
+.ltv-modal-title { font-size: 14px; font-weight: 800; color: var(--law-navy); }
+.ltv-modal-date { font-size: 10.5px; color: var(--quiet-gray-500); margin-inline-start: 4px; }
+.ltv-modal-x {
+  margin-inline-start: auto; flex-shrink: 0; width: 26px; height: 26px; border-radius: 7px; cursor: pointer;
+  border: 1px solid var(--quiet-gray-200); background: var(--quiet-gray-50);
+  color: var(--quiet-gray-600); font-size: 13px; font-weight: 800; line-height: 1;
+}
+.ltv-modal-x:hover { background: var(--quiet-gray-100); }
+.ltv-modal-body { padding: 14px 16px; overflow-y: auto; }
+.ltv-modal-foot {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-top: 1px solid var(--quiet-gray-200);
+  background: var(--quiet-gray-50);
+}
+.ltv-loading, .ltv-error { display: flex; align-items: center; gap: 9px; padding: 26px; justify-content: center; color: var(--quiet-gray-600); font-size: 13px; }
+.ltv-error { color: var(--status-red); }
+.ltv-spin { animation: ltv-spin 1s linear infinite; }
+@keyframes ltv-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 560px) {
+  .ltv-scenarios { grid-template-columns: 1fr; }
+}

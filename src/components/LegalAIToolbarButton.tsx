@@ -1,388 +1,174 @@
 /**
- * قائمة أدوات الذكاء الاصطناعي للمحامي
- * Legal AI Tools Menu Component
+ * أدوات المحامي — قائمة منسدلة + مودال نتيجة منظّم (العقد v2).
+ *
+ * تغيّر معماري (2026-06-18): النداء انتقل للباك إند الآمن (POST /lawyer-tools/run) بدل
+ * النداء المتصفحي المباشر لـ OpenRouter. المخرج صار LawyerToolResult منظّمًا يُعرض عبر
+ * LawyerToolResultView المثيّم (report/replacement)، أو يُحقن في المحرّر (annotations).
  */
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-// كلاسات legal-ai-* معرّفة في styles/legal-ai-tools.css ويُحمَّل مركزياً عبر
-// styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك). لا تستورد الستايل
-// هنا حتى لا ينفصل عن حزمة الستايلات الموحّدة
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import type { LegalAIToolInfo, LegalAIResponse } from '../services/legalAIService';
-import {
-  LEGAL_AI_TOOLS,
-  processLegalAIRequest
-} from '../services/legalAIService';
-
+// كلاسات legal-ai-* (القائمة) و ltv-* (المودال) تُحمَّل مركزياً عبر styles/appStyles.ts.
+import { Sparkles, ChevronDown, ChevronLeft, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { LAWYER_TOOLS } from '../types/lawyerTool';
+import type { LawyerToolInfo, LawyerToolResult, LawyerToolAnnotation } from '../types/lawyerTool';
+import { runLawyerTool } from '../services/lawyerToolService';
+import LawyerToolResultView from './LawyerToolResultView';
 import type { TextAnnotation, TextAnnotationSeverity } from '../types/textAnnotations';
-
-import { 
-  Sparkles, 
-  ChevronDown, 
-  ChevronLeft,
-  X,
-  Loader2,
-  Check,
-  RefreshCw,
-  Copy,
-  Replace,
-  AlertCircle
-} from 'lucide-react';
 
 interface LegalAIToolbarButtonProps {
   onSelectText: () => string | null;
   onGetAllText: () => string | null;
   onReplaceText: (newText: string) => void;
-  onReplaceAllText?: (newText: string) => void; // إضافة دالة لاستبدال كل المحتوى
+  onReplaceAllText?: (newText: string) => void;
+  /** إدراج (إلحاق) نصّ — لخيارات الشرط الجزائي؛ يسقط لـ onReplaceText إن غاب. */
+  onInsertText?: (newText: string) => void;
   disabled?: boolean;
   onSetTextAnnotations?: (annotations: TextAnnotation[]) => void;
+  /** سياق التأريض/الكاش (اختياري — تمرير محدود من السطح المستضيف). */
+  caseId?: number;
+  source?: 'memo' | 'notebook';
+  memoType?: string;
 }
 
-interface AIResultModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  result: LegalAIResponse | null;
-  selectedText: string;
-  toolInfo: LegalAIToolInfo | null;
-  isLoading: boolean;
-  onReplace: (text: string) => void;
-  onRetry: () => void;
-  isFullContent: boolean; // إضافة flag لمعرفة إذا كان تحليل للمستند كامل
-  onReplaceAllText?: (text: string) => void; // لاستبدال المستند كامل
-}
+const CATEGORIES: { key: LawyerToolInfo['category']; nameAr: string; icon: string }[] = [
+  { key: 'formalization', nameAr: 'تحسين الصياغة', icon: '✍️' },
+  { key: 'analysis', nameAr: 'التحليل القانوني', icon: '🔬' },
+  { key: 'summary', nameAr: 'التلخيص', icon: '📄' },
+  { key: 'creative', nameAr: 'الدعم الابتكاري', icon: '💡' },
+];
 
-// نافذة عرض نتائج AI
-const AIResultModal: React.FC<AIResultModalProps> = ({
-  isOpen,
-  onClose,
-  result,
-  selectedText,
-  toolInfo,
-  isLoading,
-  onReplace,
-  isFullContent,
-  onRetry,
-  onReplaceAllText
-}) => {
-  const [copied, setCopied] = useState(false);
-
-  if (!isOpen) return null;
-
-  // دالة لتنظيف النص من رموز markdown
-  const stripMarkdown = (text: string): string => {
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '$1') // إزالة **bold**
-      .replace(/\*(.*?)\*/g, '$1')     // إزالة *italic*
-      .replace(/#{1,6}\s/g, '')         // إزالة headers
-      .replace(/`{1,3}(.*?)`{1,3}/g, '$1') // إزالة code blocks
-      .replace(/\[(.*?)\]\(.*?\)/g, '$1')  // إزالة links
-      .replace(/^\s*[-*+]\s/gm, '')     // إزالة bullet points
-      .replace(/^\s*\d+\.\s/gm, '')     // إزالة numbered lists
-      .trim();
-  };
-
-  const handleCopy = async () => {
-    if (result?.result) {
-      // نسخ النص نظيف بدون رموز markdown
-      const cleanText = stripMarkdown(result.result);
-      await navigator.clipboard.writeText(cleanText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const handleReplace = () => {
-    if (result?.result) {
-      // استبدال النص نظيف
-      const cleanText = stripMarkdown(result.result);
-      if (isFullContent && onReplaceAllText) {
-        onReplaceAllText(cleanText);
-      } else {
-        onReplace(cleanText);
-      }
-      onClose();
-    }
-  };
-
-  return createPortal(
-    <div className="legal-ai-modal-overlay" onClick={onClose}>
-      <div 
-        className="legal-ai-result-modal"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="legal-ai-modal-header">
-          <div className="legal-ai-modal-title">
-            {toolInfo && <span>{toolInfo.icon}</span>}
-            <span>{toolInfo?.nameAr || 'معالجة AI'}</span>
-          </div>
-          <button className="legal-ai-close-btn" onClick={onClose}>
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="legal-ai-modal-body">
-          {/* النص الأصلي */}
-          <div className="legal-ai-section">
-            <div className="legal-ai-label">النص الأصلي</div>
-            <div className="legal-ai-original-box">
-              {selectedText}
-            </div>
-          </div>
-
-          {/* حالة التحميل */}
-          {isLoading && (
-            <div className="legal-ai-loading">
-              <Loader2 className="legal-ai-spin" size={20} />
-              <span>جارٍ المعالجة...</span>
-            </div>
-          )}
-
-          {/* الخطأ */}
-          {result && !result.success && !isLoading && (
-            <div className="legal-ai-error">
-              <AlertCircle size={16} />
-              <span>{result.error}</span>
-            </div>
-          )}
-
-          {/* النتيجة */}
-          {result?.success && result.result && !isLoading && (
-            <div className="legal-ai-section">
-              <div className="legal-ai-label">النتيجة</div>
-              <div className="legal-ai-result-box legal-ai-markdown">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {result.result}
-                </ReactMarkdown>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="legal-ai-modal-footer">
-          {result?.success && !isLoading && (
-            <>
-              <button className="legal-ai-action-btn" onClick={handleCopy}>
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-                <span>{copied ? 'تم' : 'نسخ'}</span>
-              </button>
-              <button className="legal-ai-action-btn" onClick={onRetry}>
-                <RefreshCw size={14} />
-                <span>إعادة</span>
-              </button>
-              <button className="legal-ai-action-btn primary" onClick={handleReplace}>
-                <Replace size={14} />
-                <span>{isFullContent ? 'استبدال الكل' : 'استبدال'}</span>
-              </button>
-            </>
-          )}
-          {result && !result.success && !isLoading && (
-            <button className="legal-ai-action-btn primary" onClick={onRetry}>
-              <RefreshCw size={14} />
-              <span>إعادة المحاولة</span>
-            </button>
-          )}
-          <button className="legal-ai-action-btn" onClick={onClose}>
-            إغلاق
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
+const SEVERITY_FOLD: Record<string, TextAnnotationSeverity> = {
+  critical: 'high', high: 'high', medium: 'medium', low: 'low', info: 'low',
 };
 
-// المكون الرئيسي
+/** يطوي تمييزات الأداة إلى TextAnnotation (يُسقط ما لا اقتباس/بديل له، يطوي الشدّة لثلاثية المحرّر). */
+function annotationsToTextAnnotations(anns: LawyerToolAnnotation[]): TextAnnotation[] {
+  const seen = new Set<string>();
+  return anns
+    .filter((a) => a.original_text && a.suggested_text && !seen.has(a.original_text) && seen.add(a.original_text) !== undefined)
+    .map((a) => ({
+      id: a.id || `lt-${a.original_text.slice(0, 8)}`,
+      original_text: a.original_text,
+      suggested_text: a.suggested_text as string,
+      reason: a.reason || undefined,
+      severity: SEVERITY_FOLD[a.severity] ?? 'medium',
+      legal_reference: a.legal_reference ?? undefined,
+      citation_index: a.citation_index,
+      grounded: a.citation_index != null,
+      color_code: a.color_code,
+    }));
+}
+
 const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
   onSelectText,
   onGetAllText,
   onReplaceText,
   onReplaceAllText,
+  onInsertText,
   disabled = false,
-  onSetTextAnnotations
+  onSetTextAnnotations,
+  caseId,
+  source = 'notebook',
+  memoType,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentResult, setCurrentResult] = useState<LegalAIResponse | null>(null);
-  const [currentTool, setCurrentTool] = useState<LegalAIToolInfo | null>(null);
+  const [result, setResult] = useState<LawyerToolResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [currentTool, setCurrentTool] = useState<LawyerToolInfo | null>(null);
   const [selectedText, setSelectedText] = useState('');
-  const [isFullContent, setIsFullContent] = useState(false); // تتبع ما إذا كان تحليل للمستند كامل
-  
+  const [isFullContent, setIsFullContent] = useState(false);
+
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const onClickOutside = (e: MouseEvent) => {
       if (
-        menuRef.current && 
-        !menuRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(e.target as Node)
       ) {
         setIsMenuOpen(false);
         setExpandedCategory(null);
       }
     };
-
-    if (isMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    if (isMenuOpen) document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
   }, [isMenuOpen]);
 
-  const categories = {
-    formalization: {
-      nameAr: 'تحسين الصياغة',
-      icon: '✍️',
-      tools: LEGAL_AI_TOOLS.filter(t => t.category === 'formalization')
-    },
-    analysis: {
-      nameAr: 'التحليل القانوني',
-      icon: '🔬',
-      tools: LEGAL_AI_TOOLS.filter(t => t.category === 'analysis')
-    },
-    summary: {
-      nameAr: 'التلخيص',
-      icon: '📄',
-      tools: LEGAL_AI_TOOLS.filter(t => t.category === 'summary')
-    },
-    creative: {
-      nameAr: 'الدعم الابتكاري',
-      icon: '💡',
-      tools: LEGAL_AI_TOOLS.filter(t => t.category === 'creative')
-    }
-  };
-
-  const handleToolClick = async (tool: LegalAIToolInfo) => {
-    // حاول الحصول على النص المحدد
-    let text = onSelectText();
-    const isFullDoc = !text?.trim();
-    
-    if (isFullDoc) {
-      text = onGetAllText();
-    }
-    
-    if (!text?.trim()) {
-      alert('المحرر فارغ. يرجى كتابة نص أولاً');
-      return;
-    }
-
-    const parseAnnotationsFromResult = (raw: string): TextAnnotation[] | null => {
-      const isSeverity = (value: string): value is TextAnnotationSeverity => {
-        return value === 'high' || value === 'medium' || value === 'low';
-      };
-
-      const trimmed = raw.trim();
-      const unfenced = trimmed
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/\s*```$/i, '')
-        .trim();
-
-      try {
-        const parsed = JSON.parse(unfenced);
-        if (!Array.isArray(parsed)) return null;
-
-        const annotations: TextAnnotation[] = parsed
-          .filter((x) => x && typeof x === 'object')
-          .map((x, idx) => ({
-            id: `${Date.now()}-${idx}-${Math.random().toString(36).slice(2)}`,
-            original_text: String((x as any).original_text ?? '').trim(),
-            suggested_text: String((x as any).suggested_text ?? '').trim(),
-            reason: (x as any).reason ? String((x as any).reason).trim() : undefined,
-            severity: (() => {
-              const raw = (x as any).severity ? String((x as any).severity).trim() : '';
-              return isSeverity(raw) ? raw : undefined;
-            })(),
-            legal_reference: (x as any).legal_reference ? String((x as any).legal_reference).trim() : undefined,
-          }))
-          .filter((x) => x.original_text && x.suggested_text);
-
-        return annotations;
-      } catch (e) {
-        console.error('[LegalAI] JSON parse error:', e);
-        return null;
-      }
-    };
-
-    setSelectedText(text);
-    setIsFullContent(isFullDoc); // حفظ معلومة أن التحليل للمستند كامل
-    setCurrentTool(tool);
-    setCurrentResult(null);
+  const execute = async (tool: LawyerToolInfo, text: string, fullDoc: boolean) => {
     setIsLoading(true);
-    setIsMenuOpen(false);
-
-    // Keep existing UX: open the result modal immediately with a loader.
-    setIsResultModalOpen(true);
-
+    setError(null);
+    setResult(null);
     try {
-      const result = await processLegalAIRequest({
-        tool: tool.id,
-        selectedText: text
-      });
+      const res = await runLawyerTool(tool.id, text, { source, caseId, memoType });
 
-      // Special case: annotation tool returns JSON for in-editor highlights.
-      if (tool.id === 'legal_proofreading_annotations' && result.success && result.result) {
-        console.log('[LegalAI] Annotation tool raw result:', result.result);
-        const annotations = parseAnnotationsFromResult(result.result);
-        console.log('[LegalAI] Parsed annotations:', annotations);
-        
-        if (annotations && annotations.length > 0) {
-          console.log('[LegalAI] Sending', annotations.length, 'annotations to editor');
-          console.log('[LegalAI] onSetTextAnnotations defined?', typeof onSetTextAnnotations);
-          if (onSetTextAnnotations) {
-            onSetTextAnnotations(annotations);
-            console.log('[LegalAI] onSetTextAnnotations CALLED successfully');
-          } else {
-            console.error('[LegalAI] onSetTextAnnotations is NOT defined! Annotations cannot be sent.');
-          }
-          setIsResultModalOpen(false);
-          setIsLoading(false);
-          return;
+      // النمط ج/د: تمييزات تُحقن في المحرّر مباشرة (لا مودال).
+      if (res.output_mode === 'annotations') {
+        const anns = annotationsToTextAnnotations(res.annotations ?? []);
+        if (anns.length && onSetTextAnnotations) {
+          onSetTextAnnotations(anns);
+          setIsModalOpen(false);
         } else {
-          // JSON parse failed or empty array – show raw result to user for debugging
-          console.warn('[LegalAI] No valid annotations parsed, showing raw result');
-          setCurrentResult({
-            ...result,
-            result: `⚠️ لم يتم استخراج ملاحظات صالحة من رد الذكاء الاصطناعي.\n\nالرد الخام:\n${result.result}`
-          });
-          setIsResultModalOpen(true);
-          setIsLoading(false);
-          return;
+          setError('لم تُرصد ملاحظات تستحق التمييز في النص.');
         }
+        setIsLoading(false);
+        return;
       }
 
-      setCurrentResult(result);
-      setIsResultModalOpen(true);
-    } catch (error) {
-      setCurrentResult({
-        success: false,
-        error: error instanceof Error ? error.message : 'حدث خطأ غير متوقع',
-        toolUsed: tool.id
-      });
-      setIsResultModalOpen(true);
+      setResult(res);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'حدث خطأ غير متوقع');
     } finally {
       setIsLoading(false);
     }
+    void fullDoc;
   };
 
-  const handleRetry = async () => {
-    if (!currentTool || !selectedText) return;
+  const handleToolClick = async (tool: LawyerToolInfo) => {
+    let text = onSelectText();
+    const fullDoc = !text?.trim();
+    if (fullDoc) text = onGetAllText();
+    if (!text?.trim()) {
+      alert('المحرّر فارغ. اكتب نصاً أولاً.');
+      return;
+    }
 
-    setIsLoading(true);
-    setCurrentResult(null);
-
-    const result = await processLegalAIRequest({
-      tool: currentTool.id,
-      selectedText
-    });
-
-    setCurrentResult(result);
-    setIsLoading(false);
+    setSelectedText(text);
+    setIsFullContent(fullDoc);
+    setCurrentTool(tool);
+    setIsMenuOpen(false);
+    setIsModalOpen(true);
+    await execute(tool, text, fullDoc);
   };
+
+  const handleRetry = () => {
+    if (currentTool && selectedText) void execute(currentTool, selectedText, isFullContent);
+  };
+
+  // ── معالجات النتيجة → المحرّر ──
+  const handleReplace = (text: string) => {
+    if (isFullContent && onReplaceAllText) onReplaceAllText(text);
+    else onReplaceText(text);
+    setIsModalOpen(false);
+  };
+  const handleInsert = (text: string) => {
+    (onInsertText ?? onReplaceText)(text);
+    setIsModalOpen(false);
+  };
+  const handleApply = (suggested: string, original?: string) => {
+    if (!onSetTextAnnotations) return;
+    onSetTextAnnotations([{
+      id: `lt-apply-${original?.slice(0, 8) ?? 'x'}`,
+      original_text: original ?? '',
+      suggested_text: suggested,
+    }]);
+  };
+
+  const asOf = result?.meta?.as_of_date?.hijri;
 
   return (
     <>
@@ -401,59 +187,74 @@ const LegalAIToolbarButton: React.FC<LegalAIToolbarButtonProps> = ({
       {isMenuOpen && (
         <div ref={menuRef} className="legal-ai-dropdown">
           <div className="legal-ai-dropdown-header">أدوات نظام الرائد الذكية</div>
-          
-          {Object.entries(categories).map(([key, category]) => (
-            <div key={key} className="legal-ai-group">
-              <button
-                className={`legal-ai-group-btn ${expandedCategory === key ? 'expanded' : ''}`}
-                onClick={() => setExpandedCategory(expandedCategory === key ? null : key)}
-              >
-                <span>{category.icon}</span>
-                <span>{category.nameAr}</span>
-                <ChevronLeft size={12} className={expandedCategory === key ? 'rotated' : ''} />
-              </button>
-
-              {expandedCategory === key && (
-                <div className="legal-ai-items">
-                  {category.tools.map((tool) => (
-                    <button
-                      key={tool.id}
-                      className="legal-ai-item"
-                      onClick={() => handleToolClick(tool)}
-                    >
-                      <span>{tool.icon}</span>
-                      <span>{tool.nameAr}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+          {CATEGORIES.map((cat) => {
+            const tools = LAWYER_TOOLS.filter((t) => t.category === cat.key);
+            return (
+              <div key={cat.key} className="legal-ai-group">
+                <button
+                  className={`legal-ai-group-btn ${expandedCategory === cat.key ? 'expanded' : ''}`}
+                  onClick={() => setExpandedCategory(expandedCategory === cat.key ? null : cat.key)}
+                >
+                  <span>{cat.icon}</span>
+                  <span>{cat.nameAr}</span>
+                  <ChevronLeft size={12} className={expandedCategory === cat.key ? 'rotated' : ''} />
+                </button>
+                {expandedCategory === cat.key && (
+                  <div className="legal-ai-items">
+                    {tools.map((tool) => (
+                      <button key={tool.id} className="legal-ai-item" onClick={() => handleToolClick(tool)}>
+                        <span>{tool.icon}</span>
+                        <span>{tool.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
-      <AIResultModal
-        isOpen={isResultModalOpen}
-        onClose={() => setIsResultModalOpen(false)}
-        result={currentResult}
-        selectedText={selectedText}
-        toolInfo={currentTool}
-        isLoading={isLoading}
-        onReplace={(text) => {
-          if (isFullContent && onReplaceAllText) {
-            onReplaceAllText(text); // استبدال كل المحتوى
-          } else {
-            onReplaceText(text); // استبدال النص المحدد
-          }
-        }}
-        onRetry={handleRetry}
-        isFullContent={isFullContent}
-        onReplaceAllText={onReplaceAllText}
-      />
+      {isModalOpen && createPortal(
+        <div className="ltv-modal-overlay" onClick={() => setIsModalOpen(false)}>
+          <div className="ltv-modal" onClick={(e) => e.stopPropagation()} dir="rtl">
+            <div className="ltv-modal-head">
+              {currentTool && <span className="ltv-modal-icon">{currentTool.icon}</span>}
+              <span className="ltv-modal-title">{currentTool?.label || 'معالجة ذكية'}</span>
+              {asOf && <span className="ltv-modal-date">⏱ {asOf}</span>}
+              <button className="ltv-modal-x" onClick={() => setIsModalOpen(false)} aria-label="إغلاق">✕</button>
+            </div>
+
+            <div className="ltv-modal-body">
+              {isLoading && (
+                <div className="ltv-loading"><Loader2 className="ltv-spin" size={20} /><span>جارٍ المعالجة…</span></div>
+              )}
+              {!isLoading && error && (
+                <div className="ltv-error"><AlertCircle size={18} /><span>{error}</span></div>
+              )}
+              {!isLoading && !error && result && (
+                <LawyerToolResultView
+                  result={result}
+                  onApply={handleApply}
+                  onReplace={handleReplace}
+                  onInsert={handleInsert}
+                />
+              )}
+            </div>
+
+            <div className="ltv-modal-foot">
+              {!isLoading && (
+                <button className="ltv-btn" onClick={handleRetry}><RefreshCw size={13} /> إعادة</button>
+              )}
+              <button className="ltv-btn" onClick={() => setIsModalOpen(false)} style={{ marginInlineStart: 'auto' }}>إغلاق</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 };
 
 export default LegalAIToolbarButton;
-export { AIResultModal };
 export type { LegalAIToolbarButtonProps };

@@ -578,6 +578,8 @@ const NotebookWorkspace: React.FC = () => {
                                             console.log('[NotebookWorkspace] Setting text annotations:', annotations);
                                             setTextAnnotations(annotations);
                                         }}
+                                        source="notebook"
+                                        caseId={noteCaseId ?? undefined}
                                     />
                                 </div>
                             </div>

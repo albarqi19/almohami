@@ -20,6 +20,8 @@ import NotebookAssistantWidget from './NotebookAssistantWidget';
 import AnalysisProgress from './AnalysisProgress';
 import { LegalMemoService, type AnalysisStep } from '../services/legalMemoService';
 import { runSingleAnalysis, ANALYSIS_ENGINES, type AnalysisEngineType, type MemoAnalysisResult } from '../services/memoAnalysisService';
+import EngineResultView from './memo/EngineResultView';
+import { isEngineResultV2 } from '../types/memoAnalysis';
 import { convertToHTML, detectContentType } from '../utils/contentConverter';
 import type { TextAnnotation } from '../types/textAnnotations';
 import ReactMarkdown from 'react-markdown';
@@ -790,6 +792,8 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                                 console.log('[LegalMemoWorkspace] setTextAnnotations called with', annotations.length, 'annotations');
                                                 setTextAnnotations(annotations);
                                             }}
+                                            source="memo"
+                                            memoType={selectedMemoType || undefined}
                                         />
                                     </div>
 
@@ -1138,11 +1142,29 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                                                 </span>
                                                             </summary>
                                                             <div className="lmw-engine-content">
-                                                                <div className="lmw-markdown-content" dir="rtl">
-                                                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                                        {savedResult.result}
-                                                                    </ReactMarkdown>
-                                                                </div>
+                                                                {/* عرض v2 المنظّم إن توفّر؛ وإلا fallback عكوس لـMarkdown (التحاليل القديمة/الطوارئ) */}
+                                                                {isEngineResultV2(savedResult.data) ? (
+                                                                    <EngineResultView
+                                                                        result={savedResult.data}
+                                                                        onApplySuggestion={(suggested, original) => {
+                                                                            if (!suggested) return;
+                                                                            setTextAnnotations(prev => [
+                                                                                ...prev,
+                                                                                {
+                                                                                    id: `mev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                                                                                    original_text: original ?? '',
+                                                                                    suggested_text: suggested,
+                                                                                },
+                                                                            ]);
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    <div className="lmw-markdown-content" dir="rtl">
+                                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                                            {savedResult.result}
+                                                                        </ReactMarkdown>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </details>
                                                     );

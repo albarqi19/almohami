@@ -1,709 +1,272 @@
 /**
- * خدمة التحليل الذكي للمذكرات القانونية
- * Memo Analysis Service - Specialized Legal AI for Saudi Law
- * 
- * نظام تحليل ذكي متخصص لكل نوع مذكرة وفق القانون السعودي
+ * خدمة التحليل الذكي للمذكرات القانونية (v2).
+ *
+ * ⚠️ تغيّر معماري (2026-06-17): البرومبتات والتأريض انتقلا للباك إند.
+ * هذه الخدمة الآن تنادي endpoint واحداً آمناً:
+ *     POST /api/v1/memo-analysis/analyze
+ * بدل النداء المتصفحي المباشر لـ OpenRouter (الذي كان يكشف المفتاح). راجع
+ * MEMO_ENGINES_UPGRADE_PLAN_2026-06-17.md.
+ *
+ * تُبقي الواجهة العامة (ANALYSIS_ENGINES / runSingleAnalysis / runFullMemoAnalysis)
+ * كما هي حتى لا تنكسر المكوّنات الحالية، وتُرفق النتيجة المنظّمة (data) للعرض الجديد (المرحلة ٧).
  */
 
-import { callLegalAI, hasGeminiApiKey } from './legalAIService';
+import { apiClient } from '../utils/api';
+import type { ApiResponse } from '../utils/api';
+import type { EngineResult, MemoEngineType } from '../types/memoAnalysis';
+import { MEMO_ENGINES } from '../types/memoAnalysis';
 
-// أنواع محركات التحليل
-export type AnalysisEngineType =
-    | 'gatekeeper'      // الحارس - المتطلبات الشكلية والنظامية
-    | 'brain'           // العقل - التحليل الموضوعي والاستراتيجي
-    | 'opponent'        // الخصم - محاكاة رد الخصم
-    | 'polish'          // الصقل - تحسين الصياغة القانونية
-    | 'compliance';     // الامتثال - فحص الأنظمة السعودية
+// أنواع محركات التحليل (مطابقة لـ MemoEngineType في الباك إند)
+export type AnalysisEngineType = MemoEngineType;
 
-// واجهة نتيجة التحليل
+// واجهة نتيجة التحليل (موسّعة بـ data المنظّمة + توافق خلفي عبر result النصّي)
 export interface MemoAnalysisResult {
-    engine: AnalysisEngineType;
-    engineName: string;
-    icon: string;
-    result: string;
-    success: boolean;
-    processingTime?: number;
+  engine: AnalysisEngineType;
+  engineName: string;
+  icon: string;
+  result: string; // Markdown مولّد من البنية (توافق خلفي مع العرض الحالي)
+  success: boolean;
+  processingTime?: number;
+  /** النتيجة المنظّمة الكاملة — يستهلكها العرض الجديد (EngineResultView). */
+  data?: EngineResult;
+  format?: string;
+  error?: string;
 }
 
-// واجهة التحليل الكامل
 export interface FullMemoAnalysis {
-    memoType: string;
-    memoTypeName: string;
-    analyses: MemoAnalysisResult[];
-    overallScore?: number;
-    timestamp: Date;
+  memoType: string;
+  memoTypeName: string;
+  analyses: MemoAnalysisResult[];
+  overallScore?: number;
+  timestamp: Date;
 }
 
-// معلومات محركات التحليل
+export interface AnalyzeOptions {
+  clientPosition?: 'plaintiff' | 'defendant' | 'third_party';
+  caseId?: number;
+}
+
+// معلومات محركات التحليل (مشتقّة من العقد الموحّد)
 export const ANALYSIS_ENGINES: Record<AnalysisEngineType, { name: string; icon: string; description: string }> = {
-    gatekeeper: {
-        name: 'الحارس الشكلي',
-        icon: '🛡️',
-        description: 'فحص المتطلبات الشكلية والنظامية'
-    },
-    brain: {
-        name: 'المحلل الاستراتيجي',
-        icon: '🧠',
-        description: 'التحليل الموضوعي وبناء الاستراتيجية'
-    },
-    opponent: {
-        name: 'محاكي الخصم',
-        icon: '⚔️',
-        description: 'توقع رد الخصم وكشف نقاط الضعف'
-    },
-    polish: {
-        name: 'المدقق القانوني',
-        icon: '✨',
-        description: 'تحسين الصياغة والتدقيق اللغوي'
-    },
-    compliance: {
-        name: 'مراجع الامتثال',
-        icon: '📋',
-        description: 'فحص التوافق مع الأنظمة السعودية'
-    }
+  gatekeeper: { name: 'الحارس الشكلي', icon: '🛡️', description: 'فحص المتطلبات الشكلية والنظامية' },
+  brain: { name: 'المحلل الاستراتيجي', icon: '🧠', description: 'التحليل الموضوعي وبناء الاستراتيجية' },
+  opponent: { name: 'محاكي الخصم', icon: '⚔️', description: 'توقع رد الخصم وكشف نقاط الضعف' },
+  polish: { name: 'المدقق القانوني', icon: '✨', description: 'تحسين الصياغة والتدقيق اللغوي' },
+  compliance: { name: 'مراجع الامتثال', icon: '📋', description: 'فحص التوافق مع الأنظمة السعودية' },
 };
 
 // ═══════════════════════════════════════════════════════════════
-// 🎯 البرومبتات المتخصصة لكل نوع مذكرة
+// 🚀 النداء الخلفي
 // ═══════════════════════════════════════════════════════════════
 
-// البرومبت الأساسي للحارس الشكلي (مشترك لجميع المذكرات)
-const BASE_GATEKEEPER_PROMPT = `أنت مستشار قانوني سعودي خبير متخصص في الإجراءات الشكلية والنظامية أمام المحاكم السعودية.
-
-المهمة: فحص المذكرة القانونية التالية للتأكد من استيفاء المتطلبات الشكلية والنظامية.
-
-═══════════════════════════════════════
-📋 قائمة الفحص الشكلي:
-═══════════════════════════════════════
-
-【البيانات الأساسية】
-✅/❌ اسم المحكمة المختصة
-✅/❌ رقم القضية (إن وجد)
-✅/❌ أسماء الأطراف كاملة
-✅/❌ صفات الأطراف (مدعي/مدعى عليه/مستأنف)
-✅/❌ أرقام الهوية الوطنية أو السجل التجاري
-✅/❌ عناوين الأطراف
-
-【الاختصاص】
-- الاختصاص النوعي: هل المحكمة المختارة مختصة؟
-- الاختصاص المكاني: هل الموقع الجغرافي صحيح؟
-- الإحالة: إذا كان هناك تحويل بين المحاكم
-
-【المواعيد النظامية】
-⚠️ تنبيه بالمواعيد الحرجة:
-{DEADLINE_SPECIFIC}
-
-【الطلبات】
-- هل الطلبات محددة وواضحة؟
-- هل هناك تسلسل منطقي؟
-
-═══════════════════════════════════════
-📊 التقرير:
-═══════════════════════════════════════
-
-【الملخص التنفيذي】
-🟢 مستوفية شكلياً / 🟡 تحتاج تعديلات / 🔴 ناقصة جوهرياً
-
-【البيانات الناقصة】
-قائمة بالعناصر المفقودة مع التصحيح المقترح
-
-【التوصيات العاجلة】
-أولويات يجب معالجتها فوراً
-
-═══════════════════════════════════════
-المذكرة المراد فحصها:
-═══════════════════════════════════════
-{TEXT}`;
-
-// البرومبت الأساسي للتحليل الموضوعي (Brain)
-const BASE_BRAIN_PROMPT = `أنت محامٍ سعودي خبير ومستشار قانوني متخصص في بناء الاستراتيجيات القانونية وتحليل القضايا.
-
-المهمة: تحليل المذكرة موضوعياً واستراتيجياً.
-
-{MEMO_TYPE_SPECIFIC}
-
-═══════════════════════════════════════
-المذكرة المراد تحليلها:
-═══════════════════════════════════════
-{TEXT}`;
-
-// البرومبت الأساسي لمحاكاة الخصم
-const BASE_OPPONENT_PROMPT = `أنت محامٍ سعودي متمرس، مهمتك الآن أن تتقمص دور محامي الطرف الآخر (الخصم) وتحلل المذكرة من وجهة نظره.
-
-المهمة: اكتشاف نقاط الضعف واقتراح الردود المحتملة من الخصم.
-
-═══════════════════════════════════════
-📋 منهجية التحليل:
-═══════════════════════════════════════
-
-【نقاط الضعف المكتشفة】
-ابحث عن:
-- ادعاءات بدون سند
-- ثغرات في السرد
-- تناقضات داخلية
-- أدلة ضعيفة
-
-【الردود المتوقعة من الخصم】
-لكل نقطة ضعف:
-┌─────────────────────────────────────
-│ ⚠️ نقطة الضعف: [وصفها]
-│ 📍 موقعها في المذكرة: [اقتباس]
-│ ⚔️ رد الخصم المتوقع: [كيف سيستغلها]
-│ 🛡️ كيف تحصّن موقفك: [الإجراء الوقائي]
-└─────────────────────────────────────
-
-【استراتيجية الخصم المتوقعة】
-ماذا سيفعل الخصم في الجلسة القادمة؟
-
-【توصيات تحصين المذكرة】
-قائمة بالتعديلات لتحصين المذكرة
-
-═══════════════════════════════════════
-المذكرة المراد تحليلها:
-═══════════════════════════════════════
-{TEXT}`;
-
-// البرومبت الأساسي للصقل اللغوي والقانوني
-const BASE_POLISH_PROMPT = `أنت مدقق قانوني ولغوي سعودي متخصص في الصياغة القانونية الرصينة.
-
-المهمة: مراجعة وتحسين الصياغة القانونية للمذكرة.
-
-═══════════════════════════════════════
-📋 محاور التدقيق:
-═══════════════════════════════════════
-
-【التحويل من العامية للفصحى القانونية】
-تحويل أي عبارات عامية إلى لغة قانونية رصينة:
-| العبارة الحالية | الصياغة القانونية |
-|----------------|-------------------|
-
-【التدقيق الإملائي والنحوي】
-- الأخطاء الإملائية
-- الأخطاء النحوية
-- المصطلحات القانونية غير الدقيقة
-
-【تحسين البنية】
-- تسلسل الأفكار
-- وضوح الطلبات
-- قوة الحجج
-
-【الصياغة المحسّنة】
-أعد صياغة الفقرات الضعيفة بشكل أفضل
-
-═══════════════════════════════════════
-المذكرة المراد تحسينها:
-═══════════════════════════════════════
-{TEXT}`;
-
-// البرومبت الأساسي لفحص الامتثال
-const BASE_COMPLIANCE_PROMPT = `أنت مستشار قانوني سعودي متخصص في الأنظمة واللوائح السعودية.
-
-المهمة: فحص المذكرة للتأكد من توافقها مع الأنظمة السعودية المعمول بها.
-
-═══════════════════════════════════════
-📋 الأنظمة المراد فحص التوافق معها:
-═══════════════════════════════════════
-
-{SYSTEMS_TO_CHECK}
-
-═══════════════════════════════════════
-📊 تقرير الامتثال:
-═══════════════════════════════════════
-
-【المواد النظامية المطبقة】
-قائمة بالمواد ذات الصلة من الأنظمة السعودية
-
-【مستوى الامتثال】
-🟢 متوافق / 🟡 تحفظات / 🔴 مخالف
-
-【نقاط التوافق】
-ما يتفق مع النظام
-
-【نقاط المخالفة أو النقص】
-ما يحتاج تعديل
-
-【المواد المقترح الاستشهاد بها】
-مواد نظامية تقوي الموقف
-
-═══════════════════════════════════════
-المذكرة المراد فحصها:
-═══════════════════════════════════════
-{TEXT}`;
-
-// ═══════════════════════════════════════════════════════════════
-// 🎯 البرومبتات المخصصة لكل نوع مذكرة
-// ═══════════════════════════════════════════════════════════════
-
-const MEMO_SPECIFIC_PROMPTS: Record<string, {
-    brain: string;
-    deadlineSpecific: string;
-    systemsToCheck: string;
-}> = {
-    // ═══════════════════════════════════════════════════════════════
-    // 📜 صحيفة الدعوى
-    // ═══════════════════════════════════════════════════════════════
-    claim_petition: {
-        brain: `
-═══════════════════════════════════════
-📋 تحليل صحيفة الدعوى:
-═══════════════════════════════════════
-
-【تحرير الدعوى】
-- هل الوقائع مسرودة بشكل واضح ومتسلسل زمنياً؟
-- هل هناك علاقة سببية واضحة بين الوقائع والطلبات؟
-- هل الطلبات محددة وقابلة للتنفيذ؟
-
-【صفة المدعي】
-- هل صفة المدعي واضحة ومثبتة؟
-- هل المصلحة في الدعوى قائمة ومباشرة؟
-
-【الأسانيد القانونية】
-- ما المواد النظامية الداعمة للدعوى؟
-- هل تم الاستشهاد بها بشكل صحيح؟
-
-【قوة الأدلة】
-تقييم الأدلة المذكورة:
-| الدليل | نوعه | قوته | ملاحظات |
-|--------|------|------|---------|
-
-【الطلبات】
-تحليل كل طلب:
-- الطلب الرئيسي: [تقييم]
-- الطلبات الفرعية: [تقييم]
-- الطلب الاحتياطي: [هل موجود؟]
-
-【التوصيات】
-اقتراحات لتقوية صحيفة الدعوى`,
-        deadlineSpecific: `
-- مدة التقادم حسب نوع الدعوى
-- مواعيد تقديم المستندات`,
-        systemsToCheck: `
-- نظام المرافعات الشرعية
-- نظام المعاملات المدنية (الجديد)
-- الأنظمة الخاصة حسب موضوع الدعوى`
-    },
-
-    // ═══════════════════════════════════════════════════════════════
-    // 📜 مذكرة الرد على صحيفة الدعوى
-    // ═══════════════════════════════════════════════════════════════
-    response_to_claim: {
-        brain: `
-═══════════════════════════════════════
-📋 تحليل مذكرة الرد (Gap Analysis):
-═══════════════════════════════════════
-
-【تحليل الثغرات - ما لم يُرد عليه】
-فحص كل ادعاء في صحيفة الدعوى والتأكد من وجود رد:
-| ادعاء المدعي | هل تم الرد عليه؟ | قوة الرد | ملاحظات |
-|--------------|------------------|----------|---------|
-
-【الدفوع الشكلية】
-- هل تم إثارة دفوع شكلية مناسبة؟
-- عدم الاختصاص
-- انعدام الصفة
-- سبق الفصل
-- التقادم
-
-【الدفوع الموضوعية】
-- هل تم دحض كل ادعاء؟
-- هل الأدلة المضادة كافية؟
-
-【الطلبات العارضة】
-- هل هناك فرصة لدعوى مقابلة؟
-- هل هناك طلبات عارضة مناسبة؟
-
-【الأسانيد النظامية】
-- المواد المستخدمة في الرد
-- مواد إضافية مقترحة
-
-【توصيات التحصين】
-ما يجب إضافته لتقوية مذكرة الرد`,
-        deadlineSpecific: `
-- موعد تقديم مذكرة الرد (عادة 10 أيام)
-- موعد الجلسة القادمة`,
-        systemsToCheck: `
-- نظام المرافعات الشرعية (خاصة مواد الرد والدفوع)
-- نظام المعاملات المدنية
-- الأنظمة الخاصة بموضوع الدعوى`
-    },
-
-    // ═══════════════════════════════════════════════════════════════
-    // ⚖️ مذكرة الاستئناف
-    // ═══════════════════════════════════════════════════════════════
-    appeal_memo: {
-        brain: `
-═══════════════════════════════════════
-📋 تحليل مذكرة الاستئناف (اللائحة الاعتراضية):
-═══════════════════════════════════════
-
-【تحليل أسباب الحكم】
-فحص كل سبب من أسباب الحكم المستأنف:
-| سبب الحكم | الخطأ المدعى | السند النظامي | قوة الاعتراض |
-|-----------|--------------|---------------|--------------|
-
-【أخطاء تطبيق النظام】
-- هل طُبق النظام بشكل خاطئ؟
-- هل تم تجاهل نص نظامي واجب التطبيق؟
-
-【القصور في التسبيب】
-- هل أغفل الحكم الرد على دفوع جوهرية؟
-- هل هناك تناقض في أسباب الحكم؟
-
-【الإخلال بحق الدفاع】
-- هل تم احترام الضمانات الإجرائية؟
-- هل أُتيحت الفرصة الكاملة للدفاع؟
-
-【مخالفة الثابت بالأوراق】
-- هل تجاهل الحكم أدلة مقدمة؟
-- هل بُني على وقائع غير صحيحة؟
-
-【توصيات تقوية الاستئناف】
-- أسباب إضافية مقترحة
-- أدلة جديدة يمكن تقديمها`,
-        deadlineSpecific: `
-⚠️ مهم جداً - مواعيد الاستئناف:
-- 30 يوماً من تاريخ استلام صك الحكم (للأحكام العادية)
-- 15 يوماً للأحكام المستعجلة
-- تحقق من تاريخ الاستلام!`,
-        systemsToCheck: `
-- نظام المرافعات الشرعية (الباب الثامن - الاستئناف)
-- نظام المحاكم التجارية إذا كانت تجارية
-- المبادئ القضائية للمحكمة العليا`
-    },
-
-    // ═══════════════════════════════════════════════════════════════
-    // ⚡ مذكرة طلب التنفيذ
-    // ═══════════════════════════════════════════════════════════════
-    execution_request: {
-        brain: `
-═══════════════════════════════════════
-📋 تحليل مذكرة طلب التنفيذ:
-═══════════════════════════════════════
-
-【صحة السند التنفيذي】
-- هل السند نهائي وقطعي؟
-- هل الصيغة التنفيذية صحيحة؟
-- هل مضت مدة الاستئناف؟
-
-【تحديد المنفذ ضده】
-- هل بيانات المنفذ ضده كاملة؟
-- هل العنوان صحيح للتبليغ؟
-
-【تحديد المال المطلوب تنفيذه】
-- هل المبلغ محدد بدقة؟
-- هل هناك فوائد أو تعويضات إضافية؟
-
-【إجراءات الحجز المقترحة】
-بناءً على طبيعة الدين والمدين:
-| نوع الحجز | الإجراء | الأولوية |
-|-----------|---------|----------|
-| حسابات بنكية | ... | 1 |
-| عقارات | ... | 2 |
-| منقولات | ... | 3 |
-| رواتب | ... | 4 |
-
-【توصيات التنفيذ】
-استراتيجية تنفيذ فعالة`,
-        deadlineSpecific: `
-- مدة صلاحية السند التنفيذي
-- مواعيد الإخطار والتبليغ`,
-        systemsToCheck: `
-- نظام التنفيذ السعودي
-- لائحة نظام التنفيذ
-- أنظمة الحجز والمنع من السفر`
-    },
-
-    // ═══════════════════════════════════════════════════════════════
-    // 🏛️ مذكرة القضايا التجارية
-    // ═══════════════════════════════════════════════════════════════
-    commercial_memo: {
-        brain: `
-═══════════════════════════════════════
-📋 تحليل المذكرة التجارية:
-═══════════════════════════════════════
-
-【طبيعة النزاع التجاري】
-- نوع العقد التجاري
-- الأطراف التجارية
-- قيمة النزاع
-
-【تحليل العلاقة التعاقدية】
-- شروط العقد الجوهرية
-- الإخلال المدعى به
-- الضرر والتعويض
-
-【الاختصاص التجاري】
-- هل الدائرة التجارية مختصة؟
-- هل يوجد شرط تحكيم؟
-
-【الأدلة التجارية】
-تقييم الأدلة:
-| الدليل | نوعه | حجيته | ملاحظات |
-|--------|------|-------|---------|
-| العقد | كتابي | قوي | |
-| الفواتير | تجاري | متوسط | |
-| المراسلات | إلكتروني | يحتاج توثيق | |
-
-【توصيات】
-نقاط القوة والضعف`,
-        deadlineSpecific: `
-- مواعيد المحاكم التجارية (أسرع)
-- مدد الطعن في الأحكام التجارية`,
-        systemsToCheck: `
-- نظام المحاكم التجارية
-- نظام الشركات
-- نظام الأوراق التجارية
-- نظام التحكيم`
-    },
-
-    // ═══════════════════════════════════════════════════════════════
-    // 👷 مذكرة القضايا العمالية
-    // ═══════════════════════════════════════════════════════════════
-    labor_memo: {
-        brain: `
-═══════════════════════════════════════
-📋 تحليل المذكرة العمالية:
-═══════════════════════════════════════
-
-【طبيعة النزاع العمالي】
-- نوع العلاقة العمالية
-- سبب النزاع (فصل، أجور، إصابة...)
-- المطالبات
-
-【حقوق العامل المطالب بها】
-تقييم كل مطالبة:
-| المطالبة | السند النظامي | مدى الأحقية | الملاحظات |
-|----------|---------------|-------------|-----------|
-| مكافأة نهاية الخدمة | م.84-88 | | |
-| بدل الإجازات | م.109 | | |
-| أضرار الفصل التعسفي | م.77 | | |
-
-【التسوية الودية】
-- هل تمت إجراءات التسوية الودية؟
-- قرارات مكتب العمل
-
-【الأدلة العمالية】
-- عقد العمل
-- كشوف الرواتب
-- قرار إنهاء الخدمة
-
-【توصيات】
-استراتيجية القضية العمالية`,
-        deadlineSpecific: `
-- مدة رفع الدعوى العمالية (12 شهر من تاريخ انتهاء العلاقة)
-- مواعيد جلسات المحاكم العمالية`,
-        systemsToCheck: `
-- نظام العمل السعودي
-- لائحة نظام العمل
-- قرارات وزارة الموارد البشرية`
-    }
-};
-
-// البرومبت الافتراضي للأنواع غير المحددة
-const DEFAULT_MEMO_PROMPTS = {
-    brain: `
-═══════════════════════════════════════
-📋 التحليل الموضوعي العام:
-═══════════════════════════════════════
-
-【ملخص المذكرة】
-- موضوع المذكرة
-- الأطراف
-- الطلبات
-
-【تحليل قوة الموقف】
-- نقاط القوة
-- نقاط الضعف
-- الأدلة المتوفرة
-
-【الأسانيد النظامية】
-- المواد المستخدمة
-- مواد إضافية مقترحة
-
-【التوصيات】
-تحسينات مقترحة للمذكرة`,
-    deadlineSpecific: `
-- المواعيد النظامية العامة`,
-    systemsToCheck: `
-- نظام المرافعات الشرعية
-- الأنظمة ذات الصلة بموضوع المذكرة`
-};
-
-// ═══════════════════════════════════════════════════════════════
-// 🚀 دوال التحليل
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * بناء البرومبت حسب نوع المذكرة ونوع التحليل
- */
-function buildPrompt(memoType: string, engine: AnalysisEngineType, content: string): string {
-    const memoPrompts = MEMO_SPECIFIC_PROMPTS[memoType] || DEFAULT_MEMO_PROMPTS;
-
-    let prompt = '';
-
-    switch (engine) {
-        case 'gatekeeper':
-            prompt = BASE_GATEKEEPER_PROMPT
-                .replace('{DEADLINE_SPECIFIC}', memoPrompts.deadlineSpecific)
-                .replace('{TEXT}', content);
-            break;
-
-        case 'brain':
-            prompt = BASE_BRAIN_PROMPT
-                .replace('{MEMO_TYPE_SPECIFIC}', memoPrompts.brain)
-                .replace('{TEXT}', content);
-            break;
-
-        case 'opponent':
-            prompt = BASE_OPPONENT_PROMPT.replace('{TEXT}', content);
-            break;
-
-        case 'polish':
-            prompt = BASE_POLISH_PROMPT.replace('{TEXT}', content);
-            break;
-
-        case 'compliance':
-            prompt = BASE_COMPLIANCE_PROMPT
-                .replace('{SYSTEMS_TO_CHECK}', memoPrompts.systemsToCheck)
-                .replace('{TEXT}', content);
-            break;
-    }
-
-    return prompt;
+/** يستدعي محرّكاً واحداً في الباك إند ويُرجع النتيجة المنظّمة (EngineResult). */
+export async function analyzeEngine(
+  engine: AnalysisEngineType,
+  memoType: string,
+  memoText: string,
+  opts: AnalyzeOptions = {}
+): Promise<EngineResult> {
+  const res = await apiClient.post<ApiResponse<EngineResult>>('/memo-analysis/analyze', {
+    engine,
+    memo_type: memoType,
+    memo_text: memoText,
+    client_position: opts.clientPosition,
+    case_id: opts.caseId,
+  });
+
+  if (res.success && res.data) return res.data;
+  throw new Error(res.message || 'تعذّر إجراء التحليل الذكي');
 }
 
-/**
- * تحليل واحد بمحرك محدد
- */
+/** تحليل واحد بمحرك محدد (واجهة متوافقة مع المكوّنات الحالية). */
 export async function runSingleAnalysis(
-    memoType: string,
-    memoContent: string,
-    engine: AnalysisEngineType
+  memoType: string,
+  memoContent: string,
+  engine: AnalysisEngineType,
+  opts: AnalyzeOptions = {}
 ): Promise<MemoAnalysisResult> {
-    const engineInfo = ANALYSIS_ENGINES[engine];
-    const startTime = Date.now();
+  const engineInfo = ANALYSIS_ENGINES[engine];
+  const startTime = Date.now();
 
-    if (!hasGeminiApiKey()) {
-        return {
-            engine,
-            engineName: engineInfo.name,
-            icon: engineInfo.icon,
-            result: 'لم يتم تعيين مفتاح API. يرجى إدخال المفتاح في الإعدادات.',
-            success: false
-        };
-    }
-
-    try {
-        const prompt = buildPrompt(memoType, engine, memoContent);
-
-        // استخدام callLegalAI مباشرة للبرومبتات المخصصة
-        const result = await callLegalAI(prompt);
-
-        return {
-            engine,
-            engineName: engineInfo.name,
-            icon: engineInfo.icon,
-            result: result,
-            success: true,
-            processingTime: Date.now() - startTime
-        };
-    } catch (error) {
-        return {
-            engine,
-            engineName: engineInfo.name,
-            icon: engineInfo.icon,
-            result: error instanceof Error ? error.message : 'حدث خطأ غير متوقع',
-            success: false,
-            processingTime: Date.now() - startTime
-        };
-    }
+  try {
+    const data = await analyzeEngine(engine, memoType, memoContent, opts);
+    return {
+      engine,
+      engineName: engineInfo.name,
+      icon: engineInfo.icon,
+      result: engineResultToMarkdown(data),
+      data,
+      format: data.format,
+      success: true,
+      processingTime: Date.now() - startTime,
+    };
+  } catch (error) {
+    return {
+      engine,
+      engineName: engineInfo.name,
+      icon: engineInfo.icon,
+      result: error instanceof Error ? error.message : 'حدث خطأ غير متوقع',
+      error: error instanceof Error ? error.message : 'حدث خطأ غير متوقع',
+      success: false,
+      processingTime: Date.now() - startTime,
+    };
+  }
 }
 
-/**
- * تشغيل التحليل الكامل بجميع المحركات
- */
-export async function runFullMemoAnalysis(
-    memoType: string,
-    memoTypeName: string,
-    memoContent: string,
-    onProgress?: (completed: number, total: number, current: AnalysisEngineType) => void
+async function runEngines(
+  engines: AnalysisEngineType[],
+  memoType: string,
+  memoTypeName: string,
+  memoContent: string,
+  opts: AnalyzeOptions,
+  onProgress?: (completed: number, total: number, current: AnalysisEngineType) => void
 ): Promise<FullMemoAnalysis> {
-    const engines: AnalysisEngineType[] = ['gatekeeper', 'brain', 'opponent', 'polish', 'compliance'];
-    const analyses: MemoAnalysisResult[] = [];
+  const analyses: MemoAnalysisResult[] = [];
 
-    for (let i = 0; i < engines.length; i++) {
-        const engine = engines[i];
+  for (let i = 0; i < engines.length; i++) {
+    const engine = engines[i];
+    if (onProgress) onProgress(i, engines.length, engine);
+    analyses.push(await runSingleAnalysis(memoType, memoContent, engine, opts));
+  }
 
-        if (onProgress) {
-            onProgress(i, engines.length, engine);
-        }
+  const scored = analyses.map((a) => a.data?.score).filter((s): s is number => typeof s === 'number');
+  const overallScore = scored.length ? Math.round(scored.reduce((x, y) => x + y, 0) / scored.length) : undefined;
 
-        try {
-            const result = await runSingleAnalysis(memoType, memoContent, engine);
-            analyses.push(result);
-        } catch (error) {
-            analyses.push({
-                engine,
-                engineName: ANALYSIS_ENGINES[engine].name,
-                icon: ANALYSIS_ENGINES[engine].icon,
-                result: `خطأ: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`,
-                success: false
-            });
-        }
-    }
-
-    return {
-        memoType,
-        memoTypeName,
-        analyses,
-        timestamp: new Date()
-    };
+  return { memoType, memoTypeName, analyses, overallScore, timestamp: new Date() };
 }
 
-/**
- * تشغيل تحليل سريع (الحارس والعقل فقط)
- */
-export async function runQuickAnalysis(
-    memoType: string,
-    memoTypeName: string,
-    memoContent: string,
-    onProgress?: (completed: number, total: number, current: AnalysisEngineType) => void
+/** تشغيل التحليل الكامل بجميع المحركات. */
+export function runFullMemoAnalysis(
+  memoType: string,
+  memoTypeName: string,
+  memoContent: string,
+  onProgress?: (completed: number, total: number, current: AnalysisEngineType) => void,
+  opts: AnalyzeOptions = {}
 ): Promise<FullMemoAnalysis> {
-    const engines: AnalysisEngineType[] = ['gatekeeper', 'brain'];
-    const analyses: MemoAnalysisResult[] = [];
+  return runEngines(['gatekeeper', 'brain', 'opponent', 'polish', 'compliance'], memoType, memoTypeName, memoContent, opts, onProgress);
+}
 
-    for (let i = 0; i < engines.length; i++) {
-        const engine = engines[i];
+/** تشغيل تحليل سريع (الحارس والعقل فقط). */
+export function runQuickAnalysis(
+  memoType: string,
+  memoTypeName: string,
+  memoContent: string,
+  onProgress?: (completed: number, total: number, current: AnalysisEngineType) => void,
+  opts: AnalyzeOptions = {}
+): Promise<FullMemoAnalysis> {
+  return runEngines(['gatekeeper', 'brain'], memoType, memoTypeName, memoContent, opts, onProgress);
+}
 
-        if (onProgress) {
-            onProgress(i, engines.length, engine);
-        }
+// ═══════════════════════════════════════════════════════════════
+// 📝 توليد Markdown من البنية (توافق خلفي + fallback دائم)
+// ═══════════════════════════════════════════════════════════════
 
-        try {
-            const result = await runSingleAnalysis(memoType, memoContent, engine);
-            analyses.push(result);
-        } catch (error) {
-            analyses.push({
-                engine,
-                engineName: ANALYSIS_ENGINES[engine].name,
-                icon: ANALYSIS_ENGINES[engine].icon,
-                result: `خطأ: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`,
-                success: false
-            });
-        }
+const VERDICT_ICON: Record<string, string> = { pass: '🟢', warn: '🟡', fail: '🔴' };
+const CHECK_ICON: Record<string, string> = { pass: '✅', warn: '⚠️', fail: '❌', na: '➖' };
+const SEV_LABEL: Record<string, string> = { critical: 'حرجة', high: 'عالية', medium: 'متوسطة', low: 'منخفضة', info: 'معلومة' };
+
+/** يحوّل EngineResult إلى Markdown مقروء (يستخدمه العرض الحالي حتى تجهز مكوّنات v2). */
+export function engineResultToMarkdown(r: EngineResult): string {
+  const out: string[] = [];
+
+  if (r.meta?.grounding_mode === 'ungrounded') {
+    out.push('> ⚠️ **تحليل اجتهادي بلا سند مؤرّض — يلزم تحقّق المحامي.**\n');
+  }
+
+  const vIcon = VERDICT_ICON[r.verdict?.level] ?? '';
+  out.push(`## ${vIcon} ${r.verdict?.label ?? ''}`);
+  if (r.verdict?.summary) out.push(r.verdict.summary);
+  if (typeof r.score === 'number') out.push(`\n**الدرجة:** ${r.score}/100${r.score_label ? ` — ${r.score_label}` : ''}`);
+
+  if (r.deadlines?.length) {
+    out.push('\n### ⏰ المهل');
+    for (const d of r.deadlines) {
+      out.push(`- **${d.label}**${d.days != null ? ` — المتبقّي: ${d.days} يوماً` : ''}`);
     }
+  }
 
-    return {
-        memoType,
-        memoTypeName,
-        analyses,
-        timestamp: new Date()
-    };
+  if (r.checklist?.length) {
+    out.push('\n### قائمة الفحص');
+    for (const c of r.checklist) {
+      out.push(`- ${CHECK_ICON[c.status] ?? ''} ${c.label}${c.note ? ` — _${c.note}_` : ''}`);
+    }
+  }
+
+  if (r.findings?.length) {
+    out.push('\n### الملاحظات');
+    for (const f of r.findings) {
+      out.push(`**[${SEV_LABEL[f.severity] ?? f.severity}] ${f.title}**`);
+      if (f.quote) out.push(`> ${f.quote}`);
+      if (f.impact) out.push(`- الأثر: ${f.impact}`);
+      if (f.recommendation) out.push(`- التوصية: ${f.recommendation}`);
+    }
+  }
+
+  out.push(...engineSpecificMarkdown(r));
+
+  if (r.citations?.length) {
+    out.push('\n### 📚 المواد المستند إليها');
+    for (const c of r.citations) {
+      out.push(`- [${c.index}] ${c.statute_name} — مادة ${c.article_number}`);
+    }
+  }
+
+  if (r.needs_verification?.length) {
+    out.push('\n### 🔎 يلزم التحقّق');
+    for (const n of r.needs_verification) out.push(`- ${n}`);
+  }
+
+  return out.join('\n');
+}
+
+function engineSpecificMarkdown(r: EngineResult): string[] {
+  const es = r.engine_specific ?? {};
+  const out: string[] = [];
+
+  if (r.engine === 'brain' && es.strategy && typeof es.strategy === 'object') {
+    const s = es.strategy as Record<string, unknown>;
+    const strengths = (s.strengths as { point?: string }[]) ?? [];
+    const weaknesses = (s.weaknesses as { point?: string }[]) ?? [];
+    if (strengths.length) { out.push('\n### 💪 نقاط القوة'); strengths.forEach((x) => out.push(`- ${x.point ?? ''}`)); }
+    if (weaknesses.length) { out.push('\n### ⚡ نقاط الضعف'); weaknesses.forEach((x) => out.push(`- ${x.point ?? ''}`)); }
+  }
+
+  if (r.engine === 'opponent') {
+    const weaknesses = (es.weaknesses as { opponent_move?: string; counter?: string }[]) ?? [];
+    if (weaknesses.length) {
+      out.push('\n### ⚔️ هجمات الخصم المتوقعة');
+      weaknesses.forEach((w) => {
+        out.push(`- **الخصم:** ${w.opponent_move ?? ''}`);
+        if (w.counter) out.push(`  - **تحصينك:** ${w.counter}`);
+      });
+    }
+  }
+
+  if (r.engine === 'compliance') {
+    const items = (es.items as { clause?: string; status?: string; unverified?: boolean }[]) ?? [];
+    if (items.length) {
+      out.push('\n### 📋 بنود الامتثال');
+      items.forEach((it) => out.push(`- ${it.clause ?? ''} → **${it.status ?? ''}**${it.unverified ? ' _(غير مؤكد)_' : ''}`));
+    }
+  }
+
+  if (r.engine === 'polish') {
+    const fixes = (es.language_fixes as { original_text?: string; suggested_text?: string }[]) ?? [];
+    if (fixes.length) {
+      out.push('\n### ✨ تحسينات الصياغة');
+      fixes.forEach((f) => out.push(`- ~~${f.original_text ?? ''}~~ → **${f.suggested_text ?? ''}**`));
+    }
+  }
+
+  return out;
 }
 
 export default {
-    runFullMemoAnalysis,
-    runQuickAnalysis,
-    runSingleAnalysis,
-    ANALYSIS_ENGINES
+  runFullMemoAnalysis,
+  runQuickAnalysis,
+  runSingleAnalysis,
+  analyzeEngine,
+  engineResultToMarkdown,
+  ANALYSIS_ENGINES,
+  MEMO_ENGINES,
 };
