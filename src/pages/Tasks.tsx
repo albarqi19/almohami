@@ -18,7 +18,9 @@ import {
   Pencil,
   MessageSquare,
   CheckSquare,
-  Tag
+  Tag,
+  ShieldCheck,
+  Paperclip
 } from 'lucide-react';
 import {
   DndContext,
@@ -55,6 +57,7 @@ const TASK_STATUSES: { key: TaskStatus; label: string; color: string }[] = [
   { key: 'todo', label: 'لم تبدأ', color: '#64748b' },
   { key: 'in_progress', label: 'قيد التنفيذ', color: '#3b82f6' },
   { key: 'review', label: 'مراجعة', color: '#f59e0b' },
+  { key: 'pending_approval', label: 'بانتظار الاعتماد', color: '#8b5cf6' },
   { key: 'completed', label: 'مكتملة', color: '#10b981' },
   { key: 'cancelled', label: 'ملغية', color: '#ef4444' }
 ];
@@ -183,6 +186,19 @@ const SortableTaskCard = ({
             <span className="tcm-badge comments" title="التعليقات">
               <MessageSquare size={11} />
               <span>{task.comments_count}</span>
+            </span>
+          )}
+          {task.requires_approval && (
+            <span className="tcm-badge approval" title="تتطلب اعتماداً">
+              <ShieldCheck size={11} />
+            </span>
+          )}
+          {task.requires_attachment && (
+            <span
+              className={`tcm-badge attachment${(task.documents_count ?? 0) === 0 ? ' missing' : ''}`}
+              title={(task.documents_count ?? 0) === 0 ? 'تتطلب مرفقاً — لم يُرفع بعد' : 'تتطلب مرفقاً'}
+            >
+              <Paperclip size={11} />
             </span>
           )}
         </div>
@@ -384,9 +400,17 @@ const Tasks: React.FC = () => {
 
       // Backend Update
       try {
-        await TaskService.updateTaskStatus(taskId, newStatus);
-      } catch (err) {
+        const updated = await TaskService.updateTaskStatus(taskId, newStatus);
+        // الباك قد يحوّل «مكتملة» إلى «بانتظار الاعتماد» (بوابة الاعتماد) — صحّح البطاقة
+        const actualStatus = (updated as any)?.status as TaskStatus | undefined;
+        if (actualStatus && actualStatus !== newStatus) {
+          const corrected = updatedTasks.map(t => t.id === taskId ? { ...t, status: actualStatus } : t);
+          setTasks(corrected);
+          TasksCache.set(corrected);
+        }
+      } catch (err: any) {
         console.error('Failed to update task status', err);
+        alert(err?.message || 'تعذّر تحديث حالة المهمة');
         loadTasks(); // Revert on error
       }
     }

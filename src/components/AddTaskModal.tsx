@@ -13,7 +13,9 @@ import {
   Briefcase,
   Loader2,
   CheckCircle2,
-  Tag
+  Tag,
+  ShieldCheck,
+  Paperclip
 } from 'lucide-react';
 import { UserService, type User as ServiceUser } from '../services/UserService';
 import { TaskService } from '../services/taskService';
@@ -45,7 +47,9 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
     priority: 'medium',
     due_date: '',
     estimated_hours: '',
-    assigned_to: ''
+    assigned_to: '',
+    requires_approval: false,
+    requires_attachment: false
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -113,6 +117,8 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
         priority: formData.priority as any,
         dueDate: new Date(formData.due_date),
         estimatedHours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : undefined,
+        requiresApproval: formData.requires_approval,
+        requiresAttachment: formData.requires_attachment,
       };
 
       await TaskService.createTask(taskData);
@@ -287,6 +293,33 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                   </div>
                 </div>
               )}
+            </div>
+
+            <div className="notion-section-divider"></div>
+
+            {/* متطلبات الإنجاز */}
+            <div className="task-requirements-block">
+              <div className="notion-content-label">متطلبات الإنجاز</div>
+              <label className="task-req-row">
+                <input
+                  type="checkbox"
+                  checked={formData.requires_approval}
+                  onChange={(e) => updateField('requires_approval', e.target.checked)}
+                />
+                <ShieldCheck size={15} className="task-req-icon" />
+                <span className="task-req-title">تتطلب موافقة قبل الإكمال</span>
+                <span className="task-req-hint">لن تُعدّ مكتملة حتى يعتمدها المدير</span>
+              </label>
+              <label className="task-req-row">
+                <input
+                  type="checkbox"
+                  checked={formData.requires_attachment}
+                  onChange={(e) => updateField('requires_attachment', e.target.checked)}
+                />
+                <Paperclip size={15} className="task-req-icon" />
+                <span className="task-req-title">تتطلب إرفاق مستند</span>
+                <span className="task-req-hint">لا يمكن إكمالها قبل رفع مرفق</span>
+              </label>
             </div>
 
             <div className="notion-section-divider"></div>

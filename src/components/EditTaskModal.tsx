@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, AlertCircle } from 'lucide-react';
+import { X, Save, AlertCircle, ShieldCheck, Paperclip } from 'lucide-react';
 import { UserService, type User } from '../services/UserService';
 import { TaskService } from '../services/taskService';
 import type { Task } from '../types';
@@ -27,7 +27,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     estimated_hours: '',
     actual_hours: '',
     assigned_to: '',
-    status: 'todo'
+    status: 'todo',
+    requires_approval: false,
+    requires_attachment: false
   });
 
   const [loading, setLoading] = useState(false);
@@ -47,7 +49,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         estimated_hours: task.estimatedHours?.toString() || '',
         actual_hours: task.actualHours?.toString() || '',
         assigned_to: task.assignedTo || '',
-        status: task.status || 'todo'
+        status: task.status || 'todo',
+        requires_approval: !!task.requires_approval,
+        requires_attachment: !!task.requires_attachment
       });
       fetchData();
     }
@@ -83,10 +87,26 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : undefined,
         actual_hours: formData.actual_hours ? parseFloat(formData.actual_hours) : undefined,
         assigned_to: formData.assigned_to,
-        status: formData.status as any
       };
 
       await TaskService.updateTask(task.id, updateData);
+
+      // الحالة تمرّ عبر مسارها الخاص لتفعيل بوابتي المرفق والاعتماد
+      if (formData.status !== task.status) {
+        await TaskService.updateTaskStatus(task.id, formData.status);
+      }
+
+      // المتطلبات عبر مسارها الخاص (للمنشئ/المدير فقط)
+      if (
+        formData.requires_approval !== !!task.requires_approval ||
+        formData.requires_attachment !== !!task.requires_attachment
+      ) {
+        await TaskService.configureRequirements(task.id, {
+          requires_approval: formData.requires_approval,
+          requires_attachment: formData.requires_attachment,
+        });
+      }
+
       onTaskUpdated();
       onClose();
     } catch (error: any) {
@@ -505,6 +525,33 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                       placeholder="0.0"
                     />
                   </div>
+                </div>
+
+                {/* متطلبات الإنجاز */}
+                <div className="task-requirements-block">
+                  <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)', color: 'var(--color-text)', marginBottom: '8px' }}>
+                    متطلبات الإنجاز
+                  </div>
+                  <label className="task-req-row">
+                    <input
+                      type="checkbox"
+                      checked={formData.requires_approval}
+                      onChange={(e) => setFormData(prev => ({ ...prev, requires_approval: e.target.checked }))}
+                    />
+                    <ShieldCheck size={15} className="task-req-icon" />
+                    <span className="task-req-title">تتطلب موافقة قبل الإكمال</span>
+                    <span className="task-req-hint">لن تُعدّ مكتملة حتى يعتمدها المدير</span>
+                  </label>
+                  <label className="task-req-row">
+                    <input
+                      type="checkbox"
+                      checked={formData.requires_attachment}
+                      onChange={(e) => setFormData(prev => ({ ...prev, requires_attachment: e.target.checked }))}
+                    />
+                    <Paperclip size={15} className="task-req-icon" />
+                    <span className="task-req-title">تتطلب إرفاق مستند</span>
+                    <span className="task-req-hint">لا يمكن إكمالها قبل رفع مرفق</span>
+                  </label>
                 </div>
 
                 {/* أزرار التحكم */}

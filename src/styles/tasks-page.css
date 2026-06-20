@@ -125,9 +125,10 @@ body.dark .tasks-toolbar__segmented-btn.active {
     transform: translateY(1px);
 }
 
-/* Classic theme: white text on mahogany */
-body.classic .tasks-toolbar__add-btn {
-    color: #FFFBF5;
+/* نص زر الإضافة الفاتح على الخلفية الداكنة (الديوان والكلاسيكي) */
+body.classic .tasks-toolbar__add-btn,
+body.diwan .tasks-toolbar__add-btn {
+    color: #FDFAF1;
 }
 
 .tasks-header__title {
@@ -220,8 +221,9 @@ body.classic .tasks-toolbar__add-btn {
     border-color: var(--law-navy);
 }
 
-body.classic .task-filter-btn.active {
-    color: #FFFBF5;
+body.classic .task-filter-btn.active,
+body.diwan .task-filter-btn.active {
+    color: #FDFAF1;
 }
 
 .task-filter-btn.active:hover {
@@ -367,6 +369,29 @@ body.dark .status-badge.archived {
     border-color: rgba(154, 165, 185, 0.22);
 }
 
+/* === Diwan theme — status badges (ذهب/حبر الديوان) === */
+body.diwan .status-badge.todo,
+body.diwan .status-badge.pending {
+    background: rgba(93, 102, 117, 0.1);
+    color: #5D6675;
+    border-color: rgba(93, 102, 117, 0.25);
+}
+body.diwan .status-badge.in_progress {
+    background: rgba(201, 163, 93, 0.14);
+    color: #8C6D3F;
+    border-color: rgba(201, 163, 93, 0.35);
+}
+body.diwan .status-badge.review {
+    background: rgba(201, 163, 93, 0.2);
+    color: #7A5E35;
+    border-color: rgba(201, 163, 93, 0.45);
+}
+body.diwan .status-badge.archived {
+    background: rgba(31, 60, 77, 0.08);
+    color: #5D6675;
+    border-color: rgba(31, 60, 77, 0.2);
+}
+
 /* === Classic theme overrides — muted parchment === */
 body.classic .status-badge.todo,
 body.classic .status-badge.pending {
@@ -384,21 +409,26 @@ body.classic .status-badge.review {
     color: #92660D;
     border-color: rgba(184, 134, 11, 0.4);
 }
-body.classic .status-badge.completed {
+body.classic .status-badge.archived {
+    background: rgba(74, 44, 26, 0.08);
+    color: #6B5B4D;
+    border-color: rgba(74, 44, 26, 0.2);
+}
+
+/* مشترك بين الثيمين — مكتمل (أخضر) وملغى/متأخّر (أحمر) */
+body.classic .status-badge.completed,
+body.diwan .status-badge.completed {
     background: rgba(74, 110, 64, 0.14);
     color: #3F5F37;
     border-color: rgba(74, 110, 64, 0.3);
 }
 body.classic .status-badge.cancelled,
-body.classic .status-badge.overdue {
+body.classic .status-badge.overdue,
+body.diwan .status-badge.cancelled,
+body.diwan .status-badge.overdue {
     background: rgba(139, 0, 0, 0.1);
     color: #8B0000;
     border-color: rgba(139, 0, 0, 0.25);
-}
-body.classic .status-badge.archived {
-    background: rgba(74, 44, 26, 0.08);
-    color: #6B5B4D;
-    border-color: rgba(74, 44, 26, 0.2);
 }
 
 /* Priorities — compact to match status badges */
@@ -434,11 +464,18 @@ body.dark .priority-low {
     color: #5AA5F7;
 }
 
-body.classic .priority-high {
+body.classic .priority-high,
+body.diwan .priority-high {
     color: #8B0000;
+}
+body.diwan .priority-medium {
+    color: #A8834A;
 }
 body.classic .priority-medium {
     color: #B8860B;
+}
+body.diwan .priority-low {
+    color: #1F3C4D;
 }
 body.classic .priority-low {
     color: #4A2C1A;

@@ -87,6 +87,8 @@ export class TaskService {
       priority: taskData.priority,
       due_date: taskData.dueDate?.toISOString(),
       estimated_hours: taskData.estimatedHours,
+      requires_approval: taskData.requiresApproval ?? false,
+      requires_attachment: taskData.requiresAttachment ?? false,
     };
 
     const response = await apiClient.post<ApiResponse<Task>>('/tasks', apiData);
@@ -188,5 +190,63 @@ export class TaskService {
     if (!response.success) {
       throw new Error(response.message || 'فشل في إعادة ترتيب المهام');
     }
+  }
+
+  // ===== بوابة الاعتماد + المرفقات =====
+
+  /** اعتماد إنجاز مهمة «بانتظار الاعتماد». */
+  static async approveTask(id: string): Promise<Task> {
+    const response = await apiClient.post<ApiResponse<Task>>(`/tasks/${id}/approve`, {});
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'فشل اعتماد المهمة');
+  }
+
+  /** رفض إنجاز مهمة «بانتظار الاعتماد» (سبب إجباري). */
+  static async rejectTask(id: string, reason: string): Promise<Task> {
+    const response = await apiClient.post<ApiResponse<Task>>(`/tasks/${id}/reject`, { reason });
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'فشل رفض المهمة');
+  }
+
+  /** تعديل متطلبات المهمة (تتطلب اعتماداً / تتطلب مرفقاً) — للمنشئ/المدير. */
+  static async configureRequirements(
+    id: string,
+    data: { requires_approval?: boolean; requires_attachment?: boolean }
+  ): Promise<Task> {
+    const response = await apiClient.patch<ApiResponse<Task>>(`/tasks/${id}/requirements`, data);
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'فشل تحديث متطلبات المهمة');
+  }
+
+  /** قائمة مرفقات المهمة + حالة ربط OneDrive. */
+  static async getTaskDocuments(id: string): Promise<{ documents: any[]; onedriveConnected: boolean }> {
+    const response = await apiClient.get<ApiResponse<any[]> & { onedrive_connected?: boolean }>(`/tasks/${id}/documents`);
+    if (response.success) {
+      return { documents: response.data || [], onedriveConnected: response.onedrive_connected === true };
+    }
+    throw new Error(response.message || 'فشل جلب مرفقات المهمة');
+  }
+
+  /** رفع مرفق للمهمة إلى OneDrive (متاح لكل المهام). */
+  static async uploadTaskDocument(id: string, file: File, title?: string): Promise<any> {
+    const form = new FormData();
+    form.append('file', file);
+    if (title) form.append('title', title);
+    const response = await apiClient.post<ApiResponse<any>>(`/tasks/${id}/documents`, form);
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'فشل رفع المرفق');
+  }
+
+  /** حذف مرفق من المهمة. */
+  static async deleteTaskDocument(id: string, docId: string): Promise<void> {
+    const response = await apiClient.delete<ApiResponse>(`/tasks/${id}/documents/${docId}`);
+    if (!response.success) throw new Error(response.message || 'فشل حذف المرفق');
+  }
+
+  /** رابط تنزيل آمن ومؤقّت لمرفق المهمة (يتحقق من الصلاحية على مستوى الملف). */
+  static async getTaskDocumentUrl(id: string, docId: string): Promise<string> {
+    const response = await apiClient.get<ApiResponse & { url?: string }>(`/tasks/${id}/documents/${docId}/url`);
+    if (response.success && response.url) return response.url;
+    throw new Error(response.message || 'تعذّر فتح المرفق');
   }
 }
