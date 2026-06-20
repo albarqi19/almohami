@@ -13,6 +13,7 @@ import type { ArbitrationParty, ArbitrationHearing, PanelMember } from '../../..
 import MicroStatsBar from './MicroStatsBar';
 import LegalRichEditorField from '../LegalRichEditorField';
 import LegalRichText from '../LegalRichText';
+import PhoneField from '../../PhoneField';
 
 // ── تسميات عربية ──
 
@@ -182,7 +183,7 @@ const ArbitrationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServic
       <div className="lsd-form-group"><label className="lsd-form-label">النوع</label><select className="lsd-form-input" value={data.type || ''} onChange={e => setData({ ...data, type: e.target.value as any })}><option value="">اختر</option><option value="individual">فرد</option><option value="company">شركة</option></select></div>
       <div className="lsd-form-group"><label className="lsd-form-label">رقم الهوية</label><input className="lsd-form-input" value={data.id_number || ''} onChange={e => setData({ ...data, id_number: e.target.value })} /></div>
       <div className="lsd-form-group"><label className="lsd-form-label">الممثل</label><input className="lsd-form-input" value={data.representative || ''} onChange={e => setData({ ...data, representative: e.target.value })} /></div>
-      <div className="lsd-form-group"><label className="lsd-form-label">الهاتف</label><input className="lsd-form-input" value={data.contact_phone || ''} onChange={e => setData({ ...data, contact_phone: e.target.value })} dir="ltr" /></div>
+      <div className="lsd-form-group"><label className="lsd-form-label">الهاتف</label><PhoneField value={data.contact_phone || ''} onChange={v => setData({ ...data, contact_phone: v })} placeholder="5X XXX XXXX" /></div>
       <div className="lsd-form-group"><label className="lsd-form-label">البريد</label><input className="lsd-form-input" value={data.contact_email || ''} onChange={e => setData({ ...data, contact_email: e.target.value })} dir="ltr" /></div>
     </div>
   );

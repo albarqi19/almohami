@@ -31,6 +31,7 @@ import {
   Sparkles,
   ClipboardList,
   Gavel,
+  Send,
   X as XIcon
 } from 'lucide-react';
 import Timeline from '../components/Timeline';
@@ -50,6 +51,7 @@ import LawSearchModal from '../components/LawSearchModal';
 import PrecedentSearchModal from '../components/PrecedentSearchModal';
 import CaseWekalatPanel from '../components/CaseWekalatPanel';
 import { SendDabtPreferencesModal, type NotifyMode } from '../components/SendDabtPreferencesModal';
+import { SendSessionReportModal } from '../components/SendSessionReportModal';
 import OutcomeBadge from '../components/OutcomeBadge';
 import WinCelebrationModal from '../components/WinCelebrationModal';
 import ReplayCelebrationButton from '../components/ReplayCelebrationButton';
@@ -99,6 +101,7 @@ const CaseDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notifyModalSession, setNotifyModalSession] = useState<{ id: number; mode: NotifyMode | null; enabled: boolean } | null>(null);
+  const [reportModalSession, setReportModalSession] = useState<number | null>(null);
   const [selectedDabtSession, setSelectedDabtSession] = useState<any>(null);
   const [selectedJudgementSession, setSelectedJudgementSession] = useState<any>(null);
   const [judgementActiveTab, setJudgementActiveTab] = useState<string>('text');
@@ -757,6 +760,14 @@ const CaseDetailPage: React.FC = () => {
                         </div>
                         <div className="case-session-item__content">
                           <div className="case-session-item__header">
+                            {session.session_number != null && (
+                              <span
+                                title="رقم الجلسة التسلسلي ضمن القضية"
+                                style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: 'var(--quiet-gray-100, #f1f5f9)', color: 'var(--color-text-secondary, #64748b)', fontWeight: 600 }}
+                              >
+                                الجلسة {session.session_number}
+                              </span>
+                            )}
                             <span className="case-session-item__title">
                               {session.session_type || 'جلسة'}
                             </span>
@@ -852,6 +863,18 @@ const CaseDetailPage: React.FC = () => {
                               >
                                 <FileText size={14} />
                                 ضبط الجلسة
+                              </button>
+                            )}
+                            {/* زر إرسال تقرير الجلسة (PDF) للعميل - للجلسات المنتهية مع ضبط */}
+                            {!isUpcoming && session.session_text && (
+                              <button
+                                className="case-session-item__join-btn"
+                                style={{ background: 'rgba(31, 58, 95, 0.10)', color: '#1f3a5f' }}
+                                onClick={(e) => { e.stopPropagation(); setReportModalSession(session.id); }}
+                                title="إرسال تقرير الجلسة للعميل كملف PDF عبر واتساب"
+                              >
+                                <Send size={14} />
+                                إرسال تقرير الجلسة
                               </button>
                             )}
                             {/* زر منطوق الحكم - للجلسات التي صدر فيها حكم */}
@@ -1394,6 +1417,27 @@ const CaseDetailPage: React.FC = () => {
                 sessions: caseData.sessions?.map((s: any) =>
                   s.id === notifyModalSession.id
                     ? { ...s, notify_client: result.enabled, notify_client_mode: result.mode }
+                    : s
+                ),
+              });
+            }
+          }}
+        />
+      )}
+
+      {/* مودل إرسال تقرير الجلسة (PDF) للعميل */}
+      {reportModalSession !== null && (
+        <SendSessionReportModal
+          open={reportModalSession !== null}
+          onClose={() => setReportModalSession(null)}
+          sessionId={reportModalSession}
+          onSent={() => {
+            if (caseData) {
+              setCaseData({
+                ...caseData,
+                sessions: caseData.sessions?.map((s: any) =>
+                  s.id === reportModalSession
+                    ? { ...s, dabt_sent_to_client: true, report_status: 'sent' }
                     : s
                 ),
               });

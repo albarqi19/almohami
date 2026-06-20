@@ -76,6 +76,17 @@ const getLawyerName = (caseObj: unknown): string => {
 const CACHE_KEY = 'cases_data';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// خيار المستخدم: عدد القضايا المعروضة في الصفحة الواحدة (يُحفظ ويُطبَّق على الترقيم).
+const PAGE_SIZE_KEY = 'cases_page_size';
+const PAGE_SIZE_OPTIONS = [15, 30, 50, 100];
+const DEFAULT_PAGE_SIZE = 15;
+const getSavedPageSize = (): number => {
+	try {
+		const v = parseInt(localStorage.getItem(PAGE_SIZE_KEY) || '', 10);
+		return PAGE_SIZE_OPTIONS.includes(v) ? v : DEFAULT_PAGE_SIZE;
+	} catch { return DEFAULT_PAGE_SIZE; }
+};
+
 // LocalStorage key للفلاتر المتقدمة (تبقى عبر التنقل بين الصفحات)
 const ADV_FILTERS_KEY = 'cases_advanced_filters';
 
@@ -108,6 +119,17 @@ const Cases: React.FC = () => {
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const { prefs } = useDisplayPreferences();
+	// تنظيف كاش القائمة إن كان بحجم صفحة مختلف عن تفضيل المستخدم — قبل أن تقرأه
+	// مُهيّئات الحالة أدناه (يمنع عرض حجم قديم بعد تغيير «عدد القضايا في الصفحة»).
+	useState(() => {
+		try {
+			const c = localStorage.getItem(CACHE_KEY);
+			if (c && JSON.parse(c).pageSize !== getSavedPageSize()) {
+				localStorage.removeItem(CACHE_KEY);
+			}
+		} catch { /* تجاهل */ }
+		return null;
+	});
 	const [cases, setCases] = useState<Case[]>(() => {
 		try {
 			const cached = localStorage.getItem(CACHE_KEY);
@@ -141,6 +163,7 @@ const Cases: React.FC = () => {
 	const [lawyers, setLawyers] = useState<UserType[]>([]);
 	const [clients, setClients] = useState<UserType[]>([]);
 	const [viewMode, setViewMode] = useState<ViewMode>('table');
+	const [pageSize, setPageSize] = useState<number>(getSavedPageSize);
 	const [pagination, setPagination] = useState(() => {
 		try {
 			const cached = localStorage.getItem(CACHE_KEY);
@@ -173,8 +196,11 @@ const Cases: React.FC = () => {
 
 	const [softRefreshing, setSoftRefreshing] = useState(false);
 
-	const fetchCases = async (page = 1, forceRefresh = false) => {
+	const fetchCases = async (page = 1, forceRefresh = false, sizeOverride?: number) => {
 		try {
+			// حجم الصفحة الفعلي (خيار المستخدم) — يُمرَّر صراحة عند تغييره لأن الـ state
+			// لا يُحدَّث تزامنياً.
+			const limit = sizeOverride ?? pageSize;
 			// Only use cache for first page without filters (and not forcing refresh)
 			const hasAdvFilters = !!(advFilters.lawyer_id || advFilters.responsible_lawyer_id || advFilters.client_id || advFilters.najiz_status);
 			const hasFilters = searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || hasAdvFilters;
@@ -202,7 +228,7 @@ const Cases: React.FC = () => {
 			setError(null);
 			const filters = {
 				page,
-				limit: 15,
+				limit,
 				...(searchTerm && { search: searchTerm }),
 				...(statusFilter !== 'all' && { status: statusFilter }),
 				...(typeFilter !== 'all' && { case_type: typeFilter }),
@@ -226,7 +252,8 @@ const Cases: React.FC = () => {
 			if (page === 1 && !hasFilters) {
 				localStorage.setItem(CACHE_KEY, JSON.stringify({
 					data: { cases: data, pagination: paginationData },
-					timestamp: Date.now()
+					timestamp: Date.now(),
+					pageSize: limit
 				}));
 			}
 		} catch (err) {
@@ -295,6 +322,14 @@ const Cases: React.FC = () => {
 		pollingInterval: 120, // كل 2 دقيقة
 	});
 
+	// تغيير عدد القضايا المعروضة في الصفحة (خيار المستخدم) — يُحفظ ويعيد الجلب من الصفحة الأولى.
+	const handlePageSizeChange = (size: number) => {
+		if (size === pageSize) return;
+		setPageSize(size);
+		try { localStorage.setItem(PAGE_SIZE_KEY, String(size)); } catch {}
+		fetchCases(1, true, size);
+	};
+
 	const handleAddCase = async (caseData: any) => {
 		try {
 			setLoading(true);
@@ -328,6 +363,16 @@ const Cases: React.FC = () => {
 				status: caseData.status || 'active'
 			};
 
+			// سياسة اعتماد المذكرات (تُطبَّق في الباك فقط لمن يملك صلاحية السياسة)
+			if (caseData.requiresMemoApproval) {
+				createData.requires_memo_approval = true;
+				createData.memo_approvers = {
+					user_ids: (caseData.memoApprovers || []).map((id: string) => parseInt(id, 10)).filter((n: number) => !isNaN(n)),
+					kinds: [],
+					mode: 'parallel',
+				};
+			}
+
 			// إذا كان عميل جديد
 			if (caseData.isNewClient) {
 				if (!caseData.clientName || !caseData.clientPhone) {
@@ -359,6 +404,7 @@ const Cases: React.FC = () => {
 			setIsAddModalOpen(false);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'خطأ في إضافة القضية');
+			throw err; // أعد الرمي ليُبقي النموذج مفتوحاً بمدخلاته عند الفشل
 		} finally {
 			setLoading(false);
 		}
@@ -896,6 +942,18 @@ const Cases: React.FC = () => {
 					<div className="cases-pagination">
 						<div className="cases-pagination__info">
 							{stats.total} قضية • صفحة {pagination.currentPage} من {pagination.totalPages}
+							<label style={{ marginInlineStart: 12, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+								عرض
+								<select
+									value={pageSize}
+									onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+									title="عدد القضايا المعروضة في الصفحة"
+									style={{ padding: '2px 6px', borderRadius: 6, border: '1px solid var(--quiet-gray-200, #e2e8f0)', background: 'var(--dashboard-card, #fff)', color: 'inherit', fontSize: 12, cursor: 'pointer' }}
+								>
+									{PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+								</select>
+								في الصفحة
+							</label>
 						</div>
 						<div className="cases-pagination__controls">
 							<button

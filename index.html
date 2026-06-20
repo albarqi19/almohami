@@ -127,14 +127,14 @@
     (function () {
       try {
         var t = localStorage.getItem('theme');
-        if (t !== 'light' && t !== 'dark' && t !== 'classic') t = 'classic';
+        if (t !== 'light' && t !== 'dark' && t !== 'classic' && t !== 'diwan') t = 'diwan';
         window.__appTheme = t;
         var el = document.documentElement;
-        if (t === 'dark' || t === 'classic') el.classList.add(t);
+        if (t === 'dark' || t === 'classic' || t === 'diwan') el.classList.add(t);
         // color-scheme يجعل المتصفح يرسم خلفية المستند الافتراضية داكنة بدل الأبيض.
         el.style.colorScheme = (t === 'dark') ? 'dark' : 'light';
         // خلفية صريحة على <html> مطابقة لـ --color-background لكل ثيم (تسدّ أي فجوة قبل CSS).
-        el.style.backgroundColor = (t === 'dark') ? '#10151f' : (t === 'classic' ? '#F5EFE6' : '#FDFBF7');
+        el.style.backgroundColor = (t === 'dark') ? '#10151f' : (t === 'diwan' ? '#F6F1E6' : (t === 'classic' ? '#F5EFE6' : '#FDFBF7'));
       } catch (e) { /* localStorage غير متاح — تجاهل بأمان */ }
     })();
   </script>
@@ -145,7 +145,7 @@
   <script>
     (function () {
       var t = window.__appTheme;
-      if (t === 'dark' || t === 'classic') document.body.classList.add(t);
+      if (t === 'dark' || t === 'classic' || t === 'diwan') document.body.classList.add(t);
     })();
   </script>
   <div id="root"></div>

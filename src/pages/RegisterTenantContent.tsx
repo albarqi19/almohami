@@ -5,7 +5,6 @@ import {
     Building2,
     User,
     Mail,
-    Phone,
     IdCard,
     Lock,
     Eye,
@@ -19,6 +18,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import AnimatedBrandMark from '../components/AnimatedBrandMark';
+import PhoneField from '../components/PhoneField';
 
 interface TenantFormData {
     company_name: string;
@@ -164,8 +164,6 @@ const RegisterTenantContent: React.FC = () => {
         }
         if (!formData.owner_phone.trim()) {
             newErrors.owner_phone = 'رقم الجوال مطلوب';
-        } else if (!/^05\d{8}$/.test(formData.owner_phone)) {
-            newErrors.owner_phone = 'رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام';
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -349,8 +347,7 @@ const RegisterTenantContent: React.FC = () => {
                             <div className="form-field">
                                 <label className="form-label" htmlFor="company_phone">رقم الجوال <span className="form-optional">(اختياري)</span></label>
                                 <div className="auth-field">
-                                    <span className="auth-field__icon"><Phone size={18} /></span>
-                                    <input id="company_phone" name="company_phone" type="tel" className="input auth-field__input--with-icon" placeholder="05xxxxxxxx" value={formData.company_phone} onChange={handleInputChange} dir="ltr" />
+                                    <PhoneField value={formData.company_phone} onChange={(v) => setFormData(prev => ({ ...prev, company_phone: v }))} placeholder="5X XXX XXXX" />
                                 </div>
                             </div>
                         </div>
@@ -394,8 +391,7 @@ const RegisterTenantContent: React.FC = () => {
                             <div className="form-field">
                                 <label className="form-label" htmlFor="owner_phone">رقم الجوال <span className="form-required">*</span></label>
                                 <div className="auth-field">
-                                    <span className="auth-field__icon"><Phone size={18} /></span>
-                                    <input id="owner_phone" name="owner_phone" type="tel" className={`input auth-field__input--with-icon ${errors.owner_phone ? 'input--error' : ''}`} placeholder="05xxxxxxxx" value={formData.owner_phone} onChange={handleInputChange} dir="ltr" maxLength={10} inputMode="numeric" />
+                                    <PhoneField value={formData.owner_phone} onChange={(v) => { setFormData(prev => ({ ...prev, owner_phone: v })); if (errors.owner_phone) setErrors(prev => { const n = { ...prev }; delete n.owner_phone; return n; }); }} placeholder="5X XXX XXXX" />
                                 </div>
                                 {errors.owner_phone && <span className="form-error">{errors.owner_phone}</span>}
                             </div>

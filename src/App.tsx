@@ -70,6 +70,8 @@ const AdminRequests = lazyWithRetry(() => import('./pages/AdminRequests'));
 const Feedback = lazyWithRetry(() => import('./pages/Feedback'));
 const WathqInquiryPage = lazyWithRetry(() => import('./pages/WathqInquiry'));
 const LawsPage = lazyWithRetry(() => import('./pages/laws/LawsPage'));
+const CorrespondenceRegisterPage = lazyWithRetry(() => import('./pages/CorrespondenceRegisterPage'));
+const MemoApprovals = lazyWithRetry(() => import('./pages/MemoApprovals'));
 const ClientMessages = lazyWithRetry(() => import('./pages/ClientMessages'));
 const PersonalNotebook = lazyWithRetry(() => import('./pages/NotebookWorkspace'));
 
@@ -295,13 +297,14 @@ function App() {
               <Route path="notifications" element={<Notifications />} />
               <Route path="settings" element={<Settings />} />
               <Route path="whatsapp-settings" element={<WhatsappSettings />} />
+              {/* صفحة العملاء تُحمى بالصلاحية لا بأسماء الأدوار (المحاسب/السكرتير يملكان clients.view) */}
               <Route path="clients" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="clients.view">
                   <Clients />
                 </ProtectedRoute>
               } />
               <Route path="clients/:clientId" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="clients.view">
                   <ClientDetailPage />
                 </ProtectedRoute>
               } />
@@ -318,6 +321,16 @@ function App() {
               <Route path="laws" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'senior_lawyer', 'lawyer', 'legal_assistant']}>
                   <LawsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="correspondence" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'senior_lawyer', 'lawyer', 'accountant']}>
+                  <CorrespondenceRegisterPage />
+                </ProtectedRoute>
+              } />
+              <Route path="memos/approvals" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'senior_lawyer', 'legal_assistant', 'lawyer']}>
+                  <MemoApprovals />
                 </ProtectedRoute>
               } />
               <Route path="notebook" element={

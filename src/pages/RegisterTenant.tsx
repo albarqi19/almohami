@@ -6,7 +6,6 @@ import {
     Building2,
     User,
     Mail,
-    Phone,
     IdCard,
     Lock,
     Eye,
@@ -18,6 +17,7 @@ import {
     Loader2,
 } from 'lucide-react';
 import { apiClient } from '../utils/api';
+import PhoneField from '../components/PhoneField';
 import '../styles/auth.css';
 
 interface TenantFormData {
@@ -395,16 +395,10 @@ const RegisterTenant: React.FC = () => {
                                         رقم الجوال <span className="form-optional">(اختياري)</span>
                                     </label>
                                     <div className="auth-field">
-                                        <span className="auth-field__icon"><Phone size={18} /></span>
-                                        <input
-                                            id="company_phone"
-                                            name="company_phone"
-                                            type="tel"
-                                            className="input auth-field__input--with-icon"
-                                            placeholder="05xxxxxxxx"
+                                        <PhoneField
                                             value={formData.company_phone}
-                                            onChange={handleInputChange}
-                                            dir="ltr"
+                                            onChange={(v) => setFormData(prev => ({ ...prev, company_phone: v }))}
+                                            placeholder="5X XXX XXXX"
                                         />
                                     </div>
                                 </div>
@@ -554,16 +548,10 @@ const RegisterTenant: React.FC = () => {
                                         رقم الجوال <span className="form-optional">(اختياري)</span>
                                     </label>
                                     <div className="auth-field">
-                                        <span className="auth-field__icon"><Phone size={18} /></span>
-                                        <input
-                                            id="owner_phone"
-                                            name="owner_phone"
-                                            type="tel"
-                                            className="input auth-field__input--with-icon"
-                                            placeholder="05xxxxxxxx"
+                                        <PhoneField
                                             value={formData.owner_phone}
-                                            onChange={handleInputChange}
-                                            dir="ltr"
+                                            onChange={(v) => setFormData(prev => ({ ...prev, owner_phone: v }))}
+                                            placeholder="5X XXX XXXX"
                                         />
                                     </div>
                                 </div>

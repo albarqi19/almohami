@@ -538,6 +538,17 @@ const FloatingTimer: React.FC = () => {
           border-color: var(--color-border);
         }
 
+        /* Diwan Theme */
+        body.diwan .floating-timer__icon,
+        body.diwan .floating-timer__value,
+        body.diwan .floating-timer__info {
+          color: #A8834A;
+        }
+
+        body.diwan .floating-timer__pulse {
+          border-color: #C9A35D;
+        }
+
         /* Classic Theme */
         body.classic .floating-timer__icon,
         body.classic .floating-timer__value,

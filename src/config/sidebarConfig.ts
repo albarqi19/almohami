@@ -2,7 +2,7 @@ import {
   Home, FileText, FileCheck, Calendar, Scale, Briefcase, Users, Clock, CheckSquare,
   BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature, Receipt, CreditCard,
   TrendingUp, Bell, Settings, ClipboardList, BarChart3, FolderUp, QrCode, Lightbulb,
-  Landmark, AlarmClock,
+  Landmark, AlarmClock, Archive,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -60,6 +60,8 @@ export const mainMenuItems: SidebarItem[] = [
   // [P4·UX-01] وحدة موحّدة بدل خمسة عناصر (العقود/قوالب العقود/الفواتير/المدفوعات/التحصيل).
   // any: يمنح المحامي وصول تبويب العقود حتى لو لم تكن له billing.view (التبويبات تُحرَس داخلياً — UX-07).
   { icon: FileSignature, label: 'العقود والمالية', path: '/finance', any: ['billing.view', 'contracts.view'] },
+  { icon: Archive, label: 'الصادر والوارد', path: '/correspondence', permission: 'correspondence.view', badge: 'تجريبي' },
+  { icon: FileCheck, label: 'اعتمادات المذكرات', path: '/memos/approvals', permission: 'memos.approve', badge: 'تجريبي' },
   { icon: QrCode, label: 'الفوترة الإلكترونية', path: '/zatca', roles: ['admin', 'accountant', 'owner'], featureGate: 'zatca' },
   { icon: Lightbulb, label: 'الملاحظات', path: '/feedback', permission: 'feedback.submit', badge: 'مؤقتة' },
 ];

@@ -13,6 +13,7 @@ import {
   Settings,
   ChevronDown,
   Palette,
+  Feather,
   Briefcase,
   Calendar,
   FileText,
@@ -39,12 +40,13 @@ interface HeaderProps {
 }
 
 // Theme types
-type ThemeMode = 'light' | 'dark' | 'classic';
+type ThemeMode = 'light' | 'dark' | 'classic' | 'diwan';
 
 const THEMES: { id: ThemeMode; label: string; icon: React.ReactNode }[] = [
+  { id: 'diwan', label: 'الديوان', icon: <Feather size={18} /> },
+  { id: 'classic', label: 'كلاسيكي', icon: <Palette size={18} /> },
   { id: 'light', label: 'نهاري', icon: <Sun size={18} /> },
   { id: 'dark', label: 'داكن', icon: <Moon size={18} /> },
-  { id: 'classic', label: 'كلاسيكي', icon: <Palette size={18} /> },
 ];
 
 type QuickAddModal = 'session' | 'wekala' | 'task' | 'service' | null;
@@ -63,7 +65,7 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const [theme, setTheme] = React.useState<ThemeMode>(() => {
     const savedTheme = localStorage.getItem('theme') as ThemeMode;
-    return savedTheme && ['light', 'dark', 'classic'].includes(savedTheme) ? savedTheme : 'classic';
+    return savedTheme && ['light', 'dark', 'classic', 'diwan'].includes(savedTheme) ? savedTheme : 'diwan';
   });
   const [notifications] = React.useState(3);
   const [showUserMenu, setShowUserMenu] = React.useState(false);
@@ -91,8 +93,8 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
   // Apply theme on mount and change
   React.useEffect(() => {
     // Remove all theme classes first
-    document.documentElement.classList.remove('dark', 'classic');
-    document.body.classList.remove('dark', 'classic');
+    document.documentElement.classList.remove('dark', 'classic', 'diwan');
+    document.body.classList.remove('dark', 'classic', 'diwan');
 
     // Add the current theme class (light has no class)
     if (theme === 'dark') {
@@ -101,13 +103,19 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
     } else if (theme === 'classic') {
       document.documentElement.classList.add('classic');
       document.body.classList.add('classic');
+    } else if (theme === 'diwan') {
+      document.documentElement.classList.add('diwan');
+      document.body.classList.add('diwan');
     }
 
     // مزامنة color-scheme وخلفية <html> مع index.html — يمنع ومضة المتصفح البيضاء
     // عند التحديث التالي بعد تبديل الثيم يدويًا.
     document.documentElement.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
     document.documentElement.style.backgroundColor =
-      theme === 'dark' ? '#10151f' : theme === 'classic' ? '#F5EFE6' : '#FDFBF7';
+      theme === 'dark' ? '#10151f'
+        : theme === 'diwan' ? '#F6F1E6'
+        : theme === 'classic' ? '#F5EFE6'
+        : '#FDFBF7';
   }, [theme]);
 
   const cycleTheme = () => {

@@ -58,18 +58,21 @@ const Login: React.FC = () => {
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (!savedTheme) {
-      document.documentElement.classList.add('classic');
-      document.body.classList.add('classic');
-      localStorage.setItem('theme', 'classic');
+      document.documentElement.classList.add('diwan');
+      document.body.classList.add('diwan');
+      localStorage.setItem('theme', 'diwan');
     } else if (savedTheme === 'dark') {
       document.documentElement.classList.add('dark');
       document.body.classList.add('dark');
     } else if (savedTheme === 'classic') {
       document.documentElement.classList.add('classic');
       document.body.classList.add('classic');
+    } else if (savedTheme === 'diwan') {
+      document.documentElement.classList.add('diwan');
+      document.body.classList.add('diwan');
     } else {
-      document.documentElement.classList.remove('dark', 'classic');
-      document.body.classList.remove('dark', 'classic');
+      document.documentElement.classList.remove('dark', 'classic', 'diwan');
+      document.body.classList.remove('dark', 'classic', 'diwan');
     }
   }, []);
 

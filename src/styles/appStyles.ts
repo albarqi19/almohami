@@ -96,3 +96,8 @@ import './availability.css';
 /* ملفات أُضيفت بعد التقسيم — تُلحق في النهاية */
 import './internal-meetings.css';
 import './legal-deadlines.css';
+import './session-report-templates.css';
+import './fee-proposal.css';
+import './correspondence-page.css';
+import './phone-field.css';
+import './task-approval.css';

@@ -32,11 +32,14 @@ import {
   Sparkles,
 } from 'lucide-react';
 import NotificationSettings from '../components/NotificationSettings';
+import PhoneField from '../components/PhoneField';
 import TiptapEditor from '../components/TiptapEditor';
 import { downloadInvoice, InvoicePreviewModal } from '../components/InvoiceDownload';
 import LetterheadManager from '../components/settings/LetterheadManager';
 import TwoFactorSettings from '../components/settings/TwoFactorSettings';
 import SessionDefaultsSettings from '../components/settings/SessionDefaultsSettings';
+import SessionReportTemplatesSettings from '../components/settings/SessionReportTemplatesSettings';
+import FeeProposalTemplatesSettings from '../components/settings/FeeProposalTemplatesSettings';
 import SessionWorkflowSettingsComponent from '../components/settings/SessionWorkflowSettings';
 import MicrosoftIntegrationSettings from '../components/settings/MicrosoftIntegrationSettings';
 import EmailIntegrationSection from '../components/settings/EmailIntegrationSection';
@@ -90,6 +93,8 @@ const Settings: React.FC = () => {
     { id: 'branding', label: 'هوية الشركة', icon: Image, roles: ['admin'] },
     { id: 'letterheads', label: 'الكليشات', icon: FileText, roles: ['admin'] },
     { id: 'session_defaults', label: 'قوالب الجلسات', icon: ClipboardList, roles: ['admin'] },
+    { id: 'session_report_templates', label: 'قوالب تقرير الجلسة', icon: FileText, roles: ['admin'] },
+    { id: 'fee_proposal_templates', label: 'قوالب عروض الأتعاب', icon: FileText, roles: ['admin'] },
     { id: 'session_workflow', label: 'سير عمل الجلسات', icon: Bell, roles: ['admin'] },
     { id: 'company_policy', label: 'سياسة الشركة', icon: ShieldCheck, roles: ['admin'] },
     { id: 'integrations', label: 'التكاملات', icon: Link, roles: ['admin', 'lawyer', 'legal_assistant'] },
@@ -664,14 +669,10 @@ const Settings: React.FC = () => {
 
                 <div className="settings-field">
                   <label className="settings-field__label">رقم الهاتف</label>
-                  <input
-                    type="tel"
-                    className="settings-field__input"
+                  <PhoneField
                     value={userProfile.phone}
-                    onChange={(e) => setUserProfile(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="+966501234567"
-                    disabled={!editingProfile}
-                    style={!editingProfile ? { backgroundColor: 'var(--dashboard-bg)', cursor: 'not-allowed' } : {}}
+                    onChange={(v) => setUserProfile(prev => ({ ...prev, phone: v }))}
+                    placeholder="5X XXX XXXX"
                   />
                 </div>
               </div>
@@ -1397,14 +1398,10 @@ const Settings: React.FC = () => {
                 </div>
                 <div className="settings-form__group">
                   <label className="settings-form__label">رقم الهاتف</label>
-                  <input
-                    type="tel"
-                    className="settings-form__input"
+                  <PhoneField
                     value={companyInfo.phone}
-                    onChange={(e) => setCompanyInfo(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="+966 50 000 0000"
-                    disabled={!editingCompany}
-                    style={!editingCompany ? { backgroundColor: 'var(--dashboard-bg)', cursor: 'not-allowed' } : {}}
+                    onChange={(v) => setCompanyInfo(prev => ({ ...prev, phone: v }))}
+                    placeholder="5X XXX XXXX"
                   />
                 </div>
                 <div className="settings-form__group">
@@ -2172,6 +2169,12 @@ const Settings: React.FC = () => {
 
       case 'session_defaults':
         return <SessionDefaultsSettings />;
+
+      case 'session_report_templates':
+        return <SessionReportTemplatesSettings />;
+
+      case 'fee_proposal_templates':
+        return <FeeProposalTemplatesSettings />;
 
       case 'session_workflow':
         return <SessionWorkflowSettingsComponent />;

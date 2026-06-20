@@ -12,6 +12,7 @@ import MicroStatsBar from './MicroStatsBar';
 import ContextualAlert from './ContextualAlert';
 import LegalRichEditorField from '../LegalRichEditorField';
 import LegalRichText from '../LegalRichText';
+import PhoneField from '../../PhoneField';
 
 // ── تسميات عربية ──
 
@@ -368,12 +369,10 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
                 </div>
                 <div className="lsd-form-group">
                   <label className="lsd-form-label">الهاتف</label>
-                  <input
-                    className="lsd-form-input"
+                  <PhoneField
                     value={recipientData.recipient_phone || ''}
-                    onChange={e => setRecipientData({ ...recipientData, recipient_phone: e.target.value })}
-                    placeholder="رقم الهاتف"
-                    dir="ltr"
+                    onChange={(v) => setRecipientData({ ...recipientData, recipient_phone: v })}
+                    placeholder="5X XXX XXXX"
                   />
                 </div>
                 <div className="lsd-form-group">

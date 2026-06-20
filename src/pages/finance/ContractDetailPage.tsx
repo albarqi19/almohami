@@ -13,6 +13,7 @@ import { Modal, StatusBadge } from '../../components/erp';
 import { ToneBadge } from '../../components/erp/StatusBadge';
 import { LoadingState, ErrorState } from '../../components/erp/States';
 import ContractPreview from '../../components/contracts/ContractPreview';
+import PhoneField from '../../components/PhoneField';
 import { formatSAR, formatPercent, toNumber } from '../../utils/money';
 import { invalidateFinance } from '../../utils/financeCache';
 import { contractActions } from '../../config/financeStatusConfig';
@@ -415,7 +416,7 @@ const PartyFormModal: React.FC<{
             <input className="fin-input" value={form.national_id ?? ''} onChange={(e) => set('national_id', e.target.value)} />
           </div>
         )}
-        <div className="fin-field"><label className="fin-field__label">الجوال</label><input className="fin-input" value={form.phone ?? ''} onChange={(e) => set('phone', e.target.value)} /></div>
+        <div className="fin-field"><label className="fin-field__label">الجوال</label><PhoneField value={form.phone ?? ''} onChange={(v) => set('phone', v)} placeholder="5X XXX XXXX" /></div>
         <div className="fin-field"><label className="fin-field__label">البريد</label><input className="fin-input" value={form.email ?? ''} onChange={(e) => set('email', e.target.value)} /></div>
         <div className="fin-field fin-grid__full"><label className="fin-field__label">العنوان</label><input className="fin-input" value={form.address ?? ''} onChange={(e) => set('address', e.target.value)} /></div>
         {isCompany && (

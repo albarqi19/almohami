@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -28,6 +28,9 @@ import {
 } from 'lucide-react';
 import type { Case } from '../types';
 import { apiClient } from '../utils/api';
+import { UserService } from '../services/UserService';
+import { usePermission } from '../hooks/usePermission';
+import PhoneField from './PhoneField';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface EditCaseModalProps {
@@ -99,6 +102,28 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // سياسة اعتماد المذكرات (تشمل قضايا ناجز عبر التعديل) — لمن يملك صلاحية السياسة فقط
+  const canManageMemoPolicy = usePermission('memos.approval-policy.manage');
+  const [memoLawyers, setMemoLawyers] = useState<{ id: string; name: string }[]>([]);
+  const [requiresMemoApproval, setRequiresMemoApproval] = useState<boolean>(Boolean((caseData as any).requires_memo_approval));
+  const [memoApprovers, setMemoApprovers] = useState<string[]>(
+    Array.isArray((caseData as any).memo_approvers?.user_ids)
+      ? (caseData as any).memo_approvers.user_ids.map((x: any) => String(x))
+      : []
+  );
+
+  useEffect(() => {
+    if (!canManageMemoPolicy) return;
+    let active = true;
+    UserService.getLawyers()
+      .then(list => { if (active) setMemoLawyers((list || []).map((u: any) => ({ id: String(u.id), name: u.name }))); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [canManageMemoPolicy]);
+
+  const toggleMemoApprover = (id: string) =>
+    setMemoApprovers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
   const isNajizCase = !!caseData.najiz_id || caseData.source === 'najiz';
 
   const updateField = (field: string, value: any) => {
@@ -113,11 +138,25 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
       return;
     }
 
+    if (canManageMemoPolicy && requiresMemoApproval && memoApprovers.length === 0) {
+      setError('اختر معتمِداً واحداً على الأقل، أو ألغِ اشتراط اعتماد المذكرات.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       const updatedData: any = { ...formData };
+
+      if (canManageMemoPolicy) {
+        updatedData.requires_memo_approval = requiresMemoApproval;
+        updatedData.memo_approvers = {
+          user_ids: memoApprovers.map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
+          kinds: [],
+          mode: 'parallel',
+        };
+      }
       // تحويل التواريخ
       if (updatedData.due_date) updatedData.due_date = new Date(updatedData.due_date);
       else delete updatedData.due_date;
@@ -364,7 +403,7 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
                   <span>هاتف العميل</span>
                 </div>
                 <div className="notion-property-value">
-                  <input type="text" placeholder="05xxxxxxxx" value={formData.client_phone} onChange={(e) => updateField('client_phone', e.target.value)} />
+                  <PhoneField value={formData.client_phone} onChange={(v) => updateField('client_phone', v)} placeholder="5X XXX XXXX" />
                 </div>
               </div>
 
@@ -706,6 +745,45 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
                 onChange={(e) => updateField('notes', e.target.value)}
               />
             </div>
+
+            {canManageMemoPolicy && (
+              <div className="notion-content-area" style={{ marginTop: '12px' }}>
+                <div className="notion-content-label">اعتماد المذكرات</div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={requiresMemoApproval}
+                    onChange={(e) => setRequiresMemoApproval(e.target.checked)}
+                  />
+                  <span>تشترط هذه القضية اعتماد المذكرات قبل إرسالها للعميل</span>
+                </label>
+                {requiresMemoApproval && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {memoLawyers.length === 0 && (
+                      <span style={{ fontSize: 12, opacity: 0.6 }}>جارٍ تحميل المحامين…</span>
+                    )}
+                    {memoLawyers.map(l => {
+                      const active = memoApprovers.includes(l.id);
+                      return (
+                        <button
+                          key={l.id}
+                          type="button"
+                          onClick={() => toggleMemoApprover(l.id)}
+                          style={{
+                            padding: '4px 10px', borderRadius: 14, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                            border: '1px solid var(--quiet-gray-200, #e5e7eb)',
+                            background: active ? 'var(--law-navy, #1f3a5f)' : 'transparent',
+                            color: active ? '#fff' : 'inherit',
+                          }}
+                        >
+                          {l.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Footer */}

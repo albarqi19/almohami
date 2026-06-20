@@ -263,6 +263,12 @@ const WhatsappSettings: React.FC = () => {
   const [showAddInstance, setShowAddInstance] = useState(false);
   const [newInstanceDepartment, setNewInstanceDepartment] = useState('');
   const [selectedQRCode, setSelectedQRCode] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);            // إنشاء اتصال قيد التنفيذ (يمنع الإرسال المزدوج)
+  const [qrModalOpen, setQrModalOpen] = useState(false);      // نافذة الـ QR مفتوحة (حتى قبل وصول الرمز)
+  const [qrLoading, setQrLoading] = useState(false);          // الرمز قيد التوليد/الجلب
+  const [qrInstanceId, setQrInstanceId] = useState<string | null>(null);
+  const statusIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const qrCancelRef = useRef(false);                          // لإلغاء حلقة إعادة محاولة جلب الرمز عند الإغلاق
 
   // Messages Log
   const [messages, setMessages] = useState<WhatsappMessage[]>([]);
@@ -535,8 +541,77 @@ const WhatsappSettings: React.FC = () => {
     } catch { setInstances([]); }
   };
 
+  // ── تدفّق ربط القناة (نفس نداءات الـ API والتسلسل — أُضيفت طبقة تجربة مستخدم فقط) ──
+
+  // إغلاق نافذة الـ QR: يوقف الاستطلاع ويلغي حلقة إعادة المحاولة ويعيد الحالة للصفر
+  const closeQrModal = () => {
+    qrCancelRef.current = true;
+    if (statusIntervalRef.current) { clearInterval(statusIntervalRef.current); statusIntervalRef.current = null; }
+    setQrModalOpen(false);
+    setQrLoading(false);
+    setSelectedQRCode(null);
+    setQrInstanceId(null);
+  };
+
+  // استطلاع حالة الاتصال كل ٣ ثوانٍ حتى يُربط الرقم (إيقاف أمان بعد ٩٠ ثانية) — نفس المنطق القائم
+  const startStatusPolling = (instanceId: string) => {
+    if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
+    statusIntervalRef.current = setInterval(async () => {
+      try {
+        const sr = await api.get(`/v1/whatsapp/instances/${instanceId}/status`);
+        if (sr.data.success && sr.data.data?.status === 'connected') {
+          setInstances(prev => prev.map(i => i.id === instanceId ? { ...i, status: 'connected', phone_number: sr.data.data.phone_number } : i));
+          closeQrModal();
+          showToast('تم ربط الواتساب بنجاح');
+        }
+      } catch { /* تجاهل أخطاء الاستطلاع المؤقتة */ }
+    }, 3000);
+    setTimeout(() => {
+      if (statusIntervalRef.current) { clearInterval(statusIntervalRef.current); statusIntervalRef.current = null; }
+    }, 90000);
+  };
+
+  // جلب رمز QR مع إعادة محاولة بسيطة (الرمز قد لا يكون جاهزاً فور الإنشاء — كي لا تبقى الدائرة تدور بلا نتيجة)
+  const fetchQrWithRetry = async (instanceId: string, attempts = 6): Promise<boolean> => {
+    for (let i = 0; i < attempts; i++) {
+      if (qrCancelRef.current) return false;
+      try {
+        const response = await api.get(`/v1/whatsapp/instances/${instanceId}/qr`);
+        if (response.data.success && response.data.data) {
+          const qr = response.data.data.qr_code || response.data.data.qrcode || response.data.data.base64;
+          if (qr) {
+            const src = (qr.startsWith('data:image') || qr.startsWith('http'))
+              ? qr
+              : `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`;
+            if (!qrCancelRef.current) { setSelectedQRCode(src); setQrLoading(false); }
+            return true;
+          }
+        }
+      } catch { /* نتجاهل ونعيد المحاولة */ }
+      await new Promise(res => setTimeout(res, 1500));
+    }
+    return false;
+  };
+
+  // يفتح نافذة الـ QR فوراً بحالة «جارٍ التوليد» ثم يجلب الرمز ويبدأ الاستطلاع (بدل الفجوة الفارغة)
+  const openQrModal = async (instanceId: string) => {
+    qrCancelRef.current = false;
+    setQrInstanceId(instanceId);
+    setSelectedQRCode(null);
+    setQrLoading(true);
+    setQrModalOpen(true);
+    startStatusPolling(instanceId);
+    const ok = await fetchQrWithRetry(instanceId);
+    if (!ok && !qrCancelRef.current) {
+      setQrLoading(false);
+      showToast('تعذّر توليد رمز الربط، يرجى إغلاق النافذة والمحاولة مجدداً', 'error');
+    }
+  };
+
   const createInstance = async () => {
+    if (creating) return;                          // منع الإرسال المزدوج (يتفادى إنشاء جلستين)
     if (!newInstanceDepartment.trim()) return;
+    setCreating(true);
     try {
       const response = await api.post('/v1/whatsapp/instances', { instance_name: newInstanceDepartment, department: newInstanceDepartment });
       if (response.data.success && response.data.data) {
@@ -547,22 +622,10 @@ const WhatsappSettings: React.FC = () => {
         };
         setInstances(prev => [...prev, newInst]);
         setNewInstanceDepartment(''); setShowAddInstance(false);
-        if (result.qr_code) { setSelectedQRCode(result.qr_code); }
-        else { setTimeout(() => getQRCode(String(result.id)), 2000); }
-
-        const checkStatus = setInterval(async () => {
-          try {
-            const sr = await api.get(`/v1/whatsapp/instances/${result.id}/status`);
-            if (sr.data.success && sr.data.data?.status === 'connected') {
-              setInstances(prev => prev.map(i => i.id === String(result.id) ? { ...i, status: 'connected', phone_number: sr.data.data.phone_number } : i));
-              setSelectedQRCode(null); clearInterval(checkStatus);
-              showToast('تم ربط الواتساب بنجاح');
-            }
-          } catch {}
-        }, 3000);
-        setTimeout(() => clearInterval(checkStatus), 90000);
+        openQrModal(String(result.id));            // النافذة تفتح فوراً بحالة تحميل بدل الفجوة الفارغة
       } else { throw new Error(response.data.message); }
     } catch (e: any) { showToast(e.message || 'فشل في إنشاء الرقم', 'error'); }
+    finally { setCreating(false); }
   };
 
   const deleteInstance = async (id: string) => {
@@ -573,18 +636,13 @@ const WhatsappSettings: React.FC = () => {
     } catch { showToast('فشل في الحذف', 'error'); }
   };
 
-  const getQRCode = async (instanceId: string) => {
-    try {
-      const response = await api.get(`/v1/whatsapp/instances/${instanceId}/qr`);
-      if (response.data.success && response.data.data) {
-        const qr = response.data.data.qr_code || response.data.data.qrcode || response.data.data.base64;
-        if (qr) {
-          if (qr.startsWith('data:image') || qr.startsWith('http')) setSelectedQRCode(qr);
-          else setSelectedQRCode(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`);
-        }
-      }
-    } catch { showToast('فشل في جلب QR Code', 'error'); }
-  };
+  // تنظيف الاستطلاع وحلقة إعادة المحاولة عند مغادرة الصفحة
+  useEffect(() => {
+    return () => {
+      qrCancelRef.current = true;
+      if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
+    };
+  }, []);
 
   useEffect(() => { if (activeTab === 'instances') loadInstances(); }, [activeTab]);
 
@@ -951,10 +1009,20 @@ const WhatsappSettings: React.FC = () => {
                               ) : (
                                 <button
                                   className="fin-btn fin-btn--primary fin-btn--sm"
-                                  onClick={() => getQRCode(instance.id)}
+                                  onClick={() => openQrModal(instance.id)}
+                                  disabled={qrLoading && qrInstanceId === instance.id}
                                 >
-                                  <QrCode size={13} />
-                                  {isConnecting ? 'عرض رمز QR للربط' : 'بدء ربط القناة'}
+                                  {qrLoading && qrInstanceId === instance.id ? (
+                                    <>
+                                      <Loader2 size={13} className="wa-spin" />
+                                      جارٍ توليد الرمز…
+                                    </>
+                                  ) : (
+                                    <>
+                                      <QrCode size={13} />
+                                      {isConnecting ? 'عرض رمز QR للربط' : 'بدء ربط القناة'}
+                                    </>
+                                  )}
                                 </button>
                               )}
 
@@ -2058,7 +2126,7 @@ const WhatsappSettings: React.FC = () => {
         </div>
 
           {/* ── Modals ── */}
-          <Modal isOpen={showAddInstance} onClose={() => setShowAddInstance(false)} title="إضافة رقم واتساب جديد" size="sm">
+          <Modal isOpen={showAddInstance} onClose={() => { if (!creating) setShowAddInstance(false); }} title="إضافة رقم واتساب جديد" size="sm">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ padding: 12, borderRadius: 8, background: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <MessageSquare size={18} style={{ color: '#25d366', flexShrink: 0, marginTop: 2 }} />
@@ -2079,26 +2147,43 @@ const WhatsappSettings: React.FC = () => {
                 </select>
               </div>
               <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                <button className="wa-btn wa-btn--ghost" style={{ flex: 1 }} onClick={() => setShowAddInstance(false)}>إلغاء</button>
+                <button className="wa-btn wa-btn--ghost" style={{ flex: 1 }} onClick={() => setShowAddInstance(false)} disabled={creating}>إلغاء</button>
                 <button className="wa-btn wa-btn--primary" style={{ flex: 1 }} onClick={createInstance}
-                  disabled={!newInstanceDepartment.trim()}>
-                  ربط الواتساب
+                  disabled={creating || !newInstanceDepartment.trim()}>
+                  {creating ? (
+                    <>
+                      <Loader2 size={15} className="wa-spin" />
+                      جارٍ إنشاء الاتصال…
+                    </>
+                  ) : (
+                    'ربط الواتساب'
+                  )}
                 </button>
               </div>
             </div>
           </Modal>
 
-          <Modal isOpen={!!selectedQRCode} onClose={() => setSelectedQRCode(null)} title="امسح رمز QR للربط" size="sm">
+          <Modal isOpen={qrModalOpen} onClose={closeQrModal} title="ربط رقم الواتساب" size="sm">
             <div style={{ textAlign: 'center' }}>
-              <div style={{ display: 'inline-block', padding: 16, background: 'var(--quiet-gray-100)', borderRadius: 8, marginBottom: 16 }}>
-                <img src={selectedQRCode || ''} alt="QR Code" style={{ width: 200, height: 200, objectFit: 'contain' }} />
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
-                <p>1. افتح واتساب على هاتفك</p>
-                <p>2. اذهب إلى الإعدادات {'>'} الأجهزة المرتبطة</p>
-                <p>3. اضغط "ربط جهاز" وامسح الكود</p>
-              </div>
-              <button className="wa-btn wa-btn--primary" style={{ width: '100%', marginTop: 16 }} onClick={() => setSelectedQRCode(null)}>إغلاق</button>
+              {selectedQRCode ? (
+                <>
+                  <div className="wa-qr-frame">
+                    <img src={selectedQRCode} alt="QR Code" style={{ width: 200, height: 200, objectFit: 'contain' }} />
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.8, marginTop: 16 }}>
+                    <p>1. افتح واتساب على هاتفك</p>
+                    <p>2. اذهب إلى الإعدادات {'>'} الأجهزة المرتبطة</p>
+                    <p>3. اضغط "ربط جهاز" وامسح الكود</p>
+                  </div>
+                </>
+              ) : (
+                <div className="wa-qr-loading">
+                  <Loader2 size={40} className="wa-spin wa-qr-loading__spinner" />
+                  <p className="wa-qr-loading__title">جارٍ توليد رمز الربط…</p>
+                  <p className="wa-qr-loading__hint">قد يستغرق الأمر بضع ثوانٍ. لا تُغلق النافذة ولا تضغط مرة أخرى — سيظهر الرمز تلقائياً فور جاهزيته.</p>
+                </div>
+              )}
+              <button className="wa-btn wa-btn--primary" style={{ width: '100%', marginTop: 16 }} onClick={closeQrModal}>إغلاق</button>
             </div>
           </Modal>
 

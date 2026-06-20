@@ -1,7 +1,7 @@
 ﻿import React from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
-import { Menu, Search, Bell, Moon, Sun, User, LogOut, Palette } from 'lucide-react';
+import { Menu, Search, Bell, Moon, Sun, User, LogOut, Palette, Feather } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationCenter from './NotificationCenter';
@@ -11,21 +11,22 @@ interface HeaderProps {
 }
 
 // Theme types
-type ThemeMode = 'light' | 'dark' | 'classic';
+type ThemeMode = 'light' | 'dark' | 'classic' | 'diwan';
 
 const THEMES: { id: ThemeMode; label: string; icon: React.ReactNode }[] = [
+  { id: 'diwan', label: 'الديوان', icon: <Feather size={22} /> },
+  { id: 'classic', label: 'كلاسيكي', icon: <Palette size={22} /> },
   { id: 'light', label: 'نهاري', icon: <Sun size={22} /> },
   { id: 'dark', label: 'داكن', icon: <Moon size={22} /> },
-  { id: 'classic', label: 'كلاسيكي', icon: <Palette size={22} /> },
 ];
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [theme, setTheme] = React.useState<ThemeMode>(() => {
-    // Load theme from localStorage or default to classic
+    // Load theme from localStorage or default to diwan
     const savedTheme = localStorage.getItem('theme') as ThemeMode;
-    return savedTheme && ['light', 'dark', 'classic'].includes(savedTheme) ? savedTheme : 'classic';
+    return savedTheme && ['light', 'dark', 'classic', 'diwan'].includes(savedTheme) ? savedTheme : 'diwan';
   });
   const [notifications] = React.useState(3);
   const [showUserMenu, setShowUserMenu] = React.useState(false);
@@ -37,8 +38,8 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   // Apply theme on mount and change
   React.useEffect(() => {
     // Remove all theme classes first
-    document.documentElement.classList.remove('dark', 'classic');
-    document.body.classList.remove('dark', 'classic');
+    document.documentElement.classList.remove('dark', 'classic', 'diwan');
+    document.body.classList.remove('dark', 'classic', 'diwan');
 
     // Add the current theme class (light has no class)
     if (theme === 'dark') {
@@ -47,6 +48,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     } else if (theme === 'classic') {
       document.documentElement.classList.add('classic');
       document.body.classList.add('classic');
+    } else if (theme === 'diwan') {
+      document.documentElement.classList.add('diwan');
+      document.body.classList.add('diwan');
     }
   }, [theme]);
 

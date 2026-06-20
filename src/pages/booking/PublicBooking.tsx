@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { publicBookingService, type PublicBookingInfo, type PublicBookingData } from '../../services/bookingService';
 import type { AvailableSlot } from '../../services/availabilityService';
+import PhoneField from '../../components/PhoneField';
 
 // ==========================================
 // Types
@@ -446,12 +447,10 @@ const PublicBooking: React.FC = () => {
               <div className="form-row two-cols">
                 <div className="field">
                   <label>الجوال</label>
-                  <input
-                    type="tel"
-                    dir="ltr"
+                  <PhoneField
                     value={booking.clientPhone}
-                    onChange={e => setBooking(prev => ({ ...prev, clientPhone: e.target.value }))}
-                    required
+                    onChange={v => setBooking(prev => ({ ...prev, clientPhone: v }))}
+                    placeholder="5X XXX XXXX"
                   />
                 </div>
                 <div className="field">

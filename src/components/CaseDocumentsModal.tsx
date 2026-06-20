@@ -28,7 +28,10 @@ import Modal from './Modal';
 import DocumentPreviewModal from './DocumentPreviewModal';
 import SmartUploadModal from './SmartUploadModal';
 import LegalMemoWorkspace from './LegalMemoWorkspace';
+import MemoSendModal from './MemoSendModal';
 import AnalysisProgress from './AnalysisProgress';
+import { usePermission } from '../hooks/usePermission';
+import { MEMO_APPROVAL_STATE_LABELS } from '../services/memoWorkflowService';
 import CloudFilePickerModal from './CloudFilePickerModal';
 import DocumentRequestsPanel from './DocumentRequests/DocumentRequestsPanel';
 
@@ -104,6 +107,12 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   const [showCreateMemo, setShowCreateMemo] = useState(false);
   const [showCloudPicker, setShowCloudPicker] = useState(false);
   const [editingMemo, setEditingMemo] = useState<LegalMemo | null>(null);
+  const [sendMemo, setSendMemo] = useState<LegalMemo | null>(null);
+  // صلاحيات أزرار المذكرات (الباك يمنعها أيضاً — هذا لإخفاء الأزرار غير الصالحة)
+  const canCreateMemo = usePermission('memos.create');
+  const canEditMemo = usePermission('memos.edit');
+  const canDeleteMemo = usePermission('memos.delete');
+  const canSendMemo = usePermission('memos.send');
   // الرفع المباشر إلى OneDrive + السحب والإفلات
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
@@ -722,12 +731,14 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                 <Upload size={14} />
                 رفع وثيقة ذكي
               </button>
+              {canCreateMemo && (
               <button data-tour="docs-memo" onClick={() => { setEditingMemo(null); setShowCreateMemo(true); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'transparent', color: 'var(--color-success)', border: '1px solid var(--color-success)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-success)'; e.currentTarget.style.color = 'white'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-success)'; }}>
                 <FileText size={14} />
                 مذكرة
               </button>
+              )}
               {clientId ? (
                 <button
                   data-tour="docs-requests"
@@ -858,6 +869,11 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                 <span style={{ fontSize: '14px', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{memo.title}</span>
                                 <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>{(LegalMemoService.getStatusOptions() as any)[memo.status] || memo.status}</span>
+                                {memo.approval_state && memo.approval_state !== 'not_required' && (
+                                  <span style={{ fontSize: '11px', fontWeight: 600, whiteSpace: 'nowrap', padding: '1px 7px', borderRadius: '10px', backgroundColor: 'var(--color-surface-subtle)', color: 'var(--color-primary)' }}>
+                                    {MEMO_APPROVAL_STATE_LABELS[memo.approval_state] ?? memo.approval_state}
+                                  </span>
+                                )}
                                 <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>{new Date(memo.created_at).toLocaleDateString('ar')}</span>
                               </div>
                               {memo.content && (
@@ -867,14 +883,23 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                               )}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-                              <button onClick={(e) => { e.stopPropagation(); handleSmartAnalysisMemo(memo.id, memo.title); }}
-                                style={{ background: 'none', border: 'none', padding: '5px 7px', cursor: 'pointer', fontSize: '12px', color: 'var(--color-primary)', borderRadius: '2px' }}
-                                title="تحليل ذكي">تحليل</button>
-                              <button onClick={(e) => { e.stopPropagation(); handleDeleteMemo(memo.id, memo.title); }}
-                                style={{ background: 'none', border: 'none', padding: '5px', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', borderRadius: '2px' }}
-                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-error)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
-                                title="حذف"><Trash2 size={13} /></button>
+                              {canSendMemo && (
+                                <button onClick={(e) => { e.stopPropagation(); setSendMemo(memo); }}
+                                  style={{ background: 'none', border: 'none', padding: '5px 7px', cursor: 'pointer', fontSize: '12px', color: 'var(--color-success)', borderRadius: '2px' }}
+                                  title="إرسال / اعتماد">إرسال</button>
+                              )}
+                              {canEditMemo && (
+                                <button onClick={(e) => { e.stopPropagation(); handleSmartAnalysisMemo(memo.id, memo.title); }}
+                                  style={{ background: 'none', border: 'none', padding: '5px 7px', cursor: 'pointer', fontSize: '12px', color: 'var(--color-primary)', borderRadius: '2px' }}
+                                  title="تحليل ذكي">تحليل</button>
+                              )}
+                              {canDeleteMemo && (
+                                <button onClick={(e) => { e.stopPropagation(); handleDeleteMemo(memo.id, memo.title); }}
+                                  style={{ background: 'none', border: 'none', padding: '5px', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', borderRadius: '2px' }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-error)'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
+                                  title="حذف"><Trash2 size={13} /></button>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -1203,6 +1228,18 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
           loadMemos(); // إعادة تحميل المذكرات
         }}
       />
+
+      {/* نافذة إرسال/اعتماد المذكرة (واعية بالحالة) */}
+      {sendMemo && (
+        <MemoSendModal
+          memoId={sendMemo.id}
+          isOpen={!!sendMemo}
+          onClose={() => setSendMemo(null)}
+          approvalState={sendMemo.approval_state}
+          requiresApproval={(sendMemo as any).case?.requires_memo_approval}
+          onSent={() => { setSendMemo(null); loadMemos(); }}
+        />
+      )}
 
       {/* Analysis Progress Modal */}
       <AnalysisProgress

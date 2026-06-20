@@ -21,6 +21,8 @@ import {
   Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import PhoneField from './PhoneField';
+import { usePermission } from '../hooks/usePermission';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface User {
@@ -51,12 +53,14 @@ interface CaseFormData {
   hearingDate: string;
   assignedLawyer: string;
   notes: string;
+  requiresMemoApproval: boolean;
+  memoApprovers: string[];
 }
 
 interface AddCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (caseData: CaseFormData) => void;
+  onSave: (caseData: CaseFormData) => void | Promise<void>;
   lawyers?: User[];
   clients?: User[];
 }
@@ -88,10 +92,26 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     filingDate: '',
     hearingDate: '',
     assignedLawyer: '',
-    notes: ''
+    notes: '',
+    requiresMemoApproval: false,
+    memoApprovers: []
   });
 
   const [errors, setErrors] = useState<Partial<CaseFormData>>({});
+  const canManageMemoPolicy = usePermission('memos.approval-policy.manage');
+  const [approverError, setApproverError] = useState('');
+
+  const toggleMemoApprover = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      memoApprovers: prev.memoApprovers.includes(id)
+        ? prev.memoApprovers.filter(x => x !== id)
+        : [...prev.memoApprovers, id],
+    }));
+  };
+
+  // معتمِدون من المحامين الحقيقيين فقط (لا بيانات تجريبية fallback)
+  const memoApproverOptions = lawyersFromProps.map(l => ({ value: String(l.id), label: l.name }));
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [showClientSearch, setShowClientSearch] = useState(false);
 
@@ -170,12 +190,20 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      onSave(formData);
+    if (!validateForm()) return;
+    if (canManageMemoPolicy && formData.requiresMemoApproval && formData.memoApprovers.length === 0) {
+      setApproverError('اختر معتمِداً واحداً على الأقل، أو ألغِ اشتراط اعتماد المذكرات.');
+      return;
+    }
+    setApproverError('');
+    try {
+      await onSave(formData);
       handleReset();
       onClose();
+    } catch {
+      // الإبقاء على المدخلات والنافذة مفتوحة عند فشل الحفظ (الأب يعرض رسالة الخطأ)
     }
   };
 
@@ -200,7 +228,9 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
       filingDate: '',
       hearingDate: '',
       assignedLawyer: '',
-      notes: ''
+      notes: '',
+      requiresMemoApproval: false,
+      memoApprovers: []
     });
     setErrors({});
   };
@@ -336,6 +366,56 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                     {errors.assignedLawyer && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
                   </div>
                 </div>
+
+                {/* سياسة اعتماد المذكرات — لمن يملك صلاحية السياسة فقط */}
+                {canManageMemoPolicy && (
+                  <div className="notion-property-row span-full" style={{ padding: '8px 0' }}>
+                    <div className="notion-property-label">
+                      <Check className="notion-property-icon" />
+                      <span>اعتماد المذكرات</span>
+                    </div>
+                    <div className="notion-property-value" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.requiresMemoApproval}
+                          onChange={(e) => setFormData(prev => ({ ...prev, requiresMemoApproval: e.target.checked }))}
+                        />
+                        <span>تشترط اعتماد المذكرات قبل إرسالها للعميل</span>
+                      </label>
+
+                      {formData.requiresMemoApproval && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                          {memoApproverOptions.length === 0 && (
+                            <span style={{ fontSize: 12, opacity: 0.6 }}>لا يوجد محامون للاختيار كمعتمِدين.</span>
+                          )}
+                          {memoApproverOptions.map(l => {
+                            const active = formData.memoApprovers.includes(String(l.value));
+                            return (
+                              <button
+                                key={l.value}
+                                type="button"
+                                onClick={() => toggleMemoApprover(String(l.value))}
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px',
+                                  borderRadius: 14, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                                  border: '1px solid var(--quiet-gray-200, #e5e7eb)',
+                                  background: active ? 'var(--law-navy, #1f3a5f)' : 'transparent',
+                                  color: active ? '#fff' : 'inherit',
+                                }}
+                              >
+                                {active && <Check size={12} />} {l.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {approverError && (
+                        <span style={{ color: '#EB5757', fontSize: 12 }}>{approverError}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Court */}
                 <div className="notion-property-row">
@@ -481,12 +561,10 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                         <span>الهاتف</span>
                       </div>
                       <div className="notion-property-value">
-                        <input
-                          type="tel"
-                          className="notion-input"
-                          placeholder="05..."
+                        <PhoneField
                           value={formData.clientPhone}
-                          onChange={(e) => handleInputChange('clientPhone', e.target.value)}
+                          onChange={(v) => handleInputChange('clientPhone', v)}
+                          placeholder="5X XXX XXXX"
                         />
                         {errors.clientPhone && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
                       </div>

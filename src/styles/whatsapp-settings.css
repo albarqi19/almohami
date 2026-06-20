@@ -870,6 +870,38 @@ body.dark .whatsapp-schedule-row__time {
 .wa-btn--primary:hover:not(:disabled) { opacity: 0.9; }
 .wa-btn--ghost { background: var(--quiet-gray-100); color: var(--color-text); border: 1px solid var(--color-border); }
 
+/* ── حالة توليد رمز QR (تجربة المستخدم أثناء الانتظار) ── */
+.wa-qr-frame {
+    display: inline-block;
+    padding: 16px;
+    background: var(--quiet-gray-100);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+}
+.wa-qr-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 232px;          /* يطابق ارتفاع إطار الرمز فلا تقفز النافذة عند ظهوره */
+    padding: 16px;
+}
+.wa-qr-loading__spinner { color: var(--status-green); }
+.wa-qr-loading__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+.wa-qr-loading__hint {
+    margin: 0;
+    max-width: 280px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+}
+
 .wa-icon-btn {
     display: flex;
     align-items: center;

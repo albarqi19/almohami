@@ -91,7 +91,44 @@ body.dark {
     --law-navy-light: rgba(59, 89, 152, 0.15);
 }
 
-/* Classic (Law Firm) mode */
+/* Diwan mode (افتراضي): حبر بترولي + ذهب مطفأ + ورق */
+body.diwan {
+    --dashboard-bg: #F6F1E6;
+    --dashboard-card: #FDFAF1;
+    --dashboard-sidebar: #102028;
+    --dashboard-sidebar-hover: #1F3C4D;
+    --quiet-gray-50: #F6F1E6;
+    --quiet-gray-100: #EFE7D4;
+    --quiet-gray-200: #E4D9C0;
+    --quiet-gray-300: #D3C4A4;
+    --quiet-gray-400: #B3A486;
+    --quiet-gray-500: #8A8478;
+    --quiet-gray-600: #5D6675;
+    --quiet-gray-700: #3D4A5A;
+    --quiet-gray-800: #1F3C4D;
+    --quiet-gray-900: #16202F;
+
+    --law-navy: #1F3C4D;
+    --law-navy-light: rgba(31, 60, 77, 0.12);
+    --law-navy-hover: rgba(31, 60, 77, 0.18);
+    --law-navy-dark: #102028;
+
+    --law-gold: #A8834A;
+    --law-gold-light: rgba(201, 163, 93, 0.15);
+
+    --status-green: #2E7D52;
+    --status-green-light: rgba(46, 125, 82, 0.12);
+    --status-blue: #1F5F80;
+    --status-blue-light: rgba(31, 95, 128, 0.12);
+    --status-orange: #B5772B;
+    --status-orange-light: rgba(181, 119, 43, 0.12);
+    --status-red: #A8472F;
+    --status-red-light: rgba(168, 71, 47, 0.12);
+    --status-purple: #7A6CC4;
+    --status-purple-light: rgba(122, 108, 196, 0.12);
+}
+
+/* Classic (Law Firm) mode: بنّي مهوغني + ذهب عتيق */
 body.classic {
     --dashboard-bg: #F5EFE6;
     --dashboard-card: #FFFBF5;
@@ -126,6 +163,23 @@ body.classic {
     --status-red-light: rgba(155, 44, 44, 0.12);
     --status-purple: #8b5cf6;
     --status-purple-light: rgba(139, 92, 246, 0.12);
+}
+
+/* تطعيم الديوان: الشعار والعنصر النشط ذهبيان على الحبر، والأفاتار حبر بنص ذهبي
+   (يطابق هوية صفحة الهبوط — الشعار الذهبي على الحبر البترولي) */
+body.diwan .clickup-sidebar__logo {
+    background: var(--law-gold);
+    color: #102028;
+}
+
+body.diwan .clickup-sidebar__avatar {
+    background: var(--law-navy);
+    color: var(--law-gold);
+}
+
+body.diwan .clickup-sidebar__link--active {
+    background: var(--law-gold);
+    color: #102028;
 }
 
 /* === Dashboard Layout - Full Width === */

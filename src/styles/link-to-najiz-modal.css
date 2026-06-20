@@ -448,37 +448,57 @@ body.dark .link-najiz-close:hover {
 /* ========================================
    CLASSIC THEME
    ======================================== */
+body.diwan .link-najiz-overlay {
+  background: rgba(16, 32, 40, 0.6);
+}
 body.classic .link-najiz-overlay {
   background: rgba(43, 27, 18, 0.6);
 }
 
+body.diwan .link-najiz-modal {
+  box-shadow: 0 20px 40px rgba(16, 32, 40, 0.2);
+}
 body.classic .link-najiz-modal {
   box-shadow: 0 20px 40px rgba(43, 27, 18, 0.2);
 }
 
-body.classic .link-najiz-header-icon {
+/* أيقونة الترويسة + الخطأ — قواعد مشتركة (متغيّرات / أحمر) */
+body.classic .link-najiz-header-icon,
+body.diwan .link-najiz-header-icon {
   background: linear-gradient(135deg, var(--law-navy) 0%, var(--law-navy-dark) 100%);
 }
 
-body.classic .link-najiz-error {
+body.classic .link-najiz-error,
+body.diwan .link-najiz-error {
   background: rgba(155, 44, 44, 0.1);
   border-color: rgba(155, 44, 44, 0.3);
 }
 
+body.diwan .link-najiz-case-item:hover,
+body.diwan .link-najiz-case-item.selected {
+  background: rgba(31, 60, 77, 0.1);
+}
 body.classic .link-najiz-case-item:hover,
 body.classic .link-najiz-case-item.selected {
   background: rgba(74, 44, 26, 0.1);
 }
 
+body.diwan .link-najiz-case-status {
+  background: rgba(31, 60, 77, 0.1);
+}
 body.classic .link-najiz-case-status {
   background: rgba(74, 44, 26, 0.1);
 }
 
+body.diwan .link-najiz-confirm-cases {
+  background: rgba(181, 119, 43, 0.1);
+}
 body.classic .link-najiz-confirm-cases {
   background: rgba(193, 112, 0, 0.1);
 }
 
-body.classic .link-najiz-btn-danger:hover:not(:disabled) {
+body.classic .link-najiz-btn-danger:hover:not(:disabled),
+body.diwan .link-najiz-btn-danger:hover:not(:disabled) {
   background: #7f1d1d;
 }
 

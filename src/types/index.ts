@@ -224,6 +224,7 @@ export interface CaseSession {
   id: string;
   case_id: string;
   session_type?: string;
+  session_number?: number | null; // رقم الجلسة التسلسلي داخل القضية (محسوب عرضيًا في الباك)
   session_date?: string;
   session_date_gregorian?: Date;
   session_date_hijri?: string; // التاريخ الهجري الخام من ناجز (للعرض فقط)
@@ -338,12 +339,27 @@ export interface Task {
   comments_count?: number;
   assignee?: { id: string | number; name: string } | null;
   case?: { id: number | string; title: string; file_number?: string | null } | null;
+  // اعتماد الإنجاز + إلزام المرفق (snake_case كما يرجعها الـ API)
+  requires_approval?: boolean;
+  requires_attachment?: boolean;
+  approval_requested_at?: string | Date | null;
+  approval_requested_by?: string | number | null;
+  approved_by?: string | number | null;
+  approved_at?: string | Date | null;
+  rejection_reason?: string | null;
+  approver?: { id: string | number; name: string } | null;
+  documents_count?: number;
+  // أعلام القدرة (يحسبها الباك في show) — لإخفاء الإجراءات عمّن لا يملكها
+  can_approve?: boolean;
+  can_configure_requirements?: boolean;
+  can_manage_documents?: boolean;
 }
 
 export const TaskStatus = {
   TODO: 'todo',
   IN_PROGRESS: 'in_progress',
   REVIEW: 'review',
+  PENDING_APPROVAL: 'pending_approval',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
   OVERDUE: 'overdue',
@@ -580,6 +596,8 @@ export interface CreateTaskForm {
   priority: Priority;
   dueDate?: Date;
   estimatedHours?: number;
+  requiresApproval?: boolean;
+  requiresAttachment?: boolean;
 }
 
 export interface LoginForm {

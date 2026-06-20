@@ -145,7 +145,78 @@ body.dark {
   color-scheme: dark;
 }
 
-/* === Classic Law Firm Theme === */
+/* === ثيم «الديوان الرقمي» (افتراضي) === */
+/* حبر بترولي + ذهب مطفأ + ورق مخطوطات — هوية صفحة الهبوط (landing.css) */
+body.diwan {
+  /* الخلفيات — ورق المخطوطات */
+  --color-background: #F6F1E6;
+  --color-surface: #FDFAF1;
+  --color-surface-subtle: #EFE7D4;
+
+  /* الحدود — خط الورق */
+  --color-border: #E4D9C0;
+  --color-border-strong: #D3C4A4;
+
+  /* النصوص — حبر */
+  --color-text: #16202F;
+  --color-text-secondary: #5D6675;
+  --color-heading: #102028;
+
+  /* الأساسي — حبر بترولي */
+  --color-primary: #1F3C4D;
+  --color-primary-hover: #2B5163;
+  --color-primary-active: #152A35;
+  --color-primary-soft: rgba(31, 60, 77, 0.1);
+
+  /* الإجراء — ذهب الديوان المطفأ (داكن كفايةً للقراءة على الورق) */
+  --color-accent: #A8834A;
+  --color-accent-hover: #C9A35D;
+  --color-accent-soft: rgba(201, 163, 93, 0.16);
+
+  /* ألوان الحالات — ترابية مطفأة بنكهة الديوان */
+  --color-success: #2E7D52;
+  --color-warning: #B5772B;
+  --color-error: #A8472F;
+  --color-info: #1F5F80;
+
+  /* درجات محايدة — ورق دافئ يتدرّج إلى حبر بارد */
+  --color-cream-50: #F6F1E6;
+  --color-gray-100: #EFE7D4;
+  --color-gray-200: #E4D9C0;
+  --color-gray-300: #D3C4A4;
+  --color-gray-400: #B3A486;
+  --color-gray-500: #8A8478;
+  --color-brown-600: #5D6675;
+  --color-brown-600-rgb: 93, 102, 117;
+  --color-slate-500-rgb: 93, 102, 117;
+
+  /* ألوان إضافية */
+  --color-orange-400: #B5772B;
+  --color-orange-400-rgb: 181, 119, 43;
+  --color-orange-500: #9A6321;
+  --color-teal-400: #2E7D6D;
+  --color-teal-500: #267363;
+  --color-teal-600: #1E6858;
+  --color-teal-700: #165D4E;
+
+  /* حالات ناعمة */
+  --color-success-soft: rgba(46, 125, 82, 0.12);
+  --color-warning-soft: rgba(181, 119, 43, 0.15);
+  --color-error-soft: rgba(168, 71, 47, 0.12);
+  --color-info-soft: rgba(31, 95, 128, 0.12);
+  --color-neutral-soft: rgba(93, 102, 117, 0.1);
+  --focus-outline: rgba(31, 60, 77, 0.25);
+
+  /* ظلال — قاعدة حبرية بترولية */
+  --shadow-xs: 0 1px 2px rgba(16, 32, 40, 0.05);
+  --shadow-sm: 0 8px 16px rgba(16, 32, 40, 0.08);
+  --shadow-md: 0 14px 32px rgba(16, 32, 40, 0.1);
+  --shadow-lg: 0 24px 42px rgba(16, 32, 40, 0.12);
+
+  color-scheme: light;
+}
+
+/* === Classic Law Firm Theme (بنّي مهوغني + ذهب عتيق) === */
 body.classic {
   /* Backgrounds - Warm parchment tones */
   --color-background: #F5EFE6;

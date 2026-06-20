@@ -31,6 +31,18 @@
     --notion-select-arrow: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='rgba(255, 255, 255, 0.45)'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd' /%3E%3C/svg%3E");
 }
 
+/* Diwan Theme → ورق + حبر بترولي */
+.diwan {
+    --notion-bg: #FDFAF1;
+    --notion-text: #16202F;
+    --notion-gray: #EFE7D4;
+    --notion-border: #E4D9C0;
+    --notion-blue: #1F3C4D;
+    /* Primary in diwan is petrol ink */
+    --notion-blue-bg: rgba(31, 60, 77, 0.1);
+    --notion-select-arrow: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='rgba(22, 32, 47, 0.45)'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd' /%3E%3C/svg%3E");
+}
+
 /* Classic Theme - Match Site's Classic mode */
 .classic {
     --notion-bg: #FFFBF5;

@@ -82,7 +82,7 @@
 .case-detail-header__actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     flex-shrink: 0;
 }
 
@@ -90,11 +90,12 @@
 .case-header-btn {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
+    gap: 5px;
+    padding: 5px 9px;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
+    white-space: nowrap;
     border: 1px solid var(--color-border);
     background: var(--dashboard-card);
     color: var(--color-text);
@@ -119,7 +120,7 @@
 }
 
 .case-header-btn--share {
-    padding: 8px;
+    padding: 5px;
     background: var(--quiet-gray-100);
     border-color: var(--color-border);
     color: var(--color-text-secondary);
@@ -170,19 +171,21 @@
 .case-header-tabs {
     display: flex;
     align-items: center;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 4px;
     margin-right: auto;
-    margin-left: 16px;
+    margin-left: 10px;
 }
 
 .case-header-tab {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+    gap: 5px;
+    padding: 5px 9px;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
+    white-space: nowrap;
     background: var(--quiet-gray-100);
     color: var(--color-text-secondary);
     border: 1px solid transparent;
@@ -846,8 +849,8 @@ body.dark .case-session-item {
 
 .case-session-item__header {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 6px;
 }
@@ -863,6 +866,8 @@ body.dark .case-session-item {
     padding: 2px 8px;
     border-radius: 10px;
     font-weight: 500;
+    /* ادفع شارة الحالة إلى الطرف المقابل ليبقى اسم الجلسة ملاصقاً لرقمها */
+    margin-inline-start: auto;
 }
 
 .case-session-item__status--upcoming {

@@ -238,6 +238,11 @@ export const CaseAppointmentsModal: React.FC<CaseAppointmentsModalProps> = ({
                             </td>
                             <td>
                               <div className="cam-erp-cell__primary">{session.session_type || 'جلسة'}</div>
+                              {session.session_number != null && (
+                                <div className="cam-erp-cell__sub" title="رقم الجلسة التسلسلي ضمن القضية">
+                                  الجلسة رقم {session.session_number}
+                                </div>
+                              )}
                               {session.is_video_conference && (
                                 <div className="cam-erp-cell__sub cam-erp-cell__sub--accent">
                                   <Video size={10} /> مرئية

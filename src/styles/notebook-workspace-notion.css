@@ -31,6 +31,20 @@ body.dark .notebook-workspace {
     --accent-bg: rgba(35, 131, 226, 0.15);
 }
 
+/* Diwan Theme → ورق + حبر + ذهب مطفأ */
+body.diwan .notebook-workspace {
+    --bg: #f6f1e6;
+    --bg-secondary: #efe7d4;
+    --bg-hover: #e8dfc9;
+    --bg-active: #e0d5bb;
+    --text: #16202f;
+    --text-secondary: #5d6675;
+    --text-muted: #8a8478;
+    --border: #e4d9c0;
+    --accent: #a8834a;
+    --accent-bg: rgba(201, 163, 93, 0.12);
+}
+
 /* Classic Theme */
 body.classic .notebook-workspace {
     --bg: #faf8f5;
@@ -212,14 +226,20 @@ body.classic .notebook-workspace {
     margin: 0;
 }
 
-/* تحسين التباين في الـ Classic theme */
+/* تحسين التباين في الثيمين الداكني الزر */
+body.diwan .notebook-workspace .new-note-btn {
+    background: #1F3C4D !important;
+    color: #ffffff !important;
+}
 body.classic .notebook-workspace .new-note-btn {
     background: #4A2C1A !important;
     color: #ffffff !important;
 }
 
 body.classic .notebook-workspace .new-note-btn span,
-body.classic .notebook-workspace .new-note-btn svg {
+body.classic .notebook-workspace .new-note-btn svg,
+body.diwan .notebook-workspace .new-note-btn span,
+body.diwan .notebook-workspace .new-note-btn svg {
     color: #ffffff !important;
 }
 

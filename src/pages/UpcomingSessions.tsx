@@ -40,7 +40,7 @@ interface Session {
 	id: number;
 	case_id: number;
 	session_type: string | null;
-	session_number: string | null;
+	session_number: number | string | null; // رقم الجلسة التسلسلي داخل القضية (يحسبه الباك)
 	session_date: string | null;
 	session_date_gregorian?: string | null;
 	session_date_hijri?: string | null;
@@ -697,6 +697,24 @@ const UpcomingSessions: React.FC = () => {
 										>
 											#{session.case?.file_number || session.case_id}
 										</span>
+										{session.session_number != null && (
+											<span
+												className="session-seq-chip"
+												title="رقم الجلسة التسلسلي ضمن هذه القضية"
+												style={{
+													width: 'fit-content',
+													marginTop: '2px',
+													fontSize: '11px',
+													fontWeight: 600,
+													padding: '1px 7px',
+													borderRadius: '6px',
+													background: 'var(--quiet-gray-100)',
+													color: 'var(--color-text-secondary)',
+												}}
+											>
+												الجلسة رقم {session.session_number}
+											</span>
+										)}
 								</div>
 							</td>
 							<td>

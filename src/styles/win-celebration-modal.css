@@ -44,6 +44,14 @@ body.dark .win-celebration-modal {
     0 4px 12px rgba(0, 0, 0, 0.30);
 }
 
+body.diwan .win-celebration-modal {
+  background: var(--dashboard-card, #FDFAF1);
+  border-color: rgba(31, 60, 77, 0.18);
+  box-shadow:
+    0 20px 50px rgba(16, 32, 40, 0.22),
+    0 4px 12px rgba(16, 32, 40, 0.10);
+}
+
 body.classic .win-celebration-modal {
   background: var(--dashboard-card, #FFFBF5);
   border-color: rgba(74, 44, 26, 0.18);
@@ -104,10 +112,11 @@ body.dark .win-celebration-close:focus-visible {
   /* لا animation — ثابت ومرتب */
 }
 
-body.classic .win-celebration-trophy {
-  background: var(--law-gold-light, rgba(184, 134, 11, 0.15));
-  color: var(--law-gold, #B8860B);
-  border-color: var(--law-gold, #B8860B);
+body.classic .win-celebration-trophy,
+body.diwan .win-celebration-trophy {
+  background: var(--law-gold-light, rgba(201, 163, 93, 0.15));
+  color: var(--law-gold, #A8834A);
+  border-color: var(--law-gold, #A8834A);
 }
 
 /* ===== Body ===== */
@@ -124,7 +133,8 @@ body.classic .win-celebration-trophy {
   line-height: 1.4;
 }
 body.dark .win-celebration-title { color: var(--quiet-gray-800, #E6EDF3); }
-body.classic .win-celebration-title { color: var(--law-navy, #4A2C1A); }
+body.classic .win-celebration-title,
+body.diwan .win-celebration-title { color: var(--law-navy, #1F3C4D); }
 
 .win-celebration-summary {
   margin: 0 0 12px;
@@ -147,6 +157,10 @@ body.dark .win-celebration-info-card {
   background: rgba(255, 255, 255, 0.03);
   border-color: var(--quiet-gray-300, #30363D);
 }
+body.diwan .win-celebration-info-card {
+  background: rgba(31, 60, 77, 0.04);
+  border-color: rgba(31, 60, 77, 0.15);
+}
 body.classic .win-celebration-info-card {
   background: rgba(74, 44, 26, 0.04);
   border-color: rgba(74, 44, 26, 0.15);
@@ -165,6 +179,7 @@ body.classic .win-celebration-info-card {
   border-bottom: none;
 }
 body.dark .win-celebration-info-row { border-bottom-color: var(--quiet-gray-300, #30363D); }
+body.diwan .win-celebration-info-row { border-bottom-color: rgba(31, 60, 77, 0.12); }
 body.classic .win-celebration-info-row { border-bottom-color: rgba(74, 44, 26, 0.12); }
 
 .win-celebration-info-label {
@@ -206,10 +221,11 @@ body.dark .win-celebration-info-value { color: var(--quiet-gray-800, #E6EDF3); }
   font-weight: 500;
   margin-top: 4px;
 }
-body.classic .win-celebration-ai-badge {
-  background: var(--law-gold-light, rgba(184, 134, 11, 0.10));
-  color: var(--law-gold, #B8860B);
-  border-color: var(--law-gold, #B8860B);
+body.classic .win-celebration-ai-badge,
+body.diwan .win-celebration-ai-badge {
+  background: var(--law-gold-light, rgba(201, 163, 93, 0.10));
+  color: var(--law-gold, #A8834A);
+  border-color: var(--law-gold, #A8834A);
 }
 
 /* ===== Footer ===== */
@@ -238,8 +254,16 @@ body.classic .win-celebration-ai-badge {
   background: #065f46;
 }
 
-body.classic .win-celebration-primary-btn {
-  background: var(--law-gold, #B8860B);
+body.classic .win-celebration-primary-btn,
+body.diwan .win-celebration-primary-btn {
+  background: var(--law-gold, #A8834A);
+}
+body.diwan .win-celebration-primary-btn:hover,
+body.diwan .win-celebration-primary-btn:focus-visible {
+  background: #8C6D3F;
+}
+body.diwan .win-celebration-primary-btn:active {
+  background: #7A5E35;
 }
 body.classic .win-celebration-primary-btn:hover,
 body.classic .win-celebration-primary-btn:focus-visible {

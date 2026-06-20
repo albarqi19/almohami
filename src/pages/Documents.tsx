@@ -39,6 +39,7 @@ import {
 import type { Document as DocumentType, Case } from '../types';
 import DocumentUploadModal from '../components/DocumentUploadModal';
 import LegalMemoWorkspace from '../components/LegalMemoWorkspace';
+import { usePermission } from '../hooks/usePermission';
 import DocumentPermissionsModal from '../components/DocumentPermissionsModal';
 import AssignFileToCaseModal from '../components/AssignFileToCaseModal';
 import CloudStorageSettingsModal from '../components/CloudStorageSettingsModal';
@@ -104,6 +105,7 @@ const Documents: React.FC = () => {
     // Modals
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showCreateMemo, setShowCreateMemo] = useState(false);
+    const canCreateMemo = usePermission('memos.create');
     const [showPermissionsModal, setShowPermissionsModal] = useState(false);
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [showCloudSettings, setShowCloudSettings] = useState(false);
@@ -826,6 +828,7 @@ const Documents: React.FC = () => {
                     <p>إدارة مركزية لجميع مستندات القضايا والعملاء</p>
                 </div>
                 <div className="docs-actions">
+                    {canCreateMemo && (
                     <button
                         className="docs-btn-secondary"
                         onClick={() => setShowCreateMemo(true)}
@@ -833,6 +836,7 @@ const Documents: React.FC = () => {
                         <FileText size={16} />
                         إنشاء مذكرة
                     </button>
+                    )}
                     <button
                         className="btn-upload"
                         onClick={() => setShowUploadModal(true)}

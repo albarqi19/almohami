@@ -269,3 +269,87 @@
 @keyframes sdpm-spin {
   to { transform: rotate(360deg); }
 }
+
+/* === قسم الملخص الرسمي (توليد/تحرير) === */
+.srpm-section {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-secondary, var(--color-surface));
+}
+
+.srpm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.srpm-row__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.srpm-fieldlabel {
+  display: block;
+  margin: 10px 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.srpm-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 96px;
+  resize: vertical;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.srpm-textarea:focus {
+  outline: none;
+  border-color: var(--law-navy, var(--color-primary));
+}
+
+.srpm-textarea--sm {
+  min-height: 54px;
+}
+
+.srpm-note {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.srpm-langbadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--law-navy, var(--color-primary));
+  background: var(--color-primary-soft, rgba(59, 130, 246, 0.08));
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.srpm-btn--sm {
+  padding: 5px 10px;
+  font-size: 11.5px;
+}

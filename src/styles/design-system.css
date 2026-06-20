@@ -107,6 +107,11 @@ body.dark .sidebar {
 	border-inline-start: 1px solid var(--color-border);
 }
 
+body.diwan .sidebar {
+	background-color: #102028;
+	border-inline-start: 1px solid rgba(201, 163, 93, 0.22);
+}
+
 body.classic .sidebar {
 	background-color: #3A2213;
 	border-inline-start: 1px solid rgba(184, 134, 11, 0.2);
@@ -1468,106 +1473,165 @@ body.dark .header__profile-role {
 }
 
 /* ====================================================
-   Classic Theme Overrides
-   Warm Brown/Parchment - Professional Law Firm Style
+   Diwan & Classic Theme Overrides — Sidebar + Header
+   (الشريط الجانبي داكن في كلا الثيمين؛ القواعد ذات الألوان
+   الفاتحة/المتغيّرات مشتركة، والذهب/الداكن مختلف لكل ثيم)
    ==================================================== */
 
-/* Sidebar - Classic */
+/* أيقونة العلامة — ذهبية */
+body.diwan .sidebar__brand-icon {
+	background-color: rgba(201, 163, 93, 0.18);
+	color: #C9A35D;
+}
 body.classic .sidebar__brand-icon {
 	background-color: rgba(184, 134, 11, 0.15);
 	color: #B8860B;
 }
 
+/* اسم العلامة — ورقي فاتح على الشريط الداكن */
+body.diwan .sidebar__brand-title {
+	color: #F6F1E6;
+}
 body.classic .sidebar__brand-title {
 	color: #F5EFE6;
 }
 
-body.classic .sidebar__brand-subtitle {
+/* عناصر فاتحة مشتركة على الشريط الداكن */
+body.classic .sidebar__brand-subtitle,
+body.diwan .sidebar__brand-subtitle {
 	color: rgba(245, 239, 230, 0.6);
 }
 
-body.classic .sidebar__link {
+body.classic .sidebar__link,
+body.diwan .sidebar__link {
 	color: rgba(245, 239, 230, 0.7);
 }
 
+/* تمرير الرابط — توهّج ذهبي */
+body.diwan .sidebar__link:hover,
+body.diwan .sidebar__link:focus-visible {
+	background-color: rgba(201, 163, 93, 0.15);
+	color: #F6F1E6;
+}
 body.classic .sidebar__link:hover,
 body.classic .sidebar__link:focus-visible {
 	background-color: rgba(184, 134, 11, 0.15);
 	color: #F5EFE6;
 }
 
+/* الرابط النشط */
+body.diwan .sidebar__link--active {
+	background-color: rgba(201, 163, 93, 0.2);
+	color: #E8CC96;
+}
 body.classic .sidebar__link--active {
 	background-color: rgba(184, 134, 11, 0.2);
 	color: #B8860B;
 }
 
-body.classic .sidebar__logout {
+/* تسجيل الخروج — مشترك */
+body.classic .sidebar__logout,
+body.diwan .sidebar__logout {
 	color: rgba(245, 239, 230, 0.6);
 }
-
 body.classic .sidebar__logout:hover,
-body.classic .sidebar__logout:focus-visible {
+body.classic .sidebar__logout:focus-visible,
+body.diwan .sidebar__logout:hover,
+body.diwan .sidebar__logout:focus-visible {
 	background-color: rgba(155, 44, 44, 0.15);
 	color: #ff8a8a;
 }
 
-/* Header - Classic */
-body.classic .header {
+/* Header — قواعد معتمدة على المتغيّرات (تتبع الثيم تلقائياً) */
+body.classic .header,
+body.diwan .header {
 	background-color: var(--color-surface);
 	border-block-end: 1px solid var(--color-border);
 }
 
+/* مؤشّر الصفحة — ذهبي */
+body.diwan .header__page-indicator {
+	background-color: #C9A35D;
+}
 body.classic .header__page-indicator {
 	background-color: #B8860B;
 }
 
-body.classic .header__page-title {
+body.classic .header__page-title,
+body.diwan .header__page-title {
 	color: var(--color-heading);
 }
 
-body.classic .header__page-subtitle {
+body.classic .header__page-subtitle,
+body.diwan .header__page-subtitle {
 	color: var(--color-text-secondary);
 }
 
-body.classic .header__search-input {
+body.classic .header__search-input,
+body.diwan .header__search-input {
 	border: 1px solid var(--color-border);
 	background-color: var(--color-surface-subtle);
 	color: var(--color-text);
 }
 
+/* حدّ التركيز — ذهبي */
+body.diwan .header__search-input:focus {
+	border-color: #C9A35D;
+	background-color: var(--color-surface);
+}
 body.classic .header__search-input:focus {
 	border-color: #B8860B;
 	background-color: var(--color-surface);
 }
 
-body.classic .header__icon-button {
+body.classic .header__icon-button,
+body.diwan .header__icon-button {
 	color: var(--color-text-secondary);
 }
 
+/* تمرير زر الأيقونة — ذهبي */
+body.diwan .header__icon-button:hover,
+body.diwan .header__icon-button:focus-visible {
+	background-color: rgba(201, 163, 93, 0.12);
+	color: #A8834A;
+}
 body.classic .header__icon-button:hover,
 body.classic .header__icon-button:focus-visible {
 	background-color: rgba(184, 134, 11, 0.1);
 	color: #B8860B;
 }
 
-body.classic .header__profile {
+body.classic .header__profile,
+body.diwan .header__profile {
 	background-color: transparent;
 }
 
+/* تمرير الملف الشخصي */
+body.diwan .header__profile:hover,
+body.diwan .header__profile:focus-visible {
+	background-color: rgba(201, 163, 93, 0.1);
+}
 body.classic .header__profile:hover,
 body.classic .header__profile:focus-visible {
 	background-color: rgba(184, 134, 11, 0.08);
 }
 
+/* الأفاتار — خلفية مختلفة لكل ثيم */
+body.diwan .header__avatar {
+	background-color: rgba(31, 60, 77, 0.1);
+	color: var(--color-primary);
+}
 body.classic .header__avatar {
 	background-color: rgba(74, 44, 26, 0.1);
 	color: var(--color-primary);
 }
 
-body.classic .header__profile-name {
+body.classic .header__profile-name,
+body.diwan .header__profile-name {
 	color: var(--color-text);
 }
 
-body.classic .header__profile-role {
+body.classic .header__profile-role,
+body.diwan .header__profile-role {
 	color: var(--color-text-secondary);
 }

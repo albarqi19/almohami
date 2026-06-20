@@ -12,6 +12,7 @@ import type { WorkspaceProps } from './types';
 import type { TrainingAttendee, TrainingMaterial } from '../../../types/legalServices';
 import MicroStatsBar from './MicroStatsBar';
 import LegalRichEditorField from '../LegalRichEditorField';
+import PhoneField from '../../PhoneField';
 
 // ── تسميات عربية ──
 
@@ -478,7 +479,7 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
                     </div>
                     <div className="lsd-form-group">
                       <label className="lsd-form-label">الهاتف</label>
-                      <input className="lsd-form-input" value={newAttendee.phone || ''} onChange={e => setNewAttendee({ ...newAttendee, phone: e.target.value })} placeholder="رقم الهاتف" dir="ltr" />
+                      <PhoneField value={newAttendee.phone || ''} onChange={(v) => setNewAttendee({ ...newAttendee, phone: v })} placeholder="5X XXX XXXX" />
                     </div>
                     <div className="lsd-form-group">
                       <label className="lsd-form-label">الشركة</label>
