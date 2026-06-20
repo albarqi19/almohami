@@ -10,6 +10,12 @@ export interface LegalMemo {
   created_by: string;
   assigned_lawyer?: string;
   status: 'draft' | 'under_review' | 'approved' | 'needs_revision' | 'finalized';
+  // دورة الاعتماد/الإرسال (المرحلتان 1 و3)
+  approval_state?: 'not_required' | 'draft' | 'pending' | 'endorsed' | 'rejected' | 'issued' | 'client_changes_requested' | 'client_approved';
+  current_revision?: number;
+  current_issue?: number;
+  approval_cycle?: number;
+  memo_number?: string | null;
   last_auto_saved_at?: string;
   ai_analysis_enabled: boolean;
   last_analyzed_at?: string;
@@ -269,26 +275,27 @@ export class LegalMemoService {
    * إنشاء مذكرة جديدة مع الملفات المرفقة
    */
   static async createMemoWithFiles(formData: FormData): Promise<LegalMemo> {
-    const response = await apiClient.post('/legal-memos/with-files', formData) as { data: ApiResponse<LegalMemo> };
+    // apiClient يعيد JSON المُحلَّل مباشرة ({success, data, message}) — لا غلاف Axios (response.data)
+    const response = await apiClient.post<ApiResponse<LegalMemo>>('/legal-memos/with-files', formData);
 
-    if (!response.data.success) {
-      throw new Error(response.data.message || 'فشل في إنشاء المذكرة مع الملفات');
+    if (!response.success) {
+      throw new Error(response.message || 'فشل في إنشاء المذكرة مع الملفات');
     }
 
-    return response.data.data!;
+    return response.data!;
   }
 
   /**
    * تحديث مذكرة موجودة مع الملفات المرفقة
    */
   static async updateMemoWithFiles(id: string, formData: FormData): Promise<LegalMemo> {
-    const response = await apiClient.post(`/legal-memos/${id}/with-files`, formData) as { data: ApiResponse<LegalMemo> };
+    const response = await apiClient.post<ApiResponse<LegalMemo>>(`/legal-memos/${id}/with-files`, formData);
 
-    if (!response.data.success) {
-      throw new Error(response.data.message || 'فشل في تحديث المذكرة مع الملفات');
+    if (!response.success) {
+      throw new Error(response.message || 'فشل في تحديث المذكرة مع الملفات');
     }
 
-    return response.data.data!;
+    return response.data!;
   }
 
   static async analyzeSmartly(

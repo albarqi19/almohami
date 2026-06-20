@@ -10,7 +10,7 @@ import {
     ChevronLeft, ChevronRight, AlertCircle, Loader2,
     Clock, Cloud, CloudOff, Sparkles, Settings,
     FileUp, Trash2, Eye, Download, Link2, Zap, Info,
-    HelpCircle
+    HelpCircle, Send
 } from 'lucide-react';
 import { useModalTour } from '../hooks/useModalTour';
 import TiptapEditor from './TiptapEditor';
@@ -18,6 +18,7 @@ import type { TiptapEditorRef } from './TiptapEditor';
 import LegalAIToolbarButton from './LegalAIToolbarButton';
 import NotebookAssistantWidget from './NotebookAssistantWidget';
 import AnalysisProgress from './AnalysisProgress';
+import MemoSendModal from './MemoSendModal';
 import { LegalMemoService, type AnalysisStep } from '../services/legalMemoService';
 import { runSingleAnalysis, ANALYSIS_ENGINES, type AnalysisEngineType, type MemoAnalysisResult } from '../services/memoAnalysisService';
 import EngineResultView from './memo/EngineResultView';
@@ -270,6 +271,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
     const [saving, setSaving] = useState<boolean>(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [savedMemoId, setSavedMemoId] = useState<number | null>(null);
+    const [showSendModal, setShowSendModal] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
     // حالة التحليل الذكي
@@ -857,10 +859,35 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                                     'حفظ'}
                                         </span>
                                     </button>
+
+                                    {/* إرسال المذكرة (للاعتماد/للعميل) — يظهر بعد الحفظ */}
+                                    {savedMemoId && (
+                                        <button
+                                            type="button"
+                                            className="lmw-btn"
+                                            onClick={() => setShowSendModal(true)}
+                                            disabled={loading || hasUnsavedChanges}
+                                            title={hasUnsavedChanges ? 'احفظ التغييرات أولاً' : 'إرسال المذكرة'}
+                                        >
+                                            <Send size={16} />
+                                            <span>إرسال</span>
+                                        </button>
+                                    )}
                                 </>
                             )}
                         </div>
                     </header>
+
+                    {savedMemoId && (
+                        <MemoSendModal
+                            memoId={savedMemoId}
+                            isOpen={showSendModal}
+                            onClose={() => setShowSendModal(false)}
+                            approvalState={editingMemo?.approval_state}
+                            requiresApproval={editingMemo?.case?.requires_memo_approval}
+                            onSent={() => { setShowSendModal(false); onMemoCreated?.(editingMemo); }}
+                        />
+                    )}
 
                     {/* المحتوى الرئيسي */}
                     <div className="lmw-content">
