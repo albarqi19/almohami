@@ -1,0 +1,69 @@
+/* ====================================================
+   عروض الأتعاب — المودال والقائمة (يدعم الثيمات عبر CSS Variables)
+   ==================================================== */
+
+.fpm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; }
+.fpm-content {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 800px; max-width: calc(100vw - 24px); max-height: calc(100vh - 24px);
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  z-index: 1001; display: flex; flex-direction: column; overflow: hidden;
+}
+.fpm-header { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid var(--color-border); background: var(--color-bg-secondary, var(--color-surface)); }
+.fpm-title { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; color: var(--color-heading); margin: 0; }
+.fpm-close { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-secondary); cursor: pointer; }
+.fpm-body { padding: 14px 16px; overflow-y: auto; }
+
+.fpm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin-bottom: 10px; }
+.fpm-field { display: flex; flex-direction: column; gap: 4px; }
+.fpm-field.full { grid-column: 1 / -1; }
+.fpm-field > span { font-size: 11px; font-weight: 600; color: var(--color-text-secondary); }
+.fpm-field input, .fpm-field select, .fpm-field textarea {
+  padding: 7px 9px; font-size: 12.5px; font-family: inherit; color: var(--color-text);
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; box-sizing: border-box; width: 100%;
+}
+.fpm-field textarea { resize: vertical; min-height: 48px; line-height: 1.6; }
+.fpm-field input:focus, .fpm-field select:focus, .fpm-field textarea:focus { outline: none; border-color: var(--law-navy, var(--color-primary)); }
+
+.fpm-section-title { font-size: 12px; font-weight: 700; color: var(--color-heading); margin: 12px 0 6px; }
+
+table.fpm-items { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.fpm-items th { background: var(--color-bg-secondary, #f3f4f6); color: var(--color-text-secondary); padding: 6px 8px; font-size: 11px; text-align: center; border: 1px solid var(--color-border); }
+table.fpm-items td { border: 1px solid var(--color-border); padding: 3px 5px; vertical-align: middle; }
+table.fpm-items input { width: 100%; border: none; background: transparent; color: var(--color-text); font-size: 12px; padding: 5px 4px; box-sizing: border-box; }
+table.fpm-items input:focus { outline: 1px solid var(--law-navy, var(--color-primary)); border-radius: 3px; }
+table.fpm-items td.amount { text-align: center; white-space: nowrap; color: var(--color-heading); font-weight: 600; }
+.fpm-itembtn { border: none; background: transparent; color: var(--color-error, #dc2626); cursor: pointer; padding: 4px; }
+.fpm-additem { margin-top: 6px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; font-size: 12px; border: 1px dashed var(--color-border); border-radius: 6px; background: transparent; color: var(--law-navy, var(--color-primary)); cursor: pointer; }
+
+.fpm-totals { margin: 12px 0 4px; margin-inline-start: auto; width: 320px; border-collapse: collapse; font-size: 12.5px; }
+.fpm-totals td { padding: 5px 10px; border: 1px solid var(--color-border); }
+.fpm-totals td.k { background: var(--color-bg-secondary, #f3f4f6); font-weight: 600; color: var(--color-text-secondary); }
+.fpm-totals td.v { text-align: left; color: var(--color-heading); }
+.fpm-totals tr.grand td { background: var(--law-navy, var(--color-primary)); color: #fff; font-weight: 700; font-size: 13.5px; }
+
+.fpm-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--color-border); background: var(--color-bg-secondary, var(--color-surface)); }
+.fpm-footer__right { display: flex; gap: 6px; margin-inline-start: auto; }
+.fpm-btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 13px; font-size: 12.5px; font-weight: 500; border-radius: 6px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); cursor: pointer; }
+.fpm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.fpm-btn--primary { background: var(--law-navy, var(--color-primary)); color: #fff; border-color: var(--law-navy, var(--color-primary)); }
+.fpm-btn--ghost { background: transparent; }
+.fpm-spin { animation: fpm-spin 1s linear infinite; }
+@keyframes fpm-spin { to { transform: rotate(360deg); } }
+
+/* قائمة العروض داخل صفحة العميل */
+.fpl-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid var(--color-border); border-radius: 8px; margin-bottom: 7px; background: var(--color-surface); }
+.fpl-row__main { flex: 1; min-width: 0; }
+.fpl-row__title { font-size: 13px; font-weight: 600; color: var(--color-heading); }
+.fpl-row__sub { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+.fpl-num { unicode-bidi: isolate; direction: ltr; display: inline-block; }
+.fpl-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.fpl-badge--draft { background: #6b728022; color: #6b7280; }
+.fpl-badge--sent { background: #2563eb22; color: #2563eb; }
+.fpl-badge--accepted { background: #16a34a22; color: #16a34a; }
+.fpl-badge--rejected, .fpl-badge--expired, .fpl-badge--cancelled { background: #dc262622; color: #dc2626; }
+.fpl-total { font-size: 13px; font-weight: 700; color: var(--color-heading); white-space: nowrap; }
+.fpl-empty { padding: 18px; text-align: center; color: var(--color-text-secondary); font-size: 12.5px; }
+
+/* سجل الصادر/الوارد: انتقلت أنماطه إلى correspondence-page.css (إعادة تصميم مثيّم بالكامل) */

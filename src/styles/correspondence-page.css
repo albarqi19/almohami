@@ -1,0 +1,473 @@
+/* ====================================================
+   صفحة «الصادر والوارد» — سجلّ المراسلات
+   شريط علوي + بطاقات إحصائية + قائمة جانبية للفلاتر + جدول
+   كل الألوان مشتقّة من متغيّرات الثيم → تتبع الثيمات الأربعة
+   (:root / dark / diwan / classic) تلقائياً، بلا hex صلب.
+   ==================================================== */
+
+.corr-page {
+    padding: 16px 20px 28px;
+    background: var(--dashboard-bg);
+    min-height: calc(100vh - 64px);
+}
+
+/* ==================== الشريط العلوي ==================== */
+.corr-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.corr-topbar__title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+.corr-topbar__title svg { color: var(--color-primary); }
+
+.corr-topbar__badge {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 1px 9px;
+    border-radius: 10px;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+.corr-topbar__tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.corr-search {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 10px;
+    height: 34px;
+    width: 320px;
+    max-width: 60vw;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    transition: border-color 120ms ease;
+}
+
+.corr-search:focus-within { border-color: var(--color-primary); }
+.corr-search svg { color: var(--color-text-secondary); flex-shrink: 0; }
+
+.corr-search input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 12.5px;
+    color: var(--color-text);
+}
+
+.corr-search__clear {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    display: flex;
+    padding: 2px;
+    border-radius: 4px;
+}
+.corr-search__clear:hover { color: var(--status-red); }
+
+.corr-select {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 12.5px;
+    cursor: pointer;
+    outline: none;
+}
+
+.corr-btn {
+    height: 34px;
+    padding: 0 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+.corr-btn:hover:not(:disabled) {
+    background: var(--color-surface-subtle);
+    color: var(--color-text);
+    border-color: var(--color-text-secondary);
+}
+.corr-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ==================== بطاقات الإحصائيات ==================== */
+.corr-stats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.corr-stat {
+    position: relative;
+    overflow: hidden;
+    padding: 14px 16px;
+    background: var(--dashboard-card, var(--color-surface));
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-xs, 0 1px 2px rgba(0,0,0,0.03));
+    transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+.corr-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md, 0 4px 10px rgba(0,0,0,0.08));
+    border-color: color-mix(in srgb, var(--corr-tone, var(--color-primary)) 35%, var(--color-border));
+}
+
+/* أيقونة خلفية (علامة مائية باهتة بلون الدرجة) */
+.corr-stat__bg {
+    position: absolute;
+    inset-inline-end: -6px;
+    bottom: -8px;
+    color: var(--corr-tone, var(--color-primary));
+    opacity: 0.12;
+    pointer-events: none;
+}
+
+.corr-stat__body {
+    position: relative;
+    z-index: 1;
+}
+
+.corr-stat__value {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--color-heading);
+    unicode-bidi: plaintext;
+}
+
+.corr-stat__label {
+    font-size: 11.5px;
+    color: var(--color-text-secondary);
+    margin-top: 3px;
+}
+
+/* درجات الألوان للبطاقات — كلها من متغيّرات الثيم */
+.corr-stat--navy   { --corr-tone: var(--law-navy, var(--color-primary)); }
+.corr-stat--blue   { --corr-tone: var(--status-blue); }
+.corr-stat--green  { --corr-tone: var(--status-green); }
+.corr-stat--orange { --corr-tone: var(--status-orange); }
+.corr-stat--red    { --corr-tone: var(--status-red); }
+
+/* ==================== التخطيط: قائمة جانبية + جدول ==================== */
+.corr-layout {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+/* ── القائمة الجانبية (مضغوطة، بنمط قائمة صفحة التنبيهات) ── */
+.corr-sidebar {
+    width: 206px;
+    flex-shrink: 0;
+    background: var(--dashboard-card, var(--color-surface));
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 8px 6px;
+    position: sticky;
+    top: 12px;
+}
+
+.corr-sidebar__group { margin-bottom: 8px; }
+.corr-sidebar__group:last-of-type { margin-bottom: 2px; }
+
+.corr-sidebar__title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.4px;
+    padding: 4px 8px 4px;
+    text-transform: uppercase;
+}
+
+.corr-filter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 5px 9px;
+    margin-bottom: 1px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    color: var(--color-text);
+    font-size: 12px;
+    line-height: 1.3;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: start;
+    transition: background 120ms ease, color 120ms ease;
+}
+.corr-filter:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+
+.corr-filter--active {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.corr-filter__label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+}
+.corr-filter__label svg { flex-shrink: 0; opacity: 0.85; }
+
+.corr-filter__badge {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 0 6px;
+    min-width: 18px;
+    text-align: center;
+    border-radius: 9px;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-secondary);
+    unicode-bidi: plaintext;
+}
+.corr-filter--active .corr-filter__badge {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+/* نقطة لونية صغيرة لحالات السجل */
+.corr-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--corr-tone, var(--color-text-secondary));
+}
+.corr-dot--green  { --corr-tone: var(--status-green); }
+.corr-dot--orange { --corr-tone: var(--status-orange); }
+.corr-dot--red    { --corr-tone: var(--status-red); }
+.corr-dot--muted  { --corr-tone: var(--color-text-secondary); }
+
+.corr-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+.corr-clear:hover {
+    color: var(--status-red);
+    border-color: var(--status-red);
+    background: color-mix(in srgb, var(--status-red) 8%, transparent);
+}
+
+/* ==================== المنطقة الرئيسية ── الجدول ==================== */
+.corr-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.corr-table-wrap {
+    background: var(--dashboard-card, var(--color-surface));
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    overflow: hidden;
+    overflow-x: auto;
+}
+
+.corr-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+}
+
+.corr-table th {
+    background: var(--color-surface-subtle);
+    color: var(--color-text-secondary);
+    padding: 11px 12px;
+    text-align: start;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.corr-table td {
+    border-top: 1px solid var(--color-border);
+    padding: 10px 12px;
+    color: var(--color-text);
+    vertical-align: middle;
+}
+.corr-table tbody tr:first-child td { border-top: none; }
+.corr-table tbody tr { transition: background 100ms ease; }
+.corr-table tbody tr:hover td {
+    background: color-mix(in srgb, var(--color-primary) 4%, transparent);
+}
+
+.corr-td-ellipsis {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.corr-num {
+    unicode-bidi: isolate;
+    direction: ltr;
+    display: inline-block;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+/* خلية المستلِم / المُرسِل (سطران) */
+.corr-party {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    line-height: 1.35;
+}
+.corr-party__to { color: var(--color-text); }
+.corr-party__from {
+    font-size: 10.5px;
+    color: var(--color-text-secondary);
+}
+
+/* شارة الاتجاه */
+.corr-dir {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 9px;
+}
+.corr-dir--outgoing {
+    color: var(--status-blue);
+    background: color-mix(in srgb, var(--status-blue) 13%, transparent);
+}
+.corr-dir--incoming {
+    color: var(--status-green);
+    background: color-mix(in srgb, var(--status-green) 13%, transparent);
+}
+
+.corr-chip {
+    font-size: 11px;
+    padding: 2px 9px;
+    border-radius: 9px;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+/* شارة الحالة الملوّنة */
+.corr-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 9px;
+    white-space: nowrap;
+    color: var(--corr-tone, var(--color-text-secondary));
+    background: color-mix(in srgb, var(--corr-tone, var(--color-text-secondary)) 12%, transparent);
+}
+.corr-status svg { flex-shrink: 0; }
+.corr-status--green  { --corr-tone: var(--status-green); }
+.corr-status--orange { --corr-tone: var(--status-orange); }
+.corr-status--red    { --corr-tone: var(--status-red); }
+.corr-status--muted  { --corr-tone: var(--color-text-secondary); }
+
+.corr-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+.corr-icon-btn:hover {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+}
+
+/* ==================== حالات فارغة / تحميل ==================== */
+.corr-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 64px 24px;
+    text-align: center;
+    color: var(--color-text-secondary);
+    background: var(--dashboard-card, var(--color-surface));
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    font-size: 13px;
+}
+.corr-empty__icon { opacity: 0.3; margin-bottom: 4px; }
+.corr-empty__title { font-size: 15px; font-weight: 700; color: var(--color-heading); }
+.corr-empty__desc { font-size: 12.5px; }
+
+.corr-spin { animation: corr-spin 0.9s linear infinite; }
+@keyframes corr-spin { to { transform: rotate(360deg); } }
+
+/* ==================== استجابة ==================== */
+@media (max-width: 1100px) {
+    .corr-stats { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 860px) {
+    .corr-layout { flex-direction: column; }
+    .corr-sidebar { width: 100%; position: static; }
+}
+@media (max-width: 600px) {
+    .corr-stats { grid-template-columns: repeat(2, 1fr); }
+    .corr-search { width: 100%; max-width: none; }
+    .corr-topbar__tools { width: 100%; }
+}
