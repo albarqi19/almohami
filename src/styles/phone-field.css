@@ -1,0 +1,157 @@
+/* =====================================================
+   حقل الجوال الدولي الموحّد (PhoneField)
+   يلتزم متغيّرات الثيم ليعمل في root / dark / classic
+   ===================================================== */
+
+.phone-field {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-surface);
+}
+
+.phone-field:focus-within {
+    border-color: var(--law-navy, var(--color-primary));
+}
+
+.phone-field__country {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 7px 8px;
+    background: transparent;
+    border: none;
+    border-inline-end: 1px solid var(--color-border);
+    border-radius: 6px 0 0 6px;
+    cursor: pointer;
+    color: var(--color-text);
+    font-size: 13px;
+    white-space: nowrap;
+    transition: background var(--transition-fast, 100ms ease);
+}
+
+.phone-field__country:hover:not(:disabled) {
+    background: var(--quiet-gray-100, rgba(0, 0, 0, 0.04));
+}
+
+.phone-field__country:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.phone-field__flag {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.phone-field__dial {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-secondary);
+    direction: ltr;
+}
+
+.phone-field__chevron {
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+}
+
+.phone-field__input {
+    flex: 1;
+    min-width: 0;
+    padding: 7px 10px;
+    font-size: 13px;
+    color: var(--color-text);
+    background: transparent;
+    border: none;
+    outline: none;
+    line-height: 1.4;
+    direction: ltr;
+    text-align: left;
+}
+
+.phone-field__input::placeholder {
+    color: var(--color-text-secondary);
+    opacity: 0.7;
+}
+
+.phone-field__dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    inset-inline-start: 0;
+    z-index: 1000;
+    width: 290px;
+    max-width: 92vw;
+    background: var(--color-surface, var(--dashboard-card));
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(9, 30, 66, 0.12));
+    overflow: hidden;
+}
+
+.phone-field__search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+}
+
+.phone-field__search input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 13px;
+}
+
+.phone-field__list {
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.phone-field__option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--color-text);
+    font-size: 13px;
+    text-align: start;
+}
+
+.phone-field__option:hover {
+    background: var(--quiet-gray-100, rgba(0, 0, 0, 0.04));
+}
+
+.phone-field__option.is-active {
+    background: var(--law-navy-light, rgba(30, 58, 95, 0.1));
+}
+
+.phone-field__name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.phone-field__empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}
