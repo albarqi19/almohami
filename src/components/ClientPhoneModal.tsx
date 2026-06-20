@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { ClientManagementService } from '../services/clientManagementService';
 import type { PotentialClient, CaseLinkedClient } from '../services/clientManagementService';
+import PhoneField from './PhoneField';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface ClientPhoneModalProps {
@@ -76,8 +77,8 @@ const ClientPhoneModal: React.FC<ClientPhoneModalProps> = ({
     };
 
     const handleUpdatePhone = async () => {
-        if (!phone || !phone.match(/^05[0-9]{8}$/)) {
-            setError('يرجى إدخال رقم جوال صالح يبدأ بـ 05');
+        if (!phone) {
+            setError('يرجى إدخال رقم جوال');
             return;
         }
 
@@ -314,14 +315,7 @@ const ClientPhoneModal: React.FC<ClientPhoneModalProps> = ({
                                         <Phone size={16} /> رقم الجوال
                                     </h3>
                                     <div className="client-phone-form">
-                                        <input
-                                            type="tel"
-                                            value={phone}
-                                            onChange={e => setPhone(e.target.value)}
-                                            placeholder="05xxxxxxxx"
-                                            className="client-phone-input"
-                                            dir="ltr"
-                                        />
+                                        <PhoneField value={phone} onChange={(v) => setPhone(v)} placeholder="5X XXX XXXX" />
                                         <label className="client-phone-checkbox">
                                             <input
                                                 type="checkbox"

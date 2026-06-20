@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CaseService } from '../services/caseService';
+import ClientCaseMemos from '../components/ClientCaseMemos';
 import { DocumentService } from '../services/documentService';
 import { MessageService } from '../services/messageService';
 import { ActivityService } from '../services/activityService';
@@ -48,7 +49,8 @@ const ClientCaseDetail: React.FC = () => {
 
       try {
         setIsLoading(true);
-        const caseData = await CaseService.getCase(caseId);
+        // بوابة العميل تستخدم مسار العميل المخصّص (/client/cases/{id}) لا مسار الطاقم
+        const caseData = await CaseService.getClientCaseDetails(caseId);
         setCaseData(caseData);
 
         const documentsData = await DocumentService.getDocuments({ case_id: caseId });
@@ -316,6 +318,9 @@ const ClientCaseDetail: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Memos Card (مذكرات القضية) */}
+          {caseId && <ClientCaseMemos caseId={caseId} />}
 
           {/* Documents Card */}
           <div className="detail-card">

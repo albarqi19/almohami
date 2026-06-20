@@ -22,6 +22,9 @@ import { UserService, type User as ApiUser, type CreateUserForm, type UpdateUser
 import RoleService, { type Role as ApiRole } from '../services/roleService';
 import PermissionService, { type Permission as ApiPermission, type GroupedPermission } from '../services/permissionService';
 import { apiClient } from '../utils/api';
+import PhoneField from './PhoneField';
+import ConfirmDialog from './ConfirmDialog';
+import CredentialsModal, { type CredentialField } from './CredentialsModal';
 
 interface Permission extends ApiPermission {
   category: 'cases' | 'tasks' | 'documents' | 'reports' | 'admin' | 'clients';
@@ -81,6 +84,13 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // مودال نتيجة إنشاء/إعادة إصدار بيانات الدخول (بديل alert المتصفح)
+  const [credInfo, setCredInfo] = useState<{ title: string; fields: CredentialField[]; note: React.ReactNode } | null>(null);
+  // مودال تأكيد داخل الموقع (بديل confirm المتصفح) — للحذف وإعادة الإرسال
+  const [confirmState, setConfirmState] = useState<{
+    title: string; message: React.ReactNode; note?: React.ReactNode;
+    confirmLabel: string; variant: 'danger' | 'primary'; onConfirm: () => void;
+  } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
@@ -170,9 +180,17 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
       setLoading(true);
       const response = await UserService.createUser(userData);
 
-      // عرض رسالة نجاح مع الـ PIN المولد
+      // عرض النتيجة في مودال نظام موحّد (بديل alert المتصفح)
       if (response && (response as any).pin) {
-        alert(`تم إنشاء المستخدم بنجاح!\n\nرقم الهوية: ${userData.national_id}\nالرقم السري: ${(response as any).pin}\n\nتم إرسال رسالة ترحيب عبر واتساب للمستخدم الجديد.`);
+        setCredInfo({
+          title: 'تم إنشاء المستخدم ✅',
+          fields: [
+            { label: 'الاسم', value: userData.name, copyable: false },
+            { label: 'رقم الهوية', value: userData.national_id, mono: true },
+            { label: 'الرقم السري', value: (response as any).pin, mono: true },
+          ],
+          note: 'أُرسلت رسالة ترحيب ببيانات الدخول عبر واتساب للمستخدم الجديد.',
+        });
       }
 
       // مسح الكاش وتحديث البيانات من السيرفر
@@ -205,32 +223,59 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
     }
   };
 
-  // Handle resend credentials (PIN جديد + واتساب)
-  const handleResendCredentials = async (id: string) => {
-    if (!confirm('سيتم إنشاء رقم سري جديد وإرساله للمستخدم عبر واتساب. هل تريد المتابعة؟')) return;
+  // Handle resend credentials (PIN جديد + واتساب) — تأكيد داخل الموقع
+  const handleResendCredentials = (id: string) => {
+    setConfirmState({
+      title: 'إعادة إنشاء بيانات الدخول',
+      message: 'سيُنشأ رقم سري جديد ويُرسَل للمستخدم عبر واتساب.',
+      note: 'الرقم السري القديم لن يعمل بعد ذلك.',
+      confirmLabel: 'إنشاء وإرسال',
+      variant: 'primary',
+      onConfirm: () => doResendCredentials(id),
+    });
+  };
+
+  const doResendCredentials = async (id: string) => {
     try {
       setLoading(true);
       const result = await UserService.resendCredentials(id);
-      alert(`تم إعادة إنشاء بيانات الدخول بنجاح ✅\n\nالرقم السري الجديد: ${result.pin}\n\nتم إرسال الرسالة عبر واتساب (إذا كان الجهاز متصلاً ورقم الهاتف صحيحاً).`);
+      setConfirmState(null);
+      setCredInfo({
+        title: 'تم إعادة إنشاء بيانات الدخول ✅',
+        fields: [{ label: 'الرقم السري الجديد', value: result.pin, mono: true }],
+        note: 'أُرسلت عبر واتساب (إذا كان الجهاز متصلاً ورقم الهاتف صحيحاً).',
+      });
     } catch (err) {
       console.error('Error resending credentials:', err);
-      alert('تعذّر إعادة إرسال بيانات الدخول. تحقق من اتصال الواتساب وحاول مرة أخرى.');
+      setConfirmState(null);
+      setError(err instanceof Error ? err.message : 'تعذّر إعادة إرسال بيانات الدخول. تحقق من اتصال الواتساب وحاول مرة أخرى.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle user deletion
-  const handleDeleteUser = async (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) return;
+  // Handle user deletion — تأكيد داخل الموقع
+  const handleDeleteUser = (id: string) => {
+    setConfirmState({
+      title: 'تأكيد حذف المستخدم',
+      message: 'هل أنت متأكد من حذف هذا المستخدم؟',
+      note: 'لا يمكن التراجع عن هذا الإجراء.',
+      confirmLabel: 'حذف',
+      variant: 'danger',
+      onConfirm: () => doDeleteUser(id),
+    });
+  };
 
+  const doDeleteUser = async (id: string) => {
     try {
       setLoading(true);
       await UserService.deleteUser(id);
+      setConfirmState(null);
       localStorage.removeItem(USERS_CACHE_KEY);
       await loadUsers({}, true); // Force refresh from server
     } catch (err) {
       console.error('Error deleting user:', err);
+      setConfirmState(null);
       setError(err instanceof Error ? err.message : 'فشل في حذف المستخدم');
     } finally {
       setLoading(false);
@@ -790,13 +835,10 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
                     <label style={fieldLabelStyle}>
                       رقم الهاتف (واتساب)
                     </label>
-                    <input
-                      type="tel"
-                      inputMode="tel"
+                    <PhoneField
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="05xxxxxxxx"
-                      style={fieldInputStyle}
+                      onChange={(v) => setFormData({ ...formData, phone: v })}
+                      placeholder="5X XXX XXXX"
                     />
                   </div>
                 </div>
@@ -1910,6 +1952,28 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
           />
         )}
       </AnimatePresence>
+
+      {/* تأكيد داخل الموقع (حذف / إعادة إرسال) — بديل confirm المتصفح */}
+      <ConfirmDialog
+        isOpen={confirmState !== null}
+        title={confirmState?.title || ''}
+        message={confirmState?.message}
+        note={confirmState?.note}
+        confirmLabel={confirmState?.confirmLabel}
+        variant={confirmState?.variant}
+        loading={loading}
+        onConfirm={() => confirmState?.onConfirm()}
+        onClose={() => setConfirmState(null)}
+      />
+
+      {/* نتيجة إنشاء/إعادة إصدار بيانات الدخول — بديل alert المتصفح */}
+      <CredentialsModal
+        isOpen={credInfo !== null}
+        title={credInfo?.title || ''}
+        fields={credInfo?.fields}
+        note={credInfo?.note}
+        onClose={() => setCredInfo(null)}
+      />
     </div>
   );
 };

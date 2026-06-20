@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, X, Loader2 } from 'lucide-react';
 import Modal from './Modal';
+import PhoneField from './PhoneField';
 import ClientManagementService, {
   CLIENT_LANGUAGES,
   type Client,
@@ -34,10 +35,6 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
 
   const handleSave = async () => {
     setError(null);
-    if (form.phone && !/^05[0-9]{8}$/.test(form.phone)) {
-      setError('رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام');
-      return;
-    }
     // الرقم الضريبي (VAT) — إن أُدخل يجب أن يكون 15 رقماً يبدأ وينتهي بـ 3 (مطلوب للفوترة الإلكترونية B2B).
     if (isCompany && form.vat_number && form.vat_number.trim() && !/^3\d{13}3$/.test(form.vat_number.trim())) {
       setError('الرقم الضريبي يجب أن يكون 15 رقماً يبدأ وينتهي بالرقم 3 (مطلوب للفوترة الإلكترونية B2B)');
@@ -80,8 +77,8 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
           <Field label="الاسم">
             <input type="text" value={form.name ?? ''} onChange={(e) => set('name', e.target.value)} />
           </Field>
-          <Field label="الجوال" hint="يجب أن يبدأ بـ 05">
-            <input type="tel" dir="ltr" value={form.phone ?? ''} onChange={(e) => set('phone', e.target.value)} placeholder="05xxxxxxxx" />
+          <Field label="الجوال" hint="اختر الدولة ثم أدخل الرقم">
+            <PhoneField value={form.phone ?? ''} onChange={(v) => set('phone', v)} placeholder="5X XXX XXXX" />
           </Field>
           <Field label="التصنيف">
             <select value={form.classification ?? ''} onChange={(e) => set('classification', (e.target.value || undefined) as any)}>
@@ -155,7 +152,7 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
                 <input type="text" value={form.point_of_contact_name ?? ''} onChange={(e) => set('point_of_contact_name', e.target.value)} />
               </Field>
               <Field label="الجوال">
-                <input type="tel" dir="ltr" value={form.point_of_contact_phone ?? ''} onChange={(e) => set('point_of_contact_phone', e.target.value)} />
+                <PhoneField value={form.point_of_contact_phone ?? ''} onChange={(v) => set('point_of_contact_phone', v)} placeholder="5X XXX XXXX" />
               </Field>
               <Field label="البريد الإلكتروني">
                 <input type="email" dir="ltr" value={form.point_of_contact_email ?? ''} onChange={(e) => set('point_of_contact_email', e.target.value)} />

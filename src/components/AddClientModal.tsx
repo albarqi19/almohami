@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Building2, X } from 'lucide-react';
-import ClientManagementService, { CLIENT_LANGUAGES } from '../services/clientManagementService';
+import ClientManagementService, { CLIENT_LANGUAGES, LEAD_SOURCES } from '../services/clientManagementService';
+import PhoneField from './PhoneField';
+import CredentialsModal, { type CredentialField } from './CredentialsModal';
 
 interface AddClientModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: () => void;
+  /** حالة العميل الافتراضية عند الإنشاء: client (الافتراضي) أو prospect (من تبويب المحتملين) */
+  defaultStatus?: 'client' | 'prospect';
 }
 
 type EntityType = 'individual' | 'company';
@@ -48,9 +52,12 @@ const sectionTitleStyle: React.CSSProperties = {
   borderBottom: '1px dashed var(--color-border)',
 };
 
-const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCreated }) => {
+const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCreated, defaultStatus = 'client' }) => {
+  const isProspect = defaultStatus === 'prospect';
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  // نتيجة الإنشاء تُعرض في مودال نظام موحّد (بديل alert المتصفح)
+  const [successInfo, setSuccessInfo] = useState<{ title: string; fields: CredentialField[]; note: React.ReactNode } | null>(null);
   const [form, setForm] = useState({
     entity_type: 'individual' as EntityType,
     classification: '' as '' | 'vip' | 'regular' | 'one_time',
@@ -59,6 +66,8 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
     national_id: '',
     email: '',
     phone: '',
+    lead_source: '',
+    lead_source_detail: '',
     commercial_registration: '',
     vat_number: '',
     national_address: '',
@@ -84,9 +93,17 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
 
     const payload: any = {
       name: form.name.trim(),
-      national_id: form.national_id.trim(),
       entity_type: form.entity_type,
+      client_status: defaultStatus,
     };
+    // الهوية: إلزامية للعميل الفعلي، اختيارية للمحتمل (نرسلها فقط إن وُجدت)
+    const nid = form.national_id.trim();
+    if (nid) payload.national_id = nid;
+    // مصدر العميل المحتمل (تسويق)
+    if (isProspect) {
+      if (form.lead_source) payload.lead_source = form.lead_source;
+      if (form.lead_source_detail.trim()) payload.lead_source_detail = form.lead_source_detail.trim();
+    }
     if (form.email) payload.email = form.email.trim();
     if (form.phone) payload.phone = form.phone.trim();
     if (form.classification) payload.classification = form.classification;
@@ -113,9 +130,24 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
 
     try {
       const result = await ClientManagementService.createClient(payload);
-      alert(`تم إنشاء العميل بنجاح ✅\n\nرقم الهوية: ${payload.national_id}\nالرقم السري: ${result.pin}\n\nتم إرسال الرسالة عبر واتساب (إن كان الجهاز متصلاً ورقم الهاتف صحيحاً).`);
-      onCreated();
-      onClose();
+      // النموذج يبقى مفتوحاً حتى يُغلق المستخدم مودال النتيجة (closeSuccess)
+      if (isProspect) {
+        setSuccessInfo({
+          title: 'تم تسجيل العميل المحتمل ✅',
+          fields: [],
+          note: 'يمكنك تحويله لعميل فعلي لاحقاً من تبويب «العملاء المحتملون». لم تُرسَل بيانات دخول الآن.',
+        });
+      } else {
+        setSuccessInfo({
+          title: 'تم إنشاء العميل ✅',
+          fields: [
+            { label: 'الاسم', value: payload.name, copyable: false },
+            { label: 'رقم الهوية', value: payload.national_id, mono: true },
+            { label: 'الرقم السري', value: result.pin, mono: true },
+          ],
+          note: 'أُرسلت بيانات الدخول للعميل عبر واتساب (إن كان الجهاز متصلاً ورقم الهاتف صحيحاً).',
+        });
+      }
     } catch (err: any) {
       let msg = 'تعذّر إنشاء العميل';
       if (err?.errors && typeof err.errors === 'object') {
@@ -151,9 +183,17 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
     }
   };
 
+  // إغلاق مودال النتيجة يُنهي العملية: تحديث القائمة + إغلاق النموذج
+  const closeSuccess = () => {
+    setSuccessInfo(null);
+    onCreated();
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
+    <>
     <div style={{
       position: 'fixed',
       top: 0, left: 0, right: 0, bottom: 0,
@@ -196,7 +236,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
               margin: 0,
               lineHeight: 1.3,
             }}>
-              إضافة عميل جديد
+              {isProspect ? 'إضافة عميل محتمل' : 'إضافة عميل جديد'}
             </h3>
             <p style={{
               fontSize: '12px',
@@ -204,7 +244,9 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
               margin: '3px 0 0 0',
               lineHeight: 1.3,
             }}>
-              تسجيل عميل جديد في النظام (فرد أو شركة أو مؤسسة)
+              {isProspect
+                ? 'تسجيل عميل محتمل (lead) — يمكن تحويله لعميل فعلي لاحقاً'
+                : 'تسجيل عميل جديد في النظام (فرد أو شركة أو مؤسسة)'}
             </p>
           </div>
           <button
@@ -306,15 +348,17 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
                 <div>
                   <label style={fieldLabelStyle}>
                     {isCompany ? 'الرقم الموحّد / السجل' : 'رقم الهوية الوطنية'}
-                    <span style={requiredStarStyle}>*</span>
+                    {isProspect
+                      ? <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: 400 }}> (اختياري)</span>
+                      : <span style={requiredStarStyle}>*</span>}
                   </label>
                   <input
                     type="text"
                     inputMode="numeric"
                     value={form.national_id}
                     onChange={(e) => set('national_id', e.target.value)}
-                    required
-                    placeholder="10 أرقام"
+                    required={!isProspect}
+                    placeholder={isProspect ? 'إن وُجدت' : '10 أرقام'}
                     style={fieldInputStyle}
                   />
                 </div>
@@ -327,15 +371,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={fieldLabelStyle}>رقم الهاتف (واتساب)</label>
-                  <input
-                    type="tel"
-                    inputMode="tel"
-                    dir="ltr"
-                    value={form.phone}
-                    onChange={(e) => set('phone', e.target.value)}
-                    placeholder="05xxxxxxxx"
-                    style={fieldInputStyle}
-                  />
+                  <PhoneField value={form.phone} onChange={(v) => set('phone', v)} placeholder="5X XXX XXXX" />
                 </div>
                 <div>
                   <label style={fieldLabelStyle}>البريد الإلكتروني</label>
@@ -375,6 +411,44 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
                 </div>
               </div>
             </div>
+
+            {/* Section: مصدر العميل المحتمل (تسويق) — للمحتملين فقط */}
+            {isProspect && (
+              <div style={{ marginBottom: '14px' }}>
+                <div style={sectionTitleStyle}>مصدر العميل المحتمل</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={fieldLabelStyle}>من أين وصلنا؟</label>
+                    <select
+                      value={form.lead_source}
+                      onChange={(e) => set('lead_source', e.target.value)}
+                      style={fieldInputStyle}
+                    >
+                      <option value="">— غير محدّد —</option>
+                      {LEAD_SOURCES.map(s => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={fieldLabelStyle}>
+                      {form.lead_source === 'other'
+                        ? 'حدّد المصدر'
+                        : form.lead_source === 'referral'
+                          ? 'اسم المرشِّح'
+                          : 'تفصيل (اختياري)'}
+                    </label>
+                    <input
+                      type="text"
+                      value={form.lead_source_detail}
+                      onChange={(e) => set('lead_source_detail', e.target.value)}
+                      placeholder={form.lead_source === 'referral' ? 'اسم من رشّحنا' : 'اسم الحملة / ملاحظة'}
+                      style={fieldInputStyle}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Section: بيانات قانونية (فقط للشركة/المؤسسة) */}
             {isCompany && (
@@ -479,14 +553,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
                     </div>
                     <div>
                       <label style={fieldLabelStyle}>الجوال</label>
-                      <input
-                        type="tel"
-                        dir="ltr"
-                        value={form.point_of_contact_phone}
-                        onChange={(e) => set('point_of_contact_phone', e.target.value)}
-                        placeholder="05xxxxxxxx"
-                        style={fieldInputStyle}
-                      />
+                      <PhoneField value={form.point_of_contact_phone} onChange={(v) => set('point_of_contact_phone', v)} placeholder="5X XXX XXXX" />
                     </div>
                     <div>
                       <label style={fieldLabelStyle}>البريد الإلكتروني</label>
@@ -503,7 +570,22 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
               </>
             )}
 
-            {/* Helper info — يوضّح وجهة الـ PIN حسب نوع العميل */}
+            {/* Helper info — وجهة الـ PIN (للعميل الفعلي فقط؛ المحتمل لا تُرسل له بيانات دخول) */}
+            {isProspect ? (
+              <div style={{
+                marginTop: '6px', padding: '10px 12px',
+                backgroundColor: 'rgba(245, 158, 11, 0.07)',
+                border: '1px solid rgba(245, 158, 11, 0.25)',
+                borderRadius: '6px', fontSize: '12px', color: 'var(--color-text-secondary)',
+                display: 'flex', alignItems: 'flex-start', gap: '8px', lineHeight: 1.6,
+              }}>
+                <span style={{ color: '#d97706', flexShrink: 0, fontWeight: 700 }}>ⓘ</span>
+                <div>
+                  <strong style={{ color: 'var(--color-text)' }}>عميل محتمل:</strong>{' '}
+                  لن تُرسَل بيانات دخول بوابة العميل الآن. تُرسَل عند تحويله إلى عميل فعلي.
+                </div>
+              </div>
+            ) : (
             <div style={{
               marginTop: '6px',
               padding: '10px 12px',
@@ -533,6 +615,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
                 )}
               </div>
             </div>
+            )}
 
             {/* Helper info — لغة العميل ومقصدها */}
             <div style={{
@@ -602,11 +685,21 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
               opacity: submitting ? 0.7 : 1,
             }}
           >
-            {submitting ? 'جارٍ الحفظ...' : 'إضافة العميل'}
+            {submitting ? 'جارٍ الحفظ...' : (isProspect ? 'إضافة المحتمل' : 'إضافة العميل')}
           </button>
         </div>
       </motion.div>
     </div>
+
+    {/* مودال نتيجة الإنشاء (بديل alert المتصفح) */}
+    <CredentialsModal
+      isOpen={successInfo !== null}
+      title={successInfo?.title || ''}
+      fields={successInfo?.fields}
+      note={successInfo?.note}
+      onClose={closeSuccess}
+    />
+    </>
   );
 };
 

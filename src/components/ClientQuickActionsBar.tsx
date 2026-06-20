@@ -1,5 +1,6 @@
 import React from 'react';
 import { Plus, ListTodo, Calendar, MessageCircle, FileUp, FileSignature, MessageSquare } from 'lucide-react';
+import { toWhatsappLink } from '../utils/phone';
 
 interface ClientQuickActionsBarProps {
   clientPhone: string | null;
@@ -21,11 +22,9 @@ const ClientQuickActionsBar: React.FC<ClientQuickActionsBarProps> = ({
   onLogCommunication,
 }) => {
   const handleWhatsApp = () => {
-    if (!clientPhone) return;
-    // Saudi convention: 05xxxxxxxx → 9665xxxxxxxx
-    const digits = clientPhone.replace(/\D/g, '');
-    const intl = digits.startsWith('0') ? `966${digits.slice(1)}` : digits;
-    window.open(`https://wa.me/${intl}`, '_blank', 'noopener');
+    const link = toWhatsappLink(clientPhone);
+    if (!link) return;
+    window.open(link, '_blank', 'noopener');
   };
 
   return (

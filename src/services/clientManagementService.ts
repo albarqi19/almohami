@@ -21,6 +21,29 @@ export const CLIENT_LANGUAGES: ReadonlyArray<{ value: string; label: string }> =
 export const clientLanguageLabel = (code?: string | null): string =>
     CLIENT_LANGUAGES.find(l => l.value === (code || 'ar'))?.label ?? code ?? 'العربية (الافتراضي)';
 
+/**
+ * مصادر العميل المحتمل (lead source) — قنوات وصوله للمكتب، لقياس مردود التسويق.
+ * "other" يُتبع بنص حر في lead_source_detail. القيم تُخزَّن كما هي في users.lead_source.
+ */
+export const LEAD_SOURCES: ReadonlyArray<{ value: string; label: string }> = [
+    { value: 'twitter', label: 'تويتر / X' },
+    { value: 'snapchat', label: 'سناب شات' },
+    { value: 'instagram', label: 'إنستغرام' },
+    { value: 'tiktok', label: 'تيك توك' },
+    { value: 'facebook', label: 'فيسبوك' },
+    { value: 'linkedin', label: 'لينكدإن' },
+    { value: 'whatsapp', label: 'واتساب' },
+    { value: 'google', label: 'بحث جوجل' },
+    { value: 'ads', label: 'إعلان مموّل' },
+    { value: 'referral', label: 'ترشيح (عميل/صديق)' },
+    { value: 'website', label: 'الموقع الإلكتروني' },
+    { value: 'walk_in', label: 'زيارة / اتصال مباشر' },
+    { value: 'other', label: 'أخرى' },
+];
+
+export const leadSourceLabel = (code?: string | null): string =>
+    code ? (LEAD_SOURCES.find(s => s.value === code)?.label ?? code) : '—';
+
 // Types
 export interface Client {
     id: number;
@@ -29,8 +52,14 @@ export interface Client {
     phone: string | null;
     email: string | null;
     role: 'client';
+    client_status?: 'prospect' | 'client';
+    lead_source?: string | null;          // قناة وصول العميل المحتمل
+    lead_source_detail?: string | null;   // تفصيل المصدر (مرشِّح/حملة)
     is_active: boolean;
     assigned_cases_count?: number;
+    client_cases_count?: number;       // قضايا رئيسية (cases.client_id)
+    additional_cases_count?: number;   // قضايا إضافية (case_clients)
+    total_cases_count?: number;        // المجموع الموحّد (رئيسي + إضافي)
     created_at: string;
     preferred_language?: string | null;
 
@@ -132,6 +161,43 @@ export interface CaseLinkedClient {
     source: string;
 }
 
+/** صف خصم في قائمة الخصوم (مجمّع بالهوية) */
+export interface OpponentRow {
+    identity_key: string;
+    name: string | null;
+    national_id: string | null;
+    commercial_reg: string | null;
+    party_type: string | null;
+    cases_count: number;
+}
+
+/** بطاقة تحليل خصم */
+export interface OpponentAnalysis {
+    identity: {
+        key: string;
+        national_id: string | null;
+        commercial_reg: string | null;
+        name: string | null;
+        party_type: string | null;
+    };
+    total_cases_against_us: number;
+    cases_we_represent_opposite: number;
+    was_ever_client: boolean;
+    client_user_id: number | null;
+    client_status: 'prospect' | 'client' | null;
+    client_is_active: boolean | null;
+    sessions_count: number;
+    cases: Array<{
+        id: number;
+        file_number: string | null;
+        title: string | null;
+        status: string | null;
+        our_side: string | null;
+        his_side: string | null;
+        next_hearing: string | null;
+    }>;
+}
+
 // Client Management Service
 export class ClientManagementService {
     /**
@@ -139,6 +205,7 @@ export class ClientManagementService {
      */
     static async getClients(params?: {
         search?: string;
+        status?: 'client' | 'prospect';
         without_phone?: boolean;
         preset?: 'with_cases' | 'vip';
         sort_by?: 'name' | 'created_at' | 'cases_count' | 'entity_type' | 'phone';
@@ -148,6 +215,7 @@ export class ClientManagementService {
     }): Promise<any> {
         const searchParams = new URLSearchParams();
         if (params?.search) searchParams.append('search', params.search);
+        if (params?.status) searchParams.append('status', params.status);
         if (params?.without_phone) searchParams.append('without_phone', '1');
         if (params?.preset) searchParams.append('preset', params.preset);
         if (params?.sort_by) searchParams.append('sort_by', params.sort_by);
@@ -165,13 +233,48 @@ export class ClientManagementService {
      */
     static async getClientStats(): Promise<{
         total: number;
+        clients: number;
+        prospects: number;
         withoutPhone: number;
         withCases: number;
         vip: number;
         companies: number;
         individuals: number;
+        opponents: number;
     }> {
         const response = await apiClient.get<any>('/client-management/stats');
+        return response.data;
+    }
+
+    /**
+     * تحويل عميل محتمل (prospect) إلى عميل فعلي (client).
+     */
+    static async convertToClient(
+        clientId: number | string,
+        payload: { national_id?: string; phone?: string } = {}
+    ): Promise<{ client: Client; credentials_sent: boolean }> {
+        const response = await apiClient.put<any>(`/client-management/${clientId}/convert`, payload);
+        return response.data;
+    }
+
+    /**
+     * تبويب الخصوم: قائمة الخصوم مجمّعة بالهوية (ضمن قضايا المستخدم المرئية).
+     */
+    static async getOpponents(params?: { search?: string; per_page?: number; page?: number }): Promise<any> {
+        const sp = new URLSearchParams();
+        if (params?.search) sp.append('search', params.search);
+        if (params?.per_page) sp.append('per_page', String(params.per_page));
+        if (params?.page) sp.append('page', String(params.page));
+        const q = sp.toString();
+        const response = await apiClient.get<any>(`/client-management/opponents${q ? `?${q}` : ''}`);
+        return response.data;
+    }
+
+    /**
+     * بطاقة تحليل خصم بمفتاح الهوية (national_id أو commercial_reg).
+     */
+    static async getOpponentAnalysis(identity: string): Promise<OpponentAnalysis> {
+        const response = await apiClient.get<any>(`/client-management/opponents/${encodeURIComponent(identity)}/analysis`);
         return response.data;
     }
 
@@ -180,11 +283,14 @@ export class ClientManagementService {
      */
     static async createClient(payload: {
         name: string;
-        national_id: string;
+        national_id?: string;
         email?: string;
         phone?: string;
         preferred_language?: string;
         entity_type?: 'individual' | 'company' | 'organization';
+        client_status?: 'prospect' | 'client';
+        lead_source?: string;
+        lead_source_detail?: string;
         classification?: 'vip' | 'regular' | 'one_time';
         commercial_registration?: string;
         vat_number?: string;

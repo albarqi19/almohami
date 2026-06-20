@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { formatPhoneDisplay } from '../utils/phone';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight, User, Phone, Mail, Star, Edit2, Download, FileSpreadsheet,
   Briefcase, Calendar, ListTodo, FolderOpen, FileSignature, MessageSquare,
-  Activity, Building2, Hash, FileText, Clock, MapPin, ExternalLink, Save,
+  Activity, Building2, Hash, FileText, Clock, MapPin, ExternalLink, Save, Receipt,
 } from 'lucide-react';
+import ClientFeeProposalsTab from '../components/ClientFeeProposalsTab';
 import ClientManagementService, { clientLanguageLabel, type Client, type ClientCommunication } from '../services/clientManagementService';
 import { UserService, type User as UserType } from '../services/UserService';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
@@ -20,7 +22,7 @@ import LogCommunicationModal from '../components/LogCommunicationModal';
 import ClientQuickActionsBar from '../components/ClientQuickActionsBar';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
-type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'communications' | 'activities';
+type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'fee_proposals' | 'communications' | 'activities';
 
 const ClientDetailPage: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -257,7 +259,7 @@ const ClientDetailPage: React.FC = () => {
           </div>
           <div className="client-hero__meta">
             {client.national_id && <span><Hash size={11} /> {client.national_id}</span>}
-            {client.phone && <span><Phone size={11} /> <span dir="ltr">{client.phone}</span></span>}
+            {client.phone && <span><Phone size={11} /> <span dir="ltr">{formatPhoneDisplay(client.phone)}</span></span>}
             {client.email && <span><Mail size={11} /> <span dir="ltr">{client.email}</span></span>}
             {client.industry && <span><Building2 size={11} /> {client.industry}</span>}
           </div>
@@ -371,6 +373,7 @@ const ClientDetailPage: React.FC = () => {
               count={tasks.length} hint={taskCounts.overdue > 0 ? `${taskCounts.overdue} متأخرة` : undefined}>المهام</TabBtn>
             <TabBtn active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} icon={<FileText size={13} />}>المستندات</TabBtn>
             <TabBtn active={activeTab === 'wekalat'} onClick={() => setActiveTab('wekalat')} icon={<FileSignature size={13} />}>الوكالات</TabBtn>
+            <TabBtn active={activeTab === 'fee_proposals'} onClick={() => setActiveTab('fee_proposals')} icon={<Receipt size={13} />}>عروض الأتعاب</TabBtn>
             <TabBtn active={activeTab === 'communications'} onClick={() => setActiveTab('communications')} icon={<MessageSquare size={13} />}
               count={communications.length}>التواصل</TabBtn>
             <TabBtn active={activeTab === 'activities'} onClick={() => setActiveTab('activities')} icon={<Activity size={13} />}>النشاطات</TabBtn>
@@ -395,6 +398,13 @@ const ClientDetailPage: React.FC = () => {
             )}
             {activeTab === 'documents' && <DocumentsTab documents={documents} loading={documentsQuery.isLoading} />}
             {activeTab === 'wekalat' && <WekalatTab wekalat={wekalat} loading={wekalatQuery.isLoading} />}
+            {activeTab === 'fee_proposals' && clientId && (
+              <ClientFeeProposalsTab
+                clientId={Number(clientId)}
+                clientName={client?.name}
+                cases={cases.map((c: any) => ({ id: c.id, title: c.title, file_number: c.file_number }))}
+              />
+            )}
             {activeTab === 'communications' && (
               <CommunicationsTab
                 items={communications}
@@ -410,7 +420,7 @@ const ClientDetailPage: React.FC = () => {
           <SideCard title="معلومات العميل" action={<button onClick={() => setIsEditModalOpen(true)}><Edit2 size={12} /></button>}>
             <InfoRow label="الاسم" value={client.name} />
             <InfoRow label="النوع" value={entityTypeLabel(client.entity_type)} />
-            <InfoRow label="الجوال" value={client.phone} dir="ltr" />
+            <InfoRow label="الجوال" value={formatPhoneDisplay(client.phone)} dir="ltr" />
             <InfoRow label="الهوية" value={client.national_id} />
             <InfoRow label="البريد الإلكتروني" value={client.email} dir="ltr" />
             <InfoRow label="لغة العميل" value={clientLanguageLabel(client.preferred_language)} />
