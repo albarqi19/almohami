@@ -178,6 +178,8 @@ const ContractBuilder: React.FC = () => {
   // هل تم التحميل من صفحة القضية؟
   const [isFromCase, setIsFromCase] = useState(false);
   const [isLoadingCaseData, setIsLoadingCaseData] = useState(false);
+  // جلب محتوى القالب الكامل (index لا يُرجع content الثقيل)
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
 
   // جلب العملاء
   const { data: clientsData } = useQuery({
@@ -289,8 +291,8 @@ const ContractBuilder: React.FC = () => {
     }
   }, [searchParams]);
 
-  // اختيار قالب
-  const handleSelectTemplate = (template: ContractTemplate) => {
+  // تطبيق القالب على حالة النموذج
+  const applyTemplate = (template: ContractTemplate) => {
     setSelectedTemplate(template);
     setContractContent(template.content || '');
     setContractTitle(template.name);
@@ -299,6 +301,25 @@ const ContractBuilder: React.FC = () => {
     setVatRate(isVatRegistered ? template.default_vat_rate : 0);
     if (template.default_payment_terms) {
       setPaymentTerms(template.default_payment_terms);
+    }
+  };
+
+  // اختيار قالب — قائمة القوالب (index) لا تُرجع content/default_payment_terms
+  // الثقيلة، فنجلب القالب الكامل عند الاختيار حتى لا يظهر المحرر فارغاً.
+  const handleSelectTemplate = async (template: ContractTemplate) => {
+    if (template.content) {
+      applyTemplate(template);
+      return;
+    }
+    try {
+      setIsLoadingTemplate(true);
+      const res = await contractTemplateService.getTemplate(template.id);
+      applyTemplate(res.data || template);
+    } catch {
+      // fallback: نطبّق الخفيف على الأقل حتى لا يتوقف التدفق
+      applyTemplate(template);
+    } finally {
+      setIsLoadingTemplate(false);
     }
   };
 
@@ -657,7 +678,12 @@ const ContractBuilder: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              {!selectedTemplate ? (
+              {isLoadingTemplate ? (
+                <div className="loading-case-data">
+                  <Loader2 size={32} className="spinner" />
+                  <p>جاري تحميل محتوى القالب...</p>
+                </div>
+              ) : !selectedTemplate ? (
                 <div className="template-selection">
                   <h3>
                     <FileText size={20} />
