@@ -780,9 +780,10 @@ body.dark .table-loading-overlay {
 
 .admin-page--full-height,
 .admin-page:has(.admin-content--flush) {
-    height: 100vh;
-    min-height: 100vh;
-    max-height: 100vh;
+    /* تملأ حاوية المحتوى لا النافذة — تتكيّف مع الهيدر والشريط السفلي */
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
     overflow: hidden;
 }
 

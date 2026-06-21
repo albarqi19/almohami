@@ -1,10 +1,14 @@
 /* ====================================================
-   Task Detail Page - Full Width Professional
+   Task Detail Page — ERP-dense (low-scroll) redesign
+   كثافة معلومات أعلى، تمرير أقل، ألوان من متغيّرات الثيم فقط، RTL.
    ==================================================== */
 
+/* تملأ حاوية المحتوى (.app-content) لا النافذة — فتتكيّف مع الهيدر والشريط السفلي،
+   والتمرير داخلي للأعمدة فقط (لا تمرير للصفحة كاملة). */
 .task-detail-page {
     background: var(--dashboard-bg);
-    height: 100vh;
+    height: 100%;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -14,8 +18,8 @@
 .task-header {
     background: var(--dashboard-card);
     border-bottom: 1px solid var(--color-border);
-    padding: 0 24px;
-    height: 60px;
+    padding: 0 14px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -23,68 +27,72 @@
     z-index: 20;
 }
 
-.task-header-left {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
+.task-header-left { display: flex; align-items: center; gap: 12px; }
+.task-header-actions { display: flex; align-items: center; gap: 8px; }
+.task-bc-sep { color: var(--quiet-gray-500); }
 
 .task-breadcrumb-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
+    gap: 7px;
+    padding: 5px 10px;
     border-radius: 6px;
     color: var(--color-text-secondary);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     border: 1px solid transparent;
     transition: all 0.2s;
     background: transparent;
     cursor: pointer;
 }
+.task-breadcrumb-btn:hover { background: var(--quiet-gray-100); color: var(--law-navy); }
 
-.task-breadcrumb-btn:hover {
-    background: var(--quiet-gray-100);
-    color: var(--law-navy);
+.task-icon-btn {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
 }
+.task-icon-btn:hover { background: var(--quiet-gray-100); color: var(--law-navy); }
 
 .task-id-badge {
     background: var(--quiet-gray-100);
     color: var(--color-text-secondary);
-    padding: 4px 10px;
+    padding: 3px 9px;
     border-radius: 6px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     font-family: monospace;
 }
 
 /* Status Select */
-.status-select-wrapper {
-    position: relative;
-}
+.status-select-wrapper { position: relative; }
 
 .status-select-btn {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px;
+    padding: 6px 11px;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     border: 1px solid transparent;
     transition: all 0.2s;
 }
-
-.status-select-btn:hover {
-    filter: brightness(0.95);
-}
+.status-select-btn:hover { filter: brightness(0.95); }
 
 .status-dropdown {
     position: absolute;
     top: calc(100% + 4px);
-    right: 0;
+    inset-inline-end: 0;
     width: 180px;
     background: var(--dashboard-card);
     border: 1px solid var(--color-border);
@@ -100,118 +108,215 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 8px 12px;
+    padding: 7px 11px;
     border: none;
     background: transparent;
-    text-align: right;
+    text-align: start;
     cursor: pointer;
     border-radius: 4px;
     font-size: 13px;
     transition: all 0.1s;
 }
+.status-option:hover { background: var(--quiet-gray-50); }
 
-.status-option:hover {
-    background: var(--quiet-gray-50);
-}
-
-/* ==================== Main Layout (Split Pane) ==================== */
+/* ==================== Main Layout (Grid) ==================== */
 .task-content-wrapper {
     flex: 1;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(320px, 380px) minmax(0, 1fr) 340px;
     overflow: hidden;
+    min-height: 0;
     background: var(--dashboard-card);
 }
 
-/* Left Pane (Main Content) */
+/* الترتيب البصري: التعليقات (يمين) ← المهمة (وسط) ← الخصائص (يسار) */
+.task-activity-col { order: 1; }
+.task-main-col { order: 2; }
+.task-sidebar { order: 3; }
+
+/* العمود الرئيسي (المهمة، في الوسط، الأوسع) */
 .task-main-col {
-    flex: 1;
     overflow-y: auto;
-    padding: 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
 }
 
 .task-main-inner {
-    max-width: 900px;
-    margin: 0 auto;
     width: 100%;
-    padding: 40px 48px;
+    padding: 16px 22px;
 }
+
+/* عمود النشاط والتعليقات (يمين) — نمط محادثة: ترويسة أعلى، تعليقات تمرّر، إدخال ثابت أسفل */
+.task-activity-col {
+    overflow: hidden;
+    min-width: 0;
+    padding: 16px;
+    border-inline-end: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    background: var(--dashboard-card);
+}
+.task-activity-col .section-header { order: 0; flex-shrink: 0; margin: 0; padding: 14px 14px 8px; }
+.task-activity-feed { order: 1; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 0 14px; }
+.task-activity-col textarea { background: transparent; }
+
+/* ثيم الديوان (body.diwan): القسم بلون قائمة المفكرة الذهبي (#efe7d4)، والتعليقات بطاقات أفتح */
+body.diwan .task-activity-col { background: #efe7d4; border-inline-end-color: #e4d9c0; }
+body.diwan .task-activity-col .comment-input-box { background: #faf6ee; border-top-color: #e4d9c0; }
+body.diwan .task-activity-col .tc-comment {
+    background: #faf6ee;
+    border: 1px solid #e4d9c0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+}
+body.diwan .task-activity-col .tc-comment:last-child { margin-bottom: 0; }
 
 .task-title-input {
     width: 100%;
-    font-size: 28px;
+    font-size: 19px;
     font-weight: 700;
     color: var(--color-heading);
     border: none;
     outline: none;
     background: transparent;
-    margin-bottom: 24px;
+    margin-bottom: 10px;
     line-height: 1.3;
 }
+.task-title-input::placeholder { color: var(--quiet-gray-300); }
 
-.task-title-input::placeholder {
-    color: var(--quiet-gray-300);
+/* Shared section seam (replaces subtasks/activity 32px seams) */
+.task-section {
+    margin-top: 14px;
+    border-top: 1px solid var(--color-border);
+    padding-top: 14px;
+}
+.task-section-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .task-desc-editor {
     width: 100%;
-    min-height: 120px;
+    min-height: 64px;
     color: var(--color-text);
-    font-size: 15px;
-    line-height: 1.7;
+    font-size: 13px;
+    line-height: 1.55;
     outline: none;
     border: none;
     resize: none;
     background: transparent;
 }
 
-/* Right Pane (Sidebar) */
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-heading);
+    margin-bottom: 10px;
+}
+
+.task-empty {
+    text-align: center;
+    padding: 14px;
+    color: var(--quiet-gray-500);
+    font-size: 12px;
+}
+
+/* ==================== Sidebar ==================== */
 .task-sidebar {
-    width: 380px;
+    width: 340px;
     background: var(--quiet-gray-50);
-    border-right: 1px solid var(--color-border);
+    border-inline-start: 1px solid var(--color-border);
     overflow-y: auto;
-    padding: 24px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 8px;
     flex-shrink: 0;
 }
+body.dark .task-sidebar { background: rgba(255, 255, 255, 0.02); }
 
-body.dark .task-sidebar {
-    background: rgba(255, 255, 255, 0.02);
-}
+.sidebar-section { display: flex; flex-direction: column; gap: 6px; }
 
-/* Sidebar Properties */
-.sidebar-section {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+/* كل قسم جانبي بطاقة مدمجة */
+.task-sidebar-card {
+    border: 1px solid var(--color-border);
+    border-radius: 9px;
+    padding: 8px 10px;
+    background: var(--dashboard-card);
 }
+body.dark .task-sidebar-card { background: rgba(255, 255, 255, 0.03); }
 
 .sidebar-title {
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 600;
     color: var(--color-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-bottom: 2px;
 }
 
-.sidebar-row {
+/* صف خاصية مدمج label/value على سطر واحد (يستبدل sidebar-row + property-*) */
+.task-kv {
     display: flex;
     align-items: center;
-    border: 1px solid var(--color-border);
-    background: var(--dashboard-card);
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px dashed var(--color-border);
+    font-size: 11.5px;
+}
+.task-kv:last-child { border-bottom: none; }
+.task-kv__label {
+    color: var(--quiet-gray-500);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+.task-kv__value {
+    color: var(--color-text);
+    font-weight: 600;
+    max-width: 62%;
+    text-align: end;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.task-kv--link { text-decoration: none; cursor: pointer; }
+.task-kv--link:hover .task-kv__value { color: var(--law-navy); }
+.task-kv-empty {
+    font-size: 11.5px;
+    color: var(--quiet-gray-500);
+    font-style: italic;
+    padding: 4px 0;
+}
+
+.task-timer-box {
+    background: var(--quiet-gray-50);
     border-radius: 8px;
-    padding: 10px 12px;
-    transition: all 0.2s;
+    padding: 8px;
+}
+body.dark .task-timer-box { background: rgba(255, 255, 255, 0.02); }
+
+.task-meta-foot {
+    margin-top: auto;
+    font-size: 11px;
+    color: var(--quiet-gray-500);
+    text-align: center;
+    padding-top: 4px;
 }
 
-.sidebar-row:hover {
-    border-color: var(--law-navy);
-}
-
+/* shared property-* (مستخدمة في صفحات أخرى — تبقى كما هي) */
 .property-icon {
     width: 20px;
     display: flex;
@@ -220,64 +325,62 @@ body.dark .task-sidebar {
     color: var(--color-text-secondary);
     margin-left: 10px;
 }
-
-.property-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
 .property-label {
     font-size: 11px;
     color: var(--color-text-secondary);
     margin-bottom: 2px;
 }
-
 .property-value {
     font-size: 13px;
     font-weight: 500;
     color: var(--color-text);
 }
 
-/* Checklist / Subtasks */
-.task-subtasks-wrapper {
-    margin-top: 32px;
-    border-top: 1px solid var(--color-border);
-    padding-top: 32px;
-}
-
-.section-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--color-heading);
-    margin-bottom: 16px;
-}
-
-/* Activity Feed */
-.task-activity-wrapper {
-    margin-top: 32px;
-    border-top: 1px solid var(--color-border);
-    padding-top: 32px;
-}
-
-/* Activity Feed Input */
+/* ==================== Activity / Comments ==================== */
+/* صندوق الإدخال: مستطيل واضح ممتدّ من الجانبين، حواف حادّة، زر الإرسال بداخله */
+/* شريط محادثة أفقي: ممتدّ من الجانبين، النص يمتدّ وزر إرسال واضح بجانبه */
 .comment-input-box {
+    order: 2;
+    flex-shrink: 0;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
     background: var(--dashboard-card);
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-    padding: 0;
-    margin-bottom: 24px;
-    transition: all 0.2s;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
-    overflow: hidden;
+    border: none;
+    border-top: 1px solid var(--color-border);
+    border-radius: 0;
+    padding: 8px 10px;
+    margin: 0;
 }
-
-.comment-input-box:focus-within {
-    border-color: var(--law-navy);
-    box-shadow: 0 4px 12px rgba(30, 58, 138, 0.08);
+.comment-input-box:focus-within { border-top-color: var(--law-navy); }
+.comment-input-box .mention-input-container { flex: 1; min-width: 0; }
+.comment-input-box .mention-input__textarea,
+.comment-input-box textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    resize: none;
+    min-height: 40px;
+    max-height: 140px;
+    padding: 8px 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-text);
+}
+/* قائمة الإشارة @ : تفتح فوق الإدخال (العمود overflow:hidden يقصّ ما يفتح للأسفل) وتظهر الأسماء كاملة */
+.comment-input-box .mention-input__list {
+    top: auto !important;
+    bottom: calc(100% + 6px) !important;
+    right: 0 !important;
+    left: auto !important;
+    min-width: 230px;
+    max-width: 100%;
+    max-height: 230px;
+    overflow-y: auto;
+    z-index: 1200;
 }
 
 .comment-textarea {
@@ -285,124 +388,78 @@ body.dark .task-sidebar {
     border: none;
     outline: none;
     background: transparent;
-    font-size: 14px;
-    min-height: 80px;
+    font-size: 13px;
+    min-height: 56px;
     resize: none;
-    padding: 16px;
-    line-height: 1.6;
+    padding: 10px;
+    line-height: 1.55;
     color: var(--color-text);
 }
+.comment-textarea::placeholder { color: var(--quiet-gray-300); }
 
-.comment-textarea::placeholder {
-    color: var(--quiet-gray-300);
-}
-
+/* زر الإرسال: عنصر مرن بجانب النص (لا تموضع مطلق) */
 .comment-footer {
+    flex-shrink: 0;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 10px 16px;
-    background: var(--quiet-gray-50);
-    border-top: 1px solid var(--color-border);
+    padding: 0;
+    margin: 0;
+    background: transparent;
 }
 
 .send-btn {
     background: var(--law-navy);
-    color: white;
+    color: #fff;
     border: none;
     padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 13px;
+    border-radius: 6px;
+    font-size: 12.5px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    gap: 6px;
+    white-space: nowrap;
 }
+.send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.send-btn:hover:not(:disabled) { background: var(--law-navy-dark); }
 
-.send-btn:disabled {
-    background: var(--quiet-gray-200);
-    color: var(--quiet-gray-400);
-    cursor: not-allowed;
-    box-shadow: none;
+/* تعليق (نمط محادثة نظيف — بلا صندوق ملوّن، موحّد مع خلفية القسم، بلا hover) */
+.tc-comment { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--color-border); min-width: 0; }
+.tc-comment:last-child { border-bottom: none; }
+.tc-comment__avatar {
+    width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+    background: var(--law-navy); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px;
 }
+.tc-comment__body { flex: 1; min-width: 0; }
+.tc-comment__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
+.tc-comment__author { font-weight: 600; font-size: 12.5px; color: var(--color-heading); }
+.tc-comment__time { font-size: 11px; color: var(--color-text-secondary); flex-shrink: 0; }
+.tc-comment__text { font-size: 13px; color: var(--color-text); line-height: 1.6; overflow-wrap: break-word; word-break: break-word; }
 
-.send-btn:hover:not(:disabled) {
-    background: var(--law-navy-dark);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
-}
-
-/* Comment Item */
-.activity-item {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 20px;
-}
-
-.activity-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: var(--law-navy);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 14px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.activity-content {
-    flex: 1;
-    background: var(--quiet-gray-50);
-    padding: 12px 16px;
-    border-radius: 12px;
-    border-top-right-radius: 2px;
-}
-
-.activity-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 6px;
-}
-
-.activity-author {
-    font-weight: 600;
-    font-size: 13px;
-    color: var(--color-heading);
-}
-
-.activity-time {
-    font-size: 11px;
-    color: var(--color-text-secondary);
-}
-
-.activity-text {
-    font-size: 14px;
-    color: var(--color-text);
-    line-height: 1.5;
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
+/* ==================== Responsive ==================== */
+@media (max-width: 1280px) {
+    /* تكديس عمودي: الصفحة تنمو وتتمرّر حاوية المحتوى مرّة واحدة */
+    .task-detail-page { height: auto; overflow: visible; }
     .task-content-wrapper {
-        flex-direction: column;
-        overflow-y: auto;
-    }
-
-    .task-main-col {
-        flex: none;
+        grid-template-columns: 1fr;
         overflow: visible;
     }
-
+    /* عند التكديس: المهمة أولاً ثم التعليقات ثم الخصائص */
+    .task-main-col { order: 1; }
+    .task-activity-col { order: 2; }
+    .task-sidebar { order: 3; }
+    .task-main-col, .task-activity-col { overflow: visible; }
+    .task-activity-feed { overflow: visible; flex: none; }
+    .task-activity-col {
+        border-inline-end: none;
+        border-top: 1px solid var(--color-border);
+    }
     .task-sidebar {
         width: 100%;
-        border-right: none;
+        border-inline-start: none;
         border-top: 1px solid var(--color-border);
         overflow: visible;
     }

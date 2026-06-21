@@ -4,10 +4,10 @@
 
 .documents-page {
     background-color: var(--dashboard-bg);
-    height: 100vh;
-    /* Strict height to prevent page scrolling */
+    /* تملأ حاوية المحتوى (.app-content) لا النافذة — تتكيّف مع الهيدر والشريط السفلي */
+    height: 100%;
+    min-height: 0;
     overflow: hidden;
-    /* Prevent body scroll */
     display: flex;
     flex-direction: column;
 }

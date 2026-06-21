@@ -46,6 +46,16 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   invoice: 'فاتورة',
   letter: 'خطاب',
   notice: 'إنذار',
+  announcement: 'إشعار',
+  memo: 'مذكرة',
+  general: 'مستند عام',
+};
+
+/** تسميات قنوات الإصدار (تشمل الطباعة دون إرسال). */
+export const CHANNEL_LABELS: Record<string, string> = {
+  whatsapp: 'واتساب',
+  email: 'إيميل',
+  print: 'طباعة',
 };
 
 export const correspondenceService = {

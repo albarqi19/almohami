@@ -1,9 +1,9 @@
 // صفحة «الصادر والوارد» — سجلّ المراسلات المرقّم: بطاقات إحصائية + قائمة جانبية للفلاتر + جدول مثيّم.
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Archive, Search, Download, Loader2, Send, Inbox, CheckCircle2,
-  Clock, AlertTriangle, Ban, FileText, RefreshCw, X, Layers,
+  Clock, AlertTriangle, Ban, FileText, RefreshCw, X, Layers, Plus,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
@@ -11,6 +11,7 @@ import {
   DOCUMENT_TYPE_LABELS,
   type Correspondence,
 } from '../services/correspondenceService';
+import ComposeCorrespondenceModal from '../components/ComposeCorrespondenceModal';
 
 const STATUS_LABELS: Record<string, string> = {
   sent: 'مُرسَل', queued: 'بالانتظار', failed: 'فشل', no_channel: 'لا قناة', void: 'مُبطَل',
@@ -33,6 +34,8 @@ const CorrespondenceRegisterPage: React.FC = () => {
   const [perPage, setPerPage] = useState(50);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const [composeOpen, setComposeOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['correspondence', direction, docType, status, search, perPage],
@@ -107,6 +110,9 @@ const CorrespondenceRegisterPage: React.FC = () => {
           </select>
           <button className="corr-btn" onClick={() => refetch()} disabled={isFetching} title="تحديث">
             <RefreshCw size={14} className={isFetching ? 'corr-spin' : ''} /> تحديث
+          </button>
+          <button className="corr-btn corr-btn--primary" onClick={() => setComposeOpen(true)} title="إنشاء صادر جديد">
+            <Plus size={15} /> صادر جديد
           </button>
         </div>
       </header>
@@ -239,6 +245,15 @@ const CorrespondenceRegisterPage: React.FC = () => {
           )}
         </main>
       </div>
+
+      <ComposeCorrespondenceModal
+        isOpen={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        onIssued={() => {
+          queryClient.invalidateQueries({ queryKey: ['correspondence'] });
+          queryClient.invalidateQueries({ queryKey: ['correspondence-stats'] });
+        }}
+      />
     </div>
   );
 };

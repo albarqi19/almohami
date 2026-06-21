@@ -40,6 +40,7 @@ import TwoFactorSettings from '../components/settings/TwoFactorSettings';
 import SessionDefaultsSettings from '../components/settings/SessionDefaultsSettings';
 import SessionReportTemplatesSettings from '../components/settings/SessionReportTemplatesSettings';
 import FeeProposalTemplatesSettings from '../components/settings/FeeProposalTemplatesSettings';
+import CorrespondenceTemplatesSettings from '../components/settings/CorrespondenceTemplatesSettings';
 import SessionWorkflowSettingsComponent from '../components/settings/SessionWorkflowSettings';
 import MicrosoftIntegrationSettings from '../components/settings/MicrosoftIntegrationSettings';
 import EmailIntegrationSection from '../components/settings/EmailIntegrationSection';
@@ -95,6 +96,7 @@ const Settings: React.FC = () => {
     { id: 'session_defaults', label: 'قوالب الجلسات', icon: ClipboardList, roles: ['admin'] },
     { id: 'session_report_templates', label: 'قوالب تقرير الجلسة', icon: FileText, roles: ['admin'] },
     { id: 'fee_proposal_templates', label: 'قوالب عروض الأتعاب', icon: FileText, roles: ['admin'] },
+    { id: 'correspondence_templates', label: 'قوالب الصادر', icon: FileText, roles: ['admin'] },
     { id: 'session_workflow', label: 'سير عمل الجلسات', icon: Bell, roles: ['admin'] },
     { id: 'company_policy', label: 'سياسة الشركة', icon: ShieldCheck, roles: ['admin'] },
     { id: 'integrations', label: 'التكاملات', icon: Link, roles: ['admin', 'lawyer', 'legal_assistant'] },
@@ -2175,6 +2177,9 @@ const Settings: React.FC = () => {
 
       case 'fee_proposal_templates':
         return <FeeProposalTemplatesSettings />;
+
+      case 'correspondence_templates':
+        return <CorrespondenceTemplatesSettings />;
 
       case 'session_workflow':
         return <SessionWorkflowSettingsComponent />;

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -52,6 +52,18 @@ const PRIORITY_CONFIG: Record<string, { label: string; color: string }> = {
   medium: { label: 'متوسطة', color: '#f59e0b' },
   low: { label: 'منخفضة', color: '#3b82f6' }
 };
+
+/** وقت التعليق بصيغة نسبية حقيقية (لا قيمة وهمية). */
+function formatCommentTime(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return 'الآن';
+  if (diff < 3600) return `منذ ${Math.floor(diff / 60)} د`;
+  if (diff < 86400) return `منذ ${Math.floor(diff / 3600)} س`;
+  if (diff < 604800) return `منذ ${Math.floor(diff / 86400)} ي`;
+  return d.toLocaleDateString('ar-SA');
+}
 
 const TaskDetail: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
@@ -238,11 +250,11 @@ const TaskDetail: React.FC = () => {
             <ChevronRight size={16} />
             المهام
           </button>
-          <span className="task-breadcrumb-separator" style={{ color: 'var(--color-text-tertiary)' }}>/</span>
+          <span className="task-bc-sep">/</span>
           <span className="task-id-badge">TASK-{taskId?.slice(0, 4)}</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="task-header-actions">
           {/* Status Selector */}
           <div className="status-select-wrapper">
             <button
@@ -289,10 +301,10 @@ const TaskDetail: React.FC = () => {
             </AnimatePresence>
           </div>
 
-          <button className="task-breadcrumb-btn" onClick={handleDeleteTask} title="حذف">
+          <button className="task-icon-btn" onClick={handleDeleteTask} title="حذف">
             <Trash2 size={16} />
           </button>
-          <button className="task-breadcrumb-btn" title="خيارات إضافية">
+          <button className="task-icon-btn" title="خيارات إضافية">
             <MoreHorizontal size={16} />
           </button>
         </div>
@@ -347,21 +359,21 @@ const TaskDetail: React.FC = () => {
             )}
 
             {/* Description */}
-            <div style={{ marginBottom: '32px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div className="task-section">
+              <div className="task-section-label">
                 <FileText size={16} /> الوصف
               </div>
               <textarea
                 className="task-desc-editor"
-                placeholder="أضف وصفاً تفصيلياً، اضغط / للأوامر..."
+                placeholder="أضف وصفاً تفصيلياً..."
                 defaultValue={task.description}
               />
             </div>
 
             {/* Subtasks */}
-            <div className="task-subtasks-wrapper">
+            <div className="task-section">
               <div className="section-header">
-                <ListTodo size={20} />
+                <ListTodo size={16} />
                 المهام الفرعية
               </div>
               <SubtasksList
@@ -369,114 +381,95 @@ const TaskDetail: React.FC = () => {
                 onProgressChange={() => { }}
               />
             </div>
-
-            {/* Activity Feed */}
-            <div className="task-activity-wrapper">
-              <div className="section-header">
-                <Activity size={20} />
-                النشاط والتعليقات
-              </div>
-
-              {/* Comment Input */}
-              <div className="comment-input-box">
-                <MentionInput
-                  value={newComment}
-                  onChange={setNewComment}
-                  onMentionsChange={setMentions}
-                  placeholder="اكتب تعليقاً... يمكنك الإشارة للزملاء باستخدام @"
-                />
-                <div className="comment-footer">
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}><Paperclip size={18} /></button>
-                  </div>
-                  <button
-                    className="send-btn"
-                    disabled={!newComment.trim() || submittingComment}
-                    onClick={async () => {
-                      if (!newComment.trim()) return;
-                      setSubmittingComment(true);
-                      await TaskCommentService.createTaskComment(taskId!, { comment: newComment, mentions });
-                      setNewComment('');
-                      loadComments();
-                      setSubmittingComment(false);
-                    }}
-                  >
-                    {submittingComment ? (
-                      'جاري الإرسال...'
-                    ) : (
-                      <>
-                        إرسال <SendHorizontal size={14} />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Comments List */}
-              <div>
-                {taskComments.length > 0 ? (
-                  taskComments.map(comment => (
-                    <div key={comment.id} className="activity-item">
-                      <div className="activity-avatar">
-                        {comment.userId ? 'م' : 'U'}
-                      </div>
-                      <div className="activity-content">
-                        <div className="activity-header">
-                          <span className="activity-author">مستخدم النظام</span>
-                          <span className="activity-time">منذ ساعتين</span>
-                        </div>
-                        <div className="activity-text">{comment.comment}</div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '20px', color: 'var(--color-text-tertiary)' }}>
-                    لا توجد أنشطة مسجلة لهذه المهمة حتى الآن
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </div>
+
+        {/* Activity & Comments column */}
+        <aside className="task-activity-col">
+          <div className="section-header">
+            <Activity size={16} />
+            النشاط والتعليقات
+          </div>
+
+          {/* Comments List (تمرّر، بيانات حقيقية) */}
+          <div className="task-activity-feed">
+            {taskComments.length > 0 ? (
+              taskComments.map(comment => {
+                const authorName = comment.user?.name || users[comment.userId]?.name || 'مستخدم';
+                return (
+                  <div key={comment.id} className="tc-comment">
+                    <div className="tc-comment__avatar">{authorName.charAt(0) || '؟'}</div>
+                    <div className="tc-comment__body">
+                      <div className="tc-comment__head">
+                        <span className="tc-comment__author">{authorName}</span>
+                        <span className="tc-comment__time">{formatCommentTime(comment.createdAt)}</span>
+                      </div>
+                      <div className="tc-comment__text">{comment.comment}</div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="task-empty">لا توجد تعليقات بعد</div>
+            )}
+          </div>
+
+          {/* Comment Input (مثبّت أسفل، ممتدّ للحواف) */}
+          <div className="comment-input-box">
+            <MentionInput
+              value={newComment}
+              onChange={setNewComment}
+              onMentionsChange={setMentions}
+              placeholder="اكتب تعليقاً… (اذكر زميلاً بـ @)"
+            />
+            <div className="comment-footer">
+              <button
+                className="send-btn"
+                disabled={!newComment.trim() || submittingComment}
+                onClick={async () => {
+                  if (!newComment.trim()) return;
+                  setSubmittingComment(true);
+                  await TaskCommentService.createTaskComment(taskId!, { comment: newComment, mentions });
+                  setNewComment('');
+                  loadComments();
+                  setSubmittingComment(false);
+                }}
+              >
+                {submittingComment ? 'جارٍ الإرسال…' : <>إرسال <SendHorizontal size={14} /></>}
+              </button>
+            </div>
+          </div>
+        </aside>
 
         {/* Sidebar Properties (Right) */}
         <div className="task-sidebar">
 
           {/* Section 1: Core Info */}
-          <div className="sidebar-section">
+          <div className="sidebar-section task-sidebar-card">
             <div className="sidebar-title">معلومات أساسية</div>
 
-            <div className="sidebar-row">
-              <div className="property-icon"><User size={16} /></div>
-              <div className="property-content">
-                <span className="property-label">المسؤول</span>
-                <span className="property-value">{assigneeName}</span>
-              </div>
+            <div className="task-kv">
+              <span className="task-kv__label"><User size={14} /> المسؤول</span>
+              <span className="task-kv__value">{assigneeName}</span>
             </div>
 
-            <div className="sidebar-row">
-              <div className="property-icon"><Calendar size={16} /></div>
-              <div className="property-content">
-                <span className="property-label">تاريخ الاستحقاق</span>
-                <span className="property-value">
-                  {task.dueDate ? new Date(task.dueDate).toLocaleDateString('ar-SA') : 'غير محدد'}
-                </span>
-              </div>
+            <div className="task-kv">
+              <span className="task-kv__label"><Calendar size={14} /> الاستحقاق</span>
+              <span className="task-kv__value">
+                {task.dueDate ? new Date(task.dueDate).toLocaleDateString('ar-SA') : 'غير محدد'}
+              </span>
             </div>
 
-            <div className="sidebar-row">
-              <div className="property-icon"><Flag size={16} /></div>
-              <div className="property-content">
-                <span className="property-label">الأولوية</span>
-                <span className="property-value" style={{ color: currentPriority.color }}>
-                  {currentPriority.label}
-                </span>
-              </div>
+            <div className="task-kv">
+              <span className="task-kv__label"><Flag size={14} /> الأولوية</span>
+              <span className="task-kv__value" style={{ color: currentPriority.color }}>
+                {currentPriority.label}
+              </span>
             </div>
           </div>
 
           {/* Section: Attachments */}
-          <div className="sidebar-section">
+          <div className="sidebar-section task-sidebar-card">
             <div className="sidebar-title sidebar-title--row">
               <span>المرفقات{task.requires_attachment ? ' *' : ''}</span>
               {task.can_manage_documents && (
@@ -513,7 +506,7 @@ const TaskDetail: React.FC = () => {
           </div>
 
           {/* Section: Requirements */}
-          <div className="sidebar-section">
+          <div className="sidebar-section task-sidebar-card">
             <div className="sidebar-title">متطلبات الإنجاز</div>
             <label className="task-req-toggle">
               <input
@@ -538,34 +531,28 @@ const TaskDetail: React.FC = () => {
           </div>
 
           {/* Section 2: Time Tracking */}
-          <div className="sidebar-section">
+          <div className="sidebar-section task-sidebar-card">
             <div className="sidebar-title">تتبع الوقت</div>
-            <div style={{ background: 'var(--dashboard-card)', padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-              <TaskTimer taskId={taskId!} taskTitle={task.title} caseTitle={(task as any).case?.title || ''} />
-            </div>
+            <TaskTimer taskId={taskId!} taskTitle={task.title} caseTitle={(task as any).case?.title || ''} />
           </div>
 
           {/* Section 3: Related */}
-          <div className="sidebar-section">
+          <div className="sidebar-section task-sidebar-card">
             <div className="sidebar-title">الارتباطات</div>
             {(task as any).case ? (
-              <Link to={`/cases/${(task as any).case.id}`} className="sidebar-row" style={{ textDecoration: 'none' }}>
-                <div className="property-icon" style={{ color: 'var(--law-navy)' }}><Briefcase size={16} /></div>
-                <div className="property-content">
-                  <span className="property-label">تابع للقضية</span>
-                  <span className="property-value" style={{ fontSize: '12px', lineHeight: 1.4 }}>
-                    {(task as any).case.title}
-                  </span>
-                </div>
-                <ExternalLink size={12} style={{ opacity: 0.5 }} />
+              <Link to={`/cases/${(task as any).case.id}`} className="task-kv task-kv--link">
+                <span className="task-kv__label"><Briefcase size={14} /> القضية</span>
+                <span className="task-kv__value">
+                  {(task as any).case.title} <ExternalLink size={11} style={{ opacity: 0.5 }} />
+                </span>
               </Link>
             ) : (
-              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>غير مرتبطة بقضية</div>
+              <div className="task-kv-empty">غير مرتبطة بقضية</div>
             )}
           </div>
 
           {/* Meta Info */}
-          <div style={{ marginTop: 'auto', fontSize: '11px', color: 'var(--color-text-tertiary)', textAlign: 'center' }}>
+          <div className="task-meta-foot">
             تم الإنشاء: {new Date(task.createdAt || Date.now()).toLocaleDateString('ar-SA')}
           </div>
 
