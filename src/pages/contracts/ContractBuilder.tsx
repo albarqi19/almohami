@@ -30,6 +30,7 @@ import ContractTemplateEditor from '../../components/contracts/ContractTemplateE
 import ContractVariablesList from '../../components/contracts/ContractVariablesList';
 import PaymentTermsEditor from '../../components/contracts/PaymentTermsEditor';
 import ContractPreview from '../../components/contracts/ContractPreview';
+import ContractVariableValuesModal from '../../components/contracts/ContractVariableValuesModal';
 import { useContractVariables } from '../../hooks/useContractVariables';
 import { apiClient } from '../../utils/api';
 import type {
@@ -153,11 +154,14 @@ const ContractBuilder: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { replaceVariables } = useContractVariables();
+  const { replaceVariables, extractVariables } = useContractVariables();
 
   // الحالة
   const [currentStep, setCurrentStep] = useState(1);
   const [showPreview, setShowPreview] = useState(false);
+  const [showVariableValues, setShowVariableValues] = useState(false);
+  // تجاوزات يدوية لقيم المتغيّرات (تُرسل كـ custom_variables فيستبدلها الباك)
+  const [variableOverrides, setVariableOverrides] = useState<Record<string, string>>({});
 
   // بيانات النموذج
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -294,6 +298,7 @@ const ContractBuilder: React.FC = () => {
   // تطبيق القالب على حالة النموذج
   const applyTemplate = (template: ContractTemplate) => {
     setSelectedTemplate(template);
+    setVariableOverrides({}); // تصفير التجاوزات عند تبديل القالب
     setContractContent(template.content || '');
     setContractTitle(template.name);
     setScopeType(template.scope_type);
@@ -323,8 +328,8 @@ const ContractBuilder: React.FC = () => {
     }
   };
 
-  // حساب المتغيرات
-  const getVariableValues = (): Record<string, string> => {
+  // القيم الأصلية المحسوبة من السجلّ (العميل/القضية/المكتب) — قبل أي تجاوز يدوي
+  const getComputedValues = (): Record<string, string> => {
     const values: Record<string, string> = {};
 
     // بيانات العميل
@@ -381,6 +386,18 @@ const ContractBuilder: React.FC = () => {
     return values;
   };
 
+  // القيم النهائية = الأصلية + التجاوزات اليدوية (للمعاينة والإرسال)
+  const getVariableValues = (): Record<string, string> => {
+    const values = getComputedValues();
+    Object.entries(variableOverrides).forEach(([key, value]) => {
+      values[key] = value;
+    });
+    return values;
+  };
+
+  // المتغيّرات المستخدمة فعلاً في نصّ العقد (لعرضها في لوحة تعديل القيم)
+  const usedVariableKeys = extractVariables(contractContent);
+
   // إنشاء العقد
   const createMutation = useMutation({
     mutationFn: () => contractService.createContract({
@@ -394,6 +411,8 @@ const ContractBuilder: React.FC = () => {
       total_amount: totalAmount,
       vat_rate: vatRate,
       notes,
+      // التجاوزات اليدوية لقيم المتغيّرات — الباك يدمجها فوق القيم الأصلية ([CTR-26])
+      custom_variables: variableOverrides,
       first_party: {
         party_type: 'first',
         entity_type: 'company',
@@ -801,6 +820,7 @@ const ContractBuilder: React.FC = () => {
                         content={contractContent}
                         onChange={setContractContent}
                         onPreview={() => setShowPreview(true)}
+                        onEditValues={() => setShowVariableValues(true)}
                       />
                     </div>
                     <div className="editor-sidebar">
@@ -1044,6 +1064,16 @@ const ContractBuilder: React.FC = () => {
           onClose={() => setShowPreview(false)}
         />
       )}
+
+      {/* تعديل قيم المتغيّرات (اسم، جوال، هوية...) لهذا العقد */}
+      <ContractVariableValuesModal
+        isOpen={showVariableValues}
+        onClose={() => setShowVariableValues(false)}
+        usedKeys={usedVariableKeys}
+        computedValues={getComputedValues()}
+        overrides={variableOverrides}
+        onChange={setVariableOverrides}
+      />
     </div>
   );
 };

@@ -22,6 +22,7 @@ import {
   Redo,
   Eye,
   Braces,
+  Pencil,
 } from 'lucide-react';
 
 interface ContractTemplateEditorProps {
@@ -31,6 +32,8 @@ interface ContractTemplateEditorProps {
   className?: string;
   editable?: boolean;
   onPreview?: () => void;
+  /** عند تمريره يظهر زر «تعديل القيم» — يُستخدم في إنشاء العقد فقط (لا في تحرير القالب) */
+  onEditValues?: () => void;
 }
 
 export interface ContractTemplateEditorRef {
@@ -78,7 +81,7 @@ const Divider: React.FC = () => (
 );
 
 const ContractTemplateEditor = forwardRef<ContractTemplateEditorRef, ContractTemplateEditorProps>(
-  ({ content, onChange, placeholder = 'اكتب محتوى القالب هنا... استخدم {{ لإدراج متغير', className = '', editable = true, onPreview }, ref) => {
+  ({ content, onChange, placeholder = 'اكتب محتوى القالب هنا... استخدم {{ لإدراج متغير', className = '', editable = true, onPreview, onEditValues }, ref) => {
     const editor = useEditor({
       extensions: [
         StarterKit.configure({
@@ -194,6 +197,18 @@ const ContractTemplateEditor = forwardRef<ContractTemplateEditorRef, ContractTem
             >
               <Braces size={15} /> متغيّر
             </button>
+
+            {/* تعديل قيم المتغيّرات — يظهر فقط في إنشاء العقد (override للقيم الأصلية) */}
+            {onEditValues && (
+              <button
+                type="button"
+                onClick={onEditValues}
+                title="تعديل القيم الفعلية (اسم، جوال، هوية...) لهذا العقد"
+                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: '4px', backgroundColor: 'transparent', color: 'var(--color-text)', cursor: 'pointer', fontSize: '13px' }}
+              >
+                <Pencil size={15} /> تعديل القيم
+              </button>
+            )}
 
             {onPreview && (
               <>

@@ -268,6 +268,8 @@ export interface CreateContractData {
   vat_rate?: number;
   contract_date?: string;
   notes?: string;
+  /** تجاوزات يدوية لقيم المتغيّرات — يدمجها الباك فوق القيم الأصلية ([CTR-26]) */
+  custom_variables?: Record<string, string>;
   first_party: Partial<ContractParty>;
   second_party: Partial<ContractParty>;
   payment_terms: CreatePaymentTermData[];
