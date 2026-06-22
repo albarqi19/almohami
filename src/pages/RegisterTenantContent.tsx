@@ -213,6 +213,7 @@ const RegisterTenantContent: React.FC = () => {
     const [verifyError, setVerifyError] = useState('');
     const [turnstileToken, setTurnstileToken] = useState('');
     const [sbaInfo, setSbaInfo] = useState<SbaInfo | null>(null);
+    const [verifyOutcome, setVerifyOutcome] = useState<'found' | 'not_found' | null>(null);
 
     // معالج التسجيل
     const [step, setStep] = useState(1);
@@ -310,13 +311,13 @@ const RegisterTenantContent: React.FC = () => {
                     firm: data.firm?.name,
                     hasFirm: !!data.has_firm,
                 });
+                setVerifyOutcome('found');
             } else {
                 // غير موجود في السجل — يكمل يدوياً (سيخضع للمراجعة)
                 setFormData(prev => ({ ...prev, owner_national_id: verifyId }));
                 setSbaInfo(null);
+                setVerifyOutcome('not_found');
             }
-
-            setVerifyDone(true);
         } catch (err: any) {
             setVerifyError(err?.message || 'تعذّر التحقق الآن، يمكنك المتابعة بإكمال البيانات يدوياً');
         } finally {
@@ -518,50 +519,87 @@ const RegisterTenantContent: React.FC = () => {
                     </motion.div>
                 )}
 
-                <div className="auth-form">
-                    <div className="form-field">
-                        <label className="form-label" htmlFor="verify_id">
-                            رقم الهوية الوطنية <span className="form-required">*</span>
-                            <span className="auth-info" tabIndex={0} role="note" aria-label="لماذا نطلب رقم الهوية؟">
-                                <Info size={12} />
-                                <span className="auth-info__tip">
-                                    نستخدم رقم الهوية للتحقق من بيانات شركتك ومكتبك وتعبئتها تلقائياً لتسهيل تسجيلك — وبياناتك محفوظة بأمان.
+                {verifyOutcome === null ? (
+                    <div className="auth-form">
+                        <div className="form-field">
+                            <label className="form-label" htmlFor="verify_id">
+                                رقم الهوية الوطنية <span className="form-required">*</span>
+                                <span className="auth-info" tabIndex={0} role="note" aria-label="لماذا نطلب رقم الهوية؟">
+                                    <Info size={12} />
+                                    <span className="auth-info__tip">
+                                        نستخدم رقم الهوية للتحقق من بيانات شركتك ومكتبك وتعبئتها تلقائياً لتسهيل تسجيلك — وبياناتك محفوظة بأمان.
+                                    </span>
                                 </span>
-                            </span>
-                        </label>
-                        <div className="auth-field">
-                            <span className="auth-field__icon"><IdCard size={18} /></span>
-                            <input
-                                id="verify_id"
-                                type="text"
-                                className="input auth-field__input--with-icon"
-                                placeholder="10 أرقام"
-                                value={verifyId}
-                                onChange={(e) => { setVerifyId(e.target.value.replace(/\D/g, '').slice(0, 10)); setVerifyError(''); }}
-                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); runVerification(); } }}
-                                maxLength={10}
-                                inputMode="numeric"
-                                dir="ltr"
-                                autoFocus
-                            />
+                            </label>
+                            <div className="auth-field">
+                                <span className="auth-field__icon"><IdCard size={18} /></span>
+                                <input
+                                    id="verify_id"
+                                    type="text"
+                                    className="input auth-field__input--with-icon"
+                                    placeholder="10 أرقام"
+                                    value={verifyId}
+                                    onChange={(e) => { setVerifyId(e.target.value.replace(/\D/g, '').slice(0, 10)); setVerifyError(''); }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); runVerification(); } }}
+                                    maxLength={10}
+                                    inputMode="numeric"
+                                    dir="ltr"
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+
+                        <TurnstileWidget onVerify={handleTurnstile} />
+
+                        <button type="button" className="button button--primary" onClick={runVerification} disabled={verifying}>
+                            {verifying
+                                ? (<><Loader2 size={16} className="auth-spinner-icon" /> جارٍ التحقق...</>)
+                                : (<><Search size={16} /> تحقّق وابدأ التسجيل</>)}
+                        </button>
+
+                        <div className="auth-form__actions" style={{ justifyContent: 'space-between' }}>
+                            <Link to="/register" className="button button--ghost"><ArrowRight size={16} /> رجوع</Link>
+                            <button type="button" className="auth-link" onClick={skipVerification} disabled={verifying}>
+                                التسجيل بدون توثيق
+                            </button>
                         </div>
                     </div>
+                ) : (
+                    <div className="auth-form">
+                        {verifyOutcome === 'found' ? (
+                            <div className="auth-alert" style={{ display: 'block', background: 'rgba(46,160,67,0.10)', borderColor: 'rgba(46,160,67,0.35)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontWeight: 700 }}>
+                                    <BadgeCheck size={20} style={{ color: '#2ea043' }} /> تم التحقق بنجاح
+                                </div>
+                                <div className="auth-summary__grid">
+                                    <div className="auth-summary__item"><span className="auth-summary__label">المحامي</span><span className="auth-summary__value">{sbaInfo?.name || '—'}</span></div>
+                                    {sbaInfo?.license && (
+                                        <div className="auth-summary__item"><span className="auth-summary__label">رقم الرخصة</span><span className="auth-summary__value" dir="ltr">{sbaInfo.license}</span></div>
+                                    )}
+                                    <div className="auth-summary__item">
+                                        <span className="auth-summary__label">المنشأة</span>
+                                        <span className="auth-summary__value">
+                                            {sbaInfo?.hasFirm && sbaInfo?.firm ? sbaInfo.firm : 'بدون منشأة مسجّلة — اكتب اسم مكتبك في الخطوة التالية'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="auth-alert" style={{ background: 'rgba(184,137,61,0.10)', borderColor: 'rgba(184,137,61,0.35)' }}>
+                                <Info size={18} style={{ flexShrink: 0 }} />
+                                <span>لم نعثر على سجل لهذا الرقم. يمكنك المتابعة، وسيخضع طلبك لمراجعة سريعة قبل التفعيل.</span>
+                            </div>
+                        )}
 
-                    <TurnstileWidget onVerify={handleTurnstile} />
+                        <button type="button" className="button button--primary" onClick={() => setVerifyDone(true)}>
+                            متابعة التسجيل <ArrowLeft size={16} />
+                        </button>
 
-                    <button type="button" className="button button--primary" onClick={runVerification} disabled={verifying}>
-                        {verifying
-                            ? (<><Loader2 size={16} className="auth-spinner-icon" /> جارٍ التحقق...</>)
-                            : (<><Search size={16} /> تحقّق وابدأ التسجيل</>)}
-                    </button>
-
-                    <div className="auth-form__actions" style={{ justifyContent: 'space-between' }}>
-                        <Link to="/register" className="button button--ghost"><ArrowRight size={16} /> رجوع</Link>
-                        <button type="button" className="auth-link" onClick={skipVerification} disabled={verifying}>
-                            التسجيل بدون توثيق
+                        <button type="button" className="auth-link" style={{ alignSelf: 'center' }} onClick={() => { setVerifyOutcome(null); setTurnstileToken(''); setSbaInfo(null); }}>
+                            إدخال رقم هوية آخر
                         </button>
                     </div>
-                </div>
+                )}
             </motion.div>
         );
     }
@@ -640,7 +678,7 @@ const RegisterTenantContent: React.FC = () => {
                             <label className="form-label" htmlFor="company_name">اسم الشركة <span className="form-required">*</span></label>
                             <div className="auth-field">
                                 <span className="auth-field__icon"><Building2 size={18} /></span>
-                                <input id="company_name" name="company_name" type="text" className={`input auth-field__input--with-icon ${errors.company_name ? 'input--error' : ''}`} placeholder="مثال: مكتب الريادة للمحاماة" value={formData.company_name} onChange={handleInputChange} />
+                                <input id="company_name" name="company_name" type="text" className={`input auth-field__input--with-icon ${errors.company_name ? 'input--error' : ''}`} placeholder={sbaInfo && !sbaInfo.hasFirm ? 'اكتب اسم مكتبك (مثال: مكتب فلان للمحاماة)' : 'مثال: مكتب الريادة للمحاماة'} value={formData.company_name} onChange={handleInputChange} />
                             </div>
                             {errors.company_name && <span className="form-error">{errors.company_name}</span>}
                         </div>
