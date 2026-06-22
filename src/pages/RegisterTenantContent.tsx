@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -15,6 +15,9 @@ import {
     AlertCircle,
     Loader2,
     Info,
+    Search,
+    Clock,
+    BadgeCheck,
 } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import AnimatedBrandMark from '../components/AnimatedBrandMark';
@@ -36,6 +39,16 @@ interface TenantFormData {
 interface FormErrors {
     [key: string]: string;
 }
+
+interface SbaInfo {
+    name?: string | null;
+    license?: string | null;
+    firm?: string | null;
+    hasFirm: boolean;
+}
+
+const TURNSTILE_SITE_KEY: string =
+    (import.meta as any).env?.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAADpJLOtAOy2qJNxB';
 
 const generateSlug = (name: string): string => {
     const arabicToEnglish: Record<string, string> = {
@@ -60,21 +73,124 @@ const generateSlug = (name: string): string => {
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '')
         .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
+        .replace(/^-|-$/g, '')
+        .slice(0, 30);
 };
 
 /**
- * RegisterTenantContent - محتوى صفحة تسجيل شركة المحاماة
- * يُستخدم داخل AuthLayout
+ * Cloudflare Turnstile widget — يحمّل سكربت Cloudflare مرة واحدة ويعرض التحدّي.
+ * يستدعي onVerify بالرمز عند النجاح، وبسلسلة فارغة عند الخطأ/انتهاء الصلاحية.
+ */
+const TurnstileWidget: React.FC<{ onVerify: (token: string) => void }> = ({ onVerify }) => {
+    const ref = React.useRef<HTMLDivElement>(null);
+    const widgetId = React.useRef<string | null>(null);
+    const cb = React.useRef(onVerify);
+    cb.current = onVerify;
+    const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+
+    React.useEffect(() => {
+        const SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+        let cancelled = false;
+        let poll: ReturnType<typeof setInterval> | undefined;
+
+        const doRender = () => {
+            const ts = (window as any).turnstile;
+            if (cancelled || !ts || !ref.current || widgetId.current !== null) return;
+            if (ref.current.querySelector('iframe')) return; // تجنّب الرسم المزدوج
+            try {
+                widgetId.current = ts.render(ref.current, {
+                    sitekey: TURNSTILE_SITE_KEY,
+                    language: 'ar',
+                    callback: (token: string) => cb.current(token),
+                    'error-callback': () => { cb.current(''); setStatus('error'); },
+                    'expired-callback': () => cb.current(''),
+                });
+                setStatus('ready');
+            } catch (e) {
+                console.error('Turnstile render failed:', e);
+                setStatus('error');
+            }
+        };
+
+        // لا نستخدم turnstile.ready() لأنها تتعارض مع تحميل السكربت بـ async/defer (يرفضها Cloudflare).
+        // نستدعي render مباشرة بعد التأكد من توفّر window.turnstile (عبر onload/الاستطلاع).
+        const ready = () => doRender();
+
+        if ((window as any).turnstile) {
+            ready();
+        } else {
+            let s = document.querySelector('script[data-turnstile]') as HTMLScriptElement | null;
+            if (!s) {
+                s = document.createElement('script');
+                s.src = SRC;
+                s.async = true;
+                s.defer = true;
+                s.setAttribute('data-turnstile', '1');
+                document.head.appendChild(s);
+            }
+            s.addEventListener('load', ready);
+            s.addEventListener('error', () => { if (!cancelled) setStatus('error'); });
+            // احتياطي: استطلاع حتى 8 ثوانٍ تحسّباً لتأخّر onload
+            let waited = 0;
+            poll = setInterval(() => {
+                waited += 200;
+                if ((window as any).turnstile) { if (poll) clearInterval(poll); ready(); }
+                else if (waited >= 8000) { if (poll) clearInterval(poll); if (!cancelled) setStatus('error'); }
+            }, 200);
+        }
+
+        return () => {
+            cancelled = true;
+            if (poll) clearInterval(poll);
+            const ts = (window as any).turnstile;
+            if (ts && widgetId.current !== null) {
+                try { ts.remove(widgetId.current); } catch { /* noop */ }
+                widgetId.current = null;
+            }
+        };
+    }, []);
+
+    return (
+        <div style={{ margin: '14px 0' }}>
+            <div ref={ref} style={{ display: 'flex', justifyContent: 'center', minHeight: status === 'ready' ? 65 : 0 }} />
+            {status === 'loading' && (
+                <p className="form-hint" style={{ textAlign: 'center' }}>جارٍ تحميل التحقق الأمني…</p>
+            )}
+            {status === 'error' && (
+                <p className="form-hint" style={{ textAlign: 'center', color: 'var(--law-gold, #b8893d)' }}>
+                    تعذّر تحميل التحقق الأمني — تحقّق من اتصالك، أو تابع عبر «التسجيل بدون توثيق» بالأسفل.
+                </p>
+            )}
+        </div>
+    );
+};
+
+/**
+ * RegisterTenantContent - محتوى صفحة تسجيل شركة المحاماة (يُستخدم داخل AuthLayout).
+ * التدفق: تحقّق بالهوية أولاً (تعبئة تلقائية للبيانات) → استكمال البيانات → تأكيد.
+ * الموثّق يدخل مباشرة؛ غير الموثّق ينتظر موافقة المالك.
  */
 const RegisterTenantContent: React.FC = () => {
     const navigate = useNavigate();
+
+    // مراحل الصفحة
+    const [verifyDone, setVerifyDone] = useState(false);
+    const [pendingApproval, setPendingApproval] = useState(false);
+    const [success, setSuccess] = useState(false);
+
+    // خطوة التحقق بالهوية
+    const [verifyId, setVerifyId] = useState('');
+    const [verifying, setVerifying] = useState(false);
+    const [verifyError, setVerifyError] = useState('');
+    const [turnstileToken, setTurnstileToken] = useState('');
+    const [sbaInfo, setSbaInfo] = useState<SbaInfo | null>(null);
+
+    // معالج التسجيل
     const [step, setStep] = useState(1);
     const [showPin, setShowPin] = useState(false);
     const [showPinConfirm, setShowPinConfirm] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState(false);
 
     const [formData, setFormData] = useState<TenantFormData>({
         company_name: '',
@@ -90,6 +206,8 @@ const RegisterTenantContent: React.FC = () => {
     });
 
     const [errors, setErrors] = useState<FormErrors>({});
+
+    const handleTurnstile = useCallback((token: string) => setTurnstileToken(token), []);
 
     const handleCompanyNameChange = (value: string) => {
         setFormData(prev => ({
@@ -115,6 +233,75 @@ const RegisterTenantContent: React.FC = () => {
                 return newErrors;
             });
         }
+    };
+
+    // ===== خطوة التحقق بالهوية =====
+    const runVerification = async () => {
+        setVerifyError('');
+
+        if (!/^\d{10}$/.test(verifyId)) {
+            setVerifyError('رقم الهوية يجب أن يكون 10 أرقام');
+            return;
+        }
+        if (TURNSTILE_SITE_KEY && !turnstileToken) {
+            setVerifyError('يرجى إكمال التحقق الأمني أولاً');
+            return;
+        }
+
+        setVerifying(true);
+        try {
+            const resp = await apiClient.post<{
+                success: boolean;
+                data?: {
+                    status: string;
+                    found: boolean;
+                    has_firm: boolean;
+                    lawyer?: { name?: string; license_number?: string; license_status?: string; city?: string } | null;
+                    firm?: { name?: string; email?: string; phone?: string; logo_url?: string } | null;
+                };
+            }>('/auth/verify-lawyer', { national_id: verifyId, turnstile_token: turnstileToken });
+
+            const data = resp.data;
+
+            if (data?.found) {
+                const updates: Partial<TenantFormData> = { owner_national_id: verifyId };
+                if (data.lawyer?.name) updates.owner_name = data.lawyer.name;
+                if (data.firm) {
+                    if (data.firm.name) {
+                        updates.company_name = data.firm.name;
+                        updates.company_slug = generateSlug(data.firm.name);
+                    }
+                    if (data.firm.email) updates.company_email = data.firm.email;
+                    if (data.firm.phone) updates.company_phone = data.firm.phone;
+                }
+                setFormData(prev => ({ ...prev, ...updates }));
+                setSbaInfo({
+                    name: data.lawyer?.name,
+                    license: data.lawyer?.license_number,
+                    firm: data.firm?.name,
+                    hasFirm: !!data.has_firm,
+                });
+            } else {
+                // غير موجود في السجل — يكمل يدوياً (سيخضع للمراجعة)
+                setFormData(prev => ({ ...prev, owner_national_id: verifyId }));
+                setSbaInfo(null);
+            }
+
+            setVerifyDone(true);
+        } catch (err: any) {
+            setVerifyError(err?.message || 'تعذّر التحقق الآن، يمكنك المتابعة بإكمال البيانات يدوياً');
+        } finally {
+            setVerifying(false);
+        }
+    };
+
+    // التسجيل بدون توثيق (تخطّي خطوة التحقق)
+    const skipVerification = () => {
+        if (verifyId && /^\d{10}$/.test(verifyId)) {
+            setFormData(prev => ({ ...prev, owner_national_id: verifyId }));
+        }
+        setSbaInfo(null);
+        setVerifyDone(true);
     };
 
     const SLUG_MAX = 30;
@@ -182,7 +369,6 @@ const RegisterTenantContent: React.FC = () => {
         setIsLoading(true);
         setError('');
 
-        // Clear any existing auth data before registering to prevent conflicts
         const savedTheme = localStorage.getItem('theme');
         localStorage.clear();
         if (savedTheme) {
@@ -207,16 +393,24 @@ const RegisterTenantContent: React.FC = () => {
             const response = await apiClient.post<{
                 success: boolean;
                 message: string;
-                data?: { token: string; user: any; tenant: any };
+                data?: { token?: string | null; user?: any; tenant?: any; approval_status?: string; requires_approval?: boolean };
                 errors?: Record<string, string[]>;
             }>('/auth/register-tenant', payload);
 
             if (response.success && response.data) {
-                // Don't auto-login, let user login manually
-                setSuccess(true);
-                setTimeout(() => navigate('/login?registered=true'), 2000);
+                if (response.data.requires_approval) {
+                    // غير موثّق → بانتظار موافقة المالك (لا دخول)
+                    setPendingApproval(true);
+                } else if (response.data.token) {
+                    // موثّق → دخول مباشر
+                    apiClient.setToken(response.data.token);
+                    setSuccess(true);
+                    setTimeout(() => navigate('/dashboard'), 1600);
+                } else {
+                    setSuccess(true);
+                    setTimeout(() => navigate('/login?registered=true'), 2000);
+                }
             } else {
-                // Show detailed validation errors if available
                 if (response.errors) {
                     const errorMessages = Object.values(response.errors).flat().join('، ');
                     setError(errorMessages || response.message || 'حدث خطأ أثناء التسجيل');
@@ -225,7 +419,6 @@ const RegisterTenantContent: React.FC = () => {
                 }
             }
         } catch (err: any) {
-            // Try to parse error response
             if (err.errors) {
                 const errorMessages = Object.values(err.errors as Record<string, string[]>).flat().join('، ');
                 setError(errorMessages);
@@ -244,22 +437,105 @@ const RegisterTenantContent: React.FC = () => {
         { number: 3, title: 'مراجعة وتأكيد' },
     ];
 
+    // ===== شاشة: نجاح الموثّق (دخول مباشر) =====
     if (success) {
         return (
-            <motion.div
-                className="auth-card"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-            >
+            <motion.div className="auth-card" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                 <div className="auth-success">
                     <span className="auth-success__icon"><Check size={32} /></span>
                     <h2 className="auth-success__title">تم التسجيل بنجاح!</h2>
-                    <p className="auth-success__desc">مرحباً بك في منصة إدارة المحاماة. جاري تحويلك لصفحة تسجيل الدخول...</p>
+                    <p className="auth-success__desc">مرحباً بك في منصة إدارة المحاماة. جارٍ تجهيز لوحة التحكم...</p>
                 </div>
             </motion.div>
         );
     }
 
+    // ===== شاشة: بانتظار الموافقة (غير الموثّق) =====
+    if (pendingApproval) {
+        return (
+            <motion.div className="auth-card" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+                <div className="auth-success">
+                    <span className="auth-success__icon" style={{ background: 'var(--law-gold, #b8893d)' }}><Clock size={32} /></span>
+                    <h2 className="auth-success__title">طلبك قيد المراجعة</h2>
+                    <p className="auth-success__desc">
+                        تم استلام طلب تسجيلك بنجاح. سيراجع فريقنا الطلب ويُفعّل حسابك قريباً،
+                        وستصلك رسالة على جوالك فور التفعيل لتتمكّن من الدخول.
+                    </p>
+                    <Link to="/login" className="button button--primary" style={{ marginTop: 16 }}>
+                        العودة لتسجيل الدخول
+                    </Link>
+                </div>
+            </motion.div>
+        );
+    }
+
+    // ===== شاشة: التحقق بالهوية (الخطوة الأولى) =====
+    if (!verifyDone) {
+        return (
+            <motion.div className="auth-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                <header className="auth-card__brand">
+                    <span className="auth-card__logo"><AnimatedBrandMark size={36} /></span>
+                    <div>
+                        <h1 className="auth-card__title">تسجيل شركة محاماة</h1>
+                        <p className="auth-card__subtitle">لنبدأ بالتحقق من هويتك</p>
+                    </div>
+                </header>
+
+                {verifyError && (
+                    <motion.div className="auth-alert auth-alert--error" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
+                        <AlertCircle size={16} /> {verifyError}
+                    </motion.div>
+                )}
+
+                <div className="auth-form">
+                    <div className="form-field">
+                        <label className="form-label" htmlFor="verify_id">
+                            رقم الهوية الوطنية <span className="form-required">*</span>
+                            <span className="auth-info" tabIndex={0} role="note" aria-label="لماذا نطلب رقم الهوية؟">
+                                <Info size={12} />
+                                <span className="auth-info__tip">
+                                    نستخدم رقم الهوية للتحقق من بيانات شركتك ومكتبك وتعبئتها تلقائياً لتسهيل تسجيلك — وبياناتك محفوظة بأمان.
+                                </span>
+                            </span>
+                        </label>
+                        <div className="auth-field">
+                            <span className="auth-field__icon"><IdCard size={18} /></span>
+                            <input
+                                id="verify_id"
+                                type="text"
+                                className="input auth-field__input--with-icon"
+                                placeholder="10 أرقام"
+                                value={verifyId}
+                                onChange={(e) => { setVerifyId(e.target.value.replace(/\D/g, '').slice(0, 10)); setVerifyError(''); }}
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); runVerification(); } }}
+                                maxLength={10}
+                                inputMode="numeric"
+                                dir="ltr"
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+
+                    <TurnstileWidget onVerify={handleTurnstile} />
+
+                    <button type="button" className="button button--primary" onClick={runVerification} disabled={verifying}>
+                        {verifying
+                            ? (<><Loader2 size={16} className="auth-spinner-icon" /> جارٍ التحقق...</>)
+                            : (<><Search size={16} /> تحقّق وابدأ التسجيل</>)}
+                    </button>
+
+                    <div className="auth-form__actions" style={{ justifyContent: 'space-between' }}>
+                        <Link to="/register" className="button button--ghost"><ArrowRight size={16} /> رجوع</Link>
+                        <button type="button" className="auth-link" onClick={skipVerification} disabled={verifying}>
+                            التسجيل بدون توثيق
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    }
+
+    // ===== معالج التسجيل (بعد التحقق/التخطّي) =====
     return (
         <motion.div
             className="auth-card"
@@ -274,6 +550,33 @@ const RegisterTenantContent: React.FC = () => {
                     <p className="auth-card__subtitle">الخطوة {step} من 3 — {steps[step - 1].title}</p>
                 </div>
             </header>
+
+            {/* لافتة نتيجة التحقق من بيانات المكتب */}
+            {sbaInfo && (
+                <motion.div
+                    className="auth-alert"
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{ background: 'rgba(46,160,67,0.10)', borderColor: 'rgba(46,160,67,0.35)', color: 'var(--law-navy, #1f2937)' }}
+                >
+                    <BadgeCheck size={18} style={{ color: '#2ea043', flexShrink: 0 }} />
+                    <span>
+                        تم التحقق من بيانات مكتبك ✓ <b>{sbaInfo.name}</b>
+                        {sbaInfo.hasFirm && sbaInfo.firm ? ` · ${sbaInfo.firm}` : ' · يمكنك إدخال اسم مكتبك.'}
+                    </span>
+                </motion.div>
+            )}
+            {!sbaInfo && (
+                <motion.div
+                    className="auth-alert"
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{ background: 'rgba(184,137,61,0.10)', borderColor: 'rgba(184,137,61,0.35)' }}
+                >
+                    <Info size={18} style={{ flexShrink: 0 }} />
+                    <span>أكمل بياناتك — سيخضع طلبك لمراجعة سريعة قبل التفعيل.</span>
+                </motion.div>
+            )}
 
             {/* Steps Indicator */}
             <div className="auth-steps">
@@ -353,7 +656,7 @@ const RegisterTenantContent: React.FC = () => {
                         </div>
 
                         <div className="auth-form__actions">
-                            <Link to="/register" className="button button--ghost"><ArrowRight size={16} /> رجوع</Link>
+                            <button type="button" className="button button--ghost" onClick={() => setVerifyDone(false)}><ArrowRight size={16} /> رجوع</button>
                             <button type="submit" className="button button--primary">التالي <ArrowLeft size={16} /></button>
                         </div>
                     </motion.form>
@@ -366,7 +669,7 @@ const RegisterTenantContent: React.FC = () => {
                             <label className="form-label" htmlFor="owner_name">الاسم الكامل <span className="form-required">*</span></label>
                             <div className="auth-field">
                                 <span className="auth-field__icon"><User size={18} /></span>
-                                <input id="owner_name" name="owner_name" type="text" className={`input auth-field__input--with-icon ${errors.owner_name ? 'input--error' : ''}`} placeholder="الاسم الثلاثي" value={formData.owner_name} onChange={handleInputChange} />
+                                <input id="owner_name" name="owner_name" type="text" className={`input auth-field__input--with-icon ${errors.owner_name ? 'input--error' : ''}`} placeholder="الاسم الثلاثي" value={formData.owner_name} onChange={handleInputChange} readOnly={!!sbaInfo?.name} />
                             </div>
                             {errors.owner_name && <span className="form-error">{errors.owner_name}</span>}
                         </div>
@@ -375,16 +678,10 @@ const RegisterTenantContent: React.FC = () => {
                             <div className="form-field">
                                 <label className="form-label" htmlFor="owner_national_id">
                                     رقم الهوية <span className="form-required">*</span>
-                                    <span className="auth-info" tabIndex={0} role="note" aria-label="لماذا نطلب رقم الهوية؟">
-                                        <Info size={12} />
-                                        <span className="auth-info__tip">
-                                            نستخدم رقم الهوية لربط قضاياك وجلساتك من ناجز بحسابك تلقائياً — وبياناتك مشفّرة ومحفوظة بأمان.
-                                        </span>
-                                    </span>
                                 </label>
                                 <div className="auth-field">
                                     <span className="auth-field__icon"><IdCard size={18} /></span>
-                                    <input id="owner_national_id" name="owner_national_id" type="text" className={`input auth-field__input--with-icon ${errors.owner_national_id ? 'input--error' : ''}`} placeholder="10 أرقام" value={formData.owner_national_id} onChange={handleInputChange} maxLength={10} inputMode="numeric" dir="ltr" />
+                                    <input id="owner_national_id" name="owner_national_id" type="text" className={`input auth-field__input--with-icon ${errors.owner_national_id ? 'input--error' : ''}`} placeholder="10 أرقام" value={formData.owner_national_id} onChange={handleInputChange} maxLength={10} inputMode="numeric" dir="ltr" readOnly />
                                 </div>
                                 {errors.owner_national_id && <span className="form-error">{errors.owner_national_id}</span>}
                             </div>
