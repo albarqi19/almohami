@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import AnimatedBrandMark from '../components/AnimatedBrandMark';
-import PhoneField from '../components/PhoneField';
 
 interface TenantFormData {
     company_name: string;
@@ -76,6 +75,36 @@ const generateSlug = (name: string): string => {
         .replace(/^-|-$/g, '')
         .slice(0, 30);
 };
+
+/** يحوّل أي صيغة جوال سعودي إلى الصيغة المحلية 05XXXXXXXX (للعرض والتعديل). */
+const toLocalSaPhone = (raw: string): string => {
+    let d = (raw || '').replace(/\D/g, '');
+    if (d.startsWith('966')) d = d.slice(3);
+    if (d.startsWith('0')) d = d.slice(1);
+    if (d.length > 9) d = d.slice(-9);
+    return d ? '0' + d : '';
+};
+
+/** حقل جوال سعودي بسيط (05XXXXXXXX) — بلا قائمة دول، قابل للتعديل دائماً. */
+const SaudiPhoneInput: React.FC<{
+    value: string;
+    onChange: (v: string) => void;
+    id?: string;
+    placeholder?: string;
+    hasError?: boolean;
+}> = ({ value, onChange, id, placeholder, hasError }) => (
+    <input
+        id={id}
+        type="tel"
+        inputMode="numeric"
+        dir="ltr"
+        className={`input ${hasError ? 'input--error' : ''}`}
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
+        placeholder={placeholder || '05XXXXXXXX'}
+        maxLength={10}
+    />
+);
 
 /**
  * Cloudflare Turnstile widget — يحمّل سكربت Cloudflare مرة واحدة ويعرض التحدّي.
@@ -272,7 +301,7 @@ const RegisterTenantContent: React.FC = () => {
                         updates.company_slug = generateSlug(data.firm.name);
                     }
                     if (data.firm.email) updates.company_email = data.firm.email;
-                    if (data.firm.phone) updates.company_phone = data.firm.phone;
+                    if (data.firm.phone) updates.company_phone = toLocalSaPhone(data.firm.phone);
                 }
                 setFormData(prev => ({ ...prev, ...updates }));
                 setSbaInfo({
@@ -351,6 +380,8 @@ const RegisterTenantContent: React.FC = () => {
         }
         if (!formData.owner_phone.trim()) {
             newErrors.owner_phone = 'رقم الجوال مطلوب';
+        } else if (!/^05\d{8}$/.test(formData.owner_phone)) {
+            newErrors.owner_phone = 'أدخل رقم جوال سعودي صحيح (05XXXXXXXX)';
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -649,9 +680,7 @@ const RegisterTenantContent: React.FC = () => {
                             </div>
                             <div className="form-field">
                                 <label className="form-label" htmlFor="company_phone">رقم الجوال <span className="form-optional">(اختياري)</span></label>
-                                <div className="auth-field">
-                                    <PhoneField value={formData.company_phone} onChange={(v) => setFormData(prev => ({ ...prev, company_phone: v }))} placeholder="5X XXX XXXX" />
-                                </div>
+                                <SaudiPhoneInput id="company_phone" value={formData.company_phone} onChange={(v) => setFormData(prev => ({ ...prev, company_phone: v }))} />
                             </div>
                         </div>
 
@@ -687,9 +716,7 @@ const RegisterTenantContent: React.FC = () => {
                             </div>
                             <div className="form-field">
                                 <label className="form-label" htmlFor="owner_phone">رقم الجوال <span className="form-required">*</span></label>
-                                <div className="auth-field">
-                                    <PhoneField value={formData.owner_phone} onChange={(v) => { setFormData(prev => ({ ...prev, owner_phone: v })); if (errors.owner_phone) setErrors(prev => { const n = { ...prev }; delete n.owner_phone; return n; }); }} placeholder="5X XXX XXXX" />
-                                </div>
+                                <SaudiPhoneInput id="owner_phone" hasError={!!errors.owner_phone} value={formData.owner_phone} onChange={(v) => { setFormData(prev => ({ ...prev, owner_phone: v })); if (errors.owner_phone) setErrors(prev => { const n = { ...prev }; delete n.owner_phone; return n; }); }} />
                                 {errors.owner_phone && <span className="form-error">{errors.owner_phone}</span>}
                             </div>
                         </div>
