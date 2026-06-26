@@ -66,10 +66,11 @@ const MentionInput: React.FC<MentionInputProps> = ({
       const filtered = users.filter(user =>
         user.name.toLowerCase().includes(mentionSearch.toLowerCase())
       );
-      setFilteredUsers(filtered.slice(0, 5));
+      // عرض كل المطابقات (القائمة قابلة للتمرير) — لا نقصّها بحدّ صغير
+      setFilteredUsers(filtered);
       setSelectedIndex(0);
     } else {
-      setFilteredUsers(users.slice(0, 5));
+      setFilteredUsers(users);
       setSelectedIndex(0);
     }
   }, [mentionSearch, users]);
@@ -332,14 +333,17 @@ const MentionInput: React.FC<MentionInputProps> = ({
           z-index: 1000;
           min-width: 220px;
           max-width: 280px;
+          max-height: 240px;
+          overflow-y: auto;
           background: var(--color-surface, #fff);
           border: 1px solid var(--color-border, #e5e5e5);
           border-radius: var(--radius-md, 8px);
           box-shadow: var(--shadow-lg, 0 8px 30px rgba(0, 0, 0, 0.12));
-          overflow: hidden;
         }
 
         .mention-input__list-header {
+          position: sticky;
+          top: 0;
           padding: var(--space-2, 8px) var(--space-3, 12px);
           font-size: var(--font-size-xs, 11px);
           font-weight: var(--font-weight-semibold, 600);
