@@ -71,6 +71,32 @@ export interface AdminRequestStatistics {
     recent_pending?: AdminRequest[];
 }
 
+// ─── Sidebar Types (للمدير: قائمة الموظفين + مَن في إجازة) ───
+export interface SidebarUser {
+    id: number;
+    name: string;
+    role: string;
+    avatar: string | null;
+    is_active: boolean;
+    admin_requests_count: number;
+    pending_count: number;
+}
+
+export interface OnLeaveEntry {
+    id: number;
+    user_id: number;
+    request_type_id: number;
+    start_date: string | null;
+    end_date: string | null;
+    user?: { id: number; name: string; role: string; avatar: string | null };
+    request_type?: { id: number; name: string };
+}
+
+export interface AdminRequestSidebar {
+    users: SidebarUser[];
+    on_leave: OnLeaveEntry[];
+}
+
 // Admin Request Service
 export class AdminRequestService {
     static async getRequests(filters: AdminRequestFilters = {}): Promise<PaginatedResponse<AdminRequest>> {
@@ -152,13 +178,30 @@ export class AdminRequestService {
         }
     }
 
-    static async getStatistics(): Promise<AdminRequestStatistics> {
-        const response = await apiClient.get<ApiResponse<AdminRequestStatistics>>('/admin-requests/statistics');
+    static async getStatistics(userId?: number | null): Promise<AdminRequestStatistics> {
+        const endpoint = userId
+            ? `/admin-requests/statistics?user_id=${userId}`
+            : '/admin-requests/statistics';
+        const response = await apiClient.get<ApiResponse<AdminRequestStatistics>>(endpoint);
 
         if (response.success && response.data) {
             return response.data;
         } else {
             throw new Error(response.message || 'فشل في جلب الإحصائيات');
+        }
+    }
+
+    /**
+     * بيانات القائمة الجانبية للمدير: موظفو المكتب مع عدد طلبات كل واحد + مَن في إجازة الآن.
+     * تُرجع 403 للموظف العادي — يُستدعى فقط حين isManager.
+     */
+    static async getSidebar(): Promise<AdminRequestSidebar> {
+        const response = await apiClient.get<ApiResponse<AdminRequestSidebar>>('/admin-requests/sidebar');
+
+        if (response.success && response.data) {
+            return response.data;
+        } else {
+            throw new Error(response.message || 'فشل في جلب بيانات القائمة الجانبية');
         }
     }
 
