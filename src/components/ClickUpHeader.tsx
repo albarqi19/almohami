@@ -26,6 +26,9 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationCenter from './NotificationCenter';
+import { NotificationService, isImportantNotificationType } from '../services/notificationService';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { playNotificationSound } from '../utils/notificationSound';
 import { AddSessionModal } from './AddSessionModal';
 import { AddWekalaModal } from './AddWekalaModal';
 import AddTaskModal from './AddTaskModal';
@@ -67,7 +70,8 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
     const savedTheme = localStorage.getItem('theme') as ThemeMode;
     return savedTheme && ['light', 'dark', 'classic', 'diwan'].includes(savedTheme) ? savedTheme : 'diwan';
   });
-  const [notifications] = React.useState(3);
+  const [notifications, setNotifications] = React.useState(0);
+  const lastImportantIdRef = React.useRef<number | null>(null);
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [showSearch, setShowSearch] = React.useState(false);
@@ -79,6 +83,38 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const notificationsRef = React.useRef<HTMLDivElement | null>(null);
   const quickAddRef = React.useRef<HTMLDivElement | null>(null);
   const helpRef = React.useRef<HTMLDivElement | null>(null);
+
+  // عدّاد الإشعارات غير المقروءة (للشارة) + نغمة تنبيه عند وصول إشعار «مهم» جديد فقط (#87).
+  // المهم = الجلسات + المهام المستحقّة/المتأخرة + التحذيرات/الأخطاء (isImportantNotificationType).
+  const fetchNotifications = React.useCallback(async () => {
+    try {
+      const res = await NotificationService.getNotifications({ per_page: 10 });
+      setNotifications(res.stats.unread); // الشارة = كل غير المقروء
+
+      // أعلى مُعرّف لإشعار «مهم» غير مقروء ضمن الأحدث (الإشعارات مرتّبة تنازلياً).
+      const maxImportantId = res.data
+        .filter((n) => !n.is_read && isImportantNotificationType(n.type))
+        .reduce((max, n) => Math.max(max, Number(n.id)), 0);
+
+      // نغمة فقط عند وصول إشعار مهم جديد (مُعرّف أعلى) بعد أول تحميل — لا عند فتح الصفحة.
+      if (lastImportantIdRef.current !== null && maxImportantId > lastImportantIdRef.current) {
+        playNotificationSound();
+      }
+      lastImportantIdRef.current = maxImportantId;
+    } catch {
+      /* صامت — العدّاد تحسين ثانوي لا يجب أن يكسر الهيدر */
+    }
+  }, []);
+
+  React.useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
+
+  // polling كل 30 ثانية + عند العودة للتبويب — يعمل دائماً ما دام الهيدر ظاهراً.
+  useAutoRefresh({
+    onRefresh: fetchNotifications,
+    pollingInterval: 30,
+    refetchOnFocus: true,
+    minRefreshInterval: 15,
+  });
 
   const { runTour } = useTour();
   const currentTour = getTourForPath(location.pathname);
@@ -299,7 +335,7 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
               >
                 <Bell size={18} />
                 {notifications > 0 && (
-                  <span className="clickup-header__badge">{notifications}</span>
+                  <span className="clickup-header__badge">{notifications > 99 ? '99+' : notifications}</span>
                 )}
               </button>
 
@@ -314,7 +350,7 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
                   >
                     <NotificationCenter
                       isOpen={showNotifications}
-                      onClose={() => setShowNotifications(false)}
+                      onClose={() => { setShowNotifications(false); fetchNotifications(); }}
                     />
                   </motion.div>
                 )}

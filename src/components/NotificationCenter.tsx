@@ -15,10 +15,13 @@ import {
   MessageSquare,
   Calendar,
   UserPlus,
-  RefreshCw
+  RefreshCw,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
-import { NotificationService, type Notification as ApiNotification } from '../services/notificationService';
+import { NotificationService, isImportantNotificationType, type Notification as ApiNotification } from '../services/notificationService';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { isNotificationSoundEnabled, setNotificationSoundEnabled } from '../utils/notificationSound';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface NotificationCenterProps {
@@ -87,10 +90,8 @@ const formatTimestamp = (dateStr: string) => {
   return timestamp.toLocaleDateString('ar-SA');
 };
 
-// Check if notification is important based on type
-const isImportantType = (type: string) => {
-  return ['task_overdue', 'task_due', 'hearing_reminder', 'warning'].includes(type);
-};
+// أهمية الإشعار = نفس التعريف المشترك المستخدم لتشغيل نغمة الصوت
+const isImportantType = isImportantNotificationType;
 
 // ==================== Main Component ====================
 
@@ -104,6 +105,13 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const [filter, setFilter] = useState<'all' | 'unread' | 'important'>('all');
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState({ total: 0, unread: 0, read: 0 });
+  const [soundEnabled, setSoundEnabled] = useState(isNotificationSoundEnabled());
+
+  const toggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    setNotificationSoundEnabled(next);
+  };
 
   // Load notifications from API
   const loadNotifications = useCallback(async () => {
@@ -207,6 +215,13 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
           {unreadCount > 0 && <span className="nc-dropdown__badge">{unreadCount}</span>}
         </span>
         <div className="nc-dropdown__header-actions">
+          <button
+            className="nc-dropdown__btn"
+            onClick={toggleSound}
+            title={soundEnabled ? 'كتم نغمة الإشعارات' : 'تفعيل نغمة الإشعارات'}
+          >
+            {soundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
+          </button>
           {unreadCount > 0 && (
             <button className="nc-dropdown__btn" onClick={markAllAsRead} title="قراءة الكل">
               <CheckCheck size={13} />

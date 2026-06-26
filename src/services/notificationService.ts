@@ -38,6 +38,23 @@ export interface NotificationResponse {
   stats: NotificationStats;
 }
 
+/**
+ * أنواع الإشعارات «المهمة» التي تستحق نغمة صوتية (طلب العميل #87 — للمهم فقط):
+ * الجلسات + المهام المستحقّة/المتأخرة + التحذيرات والأخطاء.
+ * تُستخدم في الهيدر (تشغيل الصوت) وفي مركز الإشعارات (تبويب «مهمة»).
+ */
+export const IMPORTANT_NOTIFICATION_TYPES = [
+  'task_overdue',
+  'task_due',
+  'hearing_reminder',
+  'warning',
+  'error',
+] as const;
+
+export function isImportantNotificationType(type: string): boolean {
+  return (IMPORTANT_NOTIFICATION_TYPES as readonly string[]).includes(type);
+}
+
 export class NotificationService {
   /**
    * جلب الإشعارات مع الفلترة والبحث
