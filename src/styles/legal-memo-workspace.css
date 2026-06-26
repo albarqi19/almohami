@@ -63,6 +63,9 @@
 
 .lmw-ai-tools-wrapper .legal-ai-dropdown {
     z-index: 1002;
+    inset-inline-end: 0;
+    inset-inline-start: auto;
+    right: auto;
 }
 
 .lmw-close-btn {
@@ -272,7 +275,7 @@
 
 .lmw-categories-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
     width: 100%;
     max-width: 1000px;
@@ -796,6 +799,12 @@
     line-height: 1.8;
 }
 
+/* Toggle buttons hidden on desktop */
+.lmw-btn-assistant-toggle,
+.lmw-btn-properties-toggle {
+    display: none !important;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 1024px) {
     .lmw-sidebar {
@@ -808,19 +817,26 @@
 }
 
 @media (max-width: 768px) {
+    .legal-memo-workspace-overlay {
+        padding: 0;
+    }
+
     .legal-memo-workspace {
         height: 100vh;
         max-height: none;
         border-radius: 0;
     }
 
+    /* Sidebar drawer on mobile */
     .lmw-sidebar {
         position: absolute;
         right: 0;
         top: 60px;
         bottom: 0;
+        width: 280px;
+        max-width: calc(100% - 48px);
         z-index: 100;
-        box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
     }
 
     .lmw-sidebar.collapsed {
@@ -828,27 +844,152 @@
         border: none;
     }
 
+    /* Sidebar Backdrop */
+    .lmw-sidebar-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
+        z-index: 90;
+    }
+
+    /* Analysis Panel drawer on mobile */
     .lmw-analysis-panel {
         position: absolute;
         left: 0;
         top: 60px;
         bottom: 0;
+        width: 100% !important;
+        max-width: 100% !important;
         z-index: 100;
-        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+        border-right: none;
+        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
     }
 
-    .lmw-title-input-header {
-        max-width: 200px;
-        font-size: 13px;
+    /* Secondary Header controls styling */
+    .lmw-breadcrumb,
+    .lmw-title-input-header,
+    .lmw-help-btn {
+        display: none !important;
+    }
+
+    /* Compact square icon buttons in header on mobile */
+    .lmw-header-left .lmw-btn span {
+        display: none;
+    }
+
+    .lmw-header-left .lmw-btn {
+        padding: 8px !important;
+        min-width: 36px;
+        height: 36px;
+        justify-content: center;
+    }
+
+    .lmw-header-left .lmw-btn.active {
+        background: var(--color-primary-soft, rgba(30, 58, 95, 0.1));
+        border-color: var(--color-primary, #1e3a5f);
+        color: var(--color-primary, #1e3a5f);
+    }
+
+    /* Show assistant and properties toggle buttons on mobile */
+    .lmw-btn-assistant-toggle,
+    .lmw-btn-properties-toggle {
+        display: flex !important;
+    }
+
+    /* Lawyer tools button icon-only on mobile */
+    .legal-ai-btn-main span,
+    .legal-ai-btn-main svg:last-child {
+        display: none !important;
+    }
+
+    .legal-ai-btn-main {
+        padding: 8px !important;
+        min-width: 36px;
+        height: 36px;
+        justify-content: center;
+    }
+
+    .lmw-save-status span {
+        display: none;
+    }
+
+    .lmw-save-status {
+        padding: 6px;
+        background: transparent;
+        border: none;
     }
 
     .lmw-editor-container {
         padding: 0 16px 24px;
     }
 
+    /* Notion-like horizontal scroll Tiptap toolbar on mobile */
     .legal-memo-workspace .tiptap-toolbar {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 4px;
         margin: 0 -16px;
         padding: 8px 16px;
+        scrollbar-width: none; /* Firefox */
+    }
+
+    .legal-memo-workspace .tiptap-toolbar::-webkit-scrollbar {
+        display: none; /* Chrome/Safari */
+    }
+
+    .legal-memo-workspace .tiptap-toolbar > * {
+        flex-shrink: 0;
+    }
+
+    /* Fixed mobile bottom AI Chat Assistant widget */
+    .legal-memo-workspace .notebook-ai-widget {
+        position: fixed !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15) !important;
+        padding: 10px 12px !important;
+        background: var(--color-surface, #ffffff) !important;
+        z-index: 200 !important;
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    .legal-memo-workspace .lmw-editor-container {
+        padding-bottom: 160px; /* Make space for sticky chat widget */
+    }
+
+    /* Dropdown menus as overlay sheets on mobile */
+    .lmw-ai-tools-wrapper .legal-ai-dropdown {
+        position: fixed !important;
+        top: 60px !important;
+        left: 12px !important;
+        right: 12px !important;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        z-index: 1015 !important;
+    }
+
+    .lmw-analysis-menu {
+        position: fixed !important;
+        top: 60px !important;
+        left: 12px !important;
+        right: 12px !important;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        z-index: 1015 !important;
     }
 }
 
@@ -1217,7 +1358,9 @@
 .lmw-analysis-menu {
     position: absolute;
     top: 100%;
-    right: 0;
+    inset-inline-end: 0;
+    inset-inline-start: auto;
+    right: auto;
     margin-top: 4px;
     z-index: 1010;
     min-width: 280px;

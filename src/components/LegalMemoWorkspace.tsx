@@ -289,8 +289,8 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
 
-    // Sidebar
-    const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+    // Sidebar - مغلق افتراضياً على الجوال ومفتوح على الشاشات الكبيرة
+    const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => window.innerWidth <= 768);
 
     // المراجع
     const editorRef = useRef<TiptapEditorRef>(null);
@@ -721,7 +721,7 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                             {hasTour && (
                                 <button
                                     data-tour="memo-help-btn"
-                                    className="lmw-close-btn"
+                                    className="lmw-close-btn lmw-help-btn"
                                     onClick={startTour}
                                     title="جولة تعريفية"
                                     aria-label="جولة تعريفية"
@@ -839,6 +839,41 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                                         )}
                                     </div>
 
+                                    {/* زر مساعد الذكاء الاصطناعي */}
+                                    <button
+                                        type="button"
+                                        className={`lmw-btn lmw-btn-assistant-toggle ${isAssistantVisible ? 'active' : ''}`}
+                                        onClick={() => setIsAssistantVisible(!isAssistantVisible)}
+                                        title={isAssistantVisible ? 'إخفاء المساعد الذكي' : 'إظهار المساعد الذكي'}
+                                    >
+                                        <Brain size={16} />
+                                        <span>المساعد</span>
+                                    </button>
+
+                                    {/* زر نتائج التحليل الجانبي */}
+                                    {analysisResult && (
+                                        <button
+                                            type="button"
+                                            className={`lmw-btn lmw-btn-analysis-panel-toggle ${showAnalysisPanel ? 'active' : ''}`}
+                                            onClick={() => setShowAnalysisPanel(!showAnalysisPanel)}
+                                            title="عرض نتائج التحليل"
+                                        >
+                                            <Sparkles size={16} />
+                                            <span>التحليل</span>
+                                        </button>
+                                    )}
+
+                                    {/* زر الخصائص والمعلومات */}
+                                    <button
+                                        type="button"
+                                        className={`lmw-btn lmw-btn-properties-toggle ${!sidebarCollapsed ? 'active' : ''}`}
+                                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                        title="خصائص المذكرة ومستنداتها"
+                                    >
+                                        <Settings size={16} />
+                                        <span>الخصائص</span>
+                                    </button>
+
                                     {/* زر الحفظ */}
                                     <button
                                         data-tour="memo-save"
@@ -935,6 +970,14 @@ const LegalMemoWorkspace: React.FC<LegalMemoWorkspaceProps> = ({
                         ) : (
                             /* المحرر */
                             <div className="lmw-editor-layout">
+                                {/* Sidebar Backdrop Overlay on Mobile */}
+                                {!sidebarCollapsed && (
+                                    <div
+                                        className="lmw-sidebar-backdrop"
+                                        onClick={() => setSidebarCollapsed(true)}
+                                    />
+                                )}
+
                                 {/* Sidebar */}
                                 <aside className={`lmw-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`} data-tour="memo-sidebar">
                                     <button

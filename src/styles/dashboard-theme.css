@@ -1099,4 +1099,22 @@ body.dark .session-item {
 }
 @media (max-width: 768px) {
     .dash-greeting__date { display: none; }
+    .dash-toolbar {
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .dash-greeting {
+        text-align: center;
+        justify-content: center;
+        width: 100%;
+    }
+    .dash-pills {
+        justify-content: center;
+        width: 100%;
+    }
+    .dash-actions {
+        justify-content: center;
+        width: 100%;
+    }
 }

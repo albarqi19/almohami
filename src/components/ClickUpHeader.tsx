@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import {
   Menu,
@@ -606,8 +606,8 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
           min-width: fit-content;
           white-space: nowrap;
           padding: 6px 0;
-          left: auto;
-          right: 0;
+          inset-inline-end: 0;
+          inset-inline-start: auto;
         }
 
         .quickadd-item:disabled {
@@ -735,7 +735,8 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
         .clickup-header__dropdown {
           position: absolute;
           top: calc(100% + 8px);
-          left: 0;
+          inset-inline-end: 0;
+          inset-inline-start: auto;
           background: var(--dashboard-card);
           border: 1px solid var(--color-border);
           border-radius: 8px;
@@ -750,12 +751,23 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
         .clickup-header__dropdown--notifications {
           width: 360px;
-          /* Anchor the dropdown to the wrapper's left edge so it grows
-             toward the viewport's interior in RTL (icons sit on the left
-             side of the header, so right:0 would push the panel offscreen). */
-          left: 0;
-          right: auto;
+          inset-inline-end: 0;
+          inset-inline-start: auto;
           max-width: calc(100vw - 24px);
+        }
+
+        @media (max-width: 1024px) {
+          .clickup-header__dropdown--notifications {
+            position: fixed;
+            top: 56px;
+            left: 12px;
+            right: 12px;
+            width: auto;
+            max-width: none;
+            display: flex;
+            justify-content: center;
+            z-index: 999;
+          }
         }
 
         .clickup-header__dropdown-header {
