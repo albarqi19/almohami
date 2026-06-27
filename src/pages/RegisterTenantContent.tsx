@@ -748,7 +748,7 @@ const RegisterTenantContent: React.FC = () => {
                                 </label>
                                 <div className="auth-field">
                                     <span className="auth-field__icon"><IdCard size={18} /></span>
-                                    <input id="owner_national_id" name="owner_national_id" type="text" className={`input auth-field__input--with-icon ${errors.owner_national_id ? 'input--error' : ''}`} placeholder="10 أرقام" value={formData.owner_national_id} onChange={handleInputChange} maxLength={10} inputMode="numeric" dir="ltr" readOnly />
+                                    <input id="owner_national_id" name="owner_national_id" type="text" className={`input auth-field__input--with-icon ${errors.owner_national_id ? 'input--error' : ''}`} placeholder="10 أرقام" value={formData.owner_national_id} onChange={handleInputChange} maxLength={10} inputMode="numeric" dir="ltr" readOnly={!!sbaInfo} />
                                 </div>
                                 {errors.owner_national_id && <span className="form-error">{errors.owner_national_id}</span>}
                             </div>
