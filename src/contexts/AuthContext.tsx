@@ -104,6 +104,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // No 2FA required - set user
       if (loginResponse.user) {
         setUser(loginResponse.user);
+        // جلب الملف الكامل (مع بيانات الشركة tenant) لتفعيل بوّابات الميزات بالسايدبار.
+        AuthService.getProfile().then(setUser).catch(() => {});
       }
       setIsLoading(false);
       return { success: true };
@@ -128,6 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await AuthService.verify2FA(tempToken, code);
       if (response.user) {
         setUser(response.user);
+        AuthService.getProfile().then(setUser).catch(() => {});
       }
       setIsLoading(false);
       return { success: true };

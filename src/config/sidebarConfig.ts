@@ -2,7 +2,7 @@ import {
   Home, FileText, FileCheck, Calendar, Scale, Briefcase, Users, Clock, CheckSquare,
   BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature, Receipt, CreditCard,
   TrendingUp, Bell, Settings, ClipboardList, BarChart3, FolderUp, QrCode, Lightbulb,
-  Landmark, AlarmClock, Archive,
+  Landmark, AlarmClock, Archive, UserCog,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -23,9 +23,9 @@ export interface SidebarItem {
   roles?: string[];
   /**
    * بوّابة ميزة — تُخفي العنصر تماماً حتى تكون الميزة متاحة للمنشأة.
-   * 'zatca' يُقرأ من useZatcaFeature() (context) داخل ClickUpSidebar — لا hook هنا (هذا ملف بيانات).
+   * 'zatca' يُقرأ من useZatcaFeature() (context)، و'hr' من user.tenant.hr_enabled — داخل ClickUpSidebar (لا hook هنا، هذا ملف بيانات).
    */
-  featureGate?: 'zatca';
+  featureGate?: 'zatca' | 'hr';
   /** شارة نصية صغيرة بجوار الاسم (مثل "مؤقتة" لميزة تجريبية). */
   badge?: string;
 }
@@ -62,6 +62,8 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: FileSignature, label: 'العقود والمالية', path: '/finance', any: ['billing.view', 'contracts.view'] },
   { icon: Archive, label: 'الصادر والوارد', path: '/correspondence', permission: 'correspondence.view', badge: 'تجريبي' },
   { icon: FileCheck, label: 'اعتمادات المذكرات', path: '/memos/approvals', permission: 'memos.approve', badge: 'تجريبي' },
+  // الموارد البشرية — للمدير فقط (permission: hr.view مبذورة لـ owner/admin حصراً) + خلف بوابة hr_enabled.
+  { icon: UserCog, label: 'الموارد البشرية', path: '/hr', permission: 'hr.view', featureGate: 'hr', badge: 'جديد' },
   { icon: QrCode, label: 'الفوترة الإلكترونية', path: '/zatca', roles: ['admin', 'accountant', 'owner'], featureGate: 'zatca' },
   { icon: Lightbulb, label: 'الملاحظات', path: '/feedback', permission: 'feedback.submit', badge: 'مؤقتة' },
 ];

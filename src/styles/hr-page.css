@@ -1,0 +1,220 @@
+/* ===== الموارد البشرية — ستايل مؤسسي (ERP) موحّد مع ثيمات النظام ===== */
+/* يعتمد متغيّرات الثيم فقط (لا ألوان صلبة) ليتوافق مع :root/dark/classic. */
+
+.hr-page {
+  padding: 18px 22px;
+  background: var(--dashboard-bg, var(--color-background));
+  min-height: 100%;
+  color: var(--color-text);
+}
+
+/* رأس الصفحة */
+.hr-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.hr-head__title { display: flex; align-items: center; gap: 11px; }
+.hr-head__mark {
+  width: 40px; height: 40px; border-radius: 11px;
+  background: var(--law-navy); color: var(--law-gold);
+  display: grid; place-items: center; border: 1px solid var(--law-gold); flex: none;
+}
+.hr-head h1 { font-size: 19px; font-weight: 700; color: var(--color-heading); line-height: 1.2; }
+.hr-head__sub { font-size: 12px; color: var(--color-text-secondary); font-weight: 500; }
+.hr-head__spacer { flex: 1; }
+
+/* أزرار */
+.hr-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 14px; border-radius: 10px;
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  border: 1px solid var(--color-border-strong, var(--color-border));
+  background: var(--dashboard-card, var(--color-surface)); color: var(--color-text);
+  cursor: pointer; white-space: nowrap; transition: border-color .15s, background .15s;
+}
+.hr-btn:hover { border-color: var(--law-gold); }
+.hr-btn--primary { background: var(--law-navy); color: #fff; border-color: var(--law-navy); }
+.hr-btn--primary:hover { background: var(--law-navy); filter: brightness(1.12); border-color: var(--law-gold); }
+.hr-btn--ghost { background: var(--quiet-gray-100, var(--color-surface)); border-color: transparent; }
+.hr-btn--sm { padding: 6px 10px; font-size: 12px; }
+.hr-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* مؤشّرات KPI */
+.hr-kpis {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 16px;
+}
+.hr-kpi {
+  background: var(--dashboard-card, var(--color-surface));
+  border: 1px solid var(--color-border); border-radius: 14px;
+  padding: 13px 15px; display: flex; align-items: center; gap: 12px;
+  box-shadow: var(--shadow-xs, 0 1px 2px rgba(10,25,47,.04));
+}
+.hr-kpi__icon {
+  width: 38px; height: 38px; border-radius: 10px; flex: none;
+  display: grid; place-items: center;
+}
+.hr-kpi__v { font-size: 21px; font-weight: 700; color: var(--color-heading); line-height: 1; }
+.hr-kpi__l { font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; font-weight: 500; }
+.hr-kpi--navy .hr-kpi__icon { background: color-mix(in srgb, var(--law-navy) 9%, transparent); color: var(--law-navy); }
+.hr-kpi--gold .hr-kpi__icon { background: color-mix(in srgb, var(--law-gold) 18%, transparent); color: var(--law-gold); }
+.hr-kpi--green .hr-kpi__icon { background: color-mix(in srgb, var(--status-green) 14%, transparent); color: var(--status-green); }
+.hr-kpi--red .hr-kpi__icon { background: color-mix(in srgb, var(--status-red) 14%, transparent); color: var(--status-red); }
+.hr-kpi--blue .hr-kpi__icon { background: color-mix(in srgb, var(--status-blue) 14%, transparent); color: var(--status-blue); }
+
+/* تبويبات الصفحة */
+.hr-tabs {
+  display: flex; gap: 4px; border-bottom: 1px solid var(--color-border);
+  margin-bottom: 16px; overflow-x: auto;
+}
+.hr-tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 11px 15px; font-family: inherit; font-size: 14px; font-weight: 600;
+  color: var(--color-text-secondary); background: none; border: none;
+  border-bottom: 2.5px solid transparent; cursor: pointer; white-space: nowrap;
+}
+.hr-tab:hover { color: var(--color-text); }
+.hr-tab--active { color: var(--color-heading); border-bottom-color: var(--law-gold); }
+.hr-tab__soon {
+  font-size: 10px; font-weight: 700; color: var(--color-text-secondary);
+  background: var(--quiet-gray-100, var(--color-surface)); padding: 1px 7px; border-radius: 20px;
+}
+
+/* شريط الأدوات */
+.hr-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.hr-search { position: relative; flex: 1; min-width: 220px; max-width: 380px; }
+.hr-search svg { position: absolute; inset-inline-start: 11px; top: 50%; transform: translateY(-50%); color: var(--color-text-secondary); }
+.hr-search input {
+  width: 100%; padding: 9px 12px 9px 36px; font-family: inherit; font-size: 13px;
+  background: var(--dashboard-card, var(--color-surface));
+  border: 1px solid var(--color-border); border-radius: 10px; color: var(--color-text);
+}
+.hr-select {
+  padding: 9px 12px; font-family: inherit; font-size: 13px;
+  background: var(--dashboard-card, var(--color-surface));
+  border: 1px solid var(--color-border); border-radius: 10px; color: var(--color-text); cursor: pointer;
+}
+
+/* جدول */
+.hr-table-wrap {
+  background: var(--dashboard-card, var(--color-surface));
+  border: 1px solid var(--color-border); border-radius: 14px; overflow: hidden;
+}
+.hr-table { width: 100%; border-collapse: collapse; }
+.hr-table thead th {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .03em;
+  color: var(--color-text-secondary); font-weight: 700; text-align: start;
+  padding: 11px 14px; border-bottom: 1px solid var(--color-border);
+  background: var(--quiet-gray-50, var(--color-surface));
+}
+.hr-table tbody tr { border-bottom: 1px solid var(--color-border); cursor: pointer; transition: background .12s; }
+.hr-table tbody tr:last-child { border-bottom: none; }
+.hr-table tbody tr:hover { background: var(--quiet-gray-50, var(--color-surface)); }
+.hr-table td { padding: 11px 14px; font-size: 13px; vertical-align: middle; }
+
+.hr-person { display: flex; align-items: center; gap: 11px; }
+.hr-avatar {
+  width: 36px; height: 36px; border-radius: 10px; flex: none;
+  display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff;
+  background: var(--law-navy);
+}
+.hr-person__nm { font-weight: 600; color: var(--color-heading); font-size: 13px; }
+.hr-person__rl { font-size: 11px; color: var(--color-text-secondary); }
+.hr-muted { color: var(--color-text-secondary); }
+.hr-num { font-variant-numeric: tabular-nums; }
+
+/* شارات */
+.hr-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 700;
+  white-space: nowrap; border: 1px solid transparent;
+}
+.hr-badge--green { background: color-mix(in srgb, var(--status-green) 13%, transparent); color: var(--status-green); }
+.hr-badge--gold  { background: color-mix(in srgb, var(--law-gold) 18%, transparent); color: var(--law-gold); }
+.hr-badge--red   { background: color-mix(in srgb, var(--status-red) 13%, transparent); color: var(--status-red); }
+.hr-badge--blue  { background: color-mix(in srgb, var(--status-blue) 13%, transparent); color: var(--status-blue); }
+.hr-badge--gray  { background: var(--quiet-gray-100, var(--color-surface)); color: var(--color-text-secondary); }
+
+.hr-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--color-text-secondary); }
+.hr-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+
+/* حالات فارغة / تحميل */
+.hr-state { display: grid; place-items: center; gap: 12px; padding: 50px 20px; text-align: center; color: var(--color-text-secondary); }
+.hr-state svg { width: 42px; height: 42px; color: var(--color-border-strong, var(--color-border)); }
+.hr-soon-pane { padding: 60px 20px; text-align: center; color: var(--color-text-secondary); }
+.hr-soon-pane h3 { font-size: 16px; color: var(--color-heading); margin-bottom: 6px; }
+
+/* ترقيم */
+.hr-pagination { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 4px; font-size: 13px; color: var(--color-text-secondary); }
+.hr-pagination__actions { display: flex; gap: 8px; }
+
+/* ===== ملف الموظف 360 ===== */
+.hr-profile { padding: 18px 22px; background: var(--dashboard-bg, var(--color-background)); min-height: 100%; }
+.hr-back { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--color-text-secondary); background: none; border: none; cursor: pointer; margin-bottom: 14px; }
+.hr-back:hover { color: var(--color-text); }
+
+.hr-phead {
+  background: var(--dashboard-card, var(--color-surface));
+  border: 1px solid var(--color-border); border-top: 3px solid var(--law-gold);
+  border-radius: 14px; padding: 18px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.hr-phead__av { width: 58px; height: 58px; border-radius: 14px; font-size: 22px; }
+.hr-phead__nm { font-size: 18px; font-weight: 700; color: var(--color-heading); }
+.hr-phead__rl { font-size: 13px; color: var(--color-text-secondary); margin-top: 2px; }
+.hr-phead__badges { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+.hr-phead__actions { margin-inline-start: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* تبويبات داخلية */
+.hr-itabs { display: flex; gap: 3px; border-bottom: 1px solid var(--color-border); margin: 16px 0; overflow-x: auto; }
+.hr-itab { padding: 11px 14px; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--color-text-secondary); background: none; border: none; border-bottom: 2.5px solid transparent; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 7px; }
+.hr-itab--active { color: var(--color-heading); border-bottom-color: var(--law-gold); }
+
+.hr-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.hr-card { background: var(--dashboard-card, var(--color-surface)); border: 1px solid var(--color-border); border-radius: 14px; overflow: hidden; }
+.hr-card__h { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 15px; background: var(--quiet-gray-50, var(--color-surface)); border-bottom: 1px solid var(--color-border); }
+.hr-card__t { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--color-heading); }
+.hr-card__t svg { color: var(--law-gold); }
+.hr-card__b { padding: 14px 15px; }
+
+.hr-kv { display: grid; grid-template-columns: auto 1fr; gap: 9px 16px; font-size: 13px; }
+.hr-kv dt { color: var(--color-text-secondary); font-weight: 500; white-space: nowrap; }
+.hr-kv dd { color: var(--color-text); font-weight: 600; text-align: start; font-variant-numeric: tabular-nums; }
+
+.hr-strip { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; margin-bottom: 13px; }
+.hr-strip--g { background: color-mix(in srgb, var(--status-green) 12%, transparent); }
+.hr-strip--y { background: color-mix(in srgb, var(--law-gold) 15%, transparent); }
+.hr-strip__big { font-size: 19px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.hr-strip--g .hr-strip__big { color: var(--status-green); }
+.hr-strip--y .hr-strip__big { color: var(--law-gold); }
+.hr-strip__l { font-size: 11.5px; color: var(--color-text-secondary); font-weight: 600; margin-top: 3px; }
+
+.hr-locked { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--color-text-secondary); padding: 20px; justify-content: center; text-align: center; }
+.hr-locked svg { color: var(--law-gold); flex: none; }
+
+/* صفوف المستندات */
+.hr-doc { display: flex; align-items: center; gap: 11px; padding: 11px 0; border-bottom: 1px solid var(--color-border); }
+.hr-doc:last-child { border-bottom: none; }
+.hr-doc__ic { width: 36px; height: 36px; border-radius: 9px; background: var(--quiet-gray-100, var(--color-surface)); display: grid; place-items: center; color: var(--law-gold); flex: none; }
+.hr-doc__nm { font-weight: 600; color: var(--color-heading); font-size: 13px; }
+.hr-doc__m { font-size: 11.5px; color: var(--color-text-secondary); }
+
+/* مودال */
+.hr-modal-overlay { position: fixed; inset: 0; background: rgba(10,25,47,.45); display: grid; place-items: center; z-index: 1000; padding: 20px; }
+.hr-modal { background: var(--dashboard-card, var(--color-surface)); border: 1px solid var(--color-border); border-radius: 16px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg, 0 24px 42px rgba(10,25,47,.1)); }
+.hr-modal__h { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--color-border); }
+.hr-modal__h h3 { font-size: 16px; font-weight: 700; color: var(--color-heading); }
+.hr-modal__b { padding: 18px 20px; display: grid; gap: 14px; }
+.hr-modal__f { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--color-border); }
+.hr-field { display: grid; gap: 6px; }
+.hr-field label { font-size: 12.5px; font-weight: 600; color: var(--color-text); }
+.hr-field input, .hr-field select, .hr-field textarea {
+  padding: 9px 12px; font-family: inherit; font-size: 13px;
+  background: var(--color-background, var(--color-surface));
+  border: 1px solid var(--color-border); border-radius: 10px; color: var(--color-text); width: 100%;
+}
+.hr-field--row { grid-template-columns: 1fr 1fr; gap: 12px; }
+.hr-icon-btn { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; border: 1px solid var(--color-border); background: var(--dashboard-card, var(--color-surface)); cursor: pointer; color: var(--color-text-secondary); }
+.hr-icon-btn:hover { border-color: var(--law-gold); color: var(--color-text); }

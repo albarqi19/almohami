@@ -23,16 +23,18 @@ import {
 	Download,
 	FileImage,
 	FileSpreadsheet,
+	FileType,
 	Plus,
 	Trash2,
 } from 'lucide-react';
-import { apiClient } from '../utils/api';
+import { apiClient, API_BASE_URL } from '../utils/api';
 import { AddSessionModal } from '../components/AddSessionModal';
 import DisplaySettingsButton from '../components/DisplaySettingsButton';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
 import { resolveOpponent } from '../utils/partyHelpers';
 import { toHijri } from '../utils/hijriDate';
+import { useAuth } from '../contexts/AuthContext';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 
@@ -85,11 +87,13 @@ interface Session {
 const UpcomingSessions: React.FC = () => {
 	const navigate = useNavigate();
 	const { prefs } = useDisplayPreferences();
+	const { user } = useAuth();
 	const [filter, setFilter] = useState<'all' | 'upcoming' | 'today' | 'week'>('upcoming');
 	const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
 	const [searchTerm, setSearchTerm] = useState('');
 	const [showExportMenu, setShowExportMenu] = useState(false);
 	const [exportPeriod, setExportPeriod] = useState<'today' | 'tomorrow' | 'week'>('today');
+	const [isExportingPdf, setIsExportingPdf] = useState(false);
 	const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
 	const exportMenuRef = useRef<HTMLDivElement>(null);
 
@@ -404,62 +408,78 @@ const UpcomingSessions: React.FC = () => {
 			return;
 		}
 
+		// الثيم الديواني: كحلي + ذهبي، فلات (بلا تدرّج/ظل)، بإطار ذهبي رفيع
+		const NAVY = '#1E3A5F';
+		const GOLD = '#C5A059';
+		const issuer = user?.name || '';
+		const fmtGreg = (iso?: string | null) => (iso ? iso.slice(0, 10).replace(/-/g, '/') : '');
+
 		const container = document.createElement('div');
 		container.style.cssText = `
 			position: absolute;
 			left: -9999px;
-			background: linear-gradient(135deg, #1E3A5F 0%, #2d4a6f 100%);
-			padding: 40px;
-			width: 900px;
+			background: ${NAVY};
+			padding: 30px;
+			width: 1040px;
 			font-family: 'Segoe UI', Tahoma, sans-serif;
 			direction: rtl;
 		`;
 
-		const today = new Date();
-		const dateStr = today.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+		// ar-SA يُرجع هجرياً؛ نستخدم en-CA لضمان ميلادي «YYYY/MM/DD»، والهجري عبر toHijri.
+		const issuedHijri = toHijri(new Date());
+		const issuedGreg = new Date().toLocaleDateString('en-CA').replace(/-/g, '/');
 
 		container.innerHTML = `
-			<div style="text-align: center; margin-bottom: 30px;">
-				<h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">📅 ${getExportTitle()}</h1>
-				<p style="color: rgba(255,255,255,0.8); margin: 10px 0 0; font-size: 16px;">${dateStr}</p>
-			</div>
-			<div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
-				<table style="width: 100%; border-collapse: collapse;">
+			<div style="background:#ffffff; border:2px solid ${GOLD};">
+				<div style="background:${NAVY}; padding:22px 28px; border-bottom:3px solid ${GOLD};">
+					<div style="color:#ffffff; font-size:23px; font-weight:700; letter-spacing:0.5px;">${getExportTitle()}</div>
+					<div style="color:${GOLD}; font-size:13px; margin-top:8px; direction:rtl;">${issuedHijri ? issuedHijri + ' &nbsp;—&nbsp; ' : ''}<span style="direction:ltr; unicode-bidi:embed;">${issuedGreg}</span> م</div>
+				</div>
+				<table style="width:100%; border-collapse:collapse; background:#f6f7f9; border-bottom:1px solid #e5e7eb;">
+					<tr>
+						<td style="padding:9px 28px; font-size:12px; color:#6b7280; text-align:right;">عدد الجلسات: <strong style="color:${NAVY};">${sessionsToExport.length}</strong></td>
+						${issuer ? `<td style="padding:9px 28px; font-size:12px; color:#6b7280; text-align:left;">أصدره: <strong style="color:${NAVY};">${issuer}</strong></td>` : ''}
+					</tr>
+				</table>
+				<table style="width:100%; border-collapse:collapse;">
 					<thead>
-						<tr style="background: #f8fafc;">
-							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">#</th>
-							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">القضية</th>
-							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">العميل</th>
-							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">المحامي المسؤول</th>
-							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">المحكمة</th>
-							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">الوقت</th>
-							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">النوع</th>
-							<th style="padding: 14px; text-align: right; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0;">رابط الدخول</th>
+						<tr style="background:${NAVY};">
+							<th style="padding:11px 8px; font-size:12px; color:#ffffff; text-align:center; border-left:1px solid rgba(255,255,255,0.14);">#</th>
+							<th style="padding:11px 12px; font-size:12px; color:#ffffff; text-align:right; border-left:1px solid rgba(255,255,255,0.14);">القضية</th>
+							<th style="padding:11px 12px; font-size:12px; color:#ffffff; text-align:right; border-left:1px solid rgba(255,255,255,0.14);">العميل</th>
+							<th style="padding:11px 12px; font-size:12px; color:#ffffff; text-align:right; border-left:1px solid rgba(255,255,255,0.14);">المحامي المسؤول</th>
+							<th style="padding:11px 12px; font-size:12px; color:#ffffff; text-align:right; border-left:1px solid rgba(255,255,255,0.14);">المحكمة</th>
+							<th style="padding:11px 12px; font-size:12px; color:#ffffff; text-align:center; border-left:1px solid rgba(255,255,255,0.14);">تاريخ الجلسة</th>
+							<th style="padding:11px 8px; font-size:12px; color:#ffffff; text-align:center; border-left:1px solid rgba(255,255,255,0.14);">الوقت</th>
+							<th style="padding:11px 10px; font-size:12px; color:#ffffff; text-align:center;">النوع</th>
 						</tr>
 					</thead>
 					<tbody>
-						${sessionsToExport.map((session: Session, index: number) => `
-							<tr style="background: ${index % 2 === 0 ? 'white' : '#f8fafc'};">
-								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${index + 1}</td>
-								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0; font-weight: 500;">${session.case?.title || '-'}</td>
-								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${session.case?.client_name || '-'}</td>
-								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${getPrimaryLawyerName(session.case as never, '-')}</td>
-								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${session.court || session.case?.court || '-'}</td>
-								<td style="padding: 12px 14px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0;">${session.session_time || '-'}</td>
-								<td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid #e2e8f0;">
-									<span style="padding: 4px 10px; border-radius: 12px; font-size: 11px; background: ${session.method === 'عن بعد' ? '#EFF6FF' : '#ECFDF5'}; color: ${session.method === 'عن بعد' ? '#3B82F6' : '#10B981'};">
-										${session.method === 'عن بعد' ? '🎥 عن بعد' : '📍 حضوري'}
-									</span>
-								</td>
-								<td style="padding: 12px 14px; font-size: 11px; color: #3B82F6; border-bottom: 1px solid #e2e8f0; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-									${session.video_conference_url || '-'}
-								</td>
-							</tr>
-						`).join('')}
+						${sessionsToExport.map((session: Session, index: number) => {
+							const eff = getEffectiveDate(session);
+							const hj = eff ? toHijri(eff) : null;
+							const gr = fmtGreg(eff);
+							const remote = session.method === 'عن بعد';
+							const bg = index % 2 === 0 ? '#ffffff' : '#f6f7f9';
+							const cell = 'border-bottom:1px solid #eef0f3; border-left:1px solid #eef0f3;';
+							return `
+							<tr style="background:${bg};">
+								<td style="padding:10px 8px; font-size:12px; color:#334155; text-align:center; ${cell}">${index + 1}</td>
+								<td style="padding:10px 12px; font-size:12.5px; color:${NAVY}; font-weight:600; ${cell}">${session.case?.title || '-'}${session.case?.file_number ? `<div style="font-size:10px; color:#9aa3af; font-weight:400; margin-top:2px;">ملف: ${session.case?.file_number}</div>` : ''}</td>
+								<td style="padding:10px 12px; font-size:12px; color:#334155; ${cell}">${session.case?.client_name || '-'}</td>
+								<td style="padding:10px 12px; font-size:12px; color:#334155; ${cell}">${getPrimaryLawyerName(session.case as never, '-')}</td>
+								<td style="padding:10px 12px; font-size:12px; color:#334155; ${cell}">${session.court || session.case?.court || '-'}</td>
+								<td style="padding:10px 12px; font-size:12px; text-align:center; ${cell}">${hj ? `<div style="color:${NAVY}; font-weight:600;">${hj}</div>` : ''}${gr ? `<div style="font-size:10px; color:#9aa3af; direction:ltr;">${gr}</div>` : (hj ? '' : '-')}</td>
+								<td style="padding:10px 8px; font-size:12px; color:#334155; text-align:center; ${cell}">${session.session_time || '-'}</td>
+								<td style="padding:10px 10px; font-size:11.5px; text-align:center; font-weight:700; color:${remote ? '#15803d' : '#475569'}; border-bottom:1px solid #eef0f3;">${remote ? 'عن بُعد' : 'حضوري'}</td>
+							</tr>`;
+						}).join('')}
 					</tbody>
 				</table>
+				<div style="background:${NAVY}; padding:12px 28px; border-top:3px solid ${GOLD}; text-align:center;">
+					<div style="color:#ffffff; font-size:11px; letter-spacing:0.2px;">كشف استرشادي صادر عن المكتب لأغراض المتابعة والتنظيم — نظام الرائد لإدارة المحاماة</div>
+				</div>
 			</div>
-			<p style="text-align: center; color: rgba(255,255,255,0.6); margin-top: 20px; font-size: 12px;">تم إنشاء هذا التقرير تلقائياً</p>
 		`;
 
 		document.body.appendChild(container);
@@ -620,6 +640,63 @@ const UpcomingSessions: React.FC = () => {
 		link.click();
 		URL.revokeObjectURL(link.href);
 		setShowExportMenu(false);
+	};
+
+	// Export as PDF \u2014 \u0645\u0644\u0641 \u0631\u0633\u0645\u064a \u0628\u0643\u0644\u064a\u0634\u0629 \u0627\u0644\u0645\u0643\u062a\u0628 (\u064a\u0648\u0644\u0651\u062f\u0647 \u0627\u0644\u062e\u0627\u062f\u0645 \u0639\u0628\u0631 mPDF):
+	// \u062a\u0627\u0631\u064a\u062e \u0647\u062c\u0631\u064a + \u0645\u064a\u0644\u0627\u062f\u064a\u060c \u0648\u0632\u0631 \u00ab\u062f\u062e\u0648\u0644 \u0627\u0644\u062c\u0644\u0633\u0629\u00bb \u0642\u0627\u0628\u0644 \u0644\u0644\u0646\u0642\u0631. \u064a\u064f\u0631\u0633\u0644 \u0645\u0639\u0631\u0651\u0641\u0627\u062a \u0627\u0644\u062c\u0644\u0633\u0627\u062a
+	// \u0627\u0644\u0638\u0627\u0647\u0631\u0629 \u0641\u064a\u0639\u064a\u062f\u0647\u0627 \u0627\u0644\u062e\u0627\u062f\u0645 \u0628\u0646\u0641\u0633 \u0642\u064a\u0648\u062f \u0627\u0644\u0631\u0624\u064a\u0629 (\u0644\u0627 \u064a\u064f\u0635\u062f\u064e\u0651\u0631 \u0645\u0627 \u0644\u0627 \u064a\u0645\u0644\u0643\u0647 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645).
+	const exportAsPdf = async () => {
+		const sessionsToExport = getSessionsForExport();
+		if (sessionsToExport.length === 0) {
+			alert(getNoSessionsMessage());
+			return;
+		}
+
+		setShowExportMenu(false);
+		setIsExportingPdf(true);
+		const token = localStorage.getItem('authToken');
+
+		try {
+			const res = await fetch(`${API_BASE_URL}/sessions/export-pdf`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Accept: 'application/pdf',
+					'ngrok-skip-browser-warning': '69420',
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
+				},
+				body: JSON.stringify({
+					session_ids: sessionsToExport.map(s => s.id),
+					period: exportPeriod,
+				}),
+			});
+
+			if (!res.ok) {
+				let message = '\u062a\u0639\u0630\u0651\u0631 \u0625\u0646\u0634\u0627\u0621 \u0645\u0644\u0641 PDF';
+				try {
+					const body = await res.clone().json();
+					if (body?.message) message = body.message;
+				} catch {
+					/* \u0627\u0644\u0631\u062f \u0644\u064a\u0633 JSON \u2014 \u0646\u064f\u0628\u0642\u064a \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0627\u0641\u062a\u0631\u0627\u0636\u064a\u0629 */
+				}
+				throw new Error(message);
+			}
+
+			const blob = await res.blob();
+			const url = URL.createObjectURL(blob);
+			const anchor = document.createElement('a');
+			anchor.href = url;
+			anchor.download = `${getExportFileName()}.pdf`;
+			document.body.appendChild(anchor);
+			anchor.click();
+			anchor.remove();
+			URL.revokeObjectURL(url);
+		} catch (err) {
+			console.error('Error exporting PDF:', err);
+			alert(err instanceof Error ? err.message : '\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u062a\u0635\u062f\u064a\u0631');
+		} finally {
+			setIsExportingPdf(false);
+		}
 	};
 
 	// Render Table View
@@ -1165,6 +1242,10 @@ const UpcomingSessions: React.FC = () => {
 									{getExportPeriodLabel()}
 									<ChevronRight size={12} className="export-dropdown__cycle-icon" />
 								</div>
+								<button onClick={exportAsPdf} disabled={isExportingPdf}>
+									<FileType size={16} />
+									<span>{isExportingPdf ? 'جارٍ الإنشاء…' : 'PDF رسمي'}</span>
+								</button>
 								<button onClick={exportAsImage}>
 									<FileImage size={16} />
 									<span>صورة (PNG)</span>

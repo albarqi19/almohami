@@ -30,17 +30,81 @@
     flex-wrap: wrap;
 }
 
-/* Unified toolbar — البحث + الفلاتر + التبديل في سطر واحد */
+/* Unified toolbar — حاوية واحدة مرنة: سطر واحد على الشاشة الواسعة،
+   وتنقسم تلقائياً (الفلاتر تنزل سطراً كاملاً) عند ضيق المساحة فقط. */
 .tasks-header--unified {
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 10px 12px;
     padding: 10px 20px;
     justify-content: flex-start;
 }
 
 .tasks-header--unified .tasks-header__title {
     font-size: 15px;
-    padding-left: 8px;
-    border-left: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+/* البحث يتمدّد ليملأ الفراغ ويتقلّص عند الحاجة */
+.tasks-toolbar__search {
+    position: relative;
+    flex: 1 1 220px;
+    min-width: 170px;
+    max-width: 380px;
+}
+
+.tasks-toolbar__search-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-secondary);
+    pointer-events: none;
+}
+
+/* مجموعة تحكّم (ترتيب / تجميع) — لا تنكسر داخلياً */
+.tasks-toolbar__control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.tasks-toolbar__control-label {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+/* الفلاتر تأخذ بقية السطر وتلتف أفقياً بانتظام */
+.tasks-toolbar__filters {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* الإجراءات (تبديل العرض + إضافة) تُدفع لنهاية السطر */
+.tasks-toolbar__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-inline-start: auto;
+    flex-shrink: 0;
+}
+
+/* لابتوب صغير: حين تضيق المساحة تنزل الفلاتر سطراً كاملاً مرتّباً
+   بدل أن تُحشر وتتكدّس «فوق بعض» — تبقى البقية في السطر الأول. */
+@media (max-width: 1280px) {
+    .tasks-toolbar__actions {
+        order: 4;
+    }
+    .tasks-toolbar__filters {
+        order: 5;
+        flex-basis: 100%;
+        flex-grow: 0;
+    }
 }
 
 /* === Toolbar controls (theme-aware: light / dark / classic) === */
@@ -231,8 +295,16 @@ body.diwan .task-filter-btn.active {
     filter: brightness(1.1);
 }
 
-/* Dot inside the filter button — make it pop when active */
-.task-filter-btn.active > span:first-child {
+/* Dot inside the filter button (اللون يُحقن inline لأنه ديناميكي) */
+.task-filter-btn__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* make it pop when active */
+.task-filter-btn.active .task-filter-btn__dot {
     background: #fff !important;
     opacity: 0.9;
 }

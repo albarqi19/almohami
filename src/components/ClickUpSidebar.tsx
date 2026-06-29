@@ -143,6 +143,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
     const isItemVisible = (item: SidebarItem): boolean => {
         // بوّابة الميزة: تُخفي العنصر تماماً عن أي منشأة غير متاحة لها الميزة (حتى super_admin) — لا تعرف بوجوده.
         if (item.featureGate === 'zatca' && !zatcaAvailable) return false;
+        if (item.featureGate === 'hr' && !user?.tenant?.hr_enabled) return false;
 
         if (isSuperAdmin) return true;
 

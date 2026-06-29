@@ -66,6 +66,8 @@ const SubscriptionPaymentResult = lazyWithRetry(() => import('./pages/Subscripti
 const LawyerSuspended = lazyWithRetry(() => import('./pages/LawyerSuspended'));
 const Clients = lazyWithRetry(() => import('./pages/Clients'));
 const ClientDetailPage = lazyWithRetry(() => import('./pages/ClientDetailPage'));
+const HrModule = lazyWithRetry(() => import('./pages/hr/HrModule'));
+const EmployeeDetailPage = lazyWithRetry(() => import('./pages/hr/EmployeeDetailPage'));
 const AdminRequests = lazyWithRetry(() => import('./pages/AdminRequests'));
 const Feedback = lazyWithRetry(() => import('./pages/Feedback'));
 const WathqInquiryPage = lazyWithRetry(() => import('./pages/WathqInquiry'));
@@ -206,6 +208,18 @@ function App() {
               <Route path="feedback" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant', 'accountant', 'secretary']}>
                   <Feedback />
+                </ProtectedRoute>
+              } />
+
+              {/* الموارد البشرية — المدير فقط (requiredPermission: hr.view) + بوابة hr_enabled بالباك */}
+              <Route path="hr" element={
+                <ProtectedRoute requiredPermission="hr.view">
+                  <HrModule />
+                </ProtectedRoute>
+              } />
+              <Route path="hr/employees/:id" element={
+                <ProtectedRoute requiredPermission="hr.view">
+                  <EmployeeDetailPage />
                 </ProtectedRoute>
               } />
 

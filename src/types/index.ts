@@ -30,6 +30,14 @@ export interface User {
   // Phase 3 - Permission System
   is_super_admin?: boolean;
   permissions_version?: number;
+  // معلومات الشركة (لبوابات الميزات في الواجهة — مثل hr_enabled)
+  tenant?: {
+    id: number;
+    name?: string;
+    hr_enabled?: boolean;
+    correspondence_enabled?: boolean;
+    [key: string]: any;
+  };
 }
 
 export const UserRole = {

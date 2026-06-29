@@ -88,10 +88,15 @@ export class AuthService {
   }
 
   static async getProfile(): Promise<User> {
-    const response = await apiClient.get<ApiResponse<{ user: User }>>('/auth/me');
+    const response = await apiClient.get<ApiResponse<{ user: User; tenant?: User['tenant'] }>>('/auth/me');
 
     if (response.success && response.data && response.data.user) {
-      return response.data.user;
+      const user = response.data.user;
+      // إرفاق بيانات الشركة (tenant) لتفعيل بوّابات الميزات في الواجهة (مثل hr_enabled).
+      if (response.data.tenant) {
+        user.tenant = response.data.tenant;
+      }
+      return user;
     } else {
       throw new Error(response.message || 'فشل في جلب بيانات المستخدم');
     }

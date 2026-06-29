@@ -707,17 +707,17 @@ const Tasks: React.FC = () => {
 
   return (
     <div className="tasks-page">
-      {/* Unified Toolbar — العنوان + البحث + التجميع + الفلاتر + التبديل + الإضافة في سطر واحد */}
+      {/* Unified Toolbar — حاوية واحدة: سطر واحد على الواسع، تنقسم تلقائياً عند الضيق */}
       <header className="tasks-header tasks-header--unified">
-        {/* Title */}
-        <div className="tasks-header__title" style={{ flexShrink: 0 }}>
+        {/* العنوان */}
+        <div className="tasks-header__title">
           <CheckCircle size={20} color="var(--law-navy)" />
           <span>إدارة المهام</span>
         </div>
 
-        {/* Search */}
-        <div style={{ position: 'relative', width: '220px', flexShrink: 0 }}>
-          <Search size={14} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)' }} />
+        {/* البحث */}
+        <div className="tasks-toolbar__search">
+          <Search size={14} className="tasks-toolbar__search-icon" />
           <input
             type="text"
             placeholder="بحث عن مهمة..."
@@ -727,9 +727,9 @@ const Tasks: React.FC = () => {
           />
         </div>
 
-        {/* Sorting Dropdown */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>ترتيب حسب:</span>
+        {/* الترتيب */}
+        <div className="tasks-toolbar__control">
+          <span className="tasks-toolbar__control-label">ترتيب حسب:</span>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
@@ -742,10 +742,10 @@ const Tasks: React.FC = () => {
           </select>
         </div>
 
-        {/* Group By (List view only) */}
+        {/* التجميع (عرض القائمة فقط) */}
         {viewMode === 'list' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-            <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>تجميع:</span>
+          <div className="tasks-toolbar__control">
+            <span className="tasks-toolbar__control-label">تجميع:</span>
             <div className="tasks-toolbar__segmented">
               <button
                 onClick={() => setGroupBy('status')}
@@ -763,8 +763,8 @@ const Tasks: React.FC = () => {
           </div>
         )}
 
-        {/* Status Filters — wrap horizontally if needed */}
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+        {/* فلاتر الحالة — تأخذ بقية السطر وتلتف بانتظام */}
+        <div className="tasks-toolbar__filters">
           <button
             className={`task-filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
             onClick={() => setStatusFilter('all')}
@@ -777,14 +777,14 @@ const Tasks: React.FC = () => {
               className={`task-filter-btn ${statusFilter === s.key ? 'active' : ''}`}
               onClick={() => setStatusFilter(s.key)}
             >
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: s.color }}></span>
+              <span className="task-filter-btn__dot" style={{ background: s.color }}></span>
               {s.label}
             </button>
           ))}
         </div>
 
-        {/* View Switcher + Add */}
-        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+        {/* الإجراءات: تبديل العرض + إضافة */}
+        <div className="tasks-toolbar__actions">
           <div className="tasks-view-switcher">
             <button
               className={`tasks-view-btn ${viewMode === 'list' ? 'active' : ''}`}
