@@ -93,12 +93,23 @@ export interface EmployeeProfile {
   documents?: EmployeeDocument[];
 }
 
+export interface HrOfficeInfo {
+  name?: string;
+  email?: string | null;
+  phone?: string | null;
+  verified?: boolean;
+  sba_license_number?: string | null;
+  sba_license_status?: string | null;
+  national_address?: string | null;
+}
+
 export interface HrStats {
   total: number;
   active: number;
   lawyers: number;
   verified: number;
   expiring_soon: number;
+  office?: HrOfficeInfo | null;
 }
 
 export interface EmployeeFilters {
@@ -124,4 +135,118 @@ export const EMPLOYEE_STATUS_LABELS: Record<EmployeeStatus, string> = {
   on_leave: 'في إجازة',
   suspended: 'موقوف',
   terminated: 'منتهٍ',
+};
+
+// ───────────── عقود العمل (A1) ─────────────
+
+export type EmploymentContractType = 'permanent' | 'fixed_term' | 'part_time' | 'remote' | 'training';
+export type EmploymentContractStatus = 'draft' | 'active' | 'expired' | 'terminated' | 'superseded';
+
+export interface EmploymentContractAddendum {
+  id: number;
+  employment_contract_id: number;
+  addendum_number: number;
+  effective_date?: string | null;
+  title?: string | null;
+  change_summary?: string | null;
+  content?: string | null;
+  created_at?: string;
+}
+
+export interface EmploymentContract {
+  id: number;
+  employee_profile_id: number;
+  contract_number?: string | null;
+  contract_type: EmploymentContractType;
+  start_date: string;
+  end_date?: string | null;
+  probation_end_date?: string | null;
+  // لقطات الراتب — تظهر فقط لمن يملك hr.compensation.view (مخفية بالباك خلاف ذلك).
+  basic_salary_snapshot?: string | number | null;
+  total_salary_snapshot?: string | number | null;
+  job_title_snapshot?: string | null;
+  renewal_mode?: 'manual' | 'auto';
+  auto_renew_notice_days?: number | null;
+  status: EmploymentContractStatus;
+  signed_at?: string | null;
+  notes?: string | null;
+  addendums_count?: number;
+  addendums?: EmploymentContractAddendum[];
+  created_at?: string;
+}
+
+export const CONTRACT_TYPE_LABELS: Record<EmploymentContractType, string> = {
+  permanent: 'دائم',
+  fixed_term: 'محدّد المدة',
+  part_time: 'دوام جزئي',
+  remote: 'عن بُعد',
+  training: 'تدريب',
+};
+
+export const CONTRACT_STATUS_LABELS: Record<EmploymentContractStatus, string> = {
+  draft: 'مسودّة',
+  active: 'ساري',
+  expired: 'منتهٍ',
+  terminated: 'مفسوخ',
+  superseded: 'مُستبدل',
+};
+
+// ───────────── مستندات الموظف (A2) ─────────────
+
+export type EmployeeDocType = 'national_id' | 'iqama' | 'employment_contract' | 'qualification' | 'bar_license' | 'cv' | 'other';
+
+export const DOC_TYPE_LABELS: Record<EmployeeDocType, string> = {
+  national_id: 'الهوية الوطنية',
+  iqama: 'الإقامة',
+  employment_contract: 'عقد العمل',
+  qualification: 'المؤهل العلمي',
+  bar_license: 'رخصة المحاماة',
+  cv: 'السيرة الذاتية',
+  other: 'مستند آخر',
+};
+
+// ───────────── المباشرة/المغادرة (A3) ─────────────
+
+export type ChecklistKind = 'onboarding' | 'offboarding';
+
+export interface HrChecklistItem {
+  id: number;
+  employee_profile_id: number;
+  kind: ChecklistKind;
+  label: string;
+  is_done: boolean;
+  done_at?: string | null;
+  done_by?: number | null;
+  sort: number;
+  meta?: Record<string, unknown> | null;
+  created_at?: string;
+}
+
+export const CHECKLIST_KIND_LABELS: Record<ChecklistKind, string> = {
+  onboarding: 'المباشرة (الالتحاق)',
+  offboarding: 'المغادرة (إخلاء الطرف)',
+};
+
+// ───────────── التقويم الرسمي (B1) ─────────────
+
+export type HolidayType = 'eid_fitr' | 'eid_adha' | 'national_day' | 'founding_day' | 'custom';
+export type HolidayStatus = 'pending' | 'confirmed';
+
+export interface HrHoliday {
+  id: number;
+  name: string;
+  date_gregorian: string;
+  date_hijri_raw?: string | null;
+  type: HolidayType;
+  is_recurring: boolean;
+  source: 'generated' | 'manual';
+  confirmation_status: HolidayStatus;
+}
+
+export const HOLIDAY_TYPE_LABELS: Record<HolidayType, string> = {
+  eid_fitr: 'عيد الفطر',
+  eid_adha: 'عيد الأضحى',
+  national_day: 'اليوم الوطني',
+  founding_day: 'يوم التأسيس',
+  custom: 'مخصّصة',
 };

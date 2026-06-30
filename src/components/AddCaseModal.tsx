@@ -32,6 +32,15 @@ interface User {
   phone?: string;
 }
 
+interface ExtraClient {
+  mode: 'existing' | 'new';
+  clientId: string;
+  name: string;
+  phone: string;
+  email: string;
+  nationalId: string;
+}
+
 interface CaseFormData {
   caseNumber: string;
   clientName: string;
@@ -55,6 +64,7 @@ interface CaseFormData {
   notes: string;
   requiresMemoApproval: boolean;
   memoApprovers: string[];
+  additionalClients: ExtraClient[];
 }
 
 interface AddCaseModalProps {
@@ -94,12 +104,33 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     assignedLawyer: '',
     notes: '',
     requiresMemoApproval: false,
-    memoApprovers: []
+    memoApprovers: [],
+    additionalClients: []
   });
 
   const [errors, setErrors] = useState<Partial<CaseFormData>>({});
   const canManageMemoPolicy = usePermission('memos.approval-policy.manage');
   const [approverError, setApproverError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+
+  const addExtraClient = () => {
+    setFormData(prev => ({
+      ...prev,
+      additionalClients: [...prev.additionalClients, { mode: 'new', clientId: '', name: '', phone: '', email: '', nationalId: '' }],
+    }));
+  };
+  const updateExtraClient = (index: number, field: keyof ExtraClient, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalClients: prev.additionalClients.map((c, i) => i === index ? ({ ...c, [field]: value } as ExtraClient) : c),
+    }));
+  };
+  const removeExtraClient = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalClients: prev.additionalClients.filter((_, i) => i !== index),
+    }));
+  };
 
   const toggleMemoApprover = (id: string) => {
     setFormData(prev => ({
@@ -172,19 +203,25 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
 
   const validateForm = (): boolean => {
     const newErrors: Partial<CaseFormData> = {};
-    if (!formData.caseNumber.trim()) newErrors.caseNumber = 'رقم الملف مطلوب';
+    const isPrepMode = ['draft', 'preparation', 'filed'].includes(formData.status);
+
+    // إلزامي دائماً: العنوان + العميل الرئيسي + المحامي المسؤول
+    if (!formData.caseNumber.trim()) newErrors.caseNumber = 'عنوان القضية مطلوب';
     if (formData.isNewClient) {
       if (!formData.clientName.trim()) newErrors.clientName = 'اسم العميل مطلوب';
       if (!formData.clientPhone.trim()) newErrors.clientPhone = 'رقم هاتف العميل مطلوب';
     } else {
       if (!formData.clientId) newErrors.clientId = 'يرجى اختيار العميل';
     }
-    if (!formData.caseType) newErrors.caseType = 'نوع القضية مطلوب';
-    if (!formData.court) newErrors.court = 'المحكمة مطلوبة';
     if (!formData.assignedLawyer) newErrors.assignedLawyer = 'المحامي المسؤول مطلوب';
-    if (!formData.description.trim()) newErrors.description = 'وصف القضية مطلوب';
-    const isPrepMode = ['draft', 'preparation', 'filed'].includes(formData.status);
-    if (!isPrepMode && !formData.filingDate) newErrors.filingDate = 'تاريخ رفع الدعوى مطلوب';
+
+    // إلزامي للقضية النشطة فقط — المسودة مرحلة تجهيز تتساهل
+    if (!isPrepMode) {
+      if (!formData.caseType) newErrors.caseType = 'نوع القضية مطلوب';
+      if (!formData.court) newErrors.court = 'المحكمة مطلوبة';
+      if (!formData.description.trim()) newErrors.description = 'وصف القضية مطلوب';
+      if (!formData.filingDate) newErrors.filingDate = 'تاريخ رفع الدعوى مطلوب';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -192,6 +229,7 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError('');
     if (!validateForm()) return;
     if (canManageMemoPolicy && formData.requiresMemoApproval && formData.memoApprovers.length === 0) {
       setApproverError('اختر معتمِداً واحداً على الأقل، أو ألغِ اشتراط اعتماد المذكرات.');
@@ -202,8 +240,9 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
       await onSave(formData);
       handleReset();
       onClose();
-    } catch {
-      // الإبقاء على المدخلات والنافذة مفتوحة عند فشل الحفظ (الأب يعرض رسالة الخطأ)
+    } catch (err) {
+      // عرض رسالة الخطأ داخل المودال (يبقى مفتوحاً بمدخلاته) بدل ابتلاعها في الخلف
+      setSubmitError(err instanceof Error && err.message ? err.message : 'تعذّر حفظ القضية. تحقّق من البيانات وحاول مجدداً.');
     }
   };
 
@@ -230,9 +269,11 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
       assignedLawyer: '',
       notes: '',
       requiresMemoApproval: false,
-      memoApprovers: []
+      memoApprovers: [],
+      additionalClients: []
     });
     setErrors({});
+    setSubmitError('');
   };
 
   if (!isOpen) return null;
@@ -274,16 +315,27 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
             <div className="notion-modal-body">
+              {submitError && (
+                <div style={{ background: '#FDECEC', border: '1px solid #f3c5c5', borderRight: '3px solid #EB5757', color: '#b91c1c', padding: '10px 14px', borderRadius: '6px', marginBottom: '14px', fontSize: '13px', whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+                  {submitError}
+                </div>
+              )}
               {/* Icon & Title */}
               <input
                 type="text"
                 className="notion-page-title-input"
-                placeholder="رقم القضية أو اسم الملف..."
+                placeholder="عنوان القضية (مثال: مطالبة مالية - شركة س)"
                 value={formData.caseNumber}
                 onChange={(e) => handleInputChange('caseNumber', e.target.value)}
+                maxLength={255}
                 autoFocus
               />
-              {errors.caseNumber && <span style={{ color: '#EB5757', fontSize: '12px', display: 'block', marginTop: '-16px', marginBottom: '16px' }}>{errors.caseNumber}</span>}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '-12px', marginBottom: '16px' }}>
+                {errors.caseNumber
+                  ? <span style={{ color: '#EB5757', fontSize: '12px' }}>{errors.caseNumber}</span>
+                  : <span />}
+                <span style={{ fontSize: '11px', opacity: 0.45 }}>{formData.caseNumber.length}/255</span>
+              </div>
 
               {/* Properties Grid */}
               <div className="notion-properties">
@@ -506,6 +558,23 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                   </div>
                 </div>
 
+                {/* Contract Value */}
+                <div className="notion-property-row">
+                  <div className="notion-property-label">
+                    <CreditCard className="notion-property-icon" />
+                    <span>قيمة العقد</span>
+                  </div>
+                  <div className="notion-property-value">
+                    <input
+                      type="number"
+                      className="notion-input"
+                      placeholder="بالريال (اختياري)"
+                      value={formData.contractValue}
+                      onChange={(e) => handleInputChange('contractValue', e.target.value)}
+                    />
+                  </div>
+                </div>
+
                 <div className="notion-divider"></div>
 
                 {/* Client Section Header/Toggle */}
@@ -672,6 +741,51 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* عملاء إضافيون (متعددو الموكلين) */}
+                <div className="notion-property-row span-full" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+                  <div className="notion-property-label" style={{ marginBottom: 4 }}>
+                    <Users className="notion-property-icon" />
+                    <span>عملاء إضافيون <span style={{ opacity: 0.5, fontWeight: 400, fontSize: 12 }}>(اختياري — موكلون آخرون في نفس القضية)</span></span>
+                  </div>
+
+                  {formData.additionalClients.map((ec, idx) => (
+                    <div key={idx} style={{ border: '1px solid var(--quiet-gray-200, #e5e7eb)', borderRadius: 8, padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div className="notion-segmented-control">
+                          <button type="button" className={`notion-segment-btn ${ec.mode === 'new' ? 'active' : ''}`} onClick={() => updateExtraClient(idx, 'mode', 'new')}>جديد</button>
+                          <button type="button" className={`notion-segment-btn ${ec.mode === 'existing' ? 'active' : ''}`} onClick={() => updateExtraClient(idx, 'mode', 'existing')}>موجود</button>
+                        </div>
+                        <button type="button" onClick={() => removeExtraClient(idx)} title="حذف هذا العميل"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EB5757', display: 'flex', alignItems: 'center' }}>
+                          <X size={16} />
+                        </button>
+                      </div>
+
+                      {ec.mode === 'existing' ? (
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                          <select className="notion-select" value={ec.clientId} onChange={(e) => updateExtraClient(idx, 'clientId', e.target.value)} style={{ paddingLeft: '28px', width: '100%' }}>
+                            <option value="">اختر عميلاً موجوداً...</option>
+                            {clientsFromProps.map(c => <option key={c.id} value={c.id.toString()}>{c.name}{c.phone ? ` — ${c.phone}` : ''}</option>)}
+                          </select>
+                          <ChevronDown size={14} style={{ position: 'absolute', left: '8px', opacity: 0.4, pointerEvents: 'none' }} />
+                        </div>
+                      ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <input type="text" className="notion-input" placeholder="اسم العميل" value={ec.name} onChange={(e) => updateExtraClient(idx, 'name', e.target.value)} />
+                          <input type="text" className="notion-input" placeholder="رقم الهاتف" value={ec.phone} onChange={(e) => updateExtraClient(idx, 'phone', e.target.value)} />
+                          <input type="email" className="notion-input" placeholder="البريد (اختياري)" value={ec.email} onChange={(e) => updateExtraClient(idx, 'email', e.target.value)} />
+                          <input type="text" className="notion-input" placeholder="رقم الهوية (اختياري)" value={ec.nationalId} onChange={(e) => updateExtraClient(idx, 'nationalId', e.target.value)} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  <button type="button" onClick={addExtraClient}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 6, border: '1px dashed #b8860b', background: 'transparent', color: 'var(--law-navy, #1f3a5f)', cursor: 'pointer', fontSize: 13, fontWeight: 600, alignSelf: 'flex-start' }}>
+                    <UserPlus size={14} /> أضف عميلاً آخر
+                  </button>
+                </div>
 
               </div>
 

@@ -39,6 +39,8 @@ import {
 } from '../../services/bookingService';
 import CreateBookingLinkModal from '../../components/meetings/CreateBookingLinkModal';
 import LinkToCaseModal from '../../components/meetings/LinkToCaseModal';
+import MeetingOutcomeModal from '../../components/meetings/MeetingOutcomeModal';
+import ClientMeetingsCalendar from '../../components/meetings/ClientMeetingsCalendar';
 
 const ClientMeetings: React.FC = () => {
   const { user } = useAuth();
@@ -57,8 +59,11 @@ const ClientMeetings: React.FC = () => {
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [copiedLinkId, setCopiedLinkId] = useState<number | null>(null);
   const [linksViewMode, setLinksViewMode] = useState<'table' | 'cards'>('table');
+  const [meetingsViewMode, setMeetingsViewMode] = useState<'table' | 'calendar'>('table');
   const [timeFilter, setTimeFilter] = useState<'all' | 'today' | 'tomorrow' | 'week' | 'upcoming'>('upcoming');
   const [showExportMenu, setShowExportMenu] = useState(false);
+  // نتيجة الاجتماع: الموعد المعروض في modal النتيجة (إنهاء/عرض/تعديل)
+  const [outcomeMeeting, setOutcomeMeeting] = useState<ClientMeeting | null>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
   // Fetch data
@@ -115,8 +120,9 @@ const ClientMeetings: React.FC = () => {
       const matchesPhone = meeting.client_phone?.includes(term);
       if (!matchesTitle && !matchesClient && !matchesPhone) return false;
     }
-    // Time filter
-    if (timeFilter !== 'all') {
+    // Time filter — يُتجاوز في وضع التقويم لأنه يحدّد النطاق بالشهر المعروض
+    // (وإلا تظهر أيام الماضي فارغة رغم وجود مواعيد فيها)
+    if (timeFilter !== 'all' && meetingsViewMode !== 'calendar') {
       const meetingDate = new Date(meeting.scheduled_at);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -232,14 +238,9 @@ const ClientMeetings: React.FC = () => {
     setActiveMenu(null);
   };
 
-  const handleCompleteMeeting = async (meeting: ClientMeeting) => {
-    const outcome = prompt('ملاحظات عن الاجتماع (اختياري):');
-    try {
-      await clientMeetingService.complete(meeting.id, outcome || undefined);
-      fetchData();
-    } catch (err) {
-      console.error('Error completing meeting:', err);
-    }
+  // فتح modal نتيجة الاجتماع (إنهاء/عرض/تعديل) — بدل prompt
+  const handleOpenOutcome = (meeting: ClientMeeting) => {
+    setOutcomeMeeting(meeting);
     setActiveMenu(null);
   };
 
@@ -270,8 +271,9 @@ const ClientMeetings: React.FC = () => {
     try {
       await bookingLinkService.resend(link.id, 'both');
       alert('تم إعادة إرسال الرابط بنجاح');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error resending link:', err);
+      alert(err?.message || 'تعذّر إعادة إرسال الرابط');
     }
   };
 
@@ -639,6 +641,24 @@ const ClientMeetings: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            {/* Table / Calendar toggle */}
+            <div className="view-toggle">
+              <button
+                className={`view-toggle-btn ${meetingsViewMode === 'table' ? 'view-toggle-btn--active' : ''}`}
+                onClick={() => setMeetingsViewMode('table')}
+                title="عرض جدول"
+              >
+                <Table size={16} />
+              </button>
+              <button
+                className={`view-toggle-btn ${meetingsViewMode === 'calendar' ? 'view-toggle-btn--active' : ''}`}
+                onClick={() => setMeetingsViewMode('calendar')}
+                title="عرض تقويم"
+              >
+                <Calendar size={16} />
+              </button>
+            </div>
           </div>
 
           {/* Meetings List */}
@@ -666,6 +686,18 @@ const ClientMeetings: React.FC = () => {
                 إنشاء رابط حجز
               </button>
             </div>
+          ) : meetingsViewMode === 'calendar' ? (
+            <ClientMeetingsCalendar
+              meetings={filteredMeetings}
+              onSelectMeeting={(m) => {
+                if (m.status === 'completed' || m.status === 'confirmed' || m.status === 'pending') {
+                  handleOpenOutcome(m);
+                } else {
+                  setSelectedMeeting(m);
+                  setShowLinkCaseModal(true);
+                }
+              }}
+            />
           ) : (
             <div className="meetings-table-wrapper">
               <table className="meetings-table">
@@ -737,9 +769,9 @@ const ClientMeetings: React.FC = () => {
                             </button>
                             {activeMenu === meeting.id && (
                               <div className="dropdown-menu">
-                                <button onClick={() => handleCompleteMeeting(meeting)}>
+                                <button onClick={() => handleOpenOutcome(meeting)}>
                                   <CheckCircle size={14} />
-                                  إكمال
+                                  إنهاء وتسجيل النتيجة
                                 </button>
                                 <button onClick={() => handleNoShow(meeting)}>
                                   <AlertTriangle size={14} />
@@ -755,6 +787,16 @@ const ClientMeetings: React.FC = () => {
                               </div>
                             )}
                           </div>
+                        )}
+                        {meeting.status === 'completed' && (
+                          <button
+                            className="result-btn"
+                            onClick={() => handleOpenOutcome(meeting)}
+                            title="عرض نتيجة الاجتماع"
+                          >
+                            <FileText size={13} />
+                            {meeting.outcome ? 'النتيجة' : 'إضافة نتيجة'}
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -882,13 +924,15 @@ const ClientMeetings: React.FC = () => {
                               >
                                 <Mail size={14} />
                               </a>
-                              <button
-                                className="icon-btn-action"
-                                onClick={() => handleResendLink(link)}
-                                title="إعادة إرسال"
-                              >
-                                <RefreshCw size={14} />
-                              </button>
+                              {link.client && (
+                                <button
+                                  className="icon-btn-action"
+                                  onClick={() => handleResendLink(link)}
+                                  title="إعادة إرسال"
+                                >
+                                  <RefreshCw size={14} />
+                                </button>
+                              )}
                             </>
                           )}
                           <button
@@ -966,13 +1010,15 @@ const ClientMeetings: React.FC = () => {
                         >
                           <Mail size={16} />
                         </a>
-                        <button
-                          className="card-action-btn"
-                          onClick={() => handleResendLink(link)}
-                          title="إعادة إرسال"
-                        >
-                          <RefreshCw size={16} />
-                        </button>
+                        {link.client && (
+                          <button
+                            className="card-action-btn"
+                            onClick={() => handleResendLink(link)}
+                            title="إعادة إرسال"
+                          >
+                            <RefreshCw size={16} />
+                          </button>
+                        )}
                       </>
                     )}
                     <button
@@ -1012,6 +1058,17 @@ const ClientMeetings: React.FC = () => {
           onSuccess={() => {
             setShowLinkCaseModal(false);
             setSelectedMeeting(null);
+            fetchData();
+          }}
+        />
+      )}
+
+      {outcomeMeeting && (
+        <MeetingOutcomeModal
+          meeting={outcomeMeeting}
+          onClose={() => setOutcomeMeeting(null)}
+          onSuccess={() => {
+            setOutcomeMeeting(null);
             fetchData();
           }}
         />
@@ -1329,6 +1386,26 @@ const ClientMeetings: React.FC = () => {
         .link-case-btn:hover {
           border-color: var(--law-navy, #1E3A5F);
           color: var(--law-navy, #1E3A5F);
+        }
+
+        .result-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 5px 10px;
+          border-radius: 6px;
+          border: 1px solid var(--color-border, #e5e7eb);
+          background: var(--color-surface, #fff);
+          font-size: 12px;
+          font-weight: 500;
+          color: #2563EB;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+
+        .result-btn:hover {
+          background: #EFF6FF;
+          border-color: #2563EB;
         }
 
         .dropdown {

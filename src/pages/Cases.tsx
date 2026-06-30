@@ -351,14 +351,16 @@ const Cases: React.FC = () => {
 
 			// بناء البيانات حسب نوع العميل
 			const createData: any = {
-				title: caseData.description || caseData.caseNumber || 'قضية جديدة',
-				description: caseData.description || '',
-				type: caseData.caseType || 'civil',
+				title: caseData.caseNumber || 'قضية جديدة',
+				description: caseData.description || null,
+				type: caseData.caseType || (isPrepMode ? undefined : 'civil'),
 				priority: caseData.priority || 'medium',
 				primary_lawyer_id: lawyerId,
 				start_date: caseData.filingDate || null,
 				court_name: caseData.court || null,
-				court_reference: caseData.caseNumber || null,
+				opponent_lawyer: caseData.opponentLawyer || null,
+					case_value: caseData.contractValue ? Number(caseData.contractValue) : null,
+					notes: caseData.notes || null,
 				opposing_party: caseData.opponentName || null,
 				status: caseData.status || 'active'
 			};
@@ -395,12 +397,23 @@ const Cases: React.FC = () => {
 				createData.client_id = clientId;
 			}
 
-			console.log('Sending case data:', createData);
-			await CaseService.createCase(createData);
+			// عملاء إضافيون (متعددو الموكلين) — موجودون أو جدد
+				const extras = (caseData.additionalClients || [])
+					.map((ec: any) => ec.mode === 'existing'
+						? (ec.clientId ? { client_id: parseInt(ec.clientId, 10) } : null)
+						: ((ec.name && ec.phone) ? { name: ec.name, phone: ec.phone, email: ec.email || null, national_id: ec.nationalId || null } : null))
+					.filter(Boolean);
+				if (extras.length > 0) createData.additional_clients = extras;
+			const created = await CaseService.createCase(createData);
 
 			// مسح الكاش وتحديث القضايا
 			localStorage.removeItem(CACHE_KEY);
-			await fetchCases(1, true);
+			if (created?.id) {
+					setIsAddModalOpen(false);
+					navigate(`/cases/${created.id}`);
+					return;
+				}
+				await fetchCases(1, true);
 			setIsAddModalOpen(false);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'خطأ في إضافة القضية');

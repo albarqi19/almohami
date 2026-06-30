@@ -1,4 +1,4 @@
-import { apiClient } from '../utils/api';
+import { apiClient, API_BASE_URL } from '../utils/api';
 import type { AvailableSlot } from './availabilityService';
 
 // ==========================================
@@ -11,6 +11,8 @@ export interface BookingLink {
   lawyer_id: number;
   client_id: number | null;
   case_id: number | null;
+  meeting_type: 'in_person' | 'remote' | 'client_choice';
+  video_meeting_url: string | null;
   token: string;
   expires_at: string;
   is_used: boolean;
@@ -56,8 +58,16 @@ export interface PublicBookingInfo {
 export interface CreateBookingLinkData {
   client_id?: number;
   case_id?: number;
+  meeting_type?: 'in_person' | 'remote' | 'client_choice';
+  video_meeting_url?: string;
   send_notification?: boolean;
   notification_channel?: 'whatsapp' | 'email' | 'both';
+}
+
+export interface EmailSenderInfo {
+  mode: 'company' | 'system';
+  company_email: string | null;
+  system_email: string;
 }
 
 export interface PublicBookingData {
@@ -121,13 +131,21 @@ export const bookingLinkService = {
   async resend(id: number, channel: 'whatsapp' | 'email' | 'both'): Promise<void> {
     await apiClient.post(`/booking-links/${id}/resend`, { channel });
   },
+
+  // معلومات مُرسِل البريد (بريد الشركة أو بريد النظام) — لعرض info في النموذج
+  async getEmailSenderInfo(): Promise<EmailSenderInfo> {
+    const response = await apiClient.get<{ success: boolean; data: EmailSenderInfo }>(
+      '/booking-links/email-sender'
+    );
+    return response.data;
+  },
 };
 
 // ==========================================
 // Public Booking Service (للعملاء - بدون مصادقة)
 // ==========================================
 
-const API_BASE_URL = 'https://api.alraedlaw.com/api/v1';
+// API_BASE_URL مستورد من utils/api (أُزيل التعريف المحلي المكرّر الذي كان يكسر بناء TS — نفس القيمة)
 
 async function publicRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const config: RequestInit = {
@@ -141,8 +159,15 @@ async function publicRequest<T>(endpoint: string, options: RequestInit = {}): Pr
   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    const body = await response.json().catch(() => ({} as any));
+    // أبرِز أول خطأ حقل من استجابة 422 إن وُجد، وإلا الرسالة العامة
+    const firstFieldError =
+      body?.errors && typeof body.errors === 'object'
+        ? (Object.values(body.errors as Record<string, string[]>)[0]?.[0])
+        : undefined;
+    const err = new Error(firstFieldError || body?.message || `HTTP error! status: ${response.status}`);
+    (err as any).errors = body?.errors;
+    throw err;
   }
 
   return response.json();
@@ -210,6 +235,11 @@ export const publicBookingService = {
       }
     );
     return response.data;
+  },
+
+  // رابط تحميل ملف التقويم (ICS) للموعد المحجوز — لإضافته إلى تقويم العميل
+  getCalendarUrl(token: string): string {
+    return `${API_BASE_URL}/public/booking/${token}/calendar.ics`;
   },
 };
 

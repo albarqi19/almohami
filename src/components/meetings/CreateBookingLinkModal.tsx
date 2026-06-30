@@ -10,9 +10,12 @@ import {
   Check,
   Search,
   ChevronDown,
-  Sparkles
+  Video,
+  MapPin,
+  Users,
+  Info
 } from 'lucide-react';
-import { bookingLinkService, type CreateBookingLinkData } from '../../services/bookingService';
+import { bookingLinkService, type CreateBookingLinkData, type EmailSenderInfo } from '../../services/bookingService';
 import { apiClient } from '../../utils/api';
 
 interface Props {
@@ -38,18 +41,24 @@ const CreateBookingLinkModal: React.FC<Props> = ({ onClose, onSuccess }) => {
   // Form State
   const [clientId, setClientId] = useState<number | undefined>();
   const [caseId, setCaseId] = useState<number | undefined>();
+  const [meetingType, setMeetingType] = useState<'client_choice' | 'in_person' | 'remote'>('client_choice');
+  const [videoMeetingUrl, setVideoMeetingUrl] = useState('');
   const [sendNotification, setSendNotification] = useState(true);
   const [notificationChannel, setNotificationChannel] = useState<'whatsapp' | 'email' | 'both'>('both');
 
   // Data State
   const [clients, setClients] = useState<Client[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
+  const [emailSender, setEmailSender] = useState<EmailSenderInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // UI State
   const [showClients, setShowClients] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // رابط الاجتماع مطلوب فقط حين يكون الاجتماع «عن بعد» (لا حين يختار العميل)
+  const showVideoUrlField = meetingType === 'remote';
 
   // Fetch clients and cases
   useEffect(() => {
@@ -80,6 +89,11 @@ const CreateBookingLinkModal: React.FC<Props> = ({ onClose, onSuccess }) => {
       }
     };
     fetchData();
+
+    // معلومات مُرسِل البريد (بريد الشركة أو بريد النظام) — لعرض info للمستخدم
+    bookingLinkService.getEmailSenderInfo()
+      .then(setEmailSender)
+      .catch(() => setEmailSender(null));
   }, []);
 
   // Filter clients
@@ -117,6 +131,17 @@ const CreateBookingLinkModal: React.FC<Props> = ({ onClose, onSuccess }) => {
       return;
     }
 
+    // التحقق من رابط الاجتماع عند «عن بعد»
+    const trimmedUrl = videoMeetingUrl.trim();
+    if (showVideoUrlField && trimmedUrl) {
+      try {
+        new URL(trimmedUrl);
+      } catch {
+        setError('رابط الاجتماع غير صالح');
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
 
@@ -124,6 +149,8 @@ const CreateBookingLinkModal: React.FC<Props> = ({ onClose, onSuccess }) => {
       const data: CreateBookingLinkData = {
         client_id: clientId,
         case_id: caseId,
+        meeting_type: meetingType,
+        video_meeting_url: showVideoUrlField && trimmedUrl ? trimmedUrl : undefined,
         send_notification: sendNotification,
         notification_channel: sendNotification ? notificationChannel : undefined
       };
@@ -241,6 +268,62 @@ const CreateBookingLinkModal: React.FC<Props> = ({ onClose, onSuccess }) => {
               </div>
             </div>
 
+            {/* Meeting Type Selection */}
+            <div className="notion-property">
+              <div className="notion-property__label">
+                <Video size={14} />
+                <span>نوع الاجتماع</span>
+              </div>
+              <div className="notion-property__value notion-property__value--buttons">
+                <button
+                  type="button"
+                  className={`notion-type-btn ${meetingType === 'client_choice' ? 'notion-type-btn--active' : ''}`}
+                  onClick={() => setMeetingType('client_choice')}
+                >
+                  <Users size={12} /> العميل يختار
+                </button>
+                <button
+                  type="button"
+                  className={`notion-type-btn ${meetingType === 'in_person' ? 'notion-type-btn--active' : ''}`}
+                  onClick={() => setMeetingType('in_person')}
+                >
+                  <MapPin size={12} /> حضوري
+                </button>
+                <button
+                  type="button"
+                  className={`notion-type-btn ${meetingType === 'remote' ? 'notion-type-btn--active' : ''}`}
+                  onClick={() => setMeetingType('remote')}
+                >
+                  <Video size={12} /> عن بعد
+                </button>
+              </div>
+            </div>
+
+            {/* Video Meeting URL (remote only) */}
+            {showVideoUrlField && (
+              <>
+                <div className="notion-property">
+                  <div className="notion-property__label">
+                    <Link2 size={14} />
+                    <span>رابط الاجتماع</span>
+                  </div>
+                  <div className="notion-property__value">
+                    <input
+                      type="url"
+                      dir="ltr"
+                      placeholder="https://zoom.us/j/... (اختياري)"
+                      value={videoMeetingUrl}
+                      onChange={(e) => setVideoMeetingUrl(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="booking-hint">
+                  <Info size={12} />
+                  <span>الصق رابط الاجتماع (Zoom / Google Meet / Teams). يصل العميل في رسالة التأكيد. يمكنك تركه فارغاً وإضافته لاحقاً.</span>
+                </div>
+              </>
+            )}
+
             {/* Notification Toggle */}
             <div className="notion-property">
               <div className="notion-property__label">
@@ -289,6 +372,18 @@ const CreateBookingLinkModal: React.FC<Props> = ({ onClose, onSuccess }) => {
                     <span>⚡</span> الكل
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Email sender info — يظهر حين القناة تتضمن البريد */}
+            {sendNotification && (notificationChannel === 'email' || notificationChannel === 'both') && emailSender && (
+              <div className={`booking-hint ${emailSender.mode === 'company' ? 'booking-hint--ok' : ''}`}>
+                <Mail size={12} />
+                <span>
+                  {emailSender.mode === 'company'
+                    ? <>تُرسَل رسائل البريد من بريد شركتك: <strong dir="ltr">{emailSender.company_email}</strong></>
+                    : <>لا يوجد بريد شركة مربوط — تُرسَل الرسائل من بريد النظام: <strong dir="ltr">{emailSender.system_email}</strong>. لربط بريد شركتك، فعّل تكامل Microsoft من الإعدادات.</>}
+                </span>
               </div>
             )}
           </div>
@@ -483,6 +578,26 @@ const CreateBookingLinkModal: React.FC<Props> = ({ onClose, onSuccess }) => {
             color: white;
             border-color: var(--color-primary, #0A192F);
           }
+
+          .booking-hint {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            margin: 6px 0 2px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: var(--color-surface-subtle, #f3f4f6);
+            color: var(--color-text-secondary);
+            font-size: 11.5px;
+            line-height: 1.6;
+          }
+          .booking-hint svg { flex-shrink: 0; margin-top: 2px; }
+          .booking-hint strong { color: var(--color-text); }
+          .booking-hint--ok {
+            background: #ECFDF5;
+            color: #047857;
+          }
+          .booking-hint--ok strong { color: #065F46; }
 
           .notion-property__value--clickable {
             cursor: pointer;

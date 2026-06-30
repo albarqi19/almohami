@@ -16,6 +16,7 @@ import {
   Building2,
   ArrowLeft,
   Globe,
+  CalendarPlus,
 } from 'lucide-react';
 import { publicBookingService, type PublicBookingInfo, type PublicBookingData } from '../../services/bookingService';
 import type { AvailableSlot } from '../../services/availabilityService';
@@ -232,7 +233,10 @@ const PublicBooking: React.FC = () => {
   // Formatters
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
-    return new Date(dateStr).toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'short' });
+    // نبني التاريخ من الأجزاء محلياً — لأن new Date('YYYY-MM-DD') يُفسَّر UTC
+    // فيظهر اليوم السابق لمن هم في منطقة زمنية خلف UTC
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'short' });
   };
 
   const getDayName = (date: Date) => date.toLocaleDateString('ar-SA', { weekday: 'short' });
@@ -301,7 +305,22 @@ const PublicBooking: React.FC = () => {
             )}
           </div>
 
-          <p className="footer-note">تم إرسال التفاصيل إلى بريدك الإلكتروني.</p>
+          {/* أضف إلى التقويم */}
+          {token && (
+            <a
+              href={publicBookingService.getCalendarUrl(token)}
+              className="calendar-add-btn"
+            >
+              <CalendarPlus size={16} /> أضف إلى تقويمك
+            </a>
+          )}
+
+          {bookingResult?.meeting_details?.meeting_type === 'remote' && !bookingResult?.meeting_details?.video_meeting_url && (
+            <p className="footer-note">سيصلك رابط الاجتماع قبل الموعد.</p>
+          )}
+          {booking.clientEmail && (
+            <p className="footer-note">تم إرسال التفاصيل إلى بريدك الإلكتروني.</p>
+          )}
         </div>
         <style>{styles}</style>
       </div>
@@ -345,7 +364,7 @@ const PublicBooking: React.FC = () => {
               <button
                 key={d}
                 className={`pill-btn ${booking.duration === d ? 'active' : ''}`}
-                onClick={() => setBooking(prev => ({ ...prev, duration: d }))}
+                onClick={() => setBooking(prev => ({ ...prev, duration: d, time: '' }))}
               >
                 <Clock size={12} /> {d} دقيقة
               </button>
@@ -469,6 +488,7 @@ const PublicBooking: React.FC = () => {
                 <label>ملاحظات</label>
                 <textarea
                   rows={2}
+                  maxLength={1000}
                   value={booking.notes}
                   onChange={e => setBooking(prev => ({ ...prev, notes: e.target.value }))}
                 ></textarea>
@@ -750,6 +770,14 @@ const styles = `
   
   .meeting-link { color: var(--active-blue); text-decoration: none; display: flex; align-items: center; gap: 4px; }
   .footer-note { font-size: 12px; color: var(--text-light); margin-top: 24px; }
+
+  .calendar-add-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      margin-top: 24px; padding: 12px 22px; width: 100%;
+      background: var(--primary); color: white; text-decoration: none;
+      border-radius: 8px; font-size: 14px; font-weight: 600; transition: background 0.2s;
+  }
+  .calendar-add-btn:hover { background: var(--primary-hover); }
 
   @media (max-width: 480px) {
       .form-row { flex-direction: column; gap: 12px; }
