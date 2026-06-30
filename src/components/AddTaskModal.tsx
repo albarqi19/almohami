@@ -27,6 +27,7 @@ interface AddTaskModalProps {
   onClose: () => void;
   caseId?: string;
   caseTitle?: string;
+  clientId?: string;
   clientName?: string;
   onTaskAdded: () => void;
 }
@@ -36,6 +37,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
   onClose,
   caseId,
   caseTitle,
+  clientId,
   clientName,
   onTaskAdded
 }) => {
@@ -113,6 +115,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
         description: formData.description?.trim() || '',
         type: formData.type || 'other',
         caseId: caseId || undefined,
+        clientId: clientId || undefined,
         assignedTo: formData.assigned_to || undefined,
         priority: formData.priority as any,
         dueDate: new Date(formData.due_date),
@@ -153,7 +156,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
             <div className="modal-header-title">
               <h2>إضافة مهمة جديدة</h2>
               <span className="modal-header-subtitle">
-                {caseTitle ? `القضية: ${caseTitle}` : 'مهمة عامة'}
+                {caseTitle ? `القضية: ${caseTitle}` : clientName ? `العميل: ${clientName}` : 'مهمة عامة'}
               </span>
             </div>
             <button className="modal-close-btn" onClick={onClose}>
@@ -289,6 +292,21 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                   <div className="notion-property-value">
                     <span style={{ fontSize: '13px', color: 'var(--color-text)', opacity: 0.8 }}>
                       {caseTitle}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Related Client (مهمة على مستوى العميل لا قضية) */}
+              {clientName && !caseTitle && (
+                <div className="notion-property">
+                  <div className="notion-property-label">
+                    <User size={14} />
+                    <span>العميل</span>
+                  </div>
+                  <div className="notion-property-value">
+                    <span style={{ fontSize: '13px', color: 'var(--color-text)', opacity: 0.8 }}>
+                      {clientName}
                     </span>
                   </div>
                 </div>

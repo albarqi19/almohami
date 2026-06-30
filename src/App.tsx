@@ -58,6 +58,7 @@ const Notifications = lazyWithRetry(() => import('./pages/Notifications'));
 const Admin = lazyWithRetry(() => import('./pages/Admin'));
 const Statistics = lazyWithRetry(() => import('./pages/Statistics'));
 const Settings = lazyWithRetry(() => import('./pages/Settings'));
+const Archive = lazyWithRetry(() => import('./pages/Archive'));
 const WhatsappSettings = lazyWithRetry(() => import('./pages/WhatsappSettings'));
 const Wekalat = lazyWithRetry(() => import('./pages/Wekalat'));
 const ExecutionRequests = lazyWithRetry(() => import('./pages/ExecutionRequests'));
@@ -429,6 +430,12 @@ function App() {
               <Route path="legal-services/:id" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <LegalServiceDetail />
+                </ProtectedRoute>
+              } />
+              {/* الأرشيف / سلة المحذوفات — للمدير والمالك فقط (الباك إند يفرض الصلاحيات أيضاً) */}
+              <Route path="archive" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                  <Archive />
                 </ProtectedRoute>
               } />
             </Route>

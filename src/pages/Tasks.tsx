@@ -140,7 +140,7 @@ const SortableTaskCard = ({
         </div>
       </div>
 
-      {task.case && (
+      {task.case ? (
         <div
           className="task-card-case-badge"
           title={task.case.title}
@@ -153,7 +153,17 @@ const SortableTaskCard = ({
             {task.case.title}
           </span>
         </div>
-      )}
+      ) : task.client ? (
+        <div
+          className="task-card-case-badge task-card-client-badge"
+          title={`العميل: ${task.client.name}`}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <User size={11} className="case-icon" />
+          <span className="case-text">العميل: {task.client.name}</span>
+        </div>
+      ) : null}
 
       <div className="task-card-title">{task.title}</div>
 
@@ -591,6 +601,10 @@ const Tasks: React.FC = () => {
                             {task.case.file_number ? `#${task.case.file_number} — ` : ''}
                             {task.case.title}
                           </button>
+                        ) : task.client ? (
+                          <span style={{ color: 'var(--color-primary, #2563eb)', fontSize: '12px', fontWeight: 500 }}>
+                            العميل: {task.client.name}
+                          </span>
                         ) : (
                           <span style={{ color: 'var(--color-text-secondary, #94a3b8)', fontSize: '12px' }}>
                             غير مسندة

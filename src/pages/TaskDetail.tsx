@@ -546,8 +546,15 @@ const TaskDetail: React.FC = () => {
                   {(task as any).case.title} <ExternalLink size={11} style={{ opacity: 0.5 }} />
                 </span>
               </Link>
+            ) : (task as any).client ? (
+              <Link to={`/clients/${(task as any).client.id}`} className="task-kv task-kv--link">
+                <span className="task-kv__label"><User size={14} /> العميل</span>
+                <span className="task-kv__value">
+                  {(task as any).client.name} <ExternalLink size={11} style={{ opacity: 0.5 }} />
+                </span>
+              </Link>
             ) : (
-              <div className="task-kv-empty">غير مرتبطة بقضية</div>
+              <div className="task-kv-empty">مهمة عامة (غير مرتبطة)</div>
             )}
           </div>
 

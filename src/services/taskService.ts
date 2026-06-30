@@ -83,6 +83,7 @@ export class TaskService {
       description: taskData.description,
       type: taskData.type || 'other',
       case_id: taskData.caseId,
+      client_id: taskData.clientId,
       assigned_to: taskData.assignedTo,
       priority: taskData.priority,
       due_date: taskData.dueDate?.toISOString(),

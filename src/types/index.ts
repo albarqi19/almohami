@@ -347,6 +347,9 @@ export interface Task {
   comments_count?: number;
   assignee?: { id: string | number; name: string } | null;
   case?: { id: number | string; title: string; file_number?: string | null } | null;
+  // مهمة على مستوى العميل (لا قضية) — العميل المرتبط
+  clientId?: string;
+  client?: { id: number | string; name: string } | null;
   // اعتماد الإنجاز + إلزام المرفق (snake_case كما يرجعها الـ API)
   requires_approval?: boolean;
   requires_attachment?: boolean;
@@ -600,6 +603,7 @@ export interface CreateTaskForm {
   description?: string;
   type?: string;
   caseId?: string;
+  clientId?: string;
   assignedTo?: string;
   priority: Priority;
   dueDate?: Date;

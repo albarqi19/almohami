@@ -26,8 +26,12 @@ import type { CloudStorageFile, CloudStorageStatus } from '../services/cloudStor
 interface CloudFilePickerModalProps {
     isOpen: boolean;
     onClose: () => void;
-    caseId: string;
-    caseTitle: string;
+    caseId?: string;
+    caseTitle?: string;
+    /** اسم السياق البديل (عميل مثلاً) للعرض في العنوان الفرعي. */
+    contextLabel?: string;
+    /** عند تمريرها، تُستدعى بالملفات المحدّدة بدل التسجيل الافتراضي للقضية (لتعيين لعميل). */
+    onAssignFiles?: (files: CloudStorageFile[]) => Promise<void>;
     onFileAssigned: () => void;
 }
 
@@ -41,6 +45,8 @@ const CloudFilePickerModal: React.FC<CloudFilePickerModalProps> = ({
     onClose,
     caseId,
     caseTitle,
+    contextLabel,
+    onAssignFiles,
     onFileAssigned
 }) => {
     const [status, setStatus] = useState<CloudStorageStatus | null>(null);
@@ -146,6 +152,18 @@ const CloudFilePickerModal: React.FC<CloudFilePickerModalProps> = ({
         setError(null);
 
         try {
+            // وضع التعيين المخصّص (عميل): استدعاء المعالج الممرّر بدل تسجيل القضية.
+            if (onAssignFiles) {
+                await onAssignFiles(selectedFiles.filter((f) => !f.is_folder));
+                setSuccess('تم تعيين الملفات بنجاح');
+                setTimeout(() => {
+                    onFileAssigned();
+                    onClose();
+                }, 1200);
+                setSaving(false);
+                return;
+            }
+
             let filesCount = 0;
             let foldersCount = 0;
 
@@ -158,7 +176,7 @@ const CloudFilePickerModal: React.FC<CloudFilePickerModalProps> = ({
                 }
 
                 await CloudStorageService.registerUploadedFile({
-                    case_id: parseInt(caseId),
+                    case_id: parseInt(caseId || '0'),
                     cloud_file_id: file.id,
                     file_name: file.name,
                     file_size: file.size || 0,
@@ -235,7 +253,7 @@ const CloudFilePickerModal: React.FC<CloudFilePickerModalProps> = ({
                                 تعيين ملفات سحابية
                             </div>
                             <div className="task-modal-subtitle">
-                                {caseTitle}
+                                {caseTitle || contextLabel}
                             </div>
                         </div>
                         <button className="task-modal-close" onClick={onClose}>

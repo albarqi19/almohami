@@ -2,7 +2,7 @@ import {
   Home, FileText, FileCheck, Calendar, Scale, Briefcase, Users, Clock, CheckSquare,
   BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature, Receipt, CreditCard,
   TrendingUp, Bell, Settings, ClipboardList, BarChart3, FolderUp, QrCode, Lightbulb,
-  Landmark, AlarmClock, Archive, UserCog,
+  Landmark, AlarmClock, Archive, UserCog, Trash2,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -76,6 +76,8 @@ export const settingsMenuItems: SidebarItem[] = [
   { icon: FileText, label: 'قوالب العقود', path: '/settings/contract-templates', permission: 'contracts.templates.manage' },
   { icon: BarChart3, label: 'تقرير الأداء', path: '/lawyers-report', permission: 'reports.view' },
   { icon: Users, label: 'المستخدمين', path: '/users', permission: 'users.view' },
+  // سلة المحذوفات — للمدير والمالك فقط (استعادة/حذف نهائي للقضايا والوكالات والعملاء).
+  { icon: Trash2, label: 'سلة المحذوفات', path: '/archive', roles: ['admin', 'owner'] },
   { icon: Bell, label: 'التنبيهات', path: '/notifications', permission: null },
   { icon: MessageSquare, label: 'الواتساب', path: '/whatsapp-settings', permission: 'whatsapp.send' },
   { icon: Settings, label: 'الإعدادات', path: '/settings', permission: null },

@@ -20,6 +20,8 @@ import EditClientInfoModal from '../components/EditClientInfoModal';
 import ClientExportModal from '../components/ClientExportModal';
 import LogCommunicationModal from '../components/LogCommunicationModal';
 import ClientQuickActionsBar from '../components/ClientQuickActionsBar';
+import AddTaskModal from '../components/AddTaskModal';
+import ClientDocumentsManager from '../components/ClientDocumentsManager';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'fee_proposals' | 'communications' | 'activities';
@@ -35,6 +37,7 @@ const ClientDetailPage: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isLogCommModalOpen, setIsLogCommModalOpen] = useState(false);
+  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState('');
   const [notesSaving, setNotesSaving] = useState(false);
 
@@ -326,9 +329,9 @@ const ClientDetailPage: React.FC = () => {
       <ClientQuickActionsBar
         clientPhone={client.phone}
         onCreateCase={() => navigate(`/cases?new=1&client_id=${client.id}`)}
-        onCreateTask={() => navigate(`/tasks?new=1&client_id=${client.id}`)}
+        onCreateTask={() => setIsAddTaskModalOpen(true)}
         onCreateAppointment={() => navigate(`/meetings/client?new=1&client_id=${client.id}`)}
-        onUploadDocument={() => navigate(`/documents?client_id=${client.id}`)}
+        onUploadDocument={() => setActiveTab('documents')}
         onCreateWekala={() => navigate('/wekalat')}
         onLogCommunication={() => setIsLogCommModalOpen(true)}
       />
@@ -396,7 +399,14 @@ const ClientDetailPage: React.FC = () => {
               <TasksTab tasks={visibleTasks} counts={taskCounts} filter={tasksFilter} setFilter={setTasksFilter} loading={tasksQuery.isLoading}
                 onTaskClick={(id) => navigate(`/tasks/${id}`)} />
             )}
-            {activeTab === 'documents' && <DocumentsTab documents={documents} loading={documentsQuery.isLoading} />}
+            {activeTab === 'documents' && clientId && (
+              <ClientDocumentsManager
+                clientId={clientId}
+                clientName={client.name}
+                caseDocuments={documents}
+                caseDocsLoading={documentsQuery.isLoading}
+              />
+            )}
             {activeTab === 'wekalat' && <WekalatTab wekalat={wekalat} loading={wekalatQuery.isLoading} />}
             {activeTab === 'fee_proposals' && clientId && (
               <ClientFeeProposalsTab
@@ -509,6 +519,19 @@ const ClientDetailPage: React.FC = () => {
           onClose={() => setIsLogCommModalOpen(false)}
           clientId={client.id}
           onLogged={handleLogged}
+        />
+      )}
+      {client && (
+        <AddTaskModal
+          isOpen={isAddTaskModalOpen}
+          onClose={() => setIsAddTaskModalOpen(false)}
+          clientId={String(client.id)}
+          clientName={client.name}
+          onTaskAdded={() => {
+            setIsAddTaskModalOpen(false);
+            queryClient.invalidateQueries({ queryKey: ['client-tasks', clientId] });
+            queryClient.invalidateQueries({ queryKey: ['client-details', clientId] });
+          }}
         />
       )}
     </div>
@@ -658,14 +681,20 @@ const TasksTab: React.FC<{
         <div className="client-table-wrap">
           <table className="client-table">
             <thead>
-              <tr><th>#</th><th>المهمة</th><th>القضية</th><th>الأولوية</th><th>الموعد</th><th>الحالة</th></tr>
+              <tr><th>#</th><th>المهمة</th><th>القضية / العميل</th><th>الأولوية</th><th>الموعد</th><th>الحالة</th></tr>
             </thead>
             <tbody>
               {tasks.map((t: any, i: number) => (
                 <tr key={t.id} onClick={() => onTaskClick(t.id)} className="client-table__row">
                   <td>{i + 1}</td>
                   <td className="client-table__title">{t.title || '-'}</td>
-                  <td>{t.case ? `${t.case.file_number || ''} ${t.case.title || ''}`.trim() : '—'}</td>
+                  <td>
+                    {t.case
+                      ? `${t.case.file_number || ''} ${t.case.title || ''}`.trim()
+                      : t.client
+                        ? <span className="client-task-badge">العميل: {t.client.name}</span>
+                        : '—'}
+                  </td>
                   <td>{priorityBadge(t.priority)}</td>
                   <td className="client-table__date">{formatDate(t.due_date)}</td>
                   <td>{taskStatusBadge(t.status)}</td>

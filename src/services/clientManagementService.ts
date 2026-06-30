@@ -491,6 +491,63 @@ export class ClientManagementService {
         const response = await apiClient.get<any>(`/client-management/${clientId}/wekalat`);
         return response.data || [];
     }
+
+    // ===== مستندات العميل الثابتة (client_documents عبر OneDrive) =====
+
+    /** قائمة المستندات الثابتة للعميل (هوية/سجل تجاري/عقد/توكيل). */
+    static async getClientPermanentDocuments(clientId: number | string): Promise<any[]> {
+        const response = await apiClient.get<any>(`/client-management/${clientId}/client-documents`);
+        return response.data || [];
+    }
+
+    /** الخطوة 1: رابط رفع OneDrive لمجلد العميل. */
+    static async getClientDocUploadUrl(clientId: number | string, fileName: string): Promise<{ upload_url: string; folder_id?: string }> {
+        const response = await apiClient.post<any>(`/client-management/${clientId}/client-documents/upload-url`, { file_name: fileName });
+        return response.data;
+    }
+
+    /** الخطوة 3: تسجيل المستند بعد رفعه مباشرةً إلى OneDrive (رفع جديد، بحارس الانتماء). */
+    static async registerClientDocument(clientId: number | string, payload: {
+        doc_type: string; cloud_file_id: string; file_name: string;
+        title?: string; document_number?: string; mime_type?: string; file_size?: number;
+        issue_date_gregorian?: string; expiry_date_gregorian?: string;
+    }): Promise<any> {
+        const response = await apiClient.post<any>(`/client-management/${clientId}/client-documents`, payload);
+        return response.data;
+    }
+
+    /** تعيين ملف موجود مسبقاً من درايف المكتب لملف العميل (لا حارس مجلد). */
+    static async assignClientDocument(clientId: number | string, payload: {
+        doc_type: string; cloud_file_id: string; file_name: string;
+        title?: string; document_number?: string; mime_type?: string; file_size?: number;
+    }): Promise<any> {
+        const response = await apiClient.post<any>(`/client-management/${clientId}/client-documents/assign`, payload);
+        return response.data;
+    }
+
+    /** رابط تنزيل مؤقت لمستند العميل. */
+    static async downloadClientDocument(clientId: number | string, docId: number | string): Promise<string> {
+        const response = await apiClient.get<any>(`/client-management/${clientId}/client-documents/${docId}/download`);
+        const url = response.data?.url;
+        if (!url) throw new Error('تعذّر الحصول على رابط التنزيل');
+        return url;
+    }
+
+    static async deleteClientDocument(clientId: number | string, docId: number | string): Promise<void> {
+        await apiClient.delete<any>(`/client-management/${clientId}/client-documents/${docId}`);
+    }
 }
+
+/** تصنيفات مستندات العميل الثابتة (تطابق ClientDocument::DOC_TYPES في الباك). */
+export const CLIENT_DOC_TYPES: ReadonlyArray<{ value: string; label: string }> = [
+    { value: 'national_id', label: 'الهوية الوطنية' },
+    { value: 'commercial_registration', label: 'السجل التجاري' },
+    { value: 'contract', label: 'عقد' },
+    { value: 'power_of_attorney', label: 'وكالة / توكيل' },
+    { value: 'other', label: 'أخرى' },
+];
+
+export const clientDocTypeLabel = (t: string): string =>
+    CLIENT_DOC_TYPES.find((x) => x.value === t)?.label ?? t;
 
 export default ClientManagementService;
