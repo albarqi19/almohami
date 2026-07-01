@@ -158,6 +158,12 @@ export interface Case {
   najiz_status?: string;
   najiz_status_arabic?: string | null;
   source?: string;
+  // طلبات الإفلاس — صف مرساة يظهر في قائمة القضايا بلون مميّز ويوجّه لصفحة مختلفة
+  is_bankruptcy?: boolean;
+  bankruptcy_request_id?: number | null;
+  // الصلح (تراضي) — صف مرساة يظهر في قائمة القضايا بشارة خضراء ويعرض تفاصيل الصلح
+  is_reconciliation?: boolean;
+  reconciliation_request_id?: number;
   // Case demands and proofs
   case_demands?: string;
   case_proofs?: string;
@@ -184,6 +190,123 @@ export interface Case {
   outcome_celebrated_by_current_user?: boolean; // per-user flag
   ai_outcome_was_correct?: boolean | null;
   client_role?: 'plaintiff' | 'defendant' | 'third_party' | 'unknown';
+}
+
+// ===== طلبات الإفلاس (Bankruptcy) — مرآة لمخطط الباك (keys snake_case) =====
+
+export interface BankruptcyParty {
+  id: number;
+  party_role: 'applicant' | 'debtor' | 'creditor' | 'trustee' | string;
+  name?: string | null;
+  identity_number?: string | null;
+  commercial_registration_number?: string | null;
+  is_organized_entity?: boolean | null;
+  mobile?: string | null;
+  email?: string | null;
+  debt_value?: string | number | null;
+  due_date?: string | null;
+  debt_origin?: string | null;
+  is_guaranteed?: boolean | null;
+}
+
+export interface BankruptcySession {
+  id: number;
+  object_key?: string | null;
+  session_number?: number | null;
+  session_type?: string | null;
+  session_date?: string | null;
+  session_time?: string | null;
+  session_text?: string | null;
+  session_judgement?: string | null;
+  session_status?: string | null;
+  court_name?: string | null;
+  is_video_conference?: boolean;
+  video_conference_url?: string | null;
+}
+
+export interface BankruptcyJudgement {
+  id: number;
+  code?: string | null;
+  judgement_type?: string | null;
+  judgement_status?: string | null;
+  court_name?: string | null;
+  subject?: string | null;
+  reasons?: string | null;
+  text?: string | null;
+  delivery_date?: string | null;
+  available_for_objection?: boolean;
+  objection_due_date?: string | null;
+}
+
+export interface BankruptcyDecision {
+  id: number;
+  code?: string | null;
+  decision_type_name?: string | null;
+  decision_status?: string | null;
+  decision_date?: string | null;
+}
+
+export interface BankruptcySubRequest {
+  id: number;
+  bankruptcy_request_id: number;
+  parent_sub_request_id?: number | null;
+  object_key: string;
+  sub_request_code?: string | null;
+  request_type_id?: number | null;
+  request_type_name?: string | null;
+  status_id?: number | null;
+  status_name?: string | null;
+  degree_name?: string | null;
+  court_name?: string | null;
+  sub_circle_name?: string | null;
+  applicant_name?: string | null;
+  applicant_user_id?: number | null;
+  applicant_user?: { id: number; name: string } | null;
+  is_internal?: boolean;
+  request_date?: string | null;
+  request_data?: string | null;
+  sessions?: BankruptcySession[];
+  judgements?: BankruptcyJudgement[];
+  decisions?: BankruptcyDecision[];
+}
+
+export interface BankruptcyRequest {
+  id: number;
+  case_id: number;
+  object_key: string;
+  request_code?: string | null;
+  request_reason?: string | null;
+  category_name?: string | null;
+  procedure_type_name?: string | null;
+  status_id?: number | null;
+  status_name?: string | null;
+  request_owner_type_name?: string | null;
+  legal_capacity_name?: string | null;
+  court_name?: string | null;
+  applicant_name?: string | null;
+  identity_number?: string | null;
+  has_opened_procedure?: boolean;
+  opened_procedure_name?: string | null;
+  request_date?: string | null;
+  parties?: BankruptcyParty[];
+  sessions?: BankruptcySession[];
+  judgements?: BankruptcyJudgement[];
+  decisions?: BankruptcyDecision[];
+  sub_requests?: BankruptcySubRequest[];
+}
+
+export interface BankruptcyDetail {
+  case: {
+    id: number;
+    file_number: string;
+    title: string;
+    status: string;
+    status_arabic: string;
+    court?: string | null;
+    is_bankruptcy: boolean;
+    lawyers: { id: number; name: string }[];
+  };
+  request: BankruptcyRequest;
 }
 
 // Case Party - طرف القضية
@@ -225,6 +348,76 @@ export interface CaseJudgement {
   remaining_objection_days?: number;
   objection_due_date?: string;
   spid?: string;
+}
+
+// ===== الصلح (تراضي) =====
+export interface ReconciliationParty {
+  id: number;
+  party_role: string; // claimant | defendant | representative | additional
+  party_type?: string;
+  full_name?: string;
+  identity_number?: string;
+  id_type?: string;
+  nationality?: string;
+  phone_number?: string;
+  company_name?: string;
+  cr_number?: string;
+  representative_type?: string;
+  is_primary?: boolean;
+  delegates?: any[];
+  wakala_details?: any[];
+}
+
+export interface ReconciliationSession {
+  id: number;
+  py_id?: string;
+  status_work?: string;
+  status_label?: string;
+  is_link_sent?: boolean;
+  session_start_time?: string;
+  session_end_time?: string;
+  meeting_link?: string;
+}
+
+export interface ReconciliationAgreement {
+  id: number;
+  py_id?: string;
+  status_work?: string;
+  status_label?: string;
+  requester_name?: string;
+  resolved_timestamp?: string;
+}
+
+export interface ReconciliationRequest {
+  id: number;
+  py_id: string;
+  requester_name?: string;
+  status_work?: string;
+  status_label?: string;
+  category_value?: string;
+  summary?: string;
+  summary_by_mediator?: string;
+  monetary_value?: string;
+  monetary_type?: string;
+  request_type?: string;
+  mediator_name?: string;
+  claim_hijri_date?: string;
+  parties?: ReconciliationParty[];
+  sessions?: ReconciliationSession[];
+  agreements?: ReconciliationAgreement[];
+}
+
+export interface ReconciliationData {
+  case: {
+    id: number;
+    file_number: string;
+    title: string;
+    status: string;
+    status_arabic?: string;
+    is_reconciliation: boolean;
+    lawyers?: { id: number; name: string }[];
+  };
+  request: ReconciliationRequest;
 }
 
 // Case Session - جلسة القضية

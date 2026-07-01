@@ -1,0 +1,171 @@
+/**
+ * صفحة تفاصيل «طلب الإفلاس» — هوية فلات صرف (بلا توهّج/تدرّج)، كثافة ERP، تمييز ذهبي رفيع.
+ * تُحمَّل مركزياً عبر appStyles.ts.
+ */
+
+.bk-page {
+  padding: 16px 20px 48px;
+  max-width: 1180px;
+  margin: 0 auto;
+  color: var(--color-text-primary, #1f2937);
+}
+
+/* ── الهيدر ── */
+.bk-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--dashboard-card, #fff);
+  border: 1px solid var(--quiet-gray-200, #e5e7eb);
+  border-right: 3px solid var(--law-gold, #B8860B);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.bk-header__main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.bk-header__title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bk-header__title { font-size: 17px; font-weight: 700; margin: 0; }
+.bk-header__code { font-family: 'SF Mono', 'Consolas', monospace; font-size: 12px; color: var(--color-text-secondary, #6b7280); }
+.bk-header__meta { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--color-text-secondary, #6b7280); }
+.bk-header__meta-item { display: inline-flex; align-items: center; gap: 5px; }
+.bk-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--law-navy, #1E3A5F);
+  background: none; border: none; cursor: pointer; padding: 4px 0;
+}
+.bk-back:hover { text-decoration: underline; }
+
+.bk-pill {
+  display: inline-block; padding: 2px 9px; border-radius: 4px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.bk-pill--gold { background: rgba(184, 134, 11, 0.15); color: var(--law-gold, #B8860B); }
+.bk-pill--navy { background: var(--law-navy-light, #eef2f7); color: var(--law-navy, #1E3A5F); }
+.bk-pill--muted { background: var(--quiet-gray-100, #f3f4f6); color: var(--color-text-secondary, #6b7280); }
+
+/* ── التبويبات ── */
+.bk-tabs {
+  display: flex; gap: 2px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--quiet-gray-200, #e5e7eb);
+  margin-bottom: 14px;
+}
+.bk-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; font-size: 13px; font-weight: 500;
+  color: var(--color-text-secondary, #6b7280);
+  background: none; border: none; border-bottom: 2px solid transparent;
+  cursor: pointer; margin-bottom: -1px;
+}
+.bk-tab:hover { color: var(--law-navy, #1E3A5F); }
+.bk-tab--active { color: var(--law-navy, #1E3A5F); border-bottom-color: var(--law-gold, #B8860B); font-weight: 600; }
+.bk-tab__count {
+  font-size: 11px; background: var(--quiet-gray-100, #f3f4f6);
+  color: var(--color-text-secondary, #6b7280); border-radius: 8px; padding: 0 6px;
+}
+
+/* ── البطاقات والشبكات ── */
+.bk-card {
+  background: var(--dashboard-card, #fff);
+  border: 1px solid var(--quiet-gray-200, #e5e7eb);
+  border-radius: 8px; padding: 14px 16px; margin-bottom: 12px;
+}
+.bk-card__title {
+  font-size: 13px; font-weight: 700; margin: 0 0 10px;
+  display: flex; align-items: center; gap: 7px; color: var(--law-navy, #1E3A5F);
+}
+.bk-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px 18px;
+}
+.bk-field { display: flex; flex-direction: column; gap: 2px; }
+.bk-field__label { font-size: 11px; color: var(--color-text-secondary, #9ca3af); }
+.bk-field__value { font-size: 13px; color: var(--color-text-primary, #1f2937); word-break: break-word; }
+.bk-longtext {
+  font-size: 13px; line-height: 1.7; white-space: pre-wrap;
+  background: var(--quiet-gray-50, #f9fafb); border: 1px solid var(--quiet-gray-100, #f3f4f6);
+  border-radius: 6px; padding: 10px 12px; margin-top: 6px;
+}
+
+/* ── أطراف ── */
+.bk-parties { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.bk-party {
+  border: 1px solid var(--quiet-gray-200, #e5e7eb); border-radius: 6px; padding: 10px 12px;
+}
+.bk-party__role { font-size: 11px; font-weight: 700; margin-bottom: 5px; }
+.bk-party__role--debtor { color: #b45309; }
+.bk-party__role--creditor { color: #1d4ed8; }
+.bk-party__role--applicant { color: var(--law-navy, #1E3A5F); }
+.bk-party__role--trustee { color: #6d28d9; }
+.bk-party__name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+
+/* ── جداول مدمجة (جلسات/أحكام/قرارات) ── */
+.bk-list { display: flex; flex-direction: column; gap: 8px; }
+.bk-item {
+  border: 1px solid var(--quiet-gray-200, #e5e7eb); border-radius: 6px; padding: 10px 12px;
+}
+.bk-item__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.bk-item__head-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; font-weight: 600; }
+.bk-item__meta { font-size: 11px; color: var(--color-text-secondary, #6b7280); display: flex; gap: 12px; flex-wrap: wrap; }
+
+.bk-empty {
+  text-align: center; padding: 28px 16px; color: var(--color-text-secondary, #9ca3af); font-size: 13px;
+}
+
+/* ── أكورديون الطلبات الفرعية (متفرّع) ── */
+.bk-sub { border: 1px solid var(--quiet-gray-200, #e5e7eb); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+.bk-sub--child { margin-inline-start: 18px; border-right: 2px solid var(--law-gold, #B8860B); }
+.bk-sub__head {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer;
+  background: var(--quiet-gray-50, #f9fafb); user-select: none;
+}
+.bk-sub__head:hover { background: var(--quiet-gray-100, #f3f4f6); }
+.bk-sub__chev { color: var(--color-text-secondary, #9ca3af); transition: transform 0.15s ease; flex-shrink: 0; }
+.bk-sub__chev--open { transform: rotate(90deg); }
+.bk-sub__title { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; }
+.bk-sub__code { font-family: 'SF Mono', 'Consolas', monospace; font-size: 11px; color: var(--color-text-secondary, #6b7280); }
+.bk-sub__body { padding: 12px; border-top: 1px solid var(--quiet-gray-200, #e5e7eb); }
+.bk-sub__section-title {
+  font-size: 12px; font-weight: 700; color: var(--law-navy, #1E3A5F);
+  margin: 10px 0 6px; display: flex; align-items: center; gap: 6px;
+}
+.bk-sub__section-title:first-child { margin-top: 0; }
+
+/* ── عارض الضبط/الحكم (overlay فلات) ── */
+.bk-viewer-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.bk-viewer {
+  background: var(--dashboard-card, #fff);
+  border: 1px solid var(--quiet-gray-200, #e5e7eb);
+  border-radius: 10px; width: min(760px, 100%); max-height: 84vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.bk-viewer__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 16px; border-bottom: 1px solid var(--quiet-gray-200, #e5e7eb);
+}
+.bk-viewer__title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--law-navy, #1E3A5F);
+}
+.bk-viewer__close {
+  background: none; border: none; cursor: pointer; padding: 4px;
+  color: var(--color-text-secondary, #6b7280); border-radius: 6px;
+}
+.bk-viewer__close:hover { background: var(--quiet-gray-100, #f3f4f6); }
+.bk-viewer__body {
+  padding: 14px 16px; overflow-y: auto;
+  font-size: 13px; line-height: 1.9; white-space: pre-wrap;
+}
+
+/* حالة التحميل/الخطأ */
+@keyframes spin { to { transform: rotate(360deg); } }
+.bk-spin { color: var(--law-gold, #B8860B); }
+.bk-state { text-align: center; padding: 60px 20px; color: var(--color-text-secondary, #6b7280); }
+.bk-state__title { font-size: 15px; font-weight: 600; margin: 10px 0 4px; color: var(--color-text-primary, #1f2937); }

@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   Edit,
@@ -55,17 +55,19 @@ import { SendSessionReportModal } from '../components/SendSessionReportModal';
 import OutcomeBadge from '../components/OutcomeBadge';
 import WinCelebrationModal from '../components/WinCelebrationModal';
 import ReplayCelebrationButton from '../components/ReplayCelebrationButton';
+import ReconciliationSection from '../components/ReconciliationSection';
 import { useAuth } from '../contexts/AuthContext';
 import type { TimelineEvent } from '../components/Timeline';
 import { apiClient } from '../utils/api';
 import { toHijri } from '../utils/hijriDate';
 import { CaseService } from '../services/caseService';
+import { ReconciliationService } from '../services/reconciliationService';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 import { ActivityService } from '../services/activityService';
 import deadlineService, { type LegalDeadline } from '../services/deadlineService';
 import { DocumentService } from '../services/documentService';
 import { TaskService } from '../services/taskService';
-import type { Case } from '../types';
+import type { Case, ReconciliationData } from '../types';
 
 // العداد الحي لمهلة الاعتراض — live_remaining_objection_days يحسبه الباك من
 // objection_due_date عند كل قراءة، لأن remaining_objection_days المخزن snapshot
@@ -94,7 +96,9 @@ const objectionDaysLabel = (days: number | null): string => {
 const CaseDetailPage: React.FC = () => {
   const { caseId } = useParams<{ caseId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [caseData, setCaseData] = useState<Case | null>(null);
+  const [reconciliationData, setReconciliationData] = useState<ReconciliationData | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationReplayMode, setCelebrationReplayMode] = useState(false);
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
@@ -127,6 +131,16 @@ const CaseDetailPage: React.FC = () => {
   // Ref to prevent duplicate fetches
   const hasFetchedRef = useRef<string | null>(null);
 
+  // صفوف المرساة (إفلاس/صلح) لها صفحات مخصّصة — الروابط القديمة /cases/{id} تُحوَّل تلقائياً
+  useEffect(() => {
+    if (!caseData) return;
+    if ((caseData as any).is_bankruptcy) {
+      navigate(`/bankruptcy/${caseData.id}`, { replace: true });
+    } else if ((caseData as any).is_reconciliation) {
+      navigate(`/reconciliation/${caseData.id}`, { replace: true });
+    }
+  }, [caseData, navigate]);
+
   // المهل النظامية المفتوحة لهذه القضية — لشريط الإنذار أعلى الصفحة
   useEffect(() => {
     if (!caseId) return;
@@ -158,6 +172,19 @@ const CaseDetailPage: React.FC = () => {
         ]);
 
         setCaseData(fetchedCase);
+
+        // تفاصيل الصلح (تراضي) — تُجلب لصفّ المرساة (is_reconciliation) عند فتح القضية. فشلها لا يكسر الصفحة.
+        if ((fetchedCase as any).is_reconciliation) {
+          try {
+            const rec = await ReconciliationService.getReconciliation(caseId);
+            setReconciliationData(rec);
+          } catch {
+            setReconciliationData(null);
+          }
+        } else {
+          setReconciliationData(null);
+        }
+
         setDocumentsCount(documents ? documents.length : 0);
         setTasksCount(tasksData?.data?.length || 0);
 
@@ -241,6 +268,19 @@ const CaseDetailPage: React.FC = () => {
       ]);
 
       setCaseData(fetchedCase);
+
+      // تفاصيل الصلح (تراضي) — تُجلب فقط لصفّ المرساة (is_reconciliation). فشلها لا يكسر الصفحة.
+      if ((fetchedCase as any).is_reconciliation) {
+        try {
+          const rec = await ReconciliationService.getReconciliation(caseId);
+          setReconciliationData(rec);
+        } catch {
+          setReconciliationData(null);
+        }
+      } else {
+        setReconciliationData(null);
+      }
+
       setDocumentsCount(documents ? documents.length : 0);
 
       const timelineEventsData: TimelineEvent[] = activities.map(activity => ({
@@ -899,8 +939,8 @@ const CaseDetailPage: React.FC = () => {
             </div>
           )}
 
-          {/* Judgements Section - الأحكام القضائية */}
-          {caseData.judgements && caseData.judgements.length > 0 && (
+          {/* Judgements Section - الأحكام القضائية (يُخفى لطلبات الصلح — يحلّ محلّه قسم «وثيقة الصلح») */}
+          {!caseData.is_reconciliation && caseData.judgements && caseData.judgements.length > 0 && (
             <div className="case-card">
               <div className="case-card__header">
                 <div className="case-card__title">
@@ -952,6 +992,9 @@ const CaseDetailPage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Reconciliation (تراضي) — يحلّ محلّ «الأحكام»: معلومات الصلح + الأطراف + الجلسات + وثيقة الصلح */}
+          {caseData.is_reconciliation && <ReconciliationSection data={reconciliationData} />}
 
           {/* Timeline Section */}
           <div className="case-timeline-section" data-tour="case-timeline">

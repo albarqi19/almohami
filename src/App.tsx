@@ -40,6 +40,8 @@ const Layout = lazyWithRetry(() => import('./components/Layout'));
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
 const Cases = lazyWithRetry(() => import('./pages/Cases'));
 const CaseDetailPage = lazyWithRetry(() => import('./pages/CaseDetailPage'));
+const BankruptcyDetailPage = lazyWithRetry(() => import('./pages/BankruptcyDetailPage'));
+const ReconciliationDetailPage = lazyWithRetry(() => import('./pages/ReconciliationDetailPage'));
 const UpcomingSessions = lazyWithRetry(() => import('./pages/UpcomingSessions'));
 const LegalDeadlines = lazyWithRetry(() => import('./pages/LegalDeadlines'));
 const SessionPrep = lazyWithRetry(() => import('./pages/SessionPrep'));
@@ -176,6 +178,18 @@ function App() {
               <Route path="cases/:caseId" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <CaseDetailPage />
+                </ProtectedRoute>
+              } />
+              {/* طلبات الإفلاس — صفحة تفاصيل مختلفة تماماً عن القضية (نفس أدوار القضايا) */}
+              <Route path="bankruptcy/:caseId" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                  <BankruptcyDetailPage />
+                </ProtectedRoute>
+              } />
+              {/* طلبات الصلح (تراضي) — صفحة تفاصيل مناسبة للصلح بدل تفاصيل قضية ناجز */}
+              <Route path="reconciliation/:caseId" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                  <ReconciliationDetailPage />
                 </ProtectedRoute>
               } />
               <Route path="sessions" element={

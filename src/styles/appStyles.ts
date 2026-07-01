@@ -103,3 +103,4 @@ import './phone-field.css';
 import './task-approval.css';
 import './correspondence-compose.css';
 import './hr-page.css';
+import './bankruptcy-detail.css';

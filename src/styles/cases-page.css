@@ -480,6 +480,23 @@ body.dark .cases-table thead {
     color: var(--status-blue, #2563eb);
 }
 
+/* طلبات الإفلاس — تمييز فلات صرف: خلفية ذهبية خفيفة + شريط ذهبي رفيع على الحافة الأمامية
+   (RTL: td:first-child = أقصى اليمين). بلا توهّج/تدرّج. */
+.cases-table tbody tr.is-bankruptcy {
+    background: rgba(184, 134, 11, 0.05);
+}
+.cases-table tbody tr.is-bankruptcy:hover {
+    background: rgba(184, 134, 11, 0.1);
+}
+.cases-table tbody tr.is-bankruptcy td:first-child {
+    border-right: 3px solid var(--law-gold);
+}
+.erp-cell__tag--bankruptcy {
+    background: rgba(184, 134, 11, 0.15);
+    color: var(--law-gold);
+    font-weight: 600;
+}
+
 .erp-cell__row {
     display: flex;
     align-items: center;

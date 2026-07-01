@@ -77,12 +77,20 @@ interface Session {
 		court: string | null;
 		najiz_status: string | null;
 		client_id?: number | null;
+		is_bankruptcy?: boolean;
+		is_reconciliation?: boolean;
 		lawyers?: Array<{ id: number; name: string; pivot?: { is_primary?: boolean | number | null } }>;
 		primaryLawyer?: Array<{ id: number; name: string }> | null;
 		// Laravel serializes camelCase relations to snake_case in JSON output.
 		primary_lawyer?: Array<{ id: number; name: string }> | null;
 	};
 }
+
+// جلسات الإفلاس/الصلح (صف مرساة) تُفتح على صفحتيهما المخصّصتين لا صفحة القضية
+const caseUrlFor = (s: Session): string =>
+	s.case?.is_bankruptcy ? `/bankruptcy/${s.case_id}`
+	: s.case?.is_reconciliation ? `/reconciliation/${s.case_id}`
+	: `/cases/${s.case_id}`;
 
 const UpcomingSessions: React.FC = () => {
 	const navigate = useNavigate();
@@ -760,14 +768,14 @@ const UpcomingSessions: React.FC = () => {
 											onClick={(e) => {
 												if (!session.case_id) return;
 												e.stopPropagation();
-												navigate(`/cases/${session.case_id}`);
+												navigate(caseUrlFor(session));
 											}}
 											onKeyDown={(e) => {
 												if (!session.case_id) return;
 												if (e.key === 'Enter' || e.key === ' ') {
 													e.preventDefault();
 													e.stopPropagation();
-													navigate(`/cases/${session.case_id}`);
+													navigate(caseUrlFor(session));
 												}
 											}}
 											style={session.case_id ? { cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px' } : undefined}
@@ -1074,7 +1082,7 @@ const UpcomingSessions: React.FC = () => {
 									<div
 										key={s.id}
 										className={`calendar-session ${finished ? 'calendar-session--finished' : ''}`}
-										onClick={(e) => { e.stopPropagation(); s.case_id && navigate(`/cases/${s.case_id}`); }}
+										onClick={(e) => { e.stopPropagation(); s.case_id && navigate(caseUrlFor(s)); }}
 										title={`${s.case?.title || ''} — ${s.session_time || ''}`}
 									>
 										<div className="calendar-session__title">{s.case?.title || 'بدون عنوان'}</div>
@@ -1121,7 +1129,7 @@ const UpcomingSessions: React.FC = () => {
 										<div
 											key={s.id}
 											className={`calendar-modal__item ${finished ? 'calendar-modal__item--finished' : ''}`}
-											onClick={() => { setDayModalKey(null); s.case_id && navigate(`/cases/${s.case_id}`); }}
+											onClick={() => { setDayModalKey(null); s.case_id && navigate(caseUrlFor(s)); }}
 										>
 											<div className="calendar-modal__time">
 												<Clock size={12} />

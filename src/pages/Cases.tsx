@@ -48,6 +48,12 @@ const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
 	dismissed: { label: 'مرفوضة', class: 'status-badge--closed' }
 };
 
+// توجيه القضية حسب نوعها: الإفلاس والصلح لصفحتيهما المخصّصتين، والبقية لتفاصيل القضية
+const caseDetailUrl = (c: Case): string =>
+	c.is_bankruptcy ? `/bankruptcy/${c.id}`
+	: (c as any).is_reconciliation ? `/reconciliation/${c.id}`
+	: `/cases/${c.id}`;
+
 // Case type labels
 const CASE_TYPE_LABELS: Record<CaseType, string> = {
 	civil: 'مدنية',
@@ -509,12 +515,18 @@ const Cases: React.FC = () => {
 						const typeLabel = (c as any).case_type_arabic || CASE_TYPE_LABELS[c.case_type] || c.case_type;
 
 						return (
-							<tr key={c.id} onClick={() => navigate(`/cases/${c.id}`)}>
+							<tr
+								key={c.id}
+								className={c.is_bankruptcy ? 'is-bankruptcy' : undefined}
+								onClick={() => navigate(caseDetailUrl(c))}
+							>
 								{/* العمود 1: القضية (عنوان + رقم + نوع) */}
 								<td>
 									<div className="erp-cell">
 										<div className="erp-cell__primary">{c.title}</div>
 										<div className="erp-cell__secondary">
+											{c.is_bankruptcy && <span className="erp-cell__tag erp-cell__tag--bankruptcy">إفلاس</span>}
+											{(c as any).is_reconciliation && <span className="erp-cell__tag" style={{ background: 'rgba(21,115,71,0.12)', color: '#157347', fontWeight: 700 }}>صلح</span>}
 											<span className="erp-cell__tag">{typeLabel}</span>
 										</div>
 									</div>
@@ -620,7 +632,7 @@ const Cases: React.FC = () => {
 				const typeLabel = (c as any).case_type_arabic || CASE_TYPE_LABELS[c.case_type] || c.case_type;
 
 				return (
-					<div key={c.id} className="case-card" onClick={() => navigate(`/cases/${c.id}`)}>
+					<div key={c.id} className="case-card" onClick={() => navigate(caseDetailUrl(c))}>
 						<div className="case-card__header">
 							<div>
 								<div className="case-card__title">{c.title}</div>
@@ -633,6 +645,7 @@ const Cases: React.FC = () => {
 						</div>
 						<div className="case-card__meta" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
 							<span className="type-badge">{typeLabel}</span>
+							{(c as any).is_reconciliation && <span className="type-badge" style={{ background: 'rgba(21,115,71,0.12)', color: '#157347' }}>صلح</span>}
 							{(c as any).outcome && (
 								<OutcomeBadge
 									size="sm"
@@ -680,7 +693,7 @@ const Cases: React.FC = () => {
 									<div
 										key={c.id}
 										className="kanban-card"
-										onClick={() => navigate(`/cases/${c.id}`)}
+										onClick={() => navigate(caseDetailUrl(c))}
 									>
 										<div className="kanban-card__title">{c.title}</div>
 										<div className="kanban-card__meta">
