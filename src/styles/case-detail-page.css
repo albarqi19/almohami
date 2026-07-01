@@ -132,15 +132,16 @@
     color: var(--law-gold-dark);
 }
 
+/* فلات صرف (هوية بلا تدرّجات) + توكنات الثيم بدل hex صلب */
 .case-header-btn--link {
-    background: linear-gradient(135deg, #0066cc 0%, #004999 100%);
-    border-color: #0066cc;
-    color: white;
+    background: var(--law-navy, #1E3A5F);
+    border-color: var(--law-navy, #1E3A5F);
+    color: #fff;
 }
 
 .case-header-btn--link:hover {
-    background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%);
-    border-color: #0052a3;
+    background: var(--law-navy-dark, #16293f);
+    border-color: var(--law-navy-dark, #16293f);
 }
 
 /* === Back Button === */
@@ -653,7 +654,7 @@ body.dark .case-party-tag {
 }
 
 .case-judgement-item {
-    padding: 10px 12px;
+    padding: 12px;
     border: 1px solid rgba(180, 140, 60, 0.18);
     border-radius: 6px;
     background: rgba(180, 140, 60, 0.04);
@@ -1206,8 +1207,11 @@ body.dark .jm-tab:hover { background: rgba(255, 255, 255, .03); }
     }
 }
 
+/* توكنات الثيم بدل الأبيض/الرمادي الصلب — حتى لا ينكسر الوضع الداكن */
 .dabt-modal {
-    background: white;
+    background: var(--dashboard-card, #fff);
+    color: var(--color-text-primary, #111827);
+    border: 1px solid var(--quiet-gray-200, #e5e7eb);
     border-radius: 12px;
     width: 100%;
     max-width: 700px;
@@ -1222,7 +1226,7 @@ body.dark .jm-tab:hover { background: rgba(255, 255, 255, .03); }
     align-items: center;
     justify-content: space-between;
     padding: 16px 20px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--quiet-gray-200, #e5e7eb);
 }
 
 .dabt-modal-header h3 {
@@ -1237,19 +1241,19 @@ body.dark .jm-tab:hover { background: rgba(255, 255, 255, .03); }
     border: none;
     cursor: pointer;
     padding: 4px 8px;
-    color: #6b7280;
+    color: var(--color-text-secondary, #6b7280);
     border-radius: 4px;
     font-size: 16px;
 }
 
 .dabt-modal-close:hover {
-    background: #f3f4f6;
+    background: var(--quiet-gray-100, #f3f4f6);
 }
 
 .dabt-modal-info {
     padding: 16px 20px;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--quiet-gray-50, #f9fafb);
+    border-bottom: 1px solid var(--quiet-gray-200, #e5e7eb);
     display: flex;
     flex-wrap: wrap;
     gap: 12px 24px;
@@ -1262,12 +1266,12 @@ body.dark .jm-tab:hover { background: rgba(255, 255, 255, .03); }
     font-size: 12px;
 }
 
-.dabt-modal-info-row span { color: #6b7280; }
-.dabt-modal-info-row strong { color: #111827; }
+.dabt-modal-info-row span { color: var(--color-text-secondary, #6b7280); }
+.dabt-modal-info-row strong { color: var(--color-text-primary, #111827); }
 
 .dabt-modal-summary {
     padding: 16px 20px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--quiet-gray-200, #e5e7eb);
 }
 
 .dabt-modal-summary h4 {
@@ -1799,4 +1803,42 @@ body.dark .case-no-billing {
 
 .case-no-billing__link:hover {
     background: var(--law-navy-dark);
+}
+
+/* === حالة فارغة موحّدة للبطاقات (أطراف/جلسات بلا بيانات — بدل الاختفاء الصامت) === */
+.case-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 22px 14px;
+    color: var(--color-text-secondary, #9ca3af);
+    font-size: 12.5px;
+    text-align: center;
+}
+
+.case-empty-state svg {
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+/* === الهيدر على الموبايل: التبويبات السريعة تنزلق أفقياً بدل التكدّس === */
+@media (max-width: 768px) {
+    .case-header-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        width: 100%;
+        padding-bottom: 2px;
+    }
+
+    .case-header-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .case-header-tab {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
 }

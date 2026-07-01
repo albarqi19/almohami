@@ -1,13 +1,11 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Search,
   Check,
   ChevronDown,
   X,
   Save,
-  Hash,
   Briefcase,
-  AlignLeft,
   Flag,
   Activity,
   User,
@@ -18,7 +16,9 @@ import {
   Gavel,
   FileText,
   UserPlus,
-  Users
+  Users,
+  Scale,
+  AlignLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PhoneField from './PhoneField';
@@ -74,6 +74,18 @@ interface AddCaseModalProps {
   lawyers?: User[];
   clients?: User[];
 }
+
+const STATUS_LABELS: Record<CaseFormData['status'], string> = {
+  draft: 'مسودة',
+  preparation: 'جاري التجهيز',
+  filed: 'تم الرفع على ناجز',
+  active: 'نشطة',
+  pending: 'معلقة',
+  appealed: 'مستأنفة',
+  settled: 'مسوية',
+  dismissed: 'مرفوضة',
+  closed: 'مغلقة',
+};
 
 const AddCaseModal: React.FC<AddCaseModalProps> = ({
   isOpen,
@@ -274,160 +286,382 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     });
     setErrors({});
     setSubmitError('');
+    setApproverError('');
   };
 
   if (!isOpen) return null;
 
+  const isPrepMode = ['draft', 'preparation', 'filed'].includes(formData.status);
+  const extraCount = formData.additionalClients.length;
+
   return (
     <AnimatePresence>
       <motion.div
-        className="notion-modal-overlay"
+        className="erpc-overlay"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
       >
         <motion.div
-          className="notion-modal"
-          initial={{ opacity: 0, y: 20, scale: 0.98 }}
+          className="erpc-modal"
+          initial={{ opacity: 0, y: 16, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.98 }}
+          exit={{ opacity: 0, y: 16, scale: 0.98 }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="notion-modal-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div className="notion-header-icon-container">
-                <Briefcase size={20} className="notion-header-icon" />
-              </div>
-              <div className="notion-modal-title">
-                <div style={{ fontSize: '12px', opacity: 0.5, lineHeight: 1 }}>إضافة إلى</div>
-                <div style={{ fontSize: '16px', fontWeight: 600 }}>القضايا</div>
-              </div>
+          <div className="erpc-header">
+            <div className="erpc-header-icon">
+              <Briefcase size={18} />
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button className="notion-modal-close" onClick={onClose}>
-                <X size={18} />
-              </button>
+            <div className="erpc-header-title">
+              <span className="erpc-header-eyebrow">إضافة إلى القضايا</span>
+              <span className="erpc-header-main">قضية جديدة</span>
             </div>
+            <div className="erpc-header-spacer" />
+            <span className="erpc-status-chip">{STATUS_LABELS[formData.status]}</span>
+            <button type="button" className="erpc-close" onClick={onClose} aria-label="إغلاق">
+              <X size={18} />
+            </button>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-
-            <div className="notion-modal-body">
-              {submitError && (
-                <div style={{ background: '#FDECEC', border: '1px solid #f3c5c5', borderRight: '3px solid #EB5757', color: '#b91c1c', padding: '10px 14px', borderRadius: '6px', marginBottom: '14px', fontSize: '13px', whiteSpace: 'pre-line', lineHeight: 1.6 }}>
-                  {submitError}
-                </div>
-              )}
-              {/* Icon & Title */}
+          <form onSubmit={handleSubmit}>
+            {/* Title bar */}
+            <div className="erpc-titlebar">
               <input
                 type="text"
-                className="notion-page-title-input"
+                className="erpc-title-input"
                 placeholder="عنوان القضية (مثال: مطالبة مالية - شركة س)"
                 value={formData.caseNumber}
                 onChange={(e) => handleInputChange('caseNumber', e.target.value)}
                 maxLength={255}
                 autoFocus
               />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '-12px', marginBottom: '16px' }}>
+              <div className="erpc-title-meta">
                 {errors.caseNumber
-                  ? <span style={{ color: '#EB5757', fontSize: '12px' }}>{errors.caseNumber}</span>
+                  ? <span className="erpc-error-text">{errors.caseNumber}</span>
                   : <span />}
-                <span style={{ fontSize: '11px', opacity: 0.45 }}>{formData.caseNumber.length}/255</span>
+                <span className="erpc-counter">{formData.caseNumber.length}/255</span>
               </div>
+            </div>
 
-              {/* Properties Grid */}
-              <div className="notion-properties">
+            {/* Body */}
+            <div className="erpc-body">
+              {submitError && <div className="erpc-alert">{submitError}</div>}
 
-                {/* Status */}
-                <div className="notion-property-row">
-                  <div className="notion-property-label">
-                    <Activity className="notion-property-icon" />
-                    <span>الحالة</span>
+              <div className="erpc-grid">
+
+                {/* Panel: تفاصيل القضية */}
+                <div className="erpc-panel">
+                  <div className="erpc-panel-head">
+                    <Activity />
+                    <span>تفاصيل القضية</span>
                   </div>
-                  <div className="notion-property-value">
-                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
-                      <select
-                        className="notion-select"
-                        value={formData.status}
-                        onChange={(e) => handleInputChange('status', e.target.value)}
-                        style={{ paddingLeft: '28px' }}
-                      >
-                        <optgroup label="مرحلة التجهيز">
-                          <option value="draft">مسودة</option>
-                          <option value="preparation">جاري التجهيز</option>
-                          <option value="filed">تم الرفع على ناجز</option>
-                        </optgroup>
-                        <optgroup label="قضية نشطة">
-                          <option value="active">نشطة</option>
-                          <option value="pending">معلقة</option>
-                          <option value="appealed">مستأنفة</option>
-                          <option value="settled">مسوية</option>
-                          <option value="dismissed">مرفوضة</option>
-                          <option value="closed">مغلقة</option>
-                        </optgroup>
-                      </select>
-                      <ChevronDown size={14} style={{ position: 'absolute', left: '8px', opacity: 0.4, pointerEvents: 'none' }} />
+                  <div className="erpc-panel-body">
+                    {/* Status */}
+                    <div className="erpc-field">
+                      <span className="erpc-field-label"><Activity />الحالة</span>
+                      <div className="erpc-control">
+                        <select
+                          className="erpc-select"
+                          value={formData.status}
+                          onChange={(e) => handleInputChange('status', e.target.value)}
+                        >
+                          <optgroup label="مرحلة التجهيز">
+                            <option value="draft">مسودة</option>
+                            <option value="preparation">جاري التجهيز</option>
+                            <option value="filed">تم الرفع على ناجز</option>
+                          </optgroup>
+                          <optgroup label="قضية نشطة">
+                            <option value="active">نشطة</option>
+                            <option value="pending">معلقة</option>
+                            <option value="appealed">مستأنفة</option>
+                            <option value="settled">مسوية</option>
+                            <option value="dismissed">مرفوضة</option>
+                            <option value="closed">مغلقة</option>
+                          </optgroup>
+                        </select>
+                        <ChevronDown size={14} className="erpc-select-arrow" />
+                      </div>
+                    </div>
+
+                    {/* Priority */}
+                    <div className="erpc-field">
+                      <span className="erpc-field-label"><Flag />الأولوية</span>
+                      <div className="erpc-control">
+                        <select
+                          className="erpc-select"
+                          value={formData.priority}
+                          onChange={(e) => handleInputChange('priority', e.target.value)}
+                        >
+                          <option value="low">منخفضة</option>
+                          <option value="medium">متوسطة</option>
+                          <option value="high">عالية</option>
+                        </select>
+                        <ChevronDown size={14} className="erpc-select-arrow" />
+                      </div>
+                    </div>
+
+                    {/* Assigned Lawyer */}
+                    <div className="erpc-field">
+                      <span className="erpc-field-label"><User />المحامي<span className="erpc-req">*</span></span>
+                      <div className="erpc-control">
+                        <select
+                          className={`erpc-select ${errors.assignedLawyer ? 'erpc-invalid' : ''}`}
+                          value={formData.assignedLawyer}
+                          onChange={(e) => handleInputChange('assignedLawyer', e.target.value)}
+                        >
+                          <option value="">اختر المحامي</option>
+                          {lawyers.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                        </select>
+                        <ChevronDown size={14} className="erpc-select-arrow" />
+                      </div>
+                    </div>
+
+                    {/* Case Type */}
+                    <div className="erpc-field">
+                      <span className="erpc-field-label"><Briefcase />النوع{!isPrepMode && <span className="erpc-req">*</span>}</span>
+                      <div className="erpc-control">
+                        <select
+                          className={`erpc-select ${errors.caseType ? 'erpc-invalid' : ''}`}
+                          value={formData.caseType}
+                          onChange={(e) => handleInputChange('caseType', e.target.value)}
+                        >
+                          <option value="">اختر النوع</option>
+                          {caseTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                        </select>
+                        <ChevronDown size={14} className="erpc-select-arrow" />
+                      </div>
+                    </div>
+
+                    {/* Court */}
+                    <div className="erpc-field">
+                      <span className="erpc-field-label"><Gavel />المحكمة{!isPrepMode && <span className="erpc-req">*</span>}</span>
+                      <div className="erpc-control">
+                        <select
+                          className={`erpc-select ${errors.court ? 'erpc-invalid' : ''}`}
+                          value={formData.court}
+                          onChange={(e) => handleInputChange('court', e.target.value)}
+                        >
+                          <option value="">اختر المحكمة</option>
+                          {courts.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <ChevronDown size={14} className="erpc-select-arrow" />
+                      </div>
+                    </div>
+
+                    {/* Filing Date — يظهر للقضية النشطة فقط */}
+                    {!isPrepMode && (
+                      <div className="erpc-field">
+                        <span className="erpc-field-label"><Calendar />تاريخ الرفع<span className="erpc-req">*</span></span>
+                        <div className="erpc-control">
+                          <input
+                            type="date"
+                            className={`erpc-input ${errors.filingDate ? 'erpc-invalid' : ''}`}
+                            value={formData.filingDate}
+                            onChange={(e) => handleInputChange('filingDate', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Contract Value */}
+                    <div className="erpc-field">
+                      <span className="erpc-field-label"><CreditCard />قيمة العقد</span>
+                      <div className="erpc-control">
+                        <input
+                          type="number"
+                          className="erpc-input"
+                          placeholder="بالريال (اختياري)"
+                          value={formData.contractValue}
+                          onChange={(e) => handleInputChange('contractValue', e.target.value)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Priority */}
-                <div className="notion-property-row">
-                  <div className="notion-property-label">
-                    <Flag className="notion-property-icon" />
-                    <span>الأولوية</span>
-                  </div>
-                  <div className="notion-property-value">
-                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
-                      <select
-                        className="notion-select"
-                        value={formData.priority}
-                        onChange={(e) => handleInputChange('priority', e.target.value)}
-                        style={{ paddingLeft: '28px' }}
+                {/* Panel: العميل الرئيسي */}
+                <div className="erpc-panel">
+                  <div className="erpc-panel-head">
+                    <UserPlus />
+                    <span>العميل الرئيسي</span>
+                    <div className="erpc-segmented" style={{ marginInlineStart: 'auto' }}>
+                      <button
+                        type="button"
+                        className={`erpc-seg-btn ${formData.isNewClient ? 'active' : ''}`}
+                        onClick={() => handleInputChange('isNewClient', true)}
                       >
-                        <option value="low">منخفضة</option>
-                        <option value="medium">متوسطة</option>
-                        <option value="high">عالية</option>
-                      </select>
-                      <ChevronDown size={14} style={{ position: 'absolute', left: '8px', opacity: 0.4, pointerEvents: 'none' }} />
+                        جديد
+                      </button>
+                      <button
+                        type="button"
+                        className={`erpc-seg-btn ${!formData.isNewClient ? 'active' : ''}`}
+                        onClick={() => handleInputChange('isNewClient', false)}
+                      >
+                        موجود
+                      </button>
+                    </div>
+                  </div>
+                  <div className="erpc-panel-body">
+                    {formData.isNewClient ? (
+                      <>
+                        <div className="erpc-field">
+                          <span className="erpc-field-label"><User />الاسم<span className="erpc-req">*</span></span>
+                          <div className="erpc-control">
+                            <input
+                              type="text"
+                              className={`erpc-input ${errors.clientName ? 'erpc-invalid' : ''}`}
+                              placeholder="اسم العميل الكامل"
+                              value={formData.clientName}
+                              onChange={(e) => handleInputChange('clientName', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="erpc-field">
+                          <span className="erpc-field-label"><Phone />الهاتف<span className="erpc-req">*</span></span>
+                          <div className="erpc-control">
+                            <PhoneField
+                              value={formData.clientPhone}
+                              onChange={(v) => handleInputChange('clientPhone', v)}
+                              placeholder="5X XXX XXXX"
+                            />
+                          </div>
+                        </div>
+                        <div className="erpc-field">
+                          <span className="erpc-field-label"><Mail />البريد</span>
+                          <div className="erpc-control">
+                            <input
+                              type="email"
+                              className="erpc-input"
+                              placeholder="example@mail.com"
+                              value={formData.clientEmail}
+                              onChange={(e) => handleInputChange('clientEmail', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="erpc-field">
+                          <span className="erpc-field-label"><CreditCard />الهوية</span>
+                          <div className="erpc-control">
+                            <input
+                              type="text"
+                              className="erpc-input"
+                              placeholder="رقم الهوية الوطنية"
+                              value={formData.clientNationalId}
+                              onChange={(e) => handleInputChange('clientNationalId', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="erpc-field erpc-field-stack">
+                        <span className="erpc-field-label"><Search />اختر العميل<span className="erpc-req">*</span></span>
+                        <div className="erpc-search">
+                          <div
+                            className={`erpc-input erpc-search-trigger ${errors.clientId ? 'erpc-invalid' : ''}`}
+                            onClick={() => setShowClientSearch(!showClientSearch)}
+                          >
+                            <span style={{ opacity: selectedClient ? 1 : 0.4 }}>
+                              {selectedClient ? selectedClient.name : 'ابحث عن عميل...'}
+                            </span>
+                            <ChevronDown size={14} style={{ opacity: 0.5 }} />
+                          </div>
+
+                          {showClientSearch && (
+                            <>
+                              <div className="erpc-search-dropdown">
+                                <div className="erpc-search-field-wrap">
+                                  <Search size={14} style={{ opacity: 0.4 }} />
+                                  <input
+                                    type="text"
+                                    className="erpc-search-field"
+                                    placeholder="ابحث بالاسم أو الرقم..."
+                                    value={clientSearchTerm}
+                                    onChange={(e) => setClientSearchTerm(e.target.value)}
+                                    autoFocus
+                                  />
+                                </div>
+                                <div style={{ padding: '4px 0' }}>
+                                  {filteredClients.length > 0 ? (
+                                    filteredClients.map(client => (
+                                      <div
+                                        key={client.id}
+                                        className={`erpc-search-item ${formData.clientId.toString() === client.id.toString() ? 'selected' : ''}`}
+                                        onClick={() => {
+                                          handleInputChange('clientId', client.id.toString());
+                                          setShowClientSearch(false);
+                                          setClientSearchTerm('');
+                                        }}
+                                      >
+                                        <div style={{ flex: 1 }}>
+                                          <div style={{ fontWeight: 500 }}>{client.name}</div>
+                                          {client.phone && <div style={{ fontSize: '11px', opacity: 0.6 }}>{client.phone}</div>}
+                                        </div>
+                                        {formData.clientId.toString() === client.id.toString() && <Check size={14} />}
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className="erpc-search-empty">لا يوجد نتائج للبحث</div>
+                                  )}
+                                </div>
+                              </div>
+                              <div
+                                style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+                                onClick={() => setShowClientSearch(false)}
+                              />
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Panel: الخصم */}
+                <div className="erpc-panel">
+                  <div className="erpc-panel-head">
+                    <Scale />
+                    <span>الخصم</span>
+                    <span className="erpc-hint" style={{ marginInlineStart: 'auto' }}>اختياري</span>
+                  </div>
+                  <div className="erpc-panel-body">
+                    <div className="erpc-field">
+                      <span className="erpc-field-label"><Users />الاسم</span>
+                      <div className="erpc-control">
+                        <input
+                          type="text"
+                          className="erpc-input"
+                          placeholder="اسم الخصم"
+                          value={formData.opponentName}
+                          onChange={(e) => handleInputChange('opponentName', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="erpc-field">
+                      <span className="erpc-field-label"><User />محاميه</span>
+                      <div className="erpc-control">
+                        <input
+                          type="text"
+                          className="erpc-input"
+                          placeholder="محامي الخصم"
+                          value={formData.opponentLawyer}
+                          onChange={(e) => handleInputChange('opponentLawyer', e.target.value)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Assigned Lawyer */}
-                <div className="notion-property-row">
-                  <div className="notion-property-label">
-                    <User className="notion-property-icon" />
-                    <span>المحامي المسؤول</span>
-                  </div>
-                  <div className="notion-property-value">
-                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
-                      <select
-                        className="notion-select"
-                        value={formData.assignedLawyer}
-                        onChange={(e) => handleInputChange('assignedLawyer', e.target.value)}
-                        style={{ paddingLeft: '28px' }}
-                      >
-                        <option value="">اختر المحامي</option>
-                        {lawyers.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-                      </select>
-                      <ChevronDown size={14} style={{ position: 'absolute', left: '8px', opacity: 0.4, pointerEvents: 'none' }} />
-                    </div>
-                    {errors.assignedLawyer && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
-                  </div>
-                </div>
-
-                {/* سياسة اعتماد المذكرات — لمن يملك صلاحية السياسة فقط */}
+                {/* Panel: سياسة اعتماد المذكرات — لمن يملك الصلاحية فقط */}
                 {canManageMemoPolicy && (
-                  <div className="notion-property-row span-full" style={{ padding: '8px 0' }}>
-                    <div className="notion-property-label">
-                      <Check className="notion-property-icon" />
+                  <div className="erpc-panel">
+                    <div className="erpc-panel-head">
+                      <Check />
                       <span>اعتماد المذكرات</span>
                     </div>
-                    <div className="notion-property-value" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <div className="erpc-panel-body">
+                      <label className="erpc-check-row">
                         <input
                           type="checkbox"
                           checked={formData.requiresMemoApproval}
@@ -437,9 +671,9 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                       </label>
 
                       {formData.requiresMemoApproval && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                        <div className="erpc-chips" style={{ marginTop: 6 }}>
                           {memoApproverOptions.length === 0 && (
-                            <span style={{ fontSize: 12, opacity: 0.6 }}>لا يوجد محامون للاختيار كمعتمِدين.</span>
+                            <span className="erpc-hint">لا يوجد محامون للاختيار كمعتمِدين.</span>
                           )}
                           {memoApproverOptions.map(l => {
                             const active = formData.memoApprovers.includes(String(l.value));
@@ -447,14 +681,8 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                               <button
                                 key={l.value}
                                 type="button"
+                                className={`erpc-chip ${active ? 'active' : ''}`}
                                 onClick={() => toggleMemoApprover(String(l.value))}
-                                style={{
-                                  display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px',
-                                  borderRadius: 14, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                                  border: '1px solid var(--quiet-gray-200, #e5e7eb)',
-                                  background: active ? 'var(--law-navy, #1f3a5f)' : 'transparent',
-                                  color: active ? '#fff' : 'inherit',
-                                }}
                               >
                                 {active && <Check size={12} />} {l.label}
                               </button>
@@ -462,375 +690,99 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                           })}
                         </div>
                       )}
-                      {approverError && (
-                        <span style={{ color: '#EB5757', fontSize: 12 }}>{approverError}</span>
-                      )}
+                      {approverError && <span className="erpc-error-text" style={{ marginTop: 4 }}>{approverError}</span>}
                     </div>
                   </div>
                 )}
 
-                {/* Court */}
-                <div className="notion-property-row">
-                  <div className="notion-property-label">
-                    <Gavel className="notion-property-icon" />
-                    <span>المحكمة</span>
+                {/* Panel: عملاء إضافيون (متعددو الموكلين) */}
+                <div className="erpc-panel erpc-span-2">
+                  <div className="erpc-panel-head">
+                    <Users />
+                    <span>عملاء إضافيون</span>
+                    <span className="erpc-hint">موكلون آخرون في نفس القضية</span>
+                    {extraCount > 0 && <span className="erpc-panel-badge">{extraCount}</span>}
                   </div>
-                  <div className="notion-property-value">
-                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
-                      <select
-                        className="notion-select"
-                        value={formData.court}
-                        onChange={(e) => handleInputChange('court', e.target.value)}
-                        style={{ paddingLeft: '28px' }}
-                      >
-                        <option value="">اختر المحكمة</option>
-                        {courts.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                      <ChevronDown size={14} style={{ position: 'absolute', left: '8px', opacity: 0.4, pointerEvents: 'none' }} />
-                    </div>
-                    {errors.court && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
-                  </div>
-                </div>
-
-                {/* Case Type */}
-                <div className="notion-property-row">
-                  <div className="notion-property-label">
-                    <Briefcase className="notion-property-icon" />
-                    <span>نوع القضية</span>
-                  </div>
-                  <div className="notion-property-value">
-                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
-                      <select
-                        className="notion-select"
-                        value={formData.caseType}
-                        onChange={(e) => handleInputChange('caseType', e.target.value)}
-                        style={{ paddingLeft: '28px' }}
-                      >
-                        <option value="">اختر النوع</option>
-                        {caseTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                      </select>
-                      <ChevronDown size={14} style={{ position: 'absolute', left: '8px', opacity: 0.4, pointerEvents: 'none' }} />
-                    </div>
-                    {errors.caseType && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
-                  </div>
-                </div>
-
-                {/* Filing Date — مخفي لقضايا التجهيز */}
-                {!['draft', 'preparation', 'filed'].includes(formData.status) && (
-                  <div className="notion-property-row">
-                    <div className="notion-property-label">
-                      <Calendar className="notion-property-icon" />
-                      <span>تاريخ رفع الدعوى</span>
-                    </div>
-                    <div className="notion-property-value">
-                      <input
-                        type="date"
-                        className="notion-input"
-                        value={formData.filingDate}
-                        onChange={(e) => handleInputChange('filingDate', e.target.value)}
-                      />
-                      {errors.filingDate && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
-                    </div>
-                  </div>
-                )}
-
-                {/* Opponent Info */}
-                <div className="notion-property-row span-full">
-                  <div className="notion-property-label">
-                    <Users className="notion-property-icon" />
-                    <span>الخصم</span>
-                  </div>
-                  <div className="notion-property-value" style={{ gap: '8px' }}>
-                    <input
-                      type="text"
-                      className="notion-input"
-                      placeholder="اسم الخصم"
-                      value={formData.opponentName}
-                      onChange={(e) => handleInputChange('opponentName', e.target.value)}
-                    />
-                    <input
-                      type="text"
-                      className="notion-input"
-                      placeholder="محامي الخصم"
-                      value={formData.opponentLawyer}
-                      onChange={(e) => handleInputChange('opponentLawyer', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Contract Value */}
-                <div className="notion-property-row">
-                  <div className="notion-property-label">
-                    <CreditCard className="notion-property-icon" />
-                    <span>قيمة العقد</span>
-                  </div>
-                  <div className="notion-property-value">
-                    <input
-                      type="number"
-                      className="notion-input"
-                      placeholder="بالريال (اختياري)"
-                      value={formData.contractValue}
-                      onChange={(e) => handleInputChange('contractValue', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="notion-divider"></div>
-
-                {/* Client Section Header/Toggle */}
-                <div className="notion-property-row span-full" style={{ padding: '8px 0' }}>
-                  <div className="notion-property-label">
-                    <UserPlus className="notion-property-icon" />
-                    <span>بيانات العميل</span>
-                  </div>
-                  <div className="notion-property-value">
-                    <div className="notion-segmented-control">
-                      <button
-                        type="button"
-                        className={`notion-segment-btn ${formData.isNewClient ? 'active' : ''}`}
-                        onClick={() => handleInputChange('isNewClient', true)}
-                      >
-                        جديد
-                      </button>
-                      <button
-                        type="button"
-                        className={`notion-segment-btn ${!formData.isNewClient ? 'active' : ''}`}
-                        onClick={() => {
-                          handleInputChange('isNewClient', false);
-                        }}
-                      >
-                        موجود
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Client Form Fields based on Toggle */}
-                {formData.isNewClient ? (
-                  <>
-                    <div className="notion-property-row">
-                      <div className="notion-property-label">
-                        <User className="notion-property-icon" size={14} />
-                        <span>الاسم</span>
-                      </div>
-                      <div className="notion-property-value">
-                        <input
-                          type="text"
-                          className="notion-input"
-                          placeholder="اسم العميل الكامل"
-                          value={formData.clientName}
-                          onChange={(e) => handleInputChange('clientName', e.target.value)}
-                        />
-                        {errors.clientName && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
-                      </div>
-                    </div>
-                    <div className="notion-property-row">
-                      <div className="notion-property-label">
-                        <Phone className="notion-property-icon" size={14} />
-                        <span>الهاتف</span>
-                      </div>
-                      <div className="notion-property-value">
-                        <PhoneField
-                          value={formData.clientPhone}
-                          onChange={(v) => handleInputChange('clientPhone', v)}
-                          placeholder="5X XXX XXXX"
-                        />
-                        {errors.clientPhone && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
-                      </div>
-                    </div>
-                    <div className="notion-property-row">
-                      <div className="notion-property-label">
-                        <Mail className="notion-property-icon" size={14} />
-                        <span>البريد الإلكتروني</span>
-                      </div>
-                      <div className="notion-property-value">
-                        <input
-                          type="email"
-                          className="notion-input"
-                          placeholder="example@mail.com"
-                          value={formData.clientEmail}
-                          onChange={(e) => handleInputChange('clientEmail', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div className="notion-property-row">
-                      <div className="notion-property-label">
-                        <CreditCard className="notion-property-icon" size={14} />
-                        <span>رقم الهوية</span>
-                      </div>
-                      <div className="notion-property-value">
-                        <input
-                          type="text"
-                          className="notion-input"
-                          placeholder="رقم الهوية الوطنية"
-                          value={formData.clientNationalId}
-                          onChange={(e) => handleInputChange('clientNationalId', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="notion-property-row span-full">
-                    <div className="notion-property-label">
-                      <span>اختر العميل</span>
-                    </div>
-                    <div className="notion-property-value">
-                      <div className="notion-search-container">
-                        <div
-                          className="notion-input"
-                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                          onClick={() => setShowClientSearch(!showClientSearch)}
-                        >
-                          <span style={{ opacity: selectedClient ? 1 : 0.4 }}>
-                            {selectedClient ? selectedClient.name : 'ابحث عن عميل...'}
-                          </span>
-                          <ChevronDown size={14} style={{ opacity: 0.5 }} />
+                  <div className="erpc-panel-body" style={{ gap: 8 }}>
+                    {formData.additionalClients.map((ec, idx) => (
+                      <div key={idx} className="erpc-extra-card">
+                        <div className="erpc-extra-head">
+                          <div className="erpc-segmented">
+                            <button type="button" className={`erpc-seg-btn ${ec.mode === 'new' ? 'active' : ''}`} onClick={() => updateExtraClient(idx, 'mode', 'new')}>جديد</button>
+                            <button type="button" className={`erpc-seg-btn ${ec.mode === 'existing' ? 'active' : ''}`} onClick={() => updateExtraClient(idx, 'mode', 'existing')}>موجود</button>
+                          </div>
+                          <button type="button" className="erpc-icon-btn" onClick={() => removeExtraClient(idx)} title="حذف هذا العميل">
+                            <X size={16} />
+                          </button>
                         </div>
 
-                        {showClientSearch && (
-                          <div className="notion-search-dropdown">
-                            <div className="notion-search-input-wrapper">
-                              <Search size={14} style={{ opacity: 0.4 }} />
-                              <input
-                                type="text"
-                                className="notion-search-field"
-                                placeholder="ابحث بالاسم أو الرقم..."
-                                value={clientSearchTerm}
-                                onChange={(e) => setClientSearchTerm(e.target.value)}
-                                autoFocus
-                              />
-                            </div>
-
-                            <div style={{ padding: '4px 0' }}>
-                              {filteredClients.length > 0 ? (
-                                filteredClients.map(client => (
-                                  <div
-                                    key={client.id}
-                                    className={`notion-search-item ${formData.clientId.toString() === client.id.toString() ? 'selected' : ''}`}
-                                    onClick={() => {
-                                      handleInputChange('clientId', client.id.toString());
-                                      setShowClientSearch(false);
-                                      setClientSearchTerm('');
-                                    }}
-                                  >
-                                    <div style={{ flex: 1 }}>
-                                      <div style={{ fontWeight: 500 }}>{client.name}</div>
-                                      {client.phone && <div style={{ fontSize: '11px', opacity: 0.6 }}>{client.phone}</div>}
-                                    </div>
-                                    {formData.clientId.toString() === client.id.toString() && <Check size={14} />}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="notion-search-no-results">
-                                  لا يوجد نتائج للبحث
-                                </div>
-                              )}
-                            </div>
+                        {ec.mode === 'existing' ? (
+                          <div className="erpc-control">
+                            <select className="erpc-select" value={ec.clientId} onChange={(e) => updateExtraClient(idx, 'clientId', e.target.value)}>
+                              <option value="">اختر عميلاً موجوداً...</option>
+                              {clientsFromProps.map(c => <option key={c.id} value={c.id.toString()}>{c.name}{c.phone ? ` — ${c.phone}` : ''}</option>)}
+                            </select>
+                            <ChevronDown size={14} className="erpc-select-arrow" />
+                          </div>
+                        ) : (
+                          <div className="erpc-extra-grid">
+                            <input type="text" className="erpc-input" placeholder="اسم العميل" value={ec.name} onChange={(e) => updateExtraClient(idx, 'name', e.target.value)} />
+                            <input type="text" className="erpc-input" placeholder="رقم الهاتف" value={ec.phone} onChange={(e) => updateExtraClient(idx, 'phone', e.target.value)} />
+                            <input type="email" className="erpc-input" placeholder="البريد (اختياري)" value={ec.email} onChange={(e) => updateExtraClient(idx, 'email', e.target.value)} />
+                            <input type="text" className="erpc-input" placeholder="رقم الهوية (اختياري)" value={ec.nationalId} onChange={(e) => updateExtraClient(idx, 'nationalId', e.target.value)} />
                           </div>
                         )}
-
-                        {/* Overlay to close dropdown when clicking outside */}
-                        {showClientSearch && (
-                          <div
-                            style={{ position: 'fixed', inset: 0, zIndex: 99 }}
-                            onClick={() => setShowClientSearch(false)}
-                          />
-                        )}
                       </div>
-                      {errors.clientId && <span style={{ color: '#EB5757', marginLeft: '6px' }}>!</span>}
+                    ))}
+
+                    <button type="button" className="erpc-add-btn" onClick={addExtraClient}>
+                      <UserPlus size={14} /> أضف عميلاً آخر
+                    </button>
+                  </div>
+                </div>
+
+                {/* Panel: الوصف والملاحظات */}
+                <div className="erpc-panel erpc-span-2">
+                  <div className="erpc-panel-head">
+                    <AlignLeft />
+                    <span>الوصف والملاحظات</span>
+                  </div>
+                  <div className="erpc-panel-body" style={{ gap: 10 }}>
+                    <div className="erpc-field erpc-field-stack">
+                      <span className="erpc-field-label"><FileText />وصف القضية{!isPrepMode && <span className="erpc-req">*</span>}</span>
+                      <textarea
+                        className={`erpc-textarea ${errors.description ? 'erpc-invalid' : ''}`}
+                        placeholder="اكتب تفاصيل القضية، الحقائق، والطلبات..."
+                        value={formData.description}
+                        onChange={(e) => handleInputChange('description', e.target.value)}
+                      />
+                    </div>
+                    <div className="erpc-field erpc-field-stack">
+                      <span className="erpc-field-label"><FileText />ملاحظات إضافية</span>
+                      <textarea
+                        className="erpc-textarea"
+                        style={{ minHeight: 56 }}
+                        placeholder="أي ملاحظات أخرى..."
+                        value={formData.notes}
+                        onChange={(e) => handleInputChange('notes', e.target.value)}
+                      />
                     </div>
                   </div>
-                )}
-
-                {/* عملاء إضافيون (متعددو الموكلين) */}
-                <div className="notion-property-row span-full" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
-                  <div className="notion-property-label" style={{ marginBottom: 4 }}>
-                    <Users className="notion-property-icon" />
-                    <span>عملاء إضافيون <span style={{ opacity: 0.5, fontWeight: 400, fontSize: 12 }}>(اختياري — موكلون آخرون في نفس القضية)</span></span>
-                  </div>
-
-                  {formData.additionalClients.map((ec, idx) => (
-                    <div key={idx} style={{ border: '1px solid var(--quiet-gray-200, #e5e7eb)', borderRadius: 8, padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div className="notion-segmented-control">
-                          <button type="button" className={`notion-segment-btn ${ec.mode === 'new' ? 'active' : ''}`} onClick={() => updateExtraClient(idx, 'mode', 'new')}>جديد</button>
-                          <button type="button" className={`notion-segment-btn ${ec.mode === 'existing' ? 'active' : ''}`} onClick={() => updateExtraClient(idx, 'mode', 'existing')}>موجود</button>
-                        </div>
-                        <button type="button" onClick={() => removeExtraClient(idx)} title="حذف هذا العميل"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EB5757', display: 'flex', alignItems: 'center' }}>
-                          <X size={16} />
-                        </button>
-                      </div>
-
-                      {ec.mode === 'existing' ? (
-                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                          <select className="notion-select" value={ec.clientId} onChange={(e) => updateExtraClient(idx, 'clientId', e.target.value)} style={{ paddingLeft: '28px', width: '100%' }}>
-                            <option value="">اختر عميلاً موجوداً...</option>
-                            {clientsFromProps.map(c => <option key={c.id} value={c.id.toString()}>{c.name}{c.phone ? ` — ${c.phone}` : ''}</option>)}
-                          </select>
-                          <ChevronDown size={14} style={{ position: 'absolute', left: '8px', opacity: 0.4, pointerEvents: 'none' }} />
-                        </div>
-                      ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                          <input type="text" className="notion-input" placeholder="اسم العميل" value={ec.name} onChange={(e) => updateExtraClient(idx, 'name', e.target.value)} />
-                          <input type="text" className="notion-input" placeholder="رقم الهاتف" value={ec.phone} onChange={(e) => updateExtraClient(idx, 'phone', e.target.value)} />
-                          <input type="email" className="notion-input" placeholder="البريد (اختياري)" value={ec.email} onChange={(e) => updateExtraClient(idx, 'email', e.target.value)} />
-                          <input type="text" className="notion-input" placeholder="رقم الهوية (اختياري)" value={ec.nationalId} onChange={(e) => updateExtraClient(idx, 'nationalId', e.target.value)} />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-
-                  <button type="button" onClick={addExtraClient}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 6, border: '1px dashed #b8860b', background: 'transparent', color: 'var(--law-navy, #1f3a5f)', cursor: 'pointer', fontSize: 13, fontWeight: 600, alignSelf: 'flex-start' }}>
-                    <UserPlus size={14} /> أضف عميلاً آخر
-                  </button>
                 </div>
 
               </div>
-
-              <div className="notion-divider"></div>
-
-              {/* Description (Page Content) */}
-              <div className="notion-content-area">
-                <div className="notion-section-header">
-                  <AlignLeft size={18} />
-                  وصف القضية
-                </div>
-                <textarea
-                  className="notion-textarea"
-                  placeholder="اكتب تفاصيل القضية هنا، الحقائق، والطلبات..."
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                />
-                {errors.description && <span style={{ color: '#EB5757', fontSize: '12px' }}>هذا الحقل مطلوب</span>}
-
-                <div className="notion-section-header">
-                  <FileText size={18} />
-                  ملاحظات إضافية
-                </div>
-                <textarea
-                  className="notion-textarea"
-                  style={{ minHeight: '80px' }}
-                  placeholder="أي ملاحظات أخرى..."
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                />
-              </div>
-
             </div>
 
-            {/* Footer Actions */}
-            <div className="notion-modal-footer">
-              <button type="button" className="notion-btn-secondary" onClick={onClose}>
+            {/* Footer */}
+            <div className="erpc-footer">
+              <button type="button" className="erpc-btn-secondary" onClick={onClose}>
                 إلغاء
               </button>
-              <button type="submit" className="notion-btn-primary">
+              <button type="submit" className="erpc-btn-primary">
                 <Save size={16} />
                 حفظ القضية
               </button>
             </div>
-
           </form>
         </motion.div>
       </motion.div>

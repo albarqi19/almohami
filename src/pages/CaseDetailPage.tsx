@@ -50,6 +50,7 @@ import CasePrepKitchen from '../components/CasePrepKitchen';
 import LawSearchModal from '../components/LawSearchModal';
 import PrecedentSearchModal from '../components/PrecedentSearchModal';
 import CaseWekalatPanel from '../components/CaseWekalatPanel';
+import { AddSessionModal } from '../components/AddSessionModal';
 import { SendDabtPreferencesModal, type NotifyMode } from '../components/SendDabtPreferencesModal';
 import { SendSessionReportModal } from '../components/SendSessionReportModal';
 import OutcomeBadge from '../components/OutcomeBadge';
@@ -115,6 +116,7 @@ const CaseDetailPage: React.FC = () => {
   const [showMemoWorkspace, setShowMemoWorkspace] = useState(false);
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
+  const [showAddSessionModal, setShowAddSessionModal] = useState(false);
   const [showQuickActionsModal, setShowQuickActionsModal] = useState(false);
   const [showClientPhoneModal, setShowClientPhoneModal] = useState(false);
   const [showMessagesModal, setShowMessagesModal] = useState(false);
@@ -657,7 +659,7 @@ const CaseDetailPage: React.FC = () => {
           )}
 
           {/* Case Subject */}
-          {(caseData.case_subject || caseData.plaintiff_requests || caseData.case_demands || caseData.case_proofs) && (
+          {(caseData.description || caseData.case_subject || caseData.plaintiff_requests || caseData.case_demands || caseData.case_proofs) && (
             <div className="case-card">
               <div className="case-card__header">
                 <div className="case-card__title">
@@ -666,6 +668,19 @@ const CaseDetailPage: React.FC = () => {
                 </div>
               </div>
               <div className="case-card__content">
+                {/* وصف القضية — مهم للقضايا اليدوية حيث لا case_subject من ناجز */}
+                {caseData.description && (
+                  <div className="case-subject-section">
+                    <div className="case-subject-section__title case-subject-section__title--primary">
+                      <FileText size={14} />
+                      وصف القضية
+                    </div>
+                    <div className="case-subject-section__content">
+                      {caseData.description}
+                    </div>
+                  </div>
+                )}
+
                 {caseData.case_subject && (
                   <div className="case-subject-section">
                     <div className="case-subject-section__title case-subject-section__title--primary">
@@ -775,6 +790,28 @@ const CaseDetailPage: React.FC = () => {
           )}
 
           {/* Sessions Section */}
+          {/* أطراف — حالة فارغة (القضايا اليدوية غالباً): توجيه بدل الاختفاء الصامت */}
+          {(!caseData.parties || caseData.parties.length === 0) && (
+            <div className="case-card">
+              <div className="case-card__header">
+                <div className="case-card__title">
+                  <Users size={16} />
+                  أطراف الدعوى
+                </div>
+                <button className="case-card__action" onClick={() => setShowEditModal(true)}>
+                  <Edit size={13} />
+                  إضافة الخصم
+                </button>
+              </div>
+              <div className="case-card__content case-card__content--compact">
+                <div className="case-empty-state">
+                  <Users size={20} />
+                  <span>لا توجد أطراف مسجّلة{caseData.source !== 'najiz' ? ' — أضِف الخصم ووكيله من «تعديل القضية»' : ''}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {caseData.sessions && caseData.sessions.length > 0 && (
             <div className="case-card" data-tour="case-sessions-section">
               <div className="case-card__header">
@@ -782,9 +819,15 @@ const CaseDetailPage: React.FC = () => {
                   <Calendar size={16} />
                   جلسات القضية ({caseData.sessions.length})
                 </div>
-                <button className="case-card__action" onClick={() => setShowAppointmentsModal(true)}>
-                  عرض الكل
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button className="case-card__action" onClick={() => setShowAddSessionModal(true)}>
+                    <Plus size={13} />
+                    إضافة جلسة
+                  </button>
+                  <button className="case-card__action" onClick={() => setShowAppointmentsModal(true)}>
+                    عرض الكل
+                  </button>
+                </div>
               </div>
               <div className="case-card__content">
                 <div className="case-sessions-list">
@@ -835,6 +878,12 @@ const CaseDetailPage: React.FC = () => {
                               <span>
                                 <Building size={12} />
                                 {session.court}
+                              </span>
+                            )}
+                            {session.result && (
+                              <span title="نتيجة الجلسة" style={{ color: 'var(--law-navy)', fontWeight: 600 }}>
+                                <Gavel size={12} />
+                                {session.result}
                               </span>
                             )}
                             {session.method && (
@@ -934,6 +983,28 @@ const CaseDetailPage: React.FC = () => {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* جلسات — حالة فارغة: زر إضافة مباشر بدل الاختفاء الصامت */}
+          {(!caseData.sessions || caseData.sessions.length === 0) && (
+            <div className="case-card" data-tour="case-sessions-section">
+              <div className="case-card__header">
+                <div className="case-card__title">
+                  <Calendar size={16} />
+                  جلسات القضية
+                </div>
+                <button className="case-card__action" onClick={() => setShowAddSessionModal(true)}>
+                  <Plus size={13} />
+                  إضافة جلسة
+                </button>
+              </div>
+              <div className="case-card__content case-card__content--compact">
+                <div className="case-empty-state">
+                  <Calendar size={20} />
+                  <span>لا توجد جلسات بعد — أضف جلسة يدوياً وستظهر في صفحة الجلسات والتذكيرات</span>
                 </div>
               </div>
             </div>
@@ -1127,6 +1198,28 @@ const CaseDetailPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+              {(caseData as any).case_classification && (
+                <div className="case-info-row">
+                  <div className="case-info-row__icon">
+                    <FileText size={14} />
+                  </div>
+                  <div className="case-info-row__content">
+                    <div className="case-info-row__label">التصنيف</div>
+                    <div className="case-info-row__value">{(caseData as any).case_classification}</div>
+                  </div>
+                </div>
+              )}
+              {(caseData as any).sub_circle && (
+                <div className="case-info-row">
+                  <div className="case-info-row__icon">
+                    <Building size={14} />
+                  </div>
+                  <div className="case-info-row__content">
+                    <div className="case-info-row__label">الدائرة الفرعية</div>
+                    <div className="case-info-row__value">{(caseData as any).sub_circle}</div>
+                  </div>
+                </div>
+              )}
               {caseData.client_phone ? (
                 <div className="case-info-row">
                   <div className="case-info-row__icon">
@@ -1148,6 +1241,37 @@ const CaseDetailPage: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* المحامون المسؤولون عن القضية */}
+          {(caseData.lawyers?.length ?? 0) > 0 && (
+            <div className="case-card">
+              <div className="case-card__header">
+                <div className="case-card__title">
+                  <Scale size={16} />
+                  المحامون ({caseData.lawyers!.length})
+                </div>
+              </div>
+              <div className="case-card__content case-card__content--compact">
+                {caseData.lawyers!.map((l: any) => {
+                  const primaryId = (caseData as any).primary_lawyer?.[0]?.id ?? null;
+                  const isPrimary = primaryId != null ? primaryId === l.id : !!l.pivot?.is_primary;
+                  return (
+                    <div className="case-info-row" key={l.id}>
+                      <div className="case-info-row__icon">
+                        <Scale size={14} />
+                      </div>
+                      <div className="case-info-row__content">
+                        <div className="case-info-row__value">
+                          {l.name}
+                          {isPrimary && <span title="المحامي المسؤول" style={{ color: 'var(--law-gold)', marginInlineStart: 4 }}>★</span>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Wekalat summary card */}
           {(() => {
@@ -1351,7 +1475,11 @@ const CaseDetailPage: React.FC = () => {
 
       <CaseDocumentsModal
         isOpen={showDocumentsModal}
-        onClose={() => setShowDocumentsModal(false)}
+        onClose={() => {
+          setShowDocumentsModal(false);
+          // تحديث العدّاد بعد الإغلاق (قد أُضيفت/حُذفت وثائق داخل المودال)
+          if (caseId) DocumentService.getCaseDocuments(caseId).then((d: any[]) => setDocumentsCount(d?.length || 0)).catch(() => {});
+        }}
         caseId={caseData.id}
         caseTitle={caseData.title}
         clientName={caseData.client_name}
@@ -1371,7 +1499,11 @@ const CaseDetailPage: React.FC = () => {
 
       <CaseTasksModal
         isOpen={showTasksModal}
-        onClose={() => setShowTasksModal(false)}
+        onClose={() => {
+          setShowTasksModal(false);
+          // تحديث العدّاد بعد الإغلاق (قد أُضيفت/أُنجزت مهام داخل المودال)
+          if (caseId) TaskService.getTasks({ case_id: caseId } as any).then((t: any) => setTasksCount(t?.data?.length ?? t?.length ?? 0)).catch(() => {});
+        }}
         caseId={caseData.id}
         caseTitle={caseData.title}
       />
@@ -1382,6 +1514,19 @@ const CaseDetailPage: React.FC = () => {
         caseData={caseData}
         onShowDabt={(session) => setSelectedDabtSession(session)}
       />
+
+      {/* إضافة جلسة يدوية — القضية الحالية محدّدة مسبقاً */}
+      {showAddSessionModal && (
+        <AddSessionModal
+          isOpen={showAddSessionModal}
+          onClose={() => setShowAddSessionModal(false)}
+          onSessionAdded={() => {
+            setShowAddSessionModal(false);
+            refreshCaseData();
+          }}
+          preselectedCaseId={Number(caseData.id)}
+        />
+      )}
 
       <QuickActionsModal
         isOpen={showQuickActionsModal}
