@@ -109,6 +109,8 @@ const MyAvailability = lazyWithRetry(() => import('./pages/meetings/MyAvailabili
 
 // Public Booking Page (no auth required)
 const PublicBooking = lazyWithRetry(() => import('./pages/booking/PublicBooking'));
+// Legal pages: Terms & Privacy (no auth required)
+const LegalPage = lazyWithRetry(() => import('./pages/LegalPage'));
 // Public Service Portal (White-Label, no auth required)
 const ServicePortal = lazyWithRetry(() => import('./pages/portal/ServicePortal'));
 
@@ -148,6 +150,9 @@ function App() {
                   <LawyerSuspended />
                 </ProtectedRoute>
               } />
+              {/* Legal pages - No auth required */}
+              <Route path="/terms" element={<LegalPage />} />
+              <Route path="/privacy" element={<LegalPage />} />
               {/* Public Booking Page - No auth required */}
               <Route path="/booking/:token" element={<PublicBooking />} />
               {/* Public Service Portal (White-Label) - No auth required */}

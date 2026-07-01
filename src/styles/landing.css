@@ -1869,7 +1869,7 @@ html:has(.rl) {
 
 .rl-footer__grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr;
+  grid-template-columns: 1.5fr 0.9fr 1fr 1.1fr;
   gap: 36px;
   padding-bottom: 48px;
 }
@@ -1912,6 +1912,153 @@ html:has(.rl) {
   gap: 12px;
   flex-wrap: wrap;
   font-size: 0.78rem;
+}
+
+/* ============================================================
+   الصفحات القانونية (الشروط والأحكام / سياسة الخصوصية)
+   ============================================================ */
+
+.rl-legal {
+  background: var(--rl-paper);
+  padding-top: clamp(110px, 14vh, 150px);
+  padding-bottom: clamp(56px, 8vh, 88px);
+  min-height: 60vh;
+}
+
+.rl-legal__head {
+  max-width: 760px;
+  margin-bottom: clamp(32px, 5vh, 48px);
+}
+
+.rl-legal__head h1 {
+  font-family: var(--rl-font-display);
+  font-size: clamp(1.9rem, 3.6vw, 2.6rem);
+  font-weight: 800;
+  color: var(--rl-ink-900);
+  margin: 12px 0 8px;
+}
+
+.rl-legal__updated {
+  font-size: 0.85rem;
+  color: var(--rl-text-mute);
+  margin: 0;
+}
+
+.rl-legal__body {
+  max-width: 760px;
+}
+
+.rl-legal__intro {
+  font-size: 1rem;
+  line-height: 2.1;
+  color: var(--rl-text-ink);
+  margin: 0 0 28px;
+}
+
+.rl-legal__section {
+  margin-bottom: clamp(28px, 4vh, 40px);
+}
+
+.rl-legal__section h2 {
+  font-family: var(--rl-font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--rl-ink-900);
+  margin: 0 0 12px;
+  padding-inline-start: 12px;
+  border-inline-start: 3px solid var(--rl-gold-500);
+}
+
+.rl-legal__section p,
+.rl-legal__section li {
+  font-size: 0.95rem;
+  line-height: 2.1;
+  color: var(--rl-text-ink);
+}
+
+.rl-legal__section p {
+  margin: 0 0 12px;
+}
+
+.rl-legal__section ul,
+.rl-legal__section ol {
+  margin: 0 0 12px;
+  padding-inline-start: 22px;
+}
+
+.rl-legal__section li {
+  margin-bottom: 8px;
+}
+
+.rl-legal__section a {
+  color: var(--rl-ink-900);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--rl-gold-500);
+  text-underline-offset: 4px;
+}
+
+.rl-legal__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--rl-paper-line);
+  border-radius: 12px;
+}
+
+.rl-legal__table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.rl-legal__table-wrap th,
+.rl-legal__table-wrap td {
+  text-align: start;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rl-paper-line);
+  line-height: 1.9;
+  vertical-align: top;
+}
+
+.rl-legal__table-wrap th {
+  background: var(--rl-ink-950);
+  color: var(--rl-gold-300);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rl-legal__table-wrap tr:last-child td {
+  border-bottom: none;
+}
+
+.rl-legal__cross {
+  max-width: 760px;
+  margin-top: clamp(32px, 5vh, 48px);
+  padding-top: 24px;
+  border-top: 1px solid var(--rl-paper-line);
+}
+
+.rl-legal__cross a {
+  color: var(--rl-ink-900);
+  font-weight: 800;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.rl-legal__cross a:hover {
+  color: var(--rl-gold-600);
+}
+
+/* روابط التواصل في تذييل صفحة الهبوط */
+.rl-footer__social {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+}
+
+.rl-footer__social svg {
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 /* ============================================================
@@ -1969,6 +2116,13 @@ html:has(.rl) {
     grid-template-columns: 1fr;
   }
 
+  .rl-footer__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+}
+
+@media (max-width: 560px) {
   .rl-footer__grid {
     grid-template-columns: 1fr;
     gap: 28px;
