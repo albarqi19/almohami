@@ -32,11 +32,13 @@ interface ComposeCorrespondenceModalProps {
   onIssued?: () => void;
   /** ربط مسبق بقضية (اختياري). */
   caseId?: number;
+  /** مستلِم مسبق: عميل محدّد (من صفحة العميل مثلاً) — يضبط المستلِم وطريقة الإصدار تلقائياً. */
+  presetClient?: { id: number; name: string; phone?: string | null; email?: string | null };
 }
 
 const ACCENT_SWATCHES = ['#1f3a5f', '#0f766e', '#7c2d12', '#4338ca', '#9d174d', '#374151'];
 
-const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({ isOpen, onClose, onIssued, caseId }) => {
+const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({ isOpen, onClose, onIssued, caseId, presetClient }) => {
   // الحقول
   const [documentType, setDocumentType] = useState('letter');
   const [title, setTitle] = useState('');
@@ -82,6 +84,15 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     resetAll();
+    // مستلِم مسبق (فُتح من صفحة العميل): عميل محدّد + طريقة إصدار بحسب قنواته المتاحة.
+    if (presetClient) {
+      setRecipientType('client');
+      setClientId(presetClient.id);
+      setClientLabel(presetClient.name);
+      setRecipientPhone(presetClient.phone || '');
+      setRecipientEmail(presetClient.email || '');
+      setDeliveryMethod(presetClient.phone ? 'whatsapp' : (presetClient.email ? 'email' : 'print'));
+    }
     void bootstrap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);

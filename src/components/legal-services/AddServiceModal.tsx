@@ -333,6 +333,8 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
   const [direction, setDirection] = useState<'forward' | 'back'>('forward');
   const [saving, setSaving] = useState(false);
   const [stepError, setStepError] = useState('');
+  // [R3] خطأ الإرسال النهائي — يُعرض للمستخدم بدل ابتلاعه في console فقط.
+  const [submitError, setSubmitError] = useState('');
 
   const [formData, setFormData] = useState<CreateLegalServiceData>({
     title: '',
@@ -361,6 +363,7 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
       setDirection('forward');
       setSaving(false);
       setStepError('');
+      setSubmitError('');
       setFormData({
         title: '',
         service_type: '' as ServiceType,
@@ -474,6 +477,7 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
   // ── Submit ──
   const handleSubmit = async () => {
     setSaving(true);
+    setSubmitError('');
     try {
       // Map delivery_method_notice back to delivery_method for legal_notices
       const submitData = { ...formData } as any;
@@ -484,8 +488,16 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
       const response = await LegalServiceService.createService(submitData);
       if (response.success) {
         onSuccess();
+      } else {
+        // [R3] استجابة بلا success=true دون رمي استثناء: أظهر رسالة الخادم لا الصمت.
+        setSubmitError(response.message || 'تعذّر حفظ الخدمة. يرجى المحاولة مرة أخرى.');
       }
     } catch (err) {
+      // [R3] apiClient يضع رسالة الباك العربية في error.message — نعرضها للمستخدم
+      // بدل ابتلاعها في console فقط. أخطاء التحقق (errors) تُلخَّص أيضاً.
+      const e = err as Error & { errors?: Record<string, string[]> };
+      const firstFieldError = e.errors ? Object.values(e.errors)[0]?.[0] : undefined;
+      setSubmitError(firstFieldError || e.message || 'حدث خطأ غير متوقع أثناء حفظ الخدمة.');
       console.error(err);
     } finally {
       setSaving(false);
@@ -1503,6 +1515,24 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
                 </motion.div>
               </AnimatePresence>
             </div>
+
+            {/* [R3] شريط خطأ الإرسال — يظهر رسالة الخادم بدل الفشل الصامت */}
+            {submitError && (
+              <div
+                className="asm-error-msg"
+                role="alert"
+                style={{
+                  margin: '0 20px 4px',
+                  color: 'var(--asm-red)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <X size={13} />
+                {submitError}
+              </div>
+            )}
 
             {/* Footer */}
             <div className="notion-modal-footer">

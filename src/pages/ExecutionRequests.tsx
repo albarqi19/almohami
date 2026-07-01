@@ -23,9 +23,27 @@ import {
   PlayCircle,
   XCircle,
   PieChart as PieIcon,
+  BellRing,
+  Link2,
+  Link2Off,
+  UserRound,
+  Share2,
+  ListTodo,
+  Plus,
+  Receipt,
+  History,
+  Check,
+  UserPlus,
 } from 'lucide-react';
 import { ExecutionRequestService } from '../services/executionRequestService';
-import type { ExecutionRequest, ExecutionRequestStats } from '../types';
+import { UserService } from '../services/UserService';
+import type { User } from '../services/UserService';
+import { CaseService } from '../services/caseService';
+import { TaskService } from '../services/taskService';
+import type {
+  ExecutionRequest,
+  ExecutionRequestStats,
+} from '../types';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // ==================== تصنيف الحالات (ألوان عبر متغيرات الثيم) ====================
@@ -57,15 +75,33 @@ const PARTY_ROLES: Record<string, string> = {
   '6': 'وكيل منفذ ضده',
 };
 
-// ==================== مساعدات ====================
-
-const formatAmount = (amount?: number | null): string => {
-  if (amount === null || amount === undefined) return '—';
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(amount);
+const TASK_STATUS_AR: Record<string, string> = {
+  todo: 'معلقة',
+  in_progress: 'قيد التنفيذ',
+  review: 'تحت المراجعة',
+  pending_approval: 'بانتظار الاعتماد',
+  completed: 'مكتملة',
+  cancelled: 'ملغية',
 };
 
-const compactAmount = (amount?: number | null): string => {
-  const v = amount ?? 0;
+const TASK_PRIORITY_AR: Record<string, string> = {
+  low: 'منخفضة',
+  medium: 'متوسطة',
+  high: 'عالية',
+  urgent: 'عاجلة',
+};
+
+// ==================== مساعدات ====================
+
+const formatAmount = (amount?: number | string | null): string => {
+  if (amount === null || amount === undefined || amount === '') return '—';
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (Number.isNaN(num)) return '—';
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(num);
+};
+
+const compactAmount = (amount?: number | string | null): string => {
+  const v = typeof amount === 'string' ? parseFloat(amount) || 0 : (amount ?? 0);
   if (v >= 1_000_000) return `${(v / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 2 })} مليون`;
   if (v >= 1_000) return `${(v / 1_000).toLocaleString('en-US', { maximumFractionDigits: 1 })} ألف`;
   return v.toLocaleString('en-US');
@@ -82,6 +118,17 @@ const formatDate = (value?: string | null): string => {
   }
 };
 
+const formatDateTime = (value?: string | null): string => {
+  if (!value) return '—';
+  try {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return value;
+  }
+};
+
 /** نسبة التحصيل لطلب واحد */
 const collectionPct = (req: { total_amount?: number | null; paid_amount?: number | null }): number | null => {
   const total = req.total_amount ?? 0;
@@ -91,10 +138,30 @@ const collectionPct = (req: { total_amount?: number | null; paid_amount?: number
 
 const pctClass = (p: number | null) => p === null ? '' : p >= 70 ? 'exec-good' : p >= 30 ? 'exec-mid' : 'exec-bad';
 
+/**
+ * استخراج حقول حركة مالية من كشف ناجز — أسماء الحقول تختلف بين الردود
+ * فنجرّب المفاتيح الشائعة ونعرض ما نجده.
+ */
+const txField = (tx: Record<string, any>, keys: string[]): string | null => {
+  for (const k of keys) {
+    const v = tx[k];
+    if (v !== undefined && v !== null && v !== '') return String(v);
+  }
+  return null;
+};
+
+const parseTx = (tx: Record<string, any>) => ({
+  amount: txField(tx, ['transactionAmount', 'amount', 'Amount', 'transferedAmount', 'totalAmount']),
+  date: txField(tx, ['transactionDate', 'date', 'Date', 'createdDate', 'transactionDateHijri', 'dateHijri']),
+  type: txField(tx, ['transactionTypeName', 'typeName', 'type', 'TransactionTypeName', 'operationName']),
+  status: txField(tx, ['transactionStatusName', 'statusName', 'status', 'TransactionStatusName']),
+});
+
 // ==================== Cache ====================
 
 const CACHE_KEY = 'execution_requests_data';
 const CACHE_DURATION = 60 * 60 * 1000;
+const LAST_SEEN_PAYMENT_KEY = 'execution_payments_last_seen_id';
 
 // ==================== شارة الحالة ====================
 
@@ -123,21 +190,247 @@ const CollectBar: React.FC<{ req: ExecutionRequest }> = ({ req }) => {
   );
 };
 
+// ==================== نافذة «آخر السدادات» ====================
+
+interface PaymentsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  clientId: string;
+}
+
+const PaymentsModal: React.FC<PaymentsModalProps> = ({ isOpen, onClose, clientId }) => {
+  const [days, setDays] = useState<string>('30');
+  const [page, setPage] = useState(1);
+
+  useEffect(() => { setPage(1); }, [days, clientId]);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['execution-requests', 'payment-logs', days, clientId, page],
+    queryFn: () => ExecutionRequestService.getPaymentLogs({
+      ...(days !== 'all' && { days: Number(days) }),
+      ...(clientId !== 'all' && { client_id: clientId }),
+      page,
+      limit: 15,
+    }),
+    enabled: isOpen,
+    staleTime: 60 * 1000,
+  });
+
+  // تحديث «آخر سداد مُطَّلع عليه» — لإخفاء بانر السدادات الجديدة بعد المعاينة
+  useEffect(() => {
+    if (!isOpen || !data?.data?.length) return;
+    const maxId = Math.max(...data.data.map(l => l.id));
+    const prev = Number(localStorage.getItem(LAST_SEEN_PAYMENT_KEY) || 0);
+    if (maxId > prev) localStorage.setItem(LAST_SEEN_PAYMENT_KEY, String(maxId));
+  }, [isOpen, data]);
+
+  if (!isOpen) return null;
+
+  const logs = data?.data ?? [];
+  const lastPage = data?.last_page ?? 1;
+
+  return (
+    <div className="exec-overlay" onClick={onClose}>
+      <div className="exec-modal" onClick={e => e.stopPropagation()}>
+        <div className="exec-modal__header">
+          <BellRing size={16} />
+          <div className="exec-modal__title">
+            <b>آخر السدادات المرصودة</b>
+            <span>تُرصد تلقائياً عند كل استيراد من ناجز بمقارنة المحصَّل قبل وبعد</span>
+          </div>
+          <select className="exec-select" value={days} onChange={e => setDays(e.target.value)}>
+            <option value="7">آخر 7 أيام</option>
+            <option value="30">آخر 30 يوماً</option>
+            <option value="90">آخر 90 يوماً</option>
+            <option value="all">الكل</option>
+          </select>
+          <button className="exec-iconbtn" onClick={onClose}><X size={15} /></button>
+        </div>
+
+        <div className="exec-modal__body">
+          <div className="exec-modal__finance exec-paysummary">
+            <div className="exec-modal__fcell">
+              <span>عدد السدادات</span>
+              <b>{formatAmount(data?.total ?? 0)}</b>
+            </div>
+            <div className="exec-modal__fcell">
+              <span>إجمالي المحصَّل في الفترة (ر.س)</span>
+              <b className="exec-good">{formatAmount(data?.sum_delta ?? 0)}</b>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="exec-loading"><RefreshCw size={14} className="exec-spin" /> جارٍ التحميل…</div>
+          ) : logs.length === 0 ? (
+            <div className="exec-empty exec-empty--sm">
+              <Receipt size={30} />
+              <p>لا سدادات مرصودة في هذه الفترة</p>
+              <span>عند الاستيراد التالي من الإضافة سيُرصد أي تغيّر في المبالغ المحصَّلة</span>
+            </div>
+          ) : (
+            <table className="exec-table exec-paytable">
+              <thead>
+                <tr>
+                  <th>الطلب</th>
+                  <th>العميل</th>
+                  <th>قبل</th>
+                  <th>بعد</th>
+                  <th>السداد المرصود</th>
+                  <th>المتبقي</th>
+                  <th>تاريخ الرصد</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map(log => (
+                  <tr key={log.id} style={{ cursor: 'default' }}>
+                    <td><b className="exec-td-num">{log.request_number}</b></td>
+                    <td>{log.execution_request?.client?.name || '—'}</td>
+                    <td className="exec-td-num exec-dim">{formatAmount(log.previous_paid)}</td>
+                    <td className="exec-td-num">{formatAmount(log.new_paid)}</td>
+                    <td className="exec-td-num exec-good">+{formatAmount(log.delta)}</td>
+                    <td className="exec-td-num">{formatAmount(log.remaining_after)}</td>
+                    <td className="exec-dim">{formatDateTime(log.detected_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {lastPage > 1 && (
+            <div className="exec-pagination">
+              <button className="exec-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+                <ChevronRight size={13} /> السابق
+              </button>
+              <span>صفحة {page} من {lastPage}</span>
+              <button className="exec-btn" disabled={page >= lastPage} onClick={() => setPage(p => p + 1)}>
+                التالي <ChevronLeft size={13} />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ==================== نافذة التفاصيل ====================
 
 interface DetailModalProps {
-  request: ExecutionRequest | null;
+  requestId: number | null;
+  initial: ExecutionRequest | null;
   isOpen: boolean;
   onClose: () => void;
+  clients: User[];
+  lawyers: User[];
 }
 
-const DetailModal: React.FC<DetailModalProps> = ({ request, isOpen, onClose }) => {
+const DetailModal: React.FC<DetailModalProps> = ({ requestId, initial, isOpen, onClose, clients, lawyers }) => {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // ربط قضية
+  const [caseSearch, setCaseSearch] = useState('');
+  const [caseResults, setCaseResults] = useState<Array<{ id: number; title: string; file_number?: string }>>([]);
+  const [searchingCases, setSearchingCases] = useState(false);
+
+  // ربط عميل
+  const [clientToLink, setClientToLink] = useState('');
+
+  // مشاركة
+  const [showShareForm, setShowShareForm] = useState(false);
+  const [shareUserId, setShareUserId] = useState('');
+  const [shareNote, setShareNote] = useState('');
+
+  // مهمة جديدة
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskAssignee, setTaskAssignee] = useState('');
+  const [taskPriority, setTaskPriority] = useState('medium');
+  const [taskDueDate, setTaskDueDate] = useState('');
+
+  // التفاصيل الكاملة (بالعلاقات) — القائمة تحمل نسخة خفيفة فقط
+  const { data: detail, refetch: refetchDetail, isFetching: detailLoading } = useQuery<ExecutionRequest | null>({
+    queryKey: ['execution-requests', 'detail', requestId],
+    queryFn: () => requestId ? ExecutionRequestService.getRequest(requestId) : Promise.resolve(null),
+    enabled: isOpen && !!requestId,
+    staleTime: 30 * 1000,
+  });
+
+  useEffect(() => {
+    if (!isOpen) {
+      setActionError(null);
+      setCaseSearch('');
+      setCaseResults([]);
+      setClientToLink('');
+      setShowShareForm(false);
+      setShareUserId('');
+      setShareNote('');
+      setShowTaskForm(false);
+      setTaskTitle('');
+      setTaskAssignee('');
+      setTaskPriority('medium');
+      setTaskDueDate('');
+    }
+  }, [isOpen, requestId]);
+
+  const request = detail || initial;
   if (!request || !isOpen) return null;
 
   const parties = Array.isArray(request.parties) ? request.parties : [];
   const decisions = Array.isArray(request.decisions) ? request.decisions : [];
   const steps = Array.isArray(request.steps) ? request.steps : [];
+  const transactions = Array.isArray(request.financial_amounts?.transactions) ? request.financial_amounts!.transactions! : [];
+  const paymentLogs = Array.isArray(request.payment_logs) ? request.payment_logs : [];
+  const shares = Array.isArray(request.shares) ? request.shares : [];
+  const tasks = Array.isArray(request.tasks) ? request.tasks : [];
   const p = collectionPct(request);
+
+  const afterMutation = () => {
+    refetchDetail();
+    queryClient.invalidateQueries({ queryKey: ['execution-requests'] });
+  };
+
+  const run = async (key: string, fn: () => Promise<any>) => {
+    setBusy(key);
+    setActionError(null);
+    try {
+      await fn();
+      afterMutation();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'حدث خطأ');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const searchCases = async () => {
+    if (!caseSearch.trim()) return;
+    setSearchingCases(true);
+    setActionError(null);
+    try {
+      const res = await CaseService.getCases({ search: caseSearch.trim(), limit: 8 } as any);
+      const list: any[] = Array.isArray((res as any)?.data) ? (res as any).data : [];
+      setCaseResults(list.map(c => ({ id: Number(c.id), title: c.title, file_number: c.file_number })));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'فشل البحث عن القضايا');
+    } finally {
+      setSearchingCases(false);
+    }
+  };
+
+  const createTask = () => run('task', async () => {
+    await TaskService.createTask({
+      title: taskTitle.trim(),
+      executionRequestId: request.id,
+      assignedTo: taskAssignee,
+      priority: taskPriority as any,
+      dueDate: taskDueDate ? new Date(taskDueDate) : undefined,
+    } as any);
+    setShowTaskForm(false);
+    setTaskTitle('');
+    setTaskDueDate('');
+  });
 
   const partyDot = (role: string) => {
     if (role.includes('طالب') || role.includes('دائن') || role.includes('creditor')) return 'exec-dot--creditor';
@@ -145,9 +438,12 @@ const DetailModal: React.FC<DetailModalProps> = ({ request, isOpen, onClose }) =
     return 'exec-dot--attorney';
   };
 
+  const sharedUserIds = new Set(shares.map(s => s.user_id));
+  const shareCandidates = lawyers.filter(u => !sharedUserIds.has(Number(u.id)));
+
   return (
     <div className="exec-overlay" onClick={onClose}>
-      <div className="exec-modal" onClick={e => e.stopPropagation()}>
+      <div className="exec-modal exec-modal--wide" onClick={e => e.stopPropagation()}>
         {/* الترويسة */}
         <div className="exec-modal__header">
           <Scale size={16} />
@@ -155,11 +451,18 @@ const DetailModal: React.FC<DetailModalProps> = ({ request, isOpen, onClose }) =
             <b>{request.request_number}</b>
             <span>{request.court || 'محكمة غير محددة'}{request.department ? ` · ${request.department}` : ''}</span>
           </div>
+          {detailLoading && <RefreshCw size={13} className="exec-spin exec-dim" />}
           <StatusBadge status={request.status} />
           <button className="exec-iconbtn" onClick={onClose}><X size={15} /></button>
         </div>
 
         <div className="exec-modal__body">
+          {actionError && (
+            <div className="exec-alert exec-alert--error">
+              <AlertCircle size={13} /> {actionError}
+            </div>
+          )}
+
           {/* الشريط المالي */}
           <div className="exec-modal__finance">
             <div className="exec-modal__fcell">
@@ -187,90 +490,385 @@ const DetailModal: React.FC<DetailModalProps> = ({ request, isOpen, onClose }) =
             </div>
           </div>
 
-          {/* البيانات الأساسية */}
-          <table className="exec-info-table">
-            <tbody>
-              <tr>
-                <td className="exec-info-table__label">الصفة في الطلب</td>
-                <td>{request.party_role || '—'}</td>
-                <td className="exec-info-table__label">نوع السند</td>
-                <td>{request.main_document_type || '—'}</td>
-              </tr>
-              <tr>
-                <td className="exec-info-table__label">السند الفرعي</td>
-                <td>{request.sub_document_type || '—'}</td>
-                <td className="exec-info-table__label">تاريخ التقديم</td>
-                <td>{request.filing_date_hijri || formatDate(request.filing_date_gregorian)}</td>
-              </tr>
-              <tr>
-                <td className="exec-info-table__label">المحكمة</td>
-                <td>{request.court || '—'}</td>
-                <td className="exec-info-table__label">الدائرة</td>
-                <td>{request.department || '—'}</td>
-              </tr>
-            </tbody>
-          </table>
+          {/* ===== شبكة التفاصيل: بيانات (المتن) + أدوات عمل (شريط جانبي) ===== */}
+          <div className="exec-detailgrid">
+            {/* ===== المتن: البيانات ===== */}
+            <div className="exec-detailmain">
+              {/* البيانات الأساسية */}
+              <table className="exec-info-table">
+                <tbody>
+                  <tr>
+                    <td className="exec-info-table__label">الصفة في الطلب</td>
+                    <td>{request.party_role || '—'}</td>
+                    <td className="exec-info-table__label">نوع السند</td>
+                    <td>{request.main_document_type || '—'}</td>
+                  </tr>
+                  <tr>
+                    <td className="exec-info-table__label">السند الفرعي</td>
+                    <td>{request.sub_document_type || '—'}</td>
+                    <td className="exec-info-table__label">تاريخ التقديم</td>
+                    <td>{request.filing_date_hijri || formatDate(request.filing_date_gregorian)}</td>
+                  </tr>
+                  <tr>
+                    <td className="exec-info-table__label">المحكمة</td>
+                    <td>{request.court || '—'}</td>
+                    <td className="exec-info-table__label">الدائرة</td>
+                    <td>{request.department || '—'}</td>
+                  </tr>
+                </tbody>
+              </table>
 
-          <div className="exec-modal__cols">
-            {/* الأطراف */}
-            {parties.length > 0 && (
+              {/* السدادات المرصودة عبر الاستيراد */}
               <div className="exec-section">
                 <div className="exec-section__head">
-                  <Users size={13} /> الأطراف <em>{parties.length}</em>
+                  <History size={13} /> السدادات المرصودة عبر الاستيراد <em>{paymentLogs.length}</em>
                 </div>
-                {parties.map((pt, i) => (
-                  <div key={i} className="exec-party">
-                    <span className={`exec-dot ${partyDot(pt.role || '')}`} />
-                    <div>
-                      <b>{pt.name || '—'}</b>
-                      <span>
-                        {pt.role}{pt.id_number ? ` · ${pt.id_number}` : ''}
-                        {pt.nationality ? ` (${pt.nationality})` : ''}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                {paymentLogs.length === 0 ? (
+                  <div className="exec-dim exec-section__empty">لم يُرصد تغيّر في المحصَّل بعد — يُقارن تلقائياً مع كل استيراد من ناجز</div>
+                ) : (
+                  <table className="exec-minitable">
+                    <thead>
+                      <tr><th>قبل</th><th>بعد</th><th>الفرق</th><th>تاريخ الرصد</th></tr>
+                    </thead>
+                    <tbody>
+                      {paymentLogs.map(log => {
+                        const delta = typeof log.delta === 'string' ? parseFloat(log.delta) : log.delta;
+                        return (
+                          <tr key={log.id}>
+                            <td className="exec-td-num exec-dim">{formatAmount(log.previous_paid)}</td>
+                            <td className="exec-td-num">{formatAmount(log.new_paid)}</td>
+                            <td className={`exec-td-num ${delta >= 0 ? 'exec-good' : 'exec-bad'}`}>
+                              {delta >= 0 ? '+' : ''}{formatAmount(log.delta)}
+                            </td>
+                            <td className="exec-dim">{formatDateTime(log.detected_at)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </div>
-            )}
 
-            {/* القرارات */}
-            {decisions.length > 0 && (
+              {/* كشف الحركات المالية من ناجز */}
               <div className="exec-section">
                 <div className="exec-section__head">
-                  <Gavel size={13} /> القرارات <em>{decisions.length}</em>
+                  <Receipt size={13} /> كشف الحركات المالية (ناجز) <em>{transactions.length}</em>
                 </div>
-                {decisions.map((d: any, i: number) => (
-                  <div key={i} className="exec-party">
-                    <span className="exec-dot exec-dot--attorney" />
-                    <div>
-                      <b>{d.decisionNumber || d.number || `قرار ${i + 1}`}</b>
-                      <span>{d.status || d.statusName || '—'}{d.issueDate ? ` · ${d.issueDate}` : ''}</span>
-                    </div>
-                  </div>
-                ))}
+                {transactions.length === 0 ? (
+                  <div className="exec-dim exec-section__empty">لا حركات مالية مسحوبة — تُجلب مع الاستيراد من ناجز</div>
+                ) : (
+                  <table className="exec-minitable">
+                    <thead>
+                      <tr><th>النوع</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th></tr>
+                    </thead>
+                    <tbody>
+                      {transactions.map((tx: any, i: number) => {
+                        const t = parseTx(tx);
+                        return (
+                          <tr key={i}>
+                            <td>{t.type || `حركة ${i + 1}`}</td>
+                            <td className="exec-td-num">{formatAmount(t.amount)}</td>
+                            <td>{t.status || '—'}</td>
+                            <td className="exec-dim">{t.date || '—'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* مراحل الطلب */}
-          {steps.length > 0 && (
-            <div className="exec-section">
-              <div className="exec-section__head">
-                <Clock size={13} /> مراحل الطلب <em>{steps.length}</em>
-              </div>
-              <div className="exec-timeline">
-                {steps.map((s: any, i: number) => (
-                  <div key={i} className="exec-timeline__item">
-                    <div className="exec-timeline__dot" />
-                    <div className="exec-timeline__content">
-                      <b>{s.stepName || s.name || s.title || `مرحلة ${i + 1}`}</b>
-                      <span>{s.stepDate || s.date || '—'}</span>
+              <div className="exec-modal__cols">
+                {/* الأطراف */}
+                {parties.length > 0 && (
+                  <div className="exec-section">
+                    <div className="exec-section__head">
+                      <Users size={13} /> الأطراف <em>{parties.length}</em>
                     </div>
+                    {parties.map((pt, i) => (
+                      <div key={i} className="exec-party">
+                        <span className={`exec-dot ${partyDot(pt.role || '')}`} />
+                        <div>
+                          <b>{pt.name || '—'}</b>
+                          <span>
+                            {pt.role}{pt.id_number ? ` · ${pt.id_number}` : ''}
+                            {pt.nationality ? ` (${pt.nationality})` : ''}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+
+                {/* القرارات */}
+                {decisions.length > 0 && (
+                  <div className="exec-section">
+                    <div className="exec-section__head">
+                      <Gavel size={13} /> القرارات <em>{decisions.length}</em>
+                    </div>
+                    {decisions.map((d: any, i: number) => (
+                      <div key={i} className="exec-party">
+                        <span className="exec-dot exec-dot--attorney" />
+                        <div>
+                          <b>{d.decisionNumber || d.number || `قرار ${i + 1}`}</b>
+                          <span>{d.status || d.statusName || '—'}{d.issueDate ? ` · ${d.issueDate}` : ''}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              {/* مراحل الطلب */}
+              {steps.length > 0 && (
+                <div className="exec-section">
+                  <div className="exec-section__head">
+                    <Clock size={13} /> مراحل الطلب <em>{steps.length}</em>
+                  </div>
+                  <div className="exec-timeline">
+                    {steps.map((s: any, i: number) => (
+                      <div key={i} className="exec-timeline__item">
+                        <div className="exec-timeline__dot" />
+                        <div className="exec-timeline__content">
+                          <b>{s.stepName || s.name || s.title || `مرحلة ${i + 1}`}</b>
+                          <span>{s.stepDate || s.date || '—'}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* ===== الشريط الجانبي: أدوات العمل ===== */}
+            <aside className="exec-detailside">
+              {/* العميل */}
+              <div className="exec-sidebox">
+                <div className="exec-sidebox__head"><UserRound size={13} /> العميل</div>
+                {request.client ? (
+                  <div className="exec-linkrow">
+                    <b>{request.client.name}</b>
+                    <button
+                      className="exec-iconbtn exec-iconbtn--danger"
+                      title="فك ربط العميل"
+                      disabled={busy === 'client'}
+                      onClick={() => run('client', () => ExecutionRequestService.linkClient(request.id, null))}
+                    >
+                      <Link2Off size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="exec-linkrow">
+                    <select className="exec-select exec-select--grow" value={clientToLink} onChange={e => setClientToLink(e.target.value)}>
+                      <option value="">اختر عميلاً…</option>
+                      {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <button
+                      className="exec-btn"
+                      disabled={!clientToLink || busy === 'client'}
+                      onClick={() => run('client', () => ExecutionRequestService.linkClient(request.id, Number(clientToLink)))}
+                    >
+                      <Link2 size={13} /> ربط
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* القضية */}
+              <div className="exec-sidebox">
+                <div className="exec-sidebox__head"><Gavel size={13} /> القضية المرتبطة</div>
+                {request.linked_case ? (
+                  <div className="exec-linkrow">
+                    <b title={request.linked_case.title}>
+                      {request.linked_case.file_number ? `${request.linked_case.file_number} · ` : ''}{request.linked_case.title}
+                    </b>
+                    <button
+                      className="exec-iconbtn exec-iconbtn--danger"
+                      title="فك ربط القضية"
+                      disabled={busy === 'case'}
+                      onClick={() => run('case', () => ExecutionRequestService.linkCase(request.id, null))}
+                    >
+                      <Link2Off size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="exec-linkrow">
+                      <div className="exec-search exec-select--grow">
+                        <Search size={13} />
+                        <input
+                          placeholder="رقم الملف أو العنوان…"
+                          value={caseSearch}
+                          onChange={e => setCaseSearch(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && searchCases()}
+                        />
+                      </div>
+                      <button className="exec-iconbtn exec-iconbtn--bordered" title="بحث" disabled={searchingCases || !caseSearch.trim()} onClick={searchCases}>
+                        {searchingCases ? <RefreshCw size={13} className="exec-spin" /> : <Search size={13} />}
+                      </button>
+                    </div>
+                    {caseResults.length > 0 && (
+                      <div className="exec-caseresults">
+                        {caseResults.map(c => (
+                          <button
+                            key={c.id}
+                            className="exec-caseresult"
+                            disabled={busy === 'case'}
+                            onClick={() => run('case', async () => {
+                              await ExecutionRequestService.linkCase(Number(request.id), c.id);
+                              setCaseResults([]);
+                              setCaseSearch('');
+                            })}
+                          >
+                            <Link2 size={12} />
+                            <span>{c.file_number ? `${c.file_number} · ` : ''}{c.title}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* المهام */}
+              <div className="exec-sidebox">
+                <div className="exec-sidebox__head">
+                  <ListTodo size={13} /> المهام <em>{tasks.length}</em>
+                  <button className="exec-iconbtn exec-iconbtn--bordered exec-section__addbtn" title="إضافة مهمة" onClick={() => setShowTaskForm(v => !v)}>
+                    <Plus size={13} />
+                  </button>
+                </div>
+
+                {showTaskForm && (
+                  <div className="exec-quickform">
+                    <input
+                      className="exec-input"
+                      placeholder="عنوان المهمة…"
+                      value={taskTitle}
+                      onChange={e => setTaskTitle(e.target.value)}
+                    />
+                    <select className="exec-select" value={taskAssignee} onChange={e => setTaskAssignee(e.target.value)}>
+                      <option value="">المكلَّف…</option>
+                      {lawyers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    </select>
+                    <div className="exec-quickform__row">
+                      <select className="exec-select exec-select--grow" value={taskPriority} onChange={e => setTaskPriority(e.target.value)}>
+                        {Object.entries(TASK_PRIORITY_AR).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                      <input
+                        type="date"
+                        className="exec-input"
+                        value={taskDueDate}
+                        min={new Date().toISOString().slice(0, 10)}
+                        onChange={e => setTaskDueDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="exec-quickform__row">
+                      <button
+                        className="exec-btn"
+                        disabled={!taskTitle.trim() || !taskAssignee || !taskDueDate || busy === 'task'}
+                        onClick={createTask}
+                      >
+                        {busy === 'task' ? <RefreshCw size={13} className="exec-spin" /> : <Plus size={13} />} إضافة
+                      </button>
+                      <button className="exec-btn" onClick={() => setShowTaskForm(false)}>إلغاء</button>
+                    </div>
+                  </div>
+                )}
+
+                {tasks.length === 0 && !showTaskForm ? (
+                  <div className="exec-dim exec-section__empty">لا مهام على هذا الطلب</div>
+                ) : (
+                  tasks.map((t: any) => {
+                    const done = t.status === 'completed';
+                    return (
+                      <div key={t.id} className="exec-taskrow">
+                        <button
+                          className={`exec-taskcheck ${done ? 'exec-taskcheck--done' : ''}`}
+                          title={done ? 'مكتملة' : 'إكمال المهمة'}
+                          disabled={done || busy === `task-${t.id}`}
+                          onClick={() => run(`task-${t.id}`, () => TaskService.updateTaskStatus(String(t.id), 'completed'))}
+                        >
+                          <Check size={11} />
+                        </button>
+                        <div className="exec-taskrow__main">
+                          <b className={done ? 'exec-task--done' : ''}>{t.title}</b>
+                          <span>
+                            {t.assignee?.name || '—'}
+                            {' · '}{TASK_STATUS_AR[t.status] || t.status}
+                            {t.due_date ? ` · ${formatDate(t.due_date)}` : ''}
+                            {t.priority ? ` · ${TASK_PRIORITY_AR[t.priority] || t.priority}` : ''}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* المتابعون (مشاركة) */}
+              <div className="exec-sidebox">
+                <div className="exec-sidebox__head">
+                  <Share2 size={13} /> المتابعون <em>{shares.length}</em>
+                  <button className="exec-iconbtn exec-iconbtn--bordered exec-section__addbtn" title="مشاركة مع مستخدم" onClick={() => setShowShareForm(v => !v)}>
+                    <UserPlus size={13} />
+                  </button>
+                </div>
+
+                {showShareForm && (
+                  <div className="exec-quickform">
+                    <select className="exec-select" value={shareUserId} onChange={e => setShareUserId(e.target.value)}>
+                      <option value="">اختر مستخدماً…</option>
+                      {shareCandidates.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    </select>
+                    <input
+                      className="exec-input"
+                      placeholder="ملاحظة للمتابع (اختياري)…"
+                      value={shareNote}
+                      onChange={e => setShareNote(e.target.value)}
+                    />
+                    <div className="exec-quickform__row">
+                      <button
+                        className="exec-btn"
+                        disabled={!shareUserId || busy === 'share'}
+                        onClick={() => run('share', async () => {
+                          await ExecutionRequestService.share(request.id, shareUserId, shareNote.trim() || undefined);
+                          setShareUserId('');
+                          setShareNote('');
+                          setShowShareForm(false);
+                        })}
+                      >
+                        <UserPlus size={13} /> مشاركة
+                      </button>
+                      <button className="exec-btn" onClick={() => setShowShareForm(false)}>إلغاء</button>
+                    </div>
+                  </div>
+                )}
+
+                {shares.length === 0 && !showShareForm ? (
+                  <div className="exec-dim exec-section__empty">لم يُشارَك الطلب — المتابع يصله إشعار بالمشاركة وبأي سداد جديد</div>
+                ) : (
+                  shares.map(s => (
+                    <div key={s.id} className="exec-taskrow">
+                      <span className="exec-dot exec-dot--attorney" style={{ marginTop: 5 }} />
+                      <div className="exec-taskrow__main">
+                        <b>{s.user?.name || `مستخدم ${s.user_id}`}</b>
+                        <span>{s.note || 'بلا ملاحظة'}{s.created_at ? ` · ${formatDate(s.created_at)}` : ''}</span>
+                      </div>
+                      <button
+                        className="exec-iconbtn exec-iconbtn--danger"
+                        title="إلغاء المشاركة"
+                        disabled={busy === `unshare-${s.user_id}`}
+                        onClick={() => run(`unshare-${s.user_id}`, () => ExecutionRequestService.unshare(request.id, s.user_id))}
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </aside>
+          </div>
         </div>
       </div>
     </div>
@@ -285,8 +883,11 @@ const ExecutionRequests: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState('all');
+  const [sharedOnly, setSharedOnly] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<ExecutionRequest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [deletingId, setDeletingId] = useState<number | string | null>(null);
   const [requestToDelete, setRequestToDelete] = useState<ExecutionRequest | null>(null);
@@ -300,16 +901,16 @@ const ExecutionRequests: React.FC = () => {
     return () => clearTimeout(t);
   }, [searchTerm]);
 
-  useEffect(() => { setCurrentPage(1); }, [statusFilter, roleFilter]);
+  useEffect(() => { setCurrentPage(1); }, [statusFilter, roleFilter, clientFilter, sharedOnly]);
 
   // مفتاح cache لكل تركيبة فلاتر
-  const buildCacheKey = (page: number, search: string, status: string, role: string) =>
-    `${CACHE_KEY}_${status}_${role}_${search || 'none'}_p${page}`;
+  const buildCacheKey = (page: number, search: string, status: string, role: string, client: string, shared: boolean) =>
+    `${CACHE_KEY}_${status}_${role}_${client}_${shared ? 's1' : 's0'}_${search || 'none'}_p${page}`;
 
-  const readCachedPage = (page: number, search: string, status: string, role: string):
+  const readCachedPage = (page: number, search: string, status: string, role: string, client: string, shared: boolean):
     { requests: ExecutionRequest[]; pagination: { currentPage: number; totalPages: number; total: number } } | undefined => {
     try {
-      const cached = localStorage.getItem(buildCacheKey(page, search, status, role));
+      const cached = localStorage.getItem(buildCacheKey(page, search, status, role, client, shared));
       if (!cached) return undefined;
       const { data, timestamp } = JSON.parse(cached);
       if (Date.now() - timestamp >= CACHE_DURATION) return undefined;
@@ -324,7 +925,7 @@ const ExecutionRequests: React.FC = () => {
     error: queryError,
     refetch,
   } = useQuery<{ requests: ExecutionRequest[]; pagination: { currentPage: number; totalPages: number; total: number } }>({
-    queryKey: ['execution-requests', debouncedSearch, statusFilter, roleFilter, currentPage],
+    queryKey: ['execution-requests', debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly, currentPage],
     queryFn: async () => {
       const requestsRes = await ExecutionRequestService.getRequests({
         page: currentPage,
@@ -332,6 +933,8 @@ const ExecutionRequests: React.FC = () => {
         ...(debouncedSearch && { search: debouncedSearch }),
         ...(statusFilter !== 'all' && { status: statusFilter }),
         ...(roleFilter !== 'all' && { party_role_id: roleFilter }),
+        ...(clientFilter !== 'all' && { client_id: clientFilter }),
+        ...(sharedOnly && { shared_with_me: 1 }),
       });
       const list = Array.isArray(requestsRes.data) ? requestsRes.data : [];
       return {
@@ -343,18 +946,46 @@ const ExecutionRequests: React.FC = () => {
         },
       };
     },
-    placeholderData: () => readCachedPage(currentPage, debouncedSearch, statusFilter, roleFilter),
+    placeholderData: () => readCachedPage(currentPage, debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly),
     staleTime: 60 * 1000,
     refetchInterval: 90 * 1000,
     refetchIntervalInBackground: false,
   });
 
-  // الإحصائيات في استعلام مستقل كي لا تُعاد مع تغيير الفلاتر
+  // الإحصائيات — تتبع فلتر العميل لتتحول لملخّص مالي للعميل المحدد
   const { data: stats } = useQuery<ExecutionRequestStats | null>({
-    queryKey: ['execution-requests', 'stats'],
-    queryFn: () => ExecutionRequestService.getStatistics(),
+    queryKey: ['execution-requests', 'stats', clientFilter],
+    queryFn: () => ExecutionRequestService.getStatistics(clientFilter),
     staleTime: 5 * 60 * 1000,
   });
+
+  // العملاء والمستخدمون — للفلتر والربط والمشاركة والتكليف
+  const { data: clients = [] } = useQuery<User[]>({
+    queryKey: ['users', 'clients'],
+    queryFn: () => UserService.getClients(),
+    staleTime: 10 * 60 * 1000,
+  });
+  const { data: lawyers = [] } = useQuery<User[]>({
+    queryKey: ['users', 'lawyers'],
+    queryFn: () => UserService.getLawyers(),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // بانر «سدادات جديدة» — أحدث log لم يُطَّلع عليه بعد
+  const { data: latestPayments } = useQuery({
+    queryKey: ['execution-requests', 'payment-logs', 'banner'],
+    queryFn: () => ExecutionRequestService.getPaymentLogs({ days: 30, limit: 5 }),
+    staleTime: 60 * 1000,
+    refetchInterval: 90 * 1000,
+    refetchIntervalInBackground: false,
+  });
+
+  const unseenPayments = useMemo(() => {
+    const logs = latestPayments?.data ?? [];
+    if (!logs.length) return [];
+    const lastSeen = Number(localStorage.getItem(LAST_SEEN_PAYMENT_KEY) || 0);
+    return logs.filter(l => l.id > lastSeen);
+  }, [latestPayments]);
 
   const requests = queryData?.requests ?? [];
   const pagination = queryData?.pagination ?? { currentPage: 1, totalPages: 1, total: 0 };
@@ -367,11 +998,11 @@ const ExecutionRequests: React.FC = () => {
     if (!queryData) return;
     try {
       localStorage.setItem(
-        buildCacheKey(currentPage, debouncedSearch, statusFilter, roleFilter),
+        buildCacheKey(currentPage, debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly),
         JSON.stringify({ data: queryData, timestamp: Date.now() })
       );
     } catch { /* quota — ignore */ }
-  }, [queryData, currentPage, debouncedSearch, statusFilter, roleFilter]);
+  }, [queryData, currentPage, debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly]);
 
   const fetchData = (page?: number) => {
     if (page && page !== currentPage) setCurrentPage(page);
@@ -418,6 +1049,8 @@ const ExecutionRequests: React.FC = () => {
       paidAmount: paid,
       remainingAmount: stats?.remaining_amount ?? 0,
       collectionRate: total > 0 ? Math.round((paid / total) * 100) : null,
+      recentPaymentsCount: stats?.recent_payments_count ?? 0,
+      recentPaymentsTotal: stats?.recent_payments_total ?? 0,
     };
   }, [stats]);
 
@@ -446,6 +1079,11 @@ const ExecutionRequests: React.FC = () => {
 
   const uniqueStatuses = useMemo(() => (stats?.by_status ?? []).map(s => s.status), [stats]);
 
+  const selectedClientName = useMemo(
+    () => clientFilter !== 'all' ? clients.find(c => String(c.id) === String(clientFilter))?.name : null,
+    [clientFilter, clients]
+  );
+
   // ==================== العرض ====================
 
   return (
@@ -458,6 +1096,15 @@ const ExecutionRequests: React.FC = () => {
         </div>
 
         <div className="exec-header__tools">
+          <button
+            className={`exec-btn exec-btn--payments ${unseenPayments.length > 0 ? 'exec-btn--pulse' : ''}`}
+            onClick={() => setIsPaymentsOpen(true)}
+            title="آخر السدادات المرصودة عبر الاستيراد"
+          >
+            <BellRing size={13} />
+            آخر السدادات
+            {unseenPayments.length > 0 && <em className="exec-count">{unseenPayments.length}</em>}
+          </button>
           <div className="exec-search">
             <Search size={14} />
             <input
@@ -466,6 +1113,10 @@ const ExecutionRequests: React.FC = () => {
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
+          <select className="exec-select" value={clientFilter} onChange={e => setClientFilter(e.target.value)}>
+            <option value="all">كل العملاء</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
           <select className="exec-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
             <option value="all">كل الحالات</option>
             {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
@@ -473,11 +1124,46 @@ const ExecutionRequests: React.FC = () => {
           <select className="exec-select" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
             {Object.entries(PARTY_ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
+          <button
+            className={`exec-btn ${sharedOnly ? 'exec-btn--on' : ''}`}
+            onClick={() => setSharedOnly(v => !v)}
+            title="الطلبات المشارَكة معي للمتابعة"
+          >
+            <Share2 size={13} /> مشارَكة معي
+          </button>
           <button className="exec-iconbtn exec-iconbtn--bordered" onClick={() => refetch()} title="تحديث">
             <RefreshCw size={14} className={refreshing ? 'exec-spin' : ''} />
           </button>
         </div>
       </div>
+
+      {/* ===== بانر سدادات جديدة بعد الاستيراد ===== */}
+      {unseenPayments.length > 0 && (
+        <button className="exec-paybanner" onClick={() => setIsPaymentsOpen(true)}>
+          <BellRing size={14} />
+          <b>
+            رُصد {unseenPayments.length === 1 ? 'سداد جديد' : `${unseenPayments.length} سدادات جديدة`} في آخر استيراد
+          </b>
+          <span>
+            {unseenPayments.slice(0, 2).map(l => `طلب ${l.request_number}: +${formatAmount(l.delta)} ر.س`).join(' · ')}
+            {unseenPayments.length > 2 ? ' · …' : ''}
+          </span>
+          <em>عرض التفاصيل</em>
+        </button>
+      )}
+
+      {/* ===== شريط عميل محدد ===== */}
+      {selectedClientName && stats && (
+        <div className="exec-clientbar">
+          <UserRound size={14} />
+          <b>{selectedClientName}</b>
+          <span>{formatAmount(stats.total)} طلب تنفيذ</span>
+          <span>محكوم به: <b>{formatAmount(stats.total_amount)}</b> ر.س</span>
+          <span className="exec-good">محصَّل: <b>{formatAmount(stats.paid_amount)}</b> ر.س</span>
+          <span className="exec-bad">متبقٍّ: <b>{formatAmount(stats.remaining_amount)}</b> ر.س</span>
+          <button className="exec-iconbtn" title="إلغاء فلتر العميل" onClick={() => setClientFilter('all')}><X size={13} /></button>
+        </div>
+      )}
 
       {/* ===== شريط المؤشرات ===== */}
       {stats && stats.total > 0 && (
@@ -492,6 +1178,11 @@ const ExecutionRequests: React.FC = () => {
           <div className="exec-kpi"><Banknote size={14} /><b title={formatAmount(kpis.totalAmount)}>{compactAmount(kpis.totalAmount)}</b><span>محكوم به (ر.س)</span></div>
           <div className="exec-kpi exec-kpi--good"><Wallet size={14} /><b title={formatAmount(kpis.paidAmount)}>{compactAmount(kpis.paidAmount)}</b><span>محصَّل (ر.س)</span></div>
           <div className="exec-kpi exec-kpi--bad"><CircleDollarSign size={14} /><b title={formatAmount(kpis.remainingAmount)}>{compactAmount(kpis.remainingAmount)}</b><span>قيد التحصيل (ر.س)</span></div>
+          <div className="exec-kpi exec-kpi--good">
+            <BellRing size={14} />
+            <b title={formatAmount(kpis.recentPaymentsTotal)}>{compactAmount(kpis.recentPaymentsTotal)}</b>
+            <span>محصَّل آخر 30 يوماً ({formatAmount(kpis.recentPaymentsCount)} سداد)</span>
+          </div>
           <div className="exec-kpi">
             <b className={pctClass(kpis.collectionRate)}>{kpis.collectionRate !== null ? `${kpis.collectionRate}%` : '—'}</b>
             <div className="exec-kpi__bar">
@@ -566,7 +1257,7 @@ const ExecutionRequests: React.FC = () => {
               <thead>
                 <tr>
                   <th>الطلب</th>
-                  <th>الصفة</th>
+                  <th>العميل</th>
                   <th>السند</th>
                   <th>المحكمة</th>
                   <th>الحالة</th>
@@ -589,7 +1280,13 @@ const ExecutionRequests: React.FC = () => {
                           <span>{req.filing_date_hijri || formatDate(req.filing_date_gregorian)}</span>
                         </div>
                       </td>
-                      <td><span className="exec-rolechip">{req.party_role || '—'}</span></td>
+                      <td>
+                        {req.client ? (
+                          <span className="exec-rolechip exec-rolechip--client">{req.client.name}</span>
+                        ) : (
+                          <span className="exec-dim">—</span>
+                        )}
+                      </td>
                       <td className="exec-td-trunc" title={req.main_document_type || ''}>{req.main_document_type || '—'}</td>
                       <td className="exec-td-trunc" title={req.court || ''}>{req.court || '—'}</td>
                       <td><StatusBadge status={req.status} /></td>
@@ -607,6 +1304,16 @@ const ExecutionRequests: React.FC = () => {
                       </td>
                       <td>
                         <div className="exec-actions" onClick={e => e.stopPropagation()}>
+                          {(req.open_tasks_count ?? 0) > 0 && (
+                            <span className="exec-taskbadge" title={`${req.open_tasks_count} مهام مفتوحة`}>
+                              <ListTodo size={12} /> {req.open_tasks_count}
+                            </span>
+                          )}
+                          {(req.shares?.length ?? 0) > 0 && (
+                            <span className="exec-taskbadge" title={`متابَع من: ${req.shares!.map(s => s.user?.name).filter(Boolean).join('، ')}`}>
+                              <Share2 size={12} /> {req.shares!.length}
+                            </span>
+                          )}
                           <button className="exec-iconbtn" onClick={() => handleViewRequest(req)} title="عرض التفاصيل">
                             <Eye size={14} />
                           </button>
@@ -651,12 +1358,26 @@ const ExecutionRequests: React.FC = () => {
 
       {/* نافذة التفاصيل */}
       <DetailModal
-        request={selectedRequest}
+        requestId={selectedRequest?.id ?? null}
+        initial={selectedRequest}
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
           setSelectedRequest(null);
         }}
+        clients={clients}
+        lawyers={lawyers}
+      />
+
+      {/* نافذة آخر السدادات */}
+      <PaymentsModal
+        isOpen={isPaymentsOpen}
+        onClose={() => {
+          setIsPaymentsOpen(false);
+          // إعادة حساب البانر بعد الاطلاع
+          queryClient.invalidateQueries({ queryKey: ['execution-requests', 'payment-logs', 'banner'] });
+        }}
+        clientId={clientFilter}
       />
 
       {/* تأكيد الحذف */}

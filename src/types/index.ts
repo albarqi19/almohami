@@ -543,6 +543,8 @@ export interface Task {
   // مهمة على مستوى العميل (لا قضية) — العميل المرتبط
   clientId?: string;
   client?: { id: number | string; name: string } | null;
+  // مهمة على مستوى طلب تنفيذ
+  execution_request_id?: number | string | null;
   // اعتماد الإنجاز + إلزام المرفق (snake_case كما يرجعها الـ API)
   requires_approval?: boolean;
   requires_attachment?: boolean;
@@ -797,6 +799,7 @@ export interface CreateTaskForm {
   type?: string;
   caseId?: string;
   clientId?: string;
+  executionRequestId?: string | number;
   assignedTo?: string;
   priority: Priority;
   dueDate?: Date;
@@ -958,6 +961,52 @@ export interface ExecutionRequestParty {
   nationality?: string | null;
 }
 
+/** حركة مالية من كشف حركات ناجز (مخزّنة داخل financial_amounts.transactions) */
+export interface ExecutionFinancialTransaction {
+  [key: string]: any;
+}
+
+/** تفاصيل المبالغ المالية + كشف الحركات المدموج من ناجز */
+export interface ExecutionFinancialAmounts {
+  requiredAmount?: number | null;
+  totalTransferdTransactions?: number | null;
+  totalBlokedTransactions?: number | null;
+  totalUndergoingTransactions?: number | null;
+  transactionsCount?: number | null;
+  transactions?: ExecutionFinancialTransaction[];
+  [key: string]: any;
+}
+
+/** سجل تغيّر سداد مرصود أثناء مزامنة ناجز */
+export interface ExecutionPaymentLog {
+  id: number;
+  execution_request_id: number;
+  request_number: string;
+  previous_paid: number | string;
+  new_paid: number | string;
+  delta: number | string;
+  remaining_after?: number | string | null;
+  previous_status?: string | null;
+  new_status?: string | null;
+  detected_at: string;
+  created_at?: string;
+  execution_request?: Pick<ExecutionRequest, 'id' | 'request_number' | 'status' | 'total_amount' | 'paid_amount' | 'remaining_amount' | 'client_id' | 'case_id'> & {
+    client?: { id: number; name: string } | null;
+  };
+}
+
+/** مشاركة طلب تنفيذ مع مستخدم للمتابعة */
+export interface ExecutionRequestShare {
+  id: number;
+  execution_request_id: number;
+  user_id: number;
+  shared_by?: number | null;
+  note?: string | null;
+  user?: { id: number; name: string };
+  shared_by_user?: { id: number; name: string } | null;
+  created_at?: string;
+}
+
 export interface ExecutionRequest {
   id: number;
   tenant_id: number;
@@ -980,21 +1029,31 @@ export interface ExecutionRequest {
   remaining_amount?: number | null;
   currency?: string;
   case_id?: number | null;
+  client_id?: number | null;
   parties?: ExecutionRequestParty[] | null;
   decisions?: any[] | null;
   steps?: any[] | null;
   attorneys?: any[] | null;
-  financial_amounts?: any[] | null;
+  financial_amounts?: ExecutionFinancialAmounts | null;
   attachments?: any[] | null;
   source?: string;
   najiz_synced_at?: string | null;
   created_at: string;
   updated_at: string;
+  // علاقات محمّلة من الباك
+  client?: { id: number; name: string; email?: string; phone?: string } | null;
+  linked_case?: { id: number; title: string; file_number?: string } | null;
+  shares?: ExecutionRequestShare[];
+  payment_logs?: ExecutionPaymentLog[];
+  tasks?: Task[];
+  open_tasks_count?: number;
 }
 
 export interface ExecutionRequestFilters {
   status?: string;
   party_role_id?: string;
+  client_id?: string | number;
+  shared_with_me?: boolean | 1 | 0;
   search?: string;
   page?: number;
   limit?: number;
@@ -1008,6 +1067,17 @@ export interface ExecutionRequestStats {
   by_status: { status: string; count: number; total: number }[];
   by_party_role: { party_role: string; count: number }[];
   by_court: { court: string; count: number; remaining_total: number }[];
+  recent_payments_count?: number;
+  recent_payments_total?: number;
+}
+
+export interface ExecutionPaymentLogsResponse {
+  data: ExecutionPaymentLog[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+  sum_delta: number | string;
 }
 
 // ==================== Two-Factor Authentication Types ====================

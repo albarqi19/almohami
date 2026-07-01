@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Upload, FolderPlus, Download, Trash2, FileText, Loader2, X, ShieldAlert } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -16,6 +16,8 @@ interface Props {
   clientName: string;
   caseDocuments: any[];
   caseDocsLoading: boolean;
+  /** عدّاد خارجي: كل زيادة تفتح مودال الرفع مباشرة (زر «رفع مستند» في شريط العمل) */
+  uploadSignal?: number;
 }
 
 const fmtDate = (d?: string) => {
@@ -23,10 +25,14 @@ const fmtDate = (d?: string) => {
   try { return new Date(d).toLocaleDateString('ar-SA'); } catch { return '—'; }
 };
 
-const ClientDocumentsManager: React.FC<Props> = ({ clientId, clientName, caseDocuments, caseDocsLoading }) => {
+const ClientDocumentsManager: React.FC<Props> = ({ clientId, clientName, caseDocuments, caseDocsLoading, uploadSignal }) => {
   const queryClient = useQueryClient();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  useEffect(() => {
+    if (uploadSignal && uploadSignal > 0) setUploadOpen(true);
+  }, [uploadSignal]);
 
   const docsQuery = useQuery({
     queryKey: ['client-permanent-docs', clientId],

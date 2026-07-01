@@ -8,6 +8,8 @@ export interface TaskFilters {
   type?: string;
   assigned_to?: string;
   case_id?: string;
+  client_id?: string;
+  execution_request_id?: string | number;
   search?: string;
   page?: number;
   limit?: number;
@@ -84,6 +86,7 @@ export class TaskService {
       type: taskData.type || 'other',
       case_id: taskData.caseId,
       client_id: taskData.clientId,
+      execution_request_id: taskData.executionRequestId,
       assigned_to: taskData.assignedTo,
       priority: taskData.priority,
       due_date: taskData.dueDate?.toISOString(),

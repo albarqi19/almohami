@@ -3,13 +3,17 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { formatPhoneDisplay } from '../utils/phone';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowRight, User, Phone, Mail, Star, Edit2, Download, FileSpreadsheet,
-  Briefcase, Calendar, ListTodo, FolderOpen, FileSignature, MessageSquare,
-  Activity, Building2, Hash, FileText, Clock, MapPin, ExternalLink, Save, Receipt,
+  ArrowRight, Phone, Mail, Star, Edit2, Download, FileSpreadsheet,
+  Briefcase, Calendar, ListTodo, FileSignature, MessageSquare,
+  Activity, Building2, Hash, FileText, ExternalLink, Save, Receipt, Scale,
 } from 'lucide-react';
 import ClientFeeProposalsTab from '../components/ClientFeeProposalsTab';
 import ClientManagementService, { clientLanguageLabel, type Client, type ClientCommunication } from '../services/clientManagementService';
 import { UserService, type User as UserType } from '../services/UserService';
+import { LegalServiceService } from '../services/legalServiceService';
+import { SERVICE_TYPE_LABELS, type LegalService } from '../types/legalServices';
+import { useAuth } from '../contexts/AuthContext';
+import { useAnyPermission } from '../hooks/usePermission';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
 import {
   quickExportClientCases,
@@ -22,14 +26,17 @@ import LogCommunicationModal from '../components/LogCommunicationModal';
 import ClientQuickActionsBar from '../components/ClientQuickActionsBar';
 import AddTaskModal from '../components/AddTaskModal';
 import ClientDocumentsManager from '../components/ClientDocumentsManager';
+import WhatsAppSendModal from '../components/WhatsAppSendModal';
+import ComposeCorrespondenceModal from '../components/ComposeCorrespondenceModal';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
-type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'fee_proposals' | 'communications' | 'activities';
+type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'legal_services' | 'fee_proposals' | 'communications' | 'activities';
 
 const ClientDetailPage: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user: authUser } = useAuth();
 
   const [activeTab, setActiveTab] = useState<TabKey>('cases');
   const [casesScope, setCasesScope] = useState<CaseScope>('all');
@@ -38,8 +45,16 @@ const ClientDetailPage: React.FC = () => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isLogCommModalOpen, setIsLogCommModalOpen] = useState(false);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+  const [isComposeLetterOpen, setIsComposeLetterOpen] = useState(false);
+  const [docUploadSignal, setDocUploadSignal] = useState(0);
   const [notesDraft, setNotesDraft] = useState('');
   const [notesSaving, setNotesSaving] = useState(false);
+
+  // بوّابات الميزات: الصادر يظهر فقط لمكتب مفعَّل له + صلاحية؛ الخدمات القانونية بالصلاحية.
+  const canComposeLetter = useAnyPermission(['correspondence.create', 'correspondence.send'])
+    && Boolean(authUser?.tenant?.correspondence_enabled);
+  const canViewLegalServices = useAnyPermission(['legal-services.view', 'legal-services.manage']);
 
   // ===== Parallel queries =====
   const detailsQuery = useQuery({
@@ -98,6 +113,13 @@ const ClientDetailPage: React.FC = () => {
     staleTime: 30 * 1000,
   });
 
+  const legalServicesQuery = useQuery({
+    queryKey: ['client-legal-services', clientId],
+    queryFn: () => LegalServiceService.getServices({ client_id: Number(clientId), per_page: 100 }),
+    enabled: !!clientId && canViewLegalServices && activeTab === 'legal_services',
+    staleTime: 30 * 1000,
+  });
+
   const lawyersQuery = useQuery({
     queryKey: ['lawyers-list-for-client'],
     queryFn: () => UserService.getLawyers(),
@@ -131,6 +153,10 @@ const ClientDetailPage: React.FC = () => {
     const raw = activitiesQuery.data?.data;
     return Array.isArray(raw) ? raw : ((raw as any)?.data || []);
   }, [activitiesQuery.data]);
+  const legalServices: LegalService[] = useMemo(() => {
+    const raw: any = legalServicesQuery.data?.data;
+    return Array.isArray(raw) ? raw : (raw?.data || []);
+  }, [legalServicesQuery.data]);
 
   const totalRevenue = useMemo(
     () => cases.reduce((s: number, c: any) => s + (Number(c.contract_value) || 0), 0),
@@ -325,45 +351,22 @@ const ClientDetailPage: React.FC = () => {
         </div>
       </header>
 
-      {/* === Quick Actions === */}
+      {/* === شريط العمل الموحّد: إجراءات فعلية (مودالات) + مؤشرات مضغوطة في سطر واحد === */}
       <ClientQuickActionsBar
         clientPhone={client.phone}
-        onCreateCase={() => navigate(`/cases?new=1&client_id=${client.id}`)}
-        onCreateTask={() => setIsAddTaskModalOpen(true)}
-        onCreateAppointment={() => navigate(`/meetings/client?new=1&client_id=${client.id}`)}
-        onUploadDocument={() => setActiveTab('documents')}
-        onCreateWekala={() => navigate('/wekalat')}
+        stats={{
+          total: stats?.total_cases ?? 0,
+          active: stats?.active_cases ?? 0,
+          pending: stats?.pending_cases ?? 0,
+          closed: stats?.closed_cases ?? 0,
+          contractsValue: formatNumber(totalRevenue),
+        }}
+        onSendWhatsApp={() => setIsWhatsAppModalOpen(true)}
+        onComposeLetter={canComposeLetter ? () => setIsComposeLetterOpen(true) : undefined}
         onLogCommunication={() => setIsLogCommModalOpen(true)}
+        onCreateTask={() => setIsAddTaskModalOpen(true)}
+        onUploadDocument={() => { setActiveTab('documents'); setDocUploadSignal((n) => n + 1); }}
       />
-
-      {/* === KPI Stats Strip (compact horizontal) === */}
-      <div className="client-stats-strip">
-        <div className="client-stat client-stat--primary">
-          <Briefcase size={13} />
-          <span className="client-stat__value">{stats?.total_cases ?? 0}</span>
-          <span className="client-stat__label">إجمالي</span>
-        </div>
-        <div className="client-stat client-stat--info">
-          <FolderOpen size={13} />
-          <span className="client-stat__value">{stats?.active_cases ?? 0}</span>
-          <span className="client-stat__label">نشطة</span>
-        </div>
-        <div className="client-stat client-stat--warning">
-          <Clock size={13} />
-          <span className="client-stat__value">{stats?.pending_cases ?? 0}</span>
-          <span className="client-stat__label">قيد النظر</span>
-        </div>
-        <div className="client-stat client-stat--success">
-          <FolderOpen size={13} />
-          <span className="client-stat__value">{stats?.closed_cases ?? 0}</span>
-          <span className="client-stat__label">مغلقة</span>
-        </div>
-        <div className="client-stat client-stat--success">
-          <FileText size={13} />
-          <span className="client-stat__value">{formatNumber(totalRevenue)}</span>
-          <span className="client-stat__label">قيمة العقود (SAR)</span>
-        </div>
-      </div>
 
       {/* === Main grid (right tabs + left side panel) === */}
       <div className="client-grid">
@@ -376,6 +379,9 @@ const ClientDetailPage: React.FC = () => {
               count={tasks.length} hint={taskCounts.overdue > 0 ? `${taskCounts.overdue} متأخرة` : undefined}>المهام</TabBtn>
             <TabBtn active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} icon={<FileText size={13} />}>المستندات</TabBtn>
             <TabBtn active={activeTab === 'wekalat'} onClick={() => setActiveTab('wekalat')} icon={<FileSignature size={13} />}>الوكالات</TabBtn>
+            {canViewLegalServices && (
+              <TabBtn active={activeTab === 'legal_services'} onClick={() => setActiveTab('legal_services')} icon={<Scale size={13} />}>الخدمات القانونية</TabBtn>
+            )}
             <TabBtn active={activeTab === 'fee_proposals'} onClick={() => setActiveTab('fee_proposals')} icon={<Receipt size={13} />}>عروض الأتعاب</TabBtn>
             <TabBtn active={activeTab === 'communications'} onClick={() => setActiveTab('communications')} icon={<MessageSquare size={13} />}
               count={communications.length}>التواصل</TabBtn>
@@ -405,9 +411,17 @@ const ClientDetailPage: React.FC = () => {
                 clientName={client.name}
                 caseDocuments={documents}
                 caseDocsLoading={documentsQuery.isLoading}
+                uploadSignal={docUploadSignal}
               />
             )}
             {activeTab === 'wekalat' && <WekalatTab wekalat={wekalat} loading={wekalatQuery.isLoading} />}
+            {activeTab === 'legal_services' && (
+              <LegalServicesTab
+                services={legalServices}
+                loading={legalServicesQuery.isLoading}
+                onServiceClick={(id) => navigate(`/legal-services/${id}`)}
+              />
+            )}
             {activeTab === 'fee_proposals' && clientId && (
               <ClientFeeProposalsTab
                 clientId={Number(clientId)}
@@ -531,6 +545,29 @@ const ClientDetailPage: React.FC = () => {
             setIsAddTaskModalOpen(false);
             queryClient.invalidateQueries({ queryKey: ['client-tasks', clientId] });
             queryClient.invalidateQueries({ queryKey: ['client-details', clientId] });
+          }}
+        />
+      )}
+      {client && (
+        <WhatsAppSendModal
+          isOpen={isWhatsAppModalOpen}
+          onClose={() => setIsWhatsAppModalOpen(false)}
+          clientId={client.id}
+          clientName={client.name}
+          clientPhone={client.phone}
+          preferredLanguage={client.preferred_language}
+          onSent={handleLogged}
+        />
+      )}
+      {client && canComposeLetter && (
+        <ComposeCorrespondenceModal
+          isOpen={isComposeLetterOpen}
+          onClose={() => setIsComposeLetterOpen(false)}
+          presetClient={{ id: client.id, name: client.name, phone: client.phone, email: client.email }}
+          onIssued={() => {
+            // الصادر المُرسَل يُدوَّن تواصلاً في الباك — حدّث سجل التواصل والنشاطات
+            queryClient.invalidateQueries({ queryKey: ['client-communications', clientId] });
+            queryClient.invalidateQueries({ queryKey: ['client-activities', clientId] });
           }}
         />
       )}
@@ -753,6 +790,52 @@ const WekalatTab: React.FC<{ wekalat: any[]; loading: boolean }> = ({ wekalat, l
   );
 };
 
+const LS_STATUS_LABELS: Record<string, string> = {
+  new: 'جديدة',
+  in_progress: 'قيد التنفيذ',
+  under_review: 'تحت المراجعة',
+  internal_review: 'مراجعة داخلية',
+  draft_ready: 'المسودة جاهزة',
+  delivered: 'تم التسليم',
+  completed: 'مكتملة',
+  closed: 'مغلقة',
+  cancelled: 'ملغية',
+};
+
+const LegalServicesTab: React.FC<{
+  services: LegalService[];
+  loading: boolean;
+  onServiceClick: (id: number) => void;
+}> = ({ services, loading, onServiceClick }) => {
+  if (loading) return <div className="client-loading">جاري التحميل...</div>;
+  if (services.length === 0) return <EmptyState icon={<Scale size={28} />} text="لا توجد خدمات قانونية لهذا العميل" />;
+  return (
+    <div className="client-table-wrap">
+      <table className="client-table">
+        <thead>
+          <tr>
+            <th>#</th><th>رقم الخدمة</th><th>النوع</th><th>العنوان</th>
+            <th>الحالة</th><th>المحامي المسؤول</th><th>الاستحقاق</th>
+          </tr>
+        </thead>
+        <tbody>
+          {services.map((s, i) => (
+            <tr key={s.id} onClick={() => onServiceClick(s.id)} className="client-table__row">
+              <td>{i + 1}</td>
+              <td className="client-table__mono">{s.service_number || '—'}</td>
+              <td>{SERVICE_TYPE_LABELS[s.service_type] || s.service_type}</td>
+              <td className="client-table__title">{s.title || '—'}</td>
+              <td><span className="notion-badge badge-blue">{LS_STATUS_LABELS[s.status] || s.status}</span></td>
+              <td>{s.assigned_lawyer?.name || '—'}</td>
+              <td className="client-table__date">{formatDate(s.due_date)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 const CommunicationsTab: React.FC<{ items: any[]; loading: boolean; onAdd: () => void }> = ({ items, loading, onAdd }) => {
   if (loading) return <div className="client-loading">جاري التحميل...</div>;
   return (
@@ -856,7 +939,7 @@ function entityTypeLabel(t: string | null | undefined): string {
 }
 
 function communicationTypeLabel(t: string): string {
-  return ({ call: '📞 مكالمة', whatsapp: '💬 واتساب', email: '✉️ بريد', meeting: '🤝 اجتماع', sms: '📱 SMS', other: 'أخرى' } as Record<string, string>)[t] || t;
+  return ({ call: 'مكالمة', whatsapp: 'واتساب', email: 'بريد', meeting: 'اجتماع', sms: 'رسالة نصية', other: 'أخرى' } as Record<string, string>)[t] || t;
 }
 
 function formatNumber(n: number | null | undefined): string {

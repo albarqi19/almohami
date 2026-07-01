@@ -169,6 +169,8 @@ export interface OpponentRow {
     commercial_reg: string | null;
     party_type: string | null;
     cases_count: number;
+    /** معرّف المستخدم إن كان هذا الخصم عميلاً لدينا أيضاً (تعارض مصالح محتمل) */
+    client_user_id?: number | null;
 }
 
 /** بطاقة تحليل خصم */
@@ -472,6 +474,12 @@ export class ClientManagementService {
 
     static async logCommunication(clientId: number | string, payload: LogCommunicationPayload): Promise<ClientCommunication> {
         const response = await apiClient.post<any>(`/client-management/${clientId}/communications`, payload);
+        return response.data;
+    }
+
+    /** إرسال رسالة واتساب للعميل من داخل النظام — الباك يدوّنها تلقائياً في سجل التواصل ويعيد السجل */
+    static async sendWhatsapp(clientId: number | string, payload: { message: string; subject?: string | null }): Promise<ClientCommunication> {
+        const response = await apiClient.post<any>(`/client-management/${clientId}/send-whatsapp`, payload);
         return response.data;
     }
 

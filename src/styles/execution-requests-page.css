@@ -563,3 +563,313 @@
   justify-content: flex-end;
   margin-top: 14px;
 }
+
+/* ==================== توسعة: سدادات + ربط + مهام + مشاركة ==================== */
+
+/* نافذة أعرض للتفاصيل الموسّعة */
+.exec-modal--wide { max-width: 940px; width: min(95vw, 940px); }
+
+/* تنبيه خطأ داخل النافذة */
+.exec-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 7px 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+.exec-alert--error {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+}
+
+/* شبكة الربط: عميل + قضية */
+.exec-linkgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+@media (max-width: 640px) { .exec-linkgrid { grid-template-columns: 1fr; } }
+.exec-linkbox {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--color-surface-subtle);
+}
+.exec-linkbox .exec-section__head { border-bottom: none; margin-bottom: 4px; padding-bottom: 0; }
+.exec-linkrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+}
+.exec-linkrow > b {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+  color: var(--color-heading);
+}
+.exec-select--grow { flex: 1; min-width: 0; }
+
+/* نتائج البحث عن قضية */
+.exec-caseresults {
+  margin-top: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+.exec-caseresult {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 11px;
+  text-align: start;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  color: var(--color-text);
+}
+.exec-caseresult:last-child { border-bottom: none; }
+.exec-caseresult:hover { background: var(--color-accent-soft); }
+.exec-caseresult svg { color: var(--color-accent); flex-shrink: 0; }
+.exec-caseresult span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* جداول مصغّرة (كشف الحركات / سجل السدادات) */
+.exec-minitable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.exec-minitable th {
+  padding: 5px 8px;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-subtle);
+  text-align: start;
+  border-bottom: 1px solid var(--color-border);
+}
+.exec-minitable td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+.exec-minitable tbody tr:last-child td { border-bottom: none; }
+
+.exec-section__empty { font-size: 10.5px; padding: 8px 2px; }
+.exec-section__addbtn { margin-inline-start: auto; }
+
+/* نموذج سريع (مهمة / مشاركة) */
+.exec-quickform {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: var(--color-surface-subtle);
+}
+.exec-quickform__row { display: flex; gap: 6px; align-items: center; }
+.exec-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 9px;
+  font-size: 11.5px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+}
+.exec-input:focus { outline: none; border-color: var(--color-accent); }
+
+/* صف مهمة / متابع */
+.exec-taskrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 5px 0;
+  font-size: 11px;
+  border-bottom: 1px dashed var(--color-border);
+}
+.exec-taskrow:last-child { border-bottom: none; }
+.exec-taskrow__main { flex: 1; min-width: 0; }
+.exec-taskrow__main b { display: block; font-weight: 700; color: var(--color-heading); }
+.exec-taskrow__main span { display: block; font-size: 10px; color: var(--color-text-secondary); }
+.exec-task--done { text-decoration: line-through; opacity: .6; }
+.exec-taskcheck {
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  padding: 0;
+}
+.exec-taskcheck:hover:not(:disabled) { border-color: var(--color-success); color: var(--color-success); }
+.exec-taskcheck--done {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #fff;
+  cursor: default;
+}
+
+/* شارات المهام/المشاركة في صف الجدول */
+.exec-taskbadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-text-secondary);
+}
+
+/* زر آخر السدادات + العدّاد */
+.exec-btn--payments { font-weight: 800; }
+.exec-btn--on {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-heading);
+}
+.exec-count {
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 800;
+  min-width: 16px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--color-success);
+  color: #fff;
+}
+
+/* بانر سدادات جديدة بعد الاستيراد */
+.exec-paybanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--color-success);
+  border-radius: 9px;
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  font-size: 11.5px;
+  cursor: pointer;
+  text-align: start;
+  font-family: inherit;
+}
+.exec-paybanner b { font-weight: 800; white-space: nowrap; }
+.exec-paybanner span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+}
+.exec-paybanner em {
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+  text-decoration: underline;
+}
+
+/* شريط العميل المحدد */
+.exec-clientbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--color-accent);
+  border-radius: 9px;
+  background: var(--color-accent-soft);
+  font-size: 11.5px;
+  color: var(--color-text);
+}
+.exec-clientbar svg { color: var(--color-accent); }
+.exec-clientbar > b { font-weight: 800; color: var(--color-heading); }
+.exec-clientbar span b { font-weight: 800; font-variant-numeric: tabular-nums; }
+.exec-clientbar .exec-iconbtn { margin-inline-start: auto; }
+
+/* شارة العميل في الجدول */
+.exec-rolechip--client {
+  background: var(--color-accent-soft);
+  color: var(--color-heading);
+  font-weight: 700;
+}
+
+/* نافذة السدادات */
+.exec-paysummary { grid-template-columns: 1fr 1fr; margin-bottom: 10px; }
+.exec-paytable tbody tr { cursor: default; }
+.exec-empty--sm { padding: 22px 10px; }
+
+/* شبكة تفاصيل الطلب: بيانات (المتن) + أدوات عمل (شريط جانبي) */
+.exec-detailgrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 760px) { .exec-detailgrid { grid-template-columns: 1fr; } }
+.exec-detailmain { min-width: 0; }
+.exec-detailside {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+}
+.exec-sidebox {
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  padding: 8px 10px;
+  background: var(--color-surface-subtle);
+}
+.exec-sidebox__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-heading);
+  margin-bottom: 6px;
+}
+.exec-sidebox__head svg { color: var(--color-accent); }
+.exec-sidebox__head em {
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-text-secondary);
+}
+.exec-sidebox .exec-quickform { background: var(--color-surface); }
+.exec-sidebox .exec-select,
+.exec-sidebox .exec-input { width: 100%; }

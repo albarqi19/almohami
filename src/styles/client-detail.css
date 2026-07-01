@@ -460,14 +460,12 @@
     align-items: center;
     gap: 16px;
     padding: 18px 24px;
-    background: linear-gradient(135deg,
-        color-mix(in srgb, var(--color-primary) 8%, transparent),
-        color-mix(in srgb, var(--color-primary) 2%, transparent));
+    /* فلات صرف: لون صلب واحد (لا تدرّج) */
+    background: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface));
     border-bottom: 1px solid var(--color-border);
     position: sticky;
     top: 0;
     z-index: 20;
-    backdrop-filter: blur(8px);
 }
 
 .client-hero__back {
@@ -669,14 +667,67 @@
 .client-hero__btn--primary:hover { background: color-mix(in srgb, var(--color-primary) 88%, black); }
 
 /* --- Quick Actions Bar --- */
-.client-quick-actions {
+/* --- شريط العمل الموحّد: إجراءات + مؤشرات في سطر واحد (ERP مضغوط) --- */
+.client-workbar {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
     flex-wrap: wrap;
-    gap: 6px;
-    padding: 10px 24px;
+    gap: 8px 16px;
+    padding: 8px 24px;
     background: var(--color-surface-subtle);
     border-bottom: 1px solid var(--color-border);
+    margin-bottom: 12px;
 }
+
+.client-workbar__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.client-workbar__stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-surface);
+    overflow: hidden;
+}
+
+.client-workbar-stat {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 5px 12px;
+    border-inline-start: 1px solid var(--color-border);
+    font-size: 11.5px;
+}
+
+.client-workbar-stat:first-child {
+    border-inline-start: none;
+}
+
+.client-workbar-stat__value {
+    font-weight: 700;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.client-workbar-stat__label {
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.client-workbar-stat--primary .client-workbar-stat__value { color: var(--color-primary); }
+.client-workbar-stat--info .client-workbar-stat__value { color: var(--color-info, #3b82f6); }
+.client-workbar-stat--warning .client-workbar-stat__value { color: var(--color-warning, #f4a259); }
+.client-workbar-stat--muted .client-workbar-stat__value { color: var(--color-text-secondary); }
+.client-workbar-stat--success .client-workbar-stat__value { color: var(--color-success, #1b998b); }
 
 .client-quick-action {
     display: inline-flex;
@@ -710,60 +761,58 @@
     border-color: color-mix(in srgb, #25D366 30%, var(--color-border));
 }
 
-/* --- Stats Strip (compact horizontal counters, centered) --- */
-.client-stats-strip {
+/* --- مودال إرسال الواتساب الداخلي --- */
+.wa-send__recipient {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-    padding: 10px 24px;
-    background: var(--color-surface-subtle);
-    border-bottom: 1px solid var(--color-border);
-    margin-bottom: 12px;
-}
-
-.client-stat {
-    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 11px;
-    background: var(--color-surface);
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--color-surface-subtle);
     border: 1px solid var(--color-border);
     border-radius: 6px;
     font-size: 12px;
-    color: var(--color-text);
-    transition: background 0.15s, border-color 0.15s;
+    margin-bottom: 12px;
 }
 
-.client-stat:hover {
-    background: var(--color-surface-subtle);
+.wa-send__recipient svg { color: var(--color-success, #1b998b); }
+
+.wa-send__recipient-name { font-weight: 600; }
+
+.wa-send__recipient-phone {
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+    margin-inline-start: auto;
 }
 
-.client-stat__value {
-    font-weight: 700;
-    font-size: 13px;
+.wa-send__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.wa-send__counter {
+    font-size: 10.5px;
+    color: var(--color-text-secondary);
     font-variant-numeric: tabular-nums;
 }
 
-.client-stat__label {
-    color: var(--color-text-secondary);
-    font-size: 11.5px;
+.wa-send__translate-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    color: var(--color-primary);
 }
 
-.client-stat--primary { color: var(--color-primary); }
-.client-stat--primary svg { color: var(--color-primary); }
-.client-stat--info { color: #3b82f6; }
-.client-stat--info svg { color: #3b82f6; }
-.client-stat--success { color: var(--color-success, #1b998b); }
-.client-stat--success svg { color: var(--color-success, #1b998b); }
-.client-stat--warning { color: var(--color-warning, #f4a259); }
-.client-stat--warning svg { color: var(--color-warning, #f4a259); }
-.client-stat--error { color: var(--color-error, #d1495b); }
-.client-stat--error svg { color: var(--color-error, #d1495b); }
-
-/* Keep label muted regardless of accent color */
-.client-stat .client-stat__label {
+.wa-send__note {
+    font-size: 11px;
     color: var(--color-text-secondary);
+    padding: 6px 10px;
+    border: 1px dashed var(--color-border);
+    border-radius: 6px;
+    margin-bottom: 4px;
 }
 
 /* --- KPI Grid (legacy — kept for backward compat, no longer rendered) --- */
@@ -1815,3 +1864,63 @@
 .doc-type-badge.doc-type-commercial_registration { border-color: var(--law-navy, #0f172a); color: var(--law-navy, #0f172a); }
 .doc-type-badge.doc-type-contract { border-color: #16a34a; color: #166534; }
 .doc-type-badge.doc-type-power_of_attorney { border-color: #7c3aed; color: #6d28d9; }
+/* =====================================================================
+ * التجاوب — الشاشات الصغيرة (شريط العمل، الرأس، التبويبات)
+ * ===================================================================== */
+@media (max-width: 900px) {
+    .client-workbar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 8px 16px;
+    }
+
+    .client-workbar__stats {
+        width: 100%;
+        justify-content: space-between;
+        overflow-x: auto;
+        scrollbar-width: thin;
+    }
+
+    .client-workbar-stat {
+        flex: 1 1 auto;
+        justify-content: center;
+        padding: 5px 8px;
+    }
+}
+
+@media (max-width: 768px) {
+    .client-hero {
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 12px 16px;
+        position: static; /* لا تثبيت على الجوال — يستهلك الشاشة */
+    }
+
+    .client-hero__back { order: -1; width: 100%; }
+
+    .client-hero__main { min-width: 0; flex: 1 1 60%; }
+
+    .client-hero__meta { flex-wrap: wrap; }
+
+    .client-hero__session {
+        width: 100%;
+        order: 5;
+    }
+
+    .client-hero__actions {
+        width: 100%;
+        order: 6;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    .client-workbar { padding: 8px 12px; }
+
+    .client-quick-action { flex: 1 1 auto; justify-content: center; }
+
+    .client-grid { padding: 0 12px 16px; gap: 12px; }
+
+    .client-tab { padding-inline: 8px; }
+
+    .client-tab-content { padding: 10px; }
+}

@@ -533,9 +533,26 @@ const Clients: React.FC = () => {
                                     </thead>
                                     <tbody>
                                         {opponents.map((o, idx) => (
-                                            <tr key={o.identity_key} onClick={() => setSelectedOpponent(o)} style={{ cursor: 'pointer' }}>
+                                            <tr
+                                                key={o.identity_key}
+                                                onClick={() => setSelectedOpponent(o)}
+                                                style={{ cursor: 'pointer' }}
+                                                className={o.client_user_id ? 'opponent-row--client' : undefined}
+                                                title={o.client_user_id ? 'هذا الخصم عميل لدينا أيضاً — تعارض مصالح محتمل' : undefined}
+                                            >
                                                 <td className="col-num">{(oppPage - 1) * 15 + idx + 1}</td>
-                                                <td><span className="client-name">{o.name || '—'}</span></td>
+                                                <td>
+                                                    <span className="client-name">{o.name || '—'}</span>
+                                                    {o.client_user_id && (
+                                                        <span
+                                                            className="opponent-client-badge"
+                                                            onClick={(e) => { e.stopPropagation(); navigate(`/clients/${o.client_user_id}`); }}
+                                                            title="فتح ملفه كعميل"
+                                                        >
+                                                            عميل لدينا
+                                                        </span>
+                                                    )}
+                                                </td>
                                                 <td><span className="client-id-badge" dir="ltr">{o.national_id || o.commercial_reg || '—'}</span></td>
                                                 <td className="col-num">
                                                     <span className="cases-count"><FileText size={12} />{o.cases_count}</span>

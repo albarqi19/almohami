@@ -647,3 +647,33 @@ body.dark .table-loading-overlay {
         padding: 1px 6px;
     }
 }
+
+/* =====================================================================
+ * تبويب الخصوم: ترميز الخصم الذي هو عميل لدينا (تعارض مصالح محتمل)
+ * — إطار ذهبي رفيع فلات + شارة، ويأتي في أعلى القائمة من الباك.
+ * ===================================================================== */
+.clients-table tr.opponent-row--client td {
+    background: color-mix(in srgb, var(--law-gold, #d4a574) 7%, var(--dashboard-card, #fff));
+}
+
+.clients-table tr.opponent-row--client td:first-child {
+    border-inline-start: 2px solid var(--law-gold, #d4a574);
+}
+
+.opponent-client-badge {
+    display: inline-block;
+    margin-inline-start: 8px;
+    padding: 1px 8px;
+    border: 1px solid var(--law-gold, #d4a574);
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #7c5b16;
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.opponent-client-badge:hover {
+    background: color-mix(in srgb, var(--law-gold, #d4a574) 14%, transparent);
+}
