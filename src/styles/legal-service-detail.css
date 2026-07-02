@@ -2251,79 +2251,96 @@ body.dark .lsd-inline-form {
    الحالة الحالية بشرح عملي + أزرار الانتقالات المتاحة
    (هوية فلات صرف: ألوان صلبة + إطار ذهبي رفيع للتمييز)
    ====================================================== */
-.lsd-nextstep {
-    display: grid;
-    grid-template-columns: minmax(220px, 340px) 1fr;
-    gap: 20px;
+/* الغلاف يطابق هوامش .lsd-layout حرفياً (max-width + padding 24px)
+   فتحاذي البطاقة بقية محتوى الصفحة بلا نشوز */
+.lsd-nextstep-wrap {
     max-width: 1320px;
     margin: 14px auto 0;
-    padding: 16px 20px;
+    padding: 0 24px;
+}
+
+/* البطاقة بنمط .lsd-card القياسي للصفحة + إطار ذهبي جانبي رفيع للتمييز */
+.lsd-nextstep {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
     background: var(--dashboard-card);
     border: 1px solid var(--color-border);
     border-inline-start: 3px solid var(--law-gold);
-    border-radius: 10px;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-@media (max-width: 768px) {
-    .lsd-nextstep {
-        grid-template-columns: 1fr;
-        margin-inline: 16px;
-    }
+/* ── قسم الحالة الحالية ── */
+.lsd-nextstep__current {
+    flex: 0 1 380px;
+    min-width: 0;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    justify-content: center;
 }
 
+/* الشارة والشرح على سطر واحد مرتّب */
+.lsd-nextstep__status-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+}
+
+.lsd-nextstep__explanation {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+    min-width: 0;
+}
+
+/* ── قسم الخطوة التالية ── */
+.lsd-nextstep__actions {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 14px 16px;
+    border-inline-start: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    justify-content: center;
+}
+
+/* عنوان القسم الصغير — موحّد بين القسمين */
 .lsd-nextstep__eyebrow {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
     color: var(--color-text-secondary);
-    margin-bottom: 8px;
 }
 
 .lsd-nextstep__eyebrow svg {
     color: var(--law-gold);
 }
 
-.lsd-nextstep__status {
-    margin-bottom: 6px;
-}
-
-.lsd-nextstep__explanation {
-    margin: 0;
-    font-size: 13px;
-    line-height: 1.8;
-    color: var(--color-text-secondary);
-}
-
-.lsd-nextstep__actions {
-    border-inline-start: 1px solid var(--color-border);
-    padding-inline-start: 20px;
-}
-
-@media (max-width: 768px) {
-    .lsd-nextstep__actions {
-        border-inline-start: none;
-        padding-inline-start: 0;
-        border-top: 1px solid var(--color-border);
-        padding-top: 12px;
-    }
-}
-
+/* أزرار الانتقالات — صف أفقي موحّد الارتفاع */
 .lsd-nextstep__buttons {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
 }
 
 .lsd-nextstep-btn {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 3px;
-    padding: 8px 14px;
-    background: var(--dashboard-card);
+    justify-content: center;
+    gap: 2px;
+    min-height: 46px;
+    padding: 7px 14px;
+    background: var(--quiet-gray-50);
     border: 1px solid var(--color-border);
     border-radius: 8px;
     cursor: pointer;
@@ -2331,9 +2348,13 @@ body.dark .lsd-inline-form {
     transition: border-color 0.15s, background 0.15s;
 }
 
+body.dark .lsd-nextstep-btn {
+    background: var(--quiet-gray-100);
+}
+
 .lsd-nextstep-btn:hover:not(:disabled) {
     border-color: var(--law-gold);
-    background: var(--quiet-gray-100);
+    background: var(--dashboard-card);
 }
 
 .lsd-nextstep-btn:disabled {
@@ -2345,17 +2366,23 @@ body.dark .lsd-inline-form {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 600;
     color: var(--law-navy);
 }
 
+body.dark .lsd-nextstep-btn__label {
+    color: var(--color-text-primary);
+}
+
 .lsd-nextstep-btn__label svg {
     color: var(--law-gold);
+    flex-shrink: 0;
 }
 
 .lsd-nextstep-btn__hint {
-    font-size: 11px;
+    font-size: 10.5px;
+    line-height: 1.5;
     color: var(--color-text-secondary);
 }
 
@@ -2368,13 +2395,58 @@ body.dark .lsd-inline-form {
     border-color: var(--status-red);
 }
 
-.lsd-nextstep__final {
+/* ملاحظات الحالة (نهائية / خارج المسار / تحميل) — سطر هادئ بأيقونة */
+.lsd-nextstep__note {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     margin: 0;
-    font-size: 13px;
+    font-size: 12.5px;
+    line-height: 1.7;
     color: var(--color-text-secondary);
+}
+
+.lsd-nextstep__note svg {
+    flex-shrink: 0;
+}
+
+.lsd-nextstep__note--done {
+    color: var(--status-green);
+}
+
+/* دوّار صغير لحالتي التحميل/تطبيق الانتقال */
+.lsd-nextstep__spinner {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--law-gold);
+    border-radius: 50%;
+    animation: lsd-nextstep-spin 0.8s linear infinite;
+}
+
+@keyframes lsd-nextstep-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* الجوال: عمود واحد بفاصل أفقي */
+@media (max-width: 768px) {
+    .lsd-nextstep-wrap {
+        padding: 0 16px;
+    }
+
+    .lsd-nextstep {
+        flex-direction: column;
+    }
+
+    .lsd-nextstep__current {
+        flex-basis: auto;
+    }
+
+    .lsd-nextstep__actions {
+        border-inline-start: none;
+        border-top: 1px solid var(--color-border);
+    }
 }
 
 /* ======================================================

@@ -949,6 +949,11 @@ const LegalServiceDetail: React.FC = () => {
         // الباك يعيد الآن الحمولة الكاملة (التفاصيل النوعية + allowed_transitions...)
         setService(res.data);
         toast.success(`تم الانتقال إلى «${getStatusLabel(newStatus)}»`);
+        // دفاع: حمولة ناقصة (باك أقدم أثناء النشر/كاش) — أكمِلها بجلبٍ كامل
+        // كي لا تعرض بطاقة «الخطوة التالية» حالةً نهائية زائفة.
+        if (!Array.isArray(res.data?.allowed_transitions)) {
+          fetchService();
+        }
       } else {
         toast.error('تعذّر تغيير حالة الخدمة');
       }
@@ -2870,59 +2875,87 @@ const LegalServiceDetail: React.FC = () => {
 
   const renderNextStepCard = () => {
     if (!service) return null;
-    const transitions = service.allowed_transitions ?? [];
+    const transitions = service.allowed_transitions;
+    const transitionsLoaded = Array.isArray(transitions);
     const explanation =
       STATUS_EXPLANATIONS[service.status] ??
       'حالة مخصّصة — راجع سجل الأنشطة لمعرفة آخر ما جرى على الخدمة.';
-    const isFinal = transitions.length === 0;
+    // «نهائية» تُعلَن فقط عندما تكون الحالة نهائية فعلاً — مصفوفة فارغة على حالة
+    // غير نهائية تعني سجلاً قديماً خارج مسار النوع، لا قفلاً (كانت تكذب «نهائية»).
+    const TERMINAL = ['closed', 'cancelled', 'archived', 'completed'];
+    const isTerminal = transitionsLoaded && transitions.length === 0 && TERMINAL.includes(service.status);
+    const isOffTrack = transitionsLoaded && transitions.length === 0 && !TERMINAL.includes(service.status);
 
     return (
-      <div className="lsd-nextstep">
-        <div className="lsd-nextstep__current">
-          <div className="lsd-nextstep__eyebrow">
-            <Compass size={13} />
-            الحالة الحالية
-          </div>
-          <div className="lsd-nextstep__status">
-            {renderStatusBadge(service.status)}
-          </div>
-          <p className="lsd-nextstep__explanation">{explanation}</p>
-        </div>
-
-        <div className="lsd-nextstep__actions">
-          <div className="lsd-nextstep__eyebrow">
-            <ArrowLeft size={13} />
-            الخطوة التالية
-          </div>
-          {isFinal ? (
-            <p className="lsd-nextstep__final">
-              <Lock size={13} />
-              هذه حالة نهائية — لا انتقالات متاحة على هذه الخدمة.
-            </p>
-          ) : (
-            <div className="lsd-nextstep__buttons">
-              {transitions.map((transition) => {
-                const hint = getTransitionHint(service.service_type, transition);
-                return (
-                  <button
-                    key={transition}
-                    className={`lsd-nextstep-btn${
-                      transition === 'cancelled' ? ' lsd-nextstep-btn--danger' : ''
-                    }`}
-                    onClick={() => handleStatusChange(transition)}
-                    disabled={statusLoading}
-                    title={hint ? `عند الانتقال: ${hint}` : `الانتقال إلى «${getStatusLabel(transition)}»`}
-                  >
-                    <span className="lsd-nextstep-btn__label">
-                      <ArrowLeft size={13} />
-                      {getStatusLabel(transition)}
-                    </span>
-                    {hint && <span className="lsd-nextstep-btn__hint">{hint}</span>}
-                  </button>
-                );
-              })}
+      <div className="lsd-nextstep-wrap">
+        <div className="lsd-nextstep">
+          {/* الحالة الحالية */}
+          <div className="lsd-nextstep__current">
+            <div className="lsd-nextstep__eyebrow">
+              <Compass size={12} />
+              الحالة الحالية
             </div>
-          )}
+            <div className="lsd-nextstep__status-row">
+              {renderStatusBadge(service.status)}
+              <p className="lsd-nextstep__explanation">{explanation}</p>
+            </div>
+          </div>
+
+          {/* الخطوة التالية */}
+          <div className="lsd-nextstep__actions">
+            <div className="lsd-nextstep__eyebrow">
+              <ArrowLeft size={12} />
+              الخطوة التالية
+            </div>
+
+            {statusLoading ? (
+              <p className="lsd-nextstep__note">
+                <span className="lsd-nextstep__spinner" />
+                جارٍ تطبيق الانتقال...
+              </p>
+            ) : !transitionsLoaded ? (
+              // حمولة ناقصة (باك أقدم/كاش) — لا نكذب «نهائية»؛ fetchService دفاعي سيكملها
+              <p className="lsd-nextstep__note">
+                <span className="lsd-nextstep__spinner" />
+                جارٍ تحميل الخطوات المتاحة...
+              </p>
+            ) : isTerminal ? (
+              <p className={`lsd-nextstep__note${service.status === 'cancelled' ? '' : ' lsd-nextstep__note--done'}`}>
+                {service.status === 'cancelled' ? <Lock size={13} /> : <CheckCircle size={13} />}
+                {service.status === 'cancelled'
+                  ? 'الخدمة ملغاة — دورة العمل عليها منتهية.'
+                  : 'اكتملت دورة هذه الخدمة — لا خطوات متبقية.'}
+              </p>
+            ) : isOffTrack ? (
+              <p className="lsd-nextstep__note">
+                <Info size={13} />
+                هذه الحالة من سجل سابق خارج مسار النوع الحالي — لا انتقالات آلية منها، وبقية التبويبات متاحة.
+              </p>
+            ) : (
+              <div className="lsd-nextstep__buttons">
+                {transitions.map((transition) => {
+                  const hint = getTransitionHint(service.service_type, transition);
+                  return (
+                    <button
+                      key={transition}
+                      className={`lsd-nextstep-btn${
+                        transition === 'cancelled' ? ' lsd-nextstep-btn--danger' : ''
+                      }`}
+                      onClick={() => handleStatusChange(transition)}
+                      disabled={statusLoading}
+                      title={hint ? `عند الانتقال: ${hint}` : `الانتقال إلى «${getStatusLabel(transition)}»`}
+                    >
+                      <span className="lsd-nextstep-btn__label">
+                        <ArrowLeft size={12} />
+                        {getStatusLabel(transition)}
+                      </span>
+                      {hint && <span className="lsd-nextstep-btn__hint">{hint}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
