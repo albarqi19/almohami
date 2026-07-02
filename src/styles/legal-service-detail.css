@@ -2251,66 +2251,61 @@ body.dark .lsd-inline-form {
    الحالة الحالية بشرح عملي + أزرار الانتقالات المتاحة
    (هوية فلات صرف: ألوان صلبة + إطار ذهبي رفيع للتمييز)
    ====================================================== */
-/* الغلاف يطابق هوامش .lsd-layout حرفياً (max-width + padding 24px)
-   فتحاذي البطاقة بقية محتوى الصفحة بلا نشوز */
+/* شريط ممتد مطابق لشريطي المسار (أعلاه) والتبويبات (أسفله) — نفس الخلفية
+   والحد السفلي والحشوة الجانبية 24px، فلا صندوق عائماً شاذاً بينهما */
 .lsd-nextstep-wrap {
-    max-width: 1320px;
-    margin: 14px auto 0;
-    padding: 0 24px;
+    background: var(--dashboard-card);
+    border-bottom: 1px solid var(--color-border);
 }
 
-/* البطاقة بنمط .lsd-card القياسي للصفحة + إطار ذهبي جانبي رفيع للتمييز */
+/* المحتوى صفّ واحد مضغوط يلتف عند الضيق — كل قسم بحجم محتواه (لا فراغ ميت) */
 .lsd-nextstep {
     display: flex;
-    align-items: stretch;
-    gap: 0;
-    background: var(--dashboard-card);
-    border: 1px solid var(--color-border);
-    border-inline-start: 3px solid var(--law-gold);
-    border-radius: 8px;
-    overflow: hidden;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    padding: 9px 24px;
+    min-height: 44px;
 }
 
-/* ── قسم الحالة الحالية ── */
+/* ── قسم الحالة الحالية: التسمية + الشارة + الشرح على سطر واحد ── */
 .lsd-nextstep__current {
-    flex: 0 1 380px;
-    min-width: 0;
-    padding: 14px 16px;
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    min-width: 0;
 }
 
-/* الشارة والشرح على سطر واحد مرتّب */
 .lsd-nextstep__status-row {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 8px 10px;
+    gap: 6px 10px;
+    min-width: 0;
 }
 
 .lsd-nextstep__explanation {
     margin: 0;
-    font-size: 12.5px;
-    line-height: 1.7;
+    font-size: 12px;
+    line-height: 1.6;
     color: var(--color-text-secondary);
     min-width: 0;
 }
 
-/* ── قسم الخطوة التالية ── */
+/* ── قسم الخطوة التالية: تسمية + أزرار/ملاحظة inline بفاصل جانبي ── */
 .lsd-nextstep__actions {
-    flex: 1 1 auto;
-    min-width: 0;
-    padding: 14px 16px;
-    border-inline-start: 1px solid var(--color-border);
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    min-width: 0;
+    border-inline-start: 1px solid var(--color-border);
+    padding-inline-start: 20px;
+    min-height: 26px;
 }
 
-/* عنوان القسم الصغير — موحّد بين القسمين */
+/* تسمية القسم الصغيرة — موحّدة بين القسمين */
 .lsd-nextstep__eyebrow {
     display: inline-flex;
     align-items: center;
@@ -2319,30 +2314,30 @@ body.dark .lsd-inline-form {
     font-weight: 700;
     letter-spacing: 0.4px;
     color: var(--color-text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .lsd-nextstep__eyebrow svg {
     color: var(--law-gold);
 }
 
-/* أزرار الانتقالات — صف أفقي موحّد الارتفاع */
+/* أزرار الانتقالات — مضغوطة بسطر واحد (التلميح يبقى في title عند الضيق) */
 .lsd-nextstep__buttons {
     display: flex;
+    align-items: center;
     flex-wrap: wrap;
     gap: 8px;
 }
 
 .lsd-nextstep-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 2px;
-    min-height: 46px;
-    padding: 7px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
     background: var(--quiet-gray-50);
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: 7px;
     cursor: pointer;
     text-align: start;
     transition: border-color 0.15s, background 0.15s;
@@ -2365,10 +2360,11 @@ body.dark .lsd-nextstep-btn {
 .lsd-nextstep-btn__label {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     font-size: 12.5px;
     font-weight: 600;
     color: var(--law-navy);
+    white-space: nowrap;
 }
 
 body.dark .lsd-nextstep-btn__label {
@@ -2380,10 +2376,19 @@ body.dark .lsd-nextstep-btn__label {
     flex-shrink: 0;
 }
 
+/* تلميح الأثر بجانب التسمية داخل الزر — يُخفى على الشاشات الضيقة (يبقى title) */
 .lsd-nextstep-btn__hint {
     font-size: 10.5px;
-    line-height: 1.5;
     color: var(--color-text-secondary);
+    white-space: nowrap;
+    border-inline-start: 1px solid var(--color-border);
+    padding-inline-start: 8px;
+}
+
+@media (max-width: 1100px) {
+    .lsd-nextstep-btn__hint {
+        display: none;
+    }
 }
 
 .lsd-nextstep-btn--danger .lsd-nextstep-btn__label,
@@ -2399,10 +2404,10 @@ body.dark .lsd-nextstep-btn__label {
 .lsd-nextstep__note {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    gap: 6px;
     margin: 0;
-    font-size: 12.5px;
-    line-height: 1.7;
+    font-size: 12px;
+    line-height: 1.6;
     color: var(--color-text-secondary);
 }
 
@@ -2416,8 +2421,8 @@ body.dark .lsd-nextstep-btn__label {
 
 /* دوّار صغير لحالتي التحميل/تطبيق الانتقال */
 .lsd-nextstep__spinner {
-    width: 13px;
-    height: 13px;
+    width: 12px;
+    height: 12px;
     flex-shrink: 0;
     border: 2px solid var(--color-border);
     border-top-color: var(--law-gold);
@@ -2429,23 +2434,18 @@ body.dark .lsd-nextstep-btn__label {
     to { transform: rotate(360deg); }
 }
 
-/* الجوال: عمود واحد بفاصل أفقي */
+/* الجوال: القسمان يلتفان عمودياً — الفاصل يصير علوياً */
 @media (max-width: 768px) {
-    .lsd-nextstep-wrap {
-        padding: 0 16px;
-    }
-
     .lsd-nextstep {
-        flex-direction: column;
-    }
-
-    .lsd-nextstep__current {
-        flex-basis: auto;
+        padding: 9px 16px;
     }
 
     .lsd-nextstep__actions {
         border-inline-start: none;
+        padding-inline-start: 0;
+        width: 100%;
         border-top: 1px solid var(--color-border);
+        padding-top: 8px;
     }
 }
 
