@@ -63,7 +63,6 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
   const [clientOpen, setClientOpen] = useState(false);
 
   // الحالة
-  const [savedId, setSavedId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [issuing, setIssuing] = useState(false);
@@ -76,6 +75,11 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirtyRef = useRef(false);
+  // مؤقّت الحفظ التلقائي يستدعي أحدث نسخة عبر ref — closure المؤقّت لا يرى حالة الحقول الحالية.
+  const ensureSavedRef = useRef<() => Promise<number | null>>(() => Promise.resolve(null));
+  // معرّف المسودة كـ ref (لا state) كي تراه استدعاءات الحفظ المتزامنة فوراً فلا تُنشأ مسودة ثانية.
+  const savedIdRef = useRef<number | null>(null);
+  const savePromiseRef = useRef<Promise<number | null> | null>(null);
   const clientSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedMethod = DELIVERY_METHODS.find((m) => m.value === deliveryMethod)!;
@@ -103,8 +107,8 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
     setDocumentType('letter'); setTitle(''); setBody(''); setLetterheadId(''); setTemplateId('');
     setAccentColor(''); setRecipientType('external'); setClientId(''); setClientLabel('');
     setRecipientName(''); setRecipientPhone(''); setRecipientEmail(''); setDeliveryMethod('print');
-    setAttachments([]); setSavedId(null); setLastSaved(null); setTextAnnotations([]);
-    setEditorKey((k) => k + 1); dirtyRef.current = false;
+    setAttachments([]); setLastSaved(null); setTextAnnotations([]);
+    setEditorKey((k) => k + 1); dirtyRef.current = false; savedIdRef.current = null;
   };
 
   const bootstrap = async () => {
@@ -176,8 +180,7 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
   const markDirty = useCallback(() => {
     dirtyRef.current = true;
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => { void ensureSaved(); }, 1500);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    autoSaveTimer.current = setTimeout(() => { void ensureSavedRef.current(); }, 1500);
   }, []);
 
   const buildPayload = () => ({
@@ -196,49 +199,43 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
     delivery_method: deliveryMethod,
   });
 
-  /** يحفظ المسودة (إنشاء أو تحديث) ويعيد المعرّف. */
+  /** يحفظ المسودة (إنشاء أو تحديث) ويعيد المعرّف — الاستدعاءات المتزامنة تصطف خلف بعضها كي لا تُنشأ مسودتان. */
   const ensureSaved = async (): Promise<number | null> => {
-    if (saving) return savedId;
-    setSaving(true);
-    try {
-      const payload = buildPayload();
-      if (savedId) {
-        await outgoingLetterService.update(savedId, payload);
-      } else {
-        const res = await outgoingLetterService.create(payload);
-        setSavedId(res.data.id);
+    if (savePromiseRef.current) await savePromiseRef.current.catch(() => null);
+    const run = (async () => {
+      setSaving(true);
+      try {
+        const payload = buildPayload();
+        if (savedIdRef.current) {
+          await outgoingLetterService.update(savedIdRef.current, payload);
+        } else {
+          const res = await outgoingLetterService.create(payload);
+          savedIdRef.current = res.data.id;
+        }
+        setLastSaved(new Date());
+        dirtyRef.current = false;
+        return savedIdRef.current;
+      } catch (e: any) {
+        toast.error(e?.message || 'تعذّر حفظ المسودة');
+        return null;
+      } finally {
+        setSaving(false);
       }
-      setLastSaved(new Date());
-      dirtyRef.current = false;
-      return savedId ?? null;
-    } catch (e: any) {
-      toast.error(e?.message || 'تعذّر حفظ المسودة');
-      return null;
+    })();
+    savePromiseRef.current = run;
+    try {
+      return await run;
     } finally {
-      setSaving(false);
+      if (savePromiseRef.current === run) savePromiseRef.current = null;
     }
   };
+  ensureSavedRef.current = ensureSaved;
 
-  // ضمان وجود معرّف محفوظ (للمعاينة/الإصدار) حتى لو لم ينته الحفظ التلقائي
+  // يحفظ أحدث الحقول دائماً قبل المعاينة/الإصدار (لا يكتفي بفحص dirtyRef —
+  // صمام أمان كي لا يُرسَل ما حفظه مؤقّت تلقائي أقدم) ويعيد المعرّف.
   const getOrCreateId = async (): Promise<number | null> => {
-    if (savedId && !dirtyRef.current) return savedId;
-    setSaving(true);
-    try {
-      const payload = buildPayload();
-      if (savedId) {
-        await outgoingLetterService.update(savedId, payload);
-        setLastSaved(new Date()); dirtyRef.current = false;
-        return savedId;
-      }
-      const res = await outgoingLetterService.create(payload);
-      setSavedId(res.data.id); setLastSaved(new Date()); dirtyRef.current = false;
-      return res.data.id;
-    } catch (e: any) {
-      toast.error(e?.message || 'تعذّر حفظ المسودة');
-      return null;
-    } finally {
-      setSaving(false);
-    }
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    return ensureSaved();
   };
 
   const closePreview = () => {
@@ -276,8 +273,8 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
     if (!title.trim()) return 'أدخل عنوان المستند';
     if (recipientType === 'client' && !clientId) return 'اختر العميل المُرسَل إليه';
     if (recipientType === 'external' && !recipientName.trim()) return 'أدخل اسم الجهة المُرسَل إليها';
-    if (selectedMethod.needsPhone && !recipientPhone.trim()) return 'طريقة الإرسال تتطلّب رقم جوال';
-    if (selectedMethod.needsEmail && !recipientEmail.trim()) return 'طريقة الإرسال تتطلّب بريداً إلكترونياً';
+    if (selectedMethod.needsPhone && !recipientPhone.trim()) return 'الإرسال عبر الواتساب يتطلّب رقم جوال — أدخِله أو اختر «طباعة دون إرسال»';
+    if (selectedMethod.needsEmail && !recipientEmail.trim()) return 'الإرسال عبر الإيميل يتطلّب بريداً إلكترونياً — أدخِله أو اختر «طباعة دون إرسال»';
     return null;
   };
 
