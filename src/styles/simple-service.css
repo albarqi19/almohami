@@ -1,0 +1,757 @@
+/* ======================================================
+   SIMPLE SERVICE PAGE — «الخدمة القانونية المبسطة»
+   مساحة عمل واحدة بستايل ERP كثيف فلات:
+   [مهام + دفتر تدوين] [تواصل وإجراءات] [المراحل الحرة — يسار]
+   ====================================================== */
+
+.ssp2-page {
+    min-height: 100vh;
+    background: var(--quiet-gray-50);
+    padding-bottom: 40px;
+}
+
+/* ── الترويسة ── */
+.ssp2-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    padding: 12px 24px;
+    background: var(--dashboard-card);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.ssp2-header__info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    min-width: 0;
+}
+
+.ssp2-header__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--law-gold);
+    background: var(--law-gold-light, rgba(184, 144, 46, 0.08));
+    border: 1px solid var(--law-gold);
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.ssp2-header__title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.ssp2-header__number {
+    font-size: 11.5px;
+    color: var(--color-text-secondary);
+    background: var(--quiet-gray-100);
+    border-radius: 6px;
+    padding: 2px 8px;
+    direction: ltr;
+}
+
+.ssp2-header__client {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    color: var(--color-text-secondary);
+}
+
+.ssp2-status {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--quiet-gray-100);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+}
+
+.ssp2-status--in_progress { color: var(--status-orange); border-color: var(--status-orange); background: var(--status-orange-light, transparent); }
+.ssp2-status--completed { color: var(--status-green); border-color: var(--status-green); background: var(--status-green-light, transparent); }
+.ssp2-status--cancelled { color: var(--status-red); border-color: var(--status-red); }
+
+.ssp2-locked {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
+.ssp2-header__actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* ── الأزرار ── */
+.ssp2-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 13px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    white-space: nowrap;
+}
+
+.ssp2-btn:hover:not(:disabled) {
+    border-color: var(--law-gold);
+}
+
+.ssp2-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ssp2-btn--primary {
+    background: var(--law-navy);
+    border-color: var(--law-navy);
+    color: #fff;
+}
+
+.ssp2-btn--primary:hover:not(:disabled) {
+    border-color: var(--law-gold);
+}
+
+.ssp2-btn--success {
+    color: var(--status-green);
+    border-color: var(--status-green);
+}
+
+.ssp2-btn--block {
+    width: 100%;
+}
+
+.ssp2-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.ssp2-icon-btn:hover:not(:disabled) {
+    background: var(--quiet-gray-100);
+    color: var(--color-text-primary);
+}
+
+.ssp2-icon-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.ssp2-icon-btn--danger:hover:not(:disabled) {
+    color: var(--status-red);
+}
+
+/* ── الجسد: ثلاثة أعمدة (RTL: الرئيسي يمين → المراحل يسار الشاشة) ── */
+.ssp2-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 330px 290px;
+    gap: 16px;
+    max-width: 1440px;
+    margin: 16px auto 0;
+    padding: 0 24px;
+    align-items: start;
+}
+
+@media (max-width: 1180px) {
+    .ssp2-body {
+        grid-template-columns: minmax(0, 1fr) 320px;
+    }
+    .ssp2-stages { grid-column: 1 / -1; }
+}
+
+@media (max-width: 820px) {
+    .ssp2-body {
+        grid-template-columns: 1fr;
+        padding: 0 16px;
+    }
+}
+
+.ssp2-main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+/* ── البطاقة ── */
+.ssp2-card {
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ssp2-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--quiet-gray-50);
+    border-bottom: 1px solid var(--color-border);
+}
+
+body.dark .ssp2-card__head {
+    background: var(--quiet-gray-100);
+}
+
+.ssp2-card__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.ssp2-card__title svg {
+    color: var(--law-gold);
+}
+
+.ssp2-card__meta {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+/* ── شريط تقدم رفيع ── */
+.ssp2-progress {
+    height: 4px;
+    background: var(--quiet-gray-100);
+}
+
+.ssp2-progress__fill {
+    height: 100%;
+    background: var(--status-green);
+    transition: width 0.3s;
+}
+
+.ssp2-progress--gold .ssp2-progress__fill {
+    background: var(--law-gold);
+}
+
+/* ── إدخال سريع ── */
+.ssp2-quickadd {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.ssp2-quickadd input,
+.ssp2-quickadd textarea {
+    flex: 1;
+    min-width: 0;
+    padding: 7px 11px;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: var(--color-text-primary);
+    background: var(--quiet-gray-50);
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    resize: vertical;
+}
+
+.ssp2-quickadd input:focus,
+.ssp2-quickadd textarea:focus {
+    outline: none;
+    border-color: var(--law-gold);
+}
+
+/* ── المهام ── */
+.ssp2-tasks {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.ssp2-task {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    border-bottom: 1px solid var(--quiet-gray-100);
+}
+
+.ssp2-task:last-child {
+    border-bottom: none;
+}
+
+.ssp2-task__check {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--dashboard-card);
+    border: 1.5px solid var(--color-border);
+    border-radius: 5px;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.ssp2-task--done .ssp2-task__check {
+    background: var(--status-green);
+    border-color: var(--status-green);
+}
+
+.ssp2-task__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--color-text-primary);
+}
+
+.ssp2-task--done .ssp2-task__title {
+    text-decoration: line-through;
+    color: var(--color-text-secondary);
+}
+
+.ssp2-task__date {
+    font-size: 10.5px;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+/* ── دفتر التدوين ── */
+.ssp2-quickadd--area {
+    align-items: stretch;
+}
+
+.ssp2-quickadd--area .ssp2-btn {
+    align-self: flex-end;
+}
+
+.ssp2-journal {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+.ssp2-journal__entry {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--quiet-gray-100);
+    border-inline-start: 2px solid var(--law-gold);
+    margin: 8px 14px;
+    background: var(--quiet-gray-50);
+    border-radius: 6px;
+}
+
+body.dark .ssp2-journal__entry {
+    background: var(--quiet-gray-100);
+}
+
+.ssp2-journal__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.ssp2-journal__author {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--law-navy);
+}
+
+body.dark .ssp2-journal__author {
+    color: var(--color-text-primary);
+}
+
+.ssp2-journal__date {
+    font-size: 10.5px;
+    color: var(--color-text-secondary);
+    margin-inline-end: auto;
+}
+
+.ssp2-journal__text {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.8;
+    color: var(--color-text-primary);
+    white-space: pre-line;
+}
+
+/* ── عمود التواصل والإجراءات ── */
+.ssp2-side__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.ssp2-timeline {
+    padding: 10px 14px;
+    max-height: 460px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ssp2-timeline__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+}
+
+.ssp2-timeline__icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--quiet-gray-100);
+    border-radius: 50%;
+    color: var(--law-gold);
+}
+
+.ssp2-timeline__body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.ssp2-timeline__title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.ssp2-timeline__desc {
+    font-size: 11.5px;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+}
+
+.ssp2-timeline__meta {
+    font-size: 10.5px;
+    color: var(--color-text-secondary);
+}
+
+/* ── المراحل الحرة ── */
+.ssp2-stagelist {
+    list-style: none;
+    margin: 0;
+    padding: 8px 0;
+    counter-reset: stage;
+}
+
+.ssp2-stage {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 14px;
+    position: relative;
+}
+
+/* خيط عمودي يربط المراحل */
+.ssp2-stage::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    inset-inline-start: 24px;
+    width: 1px;
+    background: var(--color-border);
+}
+
+.ssp2-stage:first-child::before { top: 50%; }
+.ssp2-stage:last-child::before { bottom: 50%; }
+.ssp2-stage:only-child::before { display: none; }
+
+.ssp2-stage__dot {
+    width: 21px;
+    height: 21px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--dashboard-card);
+    border: 2px solid var(--color-border);
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.ssp2-stage__dot:hover:not(:disabled) {
+    border-color: var(--law-gold);
+}
+
+.ssp2-stage--done .ssp2-stage__dot {
+    background: var(--law-gold);
+    border-color: var(--law-gold);
+}
+
+.ssp2-stage__label {
+    flex: 1;
+    min-width: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.ssp2-stage--done .ssp2-stage__label {
+    color: var(--color-text-secondary);
+}
+
+.ssp2-stage__tools {
+    display: none;
+    align-items: center;
+    gap: 2px;
+}
+
+.ssp2-stage:hover .ssp2-stage__tools {
+    display: inline-flex;
+}
+
+/* ── مودال خفيف ── */
+.ssp2-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(15, 39, 64, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.ssp2-modal {
+    width: 100%;
+    max-width: 480px;
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.ssp2-modal__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    background: var(--quiet-gray-50);
+    border-bottom: 1px solid var(--color-border);
+}
+
+body.dark .ssp2-modal__head {
+    background: var(--quiet-gray-100);
+}
+
+.ssp2-modal__body {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ssp2-modal__foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 10px;
+}
+
+.ssp2-label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
+
+.ssp2-input {
+    width: 100%;
+    padding: 8px 11px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--color-text-primary);
+    background: var(--quiet-gray-50);
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    resize: vertical;
+}
+
+.ssp2-input:focus {
+    outline: none;
+    border-color: var(--law-gold);
+}
+
+.ssp2-hint {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+}
+
+.ssp2-hint--warn {
+    color: var(--status-orange);
+}
+
+/* اختيار ملف (مخرَج) */
+.ssp2-filepick {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.ssp2-filepick__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 11px;
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.ssp2-filepick__item:hover,
+.ssp2-filepick__item--active {
+    border-color: var(--law-gold);
+}
+
+.ssp2-filepick__item input {
+    accent-color: var(--law-gold);
+}
+
+.ssp2-filepick__item svg {
+    color: var(--law-gold);
+    flex-shrink: 0;
+}
+
+.ssp2-filepick__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.ssp2-filepick__meta {
+    font-size: 10.5px;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+/* معاينة الفاتورة */
+.ssp2-invoice-preview {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ssp2-invoice-preview > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    border-bottom: 1px solid var(--quiet-gray-100);
+}
+
+.ssp2-invoice-preview > div:last-child {
+    border-bottom: none;
+}
+
+.ssp2-invoice-preview span {
+    color: var(--color-text-secondary);
+}
+
+.ssp2-invoice-preview b {
+    color: var(--color-text-primary);
+}
+
+.ssp2-invoice-preview__total {
+    background: var(--quiet-gray-50);
+}
+
+.ssp2-invoice-preview__total b {
+    color: var(--law-navy);
+    font-size: 14px;
+}
+
+body.dark .ssp2-invoice-preview__total { background: var(--quiet-gray-100); }
+body.dark .ssp2-invoice-preview__total b { color: var(--color-text-primary); }
+
+/* ── حالات عامة ── */
+.ssp2-empty {
+    padding: 14px;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--color-text-secondary);
+    text-align: center;
+}
+
+.ssp2-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-direction: column;
+    padding: 60px 20px;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+}
+
+.ssp2-spin {
+    animation: ssp2-spin 0.8s linear infinite;
+}
+
+@keyframes ssp2-spin {
+    to { transform: rotate(360deg); }
+}

@@ -29,6 +29,7 @@ import {
   AlertCircle,
   RefreshCw,
   FilterX,
+  Zap,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -46,6 +47,7 @@ import AddServiceModal from '../../components/legal-services/AddServiceModal';
 // ── Icon map for service types ──────────────────────────────────────────────
 
 const SERVICE_TYPE_ICONS: Record<ServiceType, React.ElementType> = {
+  simple:            Zap,
   consultation:      MessageSquareText,
   contract_drafting: FileEdit,
   company_formation: Building2,
@@ -64,6 +66,7 @@ const SERVICE_TYPE_ICONS: Record<ServiceType, React.ElementType> = {
 // ── Colour mappings ──────────────────────────────────────────────────────────
 
 const TYPE_PILL_CLASS: Record<string, string> = {
+  simple:            'ls-type-pill--simple',
   consultation:      'ls-type-pill--consultation',
   contract_drafting: 'ls-type-pill--contract_drafting',
   company_formation: 'ls-type-pill--legal_memo',
@@ -430,6 +433,15 @@ const LegalServices: React.FC = () => {
 
   // ── render helpers ──
 
+  /** فتح الخدمة: «المبسطة» لها صفحة عمل مخصّصة، والبقية صفحة التفاصيل القياسية */
+  const openService = (service: LegalService) => {
+    navigate(
+      service.service_type === 'simple'
+        ? `/legal-services/simple/${service.id}`
+        : `/legal-services/${service.id}`
+    );
+  };
+
   const renderServiceTypeCell = (service: LegalService) => {
     const Icon  = getServiceTypeIcon(service.service_type);
     const label = SERVICE_TYPE_LABELS[service.service_type] ?? service.service_type;
@@ -598,7 +610,7 @@ const LegalServices: React.FC = () => {
             return (
               <tr
                 key={service.id}
-                onClick={() => navigate(`/legal-services/${service.id}`)}
+                onClick={() => openService(service)}
               >
                 {/* Title */}
                 <td>
@@ -666,7 +678,7 @@ const LegalServices: React.FC = () => {
                       title="عرض التفاصيل"
                       onClick={e => {
                         e.stopPropagation();
-                        navigate(`/legal-services/${service.id}`);
+                        openService(service);
                       }}
                     >
                       <Eye size={15} />
@@ -694,7 +706,7 @@ const LegalServices: React.FC = () => {
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.15 }}
-            onClick={() => navigate(`/legal-services/${service.id}`)}
+            onClick={() => openService(service)}
           >
             {/* Card header */}
             <div className="ls-card__header">
@@ -1011,10 +1023,14 @@ const LegalServices: React.FC = () => {
         <AddServiceModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
-          onSuccess={() => {
+          onSuccess={(created) => {
             setIsAddModalOpen(false);
             fetchStats();
             fetchServices(1);
+            // «المبسطة» تفتح مباشرة على صفحة عملها المخصّصة
+            if (created?.service_type === 'simple') {
+              navigate(`/legal-services/simple/${created.id}`);
+            }
           }}
         />
       )}

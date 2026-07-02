@@ -1,6 +1,7 @@
 // ── أنواع الخدمات القانونية ──
 
 export type ServiceType =
+  | 'simple'
   | 'consultation'
   | 'contract_drafting'
   | 'company_formation'
@@ -14,6 +15,37 @@ export type ServiceType =
   | 'legal_notices'
   | 'training'
   | 'other';
+
+/** ── الخدمة المبسطة: مسار عمل حرّ ── */
+export interface SimpleStage {
+  id: string;
+  label: string;
+  done_at: string | null;
+}
+
+export interface SimpleTask {
+  id: string;
+  title: string;
+  done: boolean;
+  done_at: string | null;
+  created_at: string;
+}
+
+export interface SimpleJournalEntry {
+  id: string;
+  text: string;
+  by: number | null;
+  by_name: string | null;
+  created_at: string;
+}
+
+export interface SimpleServiceDetail {
+  id: number;
+  legal_service_id: number;
+  stages: SimpleStage[] | null;
+  tasks: SimpleTask[] | null;
+  journal: SimpleJournalEntry[] | null;
+}
 
 export type ServicePriority = 'low' | 'medium' | 'high' | 'urgent';
 export type BillingType = 'hourly' | 'flat_fee' | 'milestone' | 'retainer';
@@ -127,6 +159,7 @@ export interface LegalService {
   ip_detail?: IpDetail;
   legal_notice_detail?: LegalNoticeDetail;
   training_detail?: TrainingDetail;
+  simple_service_detail?: SimpleServiceDetail;
   risk_score?: number | null;
   risk_level?: string | null;
   service_activities?: ServiceActivityItem[];
@@ -997,6 +1030,7 @@ export interface StatusFlowResponse {
 // ── التسميات العربية ──
 
 export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
+  simple: 'خدمة مبسطة',
   consultation: 'استشارة قانونية',
   contract_drafting: 'صياغة عقود',
   company_formation: 'تأسيس شركات',

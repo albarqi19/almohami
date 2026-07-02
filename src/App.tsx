@@ -82,6 +82,7 @@ const PersonalNotebook = lazyWithRetry(() => import('./pages/NotebookWorkspace')
 // Legal Services Pages
 const LegalServices = lazyWithRetry(() => import('./pages/legal-services/LegalServices'));
 const LegalServiceDetail = lazyWithRetry(() => import('./pages/legal-services/LegalServiceDetail'));
+const SimpleServicePage = lazyWithRetry(() => import('./pages/legal-services/SimpleServicePage'));
 
 // Contracts Pages
 const ContractTemplates = lazyWithRetry(() => import('./pages/contracts/ContractTemplates'));
@@ -447,6 +448,12 @@ function App() {
               <Route path="legal-services" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <LegalServices />
+                </ProtectedRoute>
+              } />
+              {/* الخدمة المبسطة — صفحة عمل مخصّصة (قبل :id كي لا يبتلعها) */}
+              <Route path="legal-services/simple/:id" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                  <SimpleServicePage />
                 </ProtectedRoute>
               } />
               <Route path="legal-services/:id" element={

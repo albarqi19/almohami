@@ -1130,3 +1130,10 @@ body.dark .ls-card__type-icon {
         grid-template-columns: 1fr;
     }
 }
+
+/* ── تمييز «الخدمة المبسطة» في القائمة — ذهبي فلات ── */
+.ls-type-pill--simple {
+    color: var(--law-gold);
+    background: var(--law-gold-light, rgba(184, 144, 46, 0.08));
+    border: 1px solid var(--law-gold);
+}

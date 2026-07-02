@@ -74,7 +74,8 @@ import { apiClient } from '../../utils/api';
 interface AddServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  /** تُمرَّر الخدمة المنشأة كي يوجّه الأب للصفحة المناسبة (المبسطة لها صفحة مخصّصة) */
+  onSuccess: (created?: { id: number; service_type: string }) => void;
 }
 
 interface UserOption {
@@ -94,6 +95,12 @@ interface ServiceTypeMeta {
 }
 
 const SERVICE_TYPES: ServiceTypeMeta[] = [
+  {
+    type: 'simple',
+    icon: <Zap size={20} />,
+    description: 'مسار حرّ بمراحل تضعها بنفسك — مهام وتدوين وتواصل وفوترة في صفحة واحدة',
+    enabled: true,
+  },
   {
     type: 'consultation',
     icon: <MessageSquareText size={20} />,
@@ -204,6 +211,8 @@ interface SearchableDropdownProps {
   searchValue: string;
   onSearchChange: (v: string) => void;
   onOpen: () => void;
+  /** اتجاه تمدد اللوحة: يتبع موضع الحقل بالشبكة كي تتمدد نحو داخل المودال دائماً */
+  panelAlign?: 'right' | 'left';
 }
 
 const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
@@ -215,6 +224,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   searchValue,
   onSearchChange,
   onOpen,
+  panelAlign = 'right',
 }) => {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -269,7 +279,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
       <AnimatePresence>
         {open && (
           <motion.div
-            className="asm-dropdown-panel"
+            className={`asm-dropdown-panel${panelAlign === 'left' ? ' asm-dropdown-panel--left' : ''}`}
             initial={{ opacity: 0, y: -6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
@@ -461,16 +471,19 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
   };
 
   // ── Navigation ──
+  // «المبسطة» بلا خطوة تفاصيل نوعية — 3 خطوات فعلية (نوع → أساسية → مالية)
+  const isSimpleFlow = formData.service_type === 'simple';
+
   const goNext = () => {
     if (!validateStep()) return;
     setDirection('forward');
-    setCurrentStep((s) => s + 1);
+    setCurrentStep((s) => (isSimpleFlow && s === 2 ? 4 : s + 1));
     setStepError('');
   };
 
   const goPrev = () => {
     setDirection('back');
-    setCurrentStep((s) => s - 1);
+    setCurrentStep((s) => (isSimpleFlow && s === 4 ? 2 : s - 1));
     setStepError('');
   };
 
@@ -487,7 +500,7 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
       }
       const response = await LegalServiceService.createService(submitData);
       if (response.success) {
-        onSuccess();
+        onSuccess(response.data ? { id: response.data.id, service_type: response.data.service_type } : undefined);
       } else {
         // [R3] استجابة بلا success=true دون رمي استثناء: أظهر رسالة الخادم لا الصمت.
         setSubmitError(response.message || 'تعذّر حفظ الخدمة. يرجى المحاولة مرة أخرى.');
@@ -523,11 +536,17 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
             <button
               key={meta.type}
               type="button"
-              className={`asm-type-card${isSelected ? ' selected' : ''}${isDisabled ? ' disabled' : ''}`}
+              className={`asm-type-card${isSelected ? ' selected' : ''}${isDisabled ? ' disabled' : ''}${meta.type === 'simple' ? ' asm-type-card--featured' : ''}`}
               onClick={() => {
-                if (!isDisabled) update('service_type', meta.type);
+                if (isDisabled) return;
+                // اختيار النوع هو القرار — انتقال فوري للخطوة التالية بلا زر «التالي»
+                update('service_type', meta.type);
+                setDirection('forward');
+                setCurrentStep(2);
+                setStepError('');
               }}
             >
+              {meta.type === 'simple' && <span className="asm-featured-badge">الأسرع ⚡</span>}
               <div className="asm-type-card-icon">{meta.icon}</div>
               <div className="asm-type-card-body">
                 <div className="asm-type-card-name">{SERVICE_TYPE_LABELS[meta.type]}</div>
@@ -604,6 +623,7 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
               searchValue={lawyerSearch}
               onSearchChange={setLawyerSearch}
               onOpen={() => { if (lawyers.length === 0) fetchLawyers(''); }}
+              panelAlign="left"
             />
           </div>
         </div>
@@ -1470,32 +1490,33 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
               </button>
             </div>
 
-            {/* Step Indicator */}
+            {/* Step Indicator — «المبسطة» بلا خطوة التفاصيل (3 خطوات معروضة) */}
             <div className="asm-steps">
-              {STEPS.map((step, index) => {
-                const stepNum = index + 1;
-                const isActive = currentStep === stepNum;
-                const isCompleted = currentStep > stepNum;
-                return (
-                  <React.Fragment key={stepNum}>
-                    <div className="asm-step-item">
-                      <div
-                        className={`asm-step-dot${isActive ? ' active' : ''}${isCompleted ? ' completed' : ''}`}
-                      >
-                        {isCompleted ? <Check size={11} strokeWidth={3} /> : stepNum}
+              {STEPS.map((step, index) => ({ step, stepNum: index + 1 }))
+                .filter(({ stepNum }) => !(isSimpleFlow && stepNum === 3))
+                .map(({ step, stepNum }, visIndex, visible) => {
+                  const isActive = currentStep === stepNum;
+                  const isCompleted = currentStep > stepNum;
+                  return (
+                    <React.Fragment key={stepNum}>
+                      <div className="asm-step-item">
+                        <div
+                          className={`asm-step-dot${isActive ? ' active' : ''}${isCompleted ? ' completed' : ''}`}
+                        >
+                          {isCompleted ? <Check size={11} strokeWidth={3} /> : visIndex + 1}
+                        </div>
+                        <div
+                          className={`asm-step-label${isActive ? ' active' : ''}${isCompleted ? ' completed' : ''}`}
+                        >
+                          {step.label}
+                        </div>
                       </div>
-                      <div
-                        className={`asm-step-label${isActive ? ' active' : ''}${isCompleted ? ' completed' : ''}`}
-                      >
-                        {step.label}
-                      </div>
-                    </div>
-                    {index < STEPS.length - 1 && (
-                      <div className={`asm-step-connector${isCompleted ? ' completed' : ''}`} />
-                    )}
-                  </React.Fragment>
-                );
-              })}
+                      {visIndex < visible.length - 1 && (
+                        <div className={`asm-step-connector${isCompleted ? ' completed' : ''}`} />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
             </div>
 
             {/* Body with animated step transitions */}
@@ -1557,7 +1578,7 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
                 إلغاء
               </button>
 
-              {currentStep < 4 ? (
+              {currentStep === 1 ? null : currentStep < 4 ? (
                 <button
                   type="button"
                   className="notion-btn-primary"

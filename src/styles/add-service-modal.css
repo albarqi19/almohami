@@ -45,8 +45,8 @@
   background: var(--asm-bg);
   color: var(--asm-text);
   width: 100%;
-  max-width: 860px;
-  max-height: 92vh;
+  max-width: 700px;
+  max-height: 88vh;
   border-radius: var(--asm-radius);
   border: 1px solid var(--asm-border);
   box-shadow: var(--asm-shadow-lg);
@@ -203,7 +203,7 @@
 
 /* ── Body ── */
 .asm-body {
-  padding: 28px 40px 24px;
+  padding: 22px 28px 20px;
   flex: 1 0 auto;
   background: var(--asm-bg);
 }
@@ -576,7 +576,9 @@
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  left: 0;
+  left: auto;
+  /* أوسع من حقلها الضيق كي لا تنكسر الأسماء — مرساة يمينية تتمدد يساراً داخل المودال */
+  width: max(100%, 320px);
   background: var(--asm-bg);
   border: 1px solid var(--asm-border);
   border-radius: 6px;
@@ -586,6 +588,12 @@
   display: flex;
   flex-direction: column;
   max-height: 260px;
+}
+
+/* حقول يسار الشبكة (كالمحامي): مرساة يسارية فتتمدد يميناً نحو داخل المودال */
+.asm-dropdown-panel--left {
+  right: auto;
+  left: 0;
 }
 
 .asm-dropdown-search-row {
@@ -614,6 +622,7 @@
 }
 
 .asm-dropdown-list {
+  max-height: 210px;
   overflow-y: auto;
   flex: 1;
   padding: 4px;
@@ -988,4 +997,27 @@
   .asm-step-label {
     font-size: 9px;
   }
+}
+
+/* ── بطاقة «الخدمة المبسطة» المميزة — إطار ذهبي رفيع (فلات) ── */
+.asm-type-card--featured {
+    position: relative;
+    border-color: var(--law-gold);
+}
+
+.asm-type-card--featured .asm-type-card-icon {
+    color: var(--law-gold);
+}
+
+.asm-featured-badge {
+    position: absolute;
+    top: 8px;
+    inset-inline-end: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--law-gold);
+    background: var(--law-gold-light, rgba(184, 144, 46, 0.08));
+    border: 1px solid var(--law-gold);
+    border-radius: 999px;
+    padding: 2px 8px;
 }

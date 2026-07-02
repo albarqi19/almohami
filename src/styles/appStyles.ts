@@ -104,3 +104,5 @@ import './task-approval.css';
 import './correspondence-compose.css';
 import './hr-page.css';
 import './bankruptcy-detail.css';
+import './simple-service.css';
+import './extensionGuide.css';

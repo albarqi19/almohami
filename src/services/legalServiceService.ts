@@ -163,6 +163,48 @@ export class LegalServiceService {
     return apiClient.delete(`/legal-services/${id}/documents/${docId}`);
   }
 
+  // ── الخدمة المبسطة (مسار عمل حرّ) ──
+
+  static async updateSimpleStages(id: number, stages: Array<{ id?: string; label: string; done_at?: string | null }>): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.put(`/legal-services/${id}/simple/stages`, { stages });
+  }
+
+  static async toggleSimpleStage(id: number, stageId: string): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/simple/stages/${stageId}/toggle`);
+  }
+
+  static async addSimpleTask(id: number, title: string): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/simple/tasks`, { title });
+  }
+
+  static async toggleSimpleTask(id: number, taskId: string): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/simple/tasks/${taskId}/toggle`);
+  }
+
+  static async removeSimpleTask(id: number, taskId: string): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.delete(`/legal-services/${id}/simple/tasks/${taskId}`);
+  }
+
+  static async addSimpleJournal(id: number, text: string): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/simple/journal`, { text });
+  }
+
+  static async removeSimpleJournal(id: number, entryId: string): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.delete(`/legal-services/${id}/simple/journal/${entryId}`);
+  }
+
+  static async logSimpleProcedure(id: number, title: string, description?: string): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/simple/procedure`, { title, description });
+  }
+
+  static async messageSimpleClient(id: number, message: string): Promise<{ success: boolean; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/simple/message-client`, { message });
+  }
+
+  static async shareSimpleDeliverable(id: number, deliverableId: number, note?: string): Promise<{ success: boolean; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/simple/share-deliverable`, { deliverable_id: deliverableId, note });
+  }
+
   // ── تأسيس الشركات ──
 
   static async updateCompanyDetails(id: number, data: Record<string, any>): Promise<{ success: boolean; data: any; message?: string }> {
