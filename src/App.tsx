@@ -111,6 +111,8 @@ const MyAvailability = lazyWithRetry(() => import('./pages/meetings/MyAvailabili
 const PublicBooking = lazyWithRetry(() => import('./pages/booking/PublicBooking'));
 // Legal pages: Terms & Privacy (no auth required)
 const LegalPage = lazyWithRetry(() => import('./pages/LegalPage'));
+// Najiz extension guide — opened after extension install (no auth required)
+const ExtensionGuidePage = lazyWithRetry(() => import('./pages/ExtensionGuidePage'));
 // Public Service Portal (White-Label, no auth required)
 const ServicePortal = lazyWithRetry(() => import('./pages/portal/ServicePortal'));
 
@@ -153,6 +155,8 @@ function App() {
               {/* Legal pages - No auth required */}
               <Route path="/terms" element={<LegalPage />} />
               <Route path="/privacy" element={<LegalPage />} />
+              {/* Najiz extension guide - No auth required */}
+              <Route path="/extension" element={<ExtensionGuidePage />} />
               {/* Public Booking Page - No auth required */}
               <Route path="/booking/:token" element={<PublicBooking />} />
               {/* Public Service Portal (White-Label) - No auth required */}

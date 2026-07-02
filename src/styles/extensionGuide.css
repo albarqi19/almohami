@@ -1,0 +1,347 @@
+/* ------------------------------------------------------------------ */
+/* دليل إضافة ناجز — /extension                                        */
+/* ثيم صفحة mail.alraedlaw.com: IBM Plex Sans Arabic، بيج دافئ، ذهبي،  */
+/* تصميم مفتوح بلا بطاقات — فواصل رفيعة فقط.                           */
+/* ------------------------------------------------------------------ */
+
+.rl-ext {
+  --ext-bg: #efe9dd;
+  --ext-ink: #16202f;
+  --ext-heading: #102028;
+  --ext-muted: #5d6675;
+  --ext-faint: #8b93a1;
+  --ext-gold: #c9a35d;
+  --ext-gold-deep: #8c6d3f;
+  --ext-hairline: #ddd5c4;
+
+  font-family: 'IBM Plex Sans Arabic', system-ui, 'Segoe UI', Tahoma, sans-serif;
+  background: var(--ext-bg);
+  color: var(--ext-ink);
+  min-height: 100vh;
+  padding: 64px 28px 56px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  line-height: 2;
+}
+
+.rl-ext__col {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* ===== الترويسة ===== */
+.rl-ext__head {
+  text-align: center;
+}
+
+.rl-ext__mark {
+  width: 52px;
+  height: 52px;
+  border: 1.5px solid var(--ext-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ext-gold-deep);
+  margin: 0 auto 18px;
+}
+
+.rl-ext__mark svg {
+  width: 30px;
+  height: 30px;
+}
+
+.rl-ext__eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--ext-gold-deep);
+}
+
+.rl-ext__head h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--ext-heading);
+  margin: 10px 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.rl-ext__tagline {
+  font-size: 14.5px;
+  color: var(--ext-muted);
+  font-weight: 500;
+}
+
+.rl-ext__rule {
+  height: 1.5px;
+  background: var(--ext-gold);
+  width: 50px;
+  margin: 30px auto;
+  border: 0;
+}
+
+/* ===== عناوين الأقسام ===== */
+.rl-ext h2 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--ext-gold-deep);
+  margin: 44px 0 6px;
+}
+
+.rl-ext h2::after {
+  content: '';
+  display: block;
+  height: 1px;
+  background: var(--ext-hairline);
+  margin-top: 10px;
+}
+
+/* ===== خطوات البدء ===== */
+.rl-ext__step {
+  display: flex;
+  gap: 14px;
+  padding: 12px 0;
+}
+
+.rl-ext__step + .rl-ext__step {
+  border-top: 1px solid var(--ext-hairline);
+}
+
+.rl-ext__step-num {
+  flex-shrink: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ext-gold);
+  line-height: 1.9;
+  min-width: 22px;
+  text-align: center;
+}
+
+.rl-ext__step p {
+  margin: 0;
+  font-size: 15px;
+}
+
+.rl-ext__step strong,
+.rl-ext__type strong {
+  color: var(--ext-heading);
+  font-weight: 700;
+}
+
+.rl-ext__step small {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ext-muted);
+  margin-top: 2px;
+}
+
+/* ===== أنواع السحب ===== */
+.rl-ext__type {
+  padding: 16px 0;
+}
+
+.rl-ext__type + .rl-ext__type {
+  border-top: 1px solid var(--ext-hairline);
+}
+
+.rl-ext__type-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ext-heading);
+  margin: 0 0 4px;
+}
+
+.rl-ext__type-title::before {
+  content: '◆';
+  font-size: 9px;
+  color: var(--ext-gold);
+}
+
+.rl-ext__type-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ext-gold-deep);
+  letter-spacing: 0.04em;
+}
+
+.rl-ext__type p {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--ext-ink);
+}
+
+.rl-ext__type p + p {
+  margin-top: 4px;
+}
+
+.rl-ext__hint {
+  font-size: 13px;
+  color: var(--ext-muted);
+}
+
+.rl-ext__hint strong {
+  color: var(--ext-gold-deep);
+}
+
+/* ===== رسم مكان الويدجت ===== */
+.rl-ext__mock {
+  margin: 22px auto 6px;
+  max-width: 430px;
+}
+
+.rl-ext__browser {
+  border: 1px solid var(--ext-hairline);
+  background: #ffffff;
+}
+
+.rl-ext__browser-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f6f2e9;
+  border-bottom: 1px solid var(--ext-hairline);
+}
+
+.rl-ext__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ext-hairline);
+}
+
+.rl-ext__url {
+  flex: 1;
+  direction: ltr;
+  text-align: left;
+  font-size: 11px;
+  color: var(--ext-muted);
+  background: #ffffff;
+  border: 1px solid var(--ext-hairline);
+  border-radius: 999px;
+  padding: 2px 12px;
+}
+
+.rl-ext__browser-page {
+  position: relative;
+  height: 190px;
+  padding: 18px;
+}
+
+.rl-ext__sk {
+  height: 9px;
+  background: #f0ece1;
+  margin-bottom: 10px;
+}
+
+.rl-ext__sk--w60 { width: 60%; }
+.rl-ext__sk--w85 { width: 85%; }
+.rl-ext__sk--w70 { width: 70%; }
+.rl-ext__sk--w40 { width: 40%; }
+
+.rl-ext__fab {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ext-heading);
+  border: 2px solid var(--ext-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ext-gold);
+  animation: rl-ext-beat 2.2s ease-in-out infinite;
+}
+
+.rl-ext__fab svg {
+  width: 18px;
+  height: 18px;
+}
+
+@keyframes rl-ext-beat {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201, 163, 93, 0.45); }
+  50%      { box-shadow: 0 0 0 9px rgba(201, 163, 93, 0); }
+}
+
+.rl-ext__fab-hint {
+  position: absolute;
+  bottom: 24px;
+  left: 66px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ext-heading);
+  border-bottom: 1.5px solid var(--ext-gold);
+  padding-bottom: 2px;
+  white-space: nowrap;
+}
+
+.rl-ext__mock-caption {
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--ext-muted);
+  margin-top: 12px;
+}
+
+/* ===== التنبيهات ===== */
+.rl-ext__note {
+  padding: 10px 0;
+  font-size: 14px;
+}
+
+.rl-ext__note + .rl-ext__note {
+  border-top: 1px solid var(--ext-hairline);
+}
+
+.rl-ext__note strong {
+  color: var(--ext-gold-deep);
+}
+
+/* ===== الخاتمة ===== */
+.rl-ext__cta-wrap {
+  text-align: center;
+  margin-top: 48px;
+}
+
+.rl-ext__cta {
+  display: inline-block;
+  background: var(--ext-heading);
+  color: #f3eee2;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 13px 38px;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.rl-ext__cta:hover {
+  background: var(--ext-ink);
+  color: #f3eee2;
+}
+
+.rl-ext__foot {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--ext-hairline);
+  text-align: center;
+  font-size: 12px;
+  color: var(--ext-faint);
+  line-height: 1.9;
+}
+
+.rl-ext__foot a {
+  color: var(--ext-muted);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid var(--ext-gold);
+}
+
+@media (max-width: 560px) {
+  .rl-ext { padding: 40px 20px 44px; }
+  .rl-ext__head h1 { font-size: 25px; }
+  .rl-ext__fab-hint { display: none; }
+}
