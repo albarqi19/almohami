@@ -42,11 +42,18 @@ import {
   StickyNote,
   BarChart2,
   GitCompare,
+  ArrowLeft,
+  Sparkles,
+  Copy,
+  Lock,
+  Compass,
 } from 'lucide-react';
 
 import { toast } from 'react-toastify';
 
 import { LegalServiceService } from '../../services/legalServiceService';
+import { apiClient } from '../../utils/api';
+import { getApiErrorMessage } from '../../utils/apiError';
 import TiptapEditor from '../../components/TiptapEditor';
 import LegalRichEditorField from '../../components/legal-services/LegalRichEditorField';
 import LegalRichText from '../../components/legal-services/LegalRichText';
@@ -175,6 +182,148 @@ const INVOICE_STATUS_LABELS: Record<string, string> = {
 
 function getStatusLabel(status: string): string {
   return STATUS_LABELS[status] ?? status;
+}
+
+// ── شرح عملي لكل حالة (يطابق خريطة getStatusInArabic في الباك) ─────────────
+// سطر واحد يجيب لمحامٍ غير تقني: «ماذا تعني هذه الحالة عملياً؟ وما المطلوب الآن؟»
+const STATUS_EXPLANATIONS: Record<string, string> = {
+  // عام
+  new: 'الخدمة سُجّلت للتو ولم يبدأ العمل عليها بعد — ابدأ التنفيذ أو أسند محامياً.',
+  in_progress: 'العمل جارٍ على الخدمة الآن — تابع الإنجاز وسجّل الوقت والمستندات.',
+  under_review: 'العمل أُنجز مبدئياً وينتظر مراجعة قبل الخطوة التالية.',
+  completed: 'اكتمل العمل على الخدمة — تحقق من الفوترة ثم أغلق الملف.',
+  closed: 'الملف مغلق نهائياً — لا عمل متبقٍ على هذه الخدمة.',
+  cancelled: 'أُلغيت الخدمة ولن يستمر العمل عليها.',
+  // الاستشارات
+  draft_ready: 'مسودة الرأي القانوني جاهزة — أرسلها للمراجعة الداخلية قبل التسليم.',
+  internal_review: 'الرأي القانوني تحت مراجعة داخلية — بعد الإجازة يمكن تسليمه للعميل.',
+  delivered: 'سُلّم للعميل — المحتوى مقفل ضد التعديل الآن.',
+  // صياغة العقود
+  drafting: 'العقد قيد الصياغة — أصدر مسودة جديدة كلما تقدّم العمل.',
+  client_review: 'المسودة عند العميل للمراجعة — بانتظار ملاحظاته أو موافقته.',
+  revision: 'وردت ملاحظات وتجري التعديلات — أصدر إصداراً معدّلاً.',
+  approved: 'اعتُمدت الصيغة النهائية — المحتوى مقفل وجاهز للتوقيع.',
+  signed: 'وُقّع العقد رسمياً من الأطراف.',
+  archived: 'العقد مؤرشف — انتهى مسار العمل عليه.',
+  // تأسيس الشركات
+  document_collection: 'جارٍ جمع مستندات التأسيس من العميل — تابع النواقص.',
+  name_reservation: 'جارٍ حجز الاسم التجاري لدى الجهة المختصة.',
+  aoa_drafting: 'جارٍ صياغة عقد التأسيس والنظام الأساس.',
+  government_submission: 'قُدّمت الأوراق للجهات الحكومية — بانتظار الرد.',
+  cr_issued: 'صدر السجل التجاري — أكمل إجراءات ما بعد الإصدار.',
+  post_cr_setup: 'جارٍ استكمال إجراءات ما بعد السجل (ملفات حكومية، حسابات...).',
+  // التراخيص
+  document_preparation: 'جارٍ تجهيز مستندات طلب الترخيص.',
+  submitted: 'قُدّم الطلب للجهة المختصة — بانتظار المعالجة.',
+  rejected: 'رُفض الطلب — راجع أسباب الرفض وقرّر إعادة التقديم.',
+  active: 'الترخيص فعّال وساري المفعول.',
+  renewal_pending: 'الترخيص قارب الانتهاء وجارٍ تجديده.',
+  renewed: 'جُدّد الترخيص بنجاح.',
+  // التحكيم
+  case_study: 'جارٍ دراسة ملف النزاع وتقدير الموقف.',
+  parties_notified: 'أُبلغ أطراف النزاع رسمياً ببدء إجراءات التحكيم.',
+  hearing_scheduled: 'حُدّد موعد جلسة التحكيم — جهّز المستندات والمرافعة.',
+  hearing_in_progress: 'جلسة التحكيم منعقدة حالياً.',
+  deliberation: 'هيئة التحكيم في مرحلة المداولة قبل إصدار الحكم.',
+  settlement_reached: 'توصّل الأطراف لتسوية — وثّق الاتفاق.',
+  award_issued: 'صدر حكم التحكيم — تابع مرحلة التنفيذ.',
+  enforcement: 'جارٍ تنفيذ الحكم أو التسوية.',
+  // الامتثال
+  assessment: 'جارٍ تقييم وضع الامتثال الحالي لدى العميل.',
+  gap_analysis: 'جارٍ تحليل الفجوات بين الوضع الحالي والمتطلبات النظامية.',
+  action_plan: 'جارٍ إعداد خطة معالجة الفجوات.',
+  implementation: 'العميل ينفّذ خطة الامتثال — تابع التقدّم.',
+  review: 'جارٍ مراجعة نتائج التنفيذ قبل إقرار الالتزام.',
+  compliant: 'العميل ملتزم بالمتطلبات — يمكن الانتقال للمراقبة الدورية.',
+  monitoring: 'مراقبة دورية لاستمرار الالتزام.',
+  // العمالي
+  analysis: 'جارٍ تحليل النزاع العمالي وتقدير الموقف النظامي.',
+  friendly_settlement: 'جارٍ السعي لتسوية ودية بين الطرفين.',
+  negotiation: 'مفاوضات جارية بين أطراف النزاع.',
+  resolution: 'حُلّ النزاع — وثّق النتيجة النهائية.',
+  escalated_to_case: 'صُعّدت الخدمة إلى قضية — تابع العمل من ملف القضية.',
+  documentation: 'جارٍ توثيق ما تم الاتفاق عليه رسمياً.',
+  // العقارات
+  property_review: 'جارٍ مراجعة مستندات وبيانات العقار.',
+  legal_analysis: 'جارٍ التحليل القانوني لوضع العقار أو الصفقة.',
+  registration: 'أُنجز التسجيل/الإفراغ لدى الجهة المختصة.',
+  // العناية الواجبة
+  scope_definition: 'جارٍ تحديد نطاق الفحص والاتفاق عليه مع العميل.',
+  data_collection: 'جارٍ جمع البيانات والمستندات محل الفحص.',
+  findings_review: 'جارٍ مراجعة نتائج الفحص وتدقيقها.',
+  report_drafting: 'جارٍ إعداد تقرير العناية الواجبة.',
+  report_delivered: 'سُلّم التقرير النهائي للعميل.',
+  // الملكية الفكرية
+  search_phase: 'جارٍ البحث عن أسبقيات (علامات/براءات مشابهة) قبل الإيداع.',
+  filing: 'جارٍ إيداع الطلب لدى الهيئة المختصة.',
+  examination: 'الطلب تحت الفحص الموضوعي لدى الهيئة.',
+  publication: 'نُشر الطلب — فترة الاعتراضات جارية.',
+  objection_received: 'ورد اعتراض على الطلب — جهّز الرد النظامي.',
+  renewal_due: 'حان موعد تجديد الحماية — بادر قبل انقضاء المهلة.',
+  // الإنذارات
+  sent: 'أُرسل الإنذار للطرف الآخر — راقب وصوله ورده.',
+  returned: 'أُعيد الإنذار دون تسلُّم — قرّر وسيلة إبلاغ بديلة.',
+  response_received: 'ورد رد من الطرف الآخر — قيّمه وحدّد الخطوة التالية.',
+  no_response: 'انقضت المهلة دون رد — قرّر التصعيد لقضية أو الإغلاق.',
+  // التدريب
+  planning: 'جارٍ التخطيط للبرنامج التدريبي وتحديد موعده.',
+  content_preparation: 'جارٍ إعداد المحتوى والمواد التدريبية.',
+  registration_open: 'باب التسجيل مفتوح للمتدرّبين.',
+  certificates_issued: 'أُصدرت شهادات الحضور للمتدرّبين.',
+};
+
+// ── آثار الانتقالات (مرآة منطق الباك في LegalServiceManager/LegalService) ──
+// حالات تُنشئ فاتورة مسودة تلقائياً عند بلوغها (billingTriggerStatuses)
+const BILLING_TRIGGER_STATUSES: Record<string, string[]> = {
+  consultation: ['draft_ready'],
+  contract_drafting: ['approved'],
+  company_formation: ['cr_issued'],
+  licenses: ['approved'],
+  arbitration: ['award_issued', 'settlement_reached'],
+  compliance: ['compliant'],
+  labor: ['resolution'],
+  real_estate: ['registration'],
+  due_diligence: ['report_delivered'],
+  ip: ['registration'],
+  legal_notices: ['sent'],
+  training: ['completed'],
+};
+
+// حالات يُقفل عندها محتوى الخدمة ضد التعديل (lockedStatuses) — عدا النهائية العامة
+const LOCKED_STATUSES: Record<string, string[]> = {
+  consultation: ['delivered'],
+  contract_drafting: ['approved', 'signed', 'archived'],
+  company_formation: ['completed'],
+  licenses: ['active', 'renewed'],
+  arbitration: ['award_issued', 'enforcement', 'settlement_reached'],
+  compliance: ['compliant', 'monitoring'],
+  labor: ['resolution', 'documentation', 'escalated_to_case'],
+  real_estate: ['registration'],
+  due_diligence: ['report_delivered'],
+  ip: ['registration', 'active'],
+  legal_notices: ['sent', 'delivered', 'escalated_to_case'],
+  training: ['certificates_issued'],
+};
+
+/** تلميح مختصر بأثر الانتقال إلى حالة معيّنة (فاتورة تلقائية/قفل/إشعار عميل) */
+function getTransitionHint(serviceType: string, target: string): string | null {
+  const parts: string[] = [];
+  const billing = BILLING_TRIGGER_STATUSES[serviceType] ?? ['completed'];
+  const locked = LOCKED_STATUSES[serviceType] ?? ['completed'];
+
+  if (billing.includes(target)) parts.push('فاتورة مسودة تلقائياً');
+  if (locked.includes(target) || ['closed', 'archived', 'cancelled'].includes(target)) {
+    parts.push('يُقفل المحتوى ضد التعديل');
+  }
+  // إشعار العميل: الاستشارة عند جاهزية المسودة/التسليم، وبقية الأنواع عند محطة الفوترة
+  if (
+    (serviceType === 'consultation' && (target === 'draft_ready' || target === 'delivered')) ||
+    (serviceType !== 'consultation' && billing.includes(target))
+  ) {
+    parts.push('يصل إشعار للعميل');
+  }
+
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -701,6 +850,9 @@ const LegalServiceDetail: React.FC = () => {
   const [showAddReference, setShowAddReference] = useState(false);
   const [addRefLoading, setAddRefLoading] = useState(false);
   const [deliverLoading, setDeliverLoading] = useState(false);
+  // مسودة الرأي المقترحة بالذكاء (تُعرض في صندوق قابل للنسخ — لا تُحفظ تلقائياً)
+  const [aiDraftLoading, setAiDraftLoading] = useState(false);
+  const [aiDraft, setAiDraft] = useState<string | null>(null);
 
   // ── Contract state ──
   const [showNewVersionForm, setShowNewVersionForm] = useState(false);
@@ -745,19 +897,20 @@ const LegalServiceDetail: React.FC = () => {
       const res = await LegalServiceService.getService(Number(id));
       if (res.success) {
         setService(res.data);
-        // Fetch status flow
+        // بيانات ثانوية (خط سير الحالات/ملخص الوقت/المؤقت النشط): فشلها لا يعطّل
+        // الصفحة، فلا نُغرق المستخدم بـ toasts عند التحميل — نكتفي بتسجيلها للمطوّر.
         try {
           const flowRes = await LegalServiceService.getStatusFlow(res.data.service_type);
           if (flowRes.success) setStatusFlow(flowRes.data);
-        } catch {
-          // ignore
+        } catch (err) {
+          console.warn('status-flow:', getApiErrorMessage(err));
         }
         // Fetch time summary
         try {
           const summaryRes = await LegalServiceService.getTimeSummary(Number(id));
           if (summaryRes.success) setTimeSummary(summaryRes.data);
-        } catch {
-          // ignore
+        } catch (err) {
+          console.warn('time-summary:', getApiErrorMessage(err));
         }
         // Check active timer
         try {
@@ -768,14 +921,15 @@ const LegalServiceDetail: React.FC = () => {
             const started = new Date(activeRes.data.started_at).getTime();
             setTimerSeconds(Math.floor((Date.now() - started) / 1000));
           }
-        } catch {
-          // ignore
+        } catch (err) {
+          console.warn('active-timer:', getApiErrorMessage(err));
         }
       } else {
         setError('تعذّر تحميل بيانات الخدمة');
       }
-    } catch {
-      setError('حدث خطأ في الاتصال بالخادم');
+    } catch (err) {
+      // نعرض رسالة الخادم الفعلية (404/403...) بدل نص عام
+      setError(getApiErrorMessage(err, 'حدث خطأ في الاتصال بالخادم'));
     }
     setLoading(false);
   }, [id]);
@@ -792,12 +946,15 @@ const LegalServiceDetail: React.FC = () => {
     try {
       const res = await LegalServiceService.updateStatus(service.id, newStatus);
       if (res.success) {
+        // الباك يعيد الآن الحمولة الكاملة (التفاصيل النوعية + allowed_transitions...)
         setService(res.data);
+        toast.success(`تم الانتقال إلى «${getStatusLabel(newStatus)}»`);
       } else {
         toast.error('تعذّر تغيير حالة الخدمة');
       }
-    } catch {
-      toast.error('تعذّر تغيير حالة الخدمة، حاول مرة أخرى');
+    } catch (err) {
+      // رسالة الباك تشرح سبب رفض الانتقال (مثلاً: انتقال غير مسموح) — نعرضها كما هي
+      toast.error(getApiErrorMessage(err, 'تعذّر تغيير حالة الخدمة'));
     }
     setStatusLoading(false);
   };
@@ -811,10 +968,33 @@ const LegalServiceDetail: React.FC = () => {
       setShowConvertModal(false);
       toast.success('تم تحويل الخدمة إلى قضية بنجاح');
       fetchService();
-    } catch {
-      toast.error('تعذّر تحويل الخدمة إلى قضية، حاول مرة أخرى');
+    } catch (err) {
+      // رسالة الباك توضّح السبب الفعلي (نوع غير قابل للتحويل/محوّلة سابقاً...)
+      toast.error(getApiErrorMessage(err, 'تعذّر تحويل الخدمة إلى قضية'));
     }
     setConvertLoading(false);
+  };
+
+  // ── [P3.3] تحويل الصياغة إلى عقد رسمي (كان endpoint الباك بلا واجهة) ──
+  const [convertingToContract, setConvertingToContract] = useState(false);
+  const handleConvertToContract = async () => {
+    const draftingId = service?.contract_drafting_detail?.id;
+    if (!service || !draftingId) return;
+    setConvertingToContract(true);
+    try {
+      const res = await apiClient.post<{ success: boolean; message?: string; data?: { id: number; contract_number?: string } }>(
+        `/contracts/from-drafting/${draftingId}`
+      );
+      if (res.success) {
+        toast.success(res.message || 'تم تحويل الصياغة إلى عقد رسمي بنجاح');
+        fetchService();
+      } else {
+        toast.error(res.message || 'تعذّر التحويل إلى عقد رسمي');
+      }
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر التحويل إلى عقد رسمي'));
+    }
+    setConvertingToContract(false);
   };
 
   // ── Create invoice ──
@@ -830,8 +1010,8 @@ const LegalServiceDetail: React.FC = () => {
       setShowInvoiceModal(false);
       toast.success('تم إنشاء الفاتورة بنجاح');
       fetchService();
-    } catch {
-      toast.error('تعذّر إنشاء الفاتورة، حاول مرة أخرى');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر إنشاء الفاتورة'));
     }
     setInvoiceLoading(false);
   };
@@ -849,8 +1029,8 @@ const LegalServiceDetail: React.FC = () => {
       } else {
         toast.error('تعذّر حذف الخدمة');
       }
-    } catch {
-      toast.error('تعذّر حذف الخدمة، حاول مرة أخرى');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر حذف الخدمة'));
     }
     setDeleteLoading(false);
   };
@@ -868,8 +1048,9 @@ const LegalServiceDetail: React.FC = () => {
       } else {
         toast.error('تعذّر بدء المؤقت');
       }
-    } catch {
-      toast.error('تعذّر بدء المؤقت، حاول مرة أخرى');
+    } catch (err) {
+      // رسالة الباك (مثلاً: يوجد مؤقت نشط على خدمة أخرى) أوضح من نص عام
+      toast.error(getApiErrorMessage(err, 'تعذّر بدء المؤقت'));
     }
     setTimerLoading(false);
   };
@@ -884,8 +1065,8 @@ const LegalServiceDetail: React.FC = () => {
       setActiveTimerEntry(null);
       setTimerDescription('');
       fetchService();
-    } catch {
-      toast.error('تعذّر إيقاف المؤقت، حاول مرة أخرى');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر إيقاف المؤقت'));
     }
     setTimerLoading(false);
   };
@@ -908,8 +1089,9 @@ const LegalServiceDetail: React.FC = () => {
       setShowManualForm(false);
       toast.success('تم إضافة إدخال الوقت بنجاح');
       fetchService();
-    } catch {
-      toast.error('تعذّر إضافة إدخال الوقت، حاول مرة أخرى');
+    } catch (err) {
+      // أخطاء التحقق 422 (تواريخ متعارضة...) تظهر برسالتها الفعلية
+      toast.error(getApiErrorMessage(err, 'تعذّر إضافة إدخال الوقت'));
     }
     setManualTimeLoading(false);
   };
@@ -932,8 +1114,8 @@ const LegalServiceDetail: React.FC = () => {
       setShowAddReference(false);
       toast.success('تم إضافة المرجع القانوني');
       fetchService();
-    } catch {
-      toast.error('تعذّر إضافة المرجع القانوني، حاول مرة أخرى');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر إضافة المرجع القانوني'));
     }
     setAddRefLoading(false);
   };
@@ -943,8 +1125,8 @@ const LegalServiceDetail: React.FC = () => {
     try {
       await LegalServiceService.removeReference(service.id, index);
       fetchService();
-    } catch {
-      toast.error('تعذّر حذف المرجع القانوني، حاول مرة أخرى');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر حذف المرجع القانوني'));
     }
   };
 
@@ -959,10 +1141,38 @@ const LegalServiceDetail: React.FC = () => {
       } else {
         toast.error('تعذّر تسليم الاستشارة');
       }
-    } catch {
-      toast.error('تعذّر تسليم الاستشارة، حاول مرة أخرى');
+    } catch (err) {
+      // رسالة الباك (مثلاً: الرأي غير معتمد بعد / انتقال غير مسموح) تظهر كما هي
+      toast.error(getApiErrorMessage(err, 'تعذّر تسليم الاستشارة'));
     }
     setDeliverLoading(false);
+  };
+
+  // اقتراح مسودة الرأي القانوني بالذكاء — تُعرض للنسخ فقط ولا تُحفظ تلقائياً
+  const handleAiDraft = async () => {
+    if (!service) return;
+    setAiDraftLoading(true);
+    try {
+      const res = await apiClient.post<{
+        success?: boolean;
+        data?: { draft_html?: string; draft?: string; disclaimers?: string[] } | string;
+        draft?: string;
+      }>(`/legal-services/${service.id}/consultation/ai-draft`);
+      // الشكل الرسمي: data.draft_html (+ أشكال احتياطية تحسّباً)
+      const draft =
+        (typeof res?.data === 'object' && (res.data?.draft_html || res.data?.draft)) ||
+        res?.draft ||
+        (typeof res?.data === 'string' ? res.data : null);
+      if (draft && draft.trim()) {
+        setAiDraft(draft);
+      } else {
+        toast.error('لم يُرجِع الخادم مسودة — حاول مجدداً أو اكتب الرأي يدوياً');
+      }
+    } catch (err) {
+      // 503 = خدمة الذكاء غير مهيأة للمكتب — رسالة الخادم توضّح ذلك
+      toast.error(getApiErrorMessage(err, 'تعذّر توليد المسودة الآلية'));
+    }
+    setAiDraftLoading(false);
   };
 
   // ── Contract actions ──
@@ -975,8 +1185,8 @@ const LegalServiceDetail: React.FC = () => {
     try {
       await LegalServiceService.updateChecklist(service.id, updated);
       fetchService();
-    } catch {
-      toast.error('تعذّر تحديث قائمة الفحص، حاول مرة أخرى');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر تحديث قائمة الفحص'));
     }
     setChecklistLoading(false);
   };
@@ -992,8 +1202,9 @@ const LegalServiceDetail: React.FC = () => {
       setShowNewVersionForm(false);
       toast.success('تم إصدار مسودة جديدة بنجاح');
       fetchService();
-    } catch {
-      toast.error('تعذّر إصدار المسودة الجديدة، حاول مرة أخرى');
+    } catch (err) {
+      // بعد الاعتماد/التوقيع يرفض الباك التعديل بـ422 برسالة واضحة — نعرضها
+      toast.error(getApiErrorMessage(err, 'تعذّر إصدار المسودة الجديدة'));
     }
     setNewVersionLoading(false);
   };
@@ -1008,8 +1219,9 @@ const LegalServiceDetail: React.FC = () => {
       await LegalServiceService.uploadDocument(service.id, formData);
       toast.success('تم رفع المستند بنجاح');
       fetchService();
-    } catch {
-      toast.error('تعذّر رفع المستند، حاول مرة أخرى');
+    } catch (err) {
+      // رسالة الباك (OneDrive غير مربوط / نوع ملف مرفوض...) أوضح من نص عام
+      toast.error(getApiErrorMessage(err, 'تعذّر رفع المستند'));
     }
     setDocLoading(false);
   };
@@ -1021,8 +1233,8 @@ const LegalServiceDetail: React.FC = () => {
       await LegalServiceService.removeDocument(service.id, docId);
       toast.success('تم حذف المستند بنجاح');
       fetchService();
-    } catch {
-      toast.error('تعذّر حذف المستند، حاول مرة أخرى');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر حذف المستند'));
     }
   };
 
@@ -1339,11 +1551,22 @@ const LegalServiceDetail: React.FC = () => {
         <div className="lsd-empty-tab">
           <MessageSquareText size={32} />
           <p>لا توجد تفاصيل استشارة</p>
+          <span className="lsd-empty-tab__hint">
+            لم تُسجَّل بيانات الاستشارة عند الإنشاء — عدّل الخدمة لإضافة سؤال العميل ونطاق الاستشارة.
+          </span>
         </div>
       );
     }
 
     const references = detail.legal_references ?? [];
+    // «تسليم الاستشارة» متاح فقط حين يسمح مسار الحالات بذلك (وإلا نعطّل الزر مع شرح)
+    const allowedTransitions = service.allowed_transitions ?? [];
+    const canDeliver =
+      service.status === 'internal_review' || allowedTransitions.includes('delivered');
+    const deliverDisabledReason =
+      service.status === 'delivered'
+        ? 'سُلّمت الاستشارة مسبقاً'
+        : 'التسليم متاح بعد المراجعة الداخلية — غيّر الحالة من بطاقة «الخطوة التالية» أولاً';
 
     return (
       <div className="lsd-tab-content-stack">
@@ -1442,6 +1665,71 @@ const LegalServiceDetail: React.FC = () => {
           successMessage="تم حفظ الرأي القانوني"
         />
 
+        {/* اقتراح مسودة الرأي بالذكاء — للنسخ فقط، لا تُحفظ تلقائياً */}
+        <div className="lsd-card">
+          <div className="lsd-card__header">
+            <div className="lsd-card__title">
+              <Sparkles size={15} />
+              اقتراح مسودة الرأي بالذكاء
+            </div>
+            <button
+              className="lsd-card__action"
+              onClick={handleAiDraft}
+              disabled={aiDraftLoading}
+              title="يولّد مسودة أولية للرأي القانوني اعتماداً على سؤال العميل ونطاق الاستشارة"
+            >
+              {aiDraftLoading ? (
+                <>
+                  <span className="lsd-ai-spinner" />
+                  جارٍ التوليد...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={13} />
+                  {aiDraft ? 'إعادة التوليد' : 'اقتراح مسودة'}
+                </>
+              )}
+            </button>
+          </div>
+          <div className="lsd-card__content">
+            {aiDraft ? (
+              <div className="lsd-ai-draft">
+                <div className="lsd-ai-draft__disclaimer">
+                  <AlertTriangle size={13} />
+                  مسودة آلية — تُراجَع قبل الاعتماد
+                  <button
+                    className="lsd-ai-draft__copy"
+                    onClick={() => {
+                      navigator.clipboard
+                        .writeText(aiDraft)
+                        .then(() => toast.success('نُسخت المسودة — الصقها في محرّر الرأي القانوني'))
+                        .catch(() => toast.error('تعذّر النسخ إلى الحافظة'));
+                    }}
+                  >
+                    <Copy size={12} />
+                    نسخ المسودة
+                  </button>
+                </div>
+                <div className="lsd-ai-draft__text" dir="rtl">
+                  {aiDraft}
+                </div>
+              </div>
+            ) : aiDraftLoading ? (
+              <div className="lsd-empty-state-small">
+                <span className="lsd-ai-spinner lsd-ai-spinner--lg" />
+                <span>جارٍ توليد المسودة... قد يستغرق ذلك لحظات</span>
+              </div>
+            ) : (
+              <div className="lsd-empty-state-small">
+                <Sparkles size={22} />
+                <span>
+                  اضغط «اقتراح مسودة» ليقترح الذكاء نقطة بداية للرأي القانوني — ثم انسخها وعدّلها في المحرّر أعلاه.
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* References */}
         <div className="lsd-card">
           <div className="lsd-card__header">
@@ -1528,11 +1816,18 @@ const LegalServiceDetail: React.FC = () => {
           <button
             className="lsd-header-btn lsd-header-btn--primary"
             onClick={handleMarkDelivered}
-            disabled={deliverLoading || service.status === 'delivered'}
+            disabled={deliverLoading || !canDeliver}
+            title={!canDeliver ? deliverDisabledReason : 'يسلّم الرأي للعميل ويقفل المحتوى ضد التعديل'}
           >
             <CheckCircle size={15} />
             {deliverLoading ? 'جارٍ...' : 'تسليم الاستشارة'}
           </button>
+          {!canDeliver && (
+            <span className="lsd-action-hint">
+              <Info size={12} />
+              {deliverDisabledReason}
+            </span>
+          )}
         </div>
         <p className="lsd-info-item__value--muted" style={{ fontSize: 12, marginTop: 4 }}>
           لتوليد خطاب الرأي القانوني الرسمي (PDF) انتقل إلى تبويب «المخرجات».
@@ -1551,6 +1846,9 @@ const LegalServiceDetail: React.FC = () => {
         <div className="lsd-empty-tab">
           <FileEdit size={32} />
           <p>لا توجد تفاصيل صياغة عقود</p>
+          <span className="lsd-empty-tab__hint">
+            لم تُسجَّل بيانات العقد عند الإنشاء — عدّل الخدمة لتحديد نوع العقد ولغته وقيمته.
+          </span>
         </div>
       );
     }
@@ -1734,6 +2032,22 @@ const LegalServiceDetail: React.FC = () => {
                 <span className="lsd-tab__count">v{latestVersion.version_number}</span>
               )}
             </div>
+            {/* [P3.3] الصياغة المعتمدة تتحوّل لعقد رسمي في وحدة العقود (مرة واحدة) */}
+            {latestVersion && !service.contract_id && (
+              <button
+                className="lsd-card__action"
+                onClick={handleConvertToContract}
+                disabled={convertingToContract}
+                title="ينشئ عقداً رسمياً في وحدة العقود من أحدث إصدار للصياغة، ويربطه بهذه الخدمة"
+              >
+                {convertingToContract ? 'جارٍ التحويل...' : '⚖️ تحويل إلى عقد رسمي'}
+              </button>
+            )}
+            {service.contract_id && (
+              <span className="lsd-tab__count" title="لهذه الخدمة عقد رسمي مرتبط">
+                ✓ مرتبطة بعقد رسمي{service.contract?.contract_number ? ` (${service.contract.contract_number})` : ''}
+              </span>
+            )}
           </div>
           <div className="lsd-card__content">
             <LegalRichText
@@ -1753,7 +2067,7 @@ const LegalServiceDetail: React.FC = () => {
         {/* مقارنة الإصدارات (redline) */}
         {versions.length >= 2 && (
           <div className="lsd-card">
-            <style>{`.lsd-diff{line-height:1.9;font-size:13px;white-space:pre-wrap}.lsd-diff ins{background:#dcfce7;color:#166534;text-decoration:none}.lsd-diff del{background:#fee2e2;color:#991b1b}`}</style>
+            {/* ستايل .lsd-diff انتقل إلى legal-service-detail.css بمتغيّرات الثيم */}
             <div className="lsd-card__header">
               <div className="lsd-card__title">
                 <GitCompare size={15} />
@@ -1958,7 +2272,15 @@ const LegalServiceDetail: React.FC = () => {
       return <Workspace service={service} refreshService={fetchService} />;
     }
 
-    return <div className="lsd-empty">لا توجد تفاصيل إضافية لهذا النوع</div>;
+    return (
+      <div className="lsd-empty-tab">
+        <Layers size={32} />
+        <p>لا توجد تفاصيل إضافية لهذا النوع</p>
+        <span className="lsd-empty-tab__hint">
+          تابع العمل من بقية التبويبات: التدوين، المستندات، تتبع الوقت، والفواتير.
+        </span>
+      </div>
+    );
   };
 
   // ── Tab: Documents ────────────────────────────────────────────────────────
@@ -2069,15 +2391,7 @@ const LegalServiceDetail: React.FC = () => {
           </div>
         </div>
 
-        <style>{`
-          .lsd-onedrive-warning {
-            display: flex; gap: 10px; align-items: flex-start;
-            padding: 12px 14px; margin-bottom: 14px;
-            background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px;
-            color: #9a3412; font-size: 13px; line-height: 1.7;
-          }
-          body.dark .lsd-onedrive-warning { background: #2a1c10; border-color: #7c3a12; color: #fdba74; }
-        `}</style>
+        {/* ستايل .lsd-onedrive-warning انتقل إلى legal-service-detail.css بمتغيّرات الثيم */}
       </div>
     );
   };
@@ -2186,6 +2500,18 @@ const LegalServiceDetail: React.FC = () => {
         </AnimatePresence>
 
         {/* Time entries table */}
+        {entries.length === 0 && !showManualForm && (
+          <div className="lsd-card">
+            <div className="lsd-card__content">
+              <div className="lsd-empty-state-small">
+                <Clock size={22} />
+                <span>
+                  لا توجد إدخالات وقت بعد — اضغط «بدء المؤقت» أعلاه أثناء العمل، أو «إدخال يدوي» لتسجيل وقت سابق.
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
         {entries.length > 0 && (
           <div className="lsd-card">
             <div className="lsd-card__header">
@@ -2255,6 +2581,9 @@ const LegalServiceDetail: React.FC = () => {
         <div className="lsd-empty-tab">
           <Clock size={32} />
           <p>لا توجد أنشطة بعد</p>
+          <span className="lsd-empty-tab__hint">
+            يسجّل النظام هنا تلقائياً كل ما يجري على الخدمة: تغييرات الحالة، المستندات، الفواتير...
+          </span>
         </div>
       );
     }
@@ -2379,7 +2708,10 @@ const LegalServiceDetail: React.FC = () => {
             ) : (
               <div className="lsd-empty-state-small">
                 <Receipt size={24} />
-                <span>لا توجد فواتير بعد</span>
+                <span>
+                  لا توجد فواتير بعد — اضغط «إنشاء فاتورة» لإصدار أول فاتورة، أو ستُنشأ فاتورة مسودة
+                  تلقائياً عند بلوغ محطة الإنجاز (انظر بطاقة «الخطوة التالية»).
+                </span>
               </div>
             )}
           </div>
@@ -2533,6 +2865,69 @@ const LegalServiceDetail: React.FC = () => {
     );
   };
 
+  // ── بطاقة «الخطوة التالية» — أوضح عنصر في الصفحة ──────────────────────────
+  // تجيب فوراً: أين نحن الآن؟ ماذا تعني هذه الحالة عملياً؟ وما الخطوات المتاحة؟
+
+  const renderNextStepCard = () => {
+    if (!service) return null;
+    const transitions = service.allowed_transitions ?? [];
+    const explanation =
+      STATUS_EXPLANATIONS[service.status] ??
+      'حالة مخصّصة — راجع سجل الأنشطة لمعرفة آخر ما جرى على الخدمة.';
+    const isFinal = transitions.length === 0;
+
+    return (
+      <div className="lsd-nextstep">
+        <div className="lsd-nextstep__current">
+          <div className="lsd-nextstep__eyebrow">
+            <Compass size={13} />
+            الحالة الحالية
+          </div>
+          <div className="lsd-nextstep__status">
+            {renderStatusBadge(service.status)}
+          </div>
+          <p className="lsd-nextstep__explanation">{explanation}</p>
+        </div>
+
+        <div className="lsd-nextstep__actions">
+          <div className="lsd-nextstep__eyebrow">
+            <ArrowLeft size={13} />
+            الخطوة التالية
+          </div>
+          {isFinal ? (
+            <p className="lsd-nextstep__final">
+              <Lock size={13} />
+              هذه حالة نهائية — لا انتقالات متاحة على هذه الخدمة.
+            </p>
+          ) : (
+            <div className="lsd-nextstep__buttons">
+              {transitions.map((transition) => {
+                const hint = getTransitionHint(service.service_type, transition);
+                return (
+                  <button
+                    key={transition}
+                    className={`lsd-nextstep-btn${
+                      transition === 'cancelled' ? ' lsd-nextstep-btn--danger' : ''
+                    }`}
+                    onClick={() => handleStatusChange(transition)}
+                    disabled={statusLoading}
+                    title={hint ? `عند الانتقال: ${hint}` : `الانتقال إلى «${getStatusLabel(transition)}»`}
+                  >
+                    <span className="lsd-nextstep-btn__label">
+                      <ArrowLeft size={13} />
+                      {getStatusLabel(transition)}
+                    </span>
+                    {hint && <span className="lsd-nextstep-btn__hint">{hint}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // ── Loading & Error states ────────────────────────────────────────────────
 
   if (loading) {
@@ -2587,7 +2982,8 @@ const LegalServiceDetail: React.FC = () => {
     { key: 'info', label: 'المعلومات', icon: Info },
     ...(typeTab ? [typeTab] : []),
     { key: 'notes', label: 'التدوين', icon: StickyNote },
-    { key: 'deliverables', label: 'المخرجات', icon: FileCheck },
+    // عدّاد المخرجات/الفواتير يظهر متى توفّرت البيانات — يوجّه العين لما أُنجز
+    { key: 'deliverables', label: 'المخرجات', icon: FileCheck, count: service.deliverables?.length },
     { key: 'documents', label: 'المستندات', icon: FileText, count: service.service_documents?.length },
     { key: 'time', label: 'تتبع الوقت', icon: Clock, count: service.time_entries?.length },
     { key: 'activities', label: 'الأنشطة', icon: Clock, count: service.service_activities?.length },
@@ -2711,6 +3107,9 @@ const LegalServiceDetail: React.FC = () => {
 
       {/* ── Status Pipeline ── */}
       <StatusPipeline steps={statusFlow} currentStatus={service.status} />
+
+      {/* ── بطاقة «الخطوة التالية» — أعلى المحتوى ── */}
+      {renderNextStepCard()}
 
       {/* ── Tabs ── */}
       <nav className="lsd-tabs">

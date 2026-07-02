@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
+import { getApiErrorMessage } from '../../../utils/apiError';
 import { useDynamicList } from '../../../hooks/useDynamicList';
 import type { WorkspaceProps } from './types';
 import MicroStatsBar from './MicroStatsBar';
@@ -35,15 +36,21 @@ const PROPERTY_TYPE_LABELS: Record<string, string> = {
 };
 
 const DEED_STATUS_LABELS: Record<string, string> = {
-  clean: 'نظيف',
+  clean: 'سليم',
   encumbered: 'مرهون',
   disputed: 'متنازع عليه',
 };
 
 const DEED_STATUS_COLORS: Record<string, string> = {
-  clean: '#16a34a',
-  encumbered: '#f59e0b',
-  disputed: '#ef4444',
+  clean: 'var(--status-green)',
+  encumbered: 'var(--status-orange)',
+  disputed: 'var(--status-red)',
+};
+
+const DEED_STATUS_BG: Record<string, string> = {
+  clean: 'var(--status-green-light)',
+  encumbered: 'var(--status-orange-light)',
+  disputed: 'var(--status-red-light)',
 };
 
 const PARTY_ROLE_LABELS: Record<string, string> = {
@@ -103,6 +110,11 @@ const RealEstateWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
   const [leaseData, setLeaseData] = useState<Record<string, any>>({});
   const [leaseLoading, setLeaseLoading] = useState(false);
 
+  // حالة الصك — تُقرأ وتُكتب عبر updatePropertyInfo (deed_status + encumbrances)
+  const [editingDeed, setEditingDeed] = useState(false);
+  const [deedData, setDeedData] = useState<Record<string, any>>({});
+  const [deedLoading, setDeedLoading] = useState(false);
+
   // نماذج إضافة
   const [newParty, setNewParty] = useState<Partial<TransactionParty>>({});
   const [newHeir, setNewHeir] = useState<Partial<HeirInfo>>({});
@@ -136,7 +148,8 @@ const RealEstateWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
     return (
       <div className="lsd-empty-tab">
         <Building size={32} />
-        <p>لا توجد تفاصيل عقارية</p>
+        <p>لا توجد تفاصيل عقارية بعد</p>
+        <p style={{ fontSize: 12, color: 'var(--quiet-gray-400)' }}>تُنشأ التفاصيل تلقائياً مع الخدمة — حدّث الصفحة، وإن استمرت المشكلة تواصل مع الدعم</p>
       </div>
     );
   }
@@ -152,9 +165,9 @@ const RealEstateWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
         setEditingProperty(false);
         await refreshService();
       } else {
-        toast.error(res.message || 'حدث خطأ');
+        toast.error(res.message || 'تعذّر حفظ معلومات العقار');
       }
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ معلومات العقار')); }
     finally { setPropertyLoading(false); }
   };
 
@@ -167,10 +180,26 @@ const RealEstateWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
         setEditingLease(false);
         await refreshService();
       } else {
-        toast.error(res.message || 'حدث خطأ');
+        toast.error(res.message || 'تعذّر حفظ معلومات الإيجار');
       }
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ معلومات الإيجار')); }
     finally { setLeaseLoading(false); }
+  };
+
+  // حفظ حالة الصك والأعباء — نفس مسار معلومات العقار في الخادم
+  const handleSaveDeed = async () => {
+    setDeedLoading(true);
+    try {
+      const res = await LegalServiceService.updatePropertyInfo(service.id, deedData);
+      if (res.success) {
+        toast.success('تم حفظ حالة الصك');
+        setEditingDeed(false);
+        await refreshService();
+      } else {
+        toast.error(res.message || 'تعذّر حفظ حالة الصك');
+      }
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ حالة الصك')); }
+    finally { setDeedLoading(false); }
   };
 
   // ── تنبيه انتهاء الإيجار ──
@@ -345,43 +374,84 @@ const RealEstateWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
         </div>
       </div>
 
-      {/* ── بطاقة مراجعة الصك ── */}
+      {/* ── بطاقة حالة الصك (تقرأ وتكتب deed_status + encumbrances) ── */}
       <div className="lsd-card">
         <div className="lsd-card__header">
           <div className="lsd-card__title">
             <FileText size={15} />
             حالة الصك
           </div>
+          <button
+            className="lsd-card__action"
+            onClick={() => {
+              setEditingDeed(true);
+              setDeedData({
+                deed_status: detail.deed_status || '',
+                encumbrances: detail.encumbrances || '',
+              });
+            }}
+          >
+            <Edit2 size={13} />
+            تعديل
+          </button>
         </div>
         <div className="lsd-card__content">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: detail.encumbrances ? 12 : 0 }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '8px 16px', borderRadius: 8,
-              background: detail.deed_status === 'clean' ? '#f0fdf4' : detail.deed_status === 'encumbered' ? '#fffbeb' : detail.deed_status === 'disputed' ? '#fef2f2' : 'var(--bg-secondary, #f3f4f6)',
-              border: `1px solid ${detail.deed_status ? (DEED_STATUS_COLORS[detail.deed_status] + '33') : '#e5e7eb'}`,
-            }}>
-              {detail.deed_status === 'clean' && <Shield size={18} style={{ color: DEED_STATUS_COLORS.clean }} />}
-              {detail.deed_status === 'encumbered' && <AlertTriangle size={18} style={{ color: DEED_STATUS_COLORS.encumbered }} />}
-              {detail.deed_status === 'disputed' && <Scale size={18} style={{ color: DEED_STATUS_COLORS.disputed }} />}
-              <span style={{
-                fontSize: 15, fontWeight: 700,
-                color: detail.deed_status ? DEED_STATUS_COLORS[detail.deed_status] : 'var(--quiet-gray-500, #6b7280)',
-              }}>
-                {detail.deed_status ? DEED_STATUS_LABELS[detail.deed_status] : 'غير محدد'}
-              </span>
+          {editingDeed ? (
+            <div>
+              <div className="lsd-info-grid">
+                <div className="lsd-form-group">
+                  <label className="lsd-form-label">حالة الصك</label>
+                  <select className="lsd-form-input" value={deedData.deed_status || ''} onChange={e => setDeedData({ ...deedData, deed_status: e.target.value })}>
+                    <option value="">اختر الحالة</option>
+                    {Object.entries(DEED_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="lsd-form-group" style={{ marginTop: 8 }}>
+                <label className="lsd-form-label">الأعباء والرهون (إن وجدت)</label>
+                <textarea className="lsd-form-textarea" rows={2} value={deedData.encumbrances || ''} onChange={e => setDeedData({ ...deedData, encumbrances: e.target.value })} placeholder="مثال: رهن لصالح بنك... أو نزاع قائم على الملكية" />
+              </div>
+              <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
+                <button className="lsd-header-btn" onClick={() => setEditingDeed(false)}>إلغاء</button>
+                <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleSaveDeed} disabled={deedLoading}>
+                  {deedLoading ? 'جارٍ الحفظ...' : 'حفظ'}
+                </button>
+              </div>
             </div>
-          </div>
-          {detail.encumbrances && (
-            <div className="lsd-notes-section">
-              <div className="lsd-notes-section__label">الأعباء والرهون</div>
-              <p className="lsd-description-text">{detail.encumbrances}</p>
-            </div>
-          )}
-          {!detail.deed_status && !detail.encumbrances && (
-            <div className="lsd-empty-state-small">
-              <FileText size={22} />
-              <span>لم يتم تحديد حالة الصك</span>
+          ) : (
+            <div>
+              {(detail.deed_status || detail.encumbrances) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: detail.encumbrances ? 12 : 0 }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '8px 16px', borderRadius: 8,
+                    background: detail.deed_status ? DEED_STATUS_BG[detail.deed_status] : 'var(--quiet-gray-100)',
+                    border: `1px solid ${detail.deed_status ? DEED_STATUS_COLORS[detail.deed_status] : 'var(--quiet-gray-200)'}`,
+                  }}>
+                    {detail.deed_status === 'clean' && <Shield size={18} style={{ color: DEED_STATUS_COLORS.clean }} />}
+                    {detail.deed_status === 'encumbered' && <AlertTriangle size={18} style={{ color: DEED_STATUS_COLORS.encumbered }} />}
+                    {detail.deed_status === 'disputed' && <Scale size={18} style={{ color: DEED_STATUS_COLORS.disputed }} />}
+                    <span style={{
+                      fontSize: 15, fontWeight: 700,
+                      color: detail.deed_status ? DEED_STATUS_COLORS[detail.deed_status] : 'var(--quiet-gray-500)',
+                    }}>
+                      {detail.deed_status ? (DEED_STATUS_LABELS[detail.deed_status] || detail.deed_status) : 'غير محدد'}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {detail.encumbrances && (
+                <div className="lsd-notes-section">
+                  <div className="lsd-notes-section__label">الأعباء والرهون</div>
+                  <p className="lsd-description-text">{detail.encumbrances}</p>
+                </div>
+              )}
+              {!detail.deed_status && !detail.encumbrances && (
+                <div className="lsd-empty-state-small">
+                  <FileText size={22} />
+                  <span>لم تُحدَّد حالة الصك بعد — اضغط «تعديل» لاختيار: سليم / مرهون / متنازع عليه</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -467,7 +537,7 @@ const RealEstateWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
                     <td style={{ padding: '8px 12px' }}>
                       <span style={{
                         fontSize: 11, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
-                        background: '#eff6ff', color: '#3b82f6',
+                        background: 'var(--status-blue-light)', color: 'var(--status-blue)',
                       }}>
                         {PARTY_ROLE_LABELS[party.role] || party.role}
                       </span>
@@ -688,7 +758,7 @@ const RealEstateWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
                       <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--quiet-gray-600, #4b5563)' }}>
                         {heir.relationship}
                       </td>
-                      <td style={{ padding: '8px 12px', fontSize: 12, fontWeight: 600, color: '#3b82f6' }} dir="ltr">
+                      <td style={{ padding: '8px 12px', fontSize: 12, fontWeight: 600, color: 'var(--status-blue)' }} dir="ltr">
                         {heir.share_fraction || '—'}
                       </td>
                       <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--quiet-gray-600, #4b5563)' }} dir="ltr">

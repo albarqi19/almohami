@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
+import { getApiErrorMessage } from '../../../utils/apiError';
 import type { WorkspaceProps } from './types';
 import MicroStatsBar from './MicroStatsBar';
 import LegalRichEditorField from '../LegalRichEditorField';
@@ -23,16 +24,19 @@ const RECOMMENDATION_LABELS: Record<string, string> = {
   proceed: 'المضي', proceed_with_conditions: 'المضي بشروط', do_not_proceed: 'عدم المضي',
 };
 const RECOMMENDATION_COLORS: Record<string, string> = {
-  proceed: '#16a34a', proceed_with_conditions: '#f59e0b', do_not_proceed: '#dc2626',
+  proceed: 'var(--status-green)', proceed_with_conditions: 'var(--status-orange)', do_not_proceed: 'var(--status-red)',
 };
 
-const RISK_LABELS: Record<string, string> = { low: 'منخفض', medium: 'متوسط', high: 'مرتفع', critical: 'حرج' };
-const RISK_COLORS: Record<string, string> = { low: '#16a34a', medium: '#f59e0b', high: '#dc2626', critical: '#7f1d1d' };
+// خيارات الإدخال (تُرسل medium — الخادم يطبّعها إلى moderate قبل الحفظ)
+const RISK_SELECT_LABELS: Record<string, string> = { low: 'منخفض', medium: 'متوسط', high: 'مرتفع', critical: 'حرج' };
+// تسميات العرض — تشمل moderate كما تُحفظ في القاعدة
+const RISK_LABELS: Record<string, string> = { low: 'منخفض', medium: 'متوسط', moderate: 'متوسط', high: 'مرتفع', critical: 'حرج' };
+const RISK_COLORS: Record<string, string> = { low: 'var(--status-green)', medium: 'var(--status-orange)', moderate: 'var(--status-orange)', high: 'var(--status-red)', critical: 'var(--status-red)' };
 
 const FLAG_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  red: { bg: '#fef2f2', text: '#dc2626', label: 'أحمر' },
-  yellow: { bg: '#fffbeb', text: '#f59e0b', label: 'أصفر' },
-  green: { bg: '#f0fdf4', text: '#16a34a', label: 'أخضر' },
+  red: { bg: 'var(--status-red-light)', text: 'var(--status-red)', label: 'أحمر' },
+  yellow: { bg: 'var(--status-orange-light)', text: 'var(--status-orange)', label: 'أصفر' },
+  green: { bg: 'var(--status-green-light)', text: 'var(--status-green)', label: 'أخضر' },
 };
 
 const DEFAULT_SCOPE_AREAS = [
@@ -83,8 +87,17 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
   }, [findings, activeFilter]);
 
   if (!detail) {
-    return (<div className="lsd-empty-tab"><Search size={32} /><p>لا توجد تفاصيل للفحص النافي للجهالة</p></div>);
+    return (
+      <div className="lsd-empty-tab">
+        <Search size={32} />
+        <p>لا توجد تفاصيل للفحص النافي للجهالة بعد</p>
+        <p style={{ fontSize: 12, color: 'var(--quiet-gray-400)' }}>تُنشأ التفاصيل تلقائياً مع الخدمة — حدّث الصفحة، وإن استمرت المشكلة تواصل مع الدعم</p>
+      </div>
+    );
   }
+
+  // قيمة الصفقة: الخادم يقبل deal_value ويحفظها/يعيدها estimated_deal_value
+  const dealValue = detail.estimated_deal_value ?? detail.deal_value;
 
   // ── معالجات ──
 
@@ -93,8 +106,8 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
     try {
       const res = await LegalServiceService.updateDdTargetInfo(service.id, targetData);
       if (res.success) { toast.success('تم حفظ بيانات الشركة المستهدفة'); setEditingTarget(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      else toast.error(res.message || 'تعذّر حفظ بيانات الشركة المستهدفة');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ بيانات الشركة المستهدفة')); }
     finally { setTargetLoading(false); }
   };
 
@@ -108,8 +121,8 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
       }
       const res = await LegalServiceService.updateDdScopeAreas(service.id, updated);
       if (res.success) { await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر تحديث نطاقات الفحص');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر تحديث نطاقات الفحص')); }
     finally { setScopeLoading(false); }
   };
 
@@ -118,8 +131,8 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
     try {
       const res = await LegalServiceService.updateDdScopeAreas(service.id, updated);
       if (res.success) { await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر حفظ ملاحظات النطاق');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ ملاحظات النطاق')); }
   };
 
   const handleAddFinding = async () => {
@@ -129,8 +142,8 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
     try {
       const res = await LegalServiceService.addDdFinding(service.id, newFinding);
       if (res.success) { toast.success('تمت إضافة النتيجة'); setShowAddFinding(false); setNewFinding({}); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر إضافة النتيجة');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر إضافة النتيجة')); }
     finally { setAddFindingLoading(false); }
   };
 
@@ -138,8 +151,8 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
     try {
       const res = await LegalServiceService.removeDdFinding(service.id, idx);
       if (res.success) { toast.success('تم حذف النتيجة'); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر حذف النتيجة');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حذف النتيجة')); }
   };
 
   const handleSaveRisk = async () => {
@@ -147,8 +160,8 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
     try {
       const res = await LegalServiceService.updateDdTargetInfo(service.id, riskData);
       if (res.success) { toast.success('تم حفظ تقييم المخاطر'); setEditingRisk(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      else toast.error(res.message || 'تعذّر حفظ تقييم المخاطر');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ تقييم المخاطر')); }
     finally { setRiskLoading(false); }
   };
 
@@ -184,7 +197,7 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
         ...(detail.red_flags_count > 0 ? [{ label: 'علامات حمراء', value: `${detail.red_flags_count}`, icon: Flag as any, color: 'red' as const }] : []),
         ...(detail.yellow_flags_count > 0 ? [{ label: 'علامات صفراء', value: `${detail.yellow_flags_count}`, icon: Flag as any, color: 'amber' as const }] : []),
         ...(detail.green_flags_count > 0 ? [{ label: 'علامات خضراء', value: `${detail.green_flags_count}`, icon: Flag as any, color: 'green' as const }] : []),
-        ...(detail.overall_risk ? [{ label: 'المخاطر الإجمالية', value: RISK_LABELS[detail.overall_risk] || detail.overall_risk, icon: AlertTriangle as any, color: (detail.overall_risk === 'low' ? 'green' : detail.overall_risk === 'medium' ? 'amber' : 'red') as any }] : []),
+        ...(detail.overall_risk ? [{ label: 'المخاطر الإجمالية', value: RISK_LABELS[detail.overall_risk] || detail.overall_risk, icon: AlertTriangle as any, color: (detail.overall_risk === 'low' ? 'green' : (detail.overall_risk === 'medium' || detail.overall_risk === 'moderate') ? 'amber' : 'red') as any }] : []),
         ...(detail.recommendation ? [{ label: 'التوصية', value: RECOMMENDATION_LABELS[detail.recommendation] || detail.recommendation, icon: CheckCircle as any, color: (detail.recommendation === 'proceed' ? 'green' : detail.recommendation === 'proceed_with_conditions' ? 'amber' : 'red') as any }] : []),
       ]} />
 
@@ -197,7 +210,7 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
             setTargetData({
               target_company_name: detail.target_company_name || '', target_cr_number: detail.target_cr_number || '',
               target_industry: detail.target_industry || '', target_location: detail.target_location || '',
-              deal_value: detail.deal_value || '', dd_type: detail.dd_type || '',
+              deal_value: detail.estimated_deal_value ?? detail.deal_value ?? '', dd_type: detail.dd_type || '',
             });
           }}><Edit2 size={13} /> تعديل</button>
         </div>
@@ -224,8 +237,8 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
               {detail.target_cr_number && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Hash size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">السجل التجاري</div><div className="lsd-info-item__value">{detail.target_cr_number}</div></div></div>}
               {detail.target_industry && <div className="lsd-info-item"><div className="lsd-info-item__icon"><FileText size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">القطاع</div><div className="lsd-info-item__value">{detail.target_industry}</div></div></div>}
               {detail.target_location && <div className="lsd-info-item"><div className="lsd-info-item__icon"><MapPin size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">الموقع</div><div className="lsd-info-item__value">{detail.target_location}</div></div></div>}
-              {detail.deal_value && <div className="lsd-info-item"><div className="lsd-info-item__icon"><DollarSign size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">قيمة الصفقة</div><div className="lsd-info-item__value">{formatCurrency(detail.deal_value)}</div></div></div>}
-              {!detail.target_company_name && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُضف بيانات الشركة المستهدفة بعد</div>}
+              {dealValue && <div className="lsd-info-item"><div className="lsd-info-item__icon"><DollarSign size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">قيمة الصفقة</div><div className="lsd-info-item__value">{formatCurrency(dealValue)}</div></div></div>}
+              {!detail.target_company_name && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُضف بيانات الشركة المستهدفة بعد — اضغط «تعديل» أعلى البطاقة لإدخالها</div>}
             </div>
           )}
         </div>
@@ -242,7 +255,7 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
               const existing = scopeAreas.find(s => s.area === area.key);
               const isChecked = existing?.checked ?? false;
               return (
-                <div key={area.key} style={{ padding: 10, background: isChecked ? '#f0fdf4' : 'var(--bg-secondary, #f8f9fa)', borderRadius: 8, border: `1px solid ${isChecked ? '#bbf7d0' : '#e5e7eb'}` }}>
+                <div key={area.key} style={{ padding: 10, background: isChecked ? 'var(--status-green-light)' : 'var(--bg-secondary, #f8f9fa)', borderRadius: 8, border: `1px solid ${isChecked ? 'var(--status-green)' : 'var(--quiet-gray-200)'}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}>
                       <input type="checkbox" checked={isChecked} onChange={e => handleToggleScope(area.key, e.target.checked)} disabled={scopeLoading} style={{ width: 16, height: 16 }} />
@@ -277,7 +290,7 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
             <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
               <button
                 onClick={() => setActiveFilter('all')}
-                style={{ padding: '4px 12px', borderRadius: 12, fontSize: 12, fontWeight: 600, border: '1px solid', cursor: 'pointer', background: activeFilter === 'all' ? '#1d4ed8' : '#fff', color: activeFilter === 'all' ? '#fff' : '#6b7280', borderColor: activeFilter === 'all' ? '#1d4ed8' : '#e5e7eb' }}
+                style={{ padding: '4px 12px', borderRadius: 12, fontSize: 12, fontWeight: 600, border: '1px solid', cursor: 'pointer', background: activeFilter === 'all' ? 'var(--law-navy)' : 'var(--dashboard-card)', color: activeFilter === 'all' ? 'var(--dashboard-card)' : 'var(--quiet-gray-500)', borderColor: activeFilter === 'all' ? 'var(--law-navy)' : 'var(--quiet-gray-200)' }}
               >
                 الكل ({findings.length})
               </button>
@@ -289,7 +302,7 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
                   <button
                     key={level}
                     onClick={() => setActiveFilter(activeFilter === level ? 'all' : level)}
-                    style={{ padding: '4px 12px', borderRadius: 12, fontSize: 12, fontWeight: 600, border: '1px solid', cursor: 'pointer', background: activeFilter === level ? flagColor.text : flagColor.bg, color: activeFilter === level ? '#fff' : flagColor.text, borderColor: activeFilter === level ? flagColor.text : 'transparent' }}
+                    style={{ padding: '4px 12px', borderRadius: 12, fontSize: 12, fontWeight: 600, border: '1px solid', cursor: 'pointer', background: activeFilter === level ? flagColor.text : flagColor.bg, color: activeFilter === level ? 'var(--dashboard-card)' : flagColor.text, borderColor: activeFilter === level ? flagColor.text : 'transparent' }}
                   >
                     {flagColor.label} ({count})
                   </button>
@@ -355,7 +368,8 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
           <button className="lsd-card__action" onClick={() => {
             setEditingRisk(true);
             setRiskData({
-              overall_risk: detail.overall_risk || '',
+              // القاعدة تحفظ moderate — نعرضها في القائمة كـ medium (الخادم يقبل الاثنين)
+              overall_risk: detail.overall_risk === 'moderate' ? 'medium' : (detail.overall_risk || ''),
               recommendation: detail.recommendation || '',
               recommendation_details: detail.recommendation_details || '',
             });
@@ -366,7 +380,7 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
           {editingRisk ? (
             <div>
               <div className="lsd-info-grid">
-                <div className="lsd-form-group"><label className="lsd-form-label">المخاطر الإجمالية</label><select className="lsd-form-input" value={riskData.overall_risk || ''} onChange={e => setRiskData({ ...riskData, overall_risk: e.target.value })}><option value="">اختر</option>{Object.entries(RISK_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+                <div className="lsd-form-group"><label className="lsd-form-label">المخاطر الإجمالية</label><select className="lsd-form-input" value={riskData.overall_risk || ''} onChange={e => setRiskData({ ...riskData, overall_risk: e.target.value })}><option value="">اختر</option>{Object.entries(RISK_SELECT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
                 <div className="lsd-form-group"><label className="lsd-form-label">التوصية</label><select className="lsd-form-input" value={riskData.recommendation || ''} onChange={e => setRiskData({ ...riskData, recommendation: e.target.value })}><option value="">اختر</option>{Object.entries(RECOMMENDATION_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
               </div>
               <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
@@ -377,10 +391,10 @@ const DueDiligenceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
           ) : (
             <div>
               <div className="lsd-info-grid">
-                {detail.overall_risk && <div className="lsd-info-item"><div className="lsd-info-item__icon"><AlertTriangle size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">المخاطر الإجمالية</div><div className="lsd-info-item__value" style={{ color: RISK_COLORS[detail.overall_risk] || '#6b7280', fontWeight: 700 }}>{RISK_LABELS[detail.overall_risk] || detail.overall_risk}</div></div></div>}
-                {detail.recommendation && <div className="lsd-info-item"><div className="lsd-info-item__icon"><CheckCircle size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">التوصية</div><div className="lsd-info-item__value" style={{ color: RECOMMENDATION_COLORS[detail.recommendation] || '#6b7280', fontWeight: 700 }}>{RECOMMENDATION_LABELS[detail.recommendation] || detail.recommendation}</div></div></div>}
+                {detail.overall_risk && <div className="lsd-info-item"><div className="lsd-info-item__icon"><AlertTriangle size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">المخاطر الإجمالية</div><div className="lsd-info-item__value" style={{ color: RISK_COLORS[detail.overall_risk] || 'var(--quiet-gray-500)', fontWeight: 700 }}>{RISK_LABELS[detail.overall_risk] || detail.overall_risk}</div></div></div>}
+                {detail.recommendation && <div className="lsd-info-item"><div className="lsd-info-item__icon"><CheckCircle size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">التوصية</div><div className="lsd-info-item__value" style={{ color: RECOMMENDATION_COLORS[detail.recommendation] || 'var(--quiet-gray-500)', fontWeight: 700 }}>{RECOMMENDATION_LABELS[detail.recommendation] || detail.recommendation}</div></div></div>}
               </div>
-              {!detail.overall_risk && !detail.recommendation && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم يُحدد تقييم المخاطر بعد</div>}
+              {!detail.overall_risk && !detail.recommendation && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم يُحدد تقييم المخاطر بعد — اضغط «تعديل» لاختيار مستوى المخاطر والتوصية</div>}
             </div>
           )}
         </div>

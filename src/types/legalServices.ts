@@ -94,6 +94,8 @@ export interface LegalService {
   case_id: number | null;
   converted_to_case_at: string | null;
   contract_id: number | null;
+  /** [P3.3] العقد الرسمي المرتبط (مختصر) — يعود مع حمولة show/updateStatus */
+  contract?: { id: number; contract_number: string; status: string; grand_total: string | number } | null;
   start_date: string | null;
   due_date: string | null;
   completed_date: string | null;

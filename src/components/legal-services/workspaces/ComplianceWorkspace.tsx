@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
+import { getApiErrorMessage } from '../../../utils/apiError';
 import { useDynamicList } from '../../../hooks/useDynamicList';
 import type { WorkspaceProps } from './types';
 import MicroStatsBar from './MicroStatsBar';
@@ -38,10 +39,10 @@ const RISK_LEVEL_LABELS: Record<string, string> = {
 };
 
 const RISK_LEVEL_COLORS: Record<string, string> = {
-  low: '#16a34a',
-  medium: '#f59e0b',
-  high: '#ef4444',
-  critical: '#7c3aed',
+  low: 'var(--status-green)',
+  medium: 'var(--status-orange)',
+  high: 'var(--status-red)',
+  critical: 'var(--status-purple)',
 };
 
 const CHECKLIST_STATUS_LABELS: Record<string, string> = {
@@ -53,11 +54,11 @@ const CHECKLIST_STATUS_LABELS: Record<string, string> = {
 };
 
 const CHECKLIST_STATUS_COLORS: Record<string, string> = {
-  compliant: '#16a34a',
-  non_compliant: '#ef4444',
-  partial: '#f59e0b',
-  not_applicable: '#6b7280',
-  not_checked: '#9ca3af',
+  compliant: 'var(--status-green)',
+  non_compliant: 'var(--status-red)',
+  partial: 'var(--status-orange)',
+  not_applicable: 'var(--quiet-gray-500)',
+  not_checked: 'var(--quiet-gray-400)',
 };
 
 const RISK_ITEM_STATUS_LABELS: Record<string, string> = {
@@ -73,9 +74,9 @@ const CORRECTIVE_STATUS_LABELS: Record<string, string> = {
 };
 
 const CORRECTIVE_STATUS_COLORS: Record<string, string> = {
-  pending: '#f59e0b',
-  in_progress: '#3b82f6',
-  completed: '#16a34a',
+  pending: 'var(--status-orange)',
+  in_progress: 'var(--status-blue)',
+  completed: 'var(--status-green)',
 };
 
 interface AuditChecklistItem {
@@ -168,10 +169,18 @@ const ComplianceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
   }, [checklist]);
 
   // useDynamicList للمخاطر
+  // الهوك يبتلع الاستثناءات برسالة عامة — نلتقط الخطأ هنا ونعيد { success:false, message }
+  // برسالة الباك العربية الحقيقية فيعرضها الهوك للمستخدم بدل «حدث خطأ في الاتصال».
   const riskList = useDynamicList<RiskRegisterItem>({
     items: risks,
-    onAdd: (item) => LegalServiceService.addRiskItem(service.id, item),
-    onRemove: (idx) => LegalServiceService.removeRiskItem(service.id, idx),
+    onAdd: async (item) => {
+      try { return await LegalServiceService.addRiskItem(service.id, item); }
+      catch (err) { return { success: false, message: getApiErrorMessage(err, 'تعذّرت إضافة الخطر') }; }
+    },
+    onRemove: async (idx) => {
+      try { return await LegalServiceService.removeRiskItem(service.id, idx); }
+      catch (err) { return { success: false, message: getApiErrorMessage(err, 'تعذّر حذف الخطر') }; }
+    },
     refreshService,
     addSuccessMessage: 'تمت إضافة الخطر بنجاح',
     removeSuccessMessage: 'تم حذف الخطر',
@@ -180,8 +189,14 @@ const ComplianceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
   // useDynamicList للإجراءات التصحيحية
   const actionList = useDynamicList<CorrectiveAction>({
     items: actions,
-    onAdd: (item) => LegalServiceService.addCorrectiveAction(service.id, item),
-    onRemove: (idx) => LegalServiceService.removeCorrectiveAction(service.id, idx),
+    onAdd: async (item) => {
+      try { return await LegalServiceService.addCorrectiveAction(service.id, item); }
+      catch (err) { return { success: false, message: getApiErrorMessage(err, 'تعذّرت إضافة الإجراء التصحيحي') }; }
+    },
+    onRemove: async (idx) => {
+      try { return await LegalServiceService.removeCorrectiveAction(service.id, idx); }
+      catch (err) { return { success: false, message: getApiErrorMessage(err, 'تعذّر حذف الإجراء التصحيحي') }; }
+    },
     refreshService,
     addSuccessMessage: 'تمت إضافة الإجراء التصحيحي بنجاح',
     removeSuccessMessage: 'تم حذف الإجراء التصحيحي',
@@ -199,31 +214,31 @@ const ComplianceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
 
   // ── معالجات ──
 
+  // apiClient يرمي استثناءً عند أي فشل والرسالة عربية من الباك — getApiErrorMessage يستخرجها
   const handleSaveInfo = async () => {
     setInfoLoading(true);
     try {
-      const res = await LegalServiceService.updateComplianceInfo(service.id, infoData);
-      if (res.success) {
-        toast.success('تم حفظ معلومات الامتثال');
-        setEditingInfo(false);
-        await refreshService();
-      } else {
-        toast.error(res.message || 'حدث خطأ');
-      }
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      await LegalServiceService.updateComplianceInfo(service.id, infoData);
+      toast.success('تم حفظ معلومات الامتثال');
+      setEditingInfo(false);
+      await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ معلومات الامتثال')); }
     finally { setInfoLoading(false); }
   };
 
+  // نعيد رمي الخطأ برسالة الباك الحقيقية — LegalRichEditorField يعرض err.message للمستخدم
   const handleSaveAssessmentReport = async (html: string) => {
-    const res = await LegalServiceService.updateComplianceInfo(service.id, { assessment_report: html });
-    if (!res?.success) throw new Error(res?.message || 'تعذّر الحفظ');
-    await refreshService();
+    try {
+      await LegalServiceService.updateComplianceInfo(service.id, { assessment_report: html });
+      await refreshService();
+    } catch (err) { throw new Error(getApiErrorMessage(err, 'تعذّر حفظ تقرير التقييم')); }
   };
 
   const handleSaveRecommendations = async (html: string) => {
-    const res = await LegalServiceService.updateComplianceInfo(service.id, { recommendations: html });
-    if (!res?.success) throw new Error(res?.message || 'تعذّر الحفظ');
-    await refreshService();
+    try {
+      await LegalServiceService.updateComplianceInfo(service.id, { recommendations: html });
+      await refreshService();
+    } catch (err) { throw new Error(getApiErrorMessage(err, 'تعذّر حفظ التوصيات')); }
   };
 
   const handleChecklistStatusChange = async (originalIndex: number, newStatus: string) => {
@@ -232,14 +247,10 @@ const ComplianceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
       const updatedChecklist = checklist.map((item, idx) =>
         idx === originalIndex ? { ...item, status: newStatus } : item
       );
-      const res = await LegalServiceService.updateAuditChecklist(service.id, updatedChecklist);
-      if (res.success) {
-        toast.success('تم تحديث حالة البند');
-        await refreshService();
-      } else {
-        toast.error(res.message || 'حدث خطأ');
-      }
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      await LegalServiceService.updateAuditChecklist(service.id, updatedChecklist);
+      toast.success('تم تحديث حالة البند');
+      await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر تحديث حالة البند')); }
     finally { setChecklistLoading(false); }
   };
 
@@ -253,7 +264,7 @@ const ComplianceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
   };
 
   // ── حساب لون شريط النتيجة ──
-  const scoreColor = (detail.compliance_score ?? 0) >= 80 ? '#16a34a' : (detail.compliance_score ?? 0) >= 50 ? '#f59e0b' : '#ef4444';
+  const scoreColor = (detail.compliance_score ?? 0) >= 80 ? 'var(--status-green)' : (detail.compliance_score ?? 0) >= 50 ? 'var(--status-orange)' : 'var(--status-red)';
 
   // ── تنبيه المراجعة القادمة ──
   const daysToReview = daysUntil(detail.next_review_date);
@@ -610,7 +621,7 @@ const ComplianceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
           ) : (
             <div className="lsd-empty-state-small">
               <ClipboardCheck size={22} />
-              <span>لا توجد عناصر في قائمة التدقيق</span>
+              <span>لا توجد بنود في قائمة التدقيق بعد — تُضاف البنود عند إعداد تقييم الامتثال، وبعدها يمكنك تحديث حالة كل بند (ملتزم / غير ملتزم / لم يُفحص) من هنا</span>
             </div>
           )}
         </div>
@@ -681,7 +692,8 @@ const ComplianceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
                         riskList.handleAdd({ ...newRisk, risk: newRisk.risk!, status: newRisk.status || 'open' });
                         setNewRisk({});
                       }}
-                      disabled={riskList.addLoading}
+                      disabled={riskList.addLoading || !newRisk.risk?.trim()}
+                      title={!newRisk.risk?.trim() ? 'اكتب وصف الخطر أولاً — بقية الحقول اختيارية' : undefined}
                     >
                       {riskList.addLoading ? 'جارٍ...' : 'إضافة'}
                     </button>
@@ -697,7 +709,7 @@ const ComplianceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
               {risks.map((risk, idx) => (
                 <div key={idx} className="lsd-reference-item" style={{ alignItems: 'flex-start' }}>
                   <div className="lsd-reference-item__icon">
-                    <FileWarning size={15} style={{ color: risk.status === 'open' ? '#ef4444' : risk.status === 'mitigated' ? '#16a34a' : '#f59e0b' }} />
+                    <FileWarning size={15} style={{ color: risk.status === 'open' ? 'var(--status-red)' : risk.status === 'mitigated' ? 'var(--status-green)' : 'var(--status-orange)' }} />
                   </div>
                   <div className="lsd-reference-item__body" style={{ flex: 1 }}>
                     <div className="lsd-reference-item__title">{risk.risk}</div>
@@ -716,8 +728,8 @@ const ComplianceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
                   </div>
                   <span style={{
                     fontSize: 11, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
-                    background: risk.status === 'open' ? '#fef2f2' : risk.status === 'mitigated' ? '#f0fdf4' : '#fffbeb',
-                    color: risk.status === 'open' ? '#ef4444' : risk.status === 'mitigated' ? '#16a34a' : '#f59e0b',
+                    background: risk.status === 'open' ? 'var(--status-red-light)' : risk.status === 'mitigated' ? 'var(--status-green-light)' : 'var(--status-orange-light)',
+                    color: risk.status === 'open' ? 'var(--status-red)' : risk.status === 'mitigated' ? 'var(--status-green)' : 'var(--status-orange)',
                   }}>
                     {RISK_ITEM_STATUS_LABELS[risk.status || 'open']}
                   </span>
@@ -795,7 +807,8 @@ const ComplianceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
                         actionList.handleAdd({ ...newAction, action: newAction.action!, status: newAction.status || 'pending' });
                         setNewAction({});
                       }}
-                      disabled={actionList.addLoading}
+                      disabled={actionList.addLoading || !newAction.action?.trim()}
+                      title={!newAction.action?.trim() ? 'اكتب وصف الإجراء أولاً — بقية الحقول اختيارية' : undefined}
                     >
                       {actionList.addLoading ? 'جارٍ...' : 'إضافة'}
                     </button>
@@ -823,7 +836,7 @@ const ComplianceWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService
                   </div>
                   <span style={{
                     fontSize: 11, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
-                    background: action.status === 'completed' ? '#f0fdf4' : action.status === 'in_progress' ? '#eff6ff' : '#fffbeb',
+                    background: action.status === 'completed' ? 'var(--status-green-light)' : action.status === 'in_progress' ? 'var(--status-blue-light)' : 'var(--status-orange-light)',
                     color: CORRECTIVE_STATUS_COLORS[action.status || 'pending'],
                   }}>
                     {CORRECTIVE_STATUS_LABELS[action.status || 'pending']}

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
+import { getApiErrorMessage } from '../../../utils/apiError';
 import { useDynamicList } from '../../../hooks/useDynamicList';
 import type { WorkspaceProps } from './types';
 import type { TrainingAttendee, TrainingMaterial } from '../../../types/legalServices';
@@ -118,7 +119,10 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
     return (
       <div className="lsd-empty-tab">
         <GraduationCap size={32} />
-        <p>لا توجد تفاصيل للتدريب</p>
+        <p>لا توجد تفاصيل للتدريب بعد</p>
+        <p style={{ fontSize: 12.5, color: 'var(--quiet-gray-500, #6b7280)', margin: '4px 0 0' }}>
+          أعد تحميل الصفحة، وإن استمرّت المشكلة تواصل مع الدعم — يُفترض أن تُنشأ تفاصيل التدريب تلقائياً مع الخدمة.
+        </p>
       </div>
     );
   }
@@ -128,15 +132,19 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
   const handleSaveDetails = async () => {
     setDetailsLoading(true);
     try {
-      const res = await LegalServiceService.updateTrainingDetails(service.id, detailsData);
+      // لا نرسل حقول التسعير إلا إذا لمسها المستخدم — كانت is_free تُكتب true صامتاً مع كل حفظ
+      const payload: Record<string, any> = { ...detailsData };
+      if (payload.is_free === undefined) delete payload.is_free;
+      if (payload.price_per_attendee === '' || payload.price_per_attendee === undefined) delete payload.price_per_attendee;
+      const res = await LegalServiceService.updateTrainingDetails(service.id, payload);
       if (res.success) {
         toast.success('تم حفظ تفاصيل التدريب');
         setEditingDetails(false);
         await refreshService();
       } else {
-        toast.error(res.message || 'حدث خطأ');
+        toast.error(res.message || 'تعذّر حفظ تفاصيل التدريب');
       }
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ تفاصيل التدريب')); }
     finally { setDetailsLoading(false); }
   };
 
@@ -154,17 +162,19 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
     await refreshService();
   };
 
+  // إصدار الشهادات الرسمية (PDF) عبر POST /legal-services/{id}/training/certificates/generate
+  // نعرض نتيجة الخادم الحقيقية — لا رسالة نجاح زائفة عند الفشل
   const handleGenerateCerts = async () => {
     setCertLoading(true);
     try {
       const res = await LegalServiceService.generateCertificates(service.id);
       if (res.success) {
-        toast.success('تم إصدار الشهادات بنجاح');
+        toast.success(res.message || 'تم إصدار الشهادات الرسمية — تجدها في «المخرجات الرسمية»');
         await refreshService();
       } else {
-        toast.error(res.message || 'حدث خطأ');
+        toast.error(res.message || 'تعذّر إصدار الشهادات');
       }
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر إصدار الشهادات')); }
     finally { setCertLoading(false); }
   };
 
@@ -177,9 +187,9 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
         setEditingEval(false);
         await refreshService();
       } else {
-        toast.error(res.message || 'حدث خطأ');
+        toast.error(res.message || 'تعذّر حفظ التقييم');
       }
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ التقييم')); }
     finally { setEvalLoading(false); }
   };
 
@@ -188,7 +198,7 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
     return (
       <div style={{ display: 'flex', gap: 2, direction: 'ltr' }}>
         {[1, 2, 3, 4, 5].map(i => (
-          <Star key={i} size={16} fill={i <= rating ? '#f59e0b' : 'none'} color={i <= rating ? '#f59e0b' : '#d1d5db'} />
+          <Star key={i} size={16} fill={i <= rating ? 'var(--law-gold, #f59e0b)' : 'none'} color={i <= rating ? 'var(--law-gold, #f59e0b)' : 'var(--quiet-gray-300, #d1d5db)'} />
         ))}
       </div>
     );
@@ -251,7 +261,8 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
                 trainer_name: detail.trainer_name || '',
                 max_attendees: detail.max_attendees || '',
                 price_per_attendee: detail.price_per_attendee || '',
-                is_free: detail.is_free ?? true,
+                // is_free لا تُدرج هنا عمداً — تُضاف للحمولة فقط عند لمس المستخدم للمفتاح
+                // (كانت تُرسل true افتراضياً فتُكتب صامتاً مع كل حفظ)
               });
             }}
           >
@@ -318,6 +329,33 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
                 <div className="lsd-form-group">
                   <label className="lsd-form-label">الحد الأقصى للمتدربين</label>
                   <input className="lsd-form-input" type="number" value={detailsData.max_attendees || ''} onChange={e => setDetailsData({ ...detailsData, max_attendees: e.target.value })} dir="ltr" />
+                </div>
+                {/* ── التسعير: مجاني أم برسوم؟ ── */}
+                <div className="lsd-form-group">
+                  <label className="lsd-form-label">التسعير</label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', minHeight: 34 }}>
+                    <input
+                      type="checkbox"
+                      checked={detailsData.is_free ?? detail.is_free ?? false}
+                      onChange={e => setDetailsData({ ...detailsData, is_free: e.target.checked })}
+                    />
+                    تدريب مجاني (بدون رسوم للمتدرب)
+                  </label>
+                </div>
+                <div className="lsd-form-group">
+                  <label className="lsd-form-label">السعر لكل متدرب (ر.س)</label>
+                  <input
+                    className="lsd-form-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={detailsData.price_per_attendee || ''}
+                    onChange={e => setDetailsData({ ...detailsData, price_per_attendee: e.target.value })}
+                    placeholder="مثال: 500"
+                    dir="ltr"
+                    disabled={detailsData.is_free ?? detail.is_free ?? false}
+                    title={(detailsData.is_free ?? detail.is_free ?? false) ? 'التدريب مجاني — ألغِ تحديد «مجاني» لإدخال سعر' : undefined}
+                  />
                 </div>
               </div>
               <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
@@ -414,7 +452,7 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
                     <div className="lsd-info-item__icon"><Star size={14} /></div>
                     <div className="lsd-info-item__body">
                       <div className="lsd-info-item__label">السعر</div>
-                      <div className="lsd-info-item__value" style={{ color: '#16a34a' }}>مجاني</div>
+                      <div className="lsd-info-item__value" style={{ color: 'var(--status-green, #16a34a)' }}>مجاني</div>
                     </div>
                   </div>
                 )}
@@ -466,7 +504,7 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
           <AnimatePresence>
             {attendeeList.showAddForm && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden', marginBottom: 12 }}>
-                <div style={{ padding: 12, background: 'var(--bg-secondary, #f8f9fa)', borderRadius: 8 }}>
+                <div style={{ padding: 12, background: 'var(--quiet-gray-50, #f8f9fa)', borderRadius: 8 }}>
                   <h4 style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 600 }}>إضافة متدرب جديد</h4>
                   <div className="lsd-info-grid">
                     <div className="lsd-form-group">
@@ -573,7 +611,7 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
           <AnimatePresence>
             {materialList.showAddForm && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden', marginBottom: 12 }}>
-                <div style={{ padding: 12, background: 'var(--bg-secondary, #f8f9fa)', borderRadius: 8 }}>
+                <div style={{ padding: 12, background: 'var(--quiet-gray-50, #f8f9fa)', borderRadius: 8 }}>
                   <h4 style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 600 }}>إضافة مادة تدريبية</h4>
                   <div className="lsd-info-grid">
                     <div className="lsd-form-group">
@@ -665,18 +703,22 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
               </div>
             </div>
           </div>
-          {attendedCount > 0 && (
-            <div style={{ marginTop: 12 }}>
-              <button
-                className="lsd-header-btn lsd-header-btn--primary"
-                onClick={handleGenerateCerts}
-                disabled={certLoading}
-              >
-                <Award size={15} />
-                {certLoading ? 'جارٍ الإصدار...' : 'إصدار الشهادات'}
-              </button>
-            </div>
-          )}
+          <div style={{ marginTop: 12 }}>
+            <button
+              className="lsd-header-btn lsd-header-btn--primary"
+              onClick={handleGenerateCerts}
+              disabled={certLoading || attendedCount === 0}
+              title={attendedCount === 0
+                ? 'علّم «حضر» على متدرب واحد على الأقل ليمكن إصدار الشهادات'
+                : 'يولّد شهادات حضور رسمية (PDF) لكل من علِّم عليه «حضر»'}
+            >
+              <Award size={15} />
+              {certLoading ? 'جارٍ الإصدار...' : 'إصدار الشهادات الرسمية (PDF)'}
+            </button>
+            <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--quiet-gray-500, #6b7280)' }}>
+              يولّد شهادة PDF رسمية لكل متدرب مُعلَّم عليه «حضر»، وتظهر ضمن «المخرجات الرسمية» للخدمة.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -721,7 +763,7 @@ const TrainingWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
           ) : detail.evaluation?.average_rating ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 28, fontWeight: 700, color: '#f59e0b' }}>{detail.evaluation.average_rating}</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--law-gold, #f59e0b)' }}>{detail.evaluation.average_rating}</div>
                 <div style={{ fontSize: 12, color: 'var(--quiet-gray-500)' }}>من 5</div>
                 {renderStars(Math.round(detail.evaluation.average_rating))}
               </div>

@@ -21,6 +21,14 @@ interface PortalData {
     timeline: TimelineStep[];
   };
   documents: Array<{ title: string; uploaded_at: string }>;
+  deliverables?: Array<{
+    title: string;
+    type: string;
+    format: string;
+    created_at: string | null;
+    payment_required: boolean;
+    download_url: string | null;
+  }>;
   opinion?: {
     available: boolean;
     is_paid: boolean;
@@ -178,6 +186,33 @@ const ServicePortal: React.FC = () => {
               ))
             ) : (
               <p className="sp-empty">لم تُرفع أي مستندات بعد.</p>
+            )}
+
+            {data.deliverables && data.deliverables.length > 0 && (
+              <>
+                <div className="sp-section-title">وثائق المكتب الرسمية</div>
+                {data.deliverables.map((d, i) => (
+                  <div key={i} className="sp-doc">
+                    📑 <span>{d.title}</span>
+                    <span style={{ marginInlineStart: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {d.created_at && (
+                        <span style={{ color: '#94a3b8', fontSize: 12 }}>{d.created_at}</span>
+                      )}
+                      {d.download_url ? (
+                        <a
+                          className="sp-btn"
+                          href={d.download_url}
+                          style={{ padding: '6px 12px', fontSize: 12, textDecoration: 'none' }}
+                        >
+                          ⬇️ تحميل
+                        </a>
+                      ) : d.payment_required ? (
+                        <span className="sp-status-badge">يُتاح بعد سداد الفاتورة</span>
+                      ) : null}
+                    </span>
+                  </div>
+                ))}
+              </>
             )}
 
             {data.opinion && (

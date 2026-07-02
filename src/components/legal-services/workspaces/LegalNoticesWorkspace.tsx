@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
+import { getApiErrorMessage } from '../../../utils/apiError';
 import type { WorkspaceProps, MicroStatItem } from './types';
 import MicroStatsBar from './MicroStatsBar';
 import ContextualAlert from './ContextualAlert';
@@ -103,7 +104,10 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
     return (
       <div className="lsd-empty-tab">
         <Bell size={32} />
-        <p>لا توجد تفاصيل للإنذار</p>
+        <p>لا توجد تفاصيل للإنذار بعد</p>
+        <p style={{ fontSize: 12.5, color: 'var(--quiet-gray-500, #6b7280)', margin: '4px 0 0' }}>
+          أعد تحميل الصفحة، وإن استمرّت المشكلة تواصل مع الدعم — يُفترض أن تُنشأ تفاصيل الإنذار تلقائياً مع الخدمة.
+        </p>
       </div>
     );
   }
@@ -119,10 +123,10 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
         setEditingRecipient(false);
         await refreshService();
       } else {
-        toast.error(res.message || 'حدث خطأ');
+        toast.error(res.message || 'تعذّر حفظ بيانات المرسل إليه');
       }
-    } catch {
-      toast.error('حدث خطأ في الاتصال');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر حفظ بيانات المرسل إليه'));
     } finally {
       setRecipientLoading(false);
     }
@@ -137,10 +141,11 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
         setEditingContent(false);
         await refreshService();
       } else {
-        toast.error(res.message || 'حدث خطأ');
+        toast.error(res.message || 'تعذّر حفظ محتوى الإنذار');
       }
-    } catch {
-      toast.error('حدث خطأ في الاتصال');
+    } catch (err) {
+      // قد يرفض الباك التعديل بعد الإرسال (قفل المحتوى 422) — نعرض رسالته كما هي
+      toast.error(getApiErrorMessage(err, 'تعذّر حفظ محتوى الإنذار'));
     } finally {
       setContentLoading(false);
     }
@@ -194,10 +199,10 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
         setShowSendForm(false);
         await refreshService();
       } else {
-        toast.error(res.message || 'حدث خطأ');
+        toast.error(res.message || 'تعذّر تسجيل إرسال الإنذار');
       }
-    } catch {
-      toast.error('حدث خطأ في الاتصال');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر تسجيل إرسال الإنذار'));
     } finally {
       setSendLoading(false);
     }
@@ -212,10 +217,10 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
         setShowDeliveryForm(false);
         await refreshService();
       } else {
-        toast.error(res.message || 'حدث خطأ');
+        toast.error(res.message || 'تعذّر تسجيل تسليم الإنذار');
       }
-    } catch {
-      toast.error('حدث خطأ في الاتصال');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر تسجيل تسليم الإنذار'));
     } finally {
       setDeliveryLoading(false);
     }
@@ -230,10 +235,10 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
         setShowResponseForm(false);
         await refreshService();
       } else {
-        toast.error(res.message || 'حدث خطأ');
+        toast.error(res.message || 'تعذّر تسجيل الرد على الإنذار');
       }
-    } catch {
-      toast.error('حدث خطأ في الاتصال');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر تسجيل الرد على الإنذار'));
     } finally {
       setResponseLoading(false);
     }
@@ -244,12 +249,13 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
     try {
       const res = await LegalServiceService.generateNoticePdf(service.id);
       if (res.success) {
-        toast.success('تم توليد ملف PDF');
+        toast.success(res.message || 'تم توليد ملف PDF — تجده في «المخرجات الرسمية»');
       } else {
-        toast.error(res.message || 'هذه الميزة قيد التطوير');
+        toast.error(res.message || 'تعذّر توليد ملف PDF');
       }
-    } catch {
-      toast.error('هذه الميزة قيد التطوير');
+    } catch (err) {
+      // نعرض رسالة الخادم الحقيقية بدل ادّعاء «قيد التطوير»
+      toast.error(getApiErrorMessage(err, 'تعذّر توليد ملف PDF'));
     } finally {
       setPdfLoading(false);
     }
@@ -642,17 +648,24 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
           <div className="lsd-horizontal-timeline">
             {deliverySteps.map((step, idx) => {
               const StepIcon = step.icon;
+              // خطوة غير متاحة بعد: التسليم قبل الإرسال، أو الرد قبل التسليم — نوضّح السبب بدل نقرة لا تعمل
+              const blockedReason =
+                step.key === 'delivered' && !detail.sent_date ? 'سجّل الإرسال أولاً قبل تسجيل التسليم'
+                : step.key === 'response' && !detail.delivered_date ? 'سجّل التسليم أولاً قبل تسجيل الرد'
+                : null;
+              const clickable = !step.done && !blockedReason;
               return (
                 <React.Fragment key={step.key}>
                   <div
                     className={`lsd-ht-node ${step.done ? 'lsd-ht-node--done' : ''}`}
                     onClick={() => {
-                      if (step.key === 'sent' && !step.done) setShowSendForm(true);
-                      if (step.key === 'delivered' && !step.done && detail.sent_date) setShowDeliveryForm(true);
-                      if (step.key === 'response' && !step.done && detail.delivered_date) setShowResponseForm(true);
+                      if (!clickable) return;
+                      if (step.key === 'sent') setShowSendForm(true);
+                      if (step.key === 'delivered') setShowDeliveryForm(true);
+                      if (step.key === 'response') setShowResponseForm(true);
                     }}
-                    style={{ cursor: step.done ? 'default' : 'pointer' }}
-                    title={step.done ? `${step.label}: ${formatDate(step.date)}` : `انقر لتسجيل ${step.label}`}
+                    style={{ cursor: clickable ? 'pointer' : 'default', opacity: blockedReason ? 0.55 : 1 }}
+                    title={step.done ? `${step.label}: ${formatDate(step.date)}` : blockedReason ?? `انقر لتسجيل ${step.label}`}
                   >
                     <div className="lsd-ht-node__circle">
                       <StepIcon size={14} />
@@ -699,7 +712,7 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
                 exit={{ opacity: 0, height: 0 }}
                 style={{ overflow: 'hidden', marginTop: 16 }}
               >
-                <div style={{ padding: '12px', background: 'var(--bg-secondary, #f8f9fa)', borderRadius: 8 }}>
+                <div style={{ padding: '12px', background: 'var(--quiet-gray-50, #f8f9fa)', borderRadius: 8 }}>
                   <h4 style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 600 }}>تسجيل إرسال الإنذار</h4>
                   <div className="lsd-info-grid">
                     <div className="lsd-form-group">
@@ -753,7 +766,7 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
                 exit={{ opacity: 0, height: 0 }}
                 style={{ overflow: 'hidden', marginTop: 16 }}
               >
-                <div style={{ padding: '12px', background: 'var(--bg-secondary, #f8f9fa)', borderRadius: 8 }}>
+                <div style={{ padding: '12px', background: 'var(--quiet-gray-50, #f8f9fa)', borderRadius: 8 }}>
                   <h4 style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 600 }}>تسجيل تسليم الإنذار</h4>
                   <div className="lsd-info-grid">
                     <div className="lsd-form-group">
@@ -794,7 +807,7 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
                 exit={{ opacity: 0, height: 0 }}
                 style={{ overflow: 'hidden', marginTop: 16 }}
               >
-                <div style={{ padding: '12px', background: 'var(--bg-secondary, #f8f9fa)', borderRadius: 8 }}>
+                <div style={{ padding: '12px', background: 'var(--quiet-gray-50, #f8f9fa)', borderRadius: 8 }}>
                   <h4 style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 600 }}>تسجيل الرد على الإنذار</h4>
                   <div className="lsd-form-group">
                     <label className="lsd-form-label">تاريخ الرد</label>
@@ -845,10 +858,11 @@ const LegalNoticesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServi
         <button
           className="lsd-header-btn"
           onClick={handleGeneratePdf}
-          disabled={pdfLoading}
+          disabled={pdfLoading || !detail.notice_content}
+          title={!detail.notice_content ? 'اكتب نص الإنذار أولاً ليمكن توليد ملف PDF' : 'توليد خطاب الإنذار كملف PDF رسمي'}
         >
           <FileText size={15} />
-          {pdfLoading ? 'جارٍ التوليد...' : 'توليد PDF (قريباً)'}
+          {pdfLoading ? 'جارٍ التوليد...' : 'توليد PDF'}
         </button>
       </div>
     </div>

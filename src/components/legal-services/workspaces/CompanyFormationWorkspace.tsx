@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
-import { useDynamicList } from '../../../hooks/useDynamicList';
+import { getApiErrorMessage } from '../../../utils/apiError';
 import type { WorkspaceProps, MicroStatItem } from './types';
 import type { CompanyPartner, DocumentChecklistItem } from '../../../types/legalServices';
 import MicroStatsBar from './MicroStatsBar';
@@ -21,7 +21,7 @@ const ENTITY_TYPE_LABELS: Record<string, string> = {
 };
 
 const NAME_STATUS_LABELS: Record<string, string> = { pending: 'قيد المراجعة', approved: 'معتمد', rejected: 'مرفوض' };
-const NAME_STATUS_COLORS: Record<string, string> = { pending: '#f59e0b', approved: '#16a34a', rejected: '#dc2626' };
+const NAME_STATUS_COLORS: Record<string, string> = { pending: 'var(--status-orange)', approved: 'var(--status-green)', rejected: 'var(--status-red)' };
 const PARTNER_TYPE_LABELS: Record<string, string> = { managing: 'شريك مدير', silent: 'شريك موصٍ', general: 'شريك متضامن' };
 
 const DEFAULT_AUTHORITIES = [
@@ -83,30 +83,48 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
 
   // ── معالجات ──
 
+  // apiClient يرمي استثناءً عند أي فشل (والرسالة عربية من الباك) — لذا لا حاجة لفروع else
   const handleSaveDetails = async () => {
     setDetailsLoading(true);
     try {
-      const res = await LegalServiceService.updateCompanyDetails(service.id, detailsData);
-      if (res.success) { toast.success('تم حفظ بيانات الشركة'); setEditingDetails(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      await LegalServiceService.updateCompanyDetails(service.id, detailsData);
+      toast.success('تم حفظ بيانات الشركة'); setEditingDetails(false); await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ بيانات الشركة')); }
     finally { setDetailsLoading(false); }
   };
 
-  const handleSavePartners = async (updatedPartners: CompanyPartner[]) => {
+  const handleSavePartners = async (updatedPartners: CompanyPartner[]): Promise<boolean> => {
     try {
-      const res = await LegalServiceService.updatePartners(service.id, updatedPartners);
-      if (res.success) { toast.success('تم تحديث الشركاء'); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      await LegalServiceService.updatePartners(service.id, updatedPartners);
+      toast.success('تم تحديث الشركاء'); await refreshService();
+      return true;
+    } catch (err) {
+      // الباك يرفض مجموع الحصص > 100% برسالة عربية واضحة — نعرضها كما هي
+      toast.error(getApiErrorMessage(err, 'تعذّر تحديث الشركاء'));
+      return false;
+    }
+  };
+
+  /**
+   * تنظيف بيانات الشريك قبل الإرسال: الحقول الرقمية الفارغة تُحذف من الحمولة
+   * بدل إرسال NaN (parseFloat('') = NaN يكسر التحقق في الباك). الباك يتطلب الاسم فقط.
+   */
+  const buildPartnerPayload = (p: Partial<CompanyPartner>): CompanyPartner => {
+    const cleaned: Record<string, unknown> = { name: p.name!.trim() };
+    if (p.national_id?.trim()) cleaned.national_id = p.national_id.trim();
+    if (p.nationality?.trim()) cleaned.nationality = p.nationality.trim();
+    if (p.partner_type) cleaned.partner_type = p.partner_type;
+    if (typeof p.share_percentage === 'number' && !Number.isNaN(p.share_percentage)) cleaned.share_percentage = p.share_percentage;
+    if (typeof p.share_amount === 'number' && !Number.isNaN(p.share_amount)) cleaned.share_amount = p.share_amount;
+    return cleaned as unknown as CompanyPartner;
   };
 
   const handleAddPartner = async () => {
     if (!newPartner.name?.trim()) { toast.error('يرجى إدخال اسم الشريك'); return; }
-    const updated = [...partners, { ...newPartner, name: newPartner.name! } as CompanyPartner];
-    await handleSavePartners(updated);
-    setNewPartner({});
-    setShowAddPartner(false);
+    const updated = [...partners, buildPartnerPayload(newPartner)];
+    const ok = await handleSavePartners(updated);
+    // لا نغلق النموذج إلا عند النجاح — حتى لا يفقد المستخدم مدخلاته عند رفض الباك
+    if (ok) { setNewPartner({}); setShowAddPartner(false); }
   };
 
   const handleRemovePartner = async (idx: number) => {
@@ -117,30 +135,27 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
   const handleSaveAuthorities = async () => {
     setAuthoritiesLoading(true);
     try {
-      const res = await LegalServiceService.updateAuthorities(service.id, authoritiesData);
-      if (res.success) { toast.success('تم حفظ الصلاحيات'); setEditingAuthorities(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      await LegalServiceService.updateAuthorities(service.id, authoritiesData);
+      toast.success('تم حفظ الصلاحيات'); setEditingAuthorities(false); await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ الصلاحيات')); }
     finally { setAuthoritiesLoading(false); }
   };
 
   const handleSaveGov = async () => {
     setGovLoading(true);
     try {
-      const res = await LegalServiceService.updateGovernmentTracking(service.id, govData);
-      if (res.success) { toast.success('تم حفظ التتبع الحكومي'); setEditingGov(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      await LegalServiceService.updateGovernmentTracking(service.id, govData);
+      toast.success('تم حفظ التتبع الحكومي'); setEditingGov(false); await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ التتبع الحكومي')); }
     finally { setGovLoading(false); }
   };
 
   const handleSavePostCr = async () => {
     setPostCrLoading(true);
     try {
-      const res = await LegalServiceService.updatePostCr(service.id, postCrData);
-      if (res.success) { toast.success('تم حفظ إجراءات ما بعد السجل'); setEditingPostCr(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      await LegalServiceService.updatePostCr(service.id, postCrData);
+      toast.success('تم حفظ إجراءات ما بعد السجل'); setEditingPostCr(false); await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ إجراءات ما بعد السجل')); }
     finally { setPostCrLoading(false); }
   };
 
@@ -148,10 +163,9 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
     setChecklistLoading(true);
     const updated = checklist.map((item, i) => i === idx ? { ...item, collected: !item.collected } : item);
     try {
-      const res = await LegalServiceService.updateFormationChecklist(service.id, updated);
-      if (res.success) await refreshService();
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      await LegalServiceService.updateFormationChecklist(service.id, updated);
+      await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر تحديث قائمة المستندات')); }
     finally { setChecklistLoading(false); }
   };
 
@@ -175,7 +189,7 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
           <div className="lsd-card__content" style={{ padding: '10px 14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ flex: 1, background: 'var(--quiet-gray-100, #f3f4f6)', borderRadius: 6, height: 8, overflow: 'hidden' }}>
-                <div style={{ width: `${progress.completion_percentage}%`, height: '100%', background: progress.completion_percentage >= 80 ? '#22c55e' : progress.completion_percentage >= 50 ? '#f59e0b' : '#3b82f6', borderRadius: 6, transition: 'width 0.3s' }} />
+                <div style={{ width: `${progress.completion_percentage}%`, height: '100%', background: progress.completion_percentage >= 80 ? 'var(--status-green)' : progress.completion_percentage >= 50 ? 'var(--status-orange)' : 'var(--status-blue)', borderRadius: 6, transition: 'width 0.3s' }} />
               </div>
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--quiet-gray-700)' }}>{progress.completion_percentage}%</span>
             </div>
@@ -237,7 +251,7 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
                     name ? (
                       <div key={idx} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 12, background: 'var(--quiet-gray-50)', border: '1px solid var(--quiet-gray-200)' }}>
                         {name}
-                        {detail.name_reservation_status && detail.approved_name === name && <CheckCircle size={12} style={{ marginRight: 4, color: '#16a34a' }} />}
+                        {detail.name_reservation_status && detail.approved_name === name && <CheckCircle size={12} style={{ marginRight: 4, color: 'var(--status-green)' }} />}
                       </div>
                     ) : null
                   )}
@@ -269,13 +283,19 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
                     <div className="lsd-form-group"><label className="lsd-form-label">الاسم *</label><input className="lsd-form-input" value={newPartner.name || ''} onChange={e => setNewPartner({ ...newPartner, name: e.target.value })} /></div>
                     <div className="lsd-form-group"><label className="lsd-form-label">رقم الهوية</label><input className="lsd-form-input" value={newPartner.national_id || ''} onChange={e => setNewPartner({ ...newPartner, national_id: e.target.value })} dir="ltr" /></div>
                     <div className="lsd-form-group"><label className="lsd-form-label">الجنسية</label><input className="lsd-form-input" value={newPartner.nationality || ''} onChange={e => setNewPartner({ ...newPartner, nationality: e.target.value })} /></div>
-                    <div className="lsd-form-group"><label className="lsd-form-label">النسبة %</label><input className="lsd-form-input" type="number" value={newPartner.share_percentage || ''} onChange={e => setNewPartner({ ...newPartner, share_percentage: parseFloat(e.target.value) })} dir="ltr" /></div>
-                    <div className="lsd-form-group"><label className="lsd-form-label">المبلغ</label><input className="lsd-form-input" type="number" value={newPartner.share_amount || ''} onChange={e => setNewPartner({ ...newPartner, share_amount: parseFloat(e.target.value) })} dir="ltr" /></div>
+                    {/* الحقول الرقمية اختيارية: القيمة الفارغة تبقى undefined ولا تُرسَل (parseFloat('') = NaN كان يكسر التحقق) */}
+                    <div className="lsd-form-group"><label className="lsd-form-label">النسبة %</label><input className="lsd-form-input" type="number" min={0} max={100} value={newPartner.share_percentage ?? ''} onChange={e => setNewPartner({ ...newPartner, share_percentage: e.target.value === '' ? undefined : parseFloat(e.target.value) })} dir="ltr" /></div>
+                    <div className="lsd-form-group"><label className="lsd-form-label">المبلغ</label><input className="lsd-form-input" type="number" min={0} value={newPartner.share_amount ?? ''} onChange={e => setNewPartner({ ...newPartner, share_amount: e.target.value === '' ? undefined : parseFloat(e.target.value) })} dir="ltr" /></div>
                     <div className="lsd-form-group"><label className="lsd-form-label">نوع الشريك</label><select className="lsd-form-input" value={newPartner.partner_type || ''} onChange={e => setNewPartner({ ...newPartner, partner_type: e.target.value as any })}><option value="">اختر</option>{Object.entries(PARTNER_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
                   </div>
                   <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
                     <button className="lsd-header-btn" onClick={() => { setShowAddPartner(false); setNewPartner({}); }}>إلغاء</button>
-                    <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleAddPartner}>إضافة</button>
+                    <button
+                      className="lsd-header-btn lsd-header-btn--primary"
+                      onClick={handleAddPartner}
+                      disabled={!newPartner.name?.trim()}
+                      title={!newPartner.name?.trim() ? 'أدخل اسم الشريك أولاً — بقية الحقول اختيارية' : undefined}
+                    >إضافة</button>
                   </div>
                 </div>
               </motion.div>
@@ -343,13 +363,13 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {authorities.map((a: any, idx: number) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-                  {a.granted ? <CheckCircle size={14} color="#16a34a" /> : <X size={14} color="#dc2626" />}
+                  {a.granted ? <CheckCircle size={14} color="var(--status-green)" /> : <X size={14} color="var(--status-red)" />}
                   <span style={{ color: a.granted ? 'var(--quiet-gray-900)' : 'var(--quiet-gray-400)' }}>{a.authority}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="lsd-empty-state-small"><ShieldCheck size={22} /><span>لم تُحدد الصلاحيات بعد</span></div>
+            <div className="lsd-empty-state-small"><ShieldCheck size={22} /><span>لم تُحدد الصلاحيات بعد — اضغط «تعديل» لاختيار صلاحيات المدير من القائمة الجاهزة</span></div>
           )}
         </div>
       </div>
@@ -393,7 +413,7 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
               {detail.unified_number_700 && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Hash size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">الرقم الموحد 700</div><div className="lsd-info-item__value">{detail.unified_number_700}</div></div></div>}
               {detail.trade_name_reservation_ref && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Hash size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">رقم حجز الاسم</div><div className="lsd-info-item__value">{detail.trade_name_reservation_ref}</div></div></div>}
               {detail.aoa_notarization_ref && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Hash size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">رقم توثيق التأسيس</div><div className="lsd-info-item__value">{detail.aoa_notarization_ref}</div></div></div>}
-              {!detail.cr_number && !detail.trade_name_reservation_ref && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُضف بيانات حكومية بعد</div>}
+              {!detail.cr_number && !detail.trade_name_reservation_ref && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُضف بيانات حكومية بعد — اضغط «تعديل» لتسجيل أرقام الحجز والسجل التجاري</div>}
             </div>
           )}
         </div>
@@ -446,7 +466,7 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
                 { done: detail.municipality_license, label: 'رخصة البلدية', num: detail.municipality_license_number },
               ].map((item, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                  {item.done ? <CheckCircle size={14} color="#16a34a" /> : <X size={14} color="#dc2626" />}
+                  {item.done ? <CheckCircle size={14} color="var(--status-green)" /> : <X size={14} color="var(--status-red)" />}
                   <span>{item.label}</span>
                   {item.num && <span style={{ fontSize: 12, color: 'var(--quiet-gray-400)' }}>({item.num})</span>}
                 </div>
@@ -466,7 +486,7 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
             {/* شريط التقدم */}
             <div style={{ marginBottom: 12 }}>
               <div style={{ background: 'var(--quiet-gray-100)', borderRadius: 6, height: 6, overflow: 'hidden' }}>
-                <div style={{ width: `${(completedChecklist / checklist.length) * 100}%`, height: '100%', background: '#22c55e', borderRadius: 6, transition: 'width 0.3s' }} />
+                <div style={{ width: `${(completedChecklist / checklist.length) * 100}%`, height: '100%', background: 'var(--status-green)', borderRadius: 6, transition: 'width 0.3s' }} />
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

@@ -14,6 +14,68 @@ interface ServiceStatusPipelineProps {
   currentStatus: string;
 }
 
+// ─── Arabic labels fallback ───────────────────────────────────────────────────
+// الباك يرسل label عربية عادةً، لكن إن وصلت قيمة إنجليزية (بيانات قديمة/نوع جديد)
+// نعرّبها هنا بدل عرض كود تقني يربك المحامي.
+
+const STATUS_LABELS_AR: Record<string, string> = {
+  new: 'جديدة',
+  in_progress: 'قيد التنفيذ',
+  under_review: 'تحت المراجعة',
+  completed: 'مكتملة',
+  closed: 'مغلقة',
+  cancelled: 'ملغية',
+  draft_ready: 'المسودة جاهزة',
+  internal_review: 'مراجعة داخلية',
+  delivered: 'تم التسليم',
+  drafting: 'قيد الصياغة',
+  client_review: 'مراجعة العميل',
+  revision: 'قيد التعديل',
+  approved: 'معتمدة',
+  signed: 'تم التوقيع',
+  archived: 'مؤرشفة',
+  document_collection: 'جمع المستندات',
+  name_reservation: 'حجز الاسم',
+  aoa_drafting: 'صياغة عقد التأسيس',
+  government_submission: 'تقديم للجهات الحكومية',
+  cr_issued: 'تم إصدار السجل',
+  post_cr_setup: 'إجراءات ما بعد السجل',
+  document_preparation: 'تجهيز المستندات',
+  submitted: 'تم التقديم',
+  rejected: 'مرفوضة',
+  active: 'فعّالة',
+  renewal_pending: 'قيد التجديد',
+  renewed: 'تم التجديد',
+  case_study: 'دراسة القضية',
+  parties_notified: 'تم إبلاغ الأطراف',
+  hearing_scheduled: 'جلسة مجدولة',
+  hearing_in_progress: 'جلسة قيد الانعقاد',
+  deliberation: 'مداولة',
+  settlement_reached: 'تمت التسوية',
+  award_issued: 'صدر الحكم',
+  enforcement: 'قيد التنفيذ',
+  assessment: 'التقييم',
+  gap_analysis: 'تحليل الفجوات',
+  action_plan: 'خطة العمل',
+  implementation: 'التنفيذ',
+  review: 'المراجعة',
+  compliant: 'ملتزم',
+  monitoring: 'المراقبة',
+  analysis: 'التحليل',
+  friendly_settlement: 'تسوية ودية',
+  negotiation: 'التفاوض',
+  resolution: 'الحل',
+  escalated_to_case: 'تصعيد لقضية',
+  documentation: 'التوثيق',
+  property_review: 'مراجعة العقار',
+};
+
+/** إن كانت التسمية عربية اعرضها كما هي، وإلا عرّبها من الخريطة أعلاه */
+function arabicLabel(stage: StatusStage): string {
+  if (/[؀-ۿ]/.test(stage.label)) return stage.label;
+  return STATUS_LABELS_AR[stage.status] ?? stage.label;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getStepState(
@@ -29,6 +91,12 @@ function getStepState(
   if (stageIndex < currentIndex) return 'completed';
   return 'pending';
 }
+
+const STATE_HINT: Record<'completed' | 'active' | 'pending', string> = {
+  completed: 'مرحلة مكتملة',
+  active: 'المرحلة الحالية',
+  pending: 'مرحلة قادمة',
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -57,7 +125,7 @@ const ServiceStatusPipeline: React.FC<ServiceStatusPipelineProps> = ({
                 .filter(Boolean)
                 .join(' ')}
             >
-              <div className="lsd-pipeline-step__content">
+              <div className="lsd-pipeline-step__content" title={STATE_HINT[state]}>
                 {/* Circle */}
                 <div className="lsd-pipeline-step__dot">
                   {state === 'completed' ? (
@@ -68,7 +136,7 @@ const ServiceStatusPipeline: React.FC<ServiceStatusPipelineProps> = ({
                 </div>
 
                 {/* Label */}
-                <span className="lsd-pipeline-step__label">{stage.label}</span>
+                <span className="lsd-pipeline-step__label">{arabicLabel(stage)}</span>
               </div>
             </div>
 
@@ -86,6 +154,37 @@ const ServiceStatusPipeline: React.FC<ServiceStatusPipelineProps> = ({
           </React.Fragment>
         );
       })}
+
+      {/* هوية فلات صرف: الحالة الحالية بإطار ذهبي رفيع بلا توهّج (يتجاوز box-shadow القديم)،
+          والمراحل المكتملة بلون هادئ */}
+      <style>{`
+        .lsd-status-pipeline .lsd-pipeline-step--active .lsd-pipeline-step__content {
+          border: 1px solid var(--law-gold);
+          border-radius: 8px;
+          background: var(--law-gold-light);
+        }
+        .lsd-status-pipeline .lsd-pipeline-step--active .lsd-pipeline-step__dot {
+          background: var(--law-navy);
+          border-color: var(--law-navy);
+          color: #fff;
+          box-shadow: none; /* بلا توهّج */
+        }
+        .lsd-status-pipeline .lsd-pipeline-step--active .lsd-pipeline-step__label {
+          color: var(--law-navy);
+          font-weight: 700;
+        }
+        .lsd-status-pipeline .lsd-pipeline-step--completed .lsd-pipeline-step__dot {
+          background: var(--dashboard-card);
+          border-color: var(--status-green);
+          color: var(--status-green);
+        }
+        .lsd-status-pipeline .lsd-pipeline-step--completed .lsd-pipeline-step__label {
+          color: var(--color-text-secondary);
+        }
+        .lsd-status-pipeline .lsd-pipeline-step--completed + .lsd-pipeline-connector {
+          background: var(--status-green);
+        }
+      `}</style>
     </div>
   );
 };

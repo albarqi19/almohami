@@ -279,6 +279,61 @@
     opacity: 0.9;
 }
 
+/* === Secondary Button (مسح الفلاتر / إعادة المحاولة في الحالات الفارغة) === */
+.ls-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: var(--dashboard-card);
+    color: var(--color-text);
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    white-space: nowrap;
+}
+
+.ls-btn-secondary:hover {
+    border-color: var(--law-navy);
+    background: var(--law-navy-light);
+}
+
+/* === Clear Filters (بشريط الفلاتر) === */
+.ls-filters-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--status-red);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.ls-filters-clear:hover {
+    background: var(--status-red-light);
+    border-color: var(--status-red);
+}
+
+/* === Results Count (عدّاد نتائج الفلترة) === */
+.ls-results-count {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    background: var(--quiet-gray-100);
+    padding: 4px 10px;
+    border-radius: 12px;
+    white-space: nowrap;
+}
+
 /* === Content Area === */
 .ls-content {
     padding: 0;
@@ -372,9 +427,22 @@ body.dark .ls-empty__icon {
 .ls-empty__desc {
     font-size: 14px;
     color: var(--color-text-secondary);
-    max-width: 320px;
+    max-width: 360px;
     line-height: 1.5;
     margin-bottom: 20px;
+}
+
+/* ======================================================
+   ERROR STATE (رسالة الخادم + إعادة المحاولة)
+   ====================================================== */
+.ls-error__icon {
+    background: var(--status-red-light);
+    color: var(--status-red);
+    opacity: 1;
+}
+
+body.dark .ls-error .ls-error__icon {
+    background: var(--status-red-light);
 }
 
 /* ======================================================
@@ -572,6 +640,9 @@ body.dark .ls-table th {
 
 /* ======================================================
    STATUS BADGES
+   الحالات النوعية (60+) تُصنَّف في «نغمات» دلالية من TSX:
+   tone-blue بداية · tone-orange قيد العمل · tone-purple مراجعة
+   tone-green منجز · tone-red سلبي · tone-gray مغلق/مؤرشف
    ====================================================== */
 .ls-status-badge {
     display: inline-flex;
@@ -582,6 +653,9 @@ body.dark .ls-table th {
     font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
+    /* افتراضي (حالة غير مصنّفة) — رمادي هادئ بدل شارة شفافة */
+    background: var(--quiet-gray-100);
+    color: var(--quiet-gray-600);
 }
 
 .ls-status-badge__dot {
@@ -589,58 +663,112 @@ body.dark .ls-table th {
     height: 6px;
     border-radius: 50%;
     flex-shrink: 0;
+    background: var(--quiet-gray-500);
 }
 
-/* new → blue */
-.ls-status-badge--new {
+.ls-status-badge--tone-blue {
     background: var(--status-blue-light);
     color: var(--status-blue);
 }
-.ls-status-badge--new .ls-status-badge__dot { background: var(--status-blue); }
+.ls-status-badge--tone-blue .ls-status-badge__dot { background: var(--status-blue); }
 
-/* in_progress → orange */
-.ls-status-badge--in_progress {
+.ls-status-badge--tone-orange {
     background: var(--status-orange-light);
     color: var(--status-orange);
 }
-.ls-status-badge--in_progress .ls-status-badge__dot { background: var(--status-orange); }
+.ls-status-badge--tone-orange .ls-status-badge__dot { background: var(--status-orange); }
 
-/* completed / delivered → green */
-.ls-status-badge--completed,
-.ls-status-badge--delivered {
-    background: var(--status-green-light);
-    color: var(--status-green);
-}
-.ls-status-badge--completed .ls-status-badge__dot,
-.ls-status-badge--delivered .ls-status-badge__dot { background: var(--status-green); }
-
-/* closed → gray */
-.ls-status-badge--closed {
-    background: var(--quiet-gray-200);
-    color: var(--quiet-gray-600);
-}
-.ls-status-badge--closed .ls-status-badge__dot { background: var(--quiet-gray-500); }
-
-/* cancelled → red */
-.ls-status-badge--cancelled {
-    background: var(--status-red-light);
-    color: var(--status-red);
-}
-.ls-status-badge--cancelled .ls-status-badge__dot { background: var(--status-red); }
-
-/* drafting → orange (alias) */
-.ls-status-badge--drafting {
-    background: var(--status-orange-light);
-    color: var(--status-orange);
-}
-.ls-status-badge--drafting .ls-status-badge__dot { background: var(--status-orange); }
-
-/* under_review → purple */
-.ls-status-badge--under_review {
+.ls-status-badge--tone-purple {
     background: var(--status-purple-light);
     color: var(--status-purple);
 }
-.ls-status-badge--under_review .ls-status-badge__dot { background: var(--status-purple); }
+.ls-status-badge--tone-purple .ls-status-badge__dot { background: var(--status-purple); }
+
+.ls-status-badge--tone-green {
+    background: var(--status-green-light);
+    color: var(--status-green);
+}
+.ls-status-badge--tone-green .ls-status-badge__dot { background: var(--status-green); }
+
+.ls-status-badge--tone-red {
+    background: var(--status-red-light);
+    color: var(--status-red);
+}
+.ls-status-badge--tone-red .ls-status-badge__dot { background: var(--status-red); }
+
+.ls-status-badge--tone-gray {
+    background: var(--quiet-gray-200);
+    color: var(--quiet-gray-600);
+}
+.ls-status-badge--tone-gray .ls-status-badge__dot { background: var(--quiet-gray-500); }
+
+/* خلية الحالة بالجدول: الشارة فوق شريط التقدّم */
+.ls-table__status-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+
+/* ======================================================
+   PROGRESS BAR (تقدّم تقريبي مستنتج من الحالة)
+   ====================================================== */
+.ls-progress {
+    width: 100%;
+    max-width: 120px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--quiet-gray-200);
+    overflow: hidden;
+}
+
+.ls-progress__fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--law-navy);
+    transition: width 0.3s ease;
+}
+
+.ls-progress__fill--done {
+    background: var(--status-green);
+}
+
+/* داخل البطاقة: الشريط بعرض البطاقة كاملة */
+.ls-card .ls-progress {
+    max-width: none;
+}
+
+/* ======================================================
+   DUE DATE (الاستحقاق — تمييز المتأخر)
+   ====================================================== */
+.ls-due {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.ls-due--none {
+    opacity: 0.6;
+}
+
+.ls-due--overdue {
+    color: var(--status-red);
+    font-weight: 600;
+}
+
+.ls-due__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--status-red-light);
+    color: var(--status-red);
+    font-size: 10px;
+    font-weight: 700;
+}
 
 /* ======================================================
    PRIORITY BADGES
@@ -695,37 +823,37 @@ body.dark .ls-table th {
 }
 
 .ls-type-pill--consultation {
-    background: rgba(2, 132, 199, 0.12);
+    background: var(--status-blue-light);
     color: var(--status-blue);
 }
 
 .ls-type-pill--contract_drafting {
-    background: rgba(124, 58, 237, 0.12);
+    background: var(--status-purple-light);
     color: var(--status-purple);
 }
 
 .ls-type-pill--legal_memo {
-    background: rgba(5, 150, 105, 0.12);
+    background: var(--status-green-light);
     color: var(--status-green);
 }
 
 .ls-type-pill--representation {
-    background: rgba(30, 58, 95, 0.12);
+    background: var(--law-navy-light);
     color: var(--law-navy);
 }
 
 .ls-type-pill--review {
-    background: rgba(217, 119, 6, 0.12);
+    background: var(--status-orange-light);
     color: var(--status-orange);
 }
 
 .ls-type-pill--notarization {
-    background: rgba(184, 134, 11, 0.12);
-    color: var(--law-gold, #B8860B);
+    background: var(--law-gold-light);
+    color: var(--law-gold);
 }
 
 .ls-type-pill--research {
-    background: rgba(220, 38, 38, 0.08);
+    background: var(--status-red-light);
     color: var(--status-red);
 }
 
@@ -786,11 +914,11 @@ body.dark .ls-card__type-icon {
     background: var(--quiet-gray-200);
 }
 
-.ls-card__type-icon--consultation  { background: rgba(2, 132, 199, 0.12); }
-.ls-card__type-icon--contract      { background: rgba(124, 58, 237, 0.12); }
-.ls-card__type-icon--legal_memo    { background: rgba(5, 150, 105, 0.12); }
-.ls-card__type-icon--representation{ background: rgba(30, 58, 95, 0.1); }
-.ls-card__type-icon--review        { background: rgba(217, 119, 6, 0.12); }
+.ls-card__type-icon--consultation  { background: var(--status-blue-light); }
+.ls-card__type-icon--contract      { background: var(--status-purple-light); }
+.ls-card__type-icon--legal_memo    { background: var(--status-green-light); }
+.ls-card__type-icon--representation{ background: var(--law-navy-light); }
+.ls-card__type-icon--review        { background: var(--status-orange-light); }
 
 .ls-card__meta {
     flex: 1;
@@ -832,6 +960,12 @@ body.dark .ls-card__type-icon {
     height: 13px;
     flex-shrink: 0;
     opacity: 0.6;
+}
+
+/* تسمية سطر داخل البطاقة (مثل «الاستحقاق:») */
+.ls-card__row-label {
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
 }
 
 /* Card footer */

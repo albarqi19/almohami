@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Square, Clock } from 'lucide-react';
+import { Play, Square, Clock, RefreshCw } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../services/legalServiceService';
+import { getApiErrorMessage } from '../../utils/apiError';
 import type { ServiceTimeEntryItem } from '../../types/legalServices';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -34,6 +36,9 @@ const ServiceTimerWidget: React.FC<ServiceTimerWidgetProps> = ({
   const [description, setDescription] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
+  // فشل جلب المؤقت النشط — يُعرض داخل الودجت مع زر إعادة محاولة بدل الابتلاع الصامت
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState<number>(0);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -54,10 +59,12 @@ const ServiceTimerWidget: React.FC<ServiceTimerWidgetProps> = ({
     }
   }, []);
 
-  // ── Fetch active timer on mount ───────────────────────────────────────────
+  // ── Fetch active timer on mount (or on retry via reloadKey) ───────────────
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
 
     (async () => {
       try {
@@ -70,8 +77,10 @@ const ServiceTimerWidget: React.FC<ServiceTimerWidgetProps> = ({
           setDescription(res.data.description ?? '');
           startTick(res.data.started_at);
         }
-      } catch {
-        // silently ignore — widget degrades to idle state
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(getApiErrorMessage(err, 'تعذّر التحقق من وجود مؤقت نشط'));
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -81,19 +90,20 @@ const ServiceTimerWidget: React.FC<ServiceTimerWidgetProps> = ({
       cancelled = true;
       stopTick();
     };
-  }, [serviceId, startTick, stopTick]);
+  }, [serviceId, reloadKey, startTick, stopTick]);
 
   // ── Start ─────────────────────────────────────────────────────────────────
 
   const handleStart = async () => {
     setActionLoading(true);
     try {
-      const res = await LegalServiceService.startTimer(serviceId, description || undefined);
+      const res = await LegalServiceService.startTimer(serviceId, description.trim() || undefined);
       setActiveEntry(res.data);
       startTick(res.data.started_at);
       onTimerChange?.();
     } catch (err) {
-      console.error('Failed to start timer', err);
+      // رسالة الخادم العربية كما هي (مثل: مؤقت نشط على خدمة أخرى)
+      toast.error(getApiErrorMessage(err, 'تعذّر بدء المؤقت'));
     } finally {
       setActionLoading(false);
     }
@@ -112,7 +122,7 @@ const ServiceTimerWidget: React.FC<ServiceTimerWidgetProps> = ({
       setDescription('');
       onTimerChange?.();
     } catch (err) {
-      console.error('Failed to stop timer', err);
+      toast.error(getApiErrorMessage(err, 'تعذّر إيقاف المؤقت'));
     } finally {
       setActionLoading(false);
     }
@@ -136,6 +146,7 @@ const ServiceTimerWidget: React.FC<ServiceTimerWidgetProps> = ({
           <div className="lsd-timer-widget__elapsed" style={{ opacity: 0.3 }}>
             --:--:--
           </div>
+          <div className="lsd-timer-widget__label">جارٍ التحقق من المؤقت...</div>
         </div>
       </div>
     );
@@ -157,6 +168,36 @@ const ServiceTimerWidget: React.FC<ServiceTimerWidgetProps> = ({
         <div className="lsd-timer-widget__status-dot" />
       </div>
 
+      {/* فشل جلب حالة المؤقت — رسالة الخادم + إعادة محاولة */}
+      {loadError && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            fontSize: 12,
+            color: 'var(--status-red)',
+            background: 'var(--status-red-light)',
+            border: '1px solid var(--status-red)',
+            borderRadius: 6,
+            padding: '6px 10px',
+          }}
+        >
+          <span>{loadError}</span>
+          <button
+            type="button"
+            className="lsd-timer-btn lsd-timer-btn--secondary"
+            style={{ flex: '0 0 auto', padding: '4px 10px' }}
+            onClick={() => setReloadKey((k) => k + 1)}
+          >
+            <RefreshCw size={12} />
+            إعادة المحاولة
+          </button>
+        </div>
+      )}
+
       {/* Elapsed display */}
       <div className="lsd-timer-widget__display">
         <div className="lsd-timer-widget__elapsed lsd-timer-display">
@@ -165,19 +206,32 @@ const ServiceTimerWidget: React.FC<ServiceTimerWidgetProps> = ({
         <div className="lsd-timer-widget__label">
           {isRunning ? 'جاري التسجيل' : 'لا يوجد مؤقت نشط'}
         </div>
+        {/* حالة الفراغ: ماذا أفعل الآن؟ ولماذا يهمّني؟ */}
+        {!isRunning && (
+          <div
+            style={{
+              fontSize: 11.5,
+              lineHeight: 1.7,
+              color: 'var(--color-text-secondary)',
+              marginTop: 6,
+            }}
+          >
+            اضغط «بدء المؤقت» لتسجيل وقت عملك على هذه الخدمة — الساعات المسجّلة تدخل في الفوترة بالساعة.
+          </div>
+        )}
       </div>
 
-      {/* Description input (only when running) */}
-      {isRunning && (
-        <textarea
-          className="asm-textarea"
-          rows={2}
-          placeholder="وصف المهمة (اختياري)..."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          style={{ minHeight: 54, fontSize: 12 }}
-        />
-      )}
+      {/* وصف المهمة — يُدخل قبل البدء (يُرسل مع بدء المؤقت)، ويُعرض للقراءة أثناء التسجيل */}
+      <textarea
+        className="asm-textarea"
+        rows={2}
+        placeholder="ما الذي ستعمل عليه؟ (اختياري)..."
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        readOnly={isRunning}
+        title={isRunning ? 'الوصف يُحدَّد عند بدء المؤقت — أوقفه ثم ابدأ مؤقتاً جديداً لتغييره' : undefined}
+        style={{ minHeight: 54, fontSize: 12, opacity: isRunning ? 0.75 : 1 }}
+      />
 
       {/* Controls */}
       <div className="lsd-timer-widget__controls">
@@ -186,6 +240,7 @@ const ServiceTimerWidget: React.FC<ServiceTimerWidgetProps> = ({
             className="lsd-timer-btn lsd-timer-btn--start"
             onClick={handleStart}
             disabled={actionLoading}
+            title={actionLoading ? 'جارٍ بدء المؤقت — انتظر لحظة' : 'بدء تسجيل الوقت على هذه الخدمة'}
           >
             <Play size={14} />
             {actionLoading ? 'جاري البدء...' : 'بدء المؤقت'}
@@ -195,6 +250,7 @@ const ServiceTimerWidget: React.FC<ServiceTimerWidgetProps> = ({
             className="lsd-timer-btn lsd-timer-btn--stop"
             onClick={handleStop}
             disabled={actionLoading}
+            title={actionLoading ? 'جارٍ إيقاف المؤقت — انتظر لحظة' : 'إيقاف المؤقت وحفظ المدة المسجّلة'}
           >
             <Square size={14} />
             {actionLoading ? 'جاري الإيقاف...' : 'إيقاف المؤقت'}

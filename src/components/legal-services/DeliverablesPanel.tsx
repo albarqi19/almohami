@@ -1,24 +1,55 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FileText, Download, Eye, Trash2, Loader2, FileCheck, Sparkles } from 'lucide-react';
+import { FileText, Download, Eye, Trash2, Loader2, FileCheck, Sparkles, AlertTriangle, RefreshCw } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../services/legalServiceService';
+import { getApiErrorMessage } from '../../utils/apiError';
 import type { ServiceDeliverableItem } from '../../types/legalServices';
 
 interface GeneratableDeliverable {
   type: string;
   label: string;
+  /** وصف موجز يظهر تحت الزر — يشرح للمحامي ما الذي سيُنتج بالضبط */
+  hint: string;
 }
 
 /** المخرجات القابلة للتوليد لكل نوع خدمة (تتوسّع تدريجياً مع الباك إند) */
 const GENERATABLE: Record<string, GeneratableDeliverable[]> = {
-  consultation: [{ type: 'consultation_opinion', label: 'توليد خطاب الرأي القانوني (PDF)' }],
-  legal_notices: [{ type: 'legal_notice', label: 'توليد خطاب الإنذار (PDF)' }],
-  due_diligence: [{ type: 'dd_report', label: 'توليد تقرير العناية الواجبة (PDF)' }],
-  company_formation: [{ type: 'formation_dossier', label: 'توليد حقيبة التأسيس (PDF)' }],
-  training: [{ type: 'training_certificate', label: 'إصدار شهادات الحضور (PDF)' }],
+  consultation: [{
+    type: 'consultation_opinion',
+    label: 'توليد خطاب الرأي القانوني (PDF)',
+    hint: 'خطاب رسمي بترويسة المكتب يتضمن السؤال القانوني والرأي والتوصيات — جاهز للإرسال للعميل.',
+  }],
+  legal_notices: [{
+    type: 'legal_notice',
+    label: 'توليد خطاب الإنذار (PDF)',
+    hint: 'خطاب إنذار رسمي ببيانات المرسل إليه ونص الإنذار والمهلة — جاهز للإرسال أو الطباعة.',
+  }],
+  due_diligence: [{
+    type: 'dd_report',
+    label: 'توليد تقرير العناية الواجبة (PDF)',
+    hint: 'تقرير شامل بنتائج الفحص والمخاطر المكتشفة والتوصيات، مبني على بنود قائمة الفحص.',
+  }],
+  company_formation: [{
+    type: 'formation_dossier',
+    label: 'توليد حقيبة التأسيس (PDF)',
+    hint: 'ملف موحّد ببيانات الشركة والشركاء وخطوات التأسيس وحالتها — مرجع واحد للعميل.',
+  }],
+  training: [{
+    type: 'training_certificate',
+    label: 'إصدار شهادات الحضور (PDF)',
+    hint: 'شهادة حضور رسمية لكل متدرب مُعلَّم عليه «حضر» في قائمة المتدربين.',
+  }],
   contract_drafting: [
-    { type: 'contract_pdf', label: 'توليد العقد (PDF)' },
-    { type: 'contract_docx', label: 'تصدير العقد (Word)' },
+    {
+      type: 'contract_pdf',
+      label: 'توليد العقد (PDF)',
+      hint: 'أحدث إصدار من العقد بصيغة PDF نهائية للتوقيع أو الأرشفة.',
+    },
+    {
+      type: 'contract_docx',
+      label: 'تصدير العقد (Word)',
+      hint: 'أحدث إصدار من العقد بصيغة Word قابلة للتحرير خارج النظام.',
+    },
   ],
 };
 
@@ -37,17 +68,20 @@ interface DeliverablesPanelProps {
 const DeliverablesPanel: React.FC<DeliverablesPanelProps> = ({ serviceId, serviceType }) => {
   const [items, setItems] = useState<ServiceDeliverableItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
 
   const generatable = GENERATABLE[serviceType] ?? [];
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await LegalServiceService.listDeliverables(serviceId);
       if (res.success) setItems(res.data);
-    } catch {
-      // قائمة فارغة عند تعذّر التحميل — لا نزعج المستخدم
+    } catch (err) {
+      // لا نبتلع الخطأ بصمت — نعرض رسالة الخادم مع زر إعادة محاولة
+      setLoadError(getApiErrorMessage(err, 'تعذّر تحميل قائمة المخرجات'));
     } finally {
       setLoading(false);
     }
@@ -65,8 +99,8 @@ const DeliverablesPanel: React.FC<DeliverablesPanelProps> = ({ serviceId, servic
       toast.success(res.message || 'تم توليد المستند بنجاح');
       await load();
     } catch (err) {
-      const message = err instanceof Error && err.message ? err.message : 'تعذّر توليد المستند';
-      toast.error(message);
+      // رسائل الباك 422 هنا مهمة كما هي («نوع المخرَج غير مدعوم»، «الدفع قبل التسليم»...)
+      toast.error(getApiErrorMessage(err, 'تعذّر توليد المستند'));
     } finally {
       setGenerating(null);
     }
@@ -80,8 +114,7 @@ const DeliverablesPanel: React.FC<DeliverablesPanelProps> = ({ serviceId, servic
       toast.success('تم حذف المستند');
       setItems((prev) => prev.filter((d) => d.id !== deliverableId));
     } catch (err) {
-      const message = err instanceof Error && err.message ? err.message : 'تعذّر حذف المستند';
-      toast.error(message);
+      toast.error(getApiErrorMessage(err, 'تعذّر حذف المستند'));
     }
   };
 
@@ -96,20 +129,23 @@ const DeliverablesPanel: React.FC<DeliverablesPanelProps> = ({ serviceId, servic
       </div>
 
       <div className="lsd-card__content">
-        {/* أزرار التوليد */}
+        {/* أزرار التوليد — مع وصف موجز تحت كل زر يشرح ما سيُنتج */}
         {generatable.length > 0 ? (
           <div className="lsd-deliverables__actions">
             {generatable.map((g) => (
-              <button
-                key={g.type}
-                type="button"
-                className="lsd-rich-btn lsd-rich-btn--primary"
-                onClick={() => handleGenerate(g.type)}
-                disabled={generating !== null}
-              >
-                {generating === g.type ? <Loader2 size={15} className="lsd-spin" /> : <Sparkles size={15} />}
-                <span>{generating === g.type ? 'جارٍ التوليد...' : g.label}</span>
-              </button>
+              <div key={g.type} className="lsd-deliverables__action">
+                <button
+                  type="button"
+                  className="lsd-rich-btn lsd-rich-btn--primary"
+                  onClick={() => handleGenerate(g.type)}
+                  disabled={generating !== null}
+                  title={generating !== null && generating !== g.type ? 'انتظر انتهاء التوليد الجاري أولاً' : g.hint}
+                >
+                  {generating === g.type ? <Loader2 size={15} className="lsd-spin" /> : <Sparkles size={15} />}
+                  <span>{generating === g.type ? 'جارٍ التوليد...' : g.label}</span>
+                </button>
+                <p className="lsd-deliverables__hint">{g.hint}</p>
+              </div>
             ))}
           </div>
         ) : (
@@ -120,9 +156,24 @@ const DeliverablesPanel: React.FC<DeliverablesPanelProps> = ({ serviceId, servic
 
         {/* القائمة */}
         {loading ? (
-          <p className="lsd-deliverables__empty">جارٍ التحميل...</p>
+          <p className="lsd-deliverables__empty">
+            <Loader2 size={14} className="lsd-spin" style={{ verticalAlign: 'middle', marginInlineEnd: 6 }} />
+            جارٍ تحميل المخرجات...
+          </p>
+        ) : loadError ? (
+          <div className="lsd-deliverables__error">
+            <AlertTriangle size={15} />
+            <span>{loadError}</span>
+            <button type="button" className="lsd-rich-btn lsd-rich-btn--ghost" onClick={load}>
+              <RefreshCw size={13} />
+              <span>إعادة المحاولة</span>
+            </button>
+          </div>
         ) : items.length === 0 ? (
-          <p className="lsd-deliverables__empty">لم يتم توليد أي مستند رسمي بعد.</p>
+          <p className="lsd-deliverables__empty">
+            لم يُولَّد أي مستند رسمي بعد
+            {generatable.length > 0 ? ' — اضغط أحد أزرار التوليد أعلاه وسيظهر المستند هنا جاهزاً للعرض والتحميل.' : '.'}
+          </p>
         ) : (
           <ul className="lsd-deliverables__list">
             {items.map((d) => (
@@ -171,9 +222,17 @@ const DeliverablesPanel: React.FC<DeliverablesPanelProps> = ({ serviceId, servic
       </div>
 
       <style>{`
-        .lsd-deliverables__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+        .lsd-deliverables__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+        .lsd-deliverables__action { display: flex; flex-direction: column; gap: 4px; max-width: 320px; }
+        .lsd-deliverables__hint { margin: 0; font-size: 11.5px; line-height: 1.6; color: var(--quiet-gray-500, #6b7280); }
         .lsd-deliverables__soon, .lsd-deliverables__empty {
-          color: var(--color-text-light, #6b7280); font-size: 13px; margin: 8px 0 0;
+          color: var(--quiet-gray-500, #6b7280); font-size: 13px; margin: 8px 0 0;
+        }
+        .lsd-deliverables__error {
+          display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+          font-size: 13px; color: var(--status-red, #dc2626);
+          background: var(--status-red-light, #fef2f2); border: 1px solid var(--status-red, #dc2626);
+          border-radius: 8px; padding: 8px 12px; margin: 8px 0 0;
         }
         .lsd-deliverables__list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
         .lsd-deliverable-item {
@@ -181,9 +240,9 @@ const DeliverablesPanel: React.FC<DeliverablesPanelProps> = ({ serviceId, servic
           padding: 10px 12px; border: 1px solid var(--color-border, #e5e7eb);
           border-radius: 10px; background: var(--color-surface, #fff);
         }
-        .lsd-deliverable-item__icon { position: relative; color: #dc2626; display: flex; flex-direction: column; align-items: center; }
+        .lsd-deliverable-item__icon { position: relative; color: var(--status-red, #dc2626); display: flex; flex-direction: column; align-items: center; }
         .lsd-deliverable-item__fmt { font-size: 8px; font-weight: 700; letter-spacing: .5px; }
-        .lsd-deliverable-item__fmt--docx { color: #2563eb; }
+        .lsd-deliverable-item__fmt--docx { color: var(--status-blue, #2563eb); }
         .lsd-deliverable-item__info { flex: 1; min-width: 0; }
         .lsd-deliverable-item__title { font-weight: 600; font-size: 13.5px; color: var(--color-text, #1f2937); }
         .lsd-deliverable-item__meta { font-size: 11.5px; color: var(--color-text-light, #6b7280); margin-top: 2px; }
@@ -195,7 +254,7 @@ const DeliverablesPanel: React.FC<DeliverablesPanelProps> = ({ serviceId, servic
           color: var(--color-text, #374151); text-decoration: none;
         }
         .lsd-icon-btn:hover { background: var(--color-border, #e5e7eb); }
-        .lsd-icon-btn--danger:hover { background: #fee2e2; color: #dc2626; border-color: #fecaca; }
+        .lsd-icon-btn--danger:hover { background: var(--status-red-light, #fee2e2); color: var(--status-red, #dc2626); border-color: var(--status-red, #fecaca); }
         body.dark .lsd-deliverable-item { background: #1a1a1a; border-color: #333; }
         body.dark .lsd-icon-btn { background: #1f2937; color: #e5e7eb; border-color: #374151; }
       `}</style>

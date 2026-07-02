@@ -26,9 +26,14 @@ import {
   Bell,
   GraduationCap,
   MoreHorizontal,
+  AlertCircle,
+  RefreshCw,
+  FilterX,
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 import { LegalServiceService } from '../../services/legalServiceService';
+import { getApiErrorMessage } from '../../utils/apiError';
 import type {
   LegalService,
   LegalServiceFilters,
@@ -171,10 +176,108 @@ const STATUS_LABELS: Record<string, string> = {
   certificates_issued: 'تم إصدار الشهادات',
 };
 
+// ── Status tone (لون الحالة) ─────────────────────────────────────────────────
+// بدل صفّ CSS لكل حالة (60+ حالة نوعية)، نُجمّع الحالات في «نغمات» دلالية:
+// blue=بداية · orange=قيد العمل · purple=مراجعة · green=منجز · red=سلبي · gray=مغلق/مؤرشف
+
+type StatusTone = 'blue' | 'orange' | 'purple' | 'green' | 'red' | 'gray';
+
+const STATUS_TONE: Record<string, StatusTone> = {
+  // بداية
+  new: 'blue', case_study: 'blue', scope_definition: 'blue', planning: 'blue',
+  assessment: 'blue', search_phase: 'blue', property_review: 'blue',
+  document_collection: 'blue', document_preparation: 'blue', analysis: 'blue',
+  // قيد العمل
+  in_progress: 'orange', drafting: 'orange', revision: 'orange',
+  aoa_drafting: 'orange', government_submission: 'orange', name_reservation: 'orange',
+  submitted: 'orange', data_collection: 'orange', implementation: 'orange',
+  negotiation: 'orange', filing: 'orange', examination: 'orange',
+  content_preparation: 'orange', friendly_settlement: 'orange',
+  parties_notified: 'orange', hearing_scheduled: 'orange', hearing_in_progress: 'orange',
+  deliberation: 'orange', gap_analysis: 'orange', action_plan: 'orange',
+  legal_analysis: 'orange', report_drafting: 'orange', registration: 'orange',
+  publication: 'orange', sent: 'orange', registration_open: 'orange',
+  renewal_pending: 'orange', renewal_due: 'orange', enforcement: 'orange',
+  monitoring: 'orange', documentation: 'orange',
+  // مراجعة
+  under_review: 'purple', internal_review: 'purple', client_review: 'purple',
+  review: 'purple', findings_review: 'purple', draft_ready: 'purple',
+  // منجز
+  completed: 'green', delivered: 'green', approved: 'green', signed: 'green',
+  cr_issued: 'green', post_cr_setup: 'green', active: 'green', renewed: 'green',
+  settlement_reached: 'green', award_issued: 'green', compliant: 'green',
+  resolution: 'green', report_delivered: 'green', certificates_issued: 'green',
+  response_received: 'green',
+  // سلبي
+  cancelled: 'red', rejected: 'red', objection_received: 'red',
+  no_response: 'red', returned: 'red',
+  // مغلق / مؤرشف / تصعيد
+  closed: 'gray', archived: 'gray', escalated_to_case: 'gray',
+};
+
+// ── Progress estimation (نسبة تقدّم تقريبية من الحالة) ───────────────────────
+// نسبة افتراضية حسب النغمة + تخصيصات للمسارات المتدرّجة (تأسيس/تحكيم/عناية...).
+// الحالات السلبية والمغلقة بلا شريط — الشريط يحكي «أين وصلنا» لا «كيف انتهت».
+
+const TONE_PROGRESS: Record<StatusTone, number | null> = {
+  blue: 15, orange: 50, purple: 75, green: 100, red: null, gray: null,
+};
+
+const STATUS_PROGRESS_OVERRIDE: Record<string, number> = {
+  // صياغة العقود
+  drafting: 35, client_review: 60, revision: 70, approved: 85,
+  // الاستشارات
+  draft_ready: 60, internal_review: 80,
+  // تأسيس الشركات
+  document_collection: 15, name_reservation: 30, aoa_drafting: 45,
+  government_submission: 65, cr_issued: 85, post_cr_setup: 95,
+  // التراخيص
+  document_preparation: 25, submitted: 55,
+  // التحكيم
+  case_study: 15, parties_notified: 30, hearing_scheduled: 45,
+  hearing_in_progress: 60, deliberation: 80,
+  // الامتثال
+  assessment: 15, gap_analysis: 30, action_plan: 45, implementation: 65, monitoring: 90,
+  // العمالي
+  analysis: 20, friendly_settlement: 40, negotiation: 60,
+  // العناية الواجبة
+  scope_definition: 10, data_collection: 35, findings_review: 65, report_drafting: 85,
+  // الملكية الفكرية
+  search_phase: 15, filing: 35, examination: 55, publication: 75,
+  // التدريب
+  planning: 15, content_preparation: 35, registration_open: 55,
+  // العقارات
+  property_review: 25, legal_analysis: 50, registration: 80,
+  // الإنذارات
+  sent: 45,
+};
+
+function getStatusProgress(status: string): number | null {
+  if (status in STATUS_PROGRESS_OVERRIDE) return STATUS_PROGRESS_OVERRIDE[status];
+  return TONE_PROGRESS[STATUS_TONE[status] ?? 'gray'];
+}
+
+// الحالات النهائية — لا تُعتبر الخدمة «متأخرة» بعدها حتى لو تجاوزت الاستحقاق
+const TERMINAL_STATUSES = new Set([
+  'completed', 'delivered', 'closed', 'cancelled', 'signed', 'archived',
+  'renewed', 'active', 'compliant', 'report_delivered', 'certificates_issued',
+  'settlement_reached', 'award_issued', 'resolution', 'escalated_to_case',
+]);
+
 // ── Helper functions ─────────────────────────────────────────────────────────
 
 function getStatusColor(status: string): string {
-  return `ls-status-badge--${status || 'new'}`;
+  return `ls-status-badge--tone-${STATUS_TONE[status] ?? 'gray'}`;
+}
+
+/** هل تجاوزت الخدمة تاريخ استحقاقها دون أن تصل لحالة نهائية؟ */
+function isServiceOverdue(service: LegalService): boolean {
+  if (!service.due_date || TERMINAL_STATUSES.has(service.status)) return false;
+  const due = new Date(service.due_date);
+  if (isNaN(due.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return due < today;
 }
 
 function getPriorityColor(priority: string): string {
@@ -230,6 +333,7 @@ const LegalServices: React.FC = () => {
   // ── state ──
   const [services,      setServices]      = useState<LegalService[]>([]);
   const [loading,       setLoading]       = useState(true);
+  const [loadError,     setLoadError]     = useState<string | null>(null);
   const [searchTerm,    setSearchTerm]    = useState('');
   const [filters,       setFilters]       = useState<LegalServiceFilters>({});
   const [viewMode,      setViewMode]      = useState<'table' | 'grid'>('table');
@@ -245,6 +349,7 @@ const LegalServices: React.FC = () => {
   // ── fetch ──
   const fetchServices = useCallback(async (page = currentPage) => {
     setLoading(true);
+    setLoadError(null);
     try {
       const response = await LegalServiceService.getServices({
         ...filters,
@@ -256,9 +361,15 @@ const LegalServices: React.FC = () => {
         setServices(response.data.data);
         setTotalPages(response.data.last_page);
         setTotalItems(response.data.total);
+      } else {
+        setLoadError('تعذّر تحميل قائمة الخدمات القانونية');
       }
     } catch (err) {
+      // رسالة الخادم العربية تُعرض داخل الصفحة + توست (لا ابتلاع صامت)
       console.error('Failed to fetch legal services:', err);
+      const msg = getApiErrorMessage(err, 'تعذّر تحميل قائمة الخدمات القانونية');
+      setLoadError(msg);
+      toast.error(msg);
     }
     setLoading(false);
   }, [filters, searchTerm, currentPage]);
@@ -268,6 +379,8 @@ const LegalServices: React.FC = () => {
       const res = await LegalServiceService.getStats();
       if (res.success) setStats(res.data);
     } catch (err) {
+      // الإحصاءات عنصر تكميلي بأعلى الصفحة — فشلها لا يعطّل القائمة،
+      // وخطأ تحميل القائمة نفسه يظهر للمستخدم عبر loadError؛ نكتفي بالتسجيل.
       console.error('Failed to fetch stats:', err);
     }
   }, []);
@@ -303,6 +416,18 @@ const LegalServices: React.FC = () => {
     setCurrentPage(page);
   };
 
+  // هل يوجد فلتر أو بحث نشط؟ (يتحكّم بزر «مسح الفلاتر» وصياغة حالة الفراغ)
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() || filters.service_type || filters.status || filters.priority
+  );
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    setCurrentPage(1);
+    setFilters({}); // تغيير مرجع الكائن يعيد الجلب عبر useEffect
+  };
+
   // ── render helpers ──
 
   const renderServiceTypeCell = (service: LegalService) => {
@@ -317,12 +442,56 @@ const LegalServices: React.FC = () => {
     );
   };
 
-  const renderStatusBadge = (status: string) => (
-    <span className={`ls-status-badge ${getStatusColor(status)}`}>
+  // الحالة بالعربية: نفضّل ترجمة الباك (status_arabic) ثم القاموس المحلي
+  const renderStatusBadge = (service: LegalService) => (
+    <span className={`ls-status-badge ${getStatusColor(service.status)}`}>
       <span className="ls-status-badge__dot" />
-      {getStatusLabel(status)}
+      {service.status_arabic || getStatusLabel(service.status)}
     </span>
   );
+
+  // شريط تقدّم تقريبي مستنتج من الحالة (يُخفى للحالات الملغاة/المغلقة)
+  const renderProgressBar = (service: LegalService) => {
+    const progress = getStatusProgress(service.status);
+    if (progress == null) return null;
+    return (
+      <div
+        className="ls-progress"
+        title={`تقدّم تقريبي حسب مرحلة الخدمة: ${progress}%`}
+        role="progressbar"
+        aria-valuenow={progress}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div
+          className={`ls-progress__fill${progress >= 100 ? ' ls-progress__fill--done' : ''}`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    );
+  };
+
+  // تاريخ الاستحقاق مع تمييز المتأخر بوضوح
+  const renderDueDate = (service: LegalService, compact = false) => {
+    if (!service.due_date) {
+      return (
+        <span className="ls-due ls-due--none" title="لم يُحدَّد تاريخ استحقاق لهذه الخدمة">
+          —
+        </span>
+      );
+    }
+    const overdue = isServiceOverdue(service);
+    return (
+      <span
+        className={`ls-due${overdue ? ' ls-due--overdue' : ''}`}
+        title={overdue ? 'تجاوزت تاريخ الاستحقاق ولم تكتمل بعد' : 'تاريخ الاستحقاق'}
+      >
+        <Calendar size={compact ? 11 : 12} />
+        {formatDate(service.due_date)}
+        {overdue && <span className="ls-due__badge">متأخرة</span>}
+      </span>
+    );
+  };
 
   const renderPriorityBadge = (priority: string) => (
     <span className={`ls-priority-badge ${getPriorityColor(priority)}`}>
@@ -348,21 +517,56 @@ const LegalServices: React.FC = () => {
   );
 
   // ── empty state ──
+  // صياغتان: فراغ حقيقي (لا خدمات إطلاقاً) ← ادعُ لإنشاء أول خدمة؛
+  // فراغ نتيجة فلاتر ← اشرح السبب وقدّم زر «مسح الفلاتر» بدل ترك المستخدم حائراً.
   const renderEmpty = () => (
-    <div className="ls-empty">
-      <div className="ls-empty__icon">
-        <FileText size={28} />
+    hasActiveFilters ? (
+      <div className="ls-empty">
+        <div className="ls-empty__icon">
+          <Search size={28} />
+        </div>
+        <div className="ls-empty__title">لا توجد نتائج مطابقة</div>
+        <div className="ls-empty__desc">
+          لم نجد خدمات تطابق البحث أو الفلاتر الحالية. جرّب مسح الفلاتر لعرض جميع الخدمات.
+        </div>
+        <button className="ls-btn-secondary" onClick={clearAllFilters}>
+          <FilterX size={16} />
+          <span>مسح الفلاتر</span>
+        </button>
       </div>
-      <div className="ls-empty__title">لا توجد خدمات قانونية</div>
-      <div className="ls-empty__desc">
-        لم يتم العثور على خدمات تطابق معايير البحث. جرّب تعديل الفلاتر أو أضف خدمة جديدة.
+    ) : (
+      <div className="ls-empty">
+        <div className="ls-empty__icon">
+          <FileText size={28} />
+        </div>
+        <div className="ls-empty__title">لا توجد خدمات بعد</div>
+        <div className="ls-empty__desc">
+          هنا تُدار أعمال المكتب غير القضائية: استشارات، عقود، تراخيص، تأسيس شركات وغيرها.
+          ابدأ بإنشاء أول خدمة قانونية.
+        </div>
+        <button
+          className="ls-btn-primary"
+          onClick={() => setIsAddModalOpen(true)}
+        >
+          <Plus size={16} />
+          <span>أنشئ أول خدمة قانونية</span>
+        </button>
       </div>
-      <button
-        className="ls-btn-primary"
-        onClick={() => setIsAddModalOpen(true)}
-      >
-        <Plus size={16} />
-        <span>خدمة جديدة</span>
+    )
+  );
+
+  // ── error state ──
+  // رسالة الخادم كما وردت + زر إعادة محاولة — لا نصوص عامة تُخفي السبب.
+  const renderLoadError = () => (
+    <div className="ls-empty ls-error">
+      <div className="ls-empty__icon ls-error__icon">
+        <AlertCircle size={28} />
+      </div>
+      <div className="ls-empty__title">تعذّر تحميل الخدمات</div>
+      <div className="ls-empty__desc">{loadError}</div>
+      <button className="ls-btn-secondary" onClick={() => fetchServices(currentPage)}>
+        <RefreshCw size={16} />
+        <span>إعادة المحاولة</span>
       </button>
     </div>
   );
@@ -379,7 +583,7 @@ const LegalServices: React.FC = () => {
             <th>المحامي</th>
             <th>الحالة</th>
             <th>الأولوية</th>
-            <th>تاريخ الإنشاء</th>
+            <th>الاستحقاق</th>
             <th style={{ width: 56 }}></th>
           </tr>
         </thead>
@@ -436,16 +640,21 @@ const LegalServices: React.FC = () => {
                   )}
                 </td>
 
-                {/* Status */}
-                <td>{renderStatusBadge(service.status)}</td>
+                {/* Status + approximate progress */}
+                <td>
+                  <div className="ls-table__status-cell">
+                    {renderStatusBadge(service)}
+                    {renderProgressBar(service)}
+                  </div>
+                </td>
 
                 {/* Priority */}
                 <td>{renderPriorityBadge(service.priority)}</td>
 
-                {/* Date */}
+                {/* Due date (overdue highlighted) */}
                 <td>
                   <div className="ls-table__date">
-                    {formatDate(service.created_at)}
+                    {renderDueDate(service)}
                   </div>
                 </td>
 
@@ -514,15 +723,24 @@ const LegalServices: React.FC = () => {
                   <span>{service.assigned_lawyer.name}</span>
                 </div>
               )}
+              {service.due_date && (
+                <div className="ls-card__row">
+                  <span className="ls-card__row-label">الاستحقاق:</span>
+                  {renderDueDate(service, true)}
+                </div>
+              )}
             </div>
+
+            {/* Approximate progress */}
+            {renderProgressBar(service)}
 
             {/* Card footer */}
             <div className="ls-card__footer">
               <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                {renderStatusBadge(service.status)}
+                {renderStatusBadge(service)}
                 {renderPriorityBadge(service.priority)}
               </div>
-              <div className="ls-card__row" style={{ fontSize: 11 }}>
+              <div className="ls-card__row" style={{ fontSize: 11 }} title="تاريخ الإنشاء">
                 <Calendar size={12} />
                 {formatDate(service.created_at)}
               </div>
@@ -535,7 +753,7 @@ const LegalServices: React.FC = () => {
 
   // ── pagination ──
   const renderPagination = () => {
-    if (loading || services.length === 0) return null;
+    if (loading || loadError || services.length === 0) return null;
     const pages = buildPageNumbers(currentPage, totalPages);
     return (
       <div className="ls-pagination">
@@ -686,6 +904,25 @@ const LegalServices: React.FC = () => {
               <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>
             ))}
           </select>
+
+          {/* عدّاد النتائج + مسح الفلاتر — يظهران فقط عند وجود فلتر/بحث نشط */}
+          {hasActiveFilters && (
+            <>
+              {!loading && !loadError && (
+                <span className="ls-results-count" aria-live="polite">
+                  {totalItems === 0 ? 'لا نتائج' : `${totalItems} نتيجة`}
+                </span>
+              )}
+              <button
+                className="ls-filters-clear"
+                onClick={clearAllFilters}
+                title="مسح البحث وجميع الفلاتر وعرض كل الخدمات"
+              >
+                <FilterX size={13} />
+                <span>مسح الفلاتر</span>
+              </button>
+            </>
+          )}
         </div>
 
         {/* End: view toggle + add button */}
@@ -731,6 +968,16 @@ const LegalServices: React.FC = () => {
               transition={{ duration: 0.15 }}
             >
               {renderSkeleton()}
+            </motion.div>
+          ) : loadError ? (
+            <motion.div
+              key="error"
+              variants={contentVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              {renderLoadError()}
             </motion.div>
           ) : services.length === 0 ? (
             <motion.div

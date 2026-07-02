@@ -163,12 +163,6 @@ export class LegalServiceService {
     return apiClient.delete(`/legal-services/${id}/documents/${docId}`);
   }
 
-  // ── الأنشطة ──
-
-  static async getActivities(id: number): Promise<{ success: boolean; data: ServiceActivityItem[] }> {
-    return apiClient.get(`/legal-services/${id}/activities`);
-  }
-
   // ── تأسيس الشركات ──
 
   static async updateCompanyDetails(id: number, data: Record<string, any>): Promise<{ success: boolean; data: any; message?: string }> {

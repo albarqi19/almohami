@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
+import { getApiErrorMessage } from '../../../utils/apiError';
 import type { WorkspaceProps } from './types';
 import MicroStatsBar from './MicroStatsBar';
 import ContextualAlert from './ContextualAlert';
@@ -24,14 +25,15 @@ const REGISTRATION_OFFICE_LABELS: Record<string, string> = {
   wipo: 'الويبو', other: 'أخرى',
 };
 
-const RISK_COLORS: Record<string, string> = { low: '#16a34a', medium: '#f59e0b', high: '#dc2626' };
+const RISK_COLORS: Record<string, string> = { low: 'var(--status-green)', medium: 'var(--status-orange)', high: 'var(--status-red)' };
 const RISK_LABELS: Record<string, string> = { low: 'منخفض', medium: 'متوسط', high: 'مرتفع' };
 
+// قيم الحالة مطابقة تماماً لما يقبله الخادم (IpController: reported,investigating,resolved,litigation)
 const INFRINGEMENT_STATUS_LABELS: Record<string, string> = {
   reported: 'تم الإبلاغ', investigating: 'قيد التحقيق', resolved: 'تم الحل', litigation: 'تقاضي',
 };
 const INFRINGEMENT_STATUS_COLORS: Record<string, string> = {
-  reported: '#f59e0b', investigating: '#3b82f6', resolved: '#16a34a', litigation: '#dc2626',
+  reported: 'var(--status-orange)', investigating: 'var(--status-blue)', resolved: 'var(--status-green)', litigation: 'var(--status-red)',
 };
 
 function formatDate(d: string | null | undefined): string {
@@ -80,7 +82,13 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
   const isRegistered = !!detail?.registration_number;
 
   if (!detail) {
-    return (<div className="lsd-empty-tab"><Shield size={32} /><p>لا توجد تفاصيل للملكية الفكرية</p></div>);
+    return (
+      <div className="lsd-empty-tab">
+        <Shield size={32} />
+        <p>لا توجد تفاصيل للملكية الفكرية بعد</p>
+        <p style={{ fontSize: 12, color: 'var(--quiet-gray-400)' }}>تُنشأ التفاصيل تلقائياً مع الخدمة — حدّث الصفحة، وإن استمرت المشكلة تواصل مع الدعم</p>
+      </div>
+    );
   }
 
   // ── معالجات ──
@@ -90,8 +98,8 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
     try {
       const res = await LegalServiceService.updateIpInfo(service.id, detailsData);
       if (res.success) { toast.success('تم حفظ بيانات الملكية الفكرية'); setEditingDetails(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      else toast.error(res.message || 'تعذّر حفظ بيانات الملكية الفكرية');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ بيانات الملكية الفكرية')); }
     finally { setDetailsLoading(false); }
   };
 
@@ -119,8 +127,8 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
     try {
       const res = await LegalServiceService.addIpSearchResult(service.id, newSearch);
       if (res.success) { toast.success('تمت إضافة نتيجة البحث'); setShowAddSearch(false); setNewSearch({}); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر إضافة نتيجة البحث');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر إضافة نتيجة البحث')); }
     finally { setAddSearchLoading(false); }
   };
 
@@ -128,18 +136,20 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
     try {
       const res = await LegalServiceService.removeIpSearchResult(service.id, idx);
       if (res.success) { toast.success('تم حذف نتيجة البحث'); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر حذف نتيجة البحث');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حذف نتيجة البحث')); }
   };
 
+  // الخادم يشترط اسم المعترض والتاريخ — نتحقق هنا، وأي رفض آخر تظهر رسالته كما وردت
   const handleAddObjection = async () => {
     if (!newObjection.objector?.trim()) { toast.error('يرجى إدخال اسم المعترض'); return; }
+    if (!newObjection.date) { toast.error('يرجى إدخال تاريخ الاعتراض'); return; }
     setAddObjectionLoading(true);
     try {
       const res = await LegalServiceService.addIpObjection(service.id, newObjection);
       if (res.success) { toast.success('تمت إضافة الاعتراض'); setShowAddObjection(false); setNewObjection({}); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر إضافة الاعتراض');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر إضافة الاعتراض')); }
     finally { setAddObjectionLoading(false); }
   };
 
@@ -148,18 +158,20 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
     try {
       const res = await LegalServiceService.removeIpObjection(service.id, idx);
       if (res.success) { toast.success('تم حذف الاعتراض'); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر حذف الاعتراض');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حذف الاعتراض')); }
   };
 
+  // الخادم يشترط اسم المتعدي والتاريخ، والحالة ضمن القيم الأربع المعتمدة
   const handleAddInfringement = async () => {
     if (!newInfringement.infringer?.trim()) { toast.error('يرجى إدخال اسم المتعدي'); return; }
+    if (!newInfringement.date) { toast.error('يرجى إدخال تاريخ التعدي'); return; }
     setAddInfringementLoading(true);
     try {
       const res = await LegalServiceService.addIpInfringement(service.id, newInfringement);
       if (res.success) { toast.success('تمت إضافة التعدي'); setShowAddInfringement(false); setNewInfringement({}); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر إضافة التعدي');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر إضافة التعدي')); }
     finally { setAddInfringementLoading(false); }
   };
 
@@ -168,8 +180,8 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
     try {
       const res = await LegalServiceService.removeIpInfringement(service.id, idx);
       if (res.success) { toast.success('تم حذف التعدي'); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر حذف التعدي');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حذف التعدي')); }
   };
 
   return (
@@ -270,7 +282,7 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
               <div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {detail.nice_classes.map((cls, idx) => (
-                    <span key={idx} style={{ padding: '4px 12px', background: '#eff6ff', borderRadius: 12, fontSize: 13, fontWeight: 600, color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                    <span key={idx} style={{ padding: '4px 12px', background: 'var(--status-blue-light)', borderRadius: 12, fontSize: 13, fontWeight: 600, color: 'var(--status-blue)', border: '1px solid var(--status-blue)' }}>
                       الفئة {cls}
                     </span>
                   ))}
@@ -324,7 +336,7 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
                     </div>
                   </div>
                   {item.risk_level && (
-                    <span style={{ fontSize: 12, fontWeight: 600, color: RISK_COLORS[item.risk_level], padding: '2px 8px', borderRadius: 8, background: item.risk_level === 'low' ? '#f0fdf4' : item.risk_level === 'medium' ? '#fffbeb' : '#fef2f2' }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: RISK_COLORS[item.risk_level], padding: '2px 8px', borderRadius: 8, background: item.risk_level === 'low' ? 'var(--status-green-light)' : item.risk_level === 'medium' ? 'var(--status-orange-light)' : 'var(--status-red-light)' }}>
                       {RISK_LABELS[item.risk_level]}
                     </span>
                   )}
@@ -351,13 +363,13 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
           <div className="lsd-info-grid">
             {detail.publication_start_date && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">بداية النشر</div><div className="lsd-info-item__value">{formatDate(detail.publication_start_date)}</div></div></div>}
             {detail.publication_end_date && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">نهاية النشر</div><div className="lsd-info-item__value">{formatDate(detail.publication_end_date)}</div></div></div>}
-            {daysUntilPubEnd !== null && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Clock size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">المتبقي</div><div className="lsd-info-item__value" style={{ color: daysUntilPubEnd <= 7 ? '#dc2626' : daysUntilPubEnd <= 30 ? '#f59e0b' : undefined }}>{daysUntilPubEnd} يوم</div></div></div>}
+            {daysUntilPubEnd !== null && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Clock size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">المتبقي</div><div className="lsd-info-item__value" style={{ color: daysUntilPubEnd <= 7 ? 'var(--status-red)' : daysUntilPubEnd <= 30 ? 'var(--status-orange)' : undefined }}>{daysUntilPubEnd} يوم</div></div></div>}
           </div>
           <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 18, height: 18, borderRadius: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: detail.final_fees_paid ? '#16a34a' : '#e5e7eb', color: '#fff', fontSize: 12 }}>
+            <span style={{ width: 18, height: 18, borderRadius: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: detail.final_fees_paid ? 'var(--status-green)' : 'var(--quiet-gray-200)', color: 'var(--dashboard-card)', fontSize: 12 }}>
               {detail.final_fees_paid && <Check size={12} />}
             </span>
-            <span style={{ fontSize: 13, color: detail.final_fees_paid ? '#16a34a' : 'var(--quiet-gray-500)' }}>
+            <span style={{ fontSize: 13, color: detail.final_fees_paid ? 'var(--status-green)' : 'var(--quiet-gray-500)' }}>
               {detail.final_fees_paid ? 'تم سداد الرسوم النهائية' : 'لم يتم سداد الرسوم النهائية'}
             </span>
           </div>
@@ -380,13 +392,18 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
                 <div style={{ padding: 12, background: 'var(--bg-secondary, #f8f9fa)', borderRadius: 8 }}>
                   <div className="lsd-info-grid">
                     <div className="lsd-form-group"><label className="lsd-form-label">المعترض *</label><input className="lsd-form-input" value={newObjection.objector || ''} onChange={e => setNewObjection({ ...newObjection, objector: e.target.value })} /></div>
-                    <div className="lsd-form-group"><label className="lsd-form-label">التاريخ</label><input className="lsd-form-input" type="date" value={newObjection.date || ''} onChange={e => setNewObjection({ ...newObjection, date: e.target.value })} dir="ltr" /></div>
+                    <div className="lsd-form-group"><label className="lsd-form-label">التاريخ *</label><input className="lsd-form-input" type="date" value={newObjection.date || ''} onChange={e => setNewObjection({ ...newObjection, date: e.target.value })} dir="ltr" /></div>
                     <div className="lsd-form-group"><label className="lsd-form-label">الموعد النهائي للرد</label><input className="lsd-form-input" type="date" value={newObjection.response_deadline || ''} onChange={e => setNewObjection({ ...newObjection, response_deadline: e.target.value })} dir="ltr" /></div>
                   </div>
                   <div className="lsd-form-group" style={{ marginTop: 8 }}><label className="lsd-form-label">أسباب الاعتراض</label><textarea className="lsd-form-textarea" rows={2} value={newObjection.grounds || ''} onChange={e => setNewObjection({ ...newObjection, grounds: e.target.value })} placeholder="أسباب الاعتراض..." /></div>
                   <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
                     <button className="lsd-header-btn" onClick={() => { setShowAddObjection(false); setNewObjection({}); }}>إلغاء</button>
-                    <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleAddObjection} disabled={addObjectionLoading}>{addObjectionLoading ? 'جارٍ...' : 'إضافة'}</button>
+                    <button
+                      className="lsd-header-btn lsd-header-btn--primary"
+                      onClick={handleAddObjection}
+                      disabled={addObjectionLoading || !newObjection.objector?.trim() || !newObjection.date}
+                      title={!newObjection.objector?.trim() ? 'أدخل اسم المعترض أولاً (حقل مطلوب)' : !newObjection.date ? 'أدخل تاريخ الاعتراض (حقل مطلوب)' : undefined}
+                    >{addObjectionLoading ? 'جارٍ...' : 'إضافة'}</button>
                   </div>
                 </div>
               </motion.div>
@@ -407,12 +424,12 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
                       </div>
                     </div>
                     {item.response_deadline && (
-                      <span style={{ fontSize: 12, color: deadlineDays !== null && deadlineDays <= 7 ? '#dc2626' : '#f59e0b' }}>
+                      <span style={{ fontSize: 12, color: deadlineDays !== null && deadlineDays <= 7 ? 'var(--status-red)' : 'var(--status-orange)' }}>
                         الرد: {formatDate(item.response_deadline)}
                       </span>
                     )}
                     {item.response_filed !== undefined && (
-                      <span style={{ fontSize: 12, fontWeight: 600, color: item.response_filed ? '#16a34a' : '#dc2626', padding: '2px 8px', borderRadius: 8, background: item.response_filed ? '#f0fdf4' : '#fef2f2' }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: item.response_filed ? 'var(--status-green)' : 'var(--status-red)', padding: '2px 8px', borderRadius: 8, background: item.response_filed ? 'var(--status-green-light)' : 'var(--status-red-light)' }}>
                         {item.response_filed ? 'تم الرد' : 'لم يُردّ'}
                       </span>
                     )}
@@ -445,14 +462,19 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
                 <div style={{ padding: 12, background: 'var(--bg-secondary, #f8f9fa)', borderRadius: 8 }}>
                   <div className="lsd-info-grid">
                     <div className="lsd-form-group"><label className="lsd-form-label">المتعدي *</label><input className="lsd-form-input" value={newInfringement.infringer || ''} onChange={e => setNewInfringement({ ...newInfringement, infringer: e.target.value })} /></div>
-                    <div className="lsd-form-group"><label className="lsd-form-label">التاريخ</label><input className="lsd-form-input" type="date" value={newInfringement.date || ''} onChange={e => setNewInfringement({ ...newInfringement, date: e.target.value })} dir="ltr" /></div>
+                    <div className="lsd-form-group"><label className="lsd-form-label">التاريخ *</label><input className="lsd-form-input" type="date" value={newInfringement.date || ''} onChange={e => setNewInfringement({ ...newInfringement, date: e.target.value })} dir="ltr" /></div>
                     <div className="lsd-form-group"><label className="lsd-form-label">الحالة</label><select className="lsd-form-input" value={newInfringement.status || ''} onChange={e => setNewInfringement({ ...newInfringement, status: e.target.value })}><option value="">اختر</option>{Object.entries(INFRINGEMENT_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
                   </div>
                   <div className="lsd-form-group" style={{ marginTop: 8 }}><label className="lsd-form-label">الوصف</label><textarea className="lsd-form-textarea" rows={2} value={newInfringement.description || ''} onChange={e => setNewInfringement({ ...newInfringement, description: e.target.value })} placeholder="وصف التعدي..." /></div>
                   <div className="lsd-form-group" style={{ marginTop: 8 }}><label className="lsd-form-label">الإجراء المتخذ</label><input className="lsd-form-input" value={newInfringement.action_taken || ''} onChange={e => setNewInfringement({ ...newInfringement, action_taken: e.target.value })} /></div>
                   <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
                     <button className="lsd-header-btn" onClick={() => { setShowAddInfringement(false); setNewInfringement({}); }}>إلغاء</button>
-                    <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleAddInfringement} disabled={addInfringementLoading}>{addInfringementLoading ? 'جارٍ...' : 'إضافة'}</button>
+                    <button
+                      className="lsd-header-btn lsd-header-btn--primary"
+                      onClick={handleAddInfringement}
+                      disabled={addInfringementLoading || !newInfringement.infringer?.trim() || !newInfringement.date}
+                      title={!newInfringement.infringer?.trim() ? 'أدخل اسم المتعدي أولاً (حقل مطلوب)' : !newInfringement.date ? 'أدخل تاريخ التعدي (حقل مطلوب)' : undefined}
+                    >{addInfringementLoading ? 'جارٍ...' : 'إضافة'}</button>
                   </div>
                 </div>
               </motion.div>
@@ -472,7 +494,7 @@ const IpWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) => {
                     </div>
                   </div>
                   {item.status && (
-                    <span style={{ fontSize: 12, fontWeight: 600, color: INFRINGEMENT_STATUS_COLORS[item.status] || '#6b7280', padding: '2px 8px', borderRadius: 8, background: item.status === 'resolved' ? '#f0fdf4' : item.status === 'litigation' ? '#fef2f2' : '#f0f9ff' }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: INFRINGEMENT_STATUS_COLORS[item.status] || 'var(--quiet-gray-500)', padding: '2px 8px', borderRadius: 8, background: item.status === 'resolved' ? 'var(--status-green-light)' : item.status === 'litigation' ? 'var(--status-red-light)' : 'var(--status-blue-light)' }}>
                       {INFRINGEMENT_STATUS_LABELS[item.status] || item.status}
                     </span>
                   )}

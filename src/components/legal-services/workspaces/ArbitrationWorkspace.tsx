@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
+import { getApiErrorMessage } from '../../../utils/apiError';
 import { useDynamicList } from '../../../hooks/useDynamicList';
 import type { WorkspaceProps, MicroStatItem } from './types';
 import type { ArbitrationParty, ArbitrationHearing, PanelMember } from '../../../types/legalServices';
@@ -76,10 +77,18 @@ const ArbitrationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServic
   const hearings = useMemo(() => detail?.hearings ?? [], [detail?.hearings]);
 
   // useDynamicList للجلسات
+  // الهوك يبتلع الاستثناءات برسالة عامة — لذلك نلتقط الخطأ هنا ونعيد { success:false, message }
+  // برسالة الباك العربية الحقيقية فيعرضها الهوك للمستخدم بدل «حدث خطأ في الاتصال».
   const hearingList = useDynamicList<ArbitrationHearing>({
     items: hearings,
-    onAdd: (item) => LegalServiceService.addHearing(service.id, item),
-    onUpdate: (idx, data) => LegalServiceService.updateHearing(service.id, idx, data),
+    onAdd: async (item) => {
+      try { return await LegalServiceService.addHearing(service.id, item); }
+      catch (err) { return { success: false, message: getApiErrorMessage(err, 'تعذّرت إضافة الجلسة') }; }
+    },
+    onUpdate: async (idx, data) => {
+      try { return await LegalServiceService.updateHearing(service.id, idx, data); }
+      catch (err) { return { success: false, message: getApiErrorMessage(err, 'تعذّر تحديث الجلسة') }; }
+    },
     refreshService,
     addSuccessMessage: 'تمت إضافة الجلسة',
     updateSuccessMessage: 'تم تحديث الجلسة',
@@ -99,71 +108,71 @@ const ArbitrationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServic
 
   // ── معالجات ──
 
+  // apiClient يرمي استثناءً عند أي فشل (والرسالة عربية من الباك — منها قفل المحتوى 422)
   const handleSaveParties = async () => {
     setPartiesLoading(true);
     try {
-      const res = await LegalServiceService.updateArbitrationParties(service.id, { claimant: claimantData, respondent: respondentData });
-      if (res.success) { toast.success('تم حفظ بيانات الأطراف'); setEditingParties(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      await LegalServiceService.updateArbitrationParties(service.id, { claimant: claimantData, respondent: respondentData });
+      toast.success('تم حفظ بيانات الأطراف'); setEditingParties(false); await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ بيانات الأطراف')); }
     finally { setPartiesLoading(false); }
   };
 
   const handleSavePanel = async () => {
     setPanelLoading(true);
     try {
-      const res = await LegalServiceService.updateArbitrationPanel(service.id, panelData);
-      if (res.success) { toast.success('تم حفظ هيئة التحكيم'); setEditingPanel(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      await LegalServiceService.updateArbitrationPanel(service.id, panelData);
+      toast.success('تم حفظ هيئة التحكيم'); setEditingPanel(false); await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ هيئة التحكيم')); }
     finally { setPanelLoading(false); }
   };
 
   const handleSaveAward = async () => {
     setAwardLoading(true);
     try {
-      const res = await LegalServiceService.recordAward(service.id, awardData);
-      if (res.success) { toast.success('تم تسجيل الحكم'); setShowAwardForm(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      await LegalServiceService.recordAward(service.id, awardData);
+      toast.success('تم تسجيل الحكم'); setShowAwardForm(false); await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر تسجيل الحكم')); }
     finally { setAwardLoading(false); }
   };
 
   const handleSaveSettlement = async () => {
     setSettlementLoading(true);
     try {
-      const res = await LegalServiceService.recordSettlement(service.id, settlementData);
-      if (res.success) { toast.success('تم تسجيل التسوية'); setShowSettlementForm(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      await LegalServiceService.recordSettlement(service.id, settlementData);
+      toast.success('تم تسجيل التسوية'); setShowSettlementForm(false); await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر تسجيل التسوية')); }
     finally { setSettlementLoading(false); }
   };
 
   // ── حفظ النصوص الغنية (محضر الصلح / ملخص الحكم) ──
   // نحافظ على الحقول المنظَّمة الحالية حتى لا يمسحها الحفظ الجزئي.
+  // نعيد رمي الخطأ برسالة الباك الحقيقية — LegalRichEditorField يعرض err.message للمستخدم.
   const handleSaveSettlementTerms = async (html: string) => {
-    const res = await LegalServiceService.recordSettlement(service.id, {
-      settlement_terms: html,
-      settlement_date: detail?.settlement_date ?? null,
-    });
-    if (!res?.success) throw new Error(res?.message || 'تعذّر الحفظ');
-    await refreshService();
+    try {
+      await LegalServiceService.recordSettlement(service.id, {
+        settlement_terms: html,
+        settlement_date: detail?.settlement_date ?? null,
+      });
+      await refreshService();
+    } catch (err) { throw new Error(getApiErrorMessage(err, 'تعذّر حفظ محضر الصلح')); }
   };
 
   const handleSaveAwardSummary = async (html: string) => {
-    const res = await LegalServiceService.recordAward(service.id, {
-      award_summary: html,
-      award_amount: detail?.award_amount ?? null,
-      award_date: detail?.award_date ?? null,
-      award_enforceable: detail?.award_enforceable ?? false,
-    });
-    if (!res?.success) throw new Error(res?.message || 'تعذّر الحفظ');
-    await refreshService();
+    try {
+      await LegalServiceService.recordAward(service.id, {
+        award_summary: html,
+        award_amount: detail?.award_amount ?? null,
+        award_date: detail?.award_date ?? null,
+        award_enforceable: detail?.award_enforceable ?? false,
+      });
+      await refreshService();
+    } catch (err) { throw new Error(getApiErrorMessage(err, 'تعذّر حفظ ملخص الحكم')); }
   };
 
   // ── عرض طرف ──
   const renderPartyInfo = (party: ArbitrationParty | null, label: string) => {
-    if (!party?.name) return <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُضف بيانات {label} بعد</div>;
+    if (!party?.name) return <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُضف بيانات {label} بعد — اضغط «تعديل» أعلى البطاقة لإدخالها</div>;
     return (
       <div className="lsd-info-grid">
         <div className="lsd-info-item"><div className="lsd-info-item__icon"><User size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">الاسم</div><div className="lsd-info-item__value">{party.name}</div></div></div>
@@ -228,9 +237,9 @@ const ArbitrationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServic
         <div className="lsd-card__content">
           {editingParties ? (
             <div>
-              <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: '#16a34a' }}>المدعي</h4>
+              <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--status-green)' }}>المدعي</h4>
               {renderPartyForm(claimantData, setClaimantData)}
-              <h4 style={{ fontSize: 13, fontWeight: 600, margin: '16px 0 8px', color: '#dc2626' }}>المدعى عليه</h4>
+              <h4 style={{ fontSize: 13, fontWeight: 600, margin: '16px 0 8px', color: 'var(--status-red)' }}>المدعى عليه</h4>
               {renderPartyForm(respondentData, setRespondentData)}
               <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
                 <button className="lsd-header-btn" onClick={() => setEditingParties(false)}>إلغاء</button>
@@ -239,9 +248,9 @@ const ArbitrationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServic
             </div>
           ) : (
             <div>
-              <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: '#16a34a' }}>المدعي</h4>
+              <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--status-green)' }}>المدعي</h4>
               {renderPartyInfo(detail.claimant, 'المدعي')}
-              <h4 style={{ fontSize: 13, fontWeight: 600, margin: '16px 0 8px', color: '#dc2626' }}>المدعى عليه</h4>
+              <h4 style={{ fontSize: 13, fontWeight: 600, margin: '16px 0 8px', color: 'var(--status-red)' }}>المدعى عليه</h4>
               {renderPartyInfo(detail.respondent, 'المدعى عليه')}
             </div>
           )}
@@ -273,7 +282,7 @@ const ArbitrationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServic
             <div className="lsd-info-grid">
               {detail.arbitrator_name && <div className="lsd-info-item"><div className="lsd-info-item__icon"><User size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">المحكّم الرئيسي</div><div className="lsd-info-item__value">{detail.arbitrator_name}</div></div></div>}
               {detail.arbitrator_license_number && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Hash size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">رقم الترخيص</div><div className="lsd-info-item__value">{detail.arbitrator_license_number}</div></div></div>}
-              {!detail.arbitrator_name && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُضف بيانات هيئة التحكيم بعد</div>}
+              {!detail.arbitrator_name && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُضف بيانات هيئة التحكيم بعد — اضغط «تعديل» لتسجيل المحكّم الرئيسي ورقم ترخيصه</div>}
             </div>
           )}
         </div>
@@ -301,12 +310,17 @@ const ArbitrationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshServic
                   <div className="lsd-form-group" style={{ marginTop: 8 }}><label className="lsd-form-label">جدول الأعمال</label><textarea className="lsd-form-textarea" rows={2} value={newHearing.agenda || ''} onChange={e => setNewHearing({ ...newHearing, agenda: e.target.value })} placeholder="جدول أعمال الجلسة..." /></div>
                   <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
                     <button className="lsd-header-btn" onClick={() => { setShowAddHearing(false); setNewHearing({}); }}>إلغاء</button>
-                    <button className="lsd-header-btn lsd-header-btn--primary" onClick={() => {
-                      if (!newHearing.date) { toast.error('يرجى تحديد تاريخ الجلسة'); return; }
-                      hearingList.handleAdd({ ...newHearing, date: newHearing.date! });
-                      setNewHearing({});
-                      setShowAddHearing(false);
-                    }} disabled={hearingList.addLoading}>{hearingList.addLoading ? 'جارٍ...' : 'إضافة'}</button>
+                    <button
+                      className="lsd-header-btn lsd-header-btn--primary"
+                      onClick={() => {
+                        if (!newHearing.date) { toast.error('يرجى تحديد تاريخ الجلسة'); return; }
+                        hearingList.handleAdd({ ...newHearing, date: newHearing.date! });
+                        setNewHearing({});
+                        setShowAddHearing(false);
+                      }}
+                      disabled={hearingList.addLoading || !newHearing.date}
+                      title={!newHearing.date ? 'حدد تاريخ الجلسة أولاً' : undefined}
+                    >{hearingList.addLoading ? 'جارٍ...' : 'إضافة'}</button>
                   </div>
                 </div>
               </motion.div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, User, Edit2, Plus, X, Calendar, DollarSign, Hash, Clock,
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
+import { getApiErrorMessage } from '../../../utils/apiError';
 import type { WorkspaceProps } from './types';
 import type { ClaimedItem } from '../../../types/legalServices';
 import MicroStatsBar from './MicroStatsBar';
@@ -21,7 +22,7 @@ const LABOR_TYPE_LABELS: Record<string, string> = {
 };
 
 const SETTLEMENT_RESULT_LABELS: Record<string, string> = { settled: 'تمت التسوية', failed: 'فشلت', pending: 'قيد الانتظار' };
-const SETTLEMENT_RESULT_COLORS: Record<string, string> = { settled: '#16a34a', failed: '#dc2626', pending: '#f59e0b' };
+const SETTLEMENT_RESULT_COLORS: Record<string, string> = { settled: 'var(--status-green)', failed: 'var(--status-red)', pending: 'var(--status-orange)' };
 
 const TERMINATION_REASON_LABELS: Record<string, string> = {
   resignation: 'استقالة', termination: 'إنهاء من صاحب العمل', end_of_contract: 'انتهاء العقد', mutual: 'اتفاق الطرفين', retirement: 'تقاعد',
@@ -32,19 +33,20 @@ function formatDate(d: string | null | undefined): string {
   try { return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }); } catch { return d; }
 }
 function formatCurrency(a: string | number | null | undefined): string {
-  if (!a) return '—';
+  // الصفر قيمة صحيحة تُعرض (مثال: استقالة قبل سنتين = مكافأة 0)
+  if (a === null || a === undefined || a === '') return '—';
   return `${Number(a).toLocaleString('ar-SA')} ر.س`;
 }
 
-// ── حاسبة نهاية الخدمة (client-side) — المادة 84 و 85 ──
-function calculateEosClientSide(salary: number, years: number, reason: string): number {
-  if (!salary || !years) return 0;
-  const firstFive = Math.min(years, 5) * (salary / 2);
-  const afterFive = Math.max(years - 5, 0) * salary;
-  let total = firstFive + afterFive;
-  if (reason === 'resignation' && years >= 2 && years < 5) total *= 1 / 3;
-  else if (reason === 'resignation' && years >= 5 && years < 10) total *= 2 / 3;
-  return Math.round(total * 100) / 100;
+// شرح مبسّط لأساس الحساب النظامي — الرقم نفسه يأتي من الخادم (مصدر الحقيقة)
+function eosBasisText(reason: string, years: number): string {
+  if (reason === 'resignation') {
+    if (years < 2) return 'وفق المادة 85: من استقال قبل إتمام سنتين لا يستحق مكافأة نهاية خدمة.';
+    if (years < 5) return 'وفق المادة 85: المستقيل بعد سنتين وقبل خمس سنوات يستحق ثلث المكافأة.';
+    if (years < 10) return 'وفق المادة 85: المستقيل بعد خمس سنوات وقبل عشر يستحق ثلثي المكافأة.';
+    return 'وفق المادة 85: المستقيل بعد عشر سنوات فأكثر يستحق المكافأة كاملة.';
+  }
+  return 'وفق المادة 84: أجر نصف شهر عن كل سنة من الخمس الأولى، وأجر شهر كامل عن كل سنة تليها — والأجر يشمل البدلات الثابتة (سكن ونقل).';
 }
 
 // ── المكون الرئيسي ──
@@ -56,9 +58,11 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
   const [employeeData, setEmployeeData] = useState<Record<string, any>>({});
   const [employeeLoading, setEmployeeLoading] = useState(false);
 
-  // Live EOS Calculator
+  // حاسبة نهاية الخدمة — الخادم مصدر الحقيقة: eosResult يأتي من رد eos-calculate فقط
   const [eosInputs, setEosInputs] = useState({ salary: 0, housing_allowance: 0, transport_allowance: 0, years_of_service: 0, termination_reason: 'end_of_contract' });
   const [eosResult, setEosResult] = useState<number | null>(null);
+  // مدخلات الحساب المعروض (لشرح الأساس النظامي المطابق للرقم)
+  const [eosResultInputs, setEosResultInputs] = useState<{ years: number; reason: string } | null>(null);
   const [eosSaving, setEosSaving] = useState(false);
 
   const [editingSettlement, setEditingSettlement] = useState(false);
@@ -75,19 +79,6 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
 
   const claimedItems = useMemo(() => detail?.claimed_items ?? [], [detail?.claimed_items]);
   const claimedTotal = useMemo(() => claimedItems.reduce((sum, i) => sum + (i.amount || 0), 0), [claimedItems]);
-
-  // Live EOS calculation with debounce
-  useEffect(() => {
-    const totalSalary = eosInputs.salary + (eosInputs.housing_allowance || 0) + (eosInputs.transport_allowance || 0);
-    const timer = setTimeout(() => {
-      if (totalSalary > 0 && eosInputs.years_of_service > 0) {
-        setEosResult(calculateEosClientSide(totalSalary, eosInputs.years_of_service, eosInputs.termination_reason));
-      } else {
-        setEosResult(null);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [eosInputs]);
 
   // تحميل بيانات EOS من التفاصيل
   useEffect(() => {
@@ -106,7 +97,13 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
   }, [detail?.eos_calculation, detail?.monthly_salary]);
 
   if (!detail) {
-    return (<div className="lsd-empty-tab"><Users size={32} /><p>لا توجد تفاصيل للخدمة العمالية</p></div>);
+    return (
+      <div className="lsd-empty-tab">
+        <Users size={32} />
+        <p>لا توجد تفاصيل للخدمة العمالية بعد</p>
+        <p style={{ fontSize: 12, color: 'var(--quiet-gray-400)' }}>تُنشأ التفاصيل تلقائياً مع الخدمة — حدّث الصفحة، وإن استمرت المشكلة تواصل مع الدعم</p>
+      </div>
+    );
   }
 
   // حساب سنوات الخدمة
@@ -121,18 +118,24 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
     try {
       const res = await LegalServiceService.updateEmployeeInfo(service.id, employeeData);
       if (res.success) { toast.success('تم حفظ بيانات الموظف'); setEditingEmployee(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      else toast.error(res.message || 'تعذّر حفظ بيانات الموظف');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ بيانات الموظف')); }
     finally { setEmployeeLoading(false); }
   };
 
+  // الحساب والحفظ معاً — الرقم المعروض هو eos_amount المحسوب نظامياً في الخادم
   const handleSaveEos = async () => {
     setEosSaving(true);
     try {
       const res = await LegalServiceService.calculateEos(service.id, eosInputs);
-      if (res.success) { toast.success('تم حفظ حساب مكافأة نهاية الخدمة'); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      if (res.success) {
+        const amount = res.data?.eos_amount;
+        setEosResult(typeof amount === 'number' ? amount : amount != null ? Number(amount) : null);
+        setEosResultInputs({ years: eosInputs.years_of_service, reason: eosInputs.termination_reason });
+        toast.success('تم حساب المكافأة وحفظها');
+        await refreshService();
+      } else toast.error(res.message || 'تعذّر حساب المكافأة');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حساب مكافأة نهاية الخدمة')); }
     finally { setEosSaving(false); }
   };
 
@@ -142,8 +145,8 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
     try {
       const res = await LegalServiceService.addClaimedItem(service.id, { item: newClaim.item, amount: newClaim.amount || 0 });
       if (res.success) { toast.success('تمت إضافة البند'); setShowAddClaim(false); setNewClaim({}); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر إضافة البند');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر إضافة بند المطالبة')); }
     finally { setAddClaimLoading(false); }
   };
 
@@ -151,8 +154,8 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
     try {
       const res = await LegalServiceService.removeClaimedItem(service.id, idx);
       if (res.success) { toast.success('تم حذف البند'); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر حذف البند');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حذف بند المطالبة')); }
   };
 
   const handleSaveFriendly = async () => {
@@ -160,8 +163,8 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
     try {
       const res = await LegalServiceService.updateFriendlySettlement(service.id, friendlyData);
       if (res.success) { toast.success('تم الحفظ'); setEditingFriendly(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر حفظ التسوية الودية');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ التسوية الودية')); }
     finally { setFriendlyLoading(false); }
   };
 
@@ -170,8 +173,8 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
     try {
       const res = await LegalServiceService.updateLaborSettlement(service.id, settlementData);
       if (res.success) { toast.success('تم الحفظ'); setEditingSettlement(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      else toast.error(res.message || 'تعذّر حفظ التسوية');
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ التسوية')); }
     finally { setSettlementLoading(false); }
   };
 
@@ -192,7 +195,7 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
       {/* ── شريط المؤشرات ── */}
       <MicroStatsBar items={[
         ...(yearsOfService !== null ? [{ label: 'سنوات الخدمة', value: `${yearsOfService}`, icon: Clock as any, color: 'blue' as const }] : []),
-        ...(eosResult ? [{ label: 'المكافأة المتوقعة', value: formatCurrency(eosResult), icon: Calculator as any, color: 'green' as const }] : []),
+        ...(eosResult !== null ? [{ label: 'المكافأة المستحقة', value: formatCurrency(eosResult), icon: Calculator as any, color: (eosResult === 0 ? 'amber' : 'green') as any }] : []),
         ...(claimedTotal > 0 ? [{ label: 'إجمالي المطالبة', value: formatCurrency(claimedTotal), icon: DollarSign as any, color: 'purple' as const }] : []),
         ...(detail.settlement_amount ? [{ label: 'مبلغ التسوية', value: formatCurrency(detail.settlement_amount), icon: Handshake as any, color: 'amber' as const }] : []),
       ]} />
@@ -240,7 +243,7 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
               {detail.employer_name && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Building2 size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">صاحب العمل</div><div className="lsd-info-item__value">{detail.employer_name}</div></div></div>}
               {detail.employment_start_date && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">تاريخ المباشرة</div><div className="lsd-info-item__value">{formatDate(detail.employment_start_date)}</div></div></div>}
               {detail.employment_end_date && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">تاريخ الانتهاء</div><div className="lsd-info-item__value">{formatDate(detail.employment_end_date)}</div></div></div>}
-              {!detail.employee_name && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُضف بيانات الموظف بعد</div>}
+              {!detail.employee_name && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُضف بيانات الموظف بعد — اضغط «تعديل» أعلى البطاقة لإدخالها</div>}
             </div>
           )}
         </div>
@@ -260,21 +263,38 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
             <div className="lsd-form-group"><label className="lsd-form-label">سبب الانتهاء</label><select className="lsd-form-input" value={eosInputs.termination_reason} onChange={e => setEosInputs({ ...eosInputs, termination_reason: e.target.value })}>{Object.entries(TERMINATION_REASON_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
           </div>
 
-          {/* النتيجة اللحظية */}
-          {eosResult !== null && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 16, padding: 16, background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0', textAlign: 'center' }}>
-              <div style={{ fontSize: 12, color: '#16a34a', marginBottom: 4 }}>مكافأة نهاية الخدمة المتوقعة</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: '#15803d' }}>{formatCurrency(eosResult)}</div>
-              <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
-                وفق المادة 84 و 85 من نظام العمل السعودي
-                {eosInputs.termination_reason === 'resignation' && eosInputs.years_of_service < 10 && ' (مع خصم الاستقالة)'}
-              </div>
-            </motion.div>
+          {/* نتيجة الخادم — المصدر الوحيد للرقم (يشمل البدلات وخصومات الاستقالة نظامياً) */}
+          {eosResult !== null && eosResultInputs && (
+            eosResult === 0 && eosResultInputs.reason === 'resignation' && eosResultInputs.years < 2 ? (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 16, padding: 16, background: 'var(--status-orange-light)', borderRadius: 8, border: '1px solid var(--status-orange)', textAlign: 'center' }}>
+                <div style={{ fontSize: 12, color: 'var(--status-orange)', marginBottom: 4 }}>مكافأة نهاية الخدمة المستحقة</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--status-orange)' }}>0 ر.س</div>
+                <div style={{ fontSize: 12, color: 'var(--quiet-gray-600)', marginTop: 6 }}>{eosBasisText(eosResultInputs.reason, eosResultInputs.years)}</div>
+              </motion.div>
+            ) : (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 16, padding: 16, background: 'var(--status-green-light)', borderRadius: 8, border: '1px solid var(--status-green)', textAlign: 'center' }}>
+                <div style={{ fontSize: 12, color: 'var(--status-green)', marginBottom: 4 }}>مكافأة نهاية الخدمة المستحقة (محسوبة نظامياً)</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--status-green)' }}>{formatCurrency(eosResult)}</div>
+                <div style={{ fontSize: 12, color: 'var(--quiet-gray-600)', marginTop: 6 }}>{eosBasisText(eosResultInputs.reason, eosResultInputs.years)}</div>
+              </motion.div>
+            )
+          )}
+
+          {/* قبل الحساب: إرشاد بسيط بدل بطاقة صامتة */}
+          {eosResult === null && (
+            <div style={{ marginTop: 12, fontSize: 12, color: 'var(--quiet-gray-500)' }}>
+              أدخل الراتب وسنوات الخدمة ثم اضغط «احسب واحفظ» — يحسب النظام المكافأة وفق المادتين 84 و85 (شاملاً البدلات وخصومات الاستقالة).
+            </div>
           )}
 
           <div style={{ marginTop: 12 }}>
-            <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleSaveEos} disabled={eosSaving || !eosResult}>
-              {eosSaving ? 'جارٍ الحفظ...' : 'حفظ الحساب'}
+            <button
+              className="lsd-header-btn lsd-header-btn--primary"
+              onClick={handleSaveEos}
+              disabled={eosSaving || !(eosInputs.salary > 0) || !(eosInputs.years_of_service > 0)}
+              title={!(eosInputs.salary > 0) ? 'أدخل الراتب الأساسي أولاً' : !(eosInputs.years_of_service > 0) ? 'أدخل سنوات الخدمة أولاً' : 'يحسب الخادم المكافأة نظامياً ويحفظها'}
+            >
+              {eosSaving ? 'جارٍ الحساب...' : 'احسب واحفظ'}
             </button>
           </div>
         </div>
@@ -307,7 +327,7 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
               {detail.friendly_settlement_ref && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Hash size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">المرجع</div><div className="lsd-info-item__value">{detail.friendly_settlement_ref}</div></div></div>}
               {detail.friendly_settlement_date && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">التاريخ</div><div className="lsd-info-item__value">{formatDate(detail.friendly_settlement_date)}</div></div></div>}
               {detail.friendly_settlement_result && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Check size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">النتيجة</div><div className="lsd-info-item__value" style={{ color: SETTLEMENT_RESULT_COLORS[detail.friendly_settlement_result] }}>{SETTLEMENT_RESULT_LABELS[detail.friendly_settlement_result]}</div></div></div>}
-              {!detail.friendly_settlement_ref && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُسجَّل تسوية ودية بعد</div>}
+              {!detail.friendly_settlement_ref && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُسجَّل تسوية ودية بعد — اضغط «تعديل» لتسجيل مرجع منصة قوى ونتيجتها</div>}
             </div>
           )}
         </div>
@@ -350,7 +370,7 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
                   </div>
                 ))}
               </div>
-              <div style={{ marginTop: 10, padding: '8px 12px', background: '#eff6ff', borderRadius: 6, display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600 }}>
+              <div style={{ marginTop: 10, padding: '8px 12px', background: 'var(--status-blue-light)', borderRadius: 6, display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600 }}>
                 <span>الإجمالي</span>
                 <span>{formatCurrency(claimedTotal)}</span>
               </div>
@@ -394,7 +414,7 @@ const LaborWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }) =
               </div>
             </div>
           ) : (
-            <div className="lsd-empty-state-small"><DollarSign size={22} /><span>لم تُسجَّل تسوية بعد</span></div>
+            <div className="lsd-empty-state-small"><DollarSign size={22} /><span>لم تُسجَّل تسوية بعد — اضغط «تعديل» أعلى البطاقة لإدخال مبلغ التسوية وتاريخها</span></div>
           )}
         </div>
       </div>

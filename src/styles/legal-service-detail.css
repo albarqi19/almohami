@@ -2201,7 +2201,7 @@ body.dark .lsd-inline-form {
 }
 
 .lsd-ht-line--done {
-    background: #22c55e;
+    background: var(--status-green);
 }
 
 /* ── Skeleton Loading ── */
@@ -2244,4 +2244,260 @@ body.dark .lsd-inline-form {
     font-size: 12px;
     font-weight: 500;
     color: var(--quiet-gray-500, #6b7280);
+}
+
+/* ======================================================
+   NEXT STEP CARD — بطاقة «الخطوة التالية»
+   الحالة الحالية بشرح عملي + أزرار الانتقالات المتاحة
+   (هوية فلات صرف: ألوان صلبة + إطار ذهبي رفيع للتمييز)
+   ====================================================== */
+.lsd-nextstep {
+    display: grid;
+    grid-template-columns: minmax(220px, 340px) 1fr;
+    gap: 20px;
+    max-width: 1320px;
+    margin: 14px auto 0;
+    padding: 16px 20px;
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-inline-start: 3px solid var(--law-gold);
+    border-radius: 10px;
+}
+
+@media (max-width: 768px) {
+    .lsd-nextstep {
+        grid-template-columns: 1fr;
+        margin-inline: 16px;
+    }
+}
+
+.lsd-nextstep__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--color-text-secondary);
+    margin-bottom: 8px;
+}
+
+.lsd-nextstep__eyebrow svg {
+    color: var(--law-gold);
+}
+
+.lsd-nextstep__status {
+    margin-bottom: 6px;
+}
+
+.lsd-nextstep__explanation {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--color-text-secondary);
+}
+
+.lsd-nextstep__actions {
+    border-inline-start: 1px solid var(--color-border);
+    padding-inline-start: 20px;
+}
+
+@media (max-width: 768px) {
+    .lsd-nextstep__actions {
+        border-inline-start: none;
+        padding-inline-start: 0;
+        border-top: 1px solid var(--color-border);
+        padding-top: 12px;
+    }
+}
+
+.lsd-nextstep__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.lsd-nextstep-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding: 8px 14px;
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: start;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.lsd-nextstep-btn:hover:not(:disabled) {
+    border-color: var(--law-gold);
+    background: var(--quiet-gray-100);
+}
+
+.lsd-nextstep-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.lsd-nextstep-btn__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--law-navy);
+}
+
+.lsd-nextstep-btn__label svg {
+    color: var(--law-gold);
+}
+
+.lsd-nextstep-btn__hint {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
+.lsd-nextstep-btn--danger .lsd-nextstep-btn__label,
+.lsd-nextstep-btn--danger .lsd-nextstep-btn__label svg {
+    color: var(--status-red);
+}
+
+.lsd-nextstep-btn--danger:hover:not(:disabled) {
+    border-color: var(--status-red);
+}
+
+.lsd-nextstep__final {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+}
+
+/* ======================================================
+   AI DRAFT — اقتراح مسودة الرأي بالذكاء
+   ====================================================== */
+.lsd-ai-draft__disclaimer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--status-orange);
+    background: var(--status-orange-light);
+    border: 1px solid var(--status-orange);
+    border-radius: 8px;
+}
+
+.lsd-ai-draft__copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-inline-start: auto;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--law-navy);
+    background: var(--dashboard-card);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.lsd-ai-draft__copy:hover {
+    border-color: var(--law-gold);
+}
+
+.lsd-ai-draft__text {
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 2;
+    color: var(--color-heading);
+    background: var(--quiet-gray-100);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    white-space: pre-wrap;
+    max-height: 420px;
+    overflow-y: auto;
+    user-select: text;
+}
+
+/* Spinner صغير لزر التوليد وآخر أكبر لمساحة الانتظار */
+.lsd-ai-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--quiet-gray-300);
+    border-top-color: var(--law-navy);
+    border-radius: 50%;
+    animation: lsd-ai-spin 0.8s linear infinite;
+}
+
+.lsd-ai-spinner--lg {
+    width: 22px;
+    height: 22px;
+}
+
+@keyframes lsd-ai-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ======================================================
+   HINTS & EMPTY-STATE GUIDANCE — «ماذا أفعل الآن؟»
+   ====================================================== */
+.lsd-empty-tab__hint {
+    max-width: 460px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--color-text-secondary);
+}
+
+.lsd-action-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+/* ======================================================
+   نقل من inline <style> إلى هنا — بمتغيّرات الثيم بدل hex
+   ====================================================== */
+/* مقارنة إصدارات العقد (redline) */
+.lsd-diff {
+    line-height: 1.9;
+    font-size: 13px;
+    white-space: pre-wrap;
+}
+
+.lsd-diff ins {
+    background: var(--status-green-light);
+    color: var(--status-green);
+    text-decoration: none;
+}
+
+.lsd-diff del {
+    background: var(--status-red-light);
+    color: var(--status-red);
+}
+
+/* تحذير OneDrive غير مربوط — المتغيّرات تتكيّف مع الوضع الداكن تلقائياً */
+.lsd-onedrive-warning {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    background: var(--status-orange-light);
+    border: 1px solid var(--status-orange);
+    border-radius: 10px;
+    color: var(--status-orange);
+    font-size: 13px;
+    line-height: 1.7;
 }

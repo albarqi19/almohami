@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { LegalServiceService } from '../../../services/legalServiceService';
+import { getApiErrorMessage } from '../../../utils/apiError';
 import type { WorkspaceProps } from './types';
 import MicroStatsBar from './MicroStatsBar';
 import ContextualAlert from './ContextualAlert';
@@ -76,23 +77,22 @@ const LicensesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
 
   // ── معالجات ──
 
+  // apiClient يرمي استثناءً عند أي فشل والرسالة عربية من الباك — getApiErrorMessage يستخرجها
   const handleSaveDetails = async () => {
     setDetailsLoading(true);
     try {
-      const res = await LegalServiceService.updateLicenseInfo(service.id, detailsData);
-      if (res.success) { toast.success('تم حفظ بيانات الرخصة'); setEditingDetails(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      await LegalServiceService.updateLicenseInfo(service.id, detailsData);
+      toast.success('تم حفظ بيانات الرخصة'); setEditingDetails(false); await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ بيانات الرخصة')); }
     finally { setDetailsLoading(false); }
   };
 
   const handleSaveCosts = async () => {
     setCostsLoading(true);
     try {
-      const res = await LegalServiceService.updateLicenseCosts(service.id, costsData);
-      if (res.success) { toast.success('تم حفظ التكاليف'); setEditingCosts(false); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ في الاتصال'); }
+      await LegalServiceService.updateLicenseCosts(service.id, costsData);
+      toast.success('تم حفظ التكاليف'); setEditingCosts(false); await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حفظ التكاليف')); }
     finally { setCostsLoading(false); }
   };
 
@@ -100,10 +100,9 @@ const LicensesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
     setReqUpdateLoading(true);
     try {
       const updated = requirements.map((r, i) => i === idx ? { ...r, collected } : r);
-      const res = await LegalServiceService.updateLicenseRequirements(service.id, updated);
-      if (res.success) { await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      await LegalServiceService.updateLicenseRequirements(service.id, updated);
+      await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر تحديث المتطلب')); }
     finally { setReqUpdateLoading(false); }
   };
 
@@ -111,19 +110,17 @@ const LicensesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
     if (!newReqItem.trim()) { toast.error('يرجى إدخال المتطلب'); return; }
     setAddReqLoading(true);
     try {
-      const res = await LegalServiceService.addLicenseRequirement(service.id, { item: newReqItem, collected: false });
-      if (res.success) { toast.success('تمت إضافة المتطلب'); setShowAddReq(false); setNewReqItem(''); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      await LegalServiceService.addLicenseRequirement(service.id, { item: newReqItem, collected: false });
+      toast.success('تمت إضافة المتطلب'); setShowAddReq(false); setNewReqItem(''); await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر إضافة المتطلب')); }
     finally { setAddReqLoading(false); }
   };
 
   const handleRemoveRequirement = async (idx: number) => {
     try {
-      const res = await LegalServiceService.removeLicenseRequirement(service.id, idx);
-      if (res.success) { toast.success('تم حذف المتطلب'); await refreshService(); }
-      else toast.error(res.message || 'حدث خطأ');
-    } catch { toast.error('حدث خطأ'); }
+      await LegalServiceService.removeLicenseRequirement(service.id, idx);
+      toast.success('تم حذف المتطلب'); await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر حذف المتطلب')); }
   };
 
   return (
@@ -190,7 +187,7 @@ const LicensesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
               {detail.submission_date && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">تاريخ التقديم</div><div className="lsd-info-item__value">{formatDate(detail.submission_date)}</div></div></div>}
               {detail.approval_date && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Calendar size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">تاريخ الموافقة</div><div className="lsd-info-item__value">{formatDate(detail.approval_date)}</div></div></div>}
               {detail.completion_days && <div className="lsd-info-item"><div className="lsd-info-item__icon"><Clock size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">أيام الإنجاز</div><div className="lsd-info-item__value">{detail.completion_days} يوم</div></div></div>}
-              {!detail.procedure_type && !detail.license_number && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُضف تفاصيل الرخصة بعد</div>}
+              {!detail.procedure_type && !detail.license_number && <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)' }}>لم تُضف تفاصيل الرخصة بعد — اضغط «تعديل» لإدخال نوع الإجراء والجهة والتواريخ</div>}
             </div>
           )}
         </div>
@@ -233,15 +230,15 @@ const LicensesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
                 {detail.service_fees && <div className="lsd-info-item"><div className="lsd-info-item__icon"><DollarSign size={14} /></div><div className="lsd-info-item__body"><div className="lsd-info-item__label">رسوم الخدمة</div><div className="lsd-info-item__value">{formatCurrency(detail.service_fees)}</div></div></div>}
               </div>
               <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 18, height: 18, borderRadius: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: detail.fees_paid ? '#16a34a' : '#e5e7eb', color: '#fff', fontSize: 12 }}>
+                <span style={{ width: 18, height: 18, borderRadius: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: detail.fees_paid ? 'var(--status-green)' : 'var(--quiet-gray-200)', color: 'var(--dashboard-card, #fff)', fontSize: 12 }}>
                   {detail.fees_paid && <Check size={12} />}
                 </span>
-                <span style={{ fontSize: 13, color: detail.fees_paid ? '#16a34a' : 'var(--quiet-gray-500)' }}>
+                <span style={{ fontSize: 13, color: detail.fees_paid ? 'var(--status-green)' : 'var(--quiet-gray-500)' }}>
                   {detail.fees_paid ? 'تم سداد الرسوم' : 'لم يتم سداد الرسوم'}
                 </span>
               </div>
               {!detail.government_fees && !detail.service_fees && (
-                <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)', marginTop: 8 }}>لم تُحدد التكاليف بعد</div>
+                <div style={{ fontSize: 13, color: 'var(--quiet-gray-400)', marginTop: 8 }}>لم تُحدد التكاليف بعد — اضغط «تعديل» لإدخال الرسوم الحكومية ورسوم الخدمة</div>
               )}
             </div>
           )}
@@ -260,14 +257,14 @@ const LicensesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
             <div style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--quiet-gray-500)', marginBottom: 4 }}>
                 <span>{collectedCount} من {totalCount} متطلب</span>
-                <span style={{ fontWeight: 600, color: progressPercent === 100 ? '#16a34a' : undefined }}>{progressPercent}%</span>
+                <span style={{ fontWeight: 600, color: progressPercent === 100 ? 'var(--status-green)' : undefined }}>{progressPercent}%</span>
               </div>
-              <div style={{ height: 6, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: 6, background: 'var(--quiet-gray-200)', borderRadius: 3, overflow: 'hidden' }}>
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${progressPercent}%` }}
                   transition={{ duration: 0.5 }}
-                  style={{ height: '100%', background: progressPercent === 100 ? '#16a34a' : progressPercent >= 50 ? '#f59e0b' : '#dc2626', borderRadius: 3 }}
+                  style={{ height: '100%', background: progressPercent === 100 ? 'var(--status-green)' : progressPercent >= 50 ? 'var(--status-orange)' : 'var(--status-red)', borderRadius: 3 }}
                 />
               </div>
             </div>
@@ -280,7 +277,12 @@ const LicensesWorkspace: React.FC<WorkspaceProps> = ({ service, refreshService }
                   <div className="lsd-form-group"><label className="lsd-form-label">المتطلب *</label><input className="lsd-form-input" value={newReqItem} onChange={e => setNewReqItem(e.target.value)} placeholder="وصف المتطلب" /></div>
                   <div className="lsd-inline-form__actions" style={{ marginTop: 10 }}>
                     <button className="lsd-header-btn" onClick={() => { setShowAddReq(false); setNewReqItem(''); }}>إلغاء</button>
-                    <button className="lsd-header-btn lsd-header-btn--primary" onClick={handleAddRequirement} disabled={addReqLoading}>{addReqLoading ? 'جارٍ...' : 'إضافة'}</button>
+                    <button
+                      className="lsd-header-btn lsd-header-btn--primary"
+                      onClick={handleAddRequirement}
+                      disabled={addReqLoading || !newReqItem.trim()}
+                      title={!newReqItem.trim() ? 'اكتب وصف المتطلب أولاً' : undefined}
+                    >{addReqLoading ? 'جارٍ...' : 'إضافة'}</button>
                   </div>
                 </div>
               </motion.div>
