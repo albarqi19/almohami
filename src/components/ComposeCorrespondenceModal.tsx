@@ -11,6 +11,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   X, Save, Send, Eye, Printer, Paperclip, Loader2, FileText, Trash2,
   User as UserIcon, Building2, Info, Check, Cloud, CloudOff, Palette,
+  ZoomIn, ZoomOut, Scan, FilePlus,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import TiptapEditor, { type TiptapEditorRef } from './TiptapEditor';
@@ -22,9 +23,16 @@ import {
 } from '../services/outgoingLetterService';
 import { LetterheadService } from '../services/letterheadService';
 import { ClientManagementService } from '../services/clientManagementService';
+import { useAuth } from '../contexts/AuthContext';
+import type { Letterhead } from '../types/letterhead';
 
-interface LetterheadOption { id: number; name: string; is_default?: boolean }
 interface ClientOption { id: number; name: string; phone?: string | null; email?: string | null }
+
+/** أبعاد A4 عند 96dpi (210×297مم) — نفس المرجع الذي يُولَّد به الـPDF. */
+const A4_WIDTH_PX = 794;
+const A4_HEIGHT_PX = 1123;
+const mmToPxN = (v: number) => Math.round(v * 3.7795);
+const mmToPx = (v: number) => `${mmToPxN(v)}px`;
 
 interface ComposeCorrespondenceModalProps {
   isOpen: boolean;
@@ -39,6 +47,7 @@ interface ComposeCorrespondenceModalProps {
 const ACCENT_SWATCHES = ['#1f3a5f', '#0f766e', '#7c2d12', '#4338ca', '#9d174d', '#374151'];
 
 const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({ isOpen, onClose, onIssued, caseId, presetClient }) => {
+  const { user: authUser } = useAuth();
   // الحقول
   const [documentType, setDocumentType] = useState('letter');
   const [title, setTitle] = useState('');
@@ -57,10 +66,25 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
 
   // بيانات مرجعية
   const [templates, setTemplates] = useState<OutgoingLetterTemplate[]>([]);
-  const [letterheads, setLetterheads] = useState<LetterheadOption[]>([]);
+  const [letterheads, setLetterheads] = useState<Letterhead[]>([]);
   const [clientResults, setClientResults] = useState<ClientOption[]>([]);
   const [clientSearch, setClientSearch] = useState('');
   const [clientOpen, setClientOpen] = useState(false);
+
+  // تكبير/تصغير ورقة الكتابة (0.5–2)
+  const [zoom, setZoom] = useState(1);
+  const zoomRef = useRef(1);
+  zoomRef.current = zoom;
+  const editorColRef = useRef<HTMLElement>(null);
+
+  // ترقيم الصفحات: عدد الأوراق وحدودها + مضيف شريط الأدوات الثابت
+  const pageRef = useRef<HTMLDivElement>(null);
+  const pageInnerRef = useRef<HTMLDivElement>(null);
+  // عوّامات القفز: تدفع أسطر النص فوق فجوات الحدود فيتدفق فعلياً من صفحة لصفحة
+  const flowBreaksRef = useRef<HTMLDivElement>(null);
+  const [pageCount, setPageCount] = useState(1);
+  const [pageGaps, setPageGaps] = useState<{ top: number; height: number }[]>([]);
+  const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
 
   // الحالة
   const [saving, setSaving] = useState(false);
@@ -119,7 +143,7 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
       ]);
       const tpls = (tplRes as any).data ?? [];
       setTemplates(tpls);
-      const lhs: LetterheadOption[] = ((lhRes as any).data ?? []).map((l: any) => ({ id: l.id, name: l.name, is_default: l.is_default }));
+      const lhs = (((lhRes as any).data ?? []) as Letterhead[]);
       setLetterheads(lhs);
 
       const defaultLh = lhs.find((l) => l.is_default) ?? lhs[0];
@@ -174,6 +198,221 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
     setRecipientEmail(c.email || '');
     setClientOpen(false);
     markDirty();
+  };
+
+  // ── التكبير/التصغير ──
+  const applyZoom = useCallback((z: number) => {
+    const v = Math.min(2, Math.max(0.5, Math.round(z * 20) / 20));
+    setZoom(v);
+    try { localStorage.setItem('clc_zoom', String(v)); } catch { /* تخزين اختياري */ }
+  }, []);
+  const zoomBy = (d: number) => applyZoom(zoomRef.current + d);
+  const fitWidth = useCallback(() => {
+    const w = editorColRef.current?.clientWidth ?? 900;
+    applyZoom((w - 64) / A4_WIDTH_PX);
+  }, [applyZoom]);
+
+  // عند الفتح: آخر تكبير محفوظ، وإلا ملاءمة العرض ضمن حدود مريحة
+  useEffect(() => {
+    if (!isOpen) return;
+    const saved = parseFloat(localStorage.getItem('clc_zoom') || '');
+    if (Number.isFinite(saved) && saved >= 0.5 && saved <= 2) { setZoom(saved); return; }
+    const w = editorColRef.current?.clientWidth ?? 900;
+    applyZoom(Math.min(1.4, Math.max(0.75, (w - 64) / A4_WIDTH_PX)));
+  }, [isOpen, applyZoom]);
+
+  // Ctrl + عجلة الفأرة = تكبير/تصغير (مثل Word) — مستمع غير سلبي ليمكن منع تكبير المتصفح
+  useEffect(() => {
+    const el = editorColRef.current;
+    if (!el || !isOpen) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      applyZoom(zoomRef.current + (e.deltaY < 0 ? 0.05 : -0.05));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [isOpen, applyZoom]);
+
+  // ── الكليشة الحيّة على الورقة ──
+  const selectedLetterhead = useMemo<Letterhead | null>(() => {
+    if (letterheadId !== '') return letterheads.find((l) => l.id === letterheadId) ?? null;
+    return letterheads.find((l) => l.is_default) ?? letterheads[0] ?? null;
+  }, [letterheads, letterheadId]);
+
+  const officeName = (authUser as any)?.tenant?.name || (authUser as any)?.tenant_name || '';
+  // نفس أولوية الـPDF: لون الخطاب ← لون الكليشة ← كحلي النظام
+  const pageAccent = accentColor || selectedLetterhead?.primary_color || '#1f3a5f';
+  const isImageLetterhead = selectedLetterhead?.type === 'image' && !!selectedLetterhead.header_image_url;
+
+  // مساحتا الترويسة/التذييل لكل صفحة (مرآة هوامش mPDF: صورة = ارتفاعها+3مم، ديناميكي = 30/26مم)
+  const headerAreaPx = isImageLetterhead
+    ? mmToPxN((selectedLetterhead?.header_height_mm || 30) + 3)
+    : mmToPxN(30);
+  const footerAreaPx = selectedLetterhead?.type === 'image' && selectedLetterhead.footer_image_url
+    ? mmToPxN((selectedLetterhead.footer_height_mm || 25) + 3)
+    : mmToPxN(26);
+
+  // قياس الصفحات: يمدّد كل «فاصل صفحة» يدوي حتى بداية الصفحة التالية (بعد ترويستها)،
+  // ويحسب عدد الأوراق وحدودها ليرسم أشرطة «نهاية الصفحة» مراعياً مساحة التذييل.
+  useEffect(() => {
+    if (!isOpen) return;
+    const page = pageRef.current;
+    const inner = pageInnerRef.current;
+    if (!page || !inner) return;
+
+    let raf = 0;
+    const BREAK_NET_H = 28; // ارتفاع الفاصل اليدوي «الصافي» قبل تمديده
+    const measure = () => {
+      raf = 0;
+      const z = zoomRef.current || 1;
+      const host = flowBreaksRef.current;
+      const gapH = footerAreaPx + headerAreaPx;
+
+      // 1) قياس «صافٍ»: عطّل العوّامات وصفّر الفواصل ثم اقرأ التدفق الخام — كل النتائج
+      //    دوالّ حتمية للمحتوى وحده، فلا «هيستيريسيس» (عوّامة تدفع نصاً فتبرر بقاء نفسها).
+      const breaks = Array.from(page.querySelectorAll<HTMLElement>('.ProseMirror hr.page-break'));
+      if (host) host.style.display = 'none';
+      breaks.forEach((el) => { el.style.height = `${BREAK_NET_H}px`; });
+
+      const pageRect = page.getBoundingClientRect();
+      const hostTop = host ? (host.getBoundingClientRect().top - pageRect.top) / z : 0;
+      const netBreakTops = breaks.map((el) => (el.getBoundingClientRect().top - pageRect.top) / z);
+      const netBottom = (inner.getBoundingClientRect().bottom - pageRect.top) / z;
+
+      // 2) محاكاة: افرد التدفق الصافي على صفحات A4 (نهاية نص الصفحة n عند n·P−تذييل،
+      //    وبداية التالية عند n·P+ترويسة) وأدرج قفزات الفواصل اليدوية.
+      let shift = 0;
+      let boundary = 1;
+      const effOf = (netY: number): number => {
+        let eff = netY + shift;
+        while (eff > boundary * A4_HEIGHT_PX - footerAreaPx) {
+          shift += gapH; eff += gapH; boundary += 1;
+        }
+        return eff;
+      };
+      const breakHeights = netBreakTops.map((netY) => {
+        const eff = effOf(netY);
+        const target = boundary * A4_HEIGHT_PX + headerAreaPx;
+        const h = Math.max(BREAK_NET_H, Math.round(target - eff));
+        shift += h - BREAK_NET_H;
+        boundary += 1;
+        return h;
+      });
+      const endEff = effOf(netBottom) + footerAreaPx;
+      const pages = Math.min(40, Math.max(1, Math.ceil(endEff / A4_HEIGHT_PX)));
+
+      // 3) طبّق النتائج (idempotent — لا يتغير DOM إن لم تتغير القيم)
+      breaks.forEach((el, i) => {
+        const h = `${breakHeights[i]}px`;
+        if (el.style.height !== h) el.style.height = h;
+      });
+      setPageCount((p) => (p === pages ? p : pages));
+      const gaps: { top: number; height: number }[] = [];
+      for (let n = 1; n < pages; n++) {
+        gaps.push({ top: n * A4_HEIGHT_PX - footerAreaPx, height: gapH });
+      }
+      setPageGaps((prev) => (JSON.stringify(prev) === JSON.stringify(gaps) ? prev : gaps));
+
+      // 4) عوّامات القفز: float بعرض كامل عند كل فجوة — أسطر المحرّر تلتف تحتها،
+      //    فالنص البالغ حدّ التذييل ينزل مباشرة تحت رأس الكليشة في الصفحة التالية.
+      if (host) {
+        host.style.display = '';
+        const usable = gaps.filter((g) => g.top > hostTop + 4);
+        const sig = usable.map((g) => `${Math.round(g.top - hostTop)}:${Math.round(g.height)}`).join('|');
+        if (host.dataset.sig !== sig) {
+          host.dataset.sig = sig;
+          host.textContent = '';
+          let cursor = hostTop;
+          usable.forEach((g) => {
+            const d = document.createElement('div');
+            d.style.cssText = `float:right;clear:both;width:100%;height:${Math.round(g.height)}px;`
+              + `margin-top:${Math.max(0, Math.round(g.top - cursor))}px;`;
+            cursor = g.top + g.height;
+            host.appendChild(d);
+          });
+        }
+      }
+    };
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(measure); };
+
+    schedule();
+    const ro = new ResizeObserver(schedule);
+    ro.observe(inner);
+    ro.observe(page); // تحميل صور الكليشة يغيّر ارتفاع الترويسة بعد القياس الأول
+    const pm = page.querySelector('.ProseMirror');
+    if (pm) ro.observe(pm);
+    return () => { ro.disconnect(); if (raf) cancelAnimationFrame(raf); };
+    // editorKey: يعاد الربط عند إعادة إنشاء المحرّر (تطبيق قالب)
+  }, [isOpen, headerAreaPx, footerAreaPx, editorKey]);
+
+  const pageDates = useMemo(() => {
+    const now = new Date();
+    let hijri = '';
+    try {
+      hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', { day: 'numeric', month: 'long', year: 'numeric' }).format(now) + 'هـ';
+    } catch { /* متصفح بلا تقويم هجري — يكفي الميلادي */ }
+    const greg = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return { hijri, greg };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  const renderLetterheadHeader = () => {
+    const lh = selectedLetterhead;
+    if (lh?.type === 'image' && lh.header_image_url) {
+      return <img className="clc-page__lhimg" src={lh.header_image_url} alt="" style={{ height: mmToPx(lh.header_height_mm || 30) }} />;
+    }
+    const name = lh?.company_name || officeName || 'مكتب المحاماة';
+    return (
+      <div className="clc-page__dh" style={{ borderBottomColor: lh?.border_color || pageAccent }}>
+        {lh?.logo_url && <img src={lh.logo_url} alt="" style={{ width: lh.logo_width_px || 60 }} />}
+        <div className="clc-page__dh-info">
+          <div className="clc-page__dh-name" style={{ color: lh?.primary_color || pageAccent }}>{name}</div>
+          {lh?.company_name_en && <div className="clc-page__dh-en">{lh.company_name_en}</div>}
+        </div>
+      </div>
+    );
+  };
+
+  const renderLetterheadFooter = () => {
+    const lh = selectedLetterhead;
+    if (lh?.type === 'image' && lh.footer_image_url) {
+      return <img className="clc-page__lhimg clc-page__lhimg--footer" src={lh.footer_image_url} alt="" style={{ height: mmToPx(lh.footer_height_mm || 25) }} />;
+    }
+    const contact = [lh?.footer_phone, lh?.footer_email, lh?.footer_website, lh?.footer_address].filter(Boolean).join(' | ');
+    const line = [lh?.footer_text, contact].filter(Boolean).join(' — ')
+      || `${officeName || 'مكتب المحاماة'} — صدر عبر نظام الرائد لإدارة المحاماة`;
+    return <div className="clc-page__df">{line}</div>;
+  };
+
+  const renderWatermark = () => {
+    const lh = selectedLetterhead;
+    if (!lh?.watermark_enabled) return null;
+    const rot = lh.watermark_rotation ?? -45;
+    const opacity = Math.min(0.5, Math.max(0.02, (lh.watermark_opacity || 8) / 100));
+    if (lh.watermark_type === 'image' && lh.watermark_image_url) {
+      return (
+        <div className="clc-page__wm" aria-hidden>
+          <img src={lh.watermark_image_url} alt="" style={{ opacity, transform: `rotate(${rot}deg)` }} />
+        </div>
+      );
+    }
+    const text = lh.watermark_text || lh.company_name || '';
+    if (!text) return null;
+    const style: React.CSSProperties = {
+      opacity, color: lh.watermark_text_color || '#000',
+      fontSize: lh.watermark_font_size || 48,
+      transform: `rotate(${rot}deg) scale(${(lh.watermark_size || 100) / 100})`,
+    };
+    if (lh.watermark_position === 'repeat') {
+      return (
+        <div className="clc-page__wm clc-page__wm--repeat" aria-hidden style={{ gap: lh.watermark_repeat_gap || 100 }}>
+          {Array.from({ length: 12 }).map((_, i) => <span key={i} style={style}>{text}</span>)}
+        </div>
+      );
+    }
+    const pos = lh.watermark_position === 'top' ? 'clc-page__wm--top' : lh.watermark_position === 'bottom' ? 'clc-page__wm--bottom' : '';
+    return <div className={`clc-page__wm ${pos}`} aria-hidden><span style={style}>{text}</span></div>;
   };
 
   // ── الحفظ التلقائي ──
@@ -323,7 +562,7 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
 
   return (
     <div className="clc-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="clc-modal" style={{ ['--clc-accent' as any]: accentColor || '#1f3a5f' }}>
+      <div className="clc-modal" style={{ ['--clc-accent' as any]: pageAccent }}>
         {/* ── الرأس ── */}
         <header className="clc-header">
           <div className="clc-header__right">
@@ -367,27 +606,96 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
 
         {/* ── الجسم ── */}
         <div className="clc-body">
-          {/* المحرّر — ورقة بعرض A4 متمركزة على لوحة رمادية */}
-          <main className="clc-editor-col">
-            <div className="clc-sheet">
-              <input
-                className="clc-title-input"
-                placeholder="عنوان الصادر (الموضوع)…"
-                value={title}
-                onChange={(e) => { setTitle(e.target.value); markDirty(); }}
-              />
-              <div className="clc-editor-wrap">
-                <TiptapEditor
-                  key={editorKey}
-                  ref={editorRef}
-                  content={body}
-                  onChange={(v) => { setBody(v); markDirty(); }}
-                  placeholder="اكتب نص الخطاب هنا… (تدعم الضبط من الجانبين والألوان والجداول وأدوات الذكاء بالأعلى)"
-                  minHeight="calc(100vh - 260px)"
-                  autoFocus
-                  textAnnotations={textAnnotations}
-                  onApplyAnnotation={(id) => setTextAnnotations((prev) => prev.filter((a) => a.id !== id))}
-                />
+          {/* المحرّر — ورقة A4 حقيقية بالكليشة على «منضدة» رمادية، مع تكبير/تصغير */}
+          <main className="clc-editor-col" ref={editorColRef}>
+            {/* شريط الأدوات: «مسطرة» ثابتة أعلى المنضدة خارج الورقة — لا يتأثر بالتكبير */}
+            <div className="clc-ribbon">
+              <div className="clc-ribbon__tools" ref={setToolbarHost} />
+              <button
+                className="clc-ribbon__break"
+                onClick={() => editorRef.current?.insertPageBreak?.()}
+                title="إدراج فاصل صفحة عند موضع المؤشر — يقفز النص لصفحة جديدة (وفي الملف المطبوع أيضاً)"
+              >
+                <FilePlus size={14} /> صفحة جديدة
+              </button>
+            </div>
+            <div className="clc-desk">
+              <div
+                className="clc-page"
+                ref={pageRef}
+                style={{ ['--clc-zoom' as any]: zoom, minHeight: pageCount * A4_HEIGHT_PX }}
+              >
+                {renderWatermark()}
+                {/* أشرطة حدود الصفحات: تذييل الصفحة + ترويسة التالية (بكليشة الصورة تُعرض صورتاهما) */}
+                {pageGaps.map((g, i) => (
+                  <div key={i} className="clc-page__gap" style={{ top: g.top, height: g.height }} aria-hidden>
+                    {isImageLetterhead && selectedLetterhead?.footer_image_url && (
+                      <img className="clc-page__gap-img" src={selectedLetterhead.footer_image_url} alt=""
+                        style={{ height: mmToPx((selectedLetterhead.footer_height_mm || 25)) }} />
+                    )}
+                    <span>نهاية الصفحة {i + 1}</span>
+                    {isImageLetterhead && selectedLetterhead?.header_image_url && (
+                      <img className="clc-page__gap-img clc-page__gap-img--next" src={selectedLetterhead.header_image_url} alt=""
+                        style={{ height: mmToPx((selectedLetterhead.header_height_mm || 30)) }} />
+                    )}
+                  </div>
+                ))}
+                {renderLetterheadHeader()}
+                <div ref={pageInnerRef} className={`clc-page__inner ${isImageLetterhead ? 'clc-page__inner--imglh' : ''}`}>
+                  <div className="clc-page__meta">
+                    <span>صادر رقم: <b>يُخصَّص عند الإصدار</b></span>
+                    <span className="clc-page__meta-dates">
+                      {pageDates.hijri && <>{pageDates.hijri}<br /></>}
+                      <i>الموافق {pageDates.greg}م</i>
+                    </span>
+                  </div>
+                  <div className="clc-page__typebar">{LETTER_DOC_TYPES.find((d) => d.value === documentType)?.label ?? 'خطاب'}</div>
+                  {recipientDisplay !== '—' && (
+                    <div className="clc-page__addr"><b>إلى:</b> {recipientDisplay}</div>
+                  )}
+                  <label className="clc-page__subject">
+                    <span>الموضوع:</span>
+                    <input
+                      placeholder="اكتب موضوع الصادر…"
+                      value={title}
+                      onChange={(e) => { setTitle(e.target.value); markDirty(); }}
+                    />
+                  </label>
+                  <div className="clc-editor-wrap">
+                    <div ref={flowBreaksRef} className="clc-flow-breaks" aria-hidden />
+                    <TiptapEditor
+                      key={editorKey}
+                      ref={editorRef}
+                      content={body}
+                      onChange={(v) => { setBody(v); markDirty(); }}
+                      placeholder="اكتب نص الخطاب هنا… (تدعم الضبط من الجانبين والألوان والجداول وأدوات الذكاء بالأعلى)"
+                      minHeight="360px"
+                      autoFocus
+                      textAnnotations={textAnnotations}
+                      onApplyAnnotation={(id) => setTextAnnotations((prev) => prev.filter((a) => a.id !== id))}
+                      toolbarPortalEl={toolbarHost}
+                    />
+                  </div>
+                  {attachments.length > 0 && (
+                    <div className="clc-page__att">
+                      <div className="clc-page__att-h">المرفقات (مُرفقة بهذا المستند):</div>
+                      <ol>
+                        {attachments.map((a, i) => <li key={i}>{(a.label ?? '').trim() || a.file.name}</li>)}
+                      </ol>
+                    </div>
+                  )}
+                  <div className="clc-page__num">(يُخصَّص رقم الصادر والباركود عند الإصدار)</div>
+                </div>
+                {renderLetterheadFooter()}
+              </div>
+            </div>
+            <div className="clc-zoomdock">
+              <div className="clc-zoomdock__pill">
+                <button onClick={() => zoomBy(-0.1)} title="تصغير"><ZoomOut size={15} /></button>
+                <button className="clc-zoomdock__pct" onClick={() => applyZoom(1)} title="الحجم الفعلي (100%)">{Math.round(zoom * 100)}%</button>
+                <button onClick={() => zoomBy(0.1)} title="تكبير"><ZoomIn size={15} /></button>
+                <span className="clc-zoomdock__sep" />
+                <button onClick={fitWidth} title="ملاءمة عرض الشاشة"><Scan size={15} /> ملاءمة</button>
               </div>
             </div>
           </main>

@@ -1,4 +1,5 @@
 import React, { useEffect, useImperativeHandle, forwardRef, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
@@ -41,7 +42,28 @@ import {
 import type { TextAnnotation } from '../types/textAnnotations';
 
 // Extension for Font Size
-import { Extension } from '@tiptap/core';
+import { Extension, Node as TiptapNode } from '@tiptap/core';
+
+/**
+ * فاصل صفحة يدوي — يُخزَّن <hr class="page-break"> ويحوّله مولّد الـPDF إلى <pagebreak /> (mPDF)،
+ * فتطابق القفزة في المحرر القفزة في الملف المطبوع.
+ */
+const PageBreak = TiptapNode.create({
+  name: 'pageBreak',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  parseHTML() {
+    return [{ tag: 'hr.page-break' }, { tag: 'div.page-break' }];
+  },
+  renderHTML() {
+    return ['hr', { class: 'page-break' }];
+  },
+});
+
+/** يعرض الأبناء في مكانهم، أو داخل عنصر خارجي (portal) إن مُرّر — لإخراج شريط الأدوات من سطح متكبّر. */
+const MaybePortal: React.FC<{ target?: HTMLElement | null; children: React.ReactNode }> = ({ target, children }) =>
+  target ? createPortal(children, target) : <>{children}</>;
 
 const FontSize = Extension.create({
   name: 'fontSize',
@@ -108,6 +130,8 @@ interface TiptapEditorProps {
   autoFocus?: boolean;
   textAnnotations?: TextAnnotation[];
   onApplyAnnotation?: (annotationId: string, newText: string) => void;
+  /** عنصر خارجي يُعرض فيه شريط الأدوات (portal) — يبقى ثابت الحجم خارج أي سطح متكبّر. */
+  toolbarPortalEl?: HTMLElement | null;
 }
 
 export interface TiptapEditorRef {
@@ -121,6 +145,7 @@ export interface TiptapEditorRef {
   getSelectedText: () => string | null;
   replaceSelectedText: (newText: string) => void;
   replaceAllText: (newText: string) => void;
+  insertPageBreak: () => void;
 }
 
 const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
@@ -132,7 +157,8 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
   minHeight = '300px',
   autoFocus = false,
   textAnnotations = [],
-  onApplyAnnotation
+  onApplyAnnotation,
+  toolbarPortalEl = null
 }, ref) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
@@ -206,6 +232,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
       Highlight.configure({
         multicolor: true,
       }),
+      PageBreak,
     ],
     content,
     editable,
@@ -508,6 +535,9 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
     getSelectedText: () => getSelectedText(),
     replaceSelectedText: (newText: string) => replaceSelectedText(newText),
     replaceAllText: (newText: string) => replaceAllText(newText),
+    insertPageBreak: () => {
+      editor?.chain().focus().insertContent([{ type: 'pageBreak' }, { type: 'paragraph' }]).run();
+    },
   }));
 
   useEffect(() => {
@@ -615,6 +645,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
   return (
     <div ref={containerRef} className={`tiptap-editor ${className}`} style={{ direction: 'rtl', position: 'relative' }}>
       {editable && (
+        <MaybePortal target={toolbarPortalEl}>
         <div className="tiptap-toolbar">
           {/* Text Formatting */}
           <MenuButton
@@ -981,6 +1012,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(({
             <Redo size={16} />
           </MenuButton>
         </div>
+        </MaybePortal>
       )}
 
       <div ref={editorAreaRef} className="tiptap-editor-area" style={{ position: 'relative' }}>

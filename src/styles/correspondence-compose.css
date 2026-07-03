@@ -1,5 +1,20 @@
 /* منشئ الصادر الحرّ (ComposeCorrespondenceModal) — ERP مدمج، مثيّم عبر متغيّرات اللوحة. */
 
+/* خط الملف Sakkal Majalla — يُفضَّل المثبّت محلياً (local) وإلا حُمّل من خادم الواجهة
+   (نفس ملف mPDF بالباك)، فيتطابق مقاس المحرّر مع المطبوع لدى الجميع. */
+@font-face {
+  font-family: 'Sakkal Majalla';
+  src: local('Sakkal Majalla'), url('/fonts/majalla.ttf') format('truetype');
+  font-weight: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Sakkal Majalla';
+  src: local('Sakkal Majalla Bold'), url('/fonts/majallab.ttf') format('truetype');
+  font-weight: bold;
+  font-display: swap;
+}
+
 /* زر «صادر جديد» في شريط صفحة السجل (متّسق مع .corr-btn) */
 .corr-btn.corr-btn--primary {
   background: var(--law-navy, #1f3a5f);
@@ -54,32 +69,203 @@
 
 /* ── الجسم ── */
 .clc-body { flex: 1; display: grid; grid-template-columns: 1fr 336px; gap: 0; overflow: hidden; min-height: 0; }
+
+/* «المنضدة»: سطح رمادي محايد تطفو عليه ورقة A4 — مثل عارض PDF/Word */
 .clc-editor-col {
-  display: flex; flex-direction: column; min-width: 0;
-  padding: 14px 16px; overflow: auto; background: var(--dashboard-bg, #f4f6f9);
+  position: relative; min-width: 0; overflow: auto;
+  background: var(--quiet-gray-200, #e2e5ea);
 }
-/* لوحة المحرّر تملأ كامل العرض والارتفاع (لا شكل صفحة) */
-.clc-sheet {
-  width: 100%; flex: 1; display: flex; flex-direction: column;
-  background: var(--dashboard-card, #fff);
-  border-radius: 10px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  padding: 16px 20px;
+body.dark .clc-editor-col { background: #10151f; }
+
+.clc-desk { display: flex; justify-content: safe center; padding: 18px 26px 30px; }
+
+/* شريط الأدوات الثابت أعلى المنضدة — خارج الورقة فلا يتأثر بالتكبير */
+.clc-ribbon {
+  position: sticky; top: 0; z-index: 60;
+  display: flex; align-items: stretch; gap: 8px;
+  padding: 8px 14px 7px;
+  background: var(--quiet-gray-200, #e2e5ea);
+  border-bottom: 1px solid var(--quiet-gray-300, #d1d5db);
 }
-.clc-title-input {
-  width: 100%; border: none; outline: none; background: transparent;
-  font-size: 20px; font-weight: 700; color: var(--quiet-gray-900, #111827);
-  padding: 2px 0; margin-bottom: 10px;
+body.dark .clc-ribbon { background: #10151f; border-color: #273043; }
+.clc-ribbon__tools { flex: 1; min-width: 0; position: relative; }
+.clc-ribbon__tools .tiptap-toolbar {
+  position: static;
+  border: 1px solid var(--quiet-gray-300, #d1d5db);
+  border-radius: 9px;
+  padding: 5px 10px;
 }
-.clc-title-input::placeholder { color: var(--quiet-gray-400, #9ca3af); font-weight: 600; }
-.clc-editor-wrap { flex: 1; background: transparent; }
-/* توحيد خط المحرّر مع خط الملف (Sakkal Majalla) — تتطابق المعاينة الذهنية مع الـPDF.
-   لا يُشحن ملف خط (يتفادى ترخيص الخط)؛ يعتمد على الخط المثبّت محلياً (Windows/Office) مع بدائل نسخ عربية. */
-.clc-title-input,
-.clc-editor-wrap .ProseMirror,
-.clc-editor-wrap .tiptap {
+.clc-ribbon__break {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 12px; border-radius: 9px;
+  border: 1px solid var(--quiet-gray-300, #d1d5db);
+  background: var(--dashboard-card, #fff); color: var(--quiet-gray-700, #374151);
+  font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.clc-ribbon__break:hover { border-color: var(--clc-accent, #1f3a5f); color: var(--clc-accent, #1f3a5f); }
+body.dark .clc-ribbon__break { background: #1f2937; color: #e5e7eb; border-color: #374151; }
+
+/* ورقة A4 حقيقية (210مم = 794px @ 96dpi) — بيضاء دائماً كالمطبوع، بأي ثيم */
+.clc-page {
+  zoom: var(--clc-zoom, 1);
+  width: 794px; min-height: 1123px; flex-shrink: 0;
+  background: #fff; color: #1f2937;
+  border: 1px solid #cdd2da;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12);
+  display: flex; flex-direction: column;
+  position: relative;
+  /* خط الملف نفسه (Sakkal Majalla) — لا يُشحن ملف خط (ترخيص)؛ يعتمد المثبّت محلياً مع بدائل نسخ عربية */
   font-family: 'Sakkal Majalla', 'Simplified Arabic', 'Traditional Arabic', 'Noto Naskh Arabic', 'Amiri', serif;
 }
-.clc-editor-wrap .ProseMirror { line-height: 1.9; font-size: 15px; }
+body.dark .clc-page { border-color: #2c3648; box-shadow: 0 2px 14px rgba(0, 0, 0, 0.5); }
+/* المحتوى فوق العلامة المائية (عدا طبقتي العلامة وحدود الصفحات) */
+.clc-page > *:not(.clc-page__wm):not(.clc-page__gap) { position: relative; z-index: 1; }
+
+/* شريط حدّ الصفحة: مساحة التذييل + ترويسة الصفحة التالية — شفاف كي لا يحجب نصاً عابراً */
+.clc-page__gap {
+  position: absolute; left: 0; right: 0; z-index: 2;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--quiet-gray-300, #d1d5db) 38%, transparent);
+  border-top: 1.5px dashed #b6bdc9;
+  border-bottom: 1.5px dashed #b6bdc9;
+}
+.clc-page__gap span {
+  position: absolute; top: 50%; right: 12px; transform: translateY(-50%); z-index: 1;
+  font-size: 10px; font-weight: 700; color: #7b8494;
+  background: #fff; border: 1px solid #d5dae2; border-radius: 999px; padding: 1px 9px;
+}
+/* بكليشة الصورة: تذييل الصفحة المنتهية أعلى الشريط وترويسة التالية أسفله
+   (العوّامات تضمن ألا يمر نص تحتها فتُعرض شبه معتمة) */
+.clc-page__gap-img {
+  position: absolute; top: 0; left: 0; right: 0;
+  width: 100%; object-fit: fill; opacity: 0.95;
+}
+.clc-page__gap-img--next { top: auto; bottom: 0; }
+
+/* كليشة صورة: من الحافة للحافة كما في الملف — التذييل يلتصق بأسفل الورقة (لا تمدد للمحتوى) */
+.clc-page__lhimg { display: block; width: 100%; object-fit: fill; }
+.clc-page__lhimg--footer { margin-top: auto; padding-top: 10px; }
+
+/* كليشة ديناميكية — مرآة ترويسة الـPDF */
+.clc-page__dh {
+  display: flex; align-items: center; gap: 14px;
+  margin: 26px 60px 0; padding-bottom: 8px;
+  border-bottom: 2px solid var(--clc-accent, #1f3a5f);
+}
+.clc-page__dh img { display: block; }
+.clc-page__dh-name { font-size: 21px; font-weight: 700; }
+.clc-page__dh-en { font-size: 12px; color: #666; }
+.clc-page__df {
+  margin: auto 60px 12px; padding-top: 5px;
+  border-top: 1px solid #ccc; text-align: center; font-size: 10.5px; color: #888;
+}
+
+/* محتوى الورقة — هوامش تطابق الـPDF (16مم، ولكليشة الصورة 12مم).
+   ⚠️ بلا flex-grow: الارتفاع طبيعي كي لا يدخل قياس الصفحات في حلقة تمدد لا نهائية. */
+.clc-page__inner { display: flex; flex-direction: column; padding: 14px 60px 18px; }
+.clc-page__inner--imglh { padding-inline: 45px; }
+
+.clc-page__meta { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #444; margin-bottom: 8px; }
+.clc-page__meta b { color: #1f2937; }
+.clc-page__meta-dates { text-align: left; line-height: 1.7; }
+.clc-page__meta-dates i { font-style: normal; color: #777; }
+
+.clc-page__typebar {
+  background: var(--clc-accent, #1f3a5f); color: #fff; text-align: center;
+  font-size: 17px; font-weight: 700; padding: 7px; margin: 4px 0 12px; border-radius: 2px;
+}
+.clc-page__addr { font-size: 14.5px; margin: 0 0 6px; }
+.clc-page__addr b { color: var(--clc-accent, #1f3a5f); }
+
+.clc-page__subject {
+  display: flex; align-items: center; gap: 8px;
+  margin: 6px 0 12px; padding: 6px 10px;
+  background: #f3f4f6; border-right: 3px solid var(--clc-accent, #1f3a5f); border-radius: 2px;
+}
+.clc-page__subject > span { font-weight: 700; font-size: 15px; color: #1f2937; white-space: nowrap; }
+.clc-page__subject input {
+  flex: 1; border: none; outline: none; background: transparent;
+  font: inherit; font-size: 15px; font-weight: 700; color: #1f2937; padding: 0;
+}
+.clc-page__subject input::placeholder { color: #9ca3af; font-weight: 600; }
+
+/* المحرّر داخل الورقة — نص بمقاس المطبوع (14px/سطر 2 كما في الـPDF)، بارتفاعه الطبيعي */
+.clc-editor-wrap { background: transparent; }
+.clc-page .tiptap-editor { border: none; border-radius: 0; background: transparent; }
+.clc-page .ProseMirror,
+.clc-page .tiptap { font-family: inherit; }
+.clc-page .ProseMirror { font-size: 14px; line-height: 2; color: #1f2937; }
+.clc-page .ProseMirror p { margin: 0 0 10px; text-align: justify; }
+
+/* حاوية عوّامات القفز (أبناؤها float بأنماط مباشرة) — يجب ألا تنشئ سياق تنسيق منفصلاً */
+.clc-flow-breaks { display: block; }
+/* ضمان بقاء أسطر المحرّر في نفس سياق التدفق مع العوّامات (لا التفاف بلا ذلك) */
+.clc-page .tiptap-editor,
+.clc-page .tiptap-editor-area,
+.clc-page .tiptap-content-wrapper,
+.clc-page .ProseMirror { overflow: visible; }
+/* نص المحرّر على هوامش الورقة نفسها (الحشوة العامة 16px تكسر محاذاة المطبوع) */
+.clc-page .tiptap-content-wrapper { padding: 0; }
+
+/* فاصل الصفحة اليدوي: صامت — يبدو قفزة طبيعية؛ يظهر تلميحه عند المرور أو التحديد فقط */
+.clc-page .ProseMirror hr.page-break {
+  display: block; position: relative;
+  border: none; background: transparent;
+  height: 28px; margin: 4px 0; cursor: pointer;
+}
+.clc-page .ProseMirror hr.page-break:hover::before,
+.clc-page .ProseMirror hr.page-break.ProseMirror-selectednode::before {
+  content: 'فاصل صفحة يدوي — Delete للحذف';
+  position: absolute; top: 4px; right: 50%; transform: translateX(50%);
+  font-size: 10px; font-weight: 700; color: #7b8494;
+  background: #fff; border: 1px dashed #cbd5e1; border-radius: 999px; padding: 1px 10px;
+  z-index: 1; white-space: nowrap;
+}
+.clc-page .ProseMirror hr.page-break.ProseMirror-selectednode::before {
+  color: var(--clc-accent, #1f3a5f); border-color: var(--clc-accent, #1f3a5f); border-style: solid;
+}
+
+/* فهرس المرفقات + سطر الرقم — مرآة الـPDF */
+.clc-page__att { margin-top: 14px; padding: 8px 10px; border: 1px dashed var(--clc-accent, #1f3a5f); border-radius: 2px; font-size: 12px; color: #374151; }
+.clc-page__att-h { font-weight: 700; color: var(--clc-accent, #1f3a5f); margin-bottom: 3px; }
+.clc-page__att ol { margin: 0; padding-inline-start: 18px; }
+.clc-page__num { margin-top: 18px; text-align: center; font-size: 11px; color: #667085; }
+
+/* العلامة المائية (من إعدادات الكليشة) */
+.clc-page__wm {
+  position: absolute; inset: 0; overflow: hidden; z-index: 0;
+  pointer-events: none; user-select: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.clc-page__wm span { font-weight: 700; white-space: nowrap; font-family: 'Traditional Arabic', serif; }
+.clc-page__wm--top { align-items: flex-start; padding-top: 20%; }
+.clc-page__wm--bottom { align-items: flex-end; padding-bottom: 20%; }
+.clc-page__wm--repeat { flex-wrap: wrap; align-content: center; }
+.clc-page__wm img { max-width: 55%; }
+
+/* عدّة التكبير — مثبّتة أسفل المنضدة */
+.clc-zoomdock { position: sticky; bottom: 12px; height: 0; display: flex; justify-content: flex-start; padding-inline: 16px; z-index: 55; }
+.clc-zoomdock__pill {
+  transform: translateY(-100%);
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--dashboard-card, #fff);
+  border: 1px solid var(--quiet-gray-300, #d1d5db);
+  border-radius: 10px; padding: 4px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.16);
+}
+.clc-zoomdock__pill button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  height: 28px; min-width: 28px; padding: 0 8px;
+  border: none; border-radius: 7px; background: transparent; cursor: pointer;
+  color: var(--quiet-gray-700, #374151); font-size: 12px; font-weight: 700; line-height: 1;
+}
+.clc-zoomdock__pill button:hover { background: var(--quiet-gray-100, #f3f4f6); }
+.clc-zoomdock__pct { min-width: 52px !important; font-variant-numeric: tabular-nums; }
+.clc-zoomdock__sep { width: 1px; height: 18px; background: var(--quiet-gray-200, #e5e7eb); margin: 0 2px; }
+body.dark .clc-zoomdock__pill { background: #1e293b; border-color: #374151; }
+body.dark .clc-zoomdock__pill button { color: #e5e7eb; }
+body.dark .clc-zoomdock__pill button:hover { background: #273449; }
+body.dark .clc-zoomdock__sep { background: #374151; }
 
 /* ── اللوحة الجانبية ── */
 .clc-side {
@@ -203,11 +389,12 @@
 
 /* داكن */
 body.dark .clc-modal { background: var(--dashboard-bg, #0f172a); }
-body.dark .clc-header, body.dark .clc-side, body.dark .clc-card, body.dark .clc-sheet { background: var(--dashboard-card, #1e293b); }
+body.dark .clc-header, body.dark .clc-side, body.dark .clc-card { background: var(--dashboard-card, #1e293b); }
 body.dark .clc-btn--ghost, body.dark .clc-iconbtn { background: #1f2937; color: #e5e7eb; border-color: #374151; }
 
 /* استجابة: طيّ اللوحة أسفل المحرّر على الشاشات الضيقة */
 @media (max-width: 920px) {
   .clc-body { grid-template-columns: 1fr; overflow: auto; }
   .clc-side { border-inline-start: none; border-top: 1px solid var(--quiet-gray-200, #e5e7eb); }
+  .clc-desk { padding: 10px 8px 26px; }
 }
