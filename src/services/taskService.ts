@@ -104,6 +104,19 @@ export class TaskService {
     }
   }
 
+  /** إنشاء مهمة من تسجيل صوتي — الذكاء يستخرج العنوان/الفرعية/المُسنَد إليه/الاستحقاق */
+  static async createTaskFromVoice(audio: Blob): Promise<{ task: Task & { id: number | string }; transcript?: string }> {
+    const formData = new FormData();
+    formData.append('audio', audio, 'voice-task.wav');
+
+    const response = await apiClient.post<ApiResponse<any> & { transcript?: string }>('/tasks/voice', formData);
+
+    if (response.success && response.data) {
+      return { task: response.data, transcript: response.transcript };
+    }
+    throw new Error(response.message || 'فشل في إنشاء المهمة من التسجيل');
+  }
+
   static async updateTask(id: string, taskData: Partial<CreateTaskForm>): Promise<Task> {
     const response = await apiClient.put<ApiResponse<Task>>(`/tasks/${id}`, taskData);
     

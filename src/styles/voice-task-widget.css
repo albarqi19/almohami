@@ -1,0 +1,255 @@
+/* ويدجت «مهمة بالصوت» — أسفل وسط صفحة المهام (هوية فلات، بلا توهّج) */
+
+.voice-task-widget {
+  position: fixed;
+  bottom: 56px; /* مرفوع — هو والتسمية أسفله */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900; /* تحت المودالات (1000+) وفوق المحتوى */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+/* الشاشات الكبيرة: يمين الصفحة بمسافة قصيرة عن الشريط الجانبي (240px + فجوة) */
+@media (min-width: 1025px) {
+  .voice-task-widget {
+    left: auto;
+    right: 268px;
+    transform: none;
+  }
+}
+
+.voice-task-widget__button {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--dashboard-card, #ffffff);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(30, 58, 95, 0.14);
+  transition: border-color 0.2s ease, transform 0.15s ease;
+}
+
+.voice-task-widget__button:hover:not(:disabled) {
+  border-color: var(--law-gold, #b8860b);
+  transform: scale(1.05);
+}
+
+.voice-task-widget__button:disabled {
+  cursor: default;
+}
+
+/* أثناء التسجيل: إطار ذهبي رفيع (تمييز الهوية) */
+.voice-task-widget[data-phase='recording'] .voice-task-widget__button {
+  border: 2px solid var(--law-gold, #b8860b);
+}
+
+.voice-task-widget__halo {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.voice-task-widget__mic {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  color: var(--law-navy, #1e3a5f);
+  pointer-events: none;
+}
+
+body.dark .voice-task-widget__mic {
+  color: #ffffff;
+}
+
+.voice-task-widget__caption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--dashboard-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  font-size: 12px;
+  color: var(--color-text-secondary, #64748b);
+  white-space: nowrap;
+}
+
+.voice-task-widget[data-phase='recording'] .voice-task-widget__caption {
+  color: var(--law-navy, #1e3a5f);
+  font-weight: 600;
+}
+
+body.dark .voice-task-widget[data-phase='recording'] .voice-task-widget__caption {
+  color: #ffffff;
+}
+
+.voice-task-widget__timer {
+  font-variant-numeric: tabular-nums;
+  color: var(--law-gold, #b8860b);
+  font-weight: 700;
+}
+
+.voice-task-widget__kbd {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--quiet-gray-50, #f8fafc);
+  color: var(--color-text-secondary, #64748b);
+}
+
+/* ─── نافذة التعريف بالميزة (تظهر مرة واحدة) ─── */
+
+.voice-task-intro-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.voice-task-intro {
+  position: relative;
+  overflow: hidden;
+  background: var(--dashboard-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 12px;
+  width: 380px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 18px 18px 14px;
+  text-align: right;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+
+/* الهالة خلفيةً كاملة للمودال — كبيرة وشفافة، والمحتوى يطفو فوقها */
+.voice-task-intro__bg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.16;
+}
+
+.voice-task-intro__bg-canvas {
+  width: 480px;
+  height: 480px;
+  max-width: none;
+  flex-shrink: 0;
+}
+
+/* المحتوى فوق الهالة */
+.voice-task-intro > :not(.voice-task-intro__bg) {
+  position: relative;
+  z-index: 1;
+}
+
+.voice-task-intro__title {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--law-navy, #1e3a5f);
+  text-align: right;
+}
+
+body.dark .voice-task-intro__title {
+  color: var(--color-text, #f1f5f9);
+}
+
+.voice-task-intro__lead {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--color-text-secondary, #64748b);
+  text-align: justify; /* متساوٍ من الطرفين ويبدأ من اليمين مع بداية العنوان */
+}
+
+.voice-task-intro__lead kbd {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--quiet-gray-50, #f8fafc);
+  color: var(--law-navy, #1e3a5f);
+}
+
+.voice-task-intro__tips {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.voice-task-intro__tip {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 7px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--quiet-gray-50, #f8fafc);
+}
+
+.voice-task-intro__tip svg {
+  color: var(--law-gold, #b8860b);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.voice-task-intro__tip div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.voice-task-intro__tip strong {
+  font-size: 11.5px;
+  color: var(--color-text, #1e293b);
+}
+
+.voice-task-intro__tip span {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.voice-task-intro__cta {
+  display: block;
+  width: 100%;
+  padding: 9px;
+  border: none;
+  border-radius: 8px;
+  background: var(--law-navy, #1e3a5f);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.voice-task-intro__cta:hover {
+  opacity: 0.92;
+}

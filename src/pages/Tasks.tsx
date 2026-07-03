@@ -48,6 +48,7 @@ import { TaskService } from '../services/taskService';
 import { UserService } from '../services/UserService';
 import AddTaskModal from '../components/AddTaskModal';
 import EditTaskModal from '../components/EditTaskModal';
+import VoiceTaskWidget from '../components/voice/VoiceTaskWidget';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { TasksCache, UsersCache } from '../utils/tasksCache';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
@@ -866,6 +867,9 @@ const Tasks: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         onTaskAdded={loadTasks}
       />
+
+      {/* مهمة بالصوت — نقرة أو إبقاء زر M مضغوطاً */}
+      <VoiceTaskWidget onTaskCreated={loadTasks} />
 
       {/* قائمة إجراءات الصف (النقاط الثلاثة) */}
       {menu && (

@@ -106,3 +106,4 @@ import './hr-page.css';
 import './bankruptcy-detail.css';
 import './simple-service.css';
 import './extensionGuide.css';
+import './voice-task-widget.css';
