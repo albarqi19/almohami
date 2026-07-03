@@ -44,6 +44,7 @@ import CorrespondenceTemplatesSettings from '../components/settings/Corresponden
 import SessionWorkflowSettingsComponent from '../components/settings/SessionWorkflowSettings';
 import MicrosoftIntegrationSettings from '../components/settings/MicrosoftIntegrationSettings';
 import EmailIntegrationSection from '../components/settings/EmailIntegrationSection';
+import WordAddinSettings from '../components/settings/WordAddinSettings';
 import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
@@ -100,6 +101,7 @@ const Settings: React.FC = () => {
     { id: 'session_workflow', label: 'سير عمل الجلسات', icon: Bell, roles: ['admin'] },
     { id: 'company_policy', label: 'سياسة الشركة', icon: ShieldCheck, roles: ['admin'] },
     { id: 'integrations', label: 'التكاملات', icon: Link, roles: ['admin', 'lawyer', 'legal_assistant'] },
+    { id: 'word_addin', label: 'إضافة Word', icon: FileText, roles: ['admin', 'lawyer', 'legal_assistant'] },
     { id: 'email', label: 'البريد الإلكتروني', icon: Mail, roles: ['admin'], ownerOnly: true },
     { id: 'subscription', label: 'الاشتراك', icon: CreditCard, roles: ['admin'] },
     { id: 'invoices', label: 'الفواتير', icon: Receipt, roles: ['admin'] },
@@ -512,6 +514,9 @@ const Settings: React.FC = () => {
     switch (activeTab) {
       case 'notifications':
         return <NotificationSettings />;
+
+      case 'word_addin':
+        return <WordAddinSettings />;
 
       case 'najiz':
         return (

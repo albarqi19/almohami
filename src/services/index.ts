@@ -7,6 +7,7 @@ export { ActivityService } from './activityService';
 export { NotificationService } from './notificationService';
 export { default as RoleService } from './roleService';
 export { default as PermissionService } from './permissionService';
+export { WordAddinService } from './wordAddinService';
 
 // Legal AI Service
 export {
