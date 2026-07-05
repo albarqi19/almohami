@@ -6,6 +6,23 @@ interface TimelineStep {
   label: string;
   done: boolean;
   current: boolean;
+  /* الخدمة المبسطة: تفاصيل إضافية تظهر للعميل */
+  done_at?: string | null;
+  paused?: boolean;
+  pause_reason?: string | null;
+  note?: string | null;
+}
+
+interface PortalCountdown {
+  start_date: string;
+  due_date: string | null;
+  total_days: number | null;
+  elapsed_days: number;
+  remaining_days: number | null;
+  paused_days: number;
+  is_paused: boolean;
+  pause_reason: string | null;
+  finished: boolean;
 }
 
 interface PortalData {
@@ -19,6 +36,7 @@ interface PortalData {
     status_arabic: string;
     completion_percentage: number;
     timeline: TimelineStep[];
+    countdown?: PortalCountdown | null;
   };
   documents: Array<{ title: string; uploaded_at: string }>;
   deliverables?: Array<{
@@ -119,13 +137,21 @@ const ServicePortal: React.FC = () => {
         .sp-status-badge { background: #eff6ff; color: ${primary}; border: 1px solid #bfdbfe; border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 600; }
         .sp-section-title { font-size: 15px; font-weight: 700; color: #0f172a; margin: 26px 0 12px; }
         .sp-timeline { list-style: none; margin: 0; padding: 0; }
-        .sp-step { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
-        .sp-dot { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; border: 2px solid #cbd5e1; background: #fff; }
+        .sp-step { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; }
+        .sp-dot { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; border: 2px solid #cbd5e1; background: #fff; margin-top: 1px; }
         .sp-step.done .sp-dot { background: #16a34a; border-color: #16a34a; }
         .sp-step.current .sp-dot { background: ${primary}; border-color: ${primary}; box-shadow: 0 0 0 4px ${primary}22; }
         .sp-step-label { font-size: 14px; color: #334155; }
         .sp-step.current .sp-step-label { font-weight: 700; color: #0f172a; }
         .sp-step.done .sp-step-label { color: #16a34a; }
+        .sp-step-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .sp-step-date { font-size: 11.5px; color: #94a3b8; }
+        .sp-step-note { font-size: 12.5px; color: #475569; background: #f8fafc; border-inline-start: 2px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; }
+        .sp-step-paused { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #b45309; background: #fef3c7; border-radius: 999px; padding: 2px 10px; align-self: flex-start; }
+        .sp-days { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; }
+        .sp-days-nums { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 12.5px; color: #475569; }
+        .sp-days-nums b { color: #0f172a; }
+        .sp-days-paused { font-size: 12px; font-weight: 600; color: #b45309; }
         .sp-doc { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; color: #334155; }
         .sp-upload { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 22px; text-align: center; cursor: pointer; color: #475569; }
         .sp-upload:hover { border-color: ${primary}; }
@@ -164,12 +190,47 @@ const ServicePortal: React.FC = () => {
               />
             </div>
 
+            {data.service.countdown && (
+              <div className="sp-days">
+                <div className="sp-days-nums">
+                  <span>بدأت الخدمة <b>{new Date(data.service.countdown.start_date).toLocaleDateString('ar-SA')}</b></span>
+                  {data.service.countdown.due_date && (
+                    <span>التسليم المتوقع <b>{new Date(data.service.countdown.due_date).toLocaleDateString('ar-SA')}</b></span>
+                  )}
+                  {!data.service.countdown.finished && data.service.countdown.remaining_days !== null && (
+                    <span>
+                      المتبقي{' '}
+                      <b>{Math.max(0, data.service.countdown.remaining_days)} يوم</b>
+                    </span>
+                  )}
+                  {data.service.countdown.is_paused && (
+                    <span className="sp-days-paused">
+                      ⏸ العمل متوقف مؤقتاً{data.service.countdown.pause_reason ? ` — ${data.service.countdown.pause_reason}` : ''}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="sp-section-title">مراحل الإنجاز</div>
             <ul className="sp-timeline">
               {data.service.timeline.map((step, i) => (
                 <li key={i} className={`sp-step ${step.done ? 'done' : ''} ${step.current ? 'current' : ''}`}>
                   <span className="sp-dot" />
-                  <span className="sp-step-label">{step.label}</span>
+                  <span className="sp-step-body">
+                    <span className="sp-step-label">{step.label}</span>
+                    {step.done && step.done_at && (
+                      <span className="sp-step-date">
+                        أُنجزت {new Date(step.done_at).toLocaleDateString('ar-SA')}
+                      </span>
+                    )}
+                    {step.paused && (
+                      <span className="sp-step-paused">
+                        ⏸ متوقفة مؤقتاً{step.pause_reason ? ` — ${step.pause_reason}` : ''}
+                      </span>
+                    )}
+                    {step.note && <span className="sp-step-note">{step.note}</span>}
+                  </span>
                 </li>
               ))}
             </ul>

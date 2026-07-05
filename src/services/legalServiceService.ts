@@ -205,6 +205,40 @@ export class LegalServiceService {
     return apiClient.post(`/legal-services/${id}/simple/share-deliverable`, { deliverable_id: deliverableId, note });
   }
 
+  static async pauseSimpleStage(id: number, stageId: string, reason: string): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/simple/stages/${stageId}/pause`, { reason });
+  }
+
+  static async resumeSimpleStage(id: number, stageId: string): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/simple/stages/${stageId}/resume`);
+  }
+
+  static async updateSimpleStageClientNote(id: number, stageId: string, note: string): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.put(`/legal-services/${id}/simple/stages/${stageId}/client-note`, { note });
+  }
+
+  static async generateSimplePortalLink(id: number): Promise<{ success: boolean; data: { url: string; link_id: number }; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/simple/portal-link`);
+  }
+
+  static async sendSimplePortalLink(id: number, channels?: Array<'whatsapp' | 'email'>): Promise<{ success: boolean; data: { url: string; link_id: number }; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/simple/send-portal-link`, channels ? { channels } : {});
+  }
+
+  // ── محادثة الفريق الداخلية (على أي خدمة) ──
+
+  static async getTeamChat(id: number): Promise<{ success: boolean; data: any[] }> {
+    return apiClient.get(`/legal-services/${id}/team-chat`);
+  }
+
+  static async sendTeamChatMessage(id: number, body: string, mentions?: number[]): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/team-chat`, { body, mentions: mentions ?? [] });
+  }
+
+  static async deleteTeamChatMessage(id: number, messageId: number): Promise<{ success: boolean; message?: string }> {
+    return apiClient.delete(`/legal-services/${id}/team-chat/${messageId}`);
+  }
+
   // ── تأسيس الشركات ──
 
   static async updateCompanyDetails(id: number, data: Record<string, any>): Promise<{ success: boolean; data: any; message?: string }> {

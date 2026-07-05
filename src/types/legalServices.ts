@@ -17,10 +17,43 @@ export type ServiceType =
   | 'other';
 
 /** ── الخدمة المبسطة: مسار عمل حرّ ── */
+export interface SimpleStagePausePeriod {
+  reason: string | null;
+  paused_at: string | null;
+  resumed_at: string | null;
+  by_name: string | null;
+  resumed_by_name?: string | null;
+}
+
 export interface SimpleStage {
   id: string;
   label: string;
   done_at: string | null;
+  /* ميتاداتا الاعتماد والإنشاء (تظهر عند المرور على المرحلة) */
+  done_by?: number | null;
+  done_by_name?: string | null;
+  created_at?: string;
+  created_by?: number | null;
+  created_by_name?: string | null;
+  /* إيقاف العداد (بانتظار جهة/رد) — السبب يظهر للعميل */
+  paused_at?: string | null;
+  pause_reason?: string | null;
+  paused_by?: number | null;
+  paused_by_name?: string | null;
+  pause_history?: SimpleStagePausePeriod[];
+  /* وصف المرحلة الظاهر للعميل في بوابة المتابعة */
+  client_note?: string | null;
+}
+
+/** رسالة محادثة الفريق الداخلية على الخدمة */
+export interface ServiceTeamMessageItem {
+  id: number;
+  legal_service_id: number;
+  user_id: number;
+  body: string;
+  mentions: number[] | null;
+  created_at: string;
+  user?: { id: number; name: string };
 }
 
 export interface SimpleTask {
@@ -39,12 +72,38 @@ export interface SimpleJournalEntry {
   created_at: string;
 }
 
+export interface SimpleCompositionBlock {
+  id?: string;
+  type: 'heading' | 'paragraph' | 'table' | 'list' | 'divider' | 'signature';
+  text?: string;
+  html?: string;
+  align?: 'right' | 'center' | 'justify';
+  items?: string[];
+  rows?: string[][];
+  header_row?: boolean;
+  name?: string;
+  title?: string;
+}
+
+export interface SimpleComposition {
+  doc_title?: string | null;
+  letterhead?: 'official' | 'minimal' | 'none';
+  blocks?: SimpleCompositionBlock[];
+  /* خطاب الخدمة (بنمط الصادر) — النمط الحالي للمخرَج */
+  letter_subject?: string | null;
+  letter_html?: string | null;
+  signatory_name?: string | null;
+  signatory_title?: string | null;
+  updated_at?: string;
+}
+
 export interface SimpleServiceDetail {
   id: number;
   legal_service_id: number;
   stages: SimpleStage[] | null;
   tasks: SimpleTask[] | null;
   journal: SimpleJournalEntry[] | null;
+  composition?: SimpleComposition | null;
 }
 
 export type ServicePriority = 'low' | 'medium' | 'high' | 'urgent';
