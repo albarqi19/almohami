@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
-import { Loader2, MessagesSquare, Send, Trash2 } from 'lucide-react';
+import { ChevronsRight, Loader2, MessagesSquare, Send, Trash2 } from 'lucide-react';
 import MentionInput from '../MentionInput';
 import { LegalServiceService } from '../../services/legalServiceService';
 import { getApiErrorMessage } from '../../utils/apiError';
@@ -11,7 +11,7 @@ import type { ServiceTeamMessageItem } from '../../types/legalServices';
  * محادثة الفريق الداخلية على الخدمة — شات بين أعضاء المكتب (لا يظهر للعميل)
  * مع إشارة @ تُنبِّه المذكور في جرس الإشعارات وتوجّهه إلى هنا (#team-chat).
  */
-const ServiceTeamChat: React.FC<{ serviceId: number }> = ({ serviceId }) => {
+const ServiceTeamChat: React.FC<{ serviceId: number; onCollapse?: () => void }> = ({ serviceId, onCollapse }) => {
   const { user } = useAuth();
   const myId = user?.id != null ? Number(user.id) : null;
 
@@ -98,7 +98,14 @@ const ServiceTeamChat: React.FC<{ serviceId: number }> = ({ serviceId }) => {
     <section className="ssp2-card" id="team-chat">
       <div className="ssp2-card__head">
         <span className="ssp2-card__title"><MessagesSquare size={15} /> محادثة الفريق</span>
-        <span className="ssp2-card__meta">داخلية — لا تظهر للعميل</span>
+        <span className="ssp2-card__headtools">
+          <span className="ssp2-card__meta">داخلية — لا تظهر للعميل</span>
+          {onCollapse && (
+            <button className="ssp2-icon-btn" onClick={onCollapse} title="تصغير المحادثة">
+              <ChevronsRight size={15} />
+            </button>
+          )}
+        </span>
       </div>
 
       <div className="stc-list" ref={listRef}>

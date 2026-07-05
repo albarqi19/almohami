@@ -285,7 +285,45 @@
     max-height: none;
 }
 
-/* مساحة العمل — شريط أدوات ثابت أعلى وجسم يتمرر */
+/* الدردشة مطويّة: شريط رفيع بعنوان عمودي — نقرة تعيد فتحها */
+.ssp2-chatcol--min {
+    width: 46px;
+}
+
+.ssp2-chatcol__reopen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 0;
+    background: var(--dashboard-card);
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--color-text-secondary);
+    transition: background 0.15s;
+}
+
+.ssp2-chatcol__reopen:hover {
+    background: var(--quiet-gray-50);
+}
+
+.ssp2-chatcol__reopen svg {
+    color: var(--law-gold);
+    flex-shrink: 0;
+}
+
+.ssp2-chatcol__reopen span {
+    writing-mode: vertical-rl;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+}
+
+/* مساحة العمل — شريط أدوات ثابت أعلى وجسم يتمرر، كتلة بيضاء متصلة كالأعمدة الجانبية */
 .ssp2-work {
     flex: 1;
     min-width: 0;
@@ -293,6 +331,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    background: var(--dashboard-card);
 }
 
 .ssp2-toolbar {
@@ -311,19 +350,90 @@
     min-height: 0;
     /* التمرير ينتقل لبطاقة السجل (تملأ الباقي وتتمرر داخلياً) لا للعمود كله */
     overflow: hidden;
-    padding: 16px;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 0;
 }
 
-/* المهام والتدوين جنباً إلى جنب عند الاتساع — بارتفاعها الطبيعي (لا تنكمش) */
+/* أقسام مساحة العمل: بلوكات متصلة ببعضها وبالجوانب — بلا إطارات ولا استدارة */
+.ssp2-work .ssp2-card {
+    border: none;
+    border-radius: 0;
+}
+
+/* المهام والتدوين جنباً إلى جنب — ملتصقان يفصلهما خط عمودي رفيع */
 .ssp2-work__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
-    gap: 16px;
-    align-items: start;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    align-items: stretch;
     flex-shrink: 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.ssp2-work__grid > .ssp2-card:first-child {
+    border-inline-end: 1px solid var(--color-border);
+}
+
+/* البلوكان بطول واحد دائماً: القائمة الداخلية تتمدد لملء الفراغ */
+.ssp2-work__grid > .ssp2-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.ssp2-work__grid .ssp2-tasks,
+.ssp2-work__grid .ssp2-journal {
+    flex: 1;
+    max-height: 420px;
+}
+
+/* ترميز لوني خفيف جداً يميّز كل بلوك: كحلي للمهام، ذهبي للتدوين */
+.ssp2-card--tasks {
+    background: rgba(30, 58, 95, 0.035);
+}
+
+.ssp2-card--journal {
+    background: rgba(184, 134, 11, 0.045);
+}
+
+body.dark .ssp2-card--tasks {
+    background: rgba(110, 155, 215, 0.06);
+}
+
+body.dark .ssp2-card--journal {
+    background: rgba(205, 165, 70, 0.07);
+}
+
+/* داخل البلوكين الملوّنين: الرأس والحقل شفافان كي تسري المسحة على الكتلة كلها */
+.ssp2-card--tasks .ssp2-card__head,
+.ssp2-card--journal .ssp2-card__head,
+.ssp2-card--tasks .ssp2-quickadd,
+.ssp2-card--journal .ssp2-quickadd,
+.ssp2-card--tasks .ssp2-quickadd input,
+.ssp2-card--journal .ssp2-quickadd textarea {
+    background: transparent;
+}
+
+.ssp2-card--tasks .ssp2-quickadd input:focus,
+.ssp2-card--journal .ssp2-quickadd textarea:focus {
+    background: var(--dashboard-card);
+}
+
+body.dark .ssp2-card--tasks .ssp2-card__head,
+body.dark .ssp2-card--journal .ssp2-card__head {
+    background: transparent;
+}
+
+@media (max-width: 1360px) {
+    .ssp2-work__grid {
+        grid-template-columns: 1fr;
+    }
+    .ssp2-work__grid > .ssp2-card:first-child {
+        border-inline-end: none;
+        border-bottom: 1px solid var(--color-border);
+    }
 }
 
 /* بطاقة سجل الإجراءات تملأ ارتفاع العمود المتبقي، والقائمة تتمرر داخلها */
@@ -370,6 +480,123 @@
     overflow-y: auto;
 }
 
+/* المراحل مطويّة: شريط رفيع تبقى فيه دوائر المراحل بخيطها — حية وقابلة للنقر */
+.ssp2-stagescol--min {
+    width: 46px;
+}
+
+.ssp2-stagescol__rail {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0 12px;
+    gap: 10px;
+}
+
+.ssp2-stagerail__open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    color: var(--law-gold);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+.ssp2-stagerail__open:hover {
+    background: var(--quiet-gray-100);
+}
+
+.ssp2-stagerail {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ssp2-stagerail__item {
+    position: relative;
+    padding: 5px 0;
+    display: flex;
+    justify-content: center;
+}
+
+/* الخيط الرابط بين الدوائر */
+.ssp2-stagerail__item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    inset-inline-start: 50%;
+    width: 1px;
+    margin-inline-start: -0.5px;
+    background: var(--color-border);
+}
+
+.ssp2-stagerail__item:first-child::before { top: 50%; }
+.ssp2-stagerail__item:last-child::before { bottom: 50%; }
+.ssp2-stagerail__item:only-child::before { display: none; }
+
+.ssp2-stagerail__dot {
+    position: relative;
+    z-index: 1;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid var(--color-border);
+    background: var(--dashboard-card);
+    color: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.ssp2-stagerail__dot:hover:not(:disabled) {
+    border-color: var(--law-gold);
+}
+
+.ssp2-stagerail__dot.is-done {
+    background: var(--status-green);
+    border-color: var(--status-green);
+}
+
+.ssp2-stagerail__dot.is-paused {
+    border-color: var(--status-orange);
+    color: var(--status-orange);
+}
+
+.ssp2-stagerail__dot.is-current {
+    border-color: var(--law-gold);
+    animation: ssp2-stage-pulse 2.6s ease-in-out infinite;
+}
+
+.ssp2-stagerail__dot:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.ssp2-stagerail__meta {
+    flex-shrink: 0;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
 /* شاشات متوسطة: أعمدة أضيق */
 @media (max-width: 1200px) {
     .ssp2-chatcol { width: 280px; }
@@ -381,7 +608,7 @@
     .ssp2-page { height: auto; overflow: visible; }
     .ssp2-layout { flex-direction: column; overflow: visible; }
     .ssp2-work { order: 1; overflow: visible; }
-    .ssp2-work__scroll { overflow: visible; padding: 12px; }
+    .ssp2-work__scroll { overflow: visible; }
     /* العمود يتمرر طبيعياً هنا → السجل يعود لارتفاع ثابت بتمرير داخلي */
     .ssp2-activity { flex: none; min-height: 0; }
     .ssp2-activity .ssp2-timeline { flex: none; max-height: 420px; }
@@ -392,6 +619,29 @@
         border-top: 1px solid var(--color-border);
     }
     .ssp2-stagescol .ssp2-stagelist { max-height: 420px; }
+    /* شريط المراحل المطويّ يصبح صفاً أفقياً بدوائره */
+    .ssp2-stagescol__rail {
+        flex-direction: row;
+        padding: 10px 14px;
+        gap: 12px;
+    }
+    .ssp2-stagerail {
+        flex-direction: row;
+        flex-wrap: wrap;
+        overflow: visible;
+        gap: 2px;
+    }
+    .ssp2-stagerail__item { padding: 0 4px; }
+    .ssp2-stagerail__item::before {
+        top: 50%;
+        bottom: auto;
+        height: 1px;
+        width: 100%;
+        inset-inline-start: 0;
+        margin: 0;
+    }
+    .ssp2-stagerail__item:first-child::before { inset-inline-start: 50%; width: 50%; top: 50%; }
+    .ssp2-stagerail__item:last-child::before { width: 50%; }
     .ssp2-chatcol {
         order: 3;
         width: auto;
@@ -399,6 +649,14 @@
         border-inline-end: none;
         border-top: 1px solid var(--color-border);
     }
+    /* الشريط المطويّ يصبح صفاً أفقياً في وضع التكديس */
+    .ssp2-chatcol--min { height: auto; }
+    .ssp2-chatcol__reopen {
+        flex-direction: row;
+        justify-content: center;
+        padding: 12px 14px;
+    }
+    .ssp2-chatcol__reopen span { writing-mode: horizontal-tb; }
 }
 
 /* ── البطاقة ── */
@@ -442,6 +700,82 @@ body.dark .ssp2-card__head {
     color: var(--color-text-secondary);
 }
 
+.ssp2-card__headtools {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* المهام مصغّرة: صف دوائر الإنجاز — قابلة للنقر مباشرة */
+.ssp2-tasks-mini {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 14px;
+}
+
+.ssp2-tasks-mini__dot {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1.5px solid var(--color-border);
+    background: var(--dashboard-card);
+    color: #fff;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.ssp2-tasks-mini__dot:hover:not(:disabled) {
+    border-color: var(--law-gold);
+}
+
+.ssp2-tasks-mini__dot.is-done {
+    background: var(--status-green);
+    border-color: var(--status-green);
+}
+
+.ssp2-tasks-mini__dot:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.ssp2-tasks-mini__empty {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+/* الدفتر مصغّر: سطر واحد بآخر تدوينة — نقرة توسّعه */
+.ssp2-journal-mini {
+    display: block;
+    width: 100%;
+    padding: 13px 14px;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--color-text-secondary);
+    text-align: start;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ssp2-journal-mini b {
+    color: var(--color-text-primary);
+    font-weight: 700;
+}
+
+.ssp2-journal-mini:hover {
+    color: var(--color-text-primary);
+}
+
 /* ── شريط تقدم رفيع ── */
 .ssp2-progress {
     height: 4px;
@@ -458,33 +792,54 @@ body.dark .ssp2-card__head {
     background: var(--law-gold);
 }
 
-/* ── إدخال سريع ── */
+/* ── إدخال سريع: مجموعة ملتصقة (flush) — الحقل والزر كتلة مربعة واحدة
+      متصلة بحواف البطاقة من الجانبين، يفصلها حدّ سفلي عن المحتوى ── */
 .ssp2-quickadd {
     display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 10px 14px;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
     border-bottom: 1px solid var(--color-border);
+    background: var(--dashboard-card);
 }
 
 .ssp2-quickadd input,
 .ssp2-quickadd textarea {
     flex: 1;
     min-width: 0;
-    padding: 7px 11px;
+    padding: 11px 14px;
     font-size: 12.5px;
     font-family: inherit;
     color: var(--color-text-primary);
-    background: var(--quiet-gray-50);
-    border: 1px solid var(--color-border);
-    border-radius: 7px;
+    background: var(--dashboard-card);
+    border: none;
+    border-radius: 0;
     resize: vertical;
 }
 
 .ssp2-quickadd input:focus,
 .ssp2-quickadd textarea:focus {
     outline: none;
-    border-color: var(--law-gold);
+    background: var(--quiet-gray-50);
+}
+
+/* زر الإضافة (نصي أو أيقونة): مربع ملتصق بالحقل بفاصل رفيع، بارتفاعه كاملاً */
+.ssp2-quickadd .ssp2-btn,
+.ssp2-quickadd .ssp2-icon-btn {
+    border: none;
+    border-inline-start: 1px solid var(--color-border);
+    border-radius: 0;
+    align-self: stretch;
+    flex-shrink: 0;
+    height: auto;
+}
+
+.ssp2-quickadd .ssp2-btn {
+    padding: 0 16px;
+}
+
+.ssp2-quickadd .ssp2-icon-btn {
+    width: 44px;
 }
 
 /* ── المهام ── */
@@ -546,13 +901,9 @@ body.dark .ssp2-card__head {
     white-space: nowrap;
 }
 
-/* ── دفتر التدوين ── */
-.ssp2-quickadd--area {
-    align-items: stretch;
-}
-
+/* ── دفتر التدوين: زر «تدوين» ملتصق بارتفاع المساحة النصية كاملاً ── */
 .ssp2-quickadd--area .ssp2-btn {
-    align-self: flex-end;
+    align-self: stretch;
 }
 
 .ssp2-journal {
@@ -1215,24 +1566,47 @@ body.dark .stc-list {
     opacity: 1;
 }
 
+/* شريط الكتابة: مجموعة إدخال ملتصقة (flush) — الحقل والزر كتلة مربعة واحدة
+   متصلة بحواف العمود من الجانبين والأسفل، يفصلها عن الرسائل حدّ علوي فقط */
 .stc-compose {
     display: flex;
-    align-items: flex-end;
-    gap: 8px;
-    padding: 10px 14px;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
     border-top: 1px solid var(--color-border);
+    background: var(--dashboard-card);
 }
 
 .stc-compose__input {
     flex: 1;
     min-width: 0;
+    display: flex;
 }
 
 .stc-compose__input .mention-input__textarea {
-    min-height: 44px;
-    max-height: 120px;
+    min-height: 54px;
+    max-height: 140px;
     font-size: 12.5px;
+    background: var(--dashboard-card);
+    border: none;
+    border-radius: 0;
+    padding: 13px 14px;
+}
+
+.stc-compose__input .mention-input__textarea:focus {
+    outline: none;
+    border: none;
     background: var(--quiet-gray-50);
+}
+
+/* الزر: مربع ملتصق بالحقل — يفصله خط فاصل رفيع فقط */
+.stc-compose > .ssp2-btn {
+    border-radius: 0;
+    border: none;
+    border-inline-start: 1px solid var(--color-border);
+    align-self: stretch;
+    padding: 0 18px;
+    flex-shrink: 0;
 }
 
 /* قائمة المنشن تنسدل لأعلى فوق حقل الكتابة — أسفل البطاقة تقصّها overflow:hidden */

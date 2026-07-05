@@ -30,6 +30,8 @@ import {
   CalendarRange,
   Copy,
   Radar,
+  MessagesSquare,
+  ChevronsLeft,
 } from 'lucide-react';
 import { LegalServiceService } from '../../services/legalServiceService';
 import { apiClient } from '../../utils/api';
@@ -205,9 +207,10 @@ const SimpleServicePage: React.FC = () => {
     fetchService();
   }, [fetchService]);
 
-  // القدوم من إشعار منشن (#team-chat) → تمرير إلى المحادثة بعد التحميل
+  // القدوم من إشعار منشن (#team-chat) → فتح الدردشة إن كانت مطوية + تمرير إليها
   useEffect(() => {
     if (!loading && window.location.hash === '#team-chat') {
+      setChatCollapsed(false);
       window.setTimeout(() => {
         document.getElementById('team-chat')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 250);
@@ -364,6 +367,35 @@ const SimpleServicePage: React.FC = () => {
       toast.error('تعذّر النسخ — انسخه يدوياً');
     }
   };
+
+  // ── طيّ الدردشة وتصغير المهام (تفضيل محفوظ) ──
+  const [chatCollapsed, setChatCollapsed] = useState(() => localStorage.getItem('ssp2_chat_collapsed') === '1');
+  const toggleChatCollapsed = () =>
+    setChatCollapsed((v) => {
+      localStorage.setItem('ssp2_chat_collapsed', v ? '0' : '1');
+      return !v;
+    });
+
+  const [tasksCollapsed, setTasksCollapsed] = useState(() => localStorage.getItem('ssp2_tasks_collapsed') === '1');
+  const toggleTasksCollapsed = () =>
+    setTasksCollapsed((v) => {
+      localStorage.setItem('ssp2_tasks_collapsed', v ? '0' : '1');
+      return !v;
+    });
+
+  const [stagesCollapsed, setStagesCollapsed] = useState(() => localStorage.getItem('ssp2_stages_collapsed') === '1');
+  const toggleStagesCollapsed = () =>
+    setStagesCollapsed((v) => {
+      localStorage.setItem('ssp2_stages_collapsed', v ? '0' : '1');
+      return !v;
+    });
+
+  const [journalCollapsed, setJournalCollapsed] = useState(() => localStorage.getItem('ssp2_journal_collapsed') === '1');
+  const toggleJournalCollapsed = () =>
+    setJournalCollapsed((v) => {
+      localStorage.setItem('ssp2_journal_collapsed', v ? '0' : '1');
+      return !v;
+    });
 
   // ── المهام ──
   const [newTask, setNewTask] = useState('');
@@ -683,9 +715,16 @@ const SimpleServicePage: React.FC = () => {
 
       {/* ── ثلاثة أقسام بملء الشاشة (نمط الطلبات الإدارية): [الدردشة — يمين] [مساحة العمل] [المراحل — أقصى اليسار] ── */}
       <div className="ssp2-layout">
-        {/* عمود الدردشة — متصل بالحواف من الأعلى للأسفل، الرسائل تتمرر داخله */}
-        <aside className="ssp2-chatcol">
-          <ServiceTeamChat serviceId={serviceId} />
+        {/* عمود الدردشة — متصل بالحواف، قابل للطيّ إلى شريط رفيع */}
+        <aside className={`ssp2-chatcol${chatCollapsed ? ' ssp2-chatcol--min' : ''}`}>
+          {chatCollapsed ? (
+            <button className="ssp2-chatcol__reopen" onClick={toggleChatCollapsed} title="فتح محادثة الفريق">
+              <MessagesSquare size={17} />
+              <span>محادثة الفريق</span>
+            </button>
+          ) : (
+            <ServiceTeamChat serviceId={serviceId} onCollapse={toggleChatCollapsed} />
+          )}
         </aside>
 
         {/* مساحة العمل: شريط أدوات ثابت ثم [مهام | تدوين] وسجل النشاط */}
@@ -715,59 +754,111 @@ const SimpleServicePage: React.FC = () => {
 
           <div className="ssp2-work__scroll">
             <div className="ssp2-work__grid">
-          {/* المهام */}
-          <section className="ssp2-card">
+          {/* المهام — قابلة للتصغير إلى صف دوائر الإنجاز */}
+          <section className="ssp2-card ssp2-card--tasks">
             <div className="ssp2-card__head">
               <span className="ssp2-card__title"><ListChecks size={15} /> المهام</span>
-              <span className="ssp2-card__meta">{tasksDone}/{tasks.length}</span>
+              <span className="ssp2-card__headtools">
+                <span className="ssp2-card__meta">{tasksDone}/{tasks.length}</span>
+                <button
+                  className="ssp2-icon-btn"
+                  onClick={toggleTasksCollapsed}
+                  title={tasksCollapsed ? 'توسيع المهام' : 'تصغير المهام — تبقى دوائر الإنجاز ظاهرة'}
+                >
+                  {tasksCollapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+                </button>
+              </span>
             </div>
-            {tasks.length > 0 && (
-              <div className="ssp2-progress">
-                <div className="ssp2-progress__fill" style={{ width: `${tasks.length ? (tasksDone / tasks.length) * 100 : 0}%` }} />
+            {tasksCollapsed ? (
+              <div className="ssp2-tasks-mini">
+                {tasks.length === 0 ? (
+                  <span className="ssp2-tasks-mini__empty">لا مهام بعد</span>
+                ) : (
+                  tasks.map((t) => (
+                    <button
+                      key={t.id}
+                      className={`ssp2-tasks-mini__dot${t.done ? ' is-done' : ''}`}
+                      onClick={() => toggleTask(t.id)}
+                      disabled={isLocked}
+                      title={`${t.title}${t.done ? ' — منجزة (انقر للتراجع)' : ' — انقر للإنجاز'}`}
+                    >
+                      {t.done && <Check size={11} strokeWidth={3} />}
+                    </button>
+                  ))
+                )}
               </div>
+            ) : (
+              <>
+                {tasks.length > 0 && (
+                  <div className="ssp2-progress">
+                    <div className="ssp2-progress__fill" style={{ width: `${tasks.length ? (tasksDone / tasks.length) * 100 : 0}%` }} />
+                  </div>
+                )}
+                <div className="ssp2-quickadd">
+                  <input
+                    value={newTask}
+                    onChange={(e) => setNewTask(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addTask()}
+                    placeholder="مهمة جديدة... (Enter للإضافة)"
+                    disabled={isLocked || taskBusy}
+                  />
+                  <button className="ssp2-btn ssp2-btn--primary" onClick={addTask} disabled={isLocked || taskBusy || !newTask.trim()}>
+                    <Plus size={14} /> إضافة
+                  </button>
+                </div>
+                <ul className="ssp2-tasks">
+                  {tasks.length === 0 && (
+                    <li className="ssp2-empty">لا مهام بعد — أضف أول مهمة أعلاه لتنظيم عملك.</li>
+                  )}
+                  {tasks.map((t) => (
+                    <li key={t.id} className={`ssp2-task${t.done ? ' ssp2-task--done' : ''}`}>
+                      <button
+                        className="ssp2-task__check"
+                        onClick={() => toggleTask(t.id)}
+                        disabled={isLocked}
+                        title={t.done ? 'إلغاء الإنجاز' : 'إنجاز'}
+                      >
+                        {t.done && <Check size={12} strokeWidth={3} />}
+                      </button>
+                      <span className="ssp2-task__title">{t.title}</span>
+                      {t.done_at && <span className="ssp2-task__date">{fmtDateTime(t.done_at)}</span>}
+                      <button className="ssp2-icon-btn ssp2-icon-btn--danger" onClick={() => removeTask(t.id)} disabled={isLocked} title="حذف">
+                        <Trash2 size={13} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
-            <div className="ssp2-quickadd">
-              <input
-                value={newTask}
-                onChange={(e) => setNewTask(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addTask()}
-                placeholder="مهمة جديدة... (Enter للإضافة)"
-                disabled={isLocked || taskBusy}
-              />
-              <button className="ssp2-btn ssp2-btn--primary" onClick={addTask} disabled={isLocked || taskBusy || !newTask.trim()}>
-                <Plus size={14} /> إضافة
-              </button>
-            </div>
-            <ul className="ssp2-tasks">
-              {tasks.length === 0 && (
-                <li className="ssp2-empty">لا مهام بعد — أضف أول مهمة أعلاه لتنظيم عملك.</li>
-              )}
-              {tasks.map((t) => (
-                <li key={t.id} className={`ssp2-task${t.done ? ' ssp2-task--done' : ''}`}>
-                  <button
-                    className="ssp2-task__check"
-                    onClick={() => toggleTask(t.id)}
-                    disabled={isLocked}
-                    title={t.done ? 'إلغاء الإنجاز' : 'إنجاز'}
-                  >
-                    {t.done && <Check size={12} strokeWidth={3} />}
-                  </button>
-                  <span className="ssp2-task__title">{t.title}</span>
-                  {t.done_at && <span className="ssp2-task__date">{fmtDateTime(t.done_at)}</span>}
-                  <button className="ssp2-icon-btn ssp2-icon-btn--danger" onClick={() => removeTask(t.id)} disabled={isLocked} title="حذف">
-                    <Trash2 size={13} />
-                  </button>
-                </li>
-              ))}
-            </ul>
           </section>
 
-          {/* دفتر التدوين */}
-          <section className="ssp2-card">
+          {/* دفتر التدوين — قابل للتصغير إلى سطر بآخر تدوينة */}
+          <section className="ssp2-card ssp2-card--journal">
             <div className="ssp2-card__head">
               <span className="ssp2-card__title"><NotebookPen size={15} /> دفتر التدوين</span>
-              <span className="ssp2-card__meta">{journal.length} تدوينة</span>
+              <span className="ssp2-card__headtools">
+                <span className="ssp2-card__meta">{journal.length} تدوينة</span>
+                <button
+                  className="ssp2-icon-btn"
+                  onClick={toggleJournalCollapsed}
+                  title={journalCollapsed ? 'توسيع الدفتر' : 'تصغير الدفتر'}
+                >
+                  {journalCollapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+                </button>
+              </span>
             </div>
+            {journalCollapsed ? (
+              <button className="ssp2-journal-mini" onClick={toggleJournalCollapsed} title="انقر لتوسيع الدفتر">
+                {journal.length > 0 ? (
+                  <>
+                    <b>{journal[0].by_name ?? '—'}:</b> {journal[0].text}
+                  </>
+                ) : (
+                  'الدفتر فارغ'
+                )}
+              </button>
+            ) : (
+            <>
             <div className="ssp2-quickadd ssp2-quickadd--area">
               <textarea
                 value={newEntry}
@@ -812,6 +903,8 @@ const SimpleServicePage: React.FC = () => {
                 );
               })}
             </ul>
+            </>
+            )}
           </section>
             </div>
 
@@ -842,11 +935,47 @@ const SimpleServicePage: React.FC = () => {
           </div>
         </main>
 
-        {/* المراحل الحرة — أقصى اليسار، عمود متصل بالحواف */}
-        <aside className="ssp2-stagescol">
+        {/* المراحل الحرة — أقصى اليسار، عمود متصل قابل للطيّ إلى شريط دوائر */}
+        <aside className={`ssp2-stagescol${stagesCollapsed ? ' ssp2-stagescol--min' : ''}`}>
+          {stagesCollapsed ? (
+            <div className="ssp2-stagescol__rail">
+              <button className="ssp2-stagerail__open" onClick={toggleStagesCollapsed} title="فتح المراحل">
+                <Milestone size={16} />
+              </button>
+              <div className="ssp2-stagerail">
+                {stages.map((s, i) => {
+                  const isPaused = !!s.paused_at && !s.done_at;
+                  const isCurrent = i === currentStageIdx && !isPaused && !isLocked;
+                  return (
+                    <div key={s.id} className="ssp2-stagerail__item">
+                      <button
+                        className={`ssp2-stagerail__dot${s.done_at ? ' is-done' : ''}${isPaused ? ' is-paused' : ''}${isCurrent ? ' is-current' : ''}`}
+                        onClick={() => toggleStage(s.id)}
+                        disabled={isLocked}
+                        title={`${s.label}${s.done_at ? ' — منجزة (انقر للتراجع)' : isPaused ? ` — موقوفة${s.pause_reason ? `: ${s.pause_reason}` : ''}` : ' — انقر للإنجاز'}`}
+                      >
+                        {s.done_at ? <Check size={10} strokeWidth={3} /> : isPaused ? <Pause size={8} strokeWidth={3} /> : null}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <span className="ssp2-stagerail__meta">{stagesDone}/{stages.length}</span>
+            </div>
+          ) : (
+          <>
           <div className="ssp2-card__head ssp2-stagescol__head">
             <span className="ssp2-card__title"><Milestone size={15} /> المراحل</span>
-            <span className="ssp2-card__meta">{stagesDone}/{stages.length}</span>
+            <span className="ssp2-card__headtools">
+              <span className="ssp2-card__meta">{stagesDone}/{stages.length}</span>
+              <button
+                className="ssp2-icon-btn"
+                onClick={toggleStagesCollapsed}
+                title="طيّ المراحل — تبقى الدوائر ظاهرة"
+              >
+                <ChevronsLeft size={15} />
+              </button>
+            </span>
           </div>
           {stages.length > 0 && (
             <div className="ssp2-progress ssp2-progress--gold">
@@ -949,6 +1078,8 @@ const SimpleServicePage: React.FC = () => {
                 );
               })}
             </ol>
+          </>
+          )}
         </aside>
       </div>
 
