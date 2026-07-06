@@ -1618,6 +1618,258 @@ body.dark .stc-list {
     left: auto !important;
 }
 
+/* ══════════ «رائد الذكي» — عضو الفريق الافتراضي (فلات، إطار ذهبي رفيع) ══════════ */
+
+.stc-msg--raed {
+    justify-content: flex-start;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+/* الأفاتار: دائرة فلات بإطار ذهبي — «يتنفس» أثناء التفكير (حركة لون الحد فقط، لا توهج) */
+.stc-raed-avatar {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--dashboard-card);
+    border: 1.5px solid var(--law-gold);
+    color: var(--law-gold);
+    margin-bottom: 2px;
+}
+
+.stc-raed-avatar--breathing {
+    animation: stc-raed-breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes stc-raed-breathe {
+    0%, 100% { border-color: var(--law-gold); }
+    50% { border-color: var(--law-gold-light, rgba(184, 144, 46, 0.25)); }
+}
+
+/* فقاعة رائد: بطاقة فلات يميزها حدّ ذهبي رفيع وخيط ذهبي جانبي */
+.stc-raed-bubble {
+    background: var(--dashboard-card);
+    border: 1px solid var(--law-gold);
+    border-inline-start-width: 3px;
+    border-start-start-radius: 3px;
+}
+
+.stc-raed-bubble--failed {
+    border-color: var(--color-border);
+    border-inline-start-color: var(--quiet-gray-300, #cbd5e1);
+}
+
+.stc-raed-bubble--failed .stc-msg__body {
+    color: var(--color-text-secondary);
+}
+
+.stc-raed-name {
+    color: var(--law-gold);
+}
+
+/* «يكتب...» — ثلاث نقاط تتقافز بتعاقب */
+.stc-raed-typing {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 0 2px;
+}
+
+.stc-raed-typing__label {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    margin-inline-end: 3px;
+}
+
+.stc-raed-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--law-gold);
+    animation: stc-raed-bounce 1.2s ease-in-out infinite;
+}
+
+.stc-raed-dot:nth-child(3) { animation-delay: 0.15s; }
+.stc-raed-dot:nth-child(4) { animation-delay: 0.3s; }
+
+@keyframes stc-raed-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
+    30% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* الرد المكتمل يحل محل النقاط بانزلاق ناعم */
+.stc-raed-bubble .stc-msg__body {
+    animation: stc-raed-appear 0.25s ease-out;
+}
+
+@keyframes stc-raed-appear {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* مؤشر عائم (متابعة followup): بلا فقاعة — قد ينتهي بصمت فلا يترك أثراً */
+.stc-raed-floating {
+    padding: 2px 4px;
+}
+
+/* شريط الجلسة النشطة — شفافية: الفريق يعرف أن رائد يسمع */
+.stc-raed-sessionbar {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    background: var(--law-gold-light, rgba(184, 144, 46, 0.08));
+    border-bottom: 1px solid var(--law-gold);
+}
+
+.stc-raed-sessionbar__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--status-success, #16a34a);
+    flex-shrink: 0;
+    animation: stc-raed-breathe-dot 2s ease-in-out infinite;
+}
+
+@keyframes stc-raed-breathe-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* شارات الأفعال المنفَّذة ✅ */
+.stc-raed-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 5px;
+}
+
+.stc-raed-action-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--status-success, #16a34a);
+    background: var(--dashboard-card);
+    border: 1px solid var(--status-success, #16a34a);
+    border-radius: 20px;
+}
+
+/* استشهادات المواد — بطاقات قابلة للفتح */
+.stc-raed-cites {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 6px;
+}
+
+.stc-raed-cite {
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--quiet-gray-50);
+}
+
+.stc-raed-cite summary {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--law-navy);
+    cursor: pointer;
+    list-style: none;
+}
+
+.stc-raed-cite summary::-webkit-details-marker { display: none; }
+
+.stc-raed-cite[open] summary {
+    border-bottom: 1px solid var(--color-border);
+}
+
+.stc-raed-cite svg { color: var(--law-gold); flex-shrink: 0; }
+
+.stc-raed-cite__text {
+    margin: 0;
+    padding: 6px 9px;
+    font-size: 11px;
+    line-height: 1.8;
+    color: var(--color-text-primary);
+    white-space: pre-line;
+}
+
+/* أزرار الاقتراحات القابلة للنقر — الاقتراح ≠ التنفيذ: النقرة للإنسان */
+.stc-raed-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 6px;
+}
+
+.stc-raed-suggest-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: inherit;
+    color: var(--law-navy);
+    background: var(--dashboard-card);
+    border: 1px solid var(--law-gold);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 120ms ease;
+}
+
+.stc-raed-suggest-btn:hover:not(:disabled) {
+    background: var(--law-gold-light, rgba(184, 144, 46, 0.08));
+}
+
+.stc-raed-suggest-btn--done,
+.stc-raed-suggest-btn:disabled {
+    cursor: default;
+    opacity: 0.65;
+}
+
+.stc-raed-suggest-btn--done {
+    color: var(--status-success, #16a34a);
+    border-color: var(--color-border);
+}
+
+/* تلميح الأدب — سطر باهت صغير أسفل الفقاعة */
+.stc-raed-stophint {
+    margin-top: 5px;
+    font-size: 10px;
+    color: var(--color-text-secondary);
+    opacity: 0.8;
+}
+
+/* الوضع الداكن */
+body.dark .stc-raed-avatar,
+body.dark .stc-raed-bubble,
+body.dark .stc-raed-action-chip,
+body.dark .stc-raed-suggest-btn {
+    background: var(--dashboard-card);
+}
+
+body.dark .stc-raed-suggest-btn {
+    color: var(--color-text-primary);
+}
+
+body.dark .stc-raed-cite {
+    background: var(--quiet-gray-100);
+}
+
 /* ── خطاب الخدمة (SimpleLetterComposer — يكمل كلاسات clc-* من الصادر) ── */
 /* كليشة «مبسطة»: سطر هادئ باسم المكتب — مرآة وضع minimal في الـ PDF */
 .ssl-minlh {

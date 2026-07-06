@@ -1,40 +1,85 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
-import { ChevronsRight, Loader2, MessagesSquare, Send, Trash2 } from 'lucide-react';
+import { BookOpenText, CheckCircle2, ChevronsRight, Loader2, MessagesSquare, Send, Sparkles, Trash2 } from 'lucide-react';
 import MentionInput from '../MentionInput';
 import { LegalServiceService } from '../../services/legalServiceService';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { useAuth } from '../../contexts/AuthContext';
-import type { ServiceTeamMessageItem } from '../../types/legalServices';
+import type { RaedState, ServiceTeamMessageItem } from '../../types/legalServices';
 
 /**
  * محادثة الفريق الداخلية على الخدمة — شات بين أعضاء المكتب (لا يظهر للعميل)
  * مع إشارة @ تُنبِّه المذكور في جرس الإشعارات وتوجّهه إلى هنا (#team-chat).
+ *
+ * «رائد الذكي» (حين تكون البوابة مفعّلة): عضو افتراضي يُذكر بـ@رائد فيرد كزميل —
+ * فقاعة «يكتب...» فورية، استشهادات بمواد الأنظمة، شارات أفعال منفَّذة، اقتراحات
+ * قابلة للنقر، شريط جلسة «رائد يتابع النقاش»، والإيقاف بكلمة «وقف».
  */
-const ServiceTeamChat: React.FC<{ serviceId: number; onCollapse?: () => void }> = ({ serviceId, onCollapse }) => {
+/* رائد يتصدر قائمة @ بترميز ذهبي — والاستدعاء بكلمة واحدة: @رائد */
+const RAED_VIRTUAL_MEMBER = {
+  id: 'raed',
+  name: 'رائد الذكي',
+  insertName: 'رائد',
+  description: 'زميلكم الذكي — يجيب، يستدل من الأنظمة، وينفّذ',
+  virtual: true,
+};
+
+const ServiceTeamChat: React.FC<{
+  serviceId: number;
+  onCollapse?: () => void;
+  /* يُستدعى حين ينفّذ رائد فعلاً (مهمة/مرحلة/تدوينة) كي تتحدث بقية الأعمدة */
+  onServiceMutated?: () => void;
+}> = ({ serviceId, onCollapse, onServiceMutated }) => {
   const { user } = useAuth();
   const myId = user?.id != null ? Number(user.id) : null;
 
   const [messages, setMessages] = useState<ServiceTeamMessageItem[]>([]);
+  const [raed, setRaed] = useState<RaedState | null>(null);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
-  const [mentions, setMentions] = useState<number[]>([]);
+  const [mentions, setMentions] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
   /* إعادة mount لمُدخل المنشن بعد الإرسال — يصفّر قائمته الداخلية للمذكورين */
   const [inputKey, setInputKey] = useState(0);
 
   const listRef = useRef<HTMLDivElement>(null);
+  /* رسائل رائد المنفِّذة لأفعال التي عولجت — كي لا نعيد تحديث الصفحة لكل fetch */
+  const seenActionIds = useRef<Set<number>>(new Set());
+  const firstLoad = useRef(true);
+
   const scrollToEnd = () => {
     requestAnimationFrame(() => {
       if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
     });
   };
 
+  const digestRaedActions = useCallback((list: ServiceTeamMessageItem[]) => {
+    let mutated = false;
+    for (const m of list) {
+      if (m.author_type === 'assistant' && m.meta?.status === 'done' && (m.meta.actions?.length ?? 0) > 0) {
+        if (!seenActionIds.current.has(m.id)) {
+          seenActionIds.current.add(m.id);
+          mutated = true;
+        }
+      }
+    }
+    /* أول تحميل: نُحصي القديم بلا تحديث — الأفعال الجديدة فقط تحرّك الصفحة */
+    if (firstLoad.current) {
+      firstLoad.current = false;
+      return;
+    }
+    if (mutated) onServiceMutated?.();
+  }, [onServiceMutated]);
+
   const fetchMessages = useCallback(async (initial = false) => {
     try {
       const res = await LegalServiceService.getTeamChat(serviceId);
       if (res.success) {
-        setMessages(res.data ?? []);
+        const list: ServiceTeamMessageItem[] = res.data ?? [];
+        setMessages(list);
+        setRaed(res.raed ?? null);
+        digestRaedActions(list);
         if (initial) scrollToEnd();
       }
     } catch {
@@ -42,22 +87,43 @@ const ServiceTeamChat: React.FC<{ serviceId: number; onCollapse?: () => void }> 
     } finally {
       setLoading(false);
     }
-  }, [serviceId]);
+  }, [serviceId, digestRaedActions]);
+
+  /* polling ذكي: 4 ثوانٍ ما دام رائد يفكر أو الجلسة حية، وإلا 30 ثانية */
+  const hasThinkingMessage = messages.some((m) => m.author_type === 'assistant' && m.meta?.status === 'thinking');
+  const fastPoll = Boolean(raed?.thinking || raed?.session?.active || hasThinkingMessage);
 
   useEffect(() => {
     fetchMessages(true);
-    const interval = window.setInterval(() => fetchMessages(), 30000);
-    return () => window.clearInterval(interval);
   }, [fetchMessages]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => fetchMessages(), fastPoll ? 4000 : 30000);
+    return () => window.clearInterval(interval);
+  }, [fetchMessages, fastPoll]);
 
   const send = async () => {
     const body = text.trim();
     if (!body || busy) return;
     setBusy(true);
+    /* كتابة @رائد يدوياً (بلا اختيار من القائمة) تكفي لاستدعائه */
+    const finalMentions = raed?.enabled && /@رائد(?=\s|$|[.!؟،])/u.test(body) && !mentions.includes('raed')
+      ? [...mentions, 'raed']
+      : mentions;
     try {
-      const res = await LegalServiceService.sendTeamChatMessage(serviceId, body, mentions);
+      const res = await LegalServiceService.sendTeamChatMessage(serviceId, body, finalMentions);
       if (res.success) {
-        setMessages((prev) => [...prev, res.data]);
+        const appended: ServiceTeamMessageItem[] = [res.data];
+        /* منشن رائد أو ردّه المقنن — الفقاعة تظهر بنفس لحظة الإرسال */
+        if (res.raed?.message) appended.push(res.raed.message);
+        setMessages((prev) => [...prev, ...appended]);
+        if (res.raed) {
+          setRaed({
+            enabled: true,
+            session: res.raed.session ?? null,
+            thinking: Boolean(res.raed.thinking),
+          });
+        }
         setText('');
         setMentions([]);
         setInputKey((k) => k + 1);
@@ -79,6 +145,26 @@ const ServiceTeamChat: React.FC<{ serviceId: number; onCollapse?: () => void }> 
     }
   };
 
+  /* تنفيذ اقتراح رائد بنقرة — بصلاحية الناقر (manage على المسار) */
+  const runSuggested = async (messageId: number, index: number) => {
+    const key = `${messageId}:${index}`;
+    if (busyAction) return;
+    setBusyAction(key);
+    try {
+      const res = await LegalServiceService.executeRaedAction(serviceId, messageId, index);
+      if (res.success) {
+        toast.success(res.message || 'نُفِّذ الاقتراح');
+        await fetchMessages();
+        onServiceMutated?.();
+        scrollToEnd();
+      }
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر تنفيذ الاقتراح'));
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
   /* إبراز الإشارات @فلان داخل نص الرسالة */
   const renderBody = (body: string) => {
     const parts = body.split(/(@[^\s@]+(?:\s[^\s@]+)?)/g);
@@ -94,6 +180,89 @@ const ServiceTeamChat: React.FC<{ serviceId: number; onCollapse?: () => void }> 
   const fmtTime = (iso: string) =>
     new Date(iso).toLocaleString('ar-SA', { dateStyle: 'short', timeStyle: 'short' });
 
+  /* ── فقاعة رائد الذكي بحالاتها: يفكر / رد مكتمل / فشل ── */
+  const renderRaedMessage = (m: ServiceTeamMessageItem) => {
+    const meta = m.meta ?? {};
+    const thinking = meta.status === 'thinking';
+    const failed = meta.status === 'failed';
+
+    return (
+      <div key={m.id} className="stc-msg stc-msg--raed">
+        <span className={`stc-raed-avatar${thinking ? ' stc-raed-avatar--breathing' : ''}`} title="رائد الذكي">
+          <Sparkles size={13} />
+        </span>
+        <div className={`stc-msg__bubble stc-raed-bubble${failed ? ' stc-raed-bubble--failed' : ''}`}>
+          <span className="stc-msg__author stc-raed-name">رائد الذكي</span>
+
+          {thinking ? (
+            <span className="stc-raed-typing" aria-label="رائد يكتب الآن">
+              <span className="stc-raed-typing__label">يكتب</span>
+              <span className="stc-raed-dot" /><span className="stc-raed-dot" /><span className="stc-raed-dot" />
+            </span>
+          ) : (
+            <>
+              <p className="stc-msg__body">{renderBody(m.body)}</p>
+
+              {/* شارات الأفعال المنفَّذة */}
+              {(meta.actions?.length ?? 0) > 0 && (
+                <div className="stc-raed-actions">
+                  {meta.actions!.map((a, i) => (
+                    <span key={i} className="stc-raed-action-chip">
+                      <CheckCircle2 size={11} /> {a.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* استشهادات المواد النظامية — قابلة للفتح */}
+              {(meta.citations?.length ?? 0) > 0 && (
+                <div className="stc-raed-cites">
+                  {meta.citations!.map((c) => (
+                    <details key={c.n} className="stc-raed-cite">
+                      <summary>
+                        <BookOpenText size={11} /> [{c.n}] {c.statute_name}{c.article_number ? ` — ${c.article_number}` : ''}
+                      </summary>
+                      <p className="stc-raed-cite__text">{c.text}</p>
+                    </details>
+                  ))}
+                </div>
+              )}
+
+              {/* اقتراحات قابلة للنقر — تنفيذ بصلاحية الناقر */}
+              {(meta.suggested_actions?.length ?? 0) > 0 && (
+                <div className="stc-raed-suggestions">
+                  {meta.suggested_actions!.map((s, i) => {
+                    const key = `${m.id}:${i}`;
+                    const executed = Boolean(s.executed_at);
+                    return (
+                      <button
+                        key={i}
+                        className={`stc-raed-suggest-btn${executed ? ' stc-raed-suggest-btn--done' : ''}`}
+                        disabled={executed || busyAction !== null}
+                        onClick={() => runSuggested(m.id, i)}
+                        title={executed ? `نفّذها ${s.executed_by ?? ''}` : 'تنفيذ الاقتراح'}
+                      >
+                        {busyAction === key ? <Loader2 size={11} className="ssp2-spin" /> : executed ? <CheckCircle2 size={11} /> : null}
+                        {executed ? `تم — ${s.label_ar}` : s.label_ar}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* تلميح الأدب: يظهر من الرد الثالث المتتالي */}
+              {meta.stop_hint && (
+                <span className="stc-raed-stophint">💡 إذا تبوني أسكت قولوا: وقف</span>
+              )}
+            </>
+          )}
+
+          <span className="stc-msg__time">{fmtTime(m.created_at)}</span>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <section className="ssp2-card" id="team-chat">
       <div className="ssp2-card__head">
@@ -108,13 +277,24 @@ const ServiceTeamChat: React.FC<{ serviceId: number; onCollapse?: () => void }> 
         </span>
       </div>
 
+      {/* شريط الجلسة: شفافية كاملة — الفريق يعرف أن رائد يسمع */}
+      {raed?.session?.active && (
+        <div className="stc-raed-sessionbar">
+          <span className="stc-raed-sessionbar__dot" />
+          رائد يتابع النقاش — اكتب «وقف» لإيقافه
+        </div>
+      )}
+
       <div className="stc-list" ref={listRef}>
         {loading ? (
           <p className="ssp2-empty"><Loader2 size={14} className="ssp2-spin" /> جارٍ التحميل...</p>
         ) : messages.length === 0 ? (
-          <p className="ssp2-empty">لا رسائل بعد — ناقش الخدمة مع فريقك هنا، واستخدم @ لتنبيه زميل.</p>
+          <p className="ssp2-empty">
+            لا رسائل بعد — ناقش الخدمة مع فريقك هنا، واستخدم @ لتنبيه زميل{raed?.enabled ? ' أو لاستدعاء رائد الذكي ✨' : ''}.
+          </p>
         ) : (
           messages.map((m) => {
+            if (m.author_type === 'assistant') return renderRaedMessage(m);
             const mine = myId !== null && Number(m.user_id) === myId;
             return (
               <div key={m.id} className={`stc-msg${mine ? ' stc-msg--mine' : ''}`}>
@@ -134,6 +314,17 @@ const ServiceTeamChat: React.FC<{ serviceId: number; onCollapse?: () => void }> 
             );
           })
         )}
+
+        {/* مؤشر عائم: رائد يعالج رسالة متابعة (قد يرد وقد يكتفي بالقراءة) */}
+        {raed?.thinking && !hasThinkingMessage && !loading && (
+          <div className="stc-msg stc-msg--raed stc-raed-floating">
+            <span className="stc-raed-avatar stc-raed-avatar--breathing"><Sparkles size={13} /></span>
+            <span className="stc-raed-typing">
+              <span className="stc-raed-typing__label">رائد يقرأ</span>
+              <span className="stc-raed-dot" /><span className="stc-raed-dot" /><span className="stc-raed-dot" />
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="stc-compose">
@@ -141,11 +332,14 @@ const ServiceTeamChat: React.FC<{ serviceId: number; onCollapse?: () => void }> 
           key={inputKey}
           value={text}
           onChange={setText}
-          onMentionsChange={(ids) => setMentions(ids.map(Number))}
+          onMentionsChange={(ids) => setMentions(ids)}
           onSubmit={send}
-          placeholder="اكتب لفريقك... @ للإشارة لزميل (Enter للإرسال)"
+          placeholder={raed?.enabled
+            ? 'اكتب لفريقك... @ لتنبيه زميل — و@رائد يستدعي زميلكم الذكي (Enter للإرسال)'
+            : 'اكتب لفريقك... @ للإشارة لزميل (Enter للإرسال)'}
           disabled={busy}
           className="stc-compose__input"
+          virtualMembers={raed?.enabled ? [RAED_VIRTUAL_MEMBER] : undefined}
         />
         <button className="ssp2-btn ssp2-btn--primary" onClick={send} disabled={busy || !text.trim()}>
           {busy ? <Loader2 size={14} className="ssp2-spin" /> : <Send size={14} />} إرسال

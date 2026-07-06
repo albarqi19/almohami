@@ -45,13 +45,52 @@ export interface SimpleStage {
   client_note?: string | null;
 }
 
+/** استشهاد بمادة نظامية في رد «رائد الذكي» */
+export interface RaedCitation {
+  n: number;
+  article_id: number | null;
+  statute_name: string;
+  chapter: string | null;
+  article_number: string | null;
+  text: string;
+}
+
+/** اقتراح قابل للنقر من رد رائد — يُنفَّذ بصلاحية الناقر */
+export interface RaedSuggestedAction {
+  tool: string;
+  args: Record<string, string>;
+  label_ar: string;
+  executed_at?: string;
+  executed_by?: string;
+}
+
+/** meta رسالة رائد: حالة التوليد + الاستشهادات + الأفعال + الاقتراحات */
+export interface RaedMessageMeta {
+  status?: 'thinking' | 'done' | 'failed';
+  canned?: string;
+  citations?: RaedCitation[];
+  actions?: { tool: string; label: string }[];
+  suggested_actions?: RaedSuggestedAction[];
+  stop_hint?: boolean;
+  session_ended?: boolean;
+}
+
+/** حالة رائد على الشات (من استجابات team-chat) */
+export interface RaedState {
+  enabled: boolean;
+  session: { active: boolean; expires_at: string; replies_since_mention: number } | null;
+  thinking: boolean;
+}
+
 /** رسالة محادثة الفريق الداخلية على الخدمة */
 export interface ServiceTeamMessageItem {
   id: number;
   legal_service_id: number;
-  user_id: number;
+  user_id: number | null;
+  author_type?: 'user' | 'assistant';
   body: string;
-  mentions: number[] | null;
+  mentions: (number | string)[] | null;
+  meta?: RaedMessageMeta | null;
   created_at: string;
   user?: { id: number; name: string };
 }

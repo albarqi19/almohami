@@ -225,18 +225,24 @@ export class LegalServiceService {
     return apiClient.post(`/legal-services/${id}/simple/send-portal-link`, channels ? { channels } : {});
   }
 
-  // ── محادثة الفريق الداخلية (على أي خدمة) ──
+  // ── محادثة الفريق الداخلية (على أي خدمة) — raed: حالة «رائد الذكي» ──
 
-  static async getTeamChat(id: number): Promise<{ success: boolean; data: any[] }> {
+  static async getTeamChat(id: number): Promise<{ success: boolean; data: any[]; raed?: any }> {
     return apiClient.get(`/legal-services/${id}/team-chat`);
   }
 
-  static async sendTeamChatMessage(id: number, body: string, mentions?: number[]): Promise<{ success: boolean; data: any; message?: string }> {
+  /** المنشن يقبل معرفات المستخدمين + 'raed' (العضو الافتراضي «رائد الذكي») */
+  static async sendTeamChatMessage(id: number, body: string, mentions?: (number | string)[]): Promise<{ success: boolean; data: any; raed?: any; message?: string }> {
     return apiClient.post(`/legal-services/${id}/team-chat`, { body, mentions: mentions ?? [] });
   }
 
   static async deleteTeamChatMessage(id: number, messageId: number): Promise<{ success: boolean; message?: string }> {
     return apiClient.delete(`/legal-services/${id}/team-chat/${messageId}`);
+  }
+
+  /** تنفيذ اقتراح قابل للنقر من رد رائد — بصلاحية الناقر (manage) */
+  static async executeRaedAction(id: number, messageId: number, actionIndex: number): Promise<{ success: boolean; data: any; raed_message?: any; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/team-chat/raed-action`, { message_id: messageId, action_index: actionIndex });
   }
 
   // ── تأسيس الشركات ──

@@ -723,7 +723,7 @@ const SimpleServicePage: React.FC = () => {
               <span>محادثة الفريق</span>
             </button>
           ) : (
-            <ServiceTeamChat serviceId={serviceId} onCollapse={toggleChatCollapsed} />
+            <ServiceTeamChat serviceId={serviceId} onCollapse={toggleChatCollapsed} onServiceMutated={fetchService} />
           )}
         </aside>
 

@@ -9,13 +9,21 @@ interface MentionInputProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  /* أعضاء افتراضيون يتصدرون قائمة @ (مثل «رائد الذكي» بمعرّف 'raed') */
+  virtualMembers?: MentionUser[];
 }
 
-interface MentionUser {
+export interface MentionUser {
   id: string;
   name: string;
+  /* ما يُدرج في النص بعد @ عند الاختيار (افتراضياً name) — لرائد: «رائد» فقط */
+  insertName?: string;
+  /* سطر وصفي صغير تحت الاسم — يتقدم على ترجمة الدور */
+  description?: string;
   avatar?: string;
   role?: string;
+  /* عضو افتراضي (مساعد ذكي) — يُرسم بأفاتار وترميز لوني مميزين */
+  virtual?: boolean;
 }
 
 const MentionInput: React.FC<MentionInputProps> = ({
@@ -25,7 +33,8 @@ const MentionInput: React.FC<MentionInputProps> = ({
   onSubmit,
   placeholder = 'اكتب تعليقاً... استخدم @ للإشارة',
   disabled = false,
-  className = ''
+  className = '',
+  virtualMembers
 }) => {
   const [showMentionList, setShowMentionList] = useState(false);
   const [mentionSearch, setMentionSearch] = useState('');
@@ -49,14 +58,20 @@ const MentionInput: React.FC<MentionInputProps> = ({
       // استثناء العملاء من قائمة الإشارة (@) — حماية للمحادثات الداخلية
       const response = await UserService.getAllUsers({ limit: 100, exclude_role: 'client' });
       const usersData = response.data || [];
-      setUsers(usersData.map(u => ({
-        id: u.id,
-        name: u.name,
-        avatar: u.avatar,
-        role: u.role
-      })));
+      // الأعضاء الافتراضيون (رائد الذكي) يتصدرون القائمة
+      setUsers([
+        ...(virtualMembers ?? []),
+        ...usersData.map(u => ({
+          id: u.id,
+          name: u.name,
+          avatar: u.avatar,
+          role: u.role
+        }))
+      ]);
     } catch (error) {
       console.error('Failed to load users for mentions:', error);
+      // فشل جلب المستخدمين لا يحجب العضو الافتراضي
+      if (virtualMembers?.length) setUsers(virtualMembers);
     }
   };
 
@@ -154,13 +169,14 @@ const MentionInput: React.FC<MentionInputProps> = ({
   const selectUser = (user: MentionUser) => {
     const textBeforeCursor = value.substring(0, cursorPosition);
     const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    const insertText = user.insertName ?? user.name;
 
     if (lastAtIndex !== -1) {
       const beforeMention = value.substring(0, lastAtIndex);
       const afterCursor = value.substring(cursorPosition);
 
       // إضافة الاسم مع @ في البداية ومسافة في النهاية
-      const newValue = `${beforeMention}@${user.name} ${afterCursor}`;
+      const newValue = `${beforeMention}@${insertText} ${afterCursor}`;
       onChange(newValue);
 
       // إضافة المستخدم للقائمة إذا لم يكن موجوداً
@@ -175,7 +191,7 @@ const MentionInput: React.FC<MentionInputProps> = ({
       }
 
       // تحريك الكرسور بعد الاسم
-      const newCursorPos = lastAtIndex + user.name.length + 2;
+      const newCursorPos = lastAtIndex + insertText.length + 2;
       setTimeout(() => {
         if (textareaRef.current) {
           textareaRef.current.selectionStart = newCursorPos;
@@ -271,12 +287,14 @@ const MentionInput: React.FC<MentionInputProps> = ({
           {filteredUsers.map((user, index) => (
             <button
               key={user.id}
-              className={`mention-input__item ${index === selectedIndex ? 'mention-input__item--selected' : ''}`}
+              className={`mention-input__item ${index === selectedIndex ? 'mention-input__item--selected' : ''}${user.virtual ? ' mention-input__item--virtual' : ''}`}
               onClick={() => selectUser(user)}
               onMouseEnter={() => setSelectedIndex(index)}
             >
-              <div className="mention-input__avatar">
-                {user.avatar ? (
+              <div className={`mention-input__avatar${user.virtual ? ' mention-input__avatar--virtual' : ''}`}>
+                {user.virtual ? (
+                  '✨'
+                ) : user.avatar ? (
                   <img src={user.avatar} alt={user.name} />
                 ) : (
                   getInitials(user.name)
@@ -284,8 +302,8 @@ const MentionInput: React.FC<MentionInputProps> = ({
               </div>
               <div className="mention-input__info">
                 <span className="mention-input__name">{user.name}</span>
-                {user.role && (
-                  <span className="mention-input__role">{getRoleLabel(user.role)}</span>
+                {(user.description || user.role) && (
+                  <span className="mention-input__role">{user.description ?? getRoleLabel(user.role)}</span>
                 )}
               </div>
             </button>
@@ -391,6 +409,34 @@ const MentionInput: React.FC<MentionInputProps> = ({
           width: 100%;
           height: 100%;
           object-fit: cover;
+        }
+
+        /* العضو الافتراضي (رائد الذكي) — فلات بإطار ذهبي رفيع */
+        .mention-input__avatar--virtual {
+          background: var(--dashboard-card, #fff);
+          border: 1.5px solid var(--law-gold, #B8902E);
+          font-size: 14px;
+        }
+
+        /* صف رائد في القائمة: ترميز لوني خفيف (خلفية ذهبية شفيفة + خيط ذهبي جانبي) */
+        .mention-input__item--virtual {
+          background: var(--law-gold-light, rgba(184, 144, 46, 0.07));
+          border-inline-start: 2.5px solid var(--law-gold, #B8902E);
+          border-bottom: 1px solid var(--color-border, #e5e5e5);
+        }
+
+        .mention-input__item--virtual .mention-input__name {
+          color: var(--law-gold, #B8902E);
+          font-weight: 700;
+        }
+
+        .mention-input__item--virtual:hover,
+        .mention-input__item--virtual.mention-input__item--selected {
+          background: var(--law-gold-light, rgba(184, 144, 46, 0.14));
+        }
+
+        body.dark .mention-input__item--virtual {
+          background: rgba(184, 144, 46, 0.1);
         }
 
         .mention-input__info {
