@@ -42,6 +42,7 @@ const Cases = lazyWithRetry(() => import('./pages/Cases'));
 const CaseDetailPage = lazyWithRetry(() => import('./pages/CaseDetailPage'));
 const BankruptcyDetailPage = lazyWithRetry(() => import('./pages/BankruptcyDetailPage'));
 const ReconciliationDetailPage = lazyWithRetry(() => import('./pages/ReconciliationDetailPage'));
+const GrievanceDetailPage = lazyWithRetry(() => import('./pages/GrievanceDetailPage'));
 const UpcomingSessions = lazyWithRetry(() => import('./pages/UpcomingSessions'));
 const LegalDeadlines = lazyWithRetry(() => import('./pages/LegalDeadlines'));
 const SessionPrep = lazyWithRetry(() => import('./pages/SessionPrep'));
@@ -200,6 +201,12 @@ function App() {
               <Route path="reconciliation/:caseId" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <ReconciliationDetailPage />
+                </ProtectedRoute>
+              } />
+              {/* ديوان المظالم (معين) — صفحة تفاصيل الدعوى الإدارية */}
+              <Route path="grievance/:caseId" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                  <GrievanceDetailPage />
                 </ProtectedRoute>
               } />
               <Route path="sessions" element={

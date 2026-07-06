@@ -133,13 +133,15 @@ const CaseDetailPage: React.FC = () => {
   // Ref to prevent duplicate fetches
   const hasFetchedRef = useRef<string | null>(null);
 
-  // صفوف المرساة (إفلاس/صلح) لها صفحات مخصّصة — الروابط القديمة /cases/{id} تُحوَّل تلقائياً
+  // صفوف المرساة (إفلاس/صلح/ديوان المظالم) لها صفحات مخصّصة — الروابط القديمة /cases/{id} تُحوَّل تلقائياً
   useEffect(() => {
     if (!caseData) return;
     if ((caseData as any).is_bankruptcy) {
       navigate(`/bankruptcy/${caseData.id}`, { replace: true });
     } else if ((caseData as any).is_reconciliation) {
       navigate(`/reconciliation/${caseData.id}`, { replace: true });
+    } else if ((caseData as any).is_grievance) {
+      navigate(`/grievance/${caseData.id}`, { replace: true });
     }
   }, [caseData, navigate]);
 

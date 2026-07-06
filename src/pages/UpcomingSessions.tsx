@@ -79,6 +79,7 @@ interface Session {
 		client_id?: number | null;
 		is_bankruptcy?: boolean;
 		is_reconciliation?: boolean;
+		is_grievance?: boolean;
 		lawyers?: Array<{ id: number; name: string; pivot?: { is_primary?: boolean | number | null } }>;
 		primaryLawyer?: Array<{ id: number; name: string }> | null;
 		// Laravel serializes camelCase relations to snake_case in JSON output.
@@ -86,10 +87,11 @@ interface Session {
 	};
 }
 
-// جلسات الإفلاس/الصلح (صف مرساة) تُفتح على صفحتيهما المخصّصتين لا صفحة القضية
+// جلسات الإفلاس/الصلح/ديوان المظالم (صف مرساة) تُفتح على صفحاتها المخصّصة لا صفحة القضية
 const caseUrlFor = (s: Session): string =>
 	s.case?.is_bankruptcy ? `/bankruptcy/${s.case_id}`
 	: s.case?.is_reconciliation ? `/reconciliation/${s.case_id}`
+	: s.case?.is_grievance ? `/grievance/${s.case_id}`
 	: `/cases/${s.case_id}`;
 
 const UpcomingSessions: React.FC = () => {

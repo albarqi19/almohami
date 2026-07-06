@@ -164,6 +164,9 @@ export interface Case {
   // الصلح (تراضي) — صف مرساة يظهر في قائمة القضايا بشارة خضراء ويعرض تفاصيل الصلح
   is_reconciliation?: boolean;
   reconciliation_request_id?: number;
+  // ديوان المظالم (معين) — صف مرساة بشارة كحلية يوجّه لصفحة الدعوى الإدارية
+  is_grievance?: boolean;
+  grievance_case_id?: number | null;
   // Case demands and proofs
   case_demands?: string;
   case_proofs?: string;
@@ -418,6 +421,110 @@ export interface ReconciliationData {
     lawyers?: { id: number; name: string }[];
   };
   request: ReconciliationRequest;
+}
+
+// ===== ديوان المظالم (معين) =====
+export interface GrievanceParty {
+  id: number;
+  party_role: string; // plaintiff | plaintiff_agent | defendant | defendant_agent
+  party_type?: string;
+  name?: string;
+  status?: string;
+  capacity?: string;
+  join_date_hijri?: string;
+}
+
+export interface GrievanceSession {
+  id: number;
+  session_date_hijri?: string;
+  session_date_gregorian?: string;
+  session_time?: string;
+  session_type?: string;
+  is_remote?: boolean;
+  notes?: string;
+}
+
+export interface GrievanceRuling {
+  id: number;
+  ruling_date_hijri?: string;
+  ruling_date_gregorian?: string;
+  ruling_type?: string;
+  delivery_date_hijri?: string;
+  delivery_date_gregorian?: string;
+  deadline_to_hijri?: string;
+  verdict_summary?: string;
+}
+
+export interface GrievanceMinute {
+  id: number;
+  circuit?: string;
+  minute_type?: string;
+  minute_no?: string;
+  minute_date_hijri?: string;
+  decision_text?: string;
+}
+
+export interface GrievanceMemo {
+  id: number;
+  memo_no?: string;
+  memo_date_hijri?: string;
+  session_date_hijri?: string;
+  submitted_by?: string;
+  subject?: string;
+  memo_text?: string;
+  has_attachment?: boolean;
+}
+
+export interface GrievanceRequest {
+  id: number;
+  object_key: string;
+  vals_token?: string;
+  case_no?: string;
+  case_year?: string;
+  case_date_hijri?: string;
+  register_no?: string;
+  register_date_hijri?: string;
+  request_no?: string;
+  request_year?: string;
+  court?: string;
+  circuit?: string;
+  court_level?: string; // ابتدائية | استئناف | عليا
+  case_type?: string;
+  case_status?: string; // منظورة | مفصول فيها
+  file_location?: string;
+  subject?: string;
+  ruling_summary?: string;
+  transmission?: string;
+  requests_text?: string;
+  plaintiff_name?: string;
+  defendant_name?: string;
+  next_session_date_hijri?: string;
+  ruling_date_text?: string;
+  delivery_date_text?: string;
+  attachments?: { type?: string; size?: string; desc?: string; notes?: string }[];
+  parties?: GrievanceParty[];
+  sessions?: GrievanceSession[];
+  rulings?: GrievanceRuling[];
+  minutes?: GrievanceMinute[];
+  memos?: GrievanceMemo[];
+}
+
+export interface GrievanceDetail {
+  case: {
+    id: number;
+    file_number: string;
+    title: string;
+    status: string;
+    status_arabic?: string;
+    court?: string | null;
+    client_name?: string | null;
+    client_phone?: string | null;
+    client_role?: string | null;
+    opponent_name?: string | null;
+    is_grievance: boolean;
+    lawyers?: { id: number; name: string }[];
+  };
+  request: GrievanceRequest;
 }
 
 // Case Session - جلسة القضية

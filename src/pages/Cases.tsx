@@ -48,10 +48,11 @@ const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
 	dismissed: { label: 'مرفوضة', class: 'status-badge--closed' }
 };
 
-// توجيه القضية حسب نوعها: الإفلاس والصلح لصفحتيهما المخصّصتين، والبقية لتفاصيل القضية
+// توجيه القضية حسب نوعها: الإفلاس والصلح وديوان المظالم لصفحاتها المخصّصة، والبقية لتفاصيل القضية
 const caseDetailUrl = (c: Case): string =>
 	c.is_bankruptcy ? `/bankruptcy/${c.id}`
 	: (c as any).is_reconciliation ? `/reconciliation/${c.id}`
+	: (c as any).is_grievance ? `/grievance/${c.id}`
 	: `/cases/${c.id}`;
 
 // Case type labels
@@ -517,7 +518,7 @@ const Cases: React.FC = () => {
 						return (
 							<tr
 								key={c.id}
-								className={c.is_bankruptcy ? 'is-bankruptcy' : undefined}
+								className={c.is_bankruptcy ? 'is-bankruptcy' : ((c as any).is_grievance ? 'is-grievance' : undefined)}
 								onClick={() => navigate(caseDetailUrl(c))}
 							>
 								{/* العمود 1: القضية (عنوان + رقم + نوع) */}
@@ -527,6 +528,7 @@ const Cases: React.FC = () => {
 										<div className="erp-cell__secondary">
 											{c.is_bankruptcy && <span className="erp-cell__tag erp-cell__tag--bankruptcy">إفلاس</span>}
 											{(c as any).is_reconciliation && <span className="erp-cell__tag" style={{ background: 'rgba(21,115,71,0.12)', color: '#157347', fontWeight: 700 }}>صلح</span>}
+											{(c as any).is_grievance && <span className="erp-cell__tag erp-cell__tag--grievance">ديوان المظالم</span>}
 											<span className="erp-cell__tag">{typeLabel}</span>
 										</div>
 									</div>
@@ -646,6 +648,7 @@ const Cases: React.FC = () => {
 						<div className="case-card__meta" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
 							<span className="type-badge">{typeLabel}</span>
 							{(c as any).is_reconciliation && <span className="type-badge" style={{ background: 'rgba(21,115,71,0.12)', color: '#157347' }}>صلح</span>}
+							{(c as any).is_grievance && <span className="type-badge" style={{ background: 'var(--law-navy-light, #eef2f7)', color: 'var(--law-navy, #1E3A5F)' }}>ديوان المظالم</span>}
 							{(c as any).outcome && (
 								<OutcomeBadge
 									size="sm"

@@ -497,6 +497,22 @@ body.dark .cases-table thead {
     font-weight: 600;
 }
 
+/* ديوان المظالم (معين) — نفس النمط الفلات بشريط كحلي رفيع */
+.cases-table tbody tr.is-grievance {
+    background: rgba(30, 58, 95, 0.04);
+}
+.cases-table tbody tr.is-grievance:hover {
+    background: rgba(30, 58, 95, 0.08);
+}
+.cases-table tbody tr.is-grievance td:first-child {
+    border-right: 3px solid var(--law-navy);
+}
+.erp-cell__tag--grievance {
+    background: var(--law-navy-light, #eef2f7);
+    color: var(--law-navy);
+    font-weight: 600;
+}
+
 .erp-cell__row {
     display: flex;
     align-items: center;
