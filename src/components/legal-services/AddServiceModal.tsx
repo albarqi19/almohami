@@ -420,7 +420,7 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
     try {
       const qs = search ? `&search=${encodeURIComponent(search)}` : '';
       const res = await apiClient.get<{ success: boolean; data: { data: UserOption[] } | UserOption[] }>(
-        `/users?role=lawyer${qs}`
+        `/users?exclude_role=client&limit=100${qs}`
       );
       const list = Array.isArray((res as any).data)
         ? (res as any).data
@@ -611,7 +611,7 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
         <div className="asm-property-row">
           <div className="asm-property-label">
             <Briefcase size={15} className="asm-property-icon" />
-            <span>المحامي المسؤول</span>
+            <span>الموظف المسؤول</span>
           </div>
           <div className="asm-property-value">
             <SearchableDropdown
@@ -619,7 +619,7 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
               onChange={(id) => update('assigned_lawyer_id', id)}
               options={lawyers}
               loading={lawyersLoading}
-              placeholder="اختر المحامي..."
+              placeholder="اختر الموظف..."
               searchValue={lawyerSearch}
               onSearchChange={setLawyerSearch}
               onOpen={() => { if (lawyers.length === 0) fetchLawyers(''); }}
