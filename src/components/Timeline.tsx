@@ -13,7 +13,8 @@ import {
   Scale,
   PlusCircle,
   History,
-  Activity
+  Activity,
+  EyeOff
 } from 'lucide-react';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
@@ -32,6 +33,8 @@ export interface TimelineEvent {
     hearingDate?: Date;
     contactInfo?: string;
   };
+  /** نشاط آلي داخلي لا يظهر للعميل — يُعرض بمؤشر صغير في واجهة المكتب */
+  hidden_from_client?: boolean;
 }
 
 interface TimelineProps {
@@ -129,6 +132,15 @@ const Timeline: React.FC<TimelineProps> = ({ events }) => {
                     <span className="notion-timeline__object">
                       {event.type === 'status_changed' ? event.metadata?.newStatus : event.title}
                     </span>
+                    {event.hidden_from_client && (
+                      <span
+                        className="notion-timeline__hidden-tag"
+                        title="هذا الإجراء داخلي — لا يظهر للعميل في بوابته"
+                      >
+                        <EyeOff size={11} />
+                        لا يظهر للعميل
+                      </span>
+                    )}
                   </div>
                   <span className="notion-timeline__date">
                     {formatRelativeDate(event.date)}

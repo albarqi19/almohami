@@ -16,7 +16,8 @@ import {
   Inbox,
   XCircle,
   RefreshCw,
-  Play
+  Play,
+  EyeOff
 } from 'lucide-react';
 import type { Activity } from '../types';
 import { ActivityService } from '../services/activityService';
@@ -52,7 +53,8 @@ const Activities: React.FC = () => {
           taskId: a.task_id ? String(a.task_id) : undefined,
           performedBy: a.performed_by ? String(a.performed_by) : 'system',
           performedAt: new Date(a.created_at || a.performed_at || new Date()),
-          metadata: a.metadata || {}
+          metadata: a.metadata || {},
+          hidden_from_client: a.hidden_from_client
         }));
 
         setActivities(transformedActivities);
@@ -238,6 +240,12 @@ const Activities: React.FC = () => {
           <span className="activity-card__badge">
             {getActivityTypeText(activity.type)}
           </span>
+          {activity.hidden_from_client && (
+            <span className="activity-card__tag" title="هذا الإجراء داخلي — لا يظهر للعميل في بوابته">
+              <EyeOff size={10} />
+              لا يظهر للعميل
+            </span>
+          )}
         </div>
       </motion.div>
     );

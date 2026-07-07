@@ -199,7 +199,8 @@ const CaseDetailPage: React.FC = () => {
           description: activity.description || '',
           date: new Date(activity.date),
           user: activity.user,
-          metadata: activity.metadata
+          metadata: activity.metadata,
+          hidden_from_client: activity.hidden_from_client
         }));
 
         setTimelineEvents(timelineEventsData);
@@ -294,7 +295,8 @@ const CaseDetailPage: React.FC = () => {
         description: activity.description || '',
         date: new Date(activity.date),
         user: activity.user,
-        metadata: activity.metadata
+        metadata: activity.metadata,
+        hidden_from_client: activity.hidden_from_client
       }));
 
       setTimelineEvents(timelineEventsData);

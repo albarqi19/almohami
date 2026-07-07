@@ -138,6 +138,22 @@ body.dark .notion-timeline__icon-wrapper {
     white-space: nowrap;
 }
 
+/* مؤشر «لا يظهر للعميل» — وسم صغير باهت على الأنشطة الآلية الداخلية (واجهة المكتب فقط) */
+.notion-timeline__hidden-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-text-secondary, #6b7280);
+    background: var(--color-surface-hover, rgba(107, 114, 128, 0.08));
+    border: 1px solid var(--color-border, rgba(107, 114, 128, 0.2));
+    border-radius: 4px;
+    padding: 1px 6px;
+    white-space: nowrap;
+    line-height: 1.6;
+}
+
 .notion-timeline__description {
     font-size: 13px;
     color: var(--color-text-secondary);

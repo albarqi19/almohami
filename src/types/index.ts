@@ -754,6 +754,8 @@ export interface Activity {
   performedBy: string;
   performedAt: Date;
   metadata?: Record<string, any>;
+  /** نشاط آلي داخلي لا يظهر للعميل في بوابته (يرسله الباك للمكتب فقط لعرض مؤشر) */
+  hidden_from_client?: boolean;
 }
 
 export const ActivityType = {
