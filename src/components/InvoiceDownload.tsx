@@ -320,20 +320,40 @@ export const generateInvoiceHTML = (invoice: InvoiceData, tenant: TenantData): s
 
 export const downloadInvoice = async (invoice: InvoiceData, tenant: TenantData): Promise<void> => {
   const html = generateInvoiceHTML(invoice, tenant);
-  
-  // فتح نافذة جديدة للطباعة
-  const printWindow = window.open('', '_blank');
-  if (printWindow) {
-    printWindow.document.write(html);
-    printWindow.document.close();
-    
-    // انتظر تحميل المحتوى ثم اطبع
-    printWindow.onload = () => {
-      setTimeout(() => {
-        printWindow.print();
-      }, 250);
-    };
-  }
+
+  // الطباعة عبر iframe مخفي بدل نافذة منبثقة:
+  // window.open + document.write لا يُطلق onload بشكل موثوق (خاصة في Chrome)
+  // مما يؤدي إلى استدعاء print() قبل رسم المحتوى → صفحة بيضاء فارغة.
+  // حدث load الخاص بالـ iframe موثوق، ولا يصطدم بحاصر النوافذ المنبثقة.
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  iframe.setAttribute('aria-hidden', 'true');
+
+  iframe.onload = () => {
+    // تأخير بسيط لضمان اكتمال تخطيط المحتوى قبل فتح حوار الطباعة
+    setTimeout(() => {
+      try {
+        const win = iframe.contentWindow;
+        if (win) {
+          win.focus();
+          win.print();
+        }
+      } finally {
+        // أزل الـ iframe بعد انتهاء حوار الطباعة
+        setTimeout(() => {
+          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        }, 1000);
+      }
+    }, 300);
+  };
+
+  document.body.appendChild(iframe);
+  iframe.srcdoc = html;
 };
 
 // مكون معاينة الفاتورة (اختياري)
