@@ -68,12 +68,14 @@ const generateSlug = (name: string): string => {
         slug = slug.split(arabic).join(english);
     }
 
+    // القصّ قبل إزالة شرطات الأطراف — القصّ بعدها قد يولّد شرطة نهائية
+    // (slug بشرطة نهائية اسم DNS غير صالح ويفشل إنشاء الرابط في Vercel)
     return slug
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '')
         .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 30);
+        .slice(0, 30)
+        .replace(/^-+|-+$/g, '');
 };
 
 /** يحوّل أي صيغة جوال سعودي إلى الصيغة المحلية 05XXXXXXXX (للعرض والتعديل). */
@@ -343,8 +345,8 @@ const RegisterTenantContent: React.FC = () => {
         const slug = formData.company_slug.trim();
         if (!slug) {
             newErrors.company_slug = 'المعرّف الفريد مطلوب — يتولّد تلقائياً من اسم الشركة ويمكنك تعديله';
-        } else if (!/^[a-z0-9-]+$/.test(slug)) {
-            newErrors.company_slug = 'المعرّف يقبل أحرفاً إنجليزية صغيرة وأرقاماً وشرطات فقط';
+        } else if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) {
+            newErrors.company_slug = 'المعرّف يقبل أحرفاً إنجليزية صغيرة وأرقاماً وشرطات فقط، ولا يبدأ أو ينتهي بشرطة';
         } else if (slug.length > SLUG_MAX) {
             newErrors.company_slug = `المعرّف طويل جداً — اختصره إلى ${SLUG_MAX} حرفاً أو أقل ليكون رابطك سهل التذكر`;
         }
