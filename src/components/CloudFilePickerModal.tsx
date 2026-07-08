@@ -59,6 +59,8 @@ const CloudFilePickerModal: React.FC<CloudFilePickerModalProps> = ({
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    // انتهت جلسة OneDrive (التوكن) — نعرض دعوة لإعادة الربط بدل قائمة فارغة مضلّلة.
+    const [reconnectMessage, setReconnectMessage] = useState<string | null>(null);
 
     // Client permissions
     const [clientCanView, setClientCanView] = useState(true);
@@ -93,8 +95,15 @@ const CloudFilePickerModal: React.FC<CloudFilePickerModalProps> = ({
 
     const loadFiles = async (folderId: string) => {
         setLoading(true);
+        setReconnectMessage(null);
         try {
             const result = await CloudStorageService.getOneDriveFiles(folderId);
+            // انتهاء جلسة OneDrive: اعرض دعوة إعادة الربط بدل قائمة فارغة مضلّلة.
+            if (result.reconnectRequired) {
+                setReconnectMessage(result.message || 'انتهت جلسة OneDrive. أعد ربط حسابك من الإعدادات للمتابعة.');
+                setFiles([]);
+                return;
+            }
             setFiles(result.files || []);
         } catch (err) {
             console.error('Failed to load files:', err);
@@ -232,6 +241,16 @@ const CloudFilePickerModal: React.FC<CloudFilePickerModalProps> = ({
         f.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // ربط/إعادة ربط OneDrive صلاحية المدير فقط (can_connect). غير المدير يُطلب منه
+    // مراجعة المدير بدل عرض زر ربط لا يملك صلاحيته.
+    const canManageConnection = status?.can_connect === true;
+    const notLinkedTitle = reconnectMessage ? 'انتهت جلسة OneDrive' : 'OneDrive غير مربوط';
+    const notLinkedDescription = canManageConnection
+        ? (reconnectMessage || 'اربط حساب OneDrive الخاص بك لتتمكن من تعيين الملفات السحابية للقضايا')
+        : (reconnectMessage
+            ? 'انتهت جلسة OneDrive. يرجى الطلب من مدير المكتب إعادة ربط الحساب لعرض الملفات السحابية.'
+            : (status?.message || 'لم يتم ربط OneDrive بعد. تواصل مع مدير المكتب لربط الحساب.'));
+
     if (!isOpen) return null;
 
     return (
@@ -289,8 +308,8 @@ const CloudFilePickerModal: React.FC<CloudFilePickerModalProps> = ({
                             </div>
                         )}
 
-                        {!status?.connected ? (
-                            /* Not Connected State */
+                        {(!status?.connected || reconnectMessage) ? (
+                            /* حالة عدم الربط أو انتهاء الجلسة (إعادة الربط) */
                             <div style={{
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -317,29 +336,40 @@ const CloudFilePickerModal: React.FC<CloudFilePickerModalProps> = ({
                                     color: 'var(--color-heading)',
                                     marginBottom: '8px'
                                 }}>
-                                    اتصل بـ OneDrive
+                                    {notLinkedTitle}
                                 </h3>
                                 <p style={{
                                     fontSize: '14px',
                                     color: 'var(--color-text-secondary)',
                                     marginBottom: '24px',
-                                    maxWidth: '300px'
+                                    maxWidth: '340px',
+                                    lineHeight: 1.7
                                 }}>
-                                    اربط حساب OneDrive الخاص بك لتتمكن من تعيين الملفات السحابية للقضايا
+                                    {notLinkedDescription}
                                 </p>
-                                <button
-                                    onClick={handleConnect}
-                                    disabled={connecting}
-                                    className="btn-primary"
-                                    style={{ padding: '12px 32px' }}
-                                >
-                                    {connecting ? (
-                                        <Loader2 size={18} className="animate-spin" />
-                                    ) : (
-                                        <Cloud size={18} />
-                                    )}
-                                    ربط OneDrive
-                                </button>
+                                {canManageConnection ? (
+                                    <button
+                                        onClick={handleConnect}
+                                        disabled={connecting}
+                                        className="btn-primary"
+                                        style={{ padding: '12px 32px' }}
+                                    >
+                                        {connecting ? (
+                                            <Loader2 size={18} className="animate-spin" />
+                                        ) : (
+                                            <Cloud size={18} />
+                                        )}
+                                        {reconnectMessage ? 'إعادة ربط OneDrive' : 'ربط OneDrive'}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={onClose}
+                                        className="btn-secondary"
+                                        style={{ padding: '12px 32px' }}
+                                    >
+                                        حسناً
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             <>
@@ -576,7 +606,7 @@ const CloudFilePickerModal: React.FC<CloudFilePickerModalProps> = ({
                     </div>
 
                     {/* Footer */}
-                    {status?.connected && (
+                    {status?.connected && !reconnectMessage && (
                         <div className="task-modal-footer">
                             <button className="btn-secondary" onClick={onClose}>
                                 إلغاء

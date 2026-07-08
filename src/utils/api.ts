@@ -71,10 +71,41 @@ class ApiClient {
 
       if (!response.ok) {
         if (response.status === 401) {
-          // Unauthorized - clear token and redirect to login
+          const errorData = await response.json().catch(() => ({}));
+
+          // حماية: 401 قد تأتي من تكامل خارجي (OneDrive/…) لا من انتهاء جلسة التطبيق.
+          // في هذه الحالة لا نطرد المستخدم — نمرّر الخطأ كطلب إعادة ربط ليعالجه المكوّن.
+          if (errorData.reconnect_required || errorData.code === 'onedrive_reconnect_required') {
+            const error = new Error(errorData.message || 'انتهت جلسة الربط، أعد المحاولة') as Error & {
+              reconnectRequired?: boolean;
+              provider?: string;
+            };
+            error.reconnectRequired = true;
+            error.provider = errorData.provider || 'onedrive';
+            throw error;
+          }
+
+          // انتهاء جلسة التطبيق الحقيقي: امسح التوكن ووجّه لصفحة الدخول.
           this.setToken(null);
           window.location.href = '/login';
-          throw new Error('Unauthorized');
+          throw new Error('انتهت جلسة الدخول، يرجى تسجيل الدخول من جديد');
+        }
+
+        // 409 Conflict — أبرز استخدامها: تكامل خارجي يتطلب إعادة الربط (OneDrive).
+        // لا يطرد المستخدم؛ يحمل reconnectRequired ليعرض المكوّن زر «إعادة الربط».
+        if (response.status === 409) {
+          const errorData = await response.json().catch(() => ({}));
+          const error = new Error(errorData.message || 'تعذّر إتمام العملية، حاول لاحقاً') as Error & {
+            reconnectRequired?: boolean;
+            provider?: string;
+            errors?: Record<string, string[]>;
+          };
+          if (errorData.reconnect_required || errorData.code === 'onedrive_reconnect_required') {
+            error.reconnectRequired = true;
+            error.provider = errorData.provider || 'onedrive';
+          }
+          error.errors = errorData.errors;
+          throw error;
         }
 
         if (response.status === 403) {
@@ -186,13 +217,34 @@ class ApiClient {
       });
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+
         if (response.status === 401) {
+          // حماية: لا تطرد المستخدم إن كانت 401 من تكامل خارجي يتطلب إعادة الربط.
+          if (errorData.reconnect_required || errorData.code === 'onedrive_reconnect_required') {
+            const error = new Error(errorData.message || 'انتهت جلسة الربط، أعد المحاولة') as Error & {
+              reconnectRequired?: boolean;
+              provider?: string;
+            };
+            error.reconnectRequired = true;
+            error.provider = errorData.provider || 'onedrive';
+            throw error;
+          }
           this.setToken(null);
           window.location.href = '/login';
-          throw new Error('Unauthorized');
+          throw new Error('انتهت جلسة الدخول، يرجى تسجيل الدخول من جديد');
         }
 
-        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 409 && (errorData.reconnect_required || errorData.code === 'onedrive_reconnect_required')) {
+          const error = new Error(errorData.message || 'تعذّر إتمام العملية، حاول لاحقاً') as Error & {
+            reconnectRequired?: boolean;
+            provider?: string;
+          };
+          error.reconnectRequired = true;
+          error.provider = errorData.provider || 'onedrive';
+          throw error;
+        }
+
         throw new Error(errorData.message || `HTTP ${response.status}`);
       }
 

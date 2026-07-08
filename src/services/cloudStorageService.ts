@@ -82,6 +82,10 @@ export interface CloudStorageFilesResponse {
     success: boolean;
     files: CloudStorageFile[];
     folder_id: string;
+    /** انتهت جلسة OneDrive أو لم يُربط — على الواجهة عرض دعوة لإعادة الربط بدل قائمة فارغة. */
+    reconnectRequired?: boolean;
+    /** رسالة عربية جاهزة للعرض عند الفشل. */
+    message?: string;
 }
 
 interface AuthUrlResponse {
@@ -135,7 +139,16 @@ export const CloudStorageService = {
             const response = await apiClient.get<CloudStorageFilesResponse>(endpoint);
             return response;
         } catch (error) {
-            return { success: false, files: [], folder_id: 'root' };
+            // مرّر إشارة إعادة الربط والرسالة العربية للمكوّن بدل ابتلاعها،
+            // حتى يعرض دعوة «أعد ربط OneDrive» بدل «لا توجد ملفات» المضلّلة.
+            const err = error as { reconnectRequired?: boolean; message?: string };
+            return {
+                success: false,
+                files: [],
+                folder_id: 'root',
+                reconnectRequired: err.reconnectRequired,
+                message: err.message,
+            };
         }
     },
 
