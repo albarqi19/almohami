@@ -7,7 +7,7 @@
 // قرارات المالك:
 //  - تعديل بيانات المهلة وحذفها للمدير فقط (أزرار الحالة تبقى للمحامي)
 //  - زر «تم الإنجاز» يبقى بعد الانقضاء: إنجاز بأثر رجعي بتاريخ فعلي
-//    ومرجع توثيق إلزاميين + إشعار المديرين
+//    ومرجع توثيق إلزاميين (بلا إشعار للمديرين — قرار 2026-07-12)
 //  - تصنيف المهل: اعتراض على حكم / ضبط الجلسة / أخرى
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -758,7 +758,6 @@ const LegalDeadlines: React.FC = () => {
               <p className="ssp2-hint">
                 «{retroTarget.title}» — انقضى موعدها يوم {formatDue(retroTarget.due_date)}.
                 إن كان الإجراء أُنجز في وقته وفاتك التوثيق فقط، أدخل تاريخه الفعلي وسيوسم «أُنجزت في وقتها».
-                يصل المديرين إشعار بهذا التوثيق.
               </p>
               <label className="ssp2-label">متى أُنجز الإجراء فعلاً؟</label>
               <input
