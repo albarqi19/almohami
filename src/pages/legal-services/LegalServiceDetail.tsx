@@ -1302,10 +1302,13 @@ const LegalServiceDetail: React.FC = () => {
                   <Scale size={14} />
                 </div>
                 <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">المحامي المسؤول</div>
+                  <div className="lsd-info-item__label">المحامون المسؤولون</div>
                   <div className="lsd-info-item__value">
                     {service.assigned_lawyer?.name ?? (
                       <span className="lsd-info-item__value--muted">غير محدد</span>
+                    )}
+                    {(service.assignees?.length ?? 0) > 1 && (
+                      <span className="lsd-info-item__value--muted"> +{service.assignees!.length - 1}</span>
                     )}
                   </div>
                 </div>
@@ -2786,6 +2789,7 @@ const LegalServiceDetail: React.FC = () => {
               </span>
               <span className="lsd-aside-row__value">
                 {service.assigned_lawyer?.name ?? 'غير محدد'}
+                {(service.assignees?.length ?? 0) > 1 && ` +${service.assignees!.length - 1}`}
               </span>
             </div>
             <div className="lsd-aside-row">

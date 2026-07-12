@@ -36,6 +36,7 @@ export interface User {
     name?: string;
     hr_enabled?: boolean;
     correspondence_enabled?: boolean;
+    session_copilot_enabled?: boolean;
     [key: string]: any;
   };
 }
@@ -193,6 +194,52 @@ export interface Case {
   outcome_celebrated_by_current_user?: boolean; // per-user flag
   ai_outcome_was_correct?: boolean | null;
   client_role?: 'plaintiff' | 'defendant' | 'third_party' | 'unknown';
+  notes?: string;
+  // التصنيف الذكي وفق شجرة تصانيف ناجز (غرفة التجهيز)
+  ai_classification_status?: AiClassificationStatus | null;
+  ai_classification?: CaseAiClassification | null;
+  ai_classified_at?: string | null;
+}
+
+// ===== التصنيف الذكي وفق شجرة ناجز (غرفة تجهيز القضية) =====
+export type AiClassificationStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
+
+export interface CaseAiClassification {
+  classification_id?: number;
+  main_category?: string;
+  sub_category?: string | null;
+  case_type?: string;
+  /** الطلب الأنسب المختار آلياً من طلبات هذا النوع في ناجز */
+  suggested_request?: string | null;
+  /** قيمة المطالبة المستخرَجة من نص القضية (لا علاقة لخانة العقد) */
+  claim_amount?: number | null;
+  available_requests?: string[];
+  definition?: string | null;
+  confidence?: 'high' | 'medium' | 'low';
+  reasoning?: string;
+  alternative?: {
+    classification_id: number;
+    main_category: string;
+    sub_category?: string | null;
+    case_type: string;
+  } | null;
+  /** تقدير التكاليف القضائية الآلي — النموذج يحدد نوع المطالبة والحساب في الباك بمعادلات الوزارة */
+  fee_estimate?: CaseFeeEstimate | null;
+  /** سبب الفشل/التخطي حين لا يكتمل التصنيف */
+  reason?: string;
+  model?: string;
+}
+
+export interface CaseFeeEstimate {
+  claim_kind: 'non_financial' | 'financial' | 'contractual' | 'real_estate';
+  claim_kind_label: string;
+  amount_used: number | null;
+  /** مصدر المبلغ: مستخرَج من نص القضية (extracted) — لا يؤخذ من خانة العقد أبداً */
+  amount_source?: 'extracted' | null;
+  fee: number | null;
+  note: string;
+  needs_amount: boolean;
+  exemption_note?: string;
 }
 
 // ===== طلبات الإفلاس (Bankruptcy) — مرآة لمخطط الباك (keys snake_case) =====
@@ -646,6 +693,8 @@ export interface Task {
   subtasks_completed?: number;
   comments_count?: number;
   assignee?: { id: string | number; name: string } | null;
+  // تعدّد المكلّفين (اتحاد pivot task_assignees) — المسؤول محدَّد بـ pivot.is_primary
+  assignees?: { id: string | number; name: string; pivot?: { is_primary?: boolean } }[];
   case?: { id: number | string; title: string; file_number?: string | null } | null;
   // مهمة على مستوى العميل (لا قضية) — العميل المرتبط
   clientId?: string;
@@ -910,6 +959,8 @@ export interface CreateTaskForm {
   clientId?: string;
   executionRequestId?: string | number;
   assignedTo?: string;
+  /** كل المكلّفين بالمهمة (تعدّد) — أرقام معرّفات المستخدمين؛ assignedTo هو المسؤول منهم */
+  assigneeIds?: (string | number)[];
   priority: Priority;
   dueDate?: Date;
   estimatedHours?: number;

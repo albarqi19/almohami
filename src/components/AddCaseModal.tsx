@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PhoneField from './PhoneField';
+import MultiSelectDropdown from './MultiSelectDropdown';
 import { usePermission } from '../hooks/usePermission';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
@@ -65,6 +66,7 @@ interface CaseFormData {
   requiresMemoApproval: boolean;
   memoApprovers: string[];
   additionalClients: ExtraClient[];
+  teamLawyers: string[];
 }
 
 interface AddCaseModalProps {
@@ -117,7 +119,8 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     notes: '',
     requiresMemoApproval: false,
     memoApprovers: [],
-    additionalClients: []
+    additionalClients: [],
+    teamLawyers: []
   });
 
   const [errors, setErrors] = useState<Partial<CaseFormData>>({});
@@ -153,17 +156,38 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     }));
   };
 
+  // اختيار/إلغاء محامٍ من القائمة الموحّدة: أول اختيار = المسؤول (نجمة)،
+  // والبقية أعضاء فريق (صح). إلغاء المسؤول ينقل الدور لأول عضو تلقائياً.
+  const toggleLawyerSelection = (id: string) => {
+    setFormData(prev => {
+      if (prev.assignedLawyer === id) {
+        const [next, ...rest] = prev.teamLawyers;
+        return { ...prev, assignedLawyer: next || '', teamLawyers: rest };
+      }
+      if (prev.teamLawyers.includes(id)) {
+        return { ...prev, teamLawyers: prev.teamLawyers.filter(x => x !== id) };
+      }
+      if (!prev.assignedLawyer) {
+        return { ...prev, assignedLawyer: id };
+      }
+      return { ...prev, teamLawyers: [...prev.teamLawyers, id] };
+    });
+  };
+
+  // ترقية عضو فريق ليكون المسؤول (تنتقل النجمة، والمسؤول السابق يصبح عضواً)
+  const makeResponsibleLawyer = (id: string) => {
+    setFormData(prev => {
+      if (prev.assignedLawyer === id || !prev.teamLawyers.includes(id)) return prev;
+      const newTeam = prev.teamLawyers.filter(x => x !== id);
+      if (prev.assignedLawyer) newTeam.unshift(prev.assignedLawyer);
+      return { ...prev, assignedLawyer: id, teamLawyers: newTeam };
+    });
+  };
+
   // معتمِدون من المحامين الحقيقيين فقط (لا بيانات تجريبية fallback)
   const memoApproverOptions = lawyersFromProps.map(l => ({ value: String(l.id), label: l.name }));
-  const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const [showClientSearch, setShowClientSearch] = useState(false);
-
-  const filteredClients = clientsFromProps.filter(client =>
-    client.name.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
-    (client.phone && client.phone.includes(clientSearchTerm))
-  );
-
-  const selectedClient = clientsFromProps.find(c => c.id.toString() === formData.clientId.toString());
+  // كل المحامين الحقيقيين — تُعرض في قائمة منسدلة مشتركة (MultiSelectDropdown)
+  const allLawyerOptions = lawyersFromProps.map(l => ({ value: String(l.id), label: l.name }));
 
   const caseTypes = [
     { value: 'civil', label: 'قضايا مدنية' },
@@ -195,16 +219,6 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     'لجنة النظر في مخالفات أنظمة البلدية',
     'لجنة التحكيم'
   ];
-
-  const lawyers = lawyersFromProps.length > 0
-    ? lawyersFromProps.map(lawyer => ({ value: lawyer.id, label: lawyer.name }))
-    : [
-      { value: '1', label: 'أحمد محامي' },
-      { value: '2', label: 'سارة محامية' },
-      { value: '3', label: 'محمد محامي' },
-      { value: '4', label: 'خالد محامية' },
-      { value: '5', label: 'عبدالله محامي' }
-    ];
 
   const handleInputChange = (field: keyof CaseFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -282,7 +296,8 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
       notes: '',
       requiresMemoApproval: false,
       memoApprovers: [],
-      additionalClients: []
+      additionalClients: [],
+      teamLawyers: []
     });
     setErrors({});
     setSubmitError('');
@@ -403,20 +418,19 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Assigned Lawyer */}
+                    {/* المحامون — قائمة منسدلة مشتركة (Portal): أول اختيار ★ مسؤول والبقية فريق؛ الحقل يعرض «المسؤول وآخرون» */}
                     <div className="erpc-field">
-                      <span className="erpc-field-label"><User />المحامي<span className="erpc-req">*</span></span>
-                      <div className="erpc-control">
-                        <select
-                          className={`erpc-select ${errors.assignedLawyer ? 'erpc-invalid' : ''}`}
-                          value={formData.assignedLawyer}
-                          onChange={(e) => handleInputChange('assignedLawyer', e.target.value)}
-                        >
-                          <option value="">اختر المحامي</option>
-                          {lawyers.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-                        </select>
-                        <ChevronDown size={14} className="erpc-select-arrow" />
-                      </div>
+                      <span className="erpc-field-label"><User />المحامون<span className="erpc-req">*</span></span>
+                      <MultiSelectDropdown
+                        options={allLawyerOptions}
+                        selected={[formData.assignedLawyer, ...formData.teamLawyers].filter(Boolean)}
+                        responsible={formData.assignedLawyer || undefined}
+                        onToggle={toggleLawyerSelection}
+                        onPromote={makeResponsibleLawyer}
+                        invalid={!!errors.assignedLawyer}
+                        placeholder="اختر المحامين"
+                        emptyText="لا يوجد محامون متاحون"
+                      />
                     </div>
 
                     {/* Case Type */}
@@ -557,61 +571,18 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                     ) : (
                       <div className="erpc-field erpc-field-stack">
                         <span className="erpc-field-label"><Search />اختر العميل<span className="erpc-req">*</span></span>
-                        <div className="erpc-search">
-                          <div
-                            className={`erpc-input erpc-search-trigger ${errors.clientId ? 'erpc-invalid' : ''}`}
-                            onClick={() => setShowClientSearch(!showClientSearch)}
+                        <div className="erpc-control">
+                          <select
+                            className={`erpc-select ${errors.clientId ? 'erpc-invalid' : ''}`}
+                            value={formData.clientId}
+                            onChange={(e) => handleInputChange('clientId', e.target.value)}
                           >
-                            <span style={{ opacity: selectedClient ? 1 : 0.4 }}>
-                              {selectedClient ? selectedClient.name : 'ابحث عن عميل...'}
-                            </span>
-                            <ChevronDown size={14} style={{ opacity: 0.5 }} />
-                          </div>
-
-                          {showClientSearch && (
-                            <>
-                              <div className="erpc-search-dropdown">
-                                <div className="erpc-search-field-wrap">
-                                  <Search size={14} style={{ opacity: 0.4 }} />
-                                  <input
-                                    type="text"
-                                    className="erpc-search-field"
-                                    placeholder="ابحث بالاسم أو الرقم..."
-                                    value={clientSearchTerm}
-                                    onChange={(e) => setClientSearchTerm(e.target.value)}
-                                    autoFocus
-                                  />
-                                </div>
-                                <div style={{ padding: '4px 0' }}>
-                                  {filteredClients.length > 0 ? (
-                                    filteredClients.map(client => (
-                                      <div
-                                        key={client.id}
-                                        className={`erpc-search-item ${formData.clientId.toString() === client.id.toString() ? 'selected' : ''}`}
-                                        onClick={() => {
-                                          handleInputChange('clientId', client.id.toString());
-                                          setShowClientSearch(false);
-                                          setClientSearchTerm('');
-                                        }}
-                                      >
-                                        <div style={{ flex: 1 }}>
-                                          <div style={{ fontWeight: 500 }}>{client.name}</div>
-                                          {client.phone && <div style={{ fontSize: '11px', opacity: 0.6 }}>{client.phone}</div>}
-                                        </div>
-                                        {formData.clientId.toString() === client.id.toString() && <Check size={14} />}
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <div className="erpc-search-empty">لا يوجد نتائج للبحث</div>
-                                  )}
-                                </div>
-                              </div>
-                              <div
-                                style={{ position: 'fixed', inset: 0, zIndex: 99 }}
-                                onClick={() => setShowClientSearch(false)}
-                              />
-                            </>
-                          )}
+                            <option value="">اختر عميلاً...</option>
+                            {clientsFromProps.map(c => (
+                              <option key={c.id} value={c.id.toString()}>{c.name}{c.phone ? ` — ${c.phone}` : ''}</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={14} className="erpc-select-arrow" />
                         </div>
                       </div>
                     )}
@@ -671,23 +642,14 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                       </label>
 
                       {formData.requiresMemoApproval && (
-                        <div className="erpc-chips" style={{ marginTop: 6 }}>
-                          {memoApproverOptions.length === 0 && (
-                            <span className="erpc-hint">لا يوجد محامون للاختيار كمعتمِدين.</span>
-                          )}
-                          {memoApproverOptions.map(l => {
-                            const active = formData.memoApprovers.includes(String(l.value));
-                            return (
-                              <button
-                                key={l.value}
-                                type="button"
-                                className={`erpc-chip ${active ? 'active' : ''}`}
-                                onClick={() => toggleMemoApprover(String(l.value))}
-                              >
-                                {active && <Check size={12} />} {l.label}
-                              </button>
-                            );
-                          })}
+                        <div style={{ marginTop: 6 }}>
+                          <MultiSelectDropdown
+                            options={memoApproverOptions}
+                            selected={formData.memoApprovers}
+                            onToggle={(id) => toggleMemoApprover(String(id))}
+                            placeholder="اختر المعتمِدين"
+                            emptyText="لا يوجد محامون للاختيار كمعتمِدين"
+                          />
                         </div>
                       )}
                       {approverError && <span className="erpc-error-text" style={{ marginTop: 4 }}>{approverError}</span>}

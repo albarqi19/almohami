@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Calendar, Clock, MapPin, ChevronRight, ChevronLeft, MoreVertical, FileText } from 'lucide-react';
+import { ArrowRight, Calendar, Clock, MapPin, ChevronRight, ChevronLeft, MoreVertical, FileText, Radar } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ReadinessBadge, type ReadinessBreakdownItem } from './ReadinessBadge';
 import type { SessionWorkspaceData } from '../../hooks/useSessionPrep';
@@ -15,6 +15,8 @@ interface Props {
   onImportDefaults: () => void;
   onGenerateBrief: () => void;
   isGeneratingBrief?: boolean;
+  /** بوابة tenant: session_copilot_enabled — يُظهر زر «رفيق الجلسة» عند تفعيلها */
+  copilotEnabled?: boolean;
 }
 
 export const SessionPrepHeader: React.FC<Props> = ({
@@ -24,6 +26,7 @@ export const SessionPrepHeader: React.FC<Props> = ({
   onImportDefaults,
   onGenerateBrief,
   isGeneratingBrief,
+  copilotEnabled,
 }) => {
   const navigate = useNavigate();
 
@@ -85,6 +88,18 @@ export const SessionPrepHeader: React.FC<Props> = ({
             status={session.readiness_status}
             breakdown={readinessBreakdown}
           />
+
+          {copilotEnabled && (
+            <button
+              type="button"
+              className="sp-btn sp-btn--ghost"
+              onClick={() => navigate(`/sessions/${session.id}/copilot`)}
+              title="رفيق الجلسة — مساعد التحضير والتدوين"
+            >
+              <Radar size={14} strokeWidth={2.2} style={{ verticalAlign: '-2px', marginInlineEnd: 6 }} />
+              رفيق الجلسة
+            </button>
+          )}
 
           <button
             type="button"

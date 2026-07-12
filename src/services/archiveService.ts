@@ -2,12 +2,16 @@ import { apiClient } from '../utils/api';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
 
 /**
- * خدمة «الأرشيف / سلة المحذوفات» — تطابق مسارات الباك إند (Phase 4):
+ * خدمة «الأرشيف / سلة المحذوفات» — تطابق مسارات الباك إند (Phase 4 + توسعة 2026-07-12):
  *   القضايا:  GET cases/trashed (مُصفّح) · POST cases/{id}/restore · DELETE cases/{id}/force
  *   الوكالات: GET wekalat/trashed (مصفوفة) · POST wekalat/{id}/restore · DELETE wekalat/{id}/force
  *   العملاء:  GET client-management/archived (مصفوفة) · POST .../{id}/restore · DELETE .../{id}/force
+ *   المهام:   GET tasks/trashed (مُصفّح) · POST tasks/{id}/restore · DELETE tasks/{id}/force
+ *   التنفيذ:  GET execution-requests/trashed (مُصفّح) · POST .../{id}/restore · DELETE .../{id}/force
+ *   الخدمات:  GET legal-services/trashed (مُصفّح) · POST .../{id}/restore · DELETE .../{id}/force
  *
- * الاستعادة محكومة بصلاحيات cases.archive/wekala.manage/clients.delete،
+ * الاستعادة محكومة بصلاحيات cases.archive/wekala.manage/clients.delete/
+ * tasks.delete/execution.manage/legal-services.manage،
  * والحذف النهائي بصلاحيات *.force-delete (مالك/مدير) — يفرضها الباك إند.
  */
 
@@ -37,6 +41,39 @@ export interface ArchivedClient {
   national_id: string | null;
   is_active: boolean;
   updated_at: string;
+}
+
+export interface TrashedTask {
+  id: number;
+  title: string;
+  status: string;
+  priority: string | null;
+  case_id: number | null;
+  assigned_to: number | null;
+  deleted_at: string;
+  case?: { id: number; title: string | null; file_number: string | null } | null;
+  assignee?: { id: number; name: string } | null;
+}
+
+export interface TrashedExecutionRequest {
+  id: number;
+  request_number: string;
+  main_document_type: string | null;
+  court: string | null;
+  status: string | null;
+  total_amount: string | number | null;
+  deleted_at: string;
+}
+
+export interface TrashedLegalService {
+  id: number;
+  service_number: string | null;
+  title: string;
+  service_type: string;
+  status: string;
+  deleted_at: string;
+  client?: { id: number; name: string } | null;
+  assigned_lawyer?: { id: number; name: string } | null;
 }
 
 class ArchiveService {
@@ -91,6 +128,63 @@ class ArchiveService {
   static async forceDeleteClient(id: number): Promise<void> {
     const res = await apiClient.delete<ApiResponse>(`/client-management/${id}/force`);
     if (!res.success) throw new Error(res.message || 'تعذّر الحذف النهائي للعميل');
+  }
+
+  // ───────────── المهام (مُصفّحة) ─────────────
+  static async getTrashedTasks(page = 1, perPage = 20): Promise<PaginatedResponse<TrashedTask>> {
+    const res = await apiClient.get<ApiResponse<PaginatedResponse<TrashedTask>>>(
+      `/tasks/trashed?page=${page}&per_page=${perPage}`
+    );
+    if (res.success && res.data) return res.data;
+    throw new Error(res.message || 'تعذّر جلب المهام المحذوفة');
+  }
+
+  static async restoreTask(id: number): Promise<void> {
+    const res = await apiClient.post<ApiResponse>(`/tasks/${id}/restore`, {});
+    if (!res.success) throw new Error(res.message || 'تعذّرت استعادة المهمة');
+  }
+
+  static async forceDeleteTask(id: number): Promise<void> {
+    const res = await apiClient.delete<ApiResponse>(`/tasks/${id}/force`);
+    if (!res.success) throw new Error(res.message || 'تعذّر الحذف النهائي للمهمة');
+  }
+
+  // ───────────── طلبات التنفيذ (مُصفّحة) ─────────────
+  static async getTrashedExecutionRequests(page = 1, perPage = 20): Promise<PaginatedResponse<TrashedExecutionRequest>> {
+    const res = await apiClient.get<ApiResponse<PaginatedResponse<TrashedExecutionRequest>>>(
+      `/execution-requests/trashed?page=${page}&per_page=${perPage}`
+    );
+    if (res.success && res.data) return res.data;
+    throw new Error(res.message || 'تعذّر جلب طلبات التنفيذ المحذوفة');
+  }
+
+  static async restoreExecutionRequest(id: number): Promise<void> {
+    const res = await apiClient.post<ApiResponse>(`/execution-requests/${id}/restore`, {});
+    if (!res.success) throw new Error(res.message || 'تعذّرت استعادة طلب التنفيذ');
+  }
+
+  static async forceDeleteExecutionRequest(id: number): Promise<void> {
+    const res = await apiClient.delete<ApiResponse>(`/execution-requests/${id}/force`);
+    if (!res.success) throw new Error(res.message || 'تعذّر الحذف النهائي لطلب التنفيذ');
+  }
+
+  // ───────────── الخدمات القانونية (مُصفّحة) ─────────────
+  static async getTrashedLegalServices(page = 1, perPage = 20): Promise<PaginatedResponse<TrashedLegalService>> {
+    const res = await apiClient.get<ApiResponse<PaginatedResponse<TrashedLegalService>>>(
+      `/legal-services/trashed?page=${page}&per_page=${perPage}`
+    );
+    if (res.success && res.data) return res.data;
+    throw new Error(res.message || 'تعذّر جلب الخدمات المحذوفة');
+  }
+
+  static async restoreLegalService(id: number): Promise<void> {
+    const res = await apiClient.post<ApiResponse>(`/legal-services/${id}/restore`, {});
+    if (!res.success) throw new Error(res.message || 'تعذّرت استعادة الخدمة');
+  }
+
+  static async forceDeleteLegalService(id: number): Promise<void> {
+    const res = await apiClient.delete<ApiResponse>(`/legal-services/${id}/force`);
+    if (!res.success) throw new Error(res.message || 'تعذّر الحذف النهائي للخدمة');
   }
 }
 

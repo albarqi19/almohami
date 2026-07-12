@@ -14,9 +14,53 @@ export interface TaskFilters {
   page?: number;
   limit?: number;
   per_page?: number;
+  /* فلاتر «عرض الكل» لودجات اللوحة الجانبية */
+  overdue?: number;
+  due_today?: number;
+  needs_attention?: number;
+}
+
+export interface TaskStats {
+  total: number;
+  todo: number;
+  in_progress: number;
+  review: number;
+  pending_approval: number;
+  completed: number;
+  cancelled: number;
+  overdue: number;
+  due_today: number;
+  by_priority: { low: number; medium: number; high: number; urgent: number };
+}
+
+export interface TaskWidgets {
+  overdue: { id: number | string; title: string; due_date: string | null }[];
+  due_today: { id: number | string; title: string; priority: string; status: string }[];
+  pending_approval: { id: number | string; title: string; updated_at: string; assignee_name: string | null }[];
+  needs_attention: { id: number | string; title: string; reason: string }[];
+  workload: { user_id: number | string; name: string; open_count: number }[];
+  counts: { needs_attention: number };
 }
 
 export class TaskService {
+  /** إحصائيات حقيقية من الخادم (كل المهام لا المحمّل محلياً فقط) */
+  static async getTaskStatistics(): Promise<TaskStats> {
+    const response = await apiClient.get<ApiResponse<TaskStats>>('/tasks/statistics');
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || 'فشل في جلب إحصائيات المهام');
+  }
+
+  /** قوائم ودجات اللوحة الجانبية — دقيقة ومستقلة عن ترقيم الصفحات وفلاتر الجدول */
+  static async getTaskWidgets(): Promise<TaskWidgets> {
+    const response = await apiClient.get<ApiResponse<TaskWidgets>>('/tasks/widgets');
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || 'فشل في جلب بيانات الودجات');
+  }
+
   static async getTasks(filters: TaskFilters = {}): Promise<PaginatedResponse<Task>> {
     const params = new URLSearchParams();
     
@@ -43,7 +87,8 @@ export class TaskService {
         actualHours: task.actual_hours,
         assignedTo: task.assigned_to != null ? String(task.assigned_to) : '',
         assignedBy: task.assigned_by != null ? String(task.assigned_by) : '',
-        caseId: task.case_id != null ? String(task.case_id) : undefined
+        caseId: task.case_id != null ? String(task.case_id) : undefined,
+        assignees: Array.isArray(task.assignees) ? task.assignees : undefined
       }));
       
       return {
@@ -70,7 +115,8 @@ export class TaskService {
         actualHours: response.data.actual_hours,
         assignedTo: response.data.assigned_to != null ? String(response.data.assigned_to) : '',
         assignedBy: response.data.assigned_by != null ? String(response.data.assigned_by) : '',
-        caseId: response.data.case_id != null ? String(response.data.case_id) : undefined
+        caseId: response.data.case_id != null ? String(response.data.case_id) : undefined,
+        assignees: Array.isArray(response.data.assignees) ? response.data.assignees : undefined
       };
       return task as Task;
     } else {
@@ -88,6 +134,10 @@ export class TaskService {
       client_id: taskData.clientId,
       execution_request_id: taskData.executionRequestId,
       assigned_to: taskData.assignedTo,
+      // تعدّد المكلّفين — أرقام صحيحة؛ الباك يزامن pivot task_assignees
+      assignee_ids: taskData.assigneeIds && taskData.assigneeIds.length
+        ? taskData.assigneeIds.map((id) => Number(id))
+        : undefined,
       priority: taskData.priority,
       due_date: taskData.dueDate?.toISOString(),
       estimated_hours: taskData.estimatedHours,
@@ -117,7 +167,8 @@ export class TaskService {
     throw new Error(response.message || 'فشل في إنشاء المهمة من التسجيل');
   }
 
-  static async updateTask(id: string, taskData: Partial<CreateTaskForm>): Promise<Task> {
+  /** يستقبل الحقول بصيغة snake_case كما يتوقعها الـ API (مثل actual_hours وdue_date) */
+  static async updateTask(id: string, taskData: Record<string, unknown>): Promise<Task> {
     const response = await apiClient.put<ApiResponse<Task>>(`/tasks/${id}`, taskData);
     
     if (response.success && response.data) {
@@ -145,25 +196,18 @@ export class TaskService {
     }
   }
 
-  static async assignTask(id: string, assigneeId: string): Promise<Task> {
+  static async assignTask(id: string, assigneeId: string, assigneeIds?: (string | number)[]): Promise<Task> {
     const response = await apiClient.put<ApiResponse<Task>>(`/tasks/${id}/assign`, {
       assigned_to: assigneeId,
+      ...(assigneeIds && assigneeIds.length
+        ? { assignee_ids: assigneeIds.map((v) => Number(v)) }
+        : {}),
     });
     
     if (response.success && response.data) {
       return response.data;
     } else {
       throw new Error(response.message || 'فشل في تعيين المهمة');
-    }
-  }
-
-  static async getTaskStatistics(): Promise<any> {
-    const response = await apiClient.get<ApiResponse>('/tasks/statistics');
-    
-    if (response.success && response.data) {
-      return response.data;
-    } else {
-      throw new Error(response.message || 'فشل في جلب إحصائيات المهام');
     }
   }
 

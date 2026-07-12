@@ -24,6 +24,7 @@ import {
   FileText,
   SendHorizontal,
   ShieldCheck,
+  Star,
   X,
   AlertCircle,
   Loader2
@@ -449,8 +450,23 @@ const TaskDetail: React.FC = () => {
             <div className="sidebar-title">معلومات أساسية</div>
 
             <div className="task-kv">
-              <span className="task-kv__label"><User size={14} /> المسؤول</span>
-              <span className="task-kv__value">{assigneeName}</span>
+              <span className="task-kv__label"><User size={14} /> المكلّفون</span>
+              <span className="task-kv__value">
+                {task.assignees && task.assignees.length > 0 ? (
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
+                    {task.assignees.map((a) => (
+                      <span key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        {a.pivot?.is_primary && (
+                          <Star size={12} fill="var(--law-gold, #c8a24a)" color="var(--law-gold, #c8a24a)" />
+                        )}
+                        <span>{a.name}</span>
+                      </span>
+                    ))}
+                  </span>
+                ) : (
+                  assigneeName
+                )}
+              </span>
             </div>
 
             <div className="task-kv">

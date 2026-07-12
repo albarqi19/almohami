@@ -10,6 +10,11 @@ interface State {
   error: Error | null;
 }
 
+/**
+ * حاجز الأخطاء العام — بنفس لغة صفحة 404 البصرية (NotFound.tsx):
+ * خلفية كحلية متدرّجة بملء الشاشة، علامة تحذير عملاقة باهتة بالخلفية،
+ * هالتان ذهبيتان، عنوان فرعي ذهبي، عنوان، وصف، وأزرار حبّة (pill).
+ */
 class ErrorBoundary extends Component<Props, State> {
   state: State = {
     hasError: false,
@@ -35,192 +40,293 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.hasError) return this.props.children;
 
+    const incidentRef = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+
     return (
       <div
         dir="rtl"
-        className="min-h-screen flex items-center justify-center px-4 py-8 relative overflow-hidden"
         style={{
+          position: 'fixed',
+          inset: 0,
+          minHeight: '100vh',
+          width: '100%',
           background:
-            'linear-gradient(135deg, #0A192F 0%, #142840 50%, #0A192F 100%)',
+            'radial-gradient(ellipse at 30% 20%, #1a3652 0%, #0A192F 50%, #060f1e 100%)',
           fontFamily: "'IBM Plex Sans Arabic', sans-serif",
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem 1.5rem',
+          color: '#FDFBF7',
+          zIndex: 9999,
         }}
       >
-        {/* Decorative gold rays - very subtle */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] opacity-[0.04]"
-            style={{
-              background:
-                'radial-gradient(circle, #C5A572 0%, transparent 70%)',
-            }}
-          />
-          <div
-            className="absolute bottom-0 right-0 w-[400px] h-[400px] opacity-[0.03]"
-            style={{
-              background:
-                'radial-gradient(circle, #C5A572 0%, transparent 70%)',
-            }}
-          />
-        </div>
-
-        {/* Subtle pattern - legal seal motif */}
-        <div className="absolute top-8 right-8 text-[120px] opacity-[0.03] pointer-events-none select-none">
-          ⚖
-        </div>
-        <div className="absolute bottom-8 left-8 text-[80px] opacity-[0.03] pointer-events-none select-none">
-          ⚜
-        </div>
-
-        <div className="relative w-full max-w-xl">
-          {/* Main card */}
-          <div
-            className="relative rounded-2xl p-10 lg:p-14 text-center"
-            style={{
-              background: 'rgba(253, 251, 247, 0.98)',
-              boxShadow:
-                '0 30px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(197, 165, 114, 0.2)',
-            }}
-          >
-            {/* Top accent line - gold */}
-            <div
-              className="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-32 rounded-b-full"
-              style={{
-                background:
-                  'linear-gradient(90deg, transparent, #C5A572, transparent)',
-              }}
+        {/* علامة تحذير عملاقة باهتة بالخلفية — نظير الرقم 404 */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 'clamp(280px, 55vw, 720px)',
+            height: 'clamp(280px, 55vw, 720px)',
+            pointerEvents: 'none',
+            userSelect: 'none',
+            zIndex: 0,
+          }}
+        >
+          <svg viewBox="0 0 100 100" width="100%" height="100%" fill="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="eb-fade" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(197, 165, 114, 0.13)" />
+                <stop offset="60%" stopColor="rgba(197, 165, 114, 0.035)" />
+                <stop offset="100%" stopColor="transparent" />
+              </linearGradient>
+            </defs>
+            {/* مثلث التحذير */}
+            <path
+              d="M50 14 L88 82 L12 82 Z"
+              stroke="url(#eb-fade)"
+              strokeWidth="3"
+              strokeLinejoin="round"
             />
+            <line x1="50" y1="40" x2="50" y2="63" stroke="url(#eb-fade)" strokeWidth="4" strokeLinecap="round" />
+            <circle cx="50" cy="72" r="2.4" fill="url(#eb-fade)" />
+          </svg>
+        </div>
 
-            {/* Crest / emblem */}
-            <div className="mb-8 flex justify-center">
-              <div
-                className="w-20 h-20 rounded-full flex items-center justify-center"
-                style={{
-                  background:
-                    'linear-gradient(135deg, #0A192F 0%, #1a3652 100%)',
-                  boxShadow:
-                    '0 8px 24px rgba(10, 25, 47, 0.3), inset 0 0 0 2px #C5A572',
-                }}
-              >
-                <span className="text-3xl" style={{ color: '#C5A572' }}>
-                  ⚖
-                </span>
-              </div>
-            </div>
+        {/* هالة ذهبية باهتة أعلى اليمين */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: '-200px',
+            right: '-200px',
+            width: '600px',
+            height: '600px',
+            background:
+              'radial-gradient(circle, rgba(197, 165, 114, 0.15) 0%, transparent 70%)',
+            pointerEvents: 'none',
+            zIndex: 0,
+          }}
+        />
 
-            {/* Eyebrow label */}
-            <div
-              className="text-xs uppercase tracking-[0.3em] mb-4 font-semibold"
-              style={{ color: '#C5A572' }}
-            >
-              إشعار من النظام
-            </div>
+        {/* هالة ذهبية باهتة أسفل اليسار */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            bottom: '-150px',
+            left: '-150px',
+            width: '500px',
+            height: '500px',
+            background:
+              'radial-gradient(circle, rgba(197, 165, 114, 0.08) 0%, transparent 70%)',
+            pointerEvents: 'none',
+            zIndex: 0,
+          }}
+        />
 
-            {/* Title */}
-            <h1
-              className="text-3xl lg:text-4xl font-bold mb-4 leading-tight"
-              style={{ color: '#0A192F' }}
-            >
-              تعذّر إتمام العملية
-            </h1>
+        {/* المحتوى */}
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            textAlign: 'center',
+            maxWidth: '560px',
+          }}
+        >
+          {/* عنوان فرعي */}
+          <div
+            style={{
+              fontSize: '11px',
+              letterSpacing: '0.4em',
+              color: '#C5A572',
+              fontWeight: 600,
+              marginBottom: '1.5rem',
+            }}
+          >
+            إشعار من النظام
+          </div>
 
-            {/* Description */}
-            <p
-              className="text-base leading-relaxed mb-2 max-w-md mx-auto"
-              style={{ color: '#5a5a5a' }}
-            >
-              نواجه حالياً اضطراباً مؤقتاً في النظام. تم تسجيل الواقعة وإحالتها إلى
-              الفريق التقني.
-            </p>
-            <p className="text-sm" style={{ color: '#8a8a8a' }}>
-              يُرجى تحديث الصفحة، أو العودة لاحقاً.
-            </p>
+          {/* العنوان */}
+          <h1
+            style={{
+              fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
+              fontWeight: 700,
+              lineHeight: 1.2,
+              marginBottom: '1.25rem',
+              color: '#FDFBF7',
+              letterSpacing: '-0.01em',
+            }}
+          >
+            تعذّر إتمام العملية
+          </h1>
 
-            {/* Divider */}
-            <div className="my-8 flex items-center justify-center gap-3">
-              <div
-                className="h-px w-16"
-                style={{ background: 'rgba(197, 165, 114, 0.3)' }}
-              />
-              <span className="text-xs" style={{ color: '#C5A572' }}>
-                ⚜
-              </span>
-              <div
-                className="h-px w-16"
-                style={{ background: 'rgba(197, 165, 114, 0.3)' }}
-              />
-            </div>
+          {/* الوصف */}
+          <p
+            style={{
+              fontSize: '1rem',
+              lineHeight: 1.7,
+              color: 'rgba(253, 251, 247, 0.65)',
+              marginBottom: '0.75rem',
+              maxWidth: '440px',
+              marginInline: 'auto',
+            }}
+          >
+            نواجه حالياً اضطراباً مؤقتاً في النظام. تم تسجيل الواقعة وإحالتها إلى الفريق التقني.
+          </p>
+          <p
+            style={{
+              fontSize: '0.875rem',
+              color: 'rgba(253, 251, 247, 0.4)',
+              marginBottom: '2.5rem',
+            }}
+          >
+            يُرجى تحديث الصفحة، أو العودة لاحقاً.
+          </p>
 
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button
-                onClick={this.handleReload}
-                className="px-8 py-3 rounded-lg font-semibold transition-all hover:translate-y-[-1px]"
-                style={{
-                  background:
-                    'linear-gradient(135deg, #0A192F 0%, #142840 100%)',
-                  color: '#FDFBF7',
-                  boxShadow: '0 4px 14px rgba(10, 25, 47, 0.3)',
-                }}
-              >
-                تحديث الصفحة
-              </button>
-
-              <button
-                onClick={this.handleHome}
-                className="px-8 py-3 rounded-lg font-semibold transition-all border-2"
-                style={{
-                  borderColor: 'rgba(10, 25, 47, 0.15)',
-                  color: '#0A192F',
-                  background: 'transparent',
-                }}
-              >
-                الصفحة الرئيسية
-              </button>
-            </div>
-
-            {/* Error ID / Timestamp (subtle) */}
-            <div
-              className="mt-10 pt-6 border-t text-[11px] tabular-nums tracking-wider"
+          {/* الأزرار */}
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+              justifyContent: 'center',
+            }}
+          >
+            <button
+              type="button"
+              onClick={this.handleReload}
               style={{
-                borderColor: 'rgba(197, 165, 114, 0.15)',
-                color: '#a8a8a8',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0.875rem 2rem',
+                borderRadius: '999px',
+                background: '#C5A572',
+                color: '#0A192F',
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                boxShadow:
+                  '0 8px 24px rgba(197, 165, 114, 0.25), 0 0 0 1px rgba(197, 165, 114, 0.5)',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow =
+                  '0 12px 32px rgba(197, 165, 114, 0.35), 0 0 0 1px rgba(197, 165, 114, 0.7)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow =
+                  '0 8px 24px rgba(197, 165, 114, 0.25), 0 0 0 1px rgba(197, 165, 114, 0.5)';
               }}
             >
-              مرجع الواقعة: {new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14)}
-            </div>
+              تحديث الصفحة
+            </button>
 
-            {/* Dev-only error details */}
-            {import.meta.env.DEV && this.state.error && (
-              <details className="mt-6 text-left">
-                <summary
-                  className="cursor-pointer text-xs select-none hover:underline"
-                  style={{ color: '#8a8a8a' }}
-                >
-                  تفاصيل تقنية (وضع التطوير فقط)
-                </summary>
-                <pre
-                  className="mt-3 text-[10px] p-4 rounded-lg overflow-auto max-h-48 leading-relaxed text-left"
-                  style={{
-                    background: '#0A192F',
-                    color: '#ff8a8a',
-                    direction: 'ltr',
-                  }}
-                >
-                  {this.state.error.toString()}
-                  {'\n\n'}
-                  {this.state.error.stack}
-                </pre>
-              </details>
-            )}
+            <button
+              type="button"
+              onClick={this.handleHome}
+              style={{
+                padding: '0.875rem 2rem',
+                borderRadius: '999px',
+                background: 'rgba(253, 251, 247, 0.05)',
+                color: '#FDFBF7',
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                border: '1px solid rgba(253, 251, 247, 0.15)',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                transition: 'background 0.2s ease, border-color 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(253, 251, 247, 0.1)';
+                e.currentTarget.style.borderColor = 'rgba(253, 251, 247, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(253, 251, 247, 0.05)';
+                e.currentTarget.style.borderColor = 'rgba(253, 251, 247, 0.15)';
+              }}
+            >
+              الصفحة الرئيسية
+            </button>
           </div>
 
-          {/* Footer brand */}
+          {/* مرجع الواقعة */}
           <div
-            className="text-center mt-6 text-xs tracking-wider"
-            style={{ color: 'rgba(197, 165, 114, 0.6)' }}
+            style={{
+              marginTop: '2.5rem',
+              fontSize: '11px',
+              fontVariantNumeric: 'tabular-nums',
+              letterSpacing: '0.15em',
+              color: 'rgba(197, 165, 114, 0.55)',
+            }}
           >
-            الرائد لإدارة المحاماة
+            مرجع الواقعة: {incidentRef}
           </div>
+
+          {/* تفاصيل تقنية — وضع التطوير فقط */}
+          {import.meta.env.DEV && this.state.error && (
+            <details style={{ marginTop: '1.75rem', textAlign: 'right' }}>
+              <summary
+                style={{
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  userSelect: 'none',
+                  color: 'rgba(253, 251, 247, 0.5)',
+                }}
+              >
+                تفاصيل تقنية (وضع التطوير فقط)
+              </summary>
+              <pre
+                style={{
+                  marginTop: '0.75rem',
+                  fontSize: '10px',
+                  padding: '1rem',
+                  borderRadius: '10px',
+                  overflow: 'auto',
+                  maxHeight: '12rem',
+                  lineHeight: 1.7,
+                  textAlign: 'left',
+                  background: 'rgba(0, 0, 0, 0.35)',
+                  color: '#ff8a8a',
+                  border: '1px solid rgba(197, 165, 114, 0.15)',
+                  direction: 'ltr',
+                }}
+              >
+                {this.state.error.toString()}
+                {'\n\n'}
+                {this.state.error.stack}
+              </pre>
+            </details>
+          )}
+        </div>
+
+        {/* تذييل الهوية */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '2rem',
+            left: 0,
+            right: 0,
+            textAlign: 'center',
+            fontSize: '12px',
+            letterSpacing: '0.2em',
+            color: 'rgba(197, 165, 114, 0.5)',
+            zIndex: 1,
+          }}
+        >
+          الرائد لإدارة المحاماة
         </div>
       </div>
     );

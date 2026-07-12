@@ -1,19 +1,25 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Clock,
   Calendar,
+  CalendarDays,
+  CalendarClock,
   Settings,
   Save,
   Plus,
   Trash2,
   RefreshCw,
   AlertCircle,
-  CheckCircle,
-  XCircle,
+  CheckCircle2,
   MapPin,
-  CalendarDays,
   Timer,
-  Info
+  ChevronsLeft,
+  ChevronsRight,
+  ExternalLink,
+  User,
+  Video,
+  X
 } from 'lucide-react';
 import {
   availabilityService,
@@ -24,13 +30,30 @@ import {
   type AvailabilityException,
   DEFAULT_WEEKLY_SCHEDULE
 } from '../../services/availabilityService';
-// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
+import { clientMeetingService, type ClientMeeting } from '../../services/meetingService';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts — البنية المشتركة (ssp2-*) من simple-service.css
 
 type DayKey = keyof WeeklySchedule;
 
 const DAYS_ORDER: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
+const SIDE_MIN_KEY = 'avx_side_min';
+const MEET_MIN_KEY = 'avx_meet_min';
+
+const MEETING_STATUS_LABELS: Record<string, string> = {
+  pending: 'بانتظار التأكيد',
+  confirmed: 'مؤكد',
+};
+
+const slotMinutes = (slot: TimeSlot): number => {
+  const [sh, sm] = slot.start.split(':').map(Number);
+  const [eh, em] = slot.end.split(':').map(Number);
+  return Math.max(0, (eh * 60 + em) - (sh * 60 + sm));
+};
+
 const MyAvailability: React.FC = () => {
+  const navigate = useNavigate();
+
   // State
   const [availability, setAvailability] = useState<LawyerAvailability | null>(null);
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>(DEFAULT_WEEKLY_SCHEDULE);
@@ -40,11 +63,14 @@ const MyAvailability: React.FC = () => {
   const [allowedDurations, setAllowedDurations] = useState<number[]>([15, 30, 45, 60]);
   const [defaultLocation, setDefaultLocation] = useState('');
   const [exceptions, setExceptions] = useState<AvailabilityException[]>([]);
+  const [upcoming, setUpcoming] = useState<ClientMeeting[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [sideMin, setSideMin] = useState<boolean>(() => localStorage.getItem(SIDE_MIN_KEY) === '1');
+  const [meetMin, setMeetMin] = useState<boolean>(() => localStorage.getItem(MEET_MIN_KEY) === '1');
 
   // Exception modal state
   const [showExceptionModal, setShowExceptionModal] = useState(false);
@@ -53,18 +79,31 @@ const MyAvailability: React.FC = () => {
   const [exceptionReason, setExceptionReason] = useState('');
   const [exceptionSlots, setExceptionSlots] = useState<TimeSlot[]>([]);
 
+  const toggleSide = (min: boolean) => {
+    setSideMin(min);
+    localStorage.setItem(SIDE_MIN_KEY, min ? '1' : '0');
+  };
+
+  const toggleMeet = (min: boolean) => {
+    setMeetMin(min);
+    localStorage.setItem(MEET_MIN_KEY, min ? '1' : '0');
+  };
+
   // Fetch data
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const [availData, exceptionsData] = await Promise.all([
+      // فشل جلب الاجتماعات لا يُسقط الصفحة — العمود يظهر فارغاً فحسب
+      const [availData, exceptionsData, upcomingData] = await Promise.all([
         availabilityService.get(),
         availabilityService.getExceptions(),
+        clientMeetingService.getUpcoming(8).catch(() => [] as ClientMeeting[]),
       ]);
 
       setAvailability(availData);
+      setUpcoming(upcomingData);
       setWeeklySchedule(availData.weekly_schedule || DEFAULT_WEEKLY_SCHEDULE);
       setBufferMinutes(availData.buffer_minutes);
       setMinBookingHours(availData.min_booking_hours);
@@ -83,6 +122,21 @@ const MyAvailability: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // حقائق الترويسة
+  const enabledDaysCount = useMemo(
+    () => DAYS_ORDER.filter(day => weeklySchedule[day].enabled).length,
+    [weeklySchedule]
+  );
+
+  const weeklyHours = useMemo(() => {
+    let mins = 0;
+    for (const day of DAYS_ORDER) {
+      if (!weeklySchedule[day].enabled) continue;
+      for (const slot of weeklySchedule[day].slots) mins += slotMinutes(slot);
+    }
+    return Math.round((mins / 60) * 10) / 10;
+  }, [weeklySchedule]);
 
   // Toggle day enabled
   const toggleDayEnabled = (day: DayKey) => {
@@ -165,6 +219,14 @@ const MyAvailability: React.FC = () => {
     }
   };
 
+  // اختيار حالة الاستثناء — عند «متاح» نضمن وجود فترة واحدة على الأقل للتعديل
+  const setExceptionBlocked = (blocked: boolean) => {
+    setExceptionIsBlocked(blocked);
+    if (!blocked) {
+      setExceptionSlots(prev => (prev.length === 0 ? [{ start: '09:00', end: '17:00' }] : prev));
+    }
+  };
+
   // Add exception
   const handleAddException = async () => {
     if (!exceptionDate) {
@@ -206,163 +268,86 @@ const MyAvailability: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="availability-page" style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', color: 'var(--color-text-secondary)' }}>
-          <RefreshCw size={32} className="animate-spin" />
-          <p>جاري تحميل إعدادات التوفر...</p>
+      <div className="ssp2-page avx" dir="rtl">
+        <div className="avx-loading">
+          <RefreshCw size={26} className="avx-spin" />
+          جارٍ تحميل إعدادات التوفر...
         </div>
       </div>
     );
   }
 
   return (
-    <div className="availability-page">
-      {/* Header - Notion Style */}
-      <header className="notion-header">
-        <div className="notion-header__title">
-          <div className="notion-header__icon">⏰</div>
-          <h1>إعدادات التوفر</h1>
+    <div className="ssp2-page avx" dir="rtl">
+      {/* ─── الترويسة: عنوان + حفظ، ثم حقائق الجدول ─── */}
+      <header className="ssp2-header">
+        <div className="ssp2-header__top">
+          <div className="ssp2-header__info">
+            <span className="ssp2-header__badge">
+              <Clock size={13} /> حجوزات العملاء
+            </span>
+            <h1 className="ssp2-header__title">إعدادات التوفر</h1>
+            <span className="avx-disclaimer">أوقاتك المتاحة التي تظهر للعملاء في رابط الحجز</span>
+          </div>
+          <div className="ssp2-header__actions">
+            <button className="ssp2-icon-btn" onClick={fetchData} disabled={loading} title="تحديث">
+              <RefreshCw size={14} className={loading ? 'avx-spin' : ''} />
+            </button>
+            <button className="ssp2-btn ssp2-btn--primary" onClick={handleSave} disabled={saving}>
+              {saving ? <RefreshCw size={14} className="avx-spin" /> : <Save size={14} />}
+              {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+            </button>
+          </div>
         </div>
 
-        <p className="notion-header__subtitle">
-          إدارة أوقاتك المتاحة لحجوزات العملاء
-        </p>
-
-        <div className="notion-header__actions">
-          <button
-            className="notion-icon-btn"
-            onClick={fetchData}
-            disabled={loading}
-            title="تحديث"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-          </button>
-          <button
-            className="notion-primary-btn"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
-            {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-          </button>
+        <div className="ssp2-header__facts">
+          <span className="ssp2-fact"><CalendarDays size={13} /><span className="ssp2-fact__label">أيام متاحة</span><b>{enabledDaysCount}/7</b></span>
+          <span className="ssp2-fact__sep" />
+          <span className="ssp2-fact"><Clock size={13} /><span className="ssp2-fact__label">ساعات الأسبوع</span><b>{weeklyHours}</b></span>
+          <span className="ssp2-fact__sep" />
+          <span className="ssp2-fact"><Timer size={13} /><span className="ssp2-fact__label">الفاصل</span><b>{bufferMinutes === 0 ? 'بدون' : `${bufferMinutes} د`}</b></span>
+          <span className="ssp2-fact__sep" />
+          <span className="ssp2-fact"><Calendar size={13} /><span className="ssp2-fact__label">نطاق الحجز</span><b>{minBookingHours} س → {maxBookingDays} يوم</b></span>
+          <span className="ssp2-fact__sep" />
+          <span className="ssp2-fact"><AlertCircle size={13} /><span className="ssp2-fact__label">استثناءات</span><b>{exceptions.length}</b></span>
         </div>
       </header>
 
-      {/* Messages */}
-      {error && (
-        <div className="message message--error">
-          <AlertCircle size={18} />
-          {error}
-          <button onClick={() => setError(null)} style={{ marginRight: 'auto', border: 'none', background: 'none', cursor: 'pointer', color: 'inherit' }}><XCircle size={16} /></button>
-        </div>
-      )}
-      {success && (
-        <div className="message message--success">
-          <CheckCircle size={18} />
-          {success}
-        </div>
-      )}
-
-      <div className="content-grid">
-        {/* Weekly Schedule */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">
-              <CalendarDays size={20} className="text-law-navy" />
-              الجدول الأسبوعي المعتاد
-            </h3>
-          </div>
-
-          <div className="schedule-grid">
-            {DAYS_ORDER.map(day => (
-              <div key={day} className={`day-row ${weeklySchedule[day].enabled ? '' : 'day-row--disabled'}`}>
-                <div className="day-header">
-                  <label className="toggle-label">
-                    <input
-                      type="checkbox"
-                      checked={weeklySchedule[day].enabled}
-                      onChange={() => toggleDayEnabled(day)}
-                    />
-                    <div className="toggle-switch" />
-                    <span className="day-name">{availabilityHelpers.getDayNameArabic(day)}</span>
-                  </label>
-                  <span className="day-status">
-                    {weeklySchedule[day].enabled ? 'متاح' : 'غير متاح'}
-                  </span>
-                </div>
-
-                {weeklySchedule[day].enabled && (
-                  <div className="day-slots">
-                    {weeklySchedule[day].slots.map((slot, idx) => (
-                      <div key={idx} className="slot-row">
-                        <input
-                          type="time"
-                          value={slot.start}
-                          onChange={(e) => updateSlot(day, idx, 'start', e.target.value)}
-                        />
-                        <span className="slot-separator">إلى</span>
-                        <input
-                          type="time"
-                          value={slot.end}
-                          onChange={(e) => updateSlot(day, idx, 'end', e.target.value)}
-                        />
-                        {weeklySchedule[day].slots.length > 1 && (
-                          <button
-                            className="remove-slot-btn"
-                            onClick={() => removeSlot(day, idx)}
-                            title="حذف الفترة"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    <button
-                      className="add-slot-btn"
-                      onClick={() => addSlot(day)}
-                    >
-                      <Plus size={14} />
-                      إضافة فترة أخرى
-                    </button>
-                  </div>
-                )}
+      {/* ─── الأعمدة: القواعد والاستثناءات يمين (قابل للطي) + الجدول الأسبوعي ─── */}
+      <div className="ssp2-layout">
+        {sideMin ? (
+          <aside className="ssp2-chatcol avx-side ssp2-chatcol--min">
+            <button className="ssp2-chatcol__reopen" onClick={() => toggleSide(false)} title="فتح القواعد والاستثناءات">
+              <ChevronsLeft size={15} />
+              <span>القواعد والاستثناءات</span>
+            </button>
+          </aside>
+        ) : (
+          <aside className="ssp2-chatcol avx-side">
+            {/* قواعد الحجز */}
+            <div className="ssp2-card avx-card--rules">
+              <div className="ssp2-card__head">
+                <span className="ssp2-card__title">
+                  <Settings size={14} /> قواعد الحجز
+                </span>
+                <button className="ssp2-icon-btn" onClick={() => toggleSide(true)} title="طي العمود">
+                  <ChevronsRight size={14} />
+                </button>
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Sidebar: Settings & Exceptions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-
-          {/* Booking Settings */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">
-                <Settings size={20} className="text-law-navy" />
-                قواعد الحجز
-              </h3>
-            </div>
-
-            <div className="settings-form">
-              <div className="form-group">
-                <label>
-                  <MapPin size={16} />
-                  الموقع الافتراضي
-                </label>
+              <div className="avx-form">
+                <label className="ssp2-label"><MapPin size={12} /> الموقع الافتراضي</label>
                 <input
+                  className="ssp2-input"
                   type="text"
                   value={defaultLocation}
                   onChange={(e) => setDefaultLocation(e.target.value)}
                   placeholder="مثال: Google Meet أو عنوان المكتب"
                 />
-              </div>
 
-              <div className="form-group">
-                <label>
-                  <Timer size={16} />
-                  المدة الفاصلة بين المواعيد
-                </label>
+                <label className="ssp2-label"><Timer size={12} /> المدة الفاصلة بين المواعيد</label>
                 <select
+                  className="ssp2-input"
                   value={bufferMinutes}
                   onChange={(e) => setBufferMinutes(Number(e.target.value))}
                 >
@@ -372,17 +357,12 @@ const MyAvailability: React.FC = () => {
                   <option value={15}>15 دقيقة</option>
                   <option value={30}>30 دقيقة</option>
                 </select>
-              </div>
 
-              <div className="form-group">
-                <label>
-                  <Calendar size={16} />
-                  نطاق الحجز المسموح
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>الحد الأدنى (قبل الموعد)</span>
+                <div className="avx-form__row">
+                  <div>
+                    <label className="ssp2-label">أدنى مهلة قبل الموعد</label>
                     <select
+                      className="ssp2-input"
                       value={minBookingHours}
                       onChange={(e) => setMinBookingHours(Number(e.target.value))}
                     >
@@ -393,9 +373,10 @@ const MyAvailability: React.FC = () => {
                       <option value={48}>48 ساعة</option>
                     </select>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>الحد الأقصى (مستقبلاً)</span>
+                  <div>
+                    <label className="ssp2-label">أقصى مدى مستقبلاً</label>
                     <select
+                      className="ssp2-input"
                       value={maxBookingDays}
                       onChange={(e) => setMaxBookingDays(Number(e.target.value))}
                     >
@@ -406,15 +387,13 @@ const MyAvailability: React.FC = () => {
                     </select>
                   </div>
                 </div>
-              </div>
 
-              <div className="form-group">
-                <label>مدد الاجتماعات المتاحة</label>
-                <div className="durations-grid">
+                <label className="ssp2-label">مدد الاجتماعات المتاحة</label>
+                <div className="avx-durations">
                   {[15, 30, 45, 60].map(duration => (
                     <label
                       key={duration}
-                      className={`duration-option ${allowedDurations.includes(duration) ? 'duration-option--selected' : ''}`}
+                      className={`avx-chip ${allowedDurations.includes(duration) ? 'is-on' : ''}`}
                     >
                       <input
                         type="checkbox"
@@ -427,131 +406,286 @@ const MyAvailability: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Exceptions Card */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">
-                <AlertCircle size={20} className="text-law-navy" />
-                الاستثناءات والإجازات
-              </h3>
-              <button
-                className="secondary-btn"
-                onClick={() => setShowExceptionModal(true)}
-                style={{ padding: '6px 12px', fontSize: '12px' }}
-              >
-                <Plus size={14} />
-                جديد
-              </button>
-            </div>
-
-            {exceptions.length === 0 ? (
-              <div className="empty-exceptions">
-                <Calendar size={32} style={{ opacity: 0.2, marginBottom: '8px' }} />
-                <p>لا توجد استثناءات</p>
-                <span>أضف أيام إجازة أو تغييرات خاصة</span>
+            {/* الاستثناءات والإجازات */}
+            <div className="ssp2-card avx-card--exceptions">
+              <div className="ssp2-card__head">
+                <span className="ssp2-card__title">
+                  <AlertCircle size={14} /> الاستثناءات والإجازات
+                </span>
+                <button className="ssp2-icon-btn" onClick={() => setShowExceptionModal(true)} title="إضافة استثناء">
+                  <Plus size={14} />
+                </button>
               </div>
-            ) : (
-              <div className="exceptions-list">
-                {exceptions.map(exception => (
-                  <div key={exception.id} className="exception-item">
-                    <div className="exception-info">
-                      <span className="exception-date">
+
+              {exceptions.length === 0 ? (
+                <div className="avx-empty">
+                  <Calendar size={26} />
+                  <p>لا توجد استثناءات</p>
+                  <span>أضف أيام إجازة أو تغييرات خاصة</span>
+                </div>
+              ) : (
+                <div className="avx-exceptions">
+                  {exceptions.map(exception => (
+                    <div key={exception.id} className="avx-exc">
+                      <span className="avx-exc__date">
                         {new Date(exception.date).toLocaleDateString('ar-SA', {
                           month: 'short',
                           day: 'numeric',
                           weekday: 'short'
                         })}
                       </span>
-                      {exception.reason && (
-                        <span className="exception-reason">{exception.reason}</span>
-                      )}
+                      <span className="avx-exc__reason">{exception.reason || ''}</span>
+                      <span className={`avx-exc__type ${exception.is_blocked ? 'avx-exc__type--blocked' : ''}`}>
+                        {exception.is_blocked ? 'مغلق' : 'معدل'}
+                      </span>
+                      <button
+                        className="ssp2-icon-btn ssp2-icon-btn--danger avx-exc__del"
+                        onClick={() => handleDeleteException(exception.id)}
+                        title="حذف الاستثناء"
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </div>
-                    <span className={`exception-type ${exception.is_blocked ? 'exception-type--blocked' : ''}`}>
-                      {exception.is_blocked ? 'مغلق' : 'معدل'}
-                    </span>
-                    <button
-                      className="delete-exception-btn"
-                      onClick={() => handleDeleteException(exception.id)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </aside>
+        )}
 
-        </div>
-      </div>
+        {/* الجدول الأسبوعي — كتلة العمل الرئيسية، تتمرر داخلياً */}
+        <main className="ssp2-work">
+          {error && (
+            <div className="avx-msg avx-msg--error">
+              <AlertCircle size={14} />
+              {error}
+              <button onClick={() => setError(null)} title="إغلاق"><X size={13} /></button>
+            </div>
+          )}
+          {success && (
+            <div className="avx-msg avx-msg--success">
+              <CheckCircle2 size={14} />
+              {success}
+            </div>
+          )}
 
-      {/* Exception Modal */}
-      {showExceptionModal && (
-        <div className="modal-overlay" onClick={() => setShowExceptionModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>إضافة استثناء</h3>
-              <button className="close-btn" onClick={() => setShowExceptionModal(false)}>
-                <XCircle size={24} />
-              </button>
+          <div className="ssp2-card avx-schedule">
+            <div className="ssp2-card__head">
+              <span className="ssp2-card__title">
+                <CalendarDays size={14} /> الجدول الأسبوعي المعتاد
+              </span>
+              <span className="ssp2-card__meta">{enabledDaysCount} أيام متاحة · {weeklyHours} ساعة أسبوعياً</span>
             </div>
 
-            <div className="modal-body">
-              <div className="message message--info" style={{ margin: 0, padding: '10px 16px', fontSize: '13px', background: 'var(--color-info-soft)', color: 'var(--color-info)', border: 'none' }}>
-                <Info size={16} />
-                سيؤدي هذا إلى تجاوز الجدول الأسبوعي لهذا اليوم المحدد.
-              </div>
-
-              <div className="form-group">
-                <label>تاريخ الاستثناء</label>
-                <input
-                  type="date"
-                  value={exceptionDate}
-                  onChange={(e) => setExceptionDate(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>حالة التوفر</label>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <label className={`duration-option ${exceptionIsBlocked ? 'duration-option--selected' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
+            <div className="avx-days">
+              {DAYS_ORDER.map(day => (
+                <div key={day} className={`avx-day ${weeklySchedule[day].enabled ? '' : 'avx-day--off'}`}>
+                  <label className="avx-toggle" title={weeklySchedule[day].enabled ? 'تعطيل اليوم' : 'تفعيل اليوم'}>
                     <input
-                      type="radio"
-                      checked={exceptionIsBlocked}
-                      onChange={() => setExceptionIsBlocked(true)}
+                      type="checkbox"
+                      checked={weeklySchedule[day].enabled}
+                      onChange={() => toggleDayEnabled(day)}
                     />
-                    غير متاح (مغلق)
+                    <span className="avx-toggle__track" />
                   </label>
-                  <label className={`duration-option ${!exceptionIsBlocked ? 'duration-option--selected' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
-                    <input
-                      type="radio"
-                      checked={!exceptionIsBlocked}
-                      onChange={() => setExceptionIsBlocked(false)}
-                    />
-                    متاح (أوقات مخصصة)
-                  </label>
+                  <span className="avx-day__name">{availabilityHelpers.getDayNameArabic(day)}</span>
+
+                  {weeklySchedule[day].enabled ? (
+                    <div className="avx-day__slots">
+                      {weeklySchedule[day].slots.map((slot, idx) => (
+                        <span key={idx} className="avx-slot">
+                          <input
+                            type="time"
+                            value={slot.start}
+                            onChange={(e) => updateSlot(day, idx, 'start', e.target.value)}
+                          />
+                          <span className="avx-slot__sep">إلى</span>
+                          <input
+                            type="time"
+                            value={slot.end}
+                            onChange={(e) => updateSlot(day, idx, 'end', e.target.value)}
+                          />
+                          {weeklySchedule[day].slots.length > 1 && (
+                            <button
+                              className="avx-slot__del"
+                              onClick={() => removeSlot(day, idx)}
+                              title="حذف الفترة"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                      <button className="avx-addslot" onClick={() => addSlot(day)}>
+                        <Plus size={12} />
+                        فترة أخرى
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="avx-day__off">غير متاح</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+
+        {/* الاجتماعات القادمة — عمود يسار قابل للطي */}
+        {meetMin ? (
+          <aside className="ssp2-chatcol avx-meetcol ssp2-chatcol--min">
+            <button className="ssp2-chatcol__reopen" onClick={() => toggleMeet(false)} title="فتح الاجتماعات القادمة">
+              <ChevronsRight size={15} />
+              <span>الاجتماعات القادمة</span>
+            </button>
+          </aside>
+        ) : (
+          <aside className="ssp2-chatcol avx-meetcol">
+            <div className="ssp2-card">
+              <div className="ssp2-card__head">
+                <span className="ssp2-card__title">
+                  <CalendarClock size={14} /> الاجتماعات القادمة
+                </span>
+                <div className="ssp2-card__headtools">
+                  <button className="ssp2-icon-btn" onClick={() => navigate('/meetings/client')} title="كل الاجتماعات">
+                    <ExternalLink size={13} />
+                  </button>
+                  <button className="ssp2-icon-btn" onClick={() => toggleMeet(true)} title="طي العمود">
+                    <ChevronsLeft size={14} />
+                  </button>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>السبب / الملاحظة</label>
-                <input
-                  type="text"
-                  value={exceptionReason}
-                  onChange={(e) => setExceptionReason(e.target.value)}
-                  placeholder="مثال: إجازة عيد، سفر عمل..."
-                />
-              </div>
+              {upcoming.length === 0 ? (
+                <div className="avx-empty">
+                  <CalendarClock size={26} />
+                  <p>لا اجتماعات قادمة</p>
+                  <span>حجوزات العملاء المؤكدة تظهر هنا</span>
+                </div>
+              ) : (
+                <div className="avx-meets">
+                  {upcoming.map(meeting => (
+                    <div key={meeting.id} className="avx-meet">
+                      <div className="avx-meet__top">
+                        <span className="avx-meet__title">{meeting.title}</span>
+                        <span className={`avx-meet__status avx-meet__status--${meeting.status}`}>
+                          {MEETING_STATUS_LABELS[meeting.status] ?? meeting.status}
+                        </span>
+                      </div>
+                      <div className="avx-meet__meta">
+                        <Clock size={11} />
+                        {new Date(meeting.scheduled_at).toLocaleDateString('ar-SA', { weekday: 'short', day: 'numeric', month: 'short' })}
+                        {' · '}
+                        {new Date(meeting.scheduled_at).toLocaleTimeString('ar-SA', { hour: 'numeric', minute: '2-digit' })}
+                        {' · '}
+                        {meeting.duration_minutes} د
+                      </div>
+                      <div className="avx-meet__meta">
+                        <User size={11} />
+                        <span className="avx-meet__client">{meeting.client?.name || meeting.client_name || 'بدون اسم'}</span>
+                        {meeting.meeting_type === 'remote' ? <Video size={11} /> : <MapPin size={11} />}
+                        {meeting.meeting_type === 'remote' ? 'عن بعد' : 'حضوري'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </aside>
+        )}
+      </div>
+
+      {/* ─── مودال إضافة استثناء ─── */}
+      {showExceptionModal && (
+        <div className="ssp2-overlay" onClick={() => setShowExceptionModal(false)}>
+          <div className="ssp2-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="ssp2-modal__head">
+              إضافة استثناء
+              <button className="ssp2-icon-btn" onClick={() => setShowExceptionModal(false)}><X size={14} /></button>
             </div>
 
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setShowExceptionModal(false)}>
-                إلغاء
-              </button>
-              <button className="btn-primary" onClick={handleAddException}>
-                حفظ الاستثناء
-              </button>
+            <div className="ssp2-modal__body">
+              <p className="ssp2-hint">
+                سيؤدي هذا إلى تجاوز الجدول الأسبوعي لهذا اليوم المحدد.
+              </p>
+
+              <label className="ssp2-label">تاريخ الاستثناء</label>
+              <input
+                className="ssp2-input"
+                type="date"
+                value={exceptionDate}
+                onChange={(e) => setExceptionDate(e.target.value)}
+              />
+
+              <label className="ssp2-label">حالة التوفر</label>
+              <div className="avx-seg">
+                <button
+                  className={`avx-seg__btn ${exceptionIsBlocked ? 'is-current' : ''}`}
+                  onClick={() => setExceptionBlocked(true)}
+                >
+                  غير متاح (مغلق)
+                </button>
+                <button
+                  className={`avx-seg__btn ${!exceptionIsBlocked ? 'is-current' : ''}`}
+                  onClick={() => setExceptionBlocked(false)}
+                >
+                  متاح (أوقات مخصصة)
+                </button>
+              </div>
+
+              {!exceptionIsBlocked && (
+                <div className="avx-mslots">
+                  {exceptionSlots.map((slot, idx) => (
+                    <div key={idx} className="avx-mslot">
+                      <input
+                        className="ssp2-input"
+                        type="time"
+                        value={slot.start}
+                        onChange={(e) => setExceptionSlots(prev => prev.map((s, i) => i === idx ? { ...s, start: e.target.value } : s))}
+                      />
+                      <span className="avx-slot__sep">إلى</span>
+                      <input
+                        className="ssp2-input"
+                        type="time"
+                        value={slot.end}
+                        onChange={(e) => setExceptionSlots(prev => prev.map((s, i) => i === idx ? { ...s, end: e.target.value } : s))}
+                      />
+                      {exceptionSlots.length > 1 && (
+                        <button
+                          className="ssp2-icon-btn ssp2-icon-btn--danger"
+                          onClick={() => setExceptionSlots(prev => prev.filter((_, i) => i !== idx))}
+                          title="حذف الفترة"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    className="avx-addslot"
+                    onClick={() => setExceptionSlots(prev => [...prev, { start: '09:00', end: '17:00' }])}
+                  >
+                    <Plus size={12} />
+                    فترة أخرى
+                  </button>
+                </div>
+              )}
+
+              <label className="ssp2-label">السبب / الملاحظة</label>
+              <input
+                className="ssp2-input"
+                type="text"
+                value={exceptionReason}
+                onChange={(e) => setExceptionReason(e.target.value)}
+                placeholder="مثال: إجازة عيد، سفر عمل..."
+              />
+
+              <div className="ssp2-modal__foot">
+                <button className="ssp2-btn" onClick={() => setShowExceptionModal(false)}>إلغاء</button>
+                <button className="ssp2-btn ssp2-btn--primary" onClick={handleAddException}>
+                  حفظ الاستثناء
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, AlertCircle, ShieldCheck, Paperclip } from 'lucide-react';
 import { UserService, type User } from '../services/UserService';
 import { TaskService } from '../services/taskService';
+import MultiSelectDropdown from './MultiSelectDropdown';
 import type { Task } from '../types';
 
 interface EditTaskModalProps {
@@ -36,6 +37,22 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [lawyers, setLawyers] = useState<User[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+  // تعدّد المكلّفين — assigneeIds تشمل المسؤول؛ responsibleId هو المسؤول (المُرقّى بالنجمة)
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
+  const [responsibleId, setResponsibleId] = useState<string>('');
+
+  const toggleAssignee = (value: string) => {
+    setAssigneeIds((prev) => {
+      if (prev.includes(value)) {
+        const next = prev.filter((v) => v !== value);
+        setResponsibleId((resp) => (resp === value ? (next[0] || '') : resp));
+        return next;
+      }
+      const next = [...prev, value];
+      setResponsibleId((resp) => resp || value);
+      return next;
+    });
+  };
 
   // تحديث البيانات عند فتح النافذة أو تغيير المهمة
   useEffect(() => {
@@ -53,6 +70,25 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         requires_approval: !!task.requires_approval,
         requires_attachment: !!task.requires_attachment
       });
+
+      // تهيئة تعدّد المكلّفين من task.assignees (مع المسؤول من pivot.is_primary)
+      const list = Array.isArray(task.assignees) ? task.assignees : [];
+      if (list.length) {
+        const ids = list.map((a) => String(a.id));
+        const primary = list.find((a) => a.pivot?.is_primary);
+        setAssigneeIds(ids);
+        setResponsibleId(
+          primary ? String(primary.id) : (task.assignedTo ? String(task.assignedTo) : ids[0])
+        );
+      } else if (task.assignedTo) {
+        // توافق خلفي: مهمة قديمة بمكلّف مفرد فقط
+        setAssigneeIds([String(task.assignedTo)]);
+        setResponsibleId(String(task.assignedTo));
+      } else {
+        setAssigneeIds([]);
+        setResponsibleId('');
+      }
+
       fetchData();
     }
   }, [isOpen, task]);
@@ -86,7 +122,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         due_date: formData.due_date,
         estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : undefined,
         actual_hours: formData.actual_hours ? parseFloat(formData.actual_hours) : undefined,
-        assigned_to: formData.assigned_to,
+        assigned_to: responsibleId || formData.assigned_to,
+        assignee_ids: assigneeIds.length ? assigneeIds.map((v) => Number(v)) : [],
       };
 
       await TaskService.updateTask(task.id, updateData);
@@ -405,31 +442,17 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                       color: 'var(--color-text)',
                       marginBottom: '6px'
                     }}>
-                      المحامي المسؤول *
+                      المكلّفون (★ المسؤول) *
                     </label>
-                    <select
-                      name="assigned_to"
-                      value={formData.assigned_to}
-                      onChange={handleInputChange}
-                      required
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        fontSize: 'var(--font-size-sm)',
-                        color: 'var(--color-text)',
-                        backgroundColor: 'var(--color-background)',
-                        border: '2px solid var(--color-border)',
-                        borderRadius: '8px',
-                        outline: 'none'
-                      }}
-                    >
-                      <option value="">اختر المحامي</option>
-                      {lawyers.map(lawyer => (
-                        <option key={lawyer.id} value={lawyer.id}>
-                          {lawyer.name}
-                        </option>
-                      ))}
-                    </select>
+                    <MultiSelectDropdown
+                      options={lawyers.map((l) => ({ value: String(l.id), label: l.name }))}
+                      selected={assigneeIds}
+                      onToggle={toggleAssignee}
+                      responsible={responsibleId || undefined}
+                      onPromote={(v) => setResponsibleId(v)}
+                      placeholder="اختر المكلّفين"
+                      emptyText="لا يوجد محامون"
+                    />
                   </div>
                 </div>
 

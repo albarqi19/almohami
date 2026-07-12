@@ -686,8 +686,8 @@ const SimpleServicePage: React.FC = () => {
           <DaysRing service={service} stages={stages} size={44} />
           <span className="ssp2-fact">
             <Scale size={13} />
-            <span className="ssp2-fact__label">المحامي المسؤول</span>
-            <b>{service.assigned_lawyer?.name ?? 'غير مسند'}</b>
+            <span className="ssp2-fact__label">المحامون المسؤولون</span>
+            <b>{service.assigned_lawyer?.name ?? 'غير مسند'}{(service.assignees?.length ?? 0) > 1 ? ` +${service.assignees!.length - 1}` : ''}</b>
           </span>
           <span className="ssp2-fact__sep" />
           <span className="ssp2-fact">

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { UserService, type User as ServiceUser } from '../services/UserService';
 import { TaskService } from '../services/taskService';
+import MultiSelectDropdown from './MultiSelectDropdown';
 import type { CreateTaskForm } from '../types';
 // ستايلات Notion (add-appointment-modal.css) تُحمَّل مركزياً عبر styles/appStyles.ts
 
@@ -59,6 +60,23 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [lawyers, setLawyers] = useState<ServiceUser[]>([]);
   const [loadingLawyers, setLoadingLawyers] = useState(false);
+  // تعدّد المكلّفين — assigneeIds تشمل المسؤول؛ responsibleId هو المسؤول (المُرقّى بالنجمة)
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
+  const [responsibleId, setResponsibleId] = useState<string>('');
+
+  // تبديل مكلّف: إضافة/إزالة مع صون المسؤول (أول اختيار = المسؤول؛ إزالته تُرقّي التالي)
+  const toggleAssignee = (value: string) => {
+    setAssigneeIds((prev) => {
+      if (prev.includes(value)) {
+        const next = prev.filter((v) => v !== value);
+        setResponsibleId((resp) => (resp === value ? (next[0] || '') : resp));
+        return next;
+      }
+      const next = [...prev, value];
+      setResponsibleId((resp) => resp || value);
+      return next;
+    });
+  };
 
   // Fetch lawyers when modal opens
   useEffect(() => {
@@ -77,6 +95,8 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
     } else {
       // Reset form on close
       setFormData(initialFormState);
+      setAssigneeIds([]);
+      setResponsibleId('');
       setError(null);
     }
   }, [isOpen]);
@@ -116,7 +136,8 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
         type: formData.type || 'other',
         caseId: caseId || undefined,
         clientId: clientId || undefined,
-        assignedTo: formData.assigned_to || undefined,
+        assignedTo: responsibleId || undefined,
+        assigneeIds: assigneeIds.length ? assigneeIds : undefined,
         priority: formData.priority as any,
         dueDate: new Date(formData.due_date),
         estimatedHours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : undefined,
@@ -194,18 +215,15 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                   <span>تعيين إلى</span>
                 </div>
                 <div className="notion-property-value">
-                  <select
-                    value={formData.assigned_to}
-                    onChange={(e) => updateField('assigned_to', e.target.value)}
-                    disabled={loadingLawyers}
-                  >
-                    <option value="">👤 (بدون تعيين)</option>
-                    {lawyers.map(lawyer => (
-                      <option key={lawyer.id} value={lawyer.id}>
-                        {lawyer.name}
-                      </option>
-                    ))}
-                  </select>
+                  <MultiSelectDropdown
+                    options={lawyers.map((l) => ({ value: String(l.id), label: l.name }))}
+                    selected={assigneeIds}
+                    onToggle={toggleAssignee}
+                    responsible={responsibleId || undefined}
+                    onPromote={(v) => setResponsibleId(v)}
+                    placeholder={loadingLawyers ? 'جاري التحميل...' : '👤 (بدون تعيين)'}
+                    emptyText="لا يوجد محامون"
+                  />
                 </div>
               </div>
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import MultiSelectDropdown from '../MultiSelectDropdown';
 import {
   X,
   Check,
@@ -365,6 +366,8 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
   const [lawyerSearch, setLawyerSearch] = useState('');
   const [lawyers, setLawyers] = useState<UserOption[]>([]);
   const [lawyersLoading, setLawyersLoading] = useState(false);
+  // تعدّد المكلّفين: قائمة كل الموظفين المكلّفين (المسؤول الأساسي = assigned_lawyer_id)
+  const [assigneeIds, setAssigneeIds] = useState<number[]>([]);
 
   // ── Reset on open ──
   useEffect(() => {
@@ -385,6 +388,7 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
       setClientSearch('');
       setClientName('');
       setLawyerSearch('');
+      setAssigneeIds([]);
     }
   }, [isOpen]);
 
@@ -439,6 +443,26 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
     }, 300);
     return () => clearTimeout(t);
   }, [lawyerSearch, fetchLawyers]);
+
+  // ── تعدّد المكلّفين: اختيار/إلغاء (أول اختيار = المسؤول) + ترقية عضو لمسؤول ──
+  const toggleAssignee = (val: string) => {
+    const id = Number(val);
+    if (assigneeIds.includes(id)) {
+      const next = assigneeIds.filter((x) => x !== id);
+      setAssigneeIds(next);
+      if (formData.assigned_lawyer_id === id) {
+        setFormData((prev) => ({ ...prev, assigned_lawyer_id: next[0] }));
+      }
+    } else {
+      setAssigneeIds([...assigneeIds, id]);
+      if (!formData.assigned_lawyer_id) {
+        setFormData((prev) => ({ ...prev, assigned_lawyer_id: id }));
+      }
+    }
+  };
+  const promoteAssignee = (val: string) => {
+    setFormData((prev) => ({ ...prev, assigned_lawyer_id: Number(val) }));
+  };
 
   // ── Helpers ──
   const update = <K extends keyof CreateLegalServiceData>(
@@ -498,6 +522,7 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
         submitData.delivery_method = formData.delivery_method_notice;
         delete submitData.delivery_method_notice;
       }
+      if (assigneeIds.length > 0) submitData.assignee_ids = assigneeIds;
       const response = await LegalServiceService.createService(submitData);
       if (response.success) {
         onSuccess(response.data ? { id: response.data.id, service_type: response.data.service_type } : undefined);
@@ -607,23 +632,21 @@ const AddServiceModal: React.FC<AddServiceModalProps> = ({ isOpen, onClose, onSu
           </div>
         </div>
 
-        {/* Lawyer */}
+        {/* Lawyers — تعدّد المكلّفين (أول اختيار ★ مسؤول والبقية فريق) */}
         <div className="asm-property-row">
           <div className="asm-property-label">
             <Briefcase size={15} className="asm-property-icon" />
-            <span>الموظف المسؤول</span>
+            <span>الموظفون المسؤولون</span>
           </div>
           <div className="asm-property-value">
-            <SearchableDropdown
-              value={formData.assigned_lawyer_id}
-              onChange={(id) => update('assigned_lawyer_id', id)}
-              options={lawyers}
-              loading={lawyersLoading}
-              placeholder="اختر الموظف..."
-              searchValue={lawyerSearch}
-              onSearchChange={setLawyerSearch}
-              onOpen={() => { if (lawyers.length === 0) fetchLawyers(''); }}
-              panelAlign="left"
+            <MultiSelectDropdown
+              options={lawyers.map((l) => ({ value: String(l.id), label: l.name }))}
+              selected={assigneeIds.map(String)}
+              responsible={formData.assigned_lawyer_id ? String(formData.assigned_lawyer_id) : undefined}
+              onToggle={toggleAssignee}
+              onPromote={promoteAssignee}
+              placeholder="اختر الموظفين..."
+              emptyText="لا يوجد موظفون"
             />
           </div>
         </div>

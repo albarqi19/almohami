@@ -1,0 +1,904 @@
+/* ═══════════════════════════════════════════════════════
+   رفيق الجلسة — Session Copilot (مساعد التحضير والتدوين)
+   متوافق مع الثيمات الثلاثة: Light / Dark / Diwan
+   نمط ERP Dense: 11-13px fonts, dense padding, حدود 1px
+   بادئة scp- · متغيرات CSS فقط (لا hex صلب)
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Page Root ─── */
+.scp-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 18px;
+  font-family: var(--font-family-base, 'IBM Plex Sans Arabic', sans-serif);
+  font-size: 12px;
+  color: var(--color-text);
+  min-height: calc(100vh - 60px);
+  direction: rtl;
+}
+
+.scp-page--center {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+  padding: 60px 20px;
+}
+
+.scp-page--center h2 {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.scp-muted {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  margin: 0;
+}
+.scp-muted--pad { padding: 10px 4px; text-align: center; }
+
+/* ─── Header ─── */
+.scp-header {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 12px);
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  box-shadow: var(--shadow-xs);
+}
+
+.scp-header__titles { flex: 1; min-width: 220px; }
+
+.scp-header__title {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+}
+
+.scp-header__icon { color: var(--law-gold); }
+
+.scp-header__tagline {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.scp-header__subtitle {
+  font-size: 11.5px;
+  color: var(--color-text-secondary);
+  margin-top: 3px;
+}
+
+.scp-header__case-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+.scp-header__case-link:hover { color: var(--law-navy); }
+
+/* شارة الجلسة الحية */
+.scp-live-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--status-red);
+  background: var(--status-red-light);
+  border: 1px solid var(--status-red);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.scp-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--status-red);
+  animation: scp-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes scp-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* ─── Panels ─── */
+.scp-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 12px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-xs);
+}
+
+.scp-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+}
+
+.scp-panel__title {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+}
+
+.scp-panel__count {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+}
+
+.scp-panel__spacer { flex: 1; }
+
+.scp-panel__body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scp-subtitle {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 6px 0 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-text);
+}
+.scp-subtitle svg { color: var(--law-gold); flex-shrink: 0; }
+
+/* ─── الحالات (فارغ/تحميل/خطأ) ─── */
+.scp-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 26px 16px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.scp-state p { margin: 0; max-width: 520px; line-height: 1.7; }
+.scp-state__icon { color: var(--law-gold); }
+.scp-state__lead { color: var(--color-text-secondary); }
+.scp-state--error { color: var(--status-red); }
+.scp-state--error p { color: var(--status-red); }
+
+.scp-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--law-gold);
+  border-radius: 50%;
+  animation: scp-rotate 0.8s linear infinite;
+}
+
+@keyframes scp-rotate { to { transform: rotate(360deg); } }
+
+.scp-spin { animation: scp-rotate 0.8s linear infinite; }
+
+/* ─── Banners ─── */
+.scp-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  font-size: 11.5px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.scp-banner--warning {
+  color: var(--status-orange);
+  background: var(--status-orange-light);
+}
+.scp-banner--warning svg { flex-shrink: 0; }
+
+.scp-banner--danger {
+  color: var(--status-red);
+  background: var(--status-red-light);
+  border: 1px solid var(--status-red);
+  border-radius: var(--radius-xs, 8px);
+}
+
+.scp-banner--muted {
+  color: var(--color-text-secondary);
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs, 8px);
+}
+
+.scp-banner__action {
+  margin-inline-start: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.scp-banner__action:disabled { opacity: 0.5; cursor: wait; }
+
+/* ─── Buttons ─── */
+.scp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--radius-xs, 8px);
+  font-size: 11.5px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  border: 1px solid;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.scp-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.scp-btn--primary {
+  background: var(--law-navy);
+  color: #fff;
+  border-color: var(--law-navy);
+}
+.scp-btn--primary:hover:not(:disabled) { background: var(--law-navy-dark, var(--law-navy)); }
+
+.scp-btn--gold {
+  background: var(--law-gold);
+  color: #fff;
+  border-color: var(--law-gold);
+}
+.scp-btn--gold:hover:not(:disabled) { filter: brightness(0.94); }
+
+.scp-btn--ghost {
+  background: none;
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.scp-btn--ghost:hover:not(:disabled) { background: var(--color-surface-subtle); }
+
+.scp-btn--danger {
+  background: none;
+  color: var(--status-red);
+  border-color: var(--status-red);
+}
+.scp-btn--danger:hover:not(:disabled) { background: var(--status-red-light); }
+
+.scp-btn--ok {
+  background: none;
+  color: var(--status-green, var(--law-navy));
+  border-color: var(--status-green, var(--law-navy));
+}
+.scp-btn--ok:hover:not(:disabled) { background: var(--status-green-light, var(--color-surface-subtle)); }
+
+/* ─── جدول الادعاءات ─── */
+.scp-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs, 8px);
+}
+
+.scp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  min-width: 640px;
+}
+
+.scp-table th {
+  text-align: right;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-subtle);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.scp-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+  line-height: 1.5;
+}
+.scp-table tbody tr:last-child td { border-bottom: none; }
+.scp-table tbody tr:hover { background: var(--color-surface-subtle); }
+
+.scp-table__check-col { width: 46px; text-align: center; }
+.scp-table__row--off td { opacity: 0.55; }
+.scp-table__row--off .scp-table__check-col,
+.scp-table__row--off td:first-child { opacity: 1; }
+
+.scp-table__claim { font-weight: 600; min-width: 160px; }
+.scp-table__quote-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 220px;
+}
+
+/* ─── Checkbox ─── */
+.scp-check {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--color-border-strong, var(--color-border));
+  background: var(--color-surface);
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  padding: 0;
+}
+.scp-check:hover { border-color: var(--law-gold); }
+.scp-check--on {
+  background: var(--law-gold);
+  border-color: var(--law-gold);
+}
+.scp-check--sm { width: 14px; height: 14px; cursor: default; }
+.scp-check--sm:hover { border-color: var(--color-border-strong, var(--color-border)); }
+.scp-check--sm.scp-check--on:hover { border-color: var(--law-gold); }
+
+/* ─── شارة الطرف ─── */
+.scp-party {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.scp-party--opponent {
+  color: var(--status-red);
+  border-color: var(--status-red);
+  background: var(--status-red-light);
+}
+.scp-party--client {
+  color: var(--law-navy);
+  border-color: var(--law-navy);
+  background: var(--law-navy-light);
+}
+.scp-party--unknown {
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+  background: var(--color-surface-subtle);
+}
+
+/* ─── الاقتباسات والمصادر ─── */
+.scp-quote {
+  color: var(--color-text);
+  font-style: italic;
+  line-height: 1.6;
+}
+.scp-quote--block { display: block; font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+
+.scp-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.scp-unverified {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--status-orange);
+  font-weight: 700;
+}
+
+/* ─── نقطة الثقة ─── */
+.scp-confidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.scp-confidence__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.scp-confidence__dot--high { background: var(--status-green, var(--law-gold)); }
+.scp-confidence__dot--medium { background: var(--status-orange); }
+.scp-confidence__dot--low { background: var(--status-red); }
+
+/* ─── الأسئلة المقترحة ─── */
+.scp-qlist {
+  margin: 0;
+  padding: 0 18px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scp-qlist__item {
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs, 8px);
+  background: var(--color-surface-subtle);
+}
+
+.scp-qlist__question { font-weight: 600; }
+.scp-qlist__rationale {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+/* ─── أهداف المراقبة ─── */
+.scp-watchlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.scp-watchlist__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+.scp-watchlist__item:last-child { border-bottom: none; }
+.scp-watchlist__item--done .scp-watchlist__label {
+  text-decoration: line-through;
+  color: var(--color-text-secondary);
+}
+
+.scp-watchlist__icon { color: var(--law-gold); flex-shrink: 0; }
+.scp-watchlist__label { flex: 1; line-height: 1.5; }
+
+/* ─── شريط الاعتماد اللاصق ─── */
+.scp-approve-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  z-index: 5;
+}
+
+.scp-approve-bar__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  flex: 1;
+}
+
+.scp-approve-bar__done {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--status-green, var(--law-gold));
+}
+
+/* ─── بطاقة الإرشاد (لا تشغيلة) ─── */
+.scp-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 16px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-xs, 8px);
+  background: var(--color-surface-subtle);
+  align-items: flex-start;
+}
+
+.scp-guide__head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.scp-guide__head svg { color: var(--law-gold); }
+
+.scp-guide__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.scp-guide__steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scp-guide__num {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--law-navy);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ─── المرآة الحية ─── */
+.scp-live {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scp-live__grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .scp-live__grid { grid-template-columns: 1fr; }
+}
+
+.scp-live__feed,
+.scp-live__side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* ─── شريط الإحصاءات ─── */
+.scp-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scp-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.scp-stat svg { color: var(--law-gold); }
+
+.scp-stat__label { color: var(--color-text-secondary); }
+.scp-stat__value {
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── التنبيهات ─── */
+.scp-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-inline-end: 2px;
+}
+
+.scp-alert {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-right: 3px solid var(--quiet-gray-400);
+  border-radius: var(--radius-xs, 8px);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--shadow-xs);
+}
+
+.scp-alert--critical { border-right-color: var(--status-red); }
+.scp-alert--warning { border-right-color: var(--status-orange); }
+.scp-alert--info { border-right-color: var(--quiet-gray-400); }
+.scp-alert--resolved { opacity: 0.65; }
+
+.scp-alert__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.scp-alert__type {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+}
+.scp-alert__type--critical { color: var(--status-red); border-color: var(--status-red); background: var(--status-red-light); }
+.scp-alert__type--warning { color: var(--status-orange); border-color: var(--status-orange); background: var(--status-orange-light); }
+
+.scp-alert__severity {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.scp-alert__deep {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--law-gold);
+  border: 1px solid var(--law-gold);
+  border-radius: 999px;
+  padding: 0 7px;
+}
+
+.scp-alert__time {
+  margin-inline-start: auto;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.scp-alert__title {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.scp-alert__message {
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+/* اقتباسان متجاوران: قيل الآن / الضبط المصدر */
+.scp-alert__quotes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+@media (max-width: 700px) {
+  .scp-alert__quotes { grid-template-columns: 1fr; }
+}
+
+.scp-alert__quote-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs, 8px);
+  background: var(--color-surface-subtle);
+  font-size: 11px;
+  min-width: 0;
+}
+
+.scp-alert__quote-box--evidence {
+  border-color: var(--law-gold);
+}
+
+.scp-alert__quote-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+.scp-alert__quote-box--evidence .scp-alert__quote-label { color: var(--law-gold); }
+
+/* شريط المهلة داخل التنبيه */
+.scp-alert__deadline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--status-orange);
+  background: var(--status-orange-light);
+  border-radius: var(--radius-xs, 8px);
+  padding: 5px 8px;
+}
+
+.scp-alert__deadline-link {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.scp-alert__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scp-alert__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.scp-alert__state--accepted { color: var(--status-green, var(--law-gold)); }
+.scp-alert__state--dismissed { color: var(--color-text-secondary); }
+
+/* ─── إخلاء المسؤولية ─── */
+.scp-disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 7px 12px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-subtle);
+  border-bottom: 1px solid var(--color-border);
+}
+.scp-disclaimer svg { flex-shrink: 0; margin-top: 3px; }
+
+/* ─── التقرير البعدي ─── */
+.scp-report {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scp-report__summary {
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs, 8px);
+  background: var(--color-surface-subtle);
+}
+
+.scp-report__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.scp-report__item {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.scp-report__item:last-child { border-bottom: none; }
+
+.scp-report__point { font-weight: 600; }
+
+.scp-report__speaker {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0 7px;
+  margin-inline-start: 6px;
+  white-space: nowrap;
+}
+
+.scp-report__why {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.scp-report__groups {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scp-report__group {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs, 8px);
+  overflow: hidden;
+}
+
+.scp-report__group-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 10px;
+  background: var(--color-surface-subtle);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.scp-report__group .scp-report__list { padding: 0 10px; }
+
+.scp-report__deadline-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.scp-report__deadline-note { margin-top: 2px; }
+
+.scp-report__limitations {
+  margin: 0;
+  padding: 0 18px 0 0;
+  font-size: 11.5px;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}

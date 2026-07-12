@@ -22,12 +22,14 @@ import {
 	Scale,
 	Swords,
 	AlertCircle,
-	Folder
+	Folder,
+	Download
 } from 'lucide-react';
 import type { Case, CaseStatus, CaseType, Priority } from '../types';
 import { CaseService } from '../services';
 import { UserService, type User as UserType } from '../services/UserService';
 import AddCaseModal from '../components/AddCaseModal';
+import CasesExportModal from '../components/CasesExportModal';
 import OutcomeBadge from '../components/OutcomeBadge';
 import DisplaySettingsButton from '../components/DisplaySettingsButton';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
@@ -167,6 +169,7 @@ const Cases: React.FC = () => {
 	const [showAdvancedPanel, setShowAdvancedPanel] = useState(false);
 	const [najizStatuses, setNajizStatuses] = useState<string[]>([]);
 	const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+	const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 	const [lawyers, setLawyers] = useState<UserType[]>([]);
 	const [clients, setClients] = useState<UserType[]>([]);
 	const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -411,6 +414,14 @@ const Cases: React.FC = () => {
 						: ((ec.name && ec.phone) ? { name: ec.name, phone: ec.phone, email: ec.email || null, national_id: ec.nationalId || null } : null))
 					.filter(Boolean);
 				if (extras.length > 0) createData.additional_clients = extras;
+
+				// محامو الفريق (بخلاف المحامي المسؤول) — أرقام فريدة بلا المسؤول
+				const teamLawyerIds = Array.from(new Set(
+					(caseData.teamLawyers || [])
+						.map((v: string) => parseInt(v, 10))
+						.filter((n: number) => !isNaN(n) && n !== lawyerId)
+				));
+				if (teamLawyerIds.length > 0) createData.team_lawyer_ids = teamLawyerIds;
 			const created = await CaseService.createCase(createData);
 
 			// مسح الكاش وتحديث القضايا
@@ -811,6 +822,14 @@ const Cases: React.FC = () => {
 						<RefreshCw size={16} className={softRefreshing ? 'spin-slow' : ''} />
 					</button>
 
+					<button
+						className="icon-btn"
+						onClick={() => setIsExportModalOpen(true)}
+						title="تصدير القضايا (Excel)"
+					>
+						<Download size={16} />
+					</button>
+
 					<DisplaySettingsButton />
 				</div>
 
@@ -1063,6 +1082,14 @@ const Cases: React.FC = () => {
 				onSave={handleAddCase}
 				lawyers={lawyers}
 				clients={clients}
+			/>
+
+			<CasesExportModal
+				isOpen={isExportModalOpen}
+				onClose={() => setIsExportModalOpen(false)}
+				lawyers={lawyers}
+				clients={clients}
+				najizStatuses={najizStatuses}
 			/>
 		</div >
 	);

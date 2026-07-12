@@ -8,8 +8,10 @@ import type { WordAddinTokenStatus } from '../../services/wordAddinService';
  * لغير العملاء (التبويب نفسه محجوب عن دور client في Settings.tsx).
  */
 const MANIFEST_URL = 'https://api.alraedlaw.com/word-addin/manifest.xml';
+// يبدأ بكلمة `powershell` ليعمل من PowerShell ومن موجّه الأوامر (cmd) معاً —
+// المستخدمون يخلطون بينهما، وأمر `irm` المجرّد لا يعرفه cmd.
 const DESKTOP_INSTALL_CMD =
-  'irm https://api.alraedlaw.com/word-addin/install-desktop.ps1 -OutFile "$env:TEMP\\alraed-install.ps1"; powershell -ExecutionPolicy Bypass -File "$env:TEMP\\alraed-install.ps1"';
+  'powershell -ExecutionPolicy Bypass -Command "irm https://api.alraedlaw.com/word-addin/install-desktop.ps1 -OutFile $env:TEMP\\alraed-install.ps1; & $env:TEMP\\alraed-install.ps1"';
 
 /** زر نسخ أمر تثبيت سطح المكتب — الأمر نفسه لا يُعرض (مخيف للمستخدم العادي). */
 const InstallCommand: React.FC = () => {
@@ -32,7 +34,7 @@ const InstallCommand: React.FC = () => {
 
   return (
     <button type="button" className="settings-btn settings-btn--primary settings-btn--small" onClick={copy}>
-      {copied ? <><Check size={13} /> نُسخ — الصقه في PowerShell</> : <><Copy size={13} /> نسخ أمر التثبيت</>}
+      {copied ? <><Check size={13} /> نُسخ — الصقه في PowerShell أو موجّه الأوامر</> : <><Copy size={13} /> نسخ أمر التثبيت</>}
     </button>
   );
 };
@@ -236,8 +238,8 @@ const WordAddinSettings: React.FC = () => {
                 انسخ أمر التثبيت: <InstallCommand />
               </li>
               <li>
-                افتح <b>PowerShell</b> (ابحث عنه في قائمة ابدأ)، الصق الأمر واضغط Enter —
-                سيطلب موافقة المسؤول مرة واحدة ويجهّز كل شيء بنفسه.
+                افتح <b>PowerShell</b> أو <b>موجّه الأوامر (Command Prompt)</b> من قائمة ابدأ،
+                الصق الأمر واضغط Enter — يعمل من الاثنين، وسيطلب موافقة المسؤول مرة واحدة ويجهّز كل شيء بنفسه.
               </li>
               <li>
                 أعد فتح Word ← <b>إدراج</b> ← <b>الوظائف الإضافية الخاصة بي</b> ←

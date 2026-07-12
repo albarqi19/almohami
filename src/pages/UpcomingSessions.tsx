@@ -102,7 +102,7 @@ const UpcomingSessions: React.FC = () => {
 	const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
 	const [searchTerm, setSearchTerm] = useState('');
 	const [showExportMenu, setShowExportMenu] = useState(false);
-	const [exportPeriod, setExportPeriod] = useState<'today' | 'tomorrow' | 'week'>('today');
+	const [exportPeriod, setExportPeriod] = useState<'today' | 'tomorrow' | 'week' | 'all'>('today');
 	const [isExportingPdf, setIsExportingPdf] = useState(false);
 	const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
 	const exportMenuRef = useRef<HTMLDivElement>(null);
@@ -330,12 +330,15 @@ const UpcomingSessions: React.FC = () => {
 			endDate.setHours(23, 59, 59, 999);
 		}
 
-		const filtered = sessions.filter(session => {
-			const ed = getEffectiveDate(session);
-			if (!ed) return false;
-			const sessionDate = new Date(ed);
-			return sessionDate >= startDate && sessionDate <= endDate;
-		});
+		// «الكل» = كل الجلسات المعروضة بلا فلترة زمنية
+		const filtered = exportPeriod === 'all'
+			? [...sessions]
+			: sessions.filter(session => {
+				const ed = getEffectiveDate(session);
+				if (!ed) return false;
+				const sessionDate = new Date(ed);
+				return sessionDate >= startDate && sessionDate <= endDate;
+			});
 
 		// Match the on-screen ordering: upcoming first (nearest → farthest),
 		// then finished (most recent → oldest). Same logic as `sortedSessions`.
@@ -356,6 +359,7 @@ const UpcomingSessions: React.FC = () => {
 			case 'today': return 'تصدير جلسات اليوم';
 			case 'tomorrow': return 'تصدير جلسات الغد';
 			case 'week': return 'تصدير جلسات الأسبوع';
+			case 'all': return 'تصدير كل الجلسات';
 		}
 	};
 
@@ -364,6 +368,7 @@ const UpcomingSessions: React.FC = () => {
 		setExportPeriod(prev => {
 			if (prev === 'today') return 'tomorrow';
 			if (prev === 'tomorrow') return 'week';
+			if (prev === 'week') return 'all';
 			return 'today';
 		});
 	};
@@ -383,6 +388,9 @@ const UpcomingSessions: React.FC = () => {
 			const dayName = dayNames[tomorrow.getDay()];
 			const dateStr = tomorrow.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
 			return `جلسات_الغد_${dayName}_${dateStr}`.replace(/\s/g, '_');
+		} else if (exportPeriod === 'all') {
+			const dateStr = today.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+			return `كل_الجلسات_${dateStr}`.replace(/\s/g, '_');
 		} else {
 			const weekEnd = new Date(today);
 			weekEnd.setDate(weekEnd.getDate() + 7);
@@ -398,6 +406,7 @@ const UpcomingSessions: React.FC = () => {
 			case 'today': return 'جلسات اليوم';
 			case 'tomorrow': return 'جلسات الغد';
 			case 'week': return 'جلسات الأسبوع';
+			case 'all': return 'جميع الجلسات';
 		}
 	};
 
@@ -407,6 +416,7 @@ const UpcomingSessions: React.FC = () => {
 			case 'today': return 'لا توجد جلسات لليوم';
 			case 'tomorrow': return 'لا توجد جلسات للغد';
 			case 'week': return 'لا توجد جلسات لهذا الأسبوع';
+			case 'all': return 'لا توجد جلسات';
 		}
 	};
 
@@ -1237,7 +1247,7 @@ const UpcomingSessions: React.FC = () => {
 						<button
 							className="icon-btn"
 							onClick={() => setShowExportMenu(!showExportMenu)}
-							title="تصدير جلسات اليوم"
+							title="تصدير الجلسات"
 						>
 							<Download size={18} />
 						</button>
@@ -1246,7 +1256,7 @@ const UpcomingSessions: React.FC = () => {
 								<div
 									className="export-dropdown__header export-dropdown__header--clickable"
 									onClick={cycleExportPeriod}
-									title="اضغط للتبديل بين اليوم والغد والأسبوع"
+									title="اضغط للتبديل بين اليوم والغد والأسبوع والكل"
 								>
 									<Download size={14} />
 									{getExportPeriodLabel()}

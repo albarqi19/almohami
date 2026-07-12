@@ -330,4 +330,38 @@ export class CaseService {
   static async updatePrepStatus(caseId: string | number, status: 'draft' | 'preparation' | 'filed') {
     return apiClient.patch(`/cases/${caseId}/prep-status`, { status });
   }
+
+  // =================== التصنيف الذكي (شجرة ناجز) ===================
+
+  /** حالة التصنيف الذكي — نقطة استطلاع خفيفة تُسأل كل بضع ثوانٍ حتى يكتمل */
+  static async getClassification(caseId: string | number) {
+    return apiClient.get(`/cases/${caseId}/classification`);
+  }
+
+  /** (إعادة) تشغيل التصنيف الذكي يدوياً */
+  static async classifyCase(caseId: string | number) {
+    return apiClient.post(`/cases/${caseId}/classify`);
+  }
+
+  // =================== شات فريق القضية (غرفة التجهيز) ===================
+
+  static async getTeamChat(caseId: string | number) {
+    return apiClient.get(`/cases/${caseId}/team-chat`);
+  }
+
+  static async sendTeamChatMessage(caseId: string | number, body: string, mentions?: (string | number)[]) {
+    return apiClient.post(`/cases/${caseId}/team-chat`, { body, mentions: mentions ?? [] });
+  }
+
+  static async deleteTeamChatMessage(caseId: string | number, messageId: number) {
+    return apiClient.delete(`/cases/${caseId}/team-chat/${messageId}`);
+  }
+
+  /** تنفيذ اقتراح رائد القابل للنقر — بصلاحية الناقر (cases.edit على المسار) */
+  static async executeRaedAction(caseId: string | number, messageId: number, actionIndex: number) {
+    return apiClient.post(`/cases/${caseId}/team-chat/raed-action`, {
+      message_id: messageId,
+      action_index: actionIndex,
+    });
+  }
 }

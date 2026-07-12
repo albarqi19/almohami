@@ -244,6 +244,7 @@ export interface LegalService {
   // Relationships (loaded)
   client?: { id: number; name: string; email?: string; phone?: string };
   assigned_lawyer?: { id: number; name: string; email?: string; phone?: string };
+  assignees?: { id: number; name: string; pivot?: { is_primary?: boolean } }[];
   creator?: { id: number; name: string };
   consultation_detail?: ConsultationDetail;
   contract_drafting_detail?: ContractDraftingDetail;
@@ -973,6 +974,7 @@ export interface CreateLegalServiceData {
   service_type: ServiceType;
   client_id: number;
   assigned_lawyer_id?: number;
+  assignee_ids?: number[];
   priority?: ServicePriority;
   billing_type?: BillingType;
   agreed_amount?: number;

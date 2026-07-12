@@ -62,6 +62,7 @@ import type { TimelineEvent } from '../components/Timeline';
 import { apiClient } from '../utils/api';
 import { toHijri } from '../utils/hijriDate';
 import { CaseService } from '../services/caseService';
+import { UserService } from '../services/UserService';
 import { ReconciliationService } from '../services/reconciliationService';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 import { ActivityService } from '../services/activityService';
@@ -318,6 +319,56 @@ const CaseDetailPage: React.FC = () => {
     }
   };
 
+  // ── إدارة فريق المحامين (إضافة/إزالة بعد الإنشاء) ──
+  const canManageLawyers = !!user && (user.role === 'admin' || user.role === 'super_admin' || Boolean(user.is_tenant_owner));
+  const [availableLawyers, setAvailableLawyers] = useState<{ id: string; name: string }[]>([]);
+  const [showAddLawyer, setShowAddLawyer] = useState(false);
+  const [selectedNewLawyer, setSelectedNewLawyer] = useState('');
+  const [lawyerActionBusy, setLawyerActionBusy] = useState(false);
+
+  const loadAvailableLawyers = async () => {
+    try {
+      const list = await UserService.getLawyers();
+      setAvailableLawyers((list || []).map((l: any) => ({ id: String(l.id), name: l.name })));
+    } catch {
+      /* تجاهل — يبقى محدّد الإضافة فارغاً */
+    }
+  };
+
+  const handleToggleAddLawyer = () => {
+    setShowAddLawyer(v => !v);
+    if (availableLawyers.length === 0) loadAvailableLawyers();
+  };
+
+  const handleConfirmAddLawyer = async () => {
+    if (!caseId || !selectedNewLawyer) return;
+    try {
+      setLawyerActionBusy(true);
+      await CaseService.assignLawyer(caseId, selectedNewLawyer);
+      setSelectedNewLawyer('');
+      setShowAddLawyer(false);
+      await refreshCaseData();
+    } catch (e: any) {
+      setError(e?.message || 'فشل في إضافة المحامي');
+    } finally {
+      setLawyerActionBusy(false);
+    }
+  };
+
+  const handleRemoveLawyer = async (lawyerId: string) => {
+    if (!caseId) return;
+    if (!window.confirm('إزالة هذا المحامي من فريق القضية؟')) return;
+    try {
+      setLawyerActionBusy(true);
+      await CaseService.removeLawyer(caseId, String(lawyerId));
+      await refreshCaseData();
+    } catch (e: any) {
+      setError(e?.message || 'تعذّر إزالة المحامي');
+    } finally {
+      setLawyerActionBusy(false);
+    }
+  };
+
   const handleTaskAdded = async () => {
     await refreshCaseData();
   };
@@ -408,33 +459,10 @@ const CaseDetailPage: React.FC = () => {
   const isPrepMode = caseData.is_prep_mode || ['draft', 'preparation', 'filed'].includes(caseData.status);
 
   if (isPrepMode) {
+    // غرفة التجهيز صفحة ERP كاملة بترويستها الخاصة (نمط الخدمة المبسطة) —
+    // لا نغلّفها بـcase-detail-page كي تلتصق الأعمدة بحواف الشاشة
     return (
-      <div className="case-detail-page">
-        {/* Header مبسط للمطبخ */}
-        <div className="case-detail-header">
-          <div className="case-detail-header__top">
-            <Link to="/cases" className="back-btn">
-              <ArrowRight size={16} />
-              القضايا
-            </Link>
-            <div className="case-detail-header__title-section">
-              <div className="case-detail-header__title">
-                <FileText size={18} />
-                {caseData.title}
-              </div>
-              <div className="case-detail-header__subtitle">
-                رقم الملف: {caseData.file_number}
-              </div>
-            </div>
-            <div className="case-detail-header__badges">
-              <span className="case-badge" style={{ background: '#FEF3C7', color: '#92400E' }}>
-                <span className="case-badge__dot" style={{ background: '#D97706' }} />
-                {caseData.status_arabic || caseData.status}
-              </span>
-            </div>
-          </div>
-        </div>
-
+      <>
         <CasePrepKitchen
           caseData={caseData}
           onActivate={() => refreshCaseData()}
@@ -456,7 +484,7 @@ const CaseDetailPage: React.FC = () => {
           caseTitle={caseData.title}
           onSuccess={() => { setShowLinkNajizModal(false); refreshCaseData(); }}
         />
-      </div>
+      </>
     );
   }
 
@@ -1254,13 +1282,23 @@ const CaseDetailPage: React.FC = () => {
                   <Scale size={16} />
                   المحامون ({caseData.lawyers!.length})
                 </div>
+                {canManageLawyers && (
+                  <button
+                    type="button"
+                    onClick={handleToggleAddLawyer}
+                    title="إضافة محامٍ للفريق"
+                    style={{ marginInlineStart: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--law-navy, #1a3a5c)', display: 'inline-flex', alignItems: 'center', padding: 4 }}
+                  >
+                    <Plus size={16} />
+                  </button>
+                )}
               </div>
               <div className="case-card__content case-card__content--compact">
                 {caseData.lawyers!.map((l: any) => {
                   const primaryId = (caseData as any).primary_lawyer?.[0]?.id ?? null;
                   const isPrimary = primaryId != null ? primaryId === l.id : !!l.pivot?.is_primary;
                   return (
-                    <div className="case-info-row" key={l.id}>
+                    <div className="case-info-row" key={l.id} style={{ alignItems: 'center' }}>
                       <div className="case-info-row__icon">
                         <Scale size={14} />
                       </div>
@@ -1270,9 +1308,44 @@ const CaseDetailPage: React.FC = () => {
                           {isPrimary && <span title="المحامي المسؤول" style={{ color: 'var(--law-gold)', marginInlineStart: 4 }}>★</span>}
                         </div>
                       </div>
+                      {canManageLawyers && !isPrimary && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveLawyer(String(l.id))}
+                          disabled={lawyerActionBusy}
+                          title="إزالة من الفريق"
+                          style={{ marginInlineStart: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--law-danger, #c0392b)', display: 'inline-flex', alignItems: 'center', padding: 4 }}
+                        >
+                          <XIcon size={14} />
+                        </button>
+                      )}
                     </div>
                   );
                 })}
+
+                {showAddLawyer && canManageLawyers && (
+                  <div className="case-info-row" style={{ gap: 6, alignItems: 'center' }}>
+                    <select
+                      value={selectedNewLawyer}
+                      onChange={(e) => setSelectedNewLawyer(e.target.value)}
+                      disabled={lawyerActionBusy}
+                      style={{ flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--law-border, #d8dde3)' }}
+                    >
+                      <option value="">اختر محامياً…</option>
+                      {availableLawyers
+                        .filter(al => !caseData.lawyers!.some((cl: any) => String(cl.id) === al.id))
+                        .map(al => <option key={al.id} value={al.id}>{al.name}</option>)}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleConfirmAddLawyer}
+                      disabled={lawyerActionBusy || !selectedNewLawyer}
+                      style={{ background: 'var(--law-navy, #1a3a5c)', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >
+                      إضافة
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -35,6 +35,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePermissionContext } from '../contexts/PermissionContext';
 import { useZatcaFeature } from '../contexts/ZatcaStatusContext';
 import { mainMenuItems, settingsMenuItems, type SidebarItem } from '../config/sidebarConfig';
+import deadlineService from '../services/deadlineService';
+import { TaskService } from '../services/taskService';
+import { AdminRequestService } from '../services/adminRequestService';
 
 interface SidebarProps {
     isCollapsed: boolean;
@@ -49,6 +52,8 @@ interface NavItemProps {
     isActive: boolean;
     isMobileOpen: boolean;
     onMobileClose: () => void;
+    /** عدّاد حي بجوار الاسم (مثل عدد المهل المفتوحة عند المستخدم) */
+    count?: number;
 }
 
 const NavItem: React.FC<NavItemProps> = React.memo(({
@@ -57,6 +62,7 @@ const NavItem: React.FC<NavItemProps> = React.memo(({
     isActive,
     isMobileOpen,
     onMobileClose,
+    count,
 }) => {
     const Icon = item.icon;
 
@@ -81,6 +87,10 @@ const NavItem: React.FC<NavItemProps> = React.memo(({
                 >
                     {item.badge}
                 </span>
+            )}
+
+            {!isCollapsed && typeof count === 'number' && count > 0 && (
+                <span className="sidebar-link__badge sidebar-link__count">{count}</span>
             )}
         </NavLink>
     );
@@ -121,6 +131,41 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
     const { available: zatcaAvailable } = useZatcaFeature();
     const location = useLocation();
     const [showFavorites, setShowFavorites] = React.useState(true);
+
+    // عدادات حية بجوار عناصر القائمة (بحسب رؤية المستخدم — الباك يطبقها):
+    //   المهل المفتوحة / المهام المفتوحة / الطلبات الإدارية بانتظار البت
+    const [navCounts, setNavCounts] = React.useState<Record<string, number>>({});
+
+    React.useEffect(() => {
+        if (!user || user.role === 'client') {
+            setNavCounts({});
+            return;
+        }
+        let cancelled = false;
+
+        const fetchers: Array<[string, () => Promise<number>]> = [];
+
+        if (isSuperAdmin || has('deadlines.view')) {
+            fetchers.push(['/deadlines', () => deadlineService.summary(1).then((s) => s.counts.open_total ?? 0)]);
+        }
+        if (isSuperAdmin || has('tasks.view')) {
+            fetchers.push(['/tasks', () => TaskService.getTaskStatistics().then(
+                (s) => (s.todo ?? 0) + (s.in_progress ?? 0) + (s.review ?? 0) + (s.pending_approval ?? 0)
+            )]);
+        }
+        if (isSuperAdmin || hasAny(['admin_requests.view', 'admin_requests.manage'])) {
+            fetchers.push(['/admin/requests', () => AdminRequestService.getStatistics().then((s) => s.pending ?? 0)]);
+        }
+
+        fetchers.forEach(([path, fetch]) => {
+            fetch()
+                .then((n) => { if (!cancelled) setNavCounts((prev) => ({ ...prev, [path]: n })); })
+                .catch(() => { if (!cancelled) setNavCounts((prev) => ({ ...prev, [path]: 0 })); });
+        });
+
+        return () => { cancelled = true; };
+        // location.pathname: تحديث العدادات عند التنقل (إنجاز/اعتماد ثم مغادرة الصفحة)
+    }, [user, has, hasAny, isSuperAdmin, location.pathname]);
 
     /**
      * Whitelist مسارات العميل — أي مسار خارجها يُخفى من الـ sidebar حتى لو كانت الصلاحية موجودة.
@@ -239,6 +284,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                                 isActive={location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)}
                                 isMobileOpen={isMobileOpen}
                                 onMobileClose={onMobileClose}
+                                count={navCounts[item.path]}
                             />
                         ))}
                     </div>
@@ -532,6 +578,13 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                     border-radius: 10px;
                     font-size: 10px;
                     font-weight: 600;
+                }
+
+                .sidebar-link__count {
+                    background: var(--law-gold) !important;
+                    color: #1a1a1a !important;
+                    min-width: 20px;
+                    text-align: center;
                 }
                 
                 .sidebar__footer {

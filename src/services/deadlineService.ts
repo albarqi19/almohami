@@ -26,6 +26,9 @@ export type DeadlineStatus =
 
 export type DeadlineSource = 'najiz_auto' | 'dabt_ai' | 'template' | 'manual';
 
+/** التصنيف: اعتراض على حكم / تكليف من ضبط الجلسة / أخرى */
+export type DeadlineCategory = 'objection' | 'dabt' | 'other';
+
 export type DeadlineUrgency = 'expired' | 'critical' | 'warning' | 'upcoming' | 'normal';
 
 export interface LegalDeadline {
@@ -37,6 +40,7 @@ export interface LegalDeadline {
   title: string;
   description: string | null;
   source: DeadlineSource;
+  category: DeadlineCategory;
   start_date: string | null;
   due_date: string;
   due_date_source: 'najiz' | 'computed' | 'manual' | 'ai';
@@ -44,6 +48,10 @@ export interface LegalDeadline {
   legal_reference: string | null;
   status: DeadlineStatus;
   waive_reason: string | null;
+  completed_at: string | null;
+  completion_note: string | null;
+  /** null = ليست منجزة؛ false = أُنجزت في وقتها (ولو وُثّقت متأخراً)؛ true = بعد الموعد */
+  completed_after_due: boolean | null;
   obligated_party: 'client' | 'opponent';
   action_label: string | null;
   source_quote: string | null;
@@ -64,6 +72,7 @@ export interface DeadlineType {
   period_days: number | null;
   period_unit: 'days' | 'months';
   court_type: string | null;
+  category: DeadlineCategory;
   legal_reference: string | null;
 }
 
@@ -80,6 +89,7 @@ export interface DeadlineSummary {
 
 export interface DeadlineFilters {
   status?: string; // قائمة مفصولة بفواصل
+  category?: string; // objection | dabt | other (قائمة مفصولة بفواصل)
   case_id?: number;
   mine?: boolean;
   q?: string;
@@ -97,6 +107,7 @@ export interface CreateDeadlinePayload {
   action_label?: string | null;
   legal_reference?: string | null;
   assigned_to?: number | null;
+  category?: DeadlineCategory | null;
 }
 
 export type DeadlineStatusAction =
@@ -115,6 +126,7 @@ class DeadlineService {
   async list(filters: DeadlineFilters = {}): Promise<LegalDeadline[]> {
     const params = new URLSearchParams();
     if (filters.status) params.set('status', filters.status);
+    if (filters.category) params.set('category', filters.category);
     if (filters.case_id) params.set('case_id', String(filters.case_id));
     if (filters.mine) params.set('mine', '1');
     if (filters.q) params.set('q', filters.q);
@@ -148,7 +160,14 @@ class DeadlineService {
   async changeStatus(
     id: number,
     action: DeadlineStatusAction,
-    extra: { reason?: string; due_date?: string; title?: string } = {}
+    extra: {
+      reason?: string;
+      due_date?: string;
+      title?: string;
+      /** الإنجاز بأثر رجعي (مهلة منقضية): تاريخ الإنجاز الفعلي + مرجع التوثيق */
+      completed_on?: string;
+      completion_note?: string;
+    } = {}
   ): Promise<LegalDeadline> {
     const res = await apiClient.put<ApiResponse<LegalDeadline>>(`/deadlines/${id}/status`, {
       action,

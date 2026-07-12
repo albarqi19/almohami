@@ -1,824 +1,608 @@
-/* ====================================================
-   Availability Page - Theme-Aware Styles
-   ==================================================== */
+/* ═══════════════════════════════════════════════════════
+   AVAILABILITY — «إعدادات التوفر»
+   «النمط الملتصق» (ssp2): البنية المشتركة (ترويسة/أعمدة/بطاقات/
+   أزرار/مودال/حقول) من simple-service.css.
+   هنا فقط عناصر الصفحة الخاصة (avx-*): صفوف الجدول الأسبوعي الكثيفة
+   + عمود القواعد والاستثناءات + مفتاح التبديل المصغّر.
+   ═══════════════════════════════════════════════════════ */
 
-.availability-page {
-    padding: 0;
-    min-height: 100vh;
-    background: var(--color-surface-subtle);
-    color: var(--color-text);
-    display: flex;
-    flex-direction: column;
-    font-family: var(--font-family-base);
-}
-
-/* Notion Style Header */
-.availability-page .notion-header {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    padding: 20px 32px;
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
-.availability-page .notion-header__title {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.availability-page .notion-header__icon {
-    font-size: 24px;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.availability-page .notion-header h1 {
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--color-heading);
-    margin: 0;
-}
-
-.availability-page .notion-header__subtitle {
-    font-size: 14px;
+.avx-disclaimer {
+    font-size: 11px;
     color: var(--color-text-secondary);
-    margin: 0;
-    padding-right: 16px;
-    border-right: 1px solid var(--color-border);
 }
 
-.availability-page .notion-header__actions {
-    display: flex;
-    gap: 8px;
-    margin-right: auto;
+/* ─── عمود القواعد والاستثناءات (يمين، قابل للطي 46px) ─── */
+.avx-side {
+    width: 300px;
 }
 
-.availability-page .notion-icon-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    border: 1px solid var(--color-border);
-    background: transparent;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: var(--color-text-secondary);
-    transition: all 0.15s;
-}
-
-.availability-page .notion-icon-btn:hover {
-    background: var(--color-surface-subtle);
-    color: var(--color-text);
-}
-
-.availability-page .notion-icon-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.availability-page .notion-primary-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 6px;
-    border: none;
-    background: var(--color-primary);
-    color: white;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-
-body.classic .availability-page .notion-primary-btn {
-    background: var(--color-accent);
-}
-
-body.dark .availability-page .notion-primary-btn {
-    color: var(--color-background);
-}
-
-.availability-page .notion-primary-btn:hover {
-    opacity: 0.9;
-}
-
-.availability-page .notion-primary-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Buttons - Theme Aware */
-.availability-page .primary-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 8px 16px;
-    border-radius: 4px;
-    border: none;
-    background: var(--color-primary);
-    color: white;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.1s ease;
-    height: 32px;
-}
-
-body.dark .availability-page .primary-btn {
-    background: var(--color-primary);
-    color: var(--color-background);
-}
-
-body.classic .availability-page .primary-btn {
-    background: var(--color-accent);
-    color: white;
-}
-
-.availability-page .primary-btn:hover {
-    background: var(--color-primary-hover);
-}
-
-body.classic .availability-page .primary-btn:hover {
-    background: var(--color-accent-hover);
-}
-
-.availability-page .primary-btn:disabled {
-    opacity: 0.6;
-    cursor: default;
-}
-
-.availability-page .secondary-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 4px;
-    border: none;
-    background: transparent;
-    color: var(--color-text-secondary);
-    font-size: 14px;
-    cursor: pointer;
-    transition: background 0.1s ease;
-    height: 28px;
-}
-
-.availability-page .secondary-btn:hover {
-    background: var(--color-surface-subtle);
-    color: var(--color-text);
-}
-
-/* Layout Grid */
-.availability-page .content-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 32px;
-    padding: 24px 32px 60px;
-    max-width: 1200px;
-    margin: 0 auto;
-    width: 100%;
-}
-
-/* Cards - Notion Style (transparent) */
-.availability-page .card {
-    background: transparent;
-    border-radius: 0;
-    border: none;
-    padding: 0;
-    box-shadow: none;
-    margin-bottom: 0;
-}
-
-.availability-page .card:first-child {
-    grid-column: 1 / 2;
-}
-
-.availability-page .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
+/* بطاقة القواعد بحجم محتواها، والاستثناءات تملأ الباقي وتتمرر داخلياً */
+.avx-side .avx-card--rules {
+    flex: 0 0 auto;
     border-bottom: 1px solid var(--color-border);
 }
 
-.availability-page .card-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--color-heading);
-    margin: 0;
-}
-
-/* Weekly Schedule - Database View Look */
-.availability-page .schedule-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.availability-page .day-row {
-    padding: 16px;
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    transition: background 0.1s ease;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.availability-page .day-row:last-child {
-    border-bottom: none;
-}
-
-.availability-page .day-row--disabled {
-    background: var(--color-surface-subtle);
-}
-
-.availability-page .day-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 28px;
-}
-
-.availability-page .day-name {
-    font-weight: 500;
-    font-size: 15px;
-    color: var(--color-text);
-    width: 80px;
-}
-
-/* Toggle Switch - Minimalist */
-.availability-page .toggle-label {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
+.avx-side .avx-card--exceptions {
     flex: 1;
+    min-height: 0;
 }
 
-.availability-page .toggle-label input {
+.avx-form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 12px 14px;
+    overflow-y: auto;
+}
+
+.avx-form .ssp2-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 7px;
+}
+
+.avx-form > .ssp2-label:first-child {
+    margin-top: 0;
+}
+
+.avx-form__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.avx-form__row .ssp2-label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+/* شرائح مدد الاجتماعات */
+.avx-durations {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.avx-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--quiet-gray-50);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.avx-chip input {
     display: none;
 }
 
-.availability-page .toggle-switch {
-    width: 36px;
-    height: 20px;
-    background: var(--color-border-strong);
-    border-radius: 14px;
-    position: relative;
-    transition: background 0.2s ease;
+.avx-chip:hover {
+    color: var(--color-text-primary);
 }
 
-.availability-page .toggle-switch::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 16px;
-    height: 16px;
-    background: white;
-    border-radius: 50%;
-    transition: transform 0.2s ease;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+.avx-chip.is-on {
+    background: var(--law-navy, #1E3A5F);
+    border-color: var(--law-navy, #1E3A5F);
+    color: #fff;
+    font-weight: 700;
 }
 
-.availability-page .toggle-label input:checked+.toggle-switch {
-    background: var(--color-primary);
+body.dark .avx-chip.is-on {
+    background: var(--law-gold);
+    border-color: var(--law-gold);
+    color: #1a1a1a;
 }
 
-body.classic .availability-page .toggle-label input:checked+.toggle-switch {
-    background: var(--color-accent);
+/* ─── قائمة الاستثناءات الكثيفة ─── */
+.avx-exceptions {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 
-.availability-page .toggle-label input:checked+.toggle-switch::after {
-    transform: translateX(16px);
-}
-
-.availability-page .day-status {
-    font-size: 12px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: var(--color-surface-subtle);
-    color: var(--color-text-secondary);
-}
-
-.availability-page .toggle-label input:checked~.day-status {
-    background: var(--color-success-soft);
-    color: var(--color-success);
-}
-
-/* Slots */
-.availability-page .day-slots {
-    margin-left: 48px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.availability-page .slot-row {
+.avx-exc {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.availability-page .slot-row input[type="time"] {
-    padding: 4px 8px;
-    border-radius: 4px;
-    border: 1px solid transparent;
-    background: var(--color-surface-subtle);
-    color: var(--color-text);
-    font-size: 14px;
-    font-family: inherit;
-    cursor: pointer;
-    transition: all 0.1s ease;
-}
-
-.availability-page .slot-row input[type="time"]:hover {
-    background: var(--color-border);
-}
-
-body.dark .availability-page .slot-row input[type="time"]:hover {
-    background: var(--color-gray-300);
-}
-
-.availability-page .slot-row input[type="time"]:focus {
-    outline: none;
-    background: var(--color-surface);
-    box-shadow: 0 0 0 2px var(--color-primary-soft);
-    border: 1px solid var(--color-primary);
-}
-
-body.classic .availability-page .slot-row input[type="time"]:focus {
-    box-shadow: 0 0 0 2px var(--color-accent-soft);
-    border: 1px solid var(--color-accent);
-}
-
-.availability-page .slot-separator {
-    color: var(--color-text-secondary);
-    font-size: 14px;
-}
-
-.availability-page .remove-slot-btn {
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
-    border: none;
-    background: transparent;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.1s;
-}
-
-.availability-page .remove-slot-btn:hover {
-    background: var(--color-error-soft);
-    color: var(--color-error);
-}
-
-.availability-page .add-slot-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 8px;
-    border-radius: 4px;
-    border: none;
-    background: transparent;
-    font-size: 13px;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    width: fit-content;
-    transition: color 0.1s;
-}
-
-.availability-page .add-slot-btn:hover {
-    background: var(--color-surface-subtle);
-    color: var(--color-text);
-}
-
-/* Settings Form - Vertical Property List */
-.availability-page .settings-form {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.availability-page .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.availability-page .form-group label {
+    padding: 7px 14px;
+    border-bottom: 1px solid var(--color-border);
     font-size: 12px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+}
+
+.avx-exc:last-child {
+    border-bottom: none;
+}
+
+.avx-exc__date {
+    font-weight: 700;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+}
+
+.avx-exc__reason {
+    flex: 1;
+    min-width: 0;
+    font-size: 11.5px;
     color: var(--color-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.availability-page .form-group input[type="text"],
-.availability-page .form-group input[type="date"],
-.availability-page .form-group select {
-    padding: 8px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    color: var(--color-text);
-    font-size: 14px;
-    box-shadow: var(--shadow-xs);
-    transition: border-color 0.1s;
-}
-
-.availability-page .form-group input:focus,
-.availability-page .form-group select:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px var(--color-primary-soft);
-}
-
-body.classic .availability-page .form-group input:focus,
-body.classic .availability-page .form-group select:focus {
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 2px var(--color-accent-soft);
-}
-
-/* Duration Tags */
-.availability-page .durations-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.availability-page .duration-option {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    color: var(--color-text);
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.1s;
-}
-
-.availability-page .duration-option:hover {
-    background: var(--color-surface-subtle);
-}
-
-.availability-page .duration-option--selected {
-    background: var(--color-primary-soft);
-    border-color: transparent;
-    color: var(--color-primary);
-}
-
-body.classic .availability-page .duration-option--selected {
-    background: var(--color-accent-soft);
-    color: var(--color-accent);
-}
-
-body.dark .availability-page .duration-option--selected {
-    background: var(--color-primary-soft);
-    color: var(--color-primary);
-}
-
-/* Exceptions List */
-.availability-page .exceptions-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.availability-page .exception-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border-radius: 4px;
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    transition: all 0.1s;
-}
-
-.availability-page .exception-item:hover {
-    background: var(--color-surface-subtle);
-}
-
-.availability-page .exception-date {
-    font-weight: 500;
-    font-size: 14px;
-    color: var(--color-text);
-}
-
-.availability-page .exception-reason {
-    font-size: 12px;
-    color: var(--color-text-secondary);
-    margin-right: 8px;
-}
-
-.availability-page .exception-type {
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 12px;
-    background: var(--color-surface-subtle);
+.avx-exc__type {
+    flex-shrink: 0;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 700;
+    background: var(--quiet-gray-50);
     color: var(--color-text-secondary);
 }
 
-.availability-page .exception-type--blocked {
-    background: var(--color-error-soft);
-    color: var(--color-error);
+.avx-exc__type--blocked {
+    background: rgba(192, 57, 43, 0.08);
+    color: var(--status-red, #c0392b);
 }
 
-.availability-page .delete-exception-btn {
-    margin-right: auto;
+.avx-exc__del {
     opacity: 0;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--color-text-secondary);
-    padding: 4px;
-    border-radius: 4px;
-    transition: all 0.1s;
+    flex-shrink: 0;
 }
 
-.availability-page .exception-item:hover .delete-exception-btn {
+.avx-exc:hover .avx-exc__del {
     opacity: 1;
 }
 
-.availability-page .delete-exception-btn:hover {
-    background: var(--color-error-soft);
-    color: var(--color-error);
-}
-
-.availability-page .empty-exceptions {
-    padding: 32px;
+.avx-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 26px 14px;
     text-align: center;
-    border: 1px dashed var(--color-border);
-    border-radius: 4px;
+    font-size: 12px;
     color: var(--color-text-secondary);
 }
 
-.availability-page .empty-exceptions p {
-    font-size: 14px;
+.avx-empty svg {
+    opacity: 0.25;
     margin-bottom: 4px;
 }
 
-.availability-page .empty-exceptions span {
-    font-size: 12px;
-}
-
-/* Messages */
-.availability-page .message {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    margin: 16px 32px 0;
-    border-radius: 8px;
-    font-size: 14px;
-    max-width: 1200px;
-}
-
-.availability-page .message--error {
-    background: var(--color-error-soft);
-    color: var(--color-text);
-    border: 1px solid var(--color-error);
-}
-
-body.dark .availability-page .message--error {
-    border-color: rgba(255, 123, 138, 0.3);
-}
-
-.availability-page .message--success {
-    background: var(--color-success-soft);
-    color: var(--color-text);
-    border: 1px solid var(--color-success);
-}
-
-body.dark .availability-page .message--success {
-    border-color: rgba(70, 194, 179, 0.3);
-}
-
-.availability-page .message--info {
-    background: var(--color-info-soft);
-    color: var(--color-info);
-    border: 1px solid transparent;
-}
-
-/* Modal - Theme Aware */
-.availability-page .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(2px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-
-body.dark .availability-page .modal-overlay {
-    background: rgba(0, 0, 0, 0.6);
-}
-
-.availability-page .modal-content {
-    background: var(--color-surface);
-    border-radius: 8px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--color-border);
-    width: 90%;
-    max-width: 480px;
-}
-
-.availability-page .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--color-border);
-    padding: 16px 24px;
-}
-
-.availability-page .modal-header h3 {
-    font-weight: 600;
-    font-size: 16px;
-    color: var(--color-heading);
+.avx-empty p {
     margin: 0;
+    font-weight: 700;
+    color: var(--color-text-primary);
 }
 
-.availability-page .close-btn {
-    background: none;
-    border: none;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: all 0.1s;
+.avx-empty span {
+    font-size: 11px;
 }
 
-.availability-page .close-btn:hover {
-    background: var(--color-surface-subtle);
-    color: var(--color-text);
-}
-
-.availability-page .modal-body {
-    padding: 24px;
+/* ─── الجدول الأسبوعي: بطاقة تملأ العمود وصفوف أيام كثيفة ─── */
+.avx-schedule {
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 16px;
 }
 
-.availability-page .modal-footer {
-    background: var(--color-surface-subtle);
-    border-top: 1px solid var(--color-border);
-    padding: 16px 24px;
+.avx-days {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.avx-day {
     display: flex;
-    justify-content: flex-end;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--color-border);
 }
 
-.availability-page .btn-secondary {
-    padding: 8px 16px;
-    border-radius: 4px;
+.avx-day:last-child {
+    border-bottom: none;
+}
+
+.avx-day--off {
+    background: var(--quiet-gray-50);
+}
+
+.avx-day__name {
+    width: 72px;
+    flex-shrink: 0;
+    padding-top: 3px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.avx-day--off .avx-day__name {
+    color: var(--color-text-secondary);
+}
+
+.avx-day__off {
+    padding-top: 3px;
+    font-size: 11.5px;
+    color: var(--color-text-secondary);
+}
+
+/* مفتاح تبديل مصغّر */
+.avx-toggle {
+    display: inline-flex;
+    flex-shrink: 0;
+    margin-top: 3px;
+    cursor: pointer;
+}
+
+.avx-toggle input {
+    display: none;
+}
+
+.avx-toggle__track {
+    position: relative;
+    width: 30px;
+    height: 16px;
+    border-radius: 10px;
+    background: var(--color-border);
+    transition: background 0.15s;
+}
+
+.avx-toggle__track::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    inset-inline-start: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    transition: transform 0.15s;
+}
+
+.avx-toggle input:checked + .avx-toggle__track {
+    background: var(--law-navy, #1E3A5F);
+}
+
+body.dark .avx-toggle input:checked + .avx-toggle__track {
+    background: var(--law-gold);
+}
+
+/* الصفحة rtl دائماً — المؤشر يتحرك نحو نهاية السطر */
+.avx-toggle input:checked + .avx-toggle__track::after {
+    transform: translateX(-14px);
+}
+
+/* فترات اليوم: شرائح زمنية مدمجة على سطر واحد */
+.avx-day__slots {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.avx-slot {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 5px;
     border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    color: var(--color-text);
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.1s;
+    border-radius: 7px;
+    background: var(--quiet-gray-50);
 }
 
-.availability-page .btn-secondary:hover {
-    background: var(--color-surface-subtle);
+.avx-day--off .avx-slot {
+    background: var(--dashboard-card);
 }
 
-.availability-page .btn-primary {
-    padding: 8px 16px;
-    border-radius: 4px;
+.avx-slot input[type="time"] {
+    width: 78px;
+    padding: 2px 3px;
     border: none;
-    background: var(--color-primary);
-    color: white;
-    font-size: 14px;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--color-text-primary);
     cursor: pointer;
-    transition: all 0.1s;
 }
 
-body.classic .availability-page .btn-primary {
-    background: var(--color-accent);
+.avx-slot input[type="time"]:focus {
+    outline: none;
+    color: var(--law-navy, #1E3A5F);
 }
 
-body.dark .availability-page .btn-primary {
-    color: var(--color-background);
+body.dark .avx-slot input[type="time"]:focus {
+    color: var(--law-gold);
 }
 
-.availability-page .btn-primary:hover {
-    background: var(--color-primary-hover);
+.avx-slot__sep {
+    font-size: 10.5px;
+    color: var(--color-text-secondary);
 }
 
-body.classic .availability-page .btn-primary:hover {
-    background: var(--color-accent-hover);
+.avx-slot__del {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    opacity: 0.55;
+    transition: opacity 0.15s, color 0.15s, background 0.15s;
 }
 
-/* Text Color Classes */
-.availability-page .text-law-navy {
-    color: var(--color-primary);
+.avx-slot:hover .avx-slot__del {
+    opacity: 1;
 }
 
-body.classic .availability-page .text-law-navy {
-    color: var(--color-accent);
+.avx-slot__del:hover {
+    background: rgba(192, 57, 43, 0.08);
+    color: var(--status-red, #c0392b);
 }
 
-/* Animation */
-.availability-page .animate-spin {
-    animation: spin 1s linear infinite;
+.avx-addslot {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border: 1px dashed var(--color-border);
+    border-radius: 7px;
+    background: transparent;
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
 }
 
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
+.avx-addslot:hover {
+    color: var(--color-text-primary);
+    border-color: var(--color-text-secondary);
+}
+
+/* ─── رسائل النجاح/الخطأ: شريط رفيع أعلى مساحة العمل ─── */
+.avx-msg {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.avx-msg button {
+    display: flex;
+    margin-inline-start: auto;
+    padding: 2px;
+    border: none;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.avx-msg--error {
+    background: rgba(192, 57, 43, 0.06);
+    color: var(--status-red, #b3261e);
+}
+
+.avx-msg--success {
+    background: rgba(27, 127, 77, 0.07);
+    color: var(--status-green, #1b7f4d);
+}
+
+body.dark .avx-msg--error {
+    color: #ff8a80;
+}
+
+body.dark .avx-msg--success {
+    color: #69d2a5;
+}
+
+/* ─── التحميل ─── */
+.avx-loading {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+}
+
+.avx-spin {
+    animation: avx-spin 1s linear infinite;
+}
+
+@keyframes avx-spin {
     to {
         transform: rotate(360deg);
     }
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-    .availability-page .content-grid {
-        grid-template-columns: 1fr;
-        padding: 24px;
-    }
-
-    .availability-page .notion-header {
-        padding: 16px 24px;
-    }
-
-    .availability-page .card:first-child {
-        grid-column: 1;
-    }
-
-    .availability-page .message {
-        margin: 16px 24px 0;
-    }
+/* ─── شرائح حالة الاستثناء بالمودال (نسخة محلية من نمط seg) ─── */
+.avx-seg {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--dashboard-card);
 }
 
-@media (max-width: 640px) {
-    .availability-page .notion-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-        padding: 16px;
-    }
+.avx-seg__btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 7px 12px;
+    border: none;
+    border-inline-end: 1px solid var(--color-border);
+    background: transparent;
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
 
-    .availability-page .notion-header__subtitle {
-        border-right: none;
-        padding-right: 0;
-    }
+.avx-seg__btn:last-child {
+    border-inline-end: none;
+}
 
-    .availability-page .notion-header__actions {
-        margin-right: 0;
-        width: 100%;
-        justify-content: flex-end;
-    }
+.avx-seg__btn:hover {
+    background: var(--quiet-gray-50);
+    color: var(--color-text-primary);
+}
 
-    .availability-page .content-grid {
-        padding: 16px;
-        gap: 24px;
-    }
+.avx-seg__btn.is-current {
+    background: var(--law-navy, #1E3A5F);
+    color: #fff;
+    font-weight: 700;
+}
 
-    .availability-page .day-header {
+body.dark .avx-seg__btn.is-current {
+    background: var(--law-gold);
+    color: #1a1a1a;
+}
+
+/* فترات مخصصة داخل المودال */
+.avx-mslots {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.avx-mslot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.avx-mslot .ssp2-input {
+    flex: 1;
+}
+
+/* ─── عمود الاجتماعات القادمة (يسار، قابل للطي 46px) ─── */
+.avx-meetcol {
+    width: 280px;
+    border-inline-end: none;
+    border-inline-start: 1px solid var(--color-border);
+}
+
+.avx-meets {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.avx-meet {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.avx-meet:last-child {
+    border-bottom: none;
+}
+
+.avx-meet__top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.avx-meet__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.avx-meet__status {
+    flex-shrink: 0;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--quiet-gray-50);
+    color: var(--color-text-secondary);
+}
+
+.avx-meet__status--confirmed {
+    background: rgba(27, 127, 77, 0.09);
+    color: var(--status-green, #1b7f4d);
+}
+
+.avx-meet__status--pending {
+    background: rgba(201, 122, 26, 0.1);
+    color: var(--status-orange, #c97a1a);
+}
+
+.avx-meet__meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
+.avx-meet__meta svg {
+    flex-shrink: 0;
+}
+
+.avx-meet__client {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ─── شاشات ضيقة: الأعمدة تتراص (البنية المشتركة تتكفل بالتكديس) ─── */
+@media (max-width: 980px) {
+    .avx-side,
+    .avx-meetcol {
         height: auto;
+        width: auto;
+        border-inline-start: none;
     }
 
-    .availability-page .day-slots {
-        margin-left: 0;
-        margin-top: 16px;
+    .avx-days,
+    .avx-exceptions,
+    .avx-form,
+    .avx-meets {
+        overflow: visible;
     }
 
-    .availability-page .message {
-        margin: 12px 16px 0;
+    .avx-day__name {
+        width: 60px;
     }
 }

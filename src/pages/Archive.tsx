@@ -3,21 +3,23 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { toast } from 'react-toastify';
 import {
   Trash2, RotateCcw, Loader2, FileText, FileCheck, Users,
-  Inbox, AlertCircle, RefreshCw,
+  Inbox, AlertCircle, RefreshCw, ClipboardList, Gavel, Briefcase,
 } from 'lucide-react';
 import ArchiveService, {
   type TrashedCase, type TrashedWekala, type ArchivedClient,
+  type TrashedTask, type TrashedExecutionRequest, type TrashedLegalService,
 } from '../services/archiveService';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 /* ============================================================
    صفحة «الأرشيف / سلة المحذوفات» — للمدير والمالك فقط.
-   تبويبات: قضايا / وكالات / عملاء. لكل عنصر: استعادة + حذف نهائي (بتأكيد).
+   تبويبات: قضايا / وكالات / عملاء / مهام / طلبات تنفيذ / خدمات قانونية.
+   لكل عنصر: استعادة + حذف نهائي (بتأكيد).
    مُثيَّمة بمتغيّرات CSS (تتكيّف مع light/dark/diwan) وبأسلوب ERP كثيف فلات.
-   تطابق مسارات الباك إند (Phase 4) عبر ArchiveService.
+   تطابق مسارات الباك إند (Phase 4 + توسعة 2026-07-12) عبر ArchiveService.
    ============================================================ */
 
-type EntityTab = 'cases' | 'wekalat' | 'clients';
+type EntityTab = 'cases' | 'wekalat' | 'clients' | 'tasks' | 'execution' | 'services';
 
 // لوحة ألوان مثيّمة (لا hex صلب — fallback فقط للأمان)
 const C = {
@@ -39,6 +41,9 @@ const TABS: { key: EntityTab; label: string; icon: React.ElementType }[] = [
   { key: 'cases', label: 'القضايا', icon: FileText },
   { key: 'wekalat', label: 'الوكالات', icon: FileCheck },
   { key: 'clients', label: 'العملاء', icon: Users },
+  { key: 'tasks', label: 'المهام', icon: ClipboardList },
+  { key: 'execution', label: 'طلبات التنفيذ', icon: Gavel },
+  { key: 'services', label: 'الخدمات القانونية', icon: Briefcase },
 ];
 
 function fmtDate(value?: string | null): string {
@@ -59,6 +64,9 @@ const Archive: React.FC = () => {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<EntityTab>('cases');
   const [casesPage, setCasesPage] = useState(1);
+  const [tasksPage, setTasksPage] = useState(1);
+  const [execPage, setExecPage] = useState(1);
+  const [servicesPage, setServicesPage] = useState(1);
   const [confirm, setConfirm] = useState<
     { type: 'restore' | 'force'; entity: EntityTab; id: number; name: string } | null
   >(null);
@@ -83,6 +91,27 @@ const Archive: React.FC = () => {
     enabled: tab === 'clients',
     staleTime: 60_000,
   });
+  const tasksQ = useQuery({
+    queryKey: ['archive', 'tasks', tasksPage],
+    queryFn: () => ArchiveService.getTrashedTasks(tasksPage),
+    enabled: tab === 'tasks',
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  });
+  const execQ = useQuery({
+    queryKey: ['archive', 'execution', execPage],
+    queryFn: () => ArchiveService.getTrashedExecutionRequests(execPage),
+    enabled: tab === 'execution',
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  });
+  const servicesQ = useQuery({
+    queryKey: ['archive', 'services', servicesPage],
+    queryFn: () => ArchiveService.getTrashedLegalServices(servicesPage),
+    enabled: tab === 'services',
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  });
 
   // ───── إجراء موحّد (استعادة/حذف نهائي) ─────
   const action = useMutation({
@@ -91,15 +120,21 @@ const Archive: React.FC = () => {
       const { entity, type, id } = confirm;
       if (entity === 'cases') return type === 'restore' ? ArchiveService.restoreCase(id) : ArchiveService.forceDeleteCase(id);
       if (entity === 'wekalat') return type === 'restore' ? ArchiveService.restoreWekala(id) : ArchiveService.forceDeleteWekala(id);
+      if (entity === 'tasks') return type === 'restore' ? ArchiveService.restoreTask(id) : ArchiveService.forceDeleteTask(id);
+      if (entity === 'execution') return type === 'restore' ? ArchiveService.restoreExecutionRequest(id) : ArchiveService.forceDeleteExecutionRequest(id);
+      if (entity === 'services') return type === 'restore' ? ArchiveService.restoreLegalService(id) : ArchiveService.forceDeleteLegalService(id);
       return type === 'restore' ? ArchiveService.restoreClient(id) : ArchiveService.forceDeleteClient(id);
     },
     onSuccess: () => {
       toast.success(confirm?.type === 'restore' ? 'تمت الاستعادة بنجاح' : 'تم الحذف النهائي بنجاح');
       queryClient.invalidateQueries({ queryKey: ['archive'] });
-      // تحديث القوائم الحيّة المتأثرة (القضايا/الوكالات/العملاء) إن كانت مخزّنة
+      // تحديث القوائم الحيّة المتأثرة إن كانت مخزّنة
       queryClient.invalidateQueries({ queryKey: ['cases'] });
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       queryClient.invalidateQueries({ queryKey: ['wekalat'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['execution-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['legal-services'] });
       setConfirm(null);
     },
     onError: (err: unknown) => {
@@ -115,6 +150,9 @@ const Archive: React.FC = () => {
     cases: casesQ.data?.total,
     wekalat: wekalatQ.data?.length,
     clients: clientsQ.data?.length,
+    tasks: tasksQ.data?.total,
+    execution: execQ.data?.total,
+    services: servicesQ.data?.total,
   };
 
   return (
@@ -130,7 +168,7 @@ const Archive: React.FC = () => {
         <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: 18, fontWeight: 800, color: C.text, margin: 0 }}>سلة المحذوفات</h1>
           <p style={{ fontSize: 12, color: C.textSub, margin: '2px 0 0' }}>
-            استعادة أو حذف نهائي للقضايا والوكالات والعملاء المؤرشفين — متاحة للمدير والمالك فقط.
+            استعادة أو حذف نهائي للقضايا والوكالات والعملاء والمهام وطلبات التنفيذ والخدمات القانونية المؤرشفة — متاحة للمدير والمالك فقط.
           </p>
         </div>
       </div>
@@ -234,6 +272,80 @@ const Archive: React.FC = () => {
               ]}
             />
           )}
+
+          {tab === 'tasks' && (
+            <EntityTable
+              query={tasksQ}
+              columns={['العنوان', 'المكلّف', 'القضية', 'تاريخ الحذف', '']}
+              rows={(tasksQ.data?.data ?? []) as TrashedTask[]}
+              renderRow={(t: TrashedTask) => [
+                <span style={{ fontWeight: 700, color: C.text }}>{t.title || '—'}</span>,
+                <span style={{ color: C.textSub }}>{t.assignee?.name || '—'}</span>,
+                <span style={{ color: C.textSub }}>{t.case ? (t.case.file_number || t.case.title || '—') : '—'}</span>,
+                <span style={{ color: C.textSub }}>{fmtDate(t.deleted_at)}</span>,
+                <RowActions
+                  busy={action.isPending}
+                  onRestore={() => askRestore('tasks', t.id, `المهمة «${t.title}»`)}
+                  onForce={() => askForce('tasks', t.id, `المهمة «${t.title}»`)}
+                />,
+              ]}
+              pagination={{
+                page: tasksPage,
+                lastPage: tasksQ.data?.last_page ?? 1,
+                onChange: setTasksPage,
+              }}
+            />
+          )}
+
+          {tab === 'execution' && (
+            <EntityTable
+              query={execQ}
+              columns={['رقم الطلب', 'النوع', 'المحكمة', 'الحالة', 'تاريخ الحذف', '']}
+              rows={(execQ.data?.data ?? []) as TrashedExecutionRequest[]}
+              renderRow={(e: TrashedExecutionRequest) => [
+                <span style={{ fontWeight: 700, color: C.navy }}>{e.request_number}</span>,
+                <span>{e.main_document_type || '—'}</span>,
+                <span style={{ color: C.textSub }}>{e.court || '—'}</span>,
+                <span style={{ color: C.textSub }}>{e.status || '—'}</span>,
+                <span style={{ color: C.textSub }}>{fmtDate(e.deleted_at)}</span>,
+                <RowActions
+                  busy={action.isPending}
+                  onRestore={() => askRestore('execution', e.id, `طلب التنفيذ ${e.request_number}`)}
+                  onForce={() => askForce('execution', e.id, `طلب التنفيذ ${e.request_number}`)}
+                />,
+              ]}
+              pagination={{
+                page: execPage,
+                lastPage: execQ.data?.last_page ?? 1,
+                onChange: setExecPage,
+              }}
+            />
+          )}
+
+          {tab === 'services' && (
+            <EntityTable
+              query={servicesQ}
+              columns={['رقم الخدمة', 'العنوان', 'العميل', 'المحامي', 'تاريخ الحذف', '']}
+              rows={(servicesQ.data?.data ?? []) as TrashedLegalService[]}
+              renderRow={(s: TrashedLegalService) => [
+                <span style={{ fontWeight: 700, color: C.navy }}>{s.service_number || '—'}</span>,
+                <span>{s.title || '—'}</span>,
+                <span style={{ color: C.textSub }}>{s.client?.name || '—'}</span>,
+                <span style={{ color: C.textSub }}>{s.assigned_lawyer?.name || '—'}</span>,
+                <span style={{ color: C.textSub }}>{fmtDate(s.deleted_at)}</span>,
+                <RowActions
+                  busy={action.isPending}
+                  onRestore={() => askRestore('services', s.id, `الخدمة «${s.title}»`)}
+                  onForce={() => askForce('services', s.id, `الخدمة «${s.title}»`)}
+                />,
+              ]}
+              pagination={{
+                page: servicesPage,
+                lastPage: servicesQ.data?.last_page ?? 1,
+                onChange: setServicesPage,
+              }}
+            />
+          )}
         </div>
       </div>
 
@@ -252,7 +364,7 @@ const Archive: React.FC = () => {
         note={
           confirm?.type === 'force'
             ? 'لا يمكن التراجع عن الحذف النهائي. ستُحذف كل البيانات المرتبطة نهائياً.'
-            : 'ستعود مع كل ما أُرشِف معها (الجلسات/المهام/المستندات أو الأطراف).'
+            : 'ستعود مع بياناتها المرتبطة وكل ما أُرشِف معها تتاليّاً (إن وجد).'
         }
         onConfirm={() => action.mutate()}
         onClose={() => !action.isPending && setConfirm(null)}

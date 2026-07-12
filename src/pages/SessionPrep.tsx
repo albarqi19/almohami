@@ -5,6 +5,7 @@ import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { AlertCircle, ArrowRight } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import {
   useSessionWorkspace,
   useSessionAiBrief,
@@ -28,6 +29,9 @@ const SessionPrep: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const id = Number(sessionId);
+  const { user } = useAuth();
+  // بوابة «رفيق الجلسة» — tenant boolean يُقرأ من بيانات المصادقة (نمط hr_enabled)
+  const copilotEnabled = user?.tenant?.session_copilot_enabled === true;
 
   const { data: workspace, isLoading: wsLoading, isError: wsError } = useSessionWorkspace(id);
   const { data: aiBrief, isLoading: aiLoading } = useSessionAiBrief(id);
@@ -141,6 +145,7 @@ const SessionPrep: React.FC = () => {
         onImportDefaults={() => setImportOpen(true)}
         onGenerateBrief={handleGenerateBrief}
         isGeneratingBrief={generateMut.isPending}
+        copilotEnabled={copilotEnabled}
       />
 
       <ContextBanner aiBrief={aiBrief} onOpenBrief={() => setBriefOpen(true)} />

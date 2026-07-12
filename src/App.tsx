@@ -46,6 +46,7 @@ const GrievanceDetailPage = lazyWithRetry(() => import('./pages/GrievanceDetailP
 const UpcomingSessions = lazyWithRetry(() => import('./pages/UpcomingSessions'));
 const LegalDeadlines = lazyWithRetry(() => import('./pages/LegalDeadlines'));
 const SessionPrep = lazyWithRetry(() => import('./pages/SessionPrep'));
+const SessionCopilot = lazyWithRetry(() => import('./pages/SessionCopilot'));
 const ClientCases = lazyWithRetry(() => import('./pages/ClientCases'));
 const ClientCaseDetail = lazyWithRetry(() => import('./pages/ClientCaseDetail'));
 const ClientDocumentsRequired = lazyWithRetry(() => import('./pages/ClientDocumentsRequired'));
@@ -217,6 +218,12 @@ function App() {
               <Route path="sessions/:sessionId/prep" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <SessionPrep />
+                </ProtectedRoute>
+              } />
+              {/* رفيق الجلسة — مساعد التحضير والتدوين (خلف بوابة tenant: session_copilot_enabled) */}
+              <Route path="sessions/:sessionId/copilot" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                  <SessionCopilot />
                 </ProtectedRoute>
               } />
               {/* المهل النظامية — عدادات تنازلية لمهل الاعتراض والمدد (ملاحظتا عميل #21 و#23) */}

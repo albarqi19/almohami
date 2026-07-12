@@ -39,7 +39,7 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: FileText, label: 'القضايا', path: '/cases', permission: 'cases.view' },
   { icon: FileCheck, label: 'الوكالات', path: '/wekalat', permission: 'wekala.manage' },
   { icon: Calendar, label: 'الجلسات', path: '/sessions', permission: 'sessions.view' },
-  { icon: AlarmClock, label: 'المهل النظامية', path: '/deadlines', permission: 'deadlines.view', badge: 'تجريبي' },
+  { icon: AlarmClock, label: 'المهل النظامية', path: '/deadlines', permission: 'deadlines.view' },
   { icon: Scale, label: 'طلبات التنفيذ', path: '/execution-requests', permission: 'cases.view' },
   { icon: Briefcase, label: 'الخدمات القانونية', path: '/legal-services', permission: 'cases.view' },
   { icon: Users, label: 'الاجتماعات', path: '/meetings/internal', permission: 'meetings.view' },
@@ -56,11 +56,11 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: Users, label: 'العملاء', path: '/clients', permission: 'clients.view' },
   { icon: ClipboardList, label: 'الطلبات الإدارية', path: '/admin/requests', permission: 'cases.view' },
   { icon: ShieldCheck, label: 'الاستعلام والتحقق', path: '/wathq', any: ['cases.view'] },
-  { icon: Landmark, label: 'الأنظمة', path: '/laws', any: ['cases.view'], badge: 'تجريبي' },
+  { icon: Landmark, label: 'الأنظمة', path: '/laws', any: ['cases.view'] },
   // [P4·UX-01] وحدة موحّدة بدل خمسة عناصر (العقود/قوالب العقود/الفواتير/المدفوعات/التحصيل).
   // any: يمنح المحامي وصول تبويب العقود حتى لو لم تكن له billing.view (التبويبات تُحرَس داخلياً — UX-07).
   { icon: FileSignature, label: 'العقود والمالية', path: '/finance', any: ['billing.view', 'contracts.view'] },
-  { icon: Archive, label: 'الصادر والوارد', path: '/correspondence', permission: 'correspondence.view', badge: 'تجريبي' },
+  { icon: Archive, label: 'الصادر والوارد', path: '/correspondence', permission: 'correspondence.view' },
   { icon: FileCheck, label: 'اعتمادات المذكرات', path: '/memos/approvals', permission: 'memos.approve', badge: 'تجريبي' },
   // الموارد البشرية — للمدير فقط (permission: hr.view مبذورة لـ owner/admin حصراً) + خلف بوابة hr_enabled.
   { icon: UserCog, label: 'الموارد البشرية', path: '/hr', permission: 'hr.view', featureGate: 'hr', badge: 'جديد' },

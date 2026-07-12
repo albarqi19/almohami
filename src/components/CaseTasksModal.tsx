@@ -524,10 +524,16 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
                                 </span>
                               </div>
                               {task.assignee?.name && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <div
+                                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  title={(task.assignees && task.assignees.length > 1)
+                                    ? task.assignees.map((a) => a.name).join('، ')
+                                    : task.assignee.name}
+                                >
                                   <User size={10} style={{ color: 'var(--color-text-tertiary)' }} />
                                   <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
                                     {task.assignee.name}
+                                    {task.assignees && task.assignees.length > 1 ? ` +${task.assignees.length - 1}` : ''}
                                   </span>
                                 </div>
                               )}

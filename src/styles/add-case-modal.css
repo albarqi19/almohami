@@ -813,6 +813,86 @@
     pointer-events: none;
 }
 
+/* ---- Lawyers dropdown menu (Portal — تطفو فوق ولا يقصّها overflow البانل) ---- */
+.erpc-lawyer-menu {
+    z-index: 3000;
+    border: 1px solid var(--notion-border);
+    border-radius: 6px;
+    background: var(--notion-bg);
+    box-shadow: 0 10px 28px -6px rgba(0, 0, 0, 0.28);
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 3px;
+    direction: rtl;
+    min-width: 260px;
+    box-sizing: border-box;
+}
+
+.erpc-lawyer-opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--notion-text);
+}
+
+.erpc-lawyer-opt:hover {
+    background: var(--notion-gray);
+}
+
+.erpc-lawyer-opt.selected {
+    background: var(--notion-blue-bg);
+}
+
+.erpc-lawyer-mark {
+    width: 16px;
+    display: inline-flex;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.erpc-lawyer-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.erpc-lawyer-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--law-gold, #c8a24a);
+    flex-shrink: 0;
+}
+
+.erpc-lawyer-promote {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--notion-text);
+    opacity: 0.3;
+    display: inline-flex;
+    padding: 2px;
+    flex-shrink: 0;
+    transition: opacity 0.12s, color 0.12s;
+}
+
+.erpc-lawyer-promote:hover {
+    opacity: 1;
+    color: var(--law-gold, #c8a24a);
+}
+
+.erpc-lawyer-empty {
+    padding: 10px;
+    font-size: 12px;
+    opacity: 0.5;
+    text-align: center;
+}
+
 .erpc-textarea {
     resize: vertical;
     min-height: 64px;

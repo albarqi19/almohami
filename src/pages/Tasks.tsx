@@ -13,14 +13,17 @@ import {
   ChevronDown,
   User,
   Layers,
-  Archive,
   Trash2,
   Pencil,
   MessageSquare,
   CheckSquare,
   Tag,
   ShieldCheck,
-  Paperclip
+  Paperclip,
+  Sliders,
+  Play,
+  Pause,
+  AlertTriangle
 } from 'lucide-react';
 import {
   DndContext,
@@ -30,10 +33,8 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
-  defaultDropAnimationSideEffects,
   type DragStartEvent,
-  type DragEndEvent,
-  type DropAnimation
+  type DragEndEvent
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -44,14 +45,13 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 import type { Task, TaskStatus, Priority } from '../types';
-import { TaskService } from '../services/taskService';
+import { TaskService, type TaskFilters, type TaskStats, type TaskWidgets } from '../services/taskService';
 import { UserService } from '../services/UserService';
 import AddTaskModal from '../components/AddTaskModal';
 import EditTaskModal from '../components/EditTaskModal';
 import VoiceTaskWidget from '../components/voice/VoiceTaskWidget';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { TasksCache, UsersCache } from '../utils/tasksCache';
-// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // --- Constants & Types ---
 const TASK_STATUSES: { key: TaskStatus; label: string; color: string }[] = [
@@ -65,7 +65,6 @@ const TASK_STATUSES: { key: TaskStatus; label: string; color: string }[] = [
 
 type GroupBy = 'status' | 'assignee';
 
-// --- Draggable Card Component ---
 const PRIORITY_META: Record<string, { label: string; color: string }> = {
   urgent: { label: 'عاجل', color: '#ef4444' },
   high:   { label: 'مرتفع', color: '#f97316' },
@@ -73,16 +72,39 @@ const PRIORITY_META: Record<string, { label: string; color: string }> = {
   low:    { label: 'منخفض', color: '#3b82f6' },
 };
 
+// Format seconds to HH:MM:SS
+const formatTimer = (totalSeconds: number) => {
+  const hrs = Math.floor(totalSeconds / 3600);
+  const mins = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+  return [
+    hrs > 0 ? String(hrs).padStart(2, '0') : null,
+    String(mins).padStart(2, '0'),
+    String(secs).padStart(2, '0')
+  ].filter(Boolean).join(':');
+};
+
+// --- Draggable Card Component ---
 const SortableTaskCard = ({
   task,
   user,
   onOpen,
-  onOpenMenu
+  onOpenMenu,
+  activeTimerTaskId,
+  timerRunning,
+  onStartTimer,
+  onPauseTimer,
+  timerSeconds
 }: {
   task: Task;
   user?: { name: string };
   onOpen: () => void;
   onOpenMenu: (e: React.MouseEvent, task: Task) => void;
+  activeTimerTaskId: string | null;
+  timerRunning: boolean;
+  onStartTimer: (id: string) => void;
+  onPauseTimer: () => void;
+  timerSeconds: number;
 }) => {
   const {
     attributes,
@@ -93,7 +115,6 @@ const SortableTaskCard = ({
     isDragging
   } = useSortable({ id: task.id, data: { ...task } });
 
-  // الضغط على الكرت يوسّعه لإظهار الوصف (لا ينتقل للصفحة — الفتح عبر زر مخصّص)
   const [expanded, setExpanded] = useState(false);
 
   const style = {
@@ -125,6 +146,28 @@ const SortableTaskCard = ({
           {prio.label}
         </span>
         <div className="task-card-actions" onClick={(e) => e.stopPropagation()}>
+          {task.status === 'in_progress' && (
+            <button
+              type="button"
+              className={`task-card-action-btn stopwatch-icon-btn ${activeTimerTaskId === task.id && timerRunning ? 'running' : ''}`}
+              title={activeTimerTaskId === task.id && timerRunning ? 'إيقاف مؤقت للموقت' : 'بدء موقت العمل'}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (activeTimerTaskId === task.id && timerRunning) {
+                  onPauseTimer();
+                } else {
+                  onStartTimer(task.id);
+                }
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {activeTimerTaskId === task.id && timerRunning ? (
+                <Pause size={12} className="text-error pulse-animation" />
+              ) : (
+                <Play size={12} />
+              )}
+            </button>
+          )}
           <button
             type="button"
             className="task-card-action-btn menu-trigger"
@@ -187,6 +230,12 @@ const SortableTaskCard = ({
               <span>{dueDateStr}</span>
             </span>
           )}
+          {activeTimerTaskId === task.id && timerRunning && (
+            <span className="tcm-badge active-timer" title="الموقت النشط">
+              <span className="stopwatch-pulse-dot" />
+              <span>{formatTimer(timerSeconds)}</span>
+            </span>
+          )}
           {task.subtasks_total !== undefined && task.subtasks_total > 0 && (
             <span className="tcm-badge subtasks" title="المهام الفرعية">
               <CheckSquare size={11} />
@@ -215,11 +264,19 @@ const SortableTaskCard = ({
         </div>
         <div className="task-card-meta-right" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
           {user ? (
-            <span className="task-card-assignee-badge" title={user.name}>
+            <span
+              className="task-card-assignee-badge"
+              title={(task.assignees && task.assignees.length > 1)
+                ? task.assignees.map((a) => a.name).join('، ')
+                : user.name}
+            >
               <span className="assignee-avatar assignee-avatar--sm">
                 {user.name.charAt(0)}
               </span>
-              <span className="assignee-name">{user.name}</span>
+              <span className="assignee-name">
+                {user.name}
+                {task.assignees && task.assignees.length > 1 ? ` +${task.assignees.length - 1}` : ''}
+              </span>
             </span>
           ) : (
             <span className="task-card-assignee-badge unassigned" title="غير مسندة">
@@ -273,7 +330,6 @@ const DroppableColumn = ({ id, title, count, color, children }: { id: string, ti
   );
 };
 
-
 // --- Main Page Component ---
 const Tasks: React.FC = () => {
   const navigate = useNavigate();
@@ -282,8 +338,6 @@ const Tasks: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>(() => TasksCache.get());
   const [loading, setLoading] = useState(() => TasksCache.get().length === 0);
 
-  // تحميل تدريجي: نجلب حتى loadedCount مهمة في طلب واحد (per_page).
-  // ref كي تقرأ loadTasks أحدث قيمة حتى من إغلاق التحديث التلقائي.
   const PAGE_SIZE = 50;
   const loadedCountRef = useRef(PAGE_SIZE);
   const [totalCount, setTotalCount] = useState(0);
@@ -301,10 +355,33 @@ const Tasks: React.FC = () => {
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'priority' | 'dueDate' | 'title' | 'createdAt'>('priority');
 
+  // فلتر خاص من أزرار «عرض الكل» في الودجات الجانبية
+  type SpecialFilter = 'overdue' | 'due_today' | 'needs_attention' | null;
+  const [specialFilter, setSpecialFilter] = useState<SpecialFilter>(null);
+
+  // مرآة للفلاتر الحالية حتى تقرأها loadTasks من داخل أي callback بدون قيم قديمة
+  const filtersRef = useRef({ search: '', status: 'all' as TaskStatus | 'all', assignee: 'all', special: null as SpecialFilter });
+  filtersRef.current = { search: searchTerm, status: statusFilter, assignee: assigneeFilter, special: specialFilter };
+
+  // إحصائيات وقوائم ودجات حقيقية من الخادم (كل المهام لا الصفحة المحمّلة فقط)
+  const [stats, setStats] = useState<TaskStats | null>(null);
+  const [widgets, setWidgets] = useState<TaskWidgets | null>(null);
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  // المجموعات المطوية في عرض القائمة
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const toggleGroup = (id: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   // قائمة الإجراءات (زر النقاط الثلاثة)
   const [menu, setMenu] = useState<{ task: Task; top: number; left: number; openUp: boolean } | null>(null);
@@ -312,20 +389,140 @@ const Tasks: React.FC = () => {
   const [deleteTask, setDeleteTask] = useState<Task | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // responsive layout mobile navigation state
+  const [mobileActiveTab, setMobileActiveTab] = useState<'tasks' | 'filters' | 'alerts'>('tasks');
+
+  // --- Real-time Time Tracker State ---
+  const [activeTimerTaskId, setActiveTimerTaskId] = useState<string | null>(() => {
+    return localStorage.getItem('tasks_timer_task_id');
+  });
+  const [timerRunning, setTimerRunning] = useState<boolean>(() => {
+    return localStorage.getItem('tasks_timer_running') === 'true';
+  });
+  const [timerSeconds, setTimerSeconds] = useState<number>(0);
+
+  // Timer Tick implementation
   useEffect(() => {
-    // تحميل البيانات دائماً عند فتح الصفحة لضمان التحديث
-    loadTasks();
+    if (!activeTimerTaskId) {
+      setTimerSeconds(0);
+      return;
+    }
+
+    const startStr = localStorage.getItem('tasks_timer_start_time');
+    const offsetStr = localStorage.getItem('tasks_timer_offset') || '0';
+    const offset = parseInt(offsetStr, 10);
+
+    if (timerRunning && startStr) {
+      const startTime = parseInt(startStr, 10);
+      const initialElapsed = Math.floor((Date.now() - startTime) / 1000) + offset;
+      setTimerSeconds(initialElapsed);
+
+      const interval = setInterval(() => {
+        const currentElapsed = Math.floor((Date.now() - startTime) / 1000) + offset;
+        setTimerSeconds(currentElapsed);
+      }, 1000);
+
+      return () => clearInterval(interval);
+    } else {
+      setTimerSeconds(offset);
+    }
+  }, [activeTimerTaskId, timerRunning]);
+
+  const startTimer = (taskId: string) => {
+    const prevTaskId = localStorage.getItem('tasks_timer_task_id');
+    localStorage.setItem('tasks_timer_task_id', taskId);
+    localStorage.setItem('tasks_timer_start_time', Date.now().toString());
+    
+    if (prevTaskId !== taskId) {
+      localStorage.setItem('tasks_timer_offset', '0');
+    }
+
+    setActiveTimerTaskId(taskId);
+    setTimerRunning(true);
+    localStorage.setItem('tasks_timer_running', 'true');
+  };
+
+  const pauseTimer = () => {
+    if (!activeTimerTaskId) return;
+    const startStr = localStorage.getItem('tasks_timer_start_time');
+    const offsetStr = localStorage.getItem('tasks_timer_offset') || '0';
+    const offset = parseInt(offsetStr, 10);
+
+    let newOffset = offset;
+    if (startStr && timerRunning) {
+      const startTime = parseInt(startStr, 10);
+      newOffset += Math.floor((Date.now() - startTime) / 1000);
+    }
+
+    localStorage.setItem('tasks_timer_offset', newOffset.toString());
+    localStorage.removeItem('tasks_timer_start_time');
+    setTimerRunning(false);
+    localStorage.setItem('tasks_timer_running', 'false');
+    setTimerSeconds(newOffset);
+  };
+
+  const stopAndLogTimer = async () => {
+    if (!activeTimerTaskId) return;
+    const task = tasks.find(t => t.id === activeTimerTaskId);
+    if (!task) return;
+
+    const hours = parseFloat((timerSeconds / 3600).toFixed(2));
+    const confirmLog = window.confirm(`هل ترغب في تسجيل ${hours} ساعة عمل للمهمة: "${task.title}"؟`);
+    if (confirmLog) {
+      try {
+        const newActualHours = (task.actualHours || 0) + hours;
+        await TaskService.updateTask(activeTimerTaskId, { actual_hours: newActualHours });
+        
+        const updatedTasks = tasks.map(t => t.id === activeTimerTaskId ? { ...t, actualHours: newActualHours } : t);
+        setTasks(updatedTasks);
+        TasksCache.set(updatedTasks);
+        alert('تم تسجيل الوقت بنجاح.');
+      } catch (err) {
+        console.error('Failed to log hours:', err);
+        alert('فشل في حفظ الساعات في الخادم، ولكن تم إيقاف الموقت.');
+      }
+    }
+
+    localStorage.removeItem('tasks_timer_task_id');
+    localStorage.removeItem('tasks_timer_start_time');
+    localStorage.removeItem('tasks_timer_offset');
+    localStorage.setItem('tasks_timer_running', 'false');
+    setActiveTimerTaskId(null);
+    setTimerRunning(false);
+    setTimerSeconds(0);
+  };
+
+  useEffect(() => {
     loadUsers();
+    loadStats();
   }, []);
+
+  const loadStats = async () => {
+    try {
+      const [s, w] = await Promise.all([
+        TaskService.getTaskStatistics(),
+        TaskService.getTaskWidgets(),
+      ]);
+      setStats(s);
+      setWidgets(w);
+    } catch (error) {
+      console.error('Error loading task stats:', error);
+    }
+  };
 
   const loadTasks = async () => {
     try {
       if (tasks.length === 0) setLoading(true);
-      const response = await TaskService.getTasks({ per_page: loadedCountRef.current });
+      const { search, status, assignee, special } = filtersRef.current;
+      const filters: TaskFilters = { per_page: loadedCountRef.current };
+      if (search.trim()) filters.search = search.trim();
+      if (status !== 'all') filters.status = status;
+      if (assignee !== 'all' && assignee !== 'unassigned') filters.assigned_to = assignee;
+      if (special) filters[special] = 1;
+      const response = await TaskService.getTasks(filters);
       const tasksData = response.data || [];
       setTasks(tasksData);
       setTotalCount((response as any).total ?? tasksData.length);
-      // حفظ في الكاش المركزي
       TasksCache.set(tasksData);
     } catch (error) {
       console.error('Error loading tasks:', error);
@@ -334,8 +531,18 @@ const Tasks: React.FC = () => {
     }
   };
 
-  // تحميل دفعة إضافية: نزيد الحدّ ونعيد الجلب (طلب واحد يجلب كل المحمَّل
-  // محدَّثاً، فيبقى الكانبان متكاملاً والتحديث التلقائي يحافظ على ما حُمّل).
+  // البحث والفلاتر على الخادم (debounce للكتابة في البحث)
+  const isFirstFilterRun = useRef(true);
+  useEffect(() => {
+    const delay = isFirstFilterRun.current ? 0 : 350;
+    isFirstFilterRun.current = false;
+    const t = setTimeout(() => {
+      loadedCountRef.current = PAGE_SIZE;
+      loadTasks();
+    }, delay);
+    return () => clearTimeout(t);
+  }, [searchTerm, statusFilter, assigneeFilter, specialFilter]);
+
   const loadMore = async () => {
     loadedCountRef.current += PAGE_SIZE;
     setLoadingMore(true);
@@ -346,11 +553,14 @@ const Tasks: React.FC = () => {
     }
   };
 
-  // تحديث تلقائي عند العودة للصفحة وكل دقيقتين
+  const refreshAll = async () => {
+    await Promise.all([loadTasks(), loadStats()]);
+  };
+
   useAutoRefresh({
-    onRefresh: loadTasks,
+    onRefresh: refreshAll,
     refetchOnFocus: true,
-    pollingInterval: 120, // كل 2 دقيقة
+    pollingInterval: 120,
   });
 
   const loadUsers = async () => {
@@ -361,7 +571,6 @@ const Tasks: React.FC = () => {
         usersMap[user.id] = { name: user.name };
       });
       setUsers(usersMap);
-      // حفظ في الكاش المركزي
       UsersCache.set(usersMap);
     } catch (error) {
       console.error('Error loading users:', error);
@@ -383,16 +592,11 @@ const Tasks: React.FC = () => {
     const taskId = active.id as string;
     const overId = over.id as string;
 
-    // Find if we dropped over a column (status) or another task
-    // Simplified: We assume columns map to statuses
-
     let newStatus: TaskStatus | null = null;
 
-    // Check if dropped directly on a status column
     if (TASK_STATUSES.some(s => s.key === overId)) {
       newStatus = overId as TaskStatus;
     } else {
-      // Check if dropped on a task, find that task's status
       const overTask = tasks.find(t => t.id === overId);
       if (overTask) {
         newStatus = overTask.status;
@@ -400,29 +604,25 @@ const Tasks: React.FC = () => {
     }
 
     if (newStatus) {
-      // Optimistic Update
       const updatedTasks = tasks.map(t =>
         t.id === taskId ? { ...t, status: newStatus as TaskStatus } : t
       );
       setTasks(updatedTasks);
-
-      // تحديث الكاش المركزي
       TasksCache.set(updatedTasks);
 
-      // Backend Update
       try {
         const updated = await TaskService.updateTaskStatus(taskId, newStatus);
-        // الباك قد يحوّل «مكتملة» إلى «بانتظار الاعتماد» (بوابة الاعتماد) — صحّح البطاقة
         const actualStatus = (updated as any)?.status as TaskStatus | undefined;
         if (actualStatus && actualStatus !== newStatus) {
           const corrected = updatedTasks.map(t => t.id === taskId ? { ...t, status: actualStatus } : t);
           setTasks(corrected);
           TasksCache.set(corrected);
         }
+        loadStats();
       } catch (err: any) {
-        console.error('Failed to update task status', err);
+        console.error('Failed to update status', err);
         alert(err?.message || 'تعذّر تحديث حالة المهمة');
-        loadTasks(); // Revert on error
+        loadTasks();
       }
     }
   };
@@ -431,7 +631,9 @@ const Tasks: React.FC = () => {
     const filtered = tasks.filter(task => {
       const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesAssignee = assigneeFilter === 'all'
+        || (assigneeFilter === 'unassigned' ? !task.assignedTo : task.assignedTo === assigneeFilter);
+      return matchesSearch && matchesStatus && matchesAssignee;
     });
 
     const PRIORITY_RANK: Record<string, number> = {
@@ -445,7 +647,7 @@ const Tasks: React.FC = () => {
       if (sortBy === 'priority') {
         const rankA = PRIORITY_RANK[a.priority] ?? 2;
         const rankB = PRIORITY_RANK[b.priority] ?? 2;
-        return rankB - rankA; // highest priority first
+        return rankB - rankA;
       }
       if (sortBy === 'dueDate') {
         if (!a.dueDate) return 1;
@@ -466,32 +668,113 @@ const Tasks: React.FC = () => {
     return getFilteredTasks().filter(t => t.status === status);
   };
 
-  // --- Row Actions (قائمة النقاط الثلاثة) ---
+  // Dynamically compute overdue and today tasks lists
+  const overdueTasks = tasks.filter(task => {
+    if (!task.dueDate) return false;
+    const isCompletedOrCancelled = task.status === 'completed' || task.status === 'cancelled';
+    const isPast = new Date(task.dueDate) < new Date();
+    return isPast && !isCompletedOrCancelled;
+  });
+
+  const todayTasks = tasks.filter(task => {
+    if (!task.dueDate) return false;
+    const isCompletedOrCancelled = task.status === 'completed' || task.status === 'cancelled';
+    const isToday = new Date(task.dueDate).toDateString() === new Date().toDateString();
+    return isToday && !isCompletedOrCancelled;
+  });
+
+  // --- بيانات ودجات اللوحة اليسرى ---
+  const timeAgo = (d?: Date | string) => {
+    if (!d) return '';
+    const mins = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
+    if (mins < 1) return 'الآن';
+    if (mins < 60) return `منذ ${mins} د`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `منذ ${hrs} س`;
+    const days = Math.floor(hrs / 24);
+    return days === 1 ? 'منذ يوم' : days === 2 ? 'منذ يومين' : days <= 10 ? `منذ ${days} أيام` : `منذ ${days} يوماً`;
+  };
+
+  const isOpenTask = (t: Task) => t.status !== 'completed' && t.status !== 'cancelled';
+
+  // بانتظار الاعتماد
+  const pendingApprovalTasks = tasks.filter(t => t.status === 'pending_approval');
+
+  // مهام مفتوحة فيها نواقص ضبط (بلا مكلّف / بلا تاريخ / مرفق مطلوب لم يُرفع)
+  const attentionTasks = tasks
+    .filter(isOpenTask)
+    .map(task => {
+      const reason = !task.assignedTo ? 'بلا مكلّف'
+        : !task.dueDate ? 'بلا تاريخ استحقاق'
+        : (task.requires_attachment && (task.documents_count ?? 0) === 0) ? 'مرفق مطلوب لم يُرفع'
+        : null;
+      return reason ? { task, reason } : null;
+    })
+    .filter((x): x is { task: Task; reason: string } => x !== null);
+
+  // توزيع الحمل: عدد المهام المفتوحة لكل محامٍ
+  const openTasks = tasks.filter(isOpenTask);
+  const workload = Object.entries(users)
+    .map(([uid, u]) => ({ uid, name: u.name, count: openTasks.filter(t => t.assignedTo === uid).length }))
+    .filter(w => w.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6);
+
+  // مصدر عرض الودجات: بيانات الخادم الدقيقة، ومحلياً كـ fallback ريثما تصل
+  const wOverdue = widgets?.overdue
+    ?? overdueTasks.slice(0, 5).map(t => ({ id: t.id, title: t.title, due_date: t.dueDate ? String(t.dueDate) : null }));
+  const wToday = widgets?.due_today
+    ?? todayTasks.map(t => ({ id: t.id, title: t.title, priority: t.priority, status: t.status }));
+  const wApproval = widgets?.pending_approval
+    ?? pendingApprovalTasks.slice(0, 4).map(t => ({
+      id: t.id,
+      title: t.title,
+      updated_at: String(t.updatedAt),
+      assignee_name: t.assignedTo ? (users[t.assignedTo]?.name ?? null) : null,
+    }));
+  const wAttention = widgets?.needs_attention
+    ?? attentionTasks.slice(0, 4).map(({ task, reason }) => ({ id: task.id, title: task.title, reason }));
+  const wWorkload = widgets?.workload
+    ?? workload.map(w => ({ user_id: w.uid, name: w.name, open_count: w.count }));
+  const maxWorkload = wWorkload[0]?.open_count || 1;
+  const attentionCount = widgets?.counts.needs_attention ?? attentionTasks.length;
+
+  const SPECIAL_FILTER_LABELS: Record<Exclude<SpecialFilter, null>, string> = {
+    overdue: 'المهام المتأخرة',
+    due_today: 'مهام تستحق اليوم',
+    needs_attention: 'مهام تحتاج ضبط',
+  };
+
+  // «عرض الكل» من ودجة جانبية: يفعّل الفلتر الخاص على الجدول الرئيسي
+  const showAllOf = (key: Exclude<SpecialFilter, null>) => {
+    setStatusFilter('all');
+    setSpecialFilter(prev => (prev === key ? null : key));
+    setMobileActiveTab('tasks');
+  };
 
   const openTaskMenu = (e: React.MouseEvent, task: Task) => {
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const MENU_W = 210;
-    const MENU_H = 320; // تقدير لاختيار اتجاه الفتح
+    const MENU_H = 320;
     const openUp = rect.bottom + MENU_H > window.innerHeight;
     const left = Math.max(8, rect.right - MENU_W);
     const top = openUp ? rect.top - 4 : rect.bottom + 4;
-    // toggle: الضغط على نفس الزر يغلق القائمة
     setMenu(prev => (prev?.task.id === task.id ? null : { task, top, left, openUp }));
   };
 
   const changeStatus = async (task: Task, status: TaskStatus) => {
     setMenu(null);
     if (task.status === status) return;
-    // تحديث متفائل
     const updated = tasks.map(t => (t.id === task.id ? { ...t, status } : t));
     setTasks(updated);
     TasksCache.set(updated);
     try {
       await TaskService.updateTaskStatus(task.id, status);
+      loadStats();
     } catch (err) {
-      console.error('Failed to update task status', err);
-      loadTasks(); // التراجع عند الفشل
+      console.error('Failed to update status', err);
+      loadTasks();
     }
   };
 
@@ -504,6 +787,7 @@ const Tasks: React.FC = () => {
       setTasks(updated);
       TasksCache.set(updated);
       setDeleteTask(null);
+      loadStats();
     } catch (err) {
       console.error('Failed to delete task', err);
       alert('فشل حذف المهمة. حاول مرة أخرى.');
@@ -512,11 +796,8 @@ const Tasks: React.FC = () => {
     }
   };
 
-  // --- Render Views ---
-
   const renderListView = () => {
-    // Grouping Logic
-    let groups: { id: string, label: string, color: string, tasks: Task[] }[] = [];
+    let groups: { id: string; label: string; color: string; tasks: Task[] }[] = [];
 
     if (groupBy === 'status') {
       groups = TASK_STATUSES.map(s => ({
@@ -526,7 +807,6 @@ const Tasks: React.FC = () => {
         tasks: getTasksByStatus(s.key)
       }));
     } else if (groupBy === 'assignee') {
-      // Create groups for each user + Unassigned
       const userGroups = Object.keys(users).map(uid => ({
         id: uid,
         label: users[uid].name,
@@ -545,8 +825,7 @@ const Tasks: React.FC = () => {
         <table className="tasks-table">
           <thead>
             <tr>
-              <th style={{ width: '32%' }}>المهمة</th>
-              <th>القضية</th>
+              <th style={{ width: '35%' }}>المهمة</th>
               <th>الحالة</th>
               <th>الأولوية</th>
               <th>المكلف</th>
@@ -557,13 +836,14 @@ const Tasks: React.FC = () => {
           <tbody>
             {groups.map(group => {
               if (group.tasks.length === 0) return null;
+              const isCollapsed = collapsedGroups.has(group.id);
 
               return (
                 <React.Fragment key={group.id}>
-                  <tr className="task-group-header">
-                    <td colSpan={7} style={{ padding: '8px 16px', background: 'var(--quiet-gray-50)' }}>
+                  <tr className="task-group-header" onClick={() => toggleGroup(group.id)} style={{ cursor: 'pointer' }}>
+                    <td colSpan={6} style={{ padding: '8px 16px', background: 'var(--quiet-gray-50)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <ChevronDown size={14} />
+                        <ChevronDown size={14} style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.15s ease' }} />
                         <span style={{ color: group.color }}>{group.label}</span>
                         <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', background: 'rgba(0,0,0,0.05)', padding: '2px 6px', borderRadius: '4px' }}>
                           {group.tasks.length}
@@ -571,46 +851,24 @@ const Tasks: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                  {group.tasks.map(task => (
+                  {!isCollapsed && group.tasks.map(task => (
                     <tr key={task.id} onClick={() => navigate(`/tasks/${task.id}`)} style={{ cursor: 'pointer' }}>
                       <td>
-                        <div style={{ fontWeight: 500 }}>{task.title}</div>
-
-                      </td>
-                      <td>
-                        {task.case && task.caseId ? (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/cases/${task.caseId}`);
-                            }}
-                            title="فتح القضية"
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              padding: 0,
-                              color: 'var(--color-primary, #2563eb)',
-                              font: 'inherit',
-                              cursor: 'pointer',
-                              textDecoration: 'underline',
-                              textDecorationStyle: 'dotted',
-                              textUnderlineOffset: '3px',
-                              textAlign: 'right',
-                            }}
-                          >
-                            {task.case.file_number ? `#${task.case.file_number} — ` : ''}
-                            {task.case.title}
-                          </button>
-                        ) : task.client ? (
-                          <span style={{ color: 'var(--color-primary, #2563eb)', fontSize: '12px', fontWeight: 500 }}>
-                            العميل: {task.client.name}
-                          </span>
-                        ) : (
-                          <span style={{ color: 'var(--color-text-secondary, #94a3b8)', fontSize: '12px' }}>
-                            غير مسندة
-                          </span>
-                        )}
+                        <div className="task-title-cell">
+                          <span className="task-title-text">{task.title}</span>
+                          {task.case ? (
+                            <span className="task-case-subtext" title={task.case.title} onClick={(e) => { e.stopPropagation(); navigate(`/cases/${task.caseId}`); }}>
+                              <Layers size={10} className="inline-icon" />
+                              {task.case.file_number ? `#${task.case.file_number} — ` : ''}
+                              {task.case.title}
+                            </span>
+                          ) : task.client ? (
+                            <span className="task-case-subtext client" title={task.client.name}>
+                              <User size={10} className="inline-icon" />
+                              العميل: {task.client.name}
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
                       <td>
                         <span className={`status-badge ${task.status}`}>
@@ -619,25 +877,33 @@ const Tasks: React.FC = () => {
                       </td>
                       <td>
                         <div className="priority-flag">
-                          <Flag size={14} fill={task.priority === 'high' ? '#ef4444' : task.priority === 'medium' ? '#f59e0b' : '#3b82f6'} color={task.priority === 'high' ? '#ef4444' : task.priority === 'medium' ? '#f59e0b' : '#3b82f6'} />
-                          <span>{task.priority === 'high' ? 'عالية' : task.priority === 'medium' ? 'متوسطة' : 'منخفضة'}</span>
+                          <Flag size={13} fill={PRIORITY_META[task.priority]?.color || '#f59e0b'} color={PRIORITY_META[task.priority]?.color || '#f59e0b'} />
+                          <span>{PRIORITY_META[task.priority]?.label || 'متوسطة'}</span>
                         </div>
                       </td>
                       <td>
                         {task.assignedTo ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                            title={(task.assignees && task.assignees.length > 1)
+                              ? task.assignees.map((a) => a.name).join('، ')
+                              : users[task.assignedTo]?.name}
+                          >
                             <div className="assignee-avatar" style={{ width: '20px', height: '20px', fontSize: '10px' }}>
                               {users[task.assignedTo]?.name.charAt(0)}
                             </div>
-                            <span>{users[task.assignedTo]?.name}</span>
+                            <span>
+                              {users[task.assignedTo]?.name}
+                              {task.assignees && task.assignees.length > 1 ? ` +${task.assignees.length - 1}` : ''}
+                            </span>
                           </div>
                         ) : '-'}
                       </td>
                       <td>
                         {task.dueDate ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: new Date(task.dueDate) < new Date() ? 'var(--color-error)' : 'inherit' }}>
-                            <Calendar size={14} />
-                            {new Date(task.dueDate).toLocaleDateString('ar-SA')}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: new Date(task.dueDate) < new Date() && task.status !== 'completed' && task.status !== 'cancelled' ? 'var(--color-error)' : 'inherit' }}>
+                            <Calendar size={13} />
+                            <span>{new Date(task.dueDate).toLocaleDateString('ar-SA')}</span>
                           </div>
                         ) : '-'}
                       </td>
@@ -687,6 +953,11 @@ const Tasks: React.FC = () => {
                     user={task.assignedTo ? users[task.assignedTo] : undefined}
                     onOpen={() => navigate(`/tasks/${task.id}`)}
                     onOpenMenu={(e, t) => openTaskMenu(e, t)}
+                    activeTimerTaskId={activeTimerTaskId}
+                    timerRunning={timerRunning}
+                    onStartTimer={startTimer}
+                    onPauseTimer={pauseTimer}
+                    timerSeconds={timerSeconds}
                   />
                 ))}
               </SortableContext>
@@ -722,154 +993,429 @@ const Tasks: React.FC = () => {
 
   return (
     <div className="tasks-page">
-      {/* Unified Toolbar — حاوية واحدة: سطر واحد على الواسع، تنقسم تلقائياً عند الضيق */}
-      <header className="tasks-header tasks-header--unified">
-        {/* العنوان */}
-        <div className="tasks-header__title">
-          <CheckCircle size={20} color="var(--law-navy)" />
-          <span>إدارة المهام</span>
-        </div>
+      {/* Mobile Tab Switcher */}
+      <div className="tasks-mobile-tabs">
+        <button
+          className={`tasks-mobile-tab ${mobileActiveTab === 'filters' ? 'active' : ''}`}
+          onClick={() => setMobileActiveTab('filters')}
+        >
+          <Sliders size={15} />
+          <span>الفرز والإحصاء</span>
+        </button>
+        <button
+          className={`tasks-mobile-tab ${mobileActiveTab === 'tasks' ? 'active' : ''}`}
+          onClick={() => setMobileActiveTab('tasks')}
+        >
+          <CheckSquare size={15} />
+          <span>قائمة المهام ({stats?.total ?? totalCount})</span>
+        </button>
+        <button
+          className={`tasks-mobile-tab ${mobileActiveTab === 'alerts' ? 'active' : ''}`}
+          onClick={() => setMobileActiveTab('alerts')}
+        >
+          <Clock size={15} />
+          <span>المتابعة ({stats?.overdue ?? overdueTasks.length})</span>
+        </button>
+      </div>
 
-        {/* البحث */}
-        <div className="tasks-toolbar__search">
-          <Search size={14} className="tasks-toolbar__search-icon" />
-          <input
-            type="text"
-            placeholder="بحث عن مهمة..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="tasks-toolbar__search-input"
-          />
-        </div>
+      <div className="tasks-page-grid">
+        
+        {/* Column 1: Right Panel (Filters, Stats) */}
+        <aside className={`tasks-panel-right ${mobileActiveTab === 'filters' ? 'mobile-visible' : 'mobile-hidden'}`}>
+          <div className="panel-section">
+            <button
+              className="btn-primary tasks-sidebar__add-btn"
+              onClick={() => setIsAddModalOpen(true)}
+              style={{ width: '100%', justifyContent: 'center', gap: '8px', padding: '10px' }}
+            >
+              <Plus size={16} />
+              <span>مهمة جديدة</span>
+            </button>
+          </div>
 
-        {/* الترتيب */}
-        <div className="tasks-toolbar__control">
-          <span className="tasks-toolbar__control-label">ترتيب حسب:</span>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="tasks-toolbar__select"
-          >
-            <option value="priority">الأولوية</option>
-            <option value="dueDate">تاريخ الاستحقاق</option>
-            <option value="createdAt">تاريخ الإنشاء</option>
-            <option value="title">العنوان</option>
-          </select>
-        </div>
+          {/* Quick Stats Grid */}
+          <div className="panel-section stats-grid">
+            <div className="stat-card total" onClick={() => { setStatusFilter('all'); setMobileActiveTab('tasks'); }}>
+              <div className="stat-label">إجمالي المهام</div>
+              <div className="stat-value">{stats?.total ?? totalCount}</div>
+            </div>
+            <div className="stat-card overdue" onClick={() => { setStatusFilter('all'); setMobileActiveTab('alerts'); }}>
+              <div className="stat-label">المتأخرة</div>
+              <div className="stat-value text-error">{stats?.overdue ?? overdueTasks.length}</div>
+            </div>
+            <div className="stat-card in-progress" onClick={() => { setStatusFilter('in_progress'); setMobileActiveTab('tasks'); }}>
+              <div className="stat-label">قيد التنفيذ</div>
+              <div className="stat-value">{stats?.in_progress ?? tasks.filter(t => t.status === 'in_progress').length}</div>
+            </div>
+            <div className="stat-card pending" onClick={() => { setStatusFilter('pending_approval'); setMobileActiveTab('tasks'); }}>
+              <div className="stat-label">بانتظار الاعتماد</div>
+              <div className="stat-value">{stats?.pending_approval ?? tasks.filter(t => t.status === 'pending_approval').length}</div>
+            </div>
+          </div>
 
-        {/* التجميع (عرض القائمة فقط) */}
-        {viewMode === 'list' && (
-          <div className="tasks-toolbar__control">
-            <span className="tasks-toolbar__control-label">تجميع:</span>
-            <div className="tasks-toolbar__segmented">
+          {/* Status Filters List */}
+          <div className="panel-section">
+            <h4 className="panel-section-title">تصفية حسب الحالة</h4>
+            <div className="vertical-filter-list">
               <button
-                onClick={() => setGroupBy('status')}
-                className={`tasks-toolbar__segmented-btn ${groupBy === 'status' ? 'active' : ''}`}
+                className={`vertical-filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
+                onClick={() => { setSpecialFilter(null); setStatusFilter('all'); if (window.innerWidth < 1024) setMobileActiveTab('tasks'); }}
               >
-                الحالة
+                <span className="filter-dot all" />
+                <span className="filter-label">الكل</span>
+                <span className="filter-count">{stats?.total ?? totalCount}</span>
+              </button>
+              {TASK_STATUSES.map(s => {
+                const count = (stats?.[s.key as keyof TaskStats] as number | undefined) ?? tasks.filter(t => t.status === s.key).length;
+                return (
+                  <button
+                    key={s.key}
+                    className={`vertical-filter-btn ${statusFilter === s.key ? 'active' : ''}`}
+                    onClick={() => { setSpecialFilter(null); setStatusFilter(s.key); if (window.innerWidth < 1024) setMobileActiveTab('tasks'); }}
+                  >
+                    <span className="filter-dot" style={{ backgroundColor: s.color }} />
+                    <span className="filter-label">{s.label}</span>
+                    <span className="filter-count">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Priority Filters */}
+          <div className="panel-section">
+            <h4 className="panel-section-title">الأولويات</h4>
+            <div className="priority-filter-grid">
+              {Object.entries(PRIORITY_META).map(([prioKey, prioMeta]) => {
+                const count = stats?.by_priority?.[prioKey as keyof TaskStats['by_priority']]
+                  ?? tasks.filter(t => t.priority === prioKey).length;
+                return (
+                  <button
+                    key={prioKey}
+                    className="prio-filter-card"
+                    style={{ borderColor: prioMeta.color }}
+                    onClick={() => {
+                      setSortBy('priority');
+                      if (window.innerWidth < 1024) setMobileActiveTab('tasks');
+                    }}
+                  >
+                    <Flag size={12} fill={prioMeta.color} color={prioMeta.color} />
+                    <span className="prio-label">{prioMeta.label}</span>
+                    <span className="prio-count">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Sorting & assignee filter panel */}
+          <div className="panel-section">
+            <div className="inline-field">
+              <h4 className="panel-section-title">ترتيب المهام</h4>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="tasks-sidebar-select"
+              >
+                <option value="priority">الأولوية</option>
+                <option value="dueDate">تاريخ الاستحقاق</option>
+                <option value="createdAt">تاريخ الإنشاء</option>
+                <option value="title">العنوان</option>
+              </select>
+            </div>
+            <div className="inline-field">
+              <h4 className="panel-section-title">حسب المحامي</h4>
+              <select
+                value={assigneeFilter}
+                onChange={(e) => { setAssigneeFilter(e.target.value); if (window.innerWidth < 1024) setMobileActiveTab('tasks'); }}
+                className="tasks-sidebar-select"
+              >
+                <option value="all">الكل</option>
+                {Object.entries(users).map(([uid, u]) => (
+                  <option key={uid} value={uid}>{u.name}</option>
+                ))}
+                <option value="unassigned">غير معيّن</option>
+              </select>
+            </div>
+          </div>
+        </aside>
+
+        {/* Column 2: Middle Panel (Main tasks view) */}
+        <main className={`tasks-panel-middle ${mobileActiveTab === 'tasks' ? 'mobile-visible' : 'mobile-hidden'}`}>
+          <div className="middle-panel-header">
+            {/* Search */}
+            <div className="tasks-toolbar__search">
+              <Search size={14} className="tasks-toolbar__search-icon" />
+              <input
+                type="text"
+                placeholder="البحث عن مهمة..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="tasks-toolbar__search-input"
+              />
+            </div>
+
+            {/* شريحة الفلتر الخاص النشط (عرض الكل من ودجة) */}
+            {specialFilter && (
+              <div className="special-filter-chip">
+                <span>عرض: {SPECIAL_FILTER_LABELS[specialFilter]} ({totalCount})</span>
+                <button onClick={() => setSpecialFilter(null)} title="إلغاء التصفية">✕</button>
+              </div>
+            )}
+
+            {/* View switcher */}
+            <div className="tasks-view-switcher">
+              <button
+                className={`tasks-view-btn ${viewMode === 'list' ? 'active' : ''}`}
+                onClick={() => setViewMode('list')}
+                title="عرض القائمة"
+              >
+                <List size={14} />
+                <span>قائمة</span>
               </button>
               <button
-                onClick={() => setGroupBy('assignee')}
-                className={`tasks-toolbar__segmented-btn ${groupBy === 'assignee' ? 'active' : ''}`}
+                className={`tasks-view-btn ${viewMode === 'board' ? 'active' : ''}`}
+                onClick={() => setViewMode('board')}
+                title="عرض لوحة كانبان"
               >
-                المحامي
+                <LayoutGrid size={14} />
+                <span>كانبان</span>
               </button>
             </div>
           </div>
-        )}
 
-        {/* فلاتر الحالة — تأخذ بقية السطر وتلتف بانتظام */}
-        <div className="tasks-toolbar__filters">
-          <button
-            className={`task-filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setStatusFilter('all')}
-          >
-            الكل
-          </button>
-          {TASK_STATUSES.map(s => (
-            <button
-              key={s.key}
-              className={`task-filter-btn ${statusFilter === s.key ? 'active' : ''}`}
-              onClick={() => setStatusFilter(s.key)}
-            >
-              <span className="task-filter-btn__dot" style={{ background: s.color }}></span>
-              {s.label}
-            </button>
-          ))}
-        </div>
+          <div className="middle-panel-content">
+            {loading ? (
+              <div className="tasks-loading">جاري التحميل...</div>
+            ) : getFilteredTasks().length === 0 ? (
+              <div className="tasks-empty">
+                <CheckCircle size={40} style={{ opacity: 0.2, margin: '0 auto 10px' }} />
+                <h3>لا توجد مهام مطابقة</h3>
+                <p>قم بتغيير خيارات التصفية أو أضف مهمة جديدة</p>
+              </div>
+            ) : (
+              viewMode === 'list' ? renderListView() : renderBoardView()
+            )}
 
-        {/* الإجراءات: تبديل العرض + إضافة */}
-        <div className="tasks-toolbar__actions">
-          <div className="tasks-view-switcher">
-            <button
-              className={`tasks-view-btn ${viewMode === 'list' ? 'active' : ''}`}
-              onClick={() => setViewMode('list')}
-              title="قائمة"
-            >
-              <List size={14} />
-            </button>
-            <button
-              className={`tasks-view-btn ${viewMode === 'board' ? 'active' : ''}`}
-              onClick={() => setViewMode('board')}
-              title="كانبان"
-            >
-              <LayoutGrid size={14} />
-            </button>
+            {/* Pagination / Load More */}
+            {!loading && tasks.length < totalCount && (
+              <div className="load-more-container">
+                <button onClick={loadMore} disabled={loadingMore} className="load-more-btn">
+                  {loadingMore ? 'جاري التحميل…' : `تحميل المزيد (${totalCount - tasks.length} متبقية)`}
+                </button>
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* Column 3: Left Panel (Overdue, Timers) */}
+        <aside className={`tasks-panel-left ${mobileActiveTab === 'alerts' ? 'mobile-visible' : 'mobile-hidden'}`}>
+          
+          {/* Real-time Time Tracker Widget — يظهر فقط عند وجود موقت نشط */}
+          {activeTimerTaskId && (
+            <div className="panel-section tracker-widget">
+              <h4 className="panel-section-title">
+                <Clock size={14} className="title-icon" />
+                <span>متتبع الوقت الفعلي</span>
+              </h4>
+              {(() => {
+                const runningTask = tasks.find(t => t.id === activeTimerTaskId);
+                return (
+                  <div className="active-tracker-card">
+                    <div className="tracker-task-title">{runningTask ? runningTask.title : 'مهمة غير معروفة'}</div>
+                    <div className="tracker-timer-display">{formatTimer(timerSeconds)}</div>
+                    <div className="tracker-controls">
+                      {timerRunning ? (
+                        <button onClick={pauseTimer} className="tracker-btn pause" title="إيقاف مؤقت">
+                          <Pause size={14} />
+                          <span>إيقاف</span>
+                        </button>
+                      ) : (
+                        <button onClick={() => startTimer(activeTimerTaskId)} className="tracker-btn start" title="استئناف">
+                          <Play size={14} />
+                          <span>استئناف</span>
+                        </button>
+                      )}
+                      <button onClick={stopAndLogTimer} className="tracker-btn stop" title="حفظ وتسجيل الوقت">
+                        <CheckCircle size={14} />
+                        <span>تسجيل</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Pending Approval Widget */}
+          <div className="panel-section approval-widget">
+            <h4 className="panel-section-title">
+              <ShieldCheck size={14} className="title-icon" />
+              <span>بانتظار الاعتماد ({stats?.pending_approval ?? wApproval.length})</span>
+              <button
+                className={`widget-view-all ${statusFilter === 'pending_approval' ? 'active' : ''}`}
+                onClick={() => { setSpecialFilter(null); setStatusFilter(prev => prev === 'pending_approval' ? 'all' : 'pending_approval'); setMobileActiveTab('tasks'); }}
+              >
+                عرض الكل
+              </button>
+            </h4>
+            <div className="side-tasks-list">
+              {wApproval.length > 0 ? (
+                wApproval.map(item => (
+                  <div key={item.id} className="side-task-card approval" onClick={() => navigate(`/tasks/${item.id}`)}>
+                    <ShieldCheck className="side-card-bg-icon" size={34} />
+                    <div className="side-task-title">{item.title}</div>
+                    <div className="side-task-meta">
+                      <span className="waiting-label">{timeAgo(item.updated_at)}</span>
+                      {item.assignee_name && (
+                        <span className="due-date-str">{item.assignee_name}</span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="side-tasks-empty">لا توجد مهام بانتظار الاعتماد</div>
+              )}
+            </div>
           </div>
 
-          <button
-            className="btn-primary tasks-toolbar__add-btn"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            <Plus size={14} />
-            مهمة جديدة
-          </button>
-        </div>
-      </header>
+          {/* Overdue Tasks Widget */}
+          <div className="panel-section overdue-widget">
+            <h4 className="panel-section-title text-error">
+              <AlertTriangle size={14} className="title-icon" />
+              <span>مهام متأخرة ({stats?.overdue ?? overdueTasks.length})</span>
+              <button className={`widget-view-all ${specialFilter === 'overdue' ? 'active' : ''}`} onClick={() => showAllOf('overdue')}>
+                عرض الكل
+              </button>
+            </h4>
+            <div className="side-tasks-list">
+              {wOverdue.length > 0 ? (
+                wOverdue.map(item => {
+                  const overdueDays = Math.max(1, Math.floor((Date.now() - new Date(item.due_date!).getTime()) / (1000 * 60 * 60 * 24)));
+                  const overdueLabel = overdueDays === 1 ? 'متأخرة بيوم واحد'
+                    : overdueDays === 2 ? 'متأخرة بيومين'
+                    : overdueDays <= 10 ? `متأخرة بـ ${overdueDays} أيام`
+                    : `متأخرة بـ ${overdueDays} يوماً`;
+                  return (
+                    <div key={item.id} className="side-task-card overdue" onClick={() => navigate(`/tasks/${item.id}`)}>
+                      <AlertTriangle className="side-card-bg-icon" size={34} />
+                      <div className="side-task-title">{item.title}</div>
+                      <div className="side-task-meta">
+                        <span className="days-overdue">{overdueLabel}</span>
+                        <span className="due-date-str">
+                          {new Date(item.due_date!).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="side-tasks-empty">لا توجد مهام متأخرة 🎉</div>
+              )}
+            </div>
+          </div>
 
-      {loading ? (
-        <div className="tasks-loading">جاري التحميل...</div>
-      ) : getFilteredTasks().length === 0 ? (
-        <div className="tasks-empty">
-          <CheckCircle size={40} style={{ opacity: 0.2, margin: '0 auto 10px' }} />
-          <h3>لا توجد مهام</h3>
-          <p>ابدأ بإضافة مهام جديدة لتنظيم عملك</p>
-        </div>
-      ) : (
-        viewMode === 'list' ? renderListView() : renderBoardView()
-      )}
+          {/* Today Tasks Widget */}
+          <div className="panel-section today-widget">
+            <h4 className="panel-section-title">
+              <Calendar size={14} className="title-icon" />
+              <span>تستحق اليوم ({stats?.due_today ?? todayTasks.length})</span>
+              <button className={`widget-view-all ${specialFilter === 'due_today' ? 'active' : ''}`} onClick={() => showAllOf('due_today')}>
+                عرض الكل
+              </button>
+            </h4>
+            <div className="side-tasks-list">
+              {wToday.length > 0 ? (
+                wToday.map(item => (
+                  <div key={item.id} className="side-task-card today" onClick={() => navigate(`/tasks/${item.id}`)}>
+                    <Calendar className="side-card-bg-icon" size={34} />
+                    <div className="side-task-title">{item.title}</div>
+                    <div className="side-task-meta">
+                      <span className="priority-badge" style={{ color: PRIORITY_META[item.priority]?.color }}>
+                        {PRIORITY_META[item.priority]?.label}
+                      </span>
+                      {item.status === 'in_progress' && (
+                        <span className="in-progress-dot-label">
+                          <span className="stopwatch-pulse-dot inline" />
+                          قيد التنفيذ
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="side-tasks-empty">لا توجد مهام تستحق اليوم</div>
+              )}
+            </div>
+          </div>
 
-      {/* تحميل تدريجي: يظهر حين تبقّى مهام غير محمَّلة (يحافظ على تكامل الكانبان) */}
-      {!loading && tasks.length < totalCount && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0' }}>
-          <button
-            onClick={loadMore}
-            disabled={loadingMore}
-            style={{
-              padding: '10px 28px',
-              borderRadius: '8px',
-              border: '1px solid var(--color-primary)',
-              background: 'transparent',
-              color: 'var(--color-primary)',
-              cursor: loadingMore ? 'default' : 'pointer',
-              fontSize: '13px',
-              fontWeight: 600,
-              opacity: loadingMore ? 0.6 : 1,
-            }}
-          >
-            {loadingMore ? 'جاري التحميل…' : `تحميل المزيد (${totalCount - tasks.length} متبقية)`}
-          </button>
-        </div>
-      )}
+          {/* Needs Attention Widget — نواقص ضبط المهام */}
+          <div className="panel-section attention-widget">
+            <h4 className="panel-section-title">
+              <Sliders size={14} className="title-icon" />
+              <span>مهام تحتاج ضبط ({attentionCount})</span>
+              <button className={`widget-view-all ${specialFilter === 'needs_attention' ? 'active' : ''}`} onClick={() => showAllOf('needs_attention')}>
+                عرض الكل
+              </button>
+            </h4>
+            <div className="side-tasks-list">
+              {wAttention.length > 0 ? (
+                wAttention.map(item => (
+                  <div key={item.id} className="side-task-card attention" onClick={() => navigate(`/tasks/${item.id}`)}>
+                    <Sliders className="side-card-bg-icon" size={34} />
+                    <div className="side-task-title">{item.title}</div>
+                    <div className="side-task-meta">
+                      <span className="attn-reason">{item.reason}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="side-tasks-empty">كل المهام مضبوطة ✓</div>
+              )}
+            </div>
+          </div>
+
+          {/* Team Workload Widget */}
+          <div className="panel-section workload-widget">
+            <h4 className="panel-section-title">
+              <User size={14} className="title-icon" />
+              <span>توزيع الحمل على الفريق</span>
+            </h4>
+            <div className="workload-list">
+              {wWorkload.length > 0 ? (
+                wWorkload.map(w => {
+                  const uid = String(w.user_id);
+                  return (
+                    <button
+                      key={uid}
+                      className={`workload-row ${assigneeFilter === uid ? 'active' : ''}`}
+                      title={`عرض مهام ${w.name}`}
+                      onClick={() => { setAssigneeFilter(prev => prev === uid ? 'all' : uid); setMobileActiveTab('tasks'); }}
+                    >
+                      <span className="workload-name">{w.name}</span>
+                      <span className="workload-bar-track">
+                        <span className="workload-bar" style={{ width: `${Math.max(8, (w.open_count / maxWorkload) * 100)}%` }} />
+                      </span>
+                      <span className="workload-count">{w.open_count}</span>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="side-tasks-empty">لا توجد مهام مفتوحة مسندة</div>
+              )}
+            </div>
+          </div>
+        </aside>
+
+      </div>
 
       <AddTaskModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onTaskAdded={loadTasks}
+        onTaskAdded={refreshAll}
       />
 
-      {/* مهمة بالصوت — نقرة أو إبقاء زر M مضغوطاً */}
-      <VoiceTaskWidget onTaskCreated={loadTasks} />
+      <VoiceTaskWidget onTaskCreated={refreshAll} />
 
       {/* قائمة إجراءات الصف (النقاط الثلاثة) */}
       {menu && (
@@ -963,9 +1509,8 @@ const Tasks: React.FC = () => {
         isOpen={!!editTask}
         onClose={() => setEditTask(null)}
         task={editTask}
-        onTaskUpdated={() => { setEditTask(null); loadTasks(); }}
+        onTaskUpdated={() => { setEditTask(null); refreshAll(); }}
       />
-
     </div>
   );
 };
