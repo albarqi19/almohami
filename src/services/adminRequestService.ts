@@ -258,6 +258,16 @@ export interface AdminRequestContext {
         status: string;
         case?: { id: number; title: string; file_number: string | null };
     }>;
+    /** إجازات موظفين آخرين تتقاطع مع نافذة الطلب (تنبيه المدير قبل القبول) */
+    overlapping_leaves: Array<{
+        id: number;
+        employee_name: string | null;
+        type_name: string | null;
+        start_date: string | null;
+        end_date: string | null;
+        status: string;
+        status_arabic: string;
+    }>;
     has_conflicts: boolean;
 }
 

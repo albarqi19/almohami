@@ -29,7 +29,99 @@ import {
 import { usePermissionContext } from '../contexts/PermissionContext';
 import { AdminRequestService, RequestTypeService } from '../services/adminRequestService';
 import type { AdminRequest, RequestType, CreateAdminRequestForm, AdminRequestContext, AdminRequestStatistics, AdminRequestSidebar } from '../services/adminRequestService';
-import { Briefcase, History, AlertTriangle, Loader2, ChevronDown, ChevronLeft } from 'lucide-react';
+import { Briefcase, History, AlertTriangle, Loader2, ChevronDown, ChevronLeft, FileSpreadsheet } from 'lucide-react';
+import { API_BASE_URL } from '../utils/api';
+
+/**
+ * زر تصدير كشف الإجازات/العمل عن بعد Excel (ملاحظة عميل #126):
+ * الأسبوع الحالي / الشهر الحالي / مدى مخصص. الباك يقيّد الرؤية
+ * (المدير الكل، الموظف طلباته) ويُرجع المقبولة المتداخلة مع المدة.
+ */
+const ExportExcelMenu: React.FC = () => {
+    const [open, setOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [from, setFrom] = useState('');
+    const [to, setTo] = useState('');
+
+    const download = async (params: string, label: string) => {
+        setBusy(true);
+        setError(null);
+        try {
+            const token = localStorage.getItem('authToken');
+            const res = await fetch(`${API_BASE_URL}/admin-requests/export?${params}`, {
+                headers: {
+                    Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'ngrok-skip-browser-warning': '69420',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+            });
+            if (!res.ok) {
+                let message = 'تعذّر إنشاء ملف التصدير';
+                try {
+                    const payload = await res.clone().json();
+                    if (payload?.message) message = payload.message;
+                } catch { /* الرد ليس JSON */ }
+                throw new Error(message);
+            }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = `كشف-الطلبات-الإدارية-${label}.xlsx`;
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            URL.revokeObjectURL(url);
+            setOpen(false);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'حدث خطأ أثناء التصدير');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <div className="areq-export">
+            <button
+                className="requests-icon-btn"
+                onClick={() => { setOpen(v => !v); setError(null); }}
+                title="تصدير كشف الإجازات Excel"
+                disabled={busy}
+            >
+                {busy ? <Loader2 size={16} className="rv-spin" /> : <FileSpreadsheet size={16} />}
+            </button>
+            {open && (
+                <>
+                    <div className="areq-export__backdrop" onClick={() => setOpen(false)} />
+                    <div className="areq-export__menu">
+                        <div className="areq-export__title">كشف الإجازات والطلبات (Excel)</div>
+                        <button className="areq-export__opt" disabled={busy} onClick={() => download('period=week', 'الأسبوع-الحالي')}>
+                            الأسبوع الحالي
+                        </button>
+                        <button className="areq-export__opt" disabled={busy} onClick={() => download('period=month', 'الشهر-الحالي')}>
+                            الشهر الحالي
+                        </button>
+                        <div className="areq-export__sep" />
+                        <div className="areq-export__range">
+                            <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
+                            <span>←</span>
+                            <input type="date" value={to} onChange={e => setTo(e.target.value)} />
+                        </div>
+                        <button
+                            className="areq-export__opt areq-export__opt--primary"
+                            disabled={busy || !from || !to}
+                            onClick={() => download(`from=${from}&to=${to}`, `${from}_${to}`)}
+                        >
+                            تنزيل المدى المحدد
+                        </button>
+                        {error && <div className="areq-export__error">{error}</div>}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
@@ -302,13 +394,11 @@ const ReviewModal: React.FC<{
                         <AlertTriangle size={13} />
                         <span>
                             هذا الطلب يتعارض مع{' '}
-                            {context.scheduled_sessions.length > 0 && (
-                                <strong>{context.scheduled_sessions.length} جلسة مجدولة</strong>
-                            )}
-                            {context.scheduled_sessions.length > 0 && context.pending_tasks.length > 0 && ' و'}
-                            {context.pending_tasks.length > 0 && (
-                                <strong>{context.pending_tasks.length} مهمة معلّقة</strong>
-                            )}
+                            {[
+                                context.scheduled_sessions.length > 0 && <strong key="s">{context.scheduled_sessions.length} جلسة مجدولة</strong>,
+                                context.pending_tasks.length > 0 && <strong key="t">{context.pending_tasks.length} مهمة معلّقة</strong>,
+                                (context.overlapping_leaves?.length ?? 0) > 0 && <strong key="l">إجازة {context.overlapping_leaves.length} موظف بنفس المدة</strong>,
+                            ].filter(Boolean).flatMap((el, i) => (i > 0 ? [' و', el] : [el]))}
                             {' '}— راجع التفاصيل أدناه قبل الموافقة.
                         </span>
                     </div>
@@ -424,6 +514,32 @@ const ReviewModal: React.FC<{
                                                             <span className={`rv-priority rv-priority--${t.priority}`}>
                                                                 {t.priority === 'high' ? 'عالية' : t.priority === 'low' ? 'منخفضة' : t.priority}
                                                             </span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* موظفون آخرون في إجازة بنفس المدة (طلب المالك 2026-07-12) */}
+                                    {(context.overlapping_leaves?.length ?? 0) > 0 && (
+                                        <div className="rv-context__card rv-context__card--warning">
+                                            <div className="rv-context__head">
+                                                <Users size={12} />
+                                                <span>موظفون آخرون غائبون بنفس المدة ({context.overlapping_leaves.length})</span>
+                                            </div>
+                                            <div className="rv-context__list">
+                                                {context.overlapping_leaves.map((l) => (
+                                                    <div key={l.id} className="rv-context__list-item">
+                                                        <User size={10} />
+                                                        <strong>{l.employee_name || '—'}</strong>
+                                                        {l.type_name && <span className="rv-muted">— {l.type_name}</span>}
+                                                        <span>
+                                                            {formatDate(l.start_date)}
+                                                            {l.end_date && l.end_date !== l.start_date ? ` ← ${formatDate(l.end_date)}` : ''}
+                                                        </span>
+                                                        {l.status === 'pending' && (
+                                                            <span className="rv-priority rv-priority--high">طلب معلّق</span>
                                                         )}
                                                     </div>
                                                 ))}
@@ -1191,6 +1307,7 @@ const AdminRequests: React.FC = () => {
                 </div>
 
                 <div className="requests-header-bar__end">
+                    <ExportExcelMenu />
                     {isManager && (
                         <button className="requests-icon-btn requests-settings-btn" onClick={() => setIsSettingsOpen(true)} title="إعدادات أنواع الطلبات">
                             <Settings size={16} />
