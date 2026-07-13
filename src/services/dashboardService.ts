@@ -53,6 +53,7 @@ export interface RecentActivity {
     details: string | null;
     case_id: number | null;
     case_title: string | null;
+    task_id: number | null;
     performer_id: number | null;
     performer_name: string;
     performer_avatar: string | null;

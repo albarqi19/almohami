@@ -68,6 +68,13 @@ export interface Client {
     commercial_registration?: string | null;
     vat_number?: string | null;
     national_address?: string | null;
+    // ZATCA: العنوان الوطني المنظَّم (مطلوب لختم الفاتورة الضريبية B2B)
+    building_number?: string | null;
+    street_name?: string | null;
+    district?: string | null;
+    city?: string | null;
+    postal_code?: string | null;
+    additional_number?: string | null;
     industry?: string | null;
     legal_representative?: string | null;
     legal_representative_nid?: string | null;
@@ -139,6 +146,12 @@ export type UpdateClientPayload = {
     commercial_registration?: string | null;
     vat_number?: string | null;
     national_address?: string | null;
+    building_number?: string | null;
+    street_name?: string | null;
+    district?: string | null;
+    city?: string | null;
+    postal_code?: string | null;
+    additional_number?: string | null;
     industry?: string | null;
     legal_representative?: string | null;
     legal_representative_nid?: string | null;
@@ -297,6 +310,12 @@ export class ClientManagementService {
         commercial_registration?: string;
         vat_number?: string;
         national_address?: string;
+        building_number?: string;
+        street_name?: string;
+        district?: string;
+        city?: string;
+        postal_code?: string;
+        additional_number?: string;
         industry?: string;
         legal_representative?: string;
         legal_representative_nid?: string;

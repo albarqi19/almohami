@@ -43,11 +43,15 @@ export interface ZatcaStatusData {
   certificate: ZatcaCertificate | null;
 }
 
-// نتيجة فحص امتثال واحد.
+// نتيجة فحص امتثال واحد. الباك يُطبّع الرسائل إلى نصوص (flattenMessages)،
+// لكن النوع يقبل الكائنات أيضاً دفاعياً (لتفادي [object Object] لو تغيّر العقد).
+export type ZatcaMessage = string | { code?: string; message?: string; [k: string]: unknown };
+
 export interface ZatcaComplianceResult {
   passed: boolean;
   http: number;
-  errors: string[] | null;
+  warnings?: ZatcaMessage[] | null;
+  errors?: ZatcaMessage[] | null;
 }
 
 // نتائج فحوص الامتثال الست — المفاتيح قد تكون جزئية/فارغة محلياً (تتطلب sandbox فعلي).

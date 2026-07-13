@@ -174,6 +174,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
     const CLIENT_ALLOWED_PATHS = new Set<string>([
         '/dashboard',
         '/my-cases',
+        '/my-establishment',
         '/my-documents-required',
         '/my-messages',
         '/activities',
@@ -190,6 +191,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
         if (item.featureGate === 'zatca' && !zatcaAvailable) return false;
         if (item.featureGate === 'hr' && !user?.tenant?.hr_enabled) return false;
         if (item.featureGate === 'email_intake' && !user?.tenant?.email_intake_enabled) return false;
+        if (item.featureGate === 'establishment_portal' && !user?.tenant?.establishment_portal_enabled) return false;
 
         if (isSuperAdmin) return true;
 

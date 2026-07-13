@@ -7,6 +7,8 @@ import ClientManagementService, {
   type Client,
   type UpdateClientPayload,
 } from '../services/clientManagementService';
+import SaudiCitiesDatalist from './common/SaudiCitiesDatalist';
+import { SAUDI_CITIES_DATALIST_ID } from '../constants/saudiCities';
 
 interface EditClientInfoModalProps {
   isOpen: boolean;
@@ -38,6 +40,11 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
     // الرقم الضريبي (VAT) — إن أُدخل يجب أن يكون 15 رقماً يبدأ وينتهي بـ 3 (مطلوب للفوترة الإلكترونية B2B).
     if (isCompany && form.vat_number && form.vat_number.trim() && !/^3\d{13}3$/.test(form.vat_number.trim())) {
       setError('الرقم الضريبي يجب أن يكون 15 رقماً يبدأ وينتهي بالرقم 3 (مطلوب للفوترة الإلكترونية B2B)');
+      return;
+    }
+    // المدينة إلزامية لعميل شركة ذي رقم ضريبي (B2B) — الهيئة ترفض الفاتورة الضريبية بلا مدينة المشتري.
+    if (isCompany && form.vat_number?.trim() && !form.city?.trim()) {
+      setError('المدينة مطلوبة لعملاء الشركات ذوي الرقم الضريبي (تُستخدم في الفاتورة الضريبية)');
       return;
     }
     setSaving(true);
@@ -131,9 +138,6 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
               <Field label="الرقم الضريبي" hint="15 رقماً تبدأ وتنتهي بـ 3 (للفوترة B2B)">
                 <input type="text" dir="ltr" maxLength={15} placeholder="3XXXXXXXXXXXXX3" value={form.vat_number ?? ''} onChange={(e) => set('vat_number', e.target.value)} />
               </Field>
-              <Field label="العنوان الوطني" span={2}>
-                <input type="text" value={form.national_address ?? ''} onChange={(e) => set('national_address', e.target.value)} />
-              </Field>
               <Field label="الصناعة">
                 <input type="text" value={form.industry ?? ''} onChange={(e) => set('industry', e.target.value)} />
               </Field>
@@ -144,6 +148,33 @@ const EditClientInfoModal: React.FC<EditClientInfoModalProps> = ({ isOpen, onClo
                 <input type="text" dir="ltr" maxLength={20} inputMode="numeric" placeholder="1XXXXXXXXX" value={form.legal_representative_nid ?? ''} onChange={(e) => set('legal_representative_nid', e.target.value)} />
               </Field>
             </div>
+
+            <div className="edit-client-modal__divider">العنوان الوطني (مطلوب للفاتورة الضريبية)</div>
+
+            <div className="edit-client-modal__grid">
+              <Field label="رقم المبنى" hint="4 أرقام">
+                <input type="text" dir="ltr" inputMode="numeric" maxLength={4} placeholder="1234" value={form.building_number ?? ''} onChange={(e) => set('building_number', e.target.value)} />
+              </Field>
+              <Field label="اسم الشارع">
+                <input type="text" value={form.street_name ?? ''} onChange={(e) => set('street_name', e.target.value)} />
+              </Field>
+              <Field label="الحي">
+                <input type="text" value={form.district ?? ''} onChange={(e) => set('district', e.target.value)} />
+              </Field>
+              <Field label="المدينة" hint="اختر من القائمة أو اكتب">
+                <input type="text" list={SAUDI_CITIES_DATALIST_ID} autoComplete="off" value={form.city ?? ''} onChange={(e) => set('city', e.target.value)} />
+              </Field>
+              <Field label="الرمز البريدي" hint="5 أرقام">
+                <input type="text" dir="ltr" inputMode="numeric" maxLength={5} placeholder="12345" value={form.postal_code ?? ''} onChange={(e) => set('postal_code', e.target.value)} />
+              </Field>
+              <Field label="الرقم الإضافي" hint="4 أرقام (اختياري)">
+                <input type="text" dir="ltr" inputMode="numeric" maxLength={4} placeholder="6789" value={form.additional_number ?? ''} onChange={(e) => set('additional_number', e.target.value)} />
+              </Field>
+              <Field label="العنوان الوطني (نص حر — الفاتورة الضريبية تستخدم الحقول أعلاه)" span={2}>
+                <input type="text" value={form.national_address ?? ''} onChange={(e) => set('national_address', e.target.value)} />
+              </Field>
+            </div>
+            <SaudiCitiesDatalist />
 
             <div className="edit-client-modal__divider">جهة الاتصال (Point of Contact)</div>
 
@@ -191,6 +222,12 @@ function buildInitial(client: Client): UpdateClientPayload {
     commercial_registration: client.commercial_registration ?? '',
     vat_number: client.vat_number ?? '',
     national_address: client.national_address ?? '',
+    building_number: client.building_number ?? '',
+    street_name: client.street_name ?? '',
+    district: client.district ?? '',
+    city: client.city ?? '',
+    postal_code: client.postal_code ?? '',
+    additional_number: client.additional_number ?? '',
     industry: client.industry ?? '',
     legal_representative: client.legal_representative ?? '',
     legal_representative_nid: client.legal_representative_nid ?? '',

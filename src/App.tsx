@@ -80,6 +80,7 @@ const CorrespondenceRegisterPage = lazyWithRetry(() => import('./pages/Correspon
 const IntakeRequestsPage = lazyWithRetry(() => import('./pages/IntakeRequestsPage'));
 const MemoApprovals = lazyWithRetry(() => import('./pages/MemoApprovals'));
 const ClientMessages = lazyWithRetry(() => import('./pages/ClientMessages'));
+const ClientEstablishmentPage = lazyWithRetry(() => import('./pages/ClientEstablishmentPage'));
 const PersonalNotebook = lazyWithRetry(() => import('./pages/NotebookWorkspace'));
 
 // Legal Services Pages
@@ -288,6 +289,12 @@ function App() {
               <Route path="my-cases/:caseId" element={
                 <ProtectedRoute allowedRoles={['client']}>
                   <ClientCaseDetail />
+                </ProtectedRoute>
+              } />
+              {/* بوابة المنشأة — خلف بوابة establishment_portal_enabled (الباك يفرضها أيضاً) */}
+              <Route path="my-establishment" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientEstablishmentPage />
                 </ProtectedRoute>
               } />
               <Route path="my-documents-required" element={

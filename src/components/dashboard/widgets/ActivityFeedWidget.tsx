@@ -23,6 +23,8 @@ interface Activity {
     time?: string;
     time_ago?: string;
     case_title?: string;
+    case_id?: number | null;
+    task_id?: number | null;
 }
 
 interface ActivityFeedWidgetProps {
@@ -46,7 +48,9 @@ const ActivityFeedWidget: React.FC<ActivityFeedWidgetProps> = ({
         description: a.description || '',
         user: (a as RecentActivity).performer_name || (a as Activity).user || 'النظام',
         time: (a as RecentActivity).time_ago || (a as Activity).time || '',
-        case_title: (a as RecentActivity).case_title || undefined
+        case_title: (a as RecentActivity).case_title || undefined,
+        case_id: (a as RecentActivity).case_id ?? null,
+        task_id: (a as RecentActivity).task_id ?? null
     });
 
     const getActivityTitle = (type: string): string => {
@@ -62,6 +66,20 @@ const ActivityFeedWidget: React.FC<ActivityFeedWidgetProps> = ({
     };
 
     const activities = initialActivities?.slice(0, limit).map(normalizeActivity) || [];
+
+    const handleActivityClick = (activity: Activity) => {
+        if (onActivityClick) {
+            onActivityClick(activity);
+            return;
+        }
+        if (activity.task_id) {
+            navigate(`/tasks/${activity.task_id}`);
+        } else if (activity.case_id) {
+            navigate(`/cases/${activity.case_id}`);
+        } else {
+            navigate('/activities');
+        }
+    };
 
     const getIcon = (type: string) => {
         const icons: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
@@ -118,7 +136,7 @@ const ActivityFeedWidget: React.FC<ActivityFeedWidgetProps> = ({
                     <div
                         key={activity.id}
                         className="activity-item"
-                        onClick={() => onActivityClick?.(activity)}
+                        onClick={() => handleActivityClick(activity)}
                         style={{ cursor: 'pointer' }}
                     >
                         <div

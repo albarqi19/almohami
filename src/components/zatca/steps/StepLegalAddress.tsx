@@ -5,6 +5,8 @@ import { AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { zatcaService } from '../../../services/zatcaService';
 import type { StartOnboardingPayload } from '../../../types/zatca';
+import SaudiCitiesDatalist from '../../common/SaudiCitiesDatalist';
+import { SAUDI_CITIES_DATALIST_ID } from '../../../constants/saudiCities';
 
 interface Props {
   onSuccess: () => void;
@@ -107,7 +109,7 @@ const StepLegalAddress: React.FC<Props> = ({ onSuccess }) => {
   const field = (
     key: keyof FormState,
     label: string,
-    opts: { required?: boolean; hint?: string; full?: boolean; placeholder?: string; dir?: 'ltr' | 'rtl' } = {}
+    opts: { required?: boolean; hint?: string; full?: boolean; placeholder?: string; dir?: 'ltr' | 'rtl'; list?: string } = {}
   ) => (
     <div className={`zatca-field${opts.full ? ' zatca-field--full' : ''}`}>
       <label htmlFor={`zatca-${key}`}>
@@ -120,6 +122,8 @@ const StepLegalAddress: React.FC<Props> = ({ onSuccess }) => {
         value={form[key]}
         placeholder={opts.placeholder}
         dir={opts.dir}
+        list={opts.list}
+        autoComplete={opts.list ? 'off' : undefined}
         onChange={(ev) => set(key, ev.target.value)}
         className={errors[key] ? 'is-invalid' : undefined}
       />
@@ -158,8 +162,9 @@ const StepLegalAddress: React.FC<Props> = ({ onSuccess }) => {
       </div>
       <div className="zatca-row">
         {field('district', 'الحي', { required: true })}
-        {field('city', 'المدينة', { required: true })}
+        {field('city', 'المدينة', { required: true, list: SAUDI_CITIES_DATALIST_ID, hint: 'اختر من القائمة أو اكتب' })}
       </div>
+      <SaudiCitiesDatalist />
       <div className="zatca-row">
         {field('postal_code', 'الرمز البريدي', { required: true, hint: '5 أرقام', dir: 'ltr' })}
         {field('additional_number', 'الرقم الإضافي (اختياري)', { hint: '4 أرقام', dir: 'ltr' })}

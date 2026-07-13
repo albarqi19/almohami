@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
@@ -891,6 +892,19 @@ const ExecutionRequests: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [deletingId, setDeletingId] = useState<number | string | null>(null);
   const [requestToDelete, setRequestToDelete] = useState<ExecutionRequest | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // ربط عميق: /execution-requests?open=<id> يفتح نافذة تفاصيل الطلب مباشرة
+  // (تصل من شارة «طلب تنفيذ» في صفحة المهام) — النافذة تجلب التفاصيل بنفسها بالمعرّف
+  useEffect(() => {
+    const openId = Number(searchParams.get('open'));
+    if (openId > 0) {
+      setSelectedRequest({ id: openId } as ExecutionRequest);
+      setIsModalOpen(true);
+      setSearchParams(prev => { prev.delete('open'); return prev; }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // تأخير البحث كي لا نعيد الجلب مع كل حرف
   useEffect(() => {

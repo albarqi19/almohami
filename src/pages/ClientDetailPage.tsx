@@ -28,9 +28,10 @@ import AddTaskModal from '../components/AddTaskModal';
 import ClientDocumentsManager from '../components/ClientDocumentsManager';
 import WhatsAppSendModal from '../components/WhatsAppSendModal';
 import ComposeCorrespondenceModal from '../components/ComposeCorrespondenceModal';
+import EstablishmentAdminTab from '../components/clients/EstablishmentAdminTab';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
-type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'legal_services' | 'fee_proposals' | 'communications' | 'activities';
+type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'legal_services' | 'fee_proposals' | 'communications' | 'activities' | 'establishment';
 
 const ClientDetailPage: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -55,6 +56,9 @@ const ClientDetailPage: React.FC = () => {
   const canComposeLetter = useAnyPermission(['correspondence.create', 'correspondence.send'])
     && Boolean(authUser?.tenant?.correspondence_enabled);
   const canViewLegalServices = useAnyPermission(['legal-services.view', 'legal-services.manage']);
+  // بوابة المنشأة: خلف establishment_portal_enabled؛ الكتابة داخل التبويب بـ clients.edit.
+  const showEstablishmentTab = Boolean(authUser?.tenant?.establishment_portal_enabled);
+  const canEditEstablishment = useAnyPermission(['clients.edit']);
 
   // ===== Parallel queries =====
   const detailsQuery = useQuery({
@@ -378,6 +382,9 @@ const ClientDetailPage: React.FC = () => {
             <TabBtn active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} icon={<ListTodo size={13} />}
               count={tasks.length} hint={taskCounts.overdue > 0 ? `${taskCounts.overdue} متأخرة` : undefined}>المهام</TabBtn>
             <TabBtn active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} icon={<FileText size={13} />}>المستندات</TabBtn>
+            {showEstablishmentTab && (
+              <TabBtn active={activeTab === 'establishment'} onClick={() => setActiveTab('establishment')} icon={<Building2 size={13} />}>بوابة المنشأة</TabBtn>
+            )}
             <TabBtn active={activeTab === 'wekalat'} onClick={() => setActiveTab('wekalat')} icon={<FileSignature size={13} />}>الوكالات</TabBtn>
             {canViewLegalServices && (
               <TabBtn active={activeTab === 'legal_services'} onClick={() => setActiveTab('legal_services')} icon={<Scale size={13} />}>الخدمات القانونية</TabBtn>
@@ -413,6 +420,9 @@ const ClientDetailPage: React.FC = () => {
                 caseDocsLoading={documentsQuery.isLoading}
                 uploadSignal={docUploadSignal}
               />
+            )}
+            {activeTab === 'establishment' && showEstablishmentTab && clientId && (
+              <EstablishmentAdminTab clientId={Number(clientId)} canEdit={canEditEstablishment} />
             )}
             {activeTab === 'wekalat' && <WekalatTab wekalat={wekalat} loading={wekalatQuery.isLoading} />}
             {activeTab === 'legal_services' && (
@@ -453,7 +463,15 @@ const ClientDetailPage: React.FC = () => {
                 <div className="client-side__divider" />
                 <InfoRow label="السجل التجاري" value={client.commercial_registration} />
                 <InfoRow label="الرقم الضريبي" value={client.vat_number} />
-                <InfoRow label="العنوان الوطني" value={client.national_address} />
+                {(client.building_number || client.street_name || client.district || client.city || client.postal_code) && (
+                  <InfoRow
+                    label="العنوان الوطني (للفاتورة الضريبية)"
+                    value={[client.building_number, client.street_name, client.district, client.city, client.postal_code]
+                      .filter(Boolean)
+                      .join('، ')}
+                  />
+                )}
+                <InfoRow label="العنوان الوطني (نص حر)" value={client.national_address} />
                 <InfoRow label="الصناعة" value={client.industry} />
                 <InfoRow label="الممثل القانوني" value={client.legal_representative} />
                 <InfoRow label="هوية الممثل" value={client.legal_representative_nid} dir="ltr" />

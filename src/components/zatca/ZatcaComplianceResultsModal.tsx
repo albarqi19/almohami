@@ -5,11 +5,24 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X, CheckCircle2, XCircle, MinusCircle, Loader2, ClipboardCheck } from 'lucide-react';
 import { zatcaService } from '../../services/zatcaService';
-import type { ZatcaComplianceKey } from '../../types/zatca';
+import type { ZatcaComplianceKey, ZatcaMessage } from '../../types/zatca';
 
 interface Props {
   onClose: () => void;
 }
+
+// يعرض رسالة الهيئة سواء كانت نصاً أو كائناً {code,message} — يمنع [object Object].
+const msgText = (m: ZatcaMessage): string => {
+  if (typeof m === 'string') return m;
+  if (m && typeof m === 'object') {
+    const text = m.message ?? JSON.stringify(m);
+    return m.code ? `${m.code}: ${text}` : text;
+  }
+  return String(m);
+};
+
+const joinMessages = (list?: ZatcaMessage[] | null): string =>
+  list && list.length ? list.map(msgText).join('، ') : '';
 
 const CHECKS: { key: ZatcaComplianceKey; label: string }[] = [
   { key: 'standard_invoice', label: 'فاتورة قياسية' },
@@ -67,7 +80,7 @@ const ZatcaComplianceResultsModal: React.FC<Props> = ({ onClose }) => {
                           )}
                         </td>
                         <td dir="ltr" style={{ textAlign: 'center' }}>{r?.http ?? '—'}</td>
-                        <td>{r?.errors?.length ? r.errors.join('، ') : '—'}</td>
+                        <td>{joinMessages(r?.errors) || joinMessages(r?.warnings) || '—'}</td>
                       </tr>
                     );
                   })}

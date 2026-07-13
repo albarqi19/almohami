@@ -751,6 +751,10 @@ body.dark .side-task-card {
     color: var(--color-text-secondary);
 }
 
+.task-case-subtext.exec {
+    color: var(--law-gold, #B8860B);
+}
+
 .task-case-subtext:hover {
     text-decoration: underline;
 }
@@ -1237,6 +1241,11 @@ body.dark .board-column {
 .task-card-client-badge {
     background: var(--quiet-gray-100);
     color: var(--color-text-secondary);
+}
+
+.task-card-exec-badge {
+    background: var(--law-gold-light, rgba(184, 134, 11, 0.1));
+    color: var(--law-gold, #B8860B);
 }
 
 .task-card-case-badge .case-icon {

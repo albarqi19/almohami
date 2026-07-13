@@ -25,7 +25,7 @@ export interface SidebarItem {
    * بوّابة ميزة — تُخفي العنصر تماماً حتى تكون الميزة متاحة للمنشأة.
    * 'zatca' يُقرأ من useZatcaFeature() (context)، و'hr'/'email_intake' من user.tenant.*_enabled — داخل ClickUpSidebar (لا hook هنا، هذا ملف بيانات).
    */
-  featureGate?: 'zatca' | 'hr' | 'email_intake';
+  featureGate?: 'zatca' | 'hr' | 'email_intake' | 'establishment_portal';
   /** شارة نصية صغيرة بجوار الاسم (مثل "مؤقتة" لميزة تجريبية). */
   badge?: string;
 }
@@ -49,6 +49,8 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: BookOpen, label: 'المفكرة الشخصية', path: '/notebook', permission: null },
   { icon: BarChart3, label: 'أدائي', path: '/my-performance', permission: null, roles: ['lawyer', 'senior_lawyer', 'legal_assistant'] },
   { icon: FileText, label: 'قضاياي', path: '/my-cases', permission: null, roles: ['client'] },
+  // بوابة المنشأة — متابعة العميل لوثائق منشأته وموظفيها (خلف establishment_portal_enabled)
+  { icon: Landmark, label: 'منشأتي', path: '/my-establishment', permission: null, roles: ['client'], featureGate: 'establishment_portal', badge: 'جديد' },
   { icon: FolderUp, label: 'الوثائق المطلوبة', path: '/my-documents-required', permission: null, roles: ['client'] },
   { icon: MessageSquare, label: 'الرسائل', path: '/my-messages', permission: null, roles: ['client'] },
   { icon: Upload, label: 'الوثائق', path: '/documents', permission: 'documents.view' },

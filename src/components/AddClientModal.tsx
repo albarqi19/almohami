@@ -4,6 +4,8 @@ import { User, Building2, X } from 'lucide-react';
 import ClientManagementService, { CLIENT_LANGUAGES, LEAD_SOURCES } from '../services/clientManagementService';
 import PhoneField from './PhoneField';
 import CredentialsModal, { type CredentialField } from './CredentialsModal';
+import SaudiCitiesDatalist from './common/SaudiCitiesDatalist';
+import { SAUDI_CITIES_DATALIST_ID } from '../constants/saudiCities';
 
 interface AddClientModalProps {
   isOpen: boolean;
@@ -71,6 +73,12 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
     commercial_registration: '',
     vat_number: '',
     national_address: '',
+    building_number: '',
+    street_name: '',
+    district: '',
+    city: '',
+    postal_code: '',
+    additional_number: '',
     industry: '',
     legal_representative: '',
     legal_representative_nid: '',
@@ -115,11 +123,23 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
       setSubmitting(false);
       return;
     }
+    // المدينة إلزامية لعميل شركة ذي رقم ضريبي (B2B) — الهيئة ترفض الفاتورة الضريبية بلا مدينة المشتري.
+    if (isCompany && form.vat_number.trim() && !form.city.trim()) {
+      setModalError('المدينة مطلوبة لعملاء الشركات ذوي الرقم الضريبي (تُستخدم في الفاتورة الضريبية).');
+      setSubmitting(false);
+      return;
+    }
 
     if (isCompany) {
       if (form.commercial_registration) payload.commercial_registration = form.commercial_registration.trim();
       if (form.vat_number) payload.vat_number = form.vat_number.trim();
       if (form.national_address) payload.national_address = form.national_address.trim();
+      if (form.building_number) payload.building_number = form.building_number.trim();
+      if (form.street_name) payload.street_name = form.street_name.trim();
+      if (form.district) payload.district = form.district.trim();
+      if (form.city) payload.city = form.city.trim();
+      if (form.postal_code) payload.postal_code = form.postal_code.trim();
+      if (form.additional_number) payload.additional_number = form.additional_number.trim();
       if (form.industry) payload.industry = form.industry.trim();
       if (form.legal_representative) payload.legal_representative = form.legal_representative.trim();
       if (form.legal_representative_nid) payload.legal_representative_nid = form.legal_representative_nid.trim();
@@ -159,6 +179,12 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
           entity_type: 'نوع العميل',
           vat_number: 'الرقم الضريبي',
           national_address: 'العنوان الوطني',
+          building_number: 'رقم المبنى',
+          street_name: 'اسم الشارع',
+          district: 'الحي',
+          city: 'المدينة',
+          postal_code: 'الرمز البريدي',
+          additional_number: 'الرقم الإضافي',
         };
         msg = Object.entries(err.errors)
           .map(([field, msgs]: [string, any]) => {
@@ -526,16 +552,47 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
                         تُستخدم لربط وكالات الشركة تلقائياً
                       </span>
                     </div>
+                  </div>
+                </div>
+
+                {/* Section: العنوان الوطني المنظَّم (مطلوب للفاتورة الضريبية B2B) */}
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={sectionTitleStyle}>العنوان الوطني (مطلوب للفاتورة الضريبية)</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={fieldLabelStyle}>رقم المبنى</label>
+                      <input type="text" dir="ltr" inputMode="numeric" maxLength={4} placeholder="1234"
+                        value={form.building_number} onChange={(e) => set('building_number', e.target.value)} style={fieldInputStyle} />
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>اسم الشارع</label>
+                      <input type="text" value={form.street_name} onChange={(e) => set('street_name', e.target.value)} style={fieldInputStyle} />
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>الحي</label>
+                      <input type="text" value={form.district} onChange={(e) => set('district', e.target.value)} style={fieldInputStyle} />
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>المدينة</label>
+                      <input type="text" list={SAUDI_CITIES_DATALIST_ID} autoComplete="off"
+                        value={form.city} onChange={(e) => set('city', e.target.value)} style={fieldInputStyle} />
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>الرمز البريدي</label>
+                      <input type="text" dir="ltr" inputMode="numeric" maxLength={5} placeholder="12345"
+                        value={form.postal_code} onChange={(e) => set('postal_code', e.target.value)} style={fieldInputStyle} />
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>الرقم الإضافي (اختياري)</label>
+                      <input type="text" dir="ltr" inputMode="numeric" maxLength={4} placeholder="6789"
+                        value={form.additional_number} onChange={(e) => set('additional_number', e.target.value)} style={fieldInputStyle} />
+                    </div>
                     <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={fieldLabelStyle}>العنوان الوطني</label>
-                      <input
-                        type="text"
-                        value={form.national_address}
-                        onChange={(e) => set('national_address', e.target.value)}
-                        style={fieldInputStyle}
-                      />
+                      <label style={fieldLabelStyle}>العنوان الوطني (نص حر — الفاتورة الضريبية تستخدم الحقول أعلاه)</label>
+                      <input type="text" value={form.national_address} onChange={(e) => set('national_address', e.target.value)} style={fieldInputStyle} />
                     </div>
                   </div>
+                  <SaudiCitiesDatalist />
                 </div>
 
                 {/* Section: جهة الاتصال */}
