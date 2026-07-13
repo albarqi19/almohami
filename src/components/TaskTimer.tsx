@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Clock, FileText, AlertCircle } from 'lucide-react';
 import { TimeService, type TimeEntry } from '../services/timeService';
 import { useTimer } from '../contexts/TimerContext';
@@ -8,9 +8,11 @@ interface TaskTimerProps {
   taskTitle?: string;
   caseTitle?: string;
   compact?: boolean; // عرض مضغوط بدون سجل الوقت
+  /** يُستدعى بعد تسجيل وقت (إيقاف المؤقّت) — كي تُحدّث الصفحة الأم «الساعات الفعلية» */
+  onTimeLogged?: () => void;
 }
 
-const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle, compact = false }) => {
+const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle, compact = false, onTimeLogged }) => {
   const { timerState, startTimer, stopTimer, isLoading } = useTimer();
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [totalSeconds, setTotalSeconds] = useState(0);
@@ -18,10 +20,23 @@ const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle, com
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
 
   const isTimerForThisTask = timerState.isRunning && timerState.taskId === taskId;
+  // تتبّع الانتقال «كان يعمل لهذه المهمة» → «توقّف» كي نُنعش السجل حتى لو أُوقف من الودجت العائمة
+  const wasRunningForThisTask = useRef(false);
 
   useEffect(() => {
     loadTimeEntries();
   }, [taskId]);
+
+  // عند توقّف المؤقّت لهذه المهمة (من هنا أو من «إيقاف وحفظ» في الودجت العائمة): أعِد جلب السجل
+  // وبلّغ الأم لتحديث «الساعات الفعلية». يغطّي الثغرة: TaskTimer لا يشترك في تغيّرات حالة المؤقّت.
+  useEffect(() => {
+    if (wasRunningForThisTask.current && !isTimerForThisTask) {
+      loadTimeEntries();
+      onTimeLogged?.();
+    }
+    wasRunningForThisTask.current = isTimerForThisTask;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTimerForThisTask]);
 
   const loadTimeEntries = async () => {
     setLoadingEntries(true);
@@ -47,7 +62,7 @@ const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle, com
   const handleStopTimer = async () => {
     try {
       await stopTimer();
-      await loadTimeEntries();
+      // إنعاش السجل + تبليغ الأم يتكفّل بهما effect المراقب لحالة المؤقّت (يغطّي الإيقاف من الودجت العائمة أيضاً)
     } catch (error) {
       console.error('Failed to stop timer:', error);
     }

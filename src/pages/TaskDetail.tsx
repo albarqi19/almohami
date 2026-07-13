@@ -109,6 +109,11 @@ const TaskDetail: React.FC = () => {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [subProgress, setSubProgress] = useState<number | null>(null);
+  // مفتاح تحديث نازل للأبناء (المهام الفرعية/المؤقت): يملكون حالتهم المستقلة ولا يعيدون الجلب
+  // إلا على taskId، فنزيد هذا المفتاح لإجبارهم بعد فعل يقع في الباك خارجهم (رائد ينشئ فرعية،
+  // استئناف المهمة يفكّ إيقاف فرعياتها...).
+  const [childReloadKey, setChildReloadKey] = useState(0);
+  const reloadChildren = () => setChildReloadKey((k) => k + 1);
   // الإيقاف المؤقت بسبب إلزامي (#130)
   const [holdModalOpen, setHoldModalOpen] = useState(false);
   const [holdReason, setHoldReason] = useState('');
@@ -206,6 +211,7 @@ const TaskDetail: React.FC = () => {
     try {
       await TaskService.resumeTask(taskId!);
       await loadTask();
+      reloadChildren(); // الباك يفكّ إيقاف كل الفرعيات عند الاستئناف — أجبِر قائمتها على إعادة الجلب
     } catch (error: any) {
       alert(error?.message || 'تعذّر استئناف المهمة');
     } finally {
@@ -466,7 +472,7 @@ const TaskDetail: React.FC = () => {
               <span>محادثة المهمة</span>
             </button>
           ) : (
-            <TaskTeamChat taskId={taskId!} onCollapse={toggleChatCollapsed} onTaskMutated={loadTask} />
+            <TaskTeamChat taskId={taskId!} onCollapse={toggleChatCollapsed} onTaskMutated={() => { loadTask(); reloadChildren(); }} />
           )}
         </aside>
 
@@ -586,6 +592,7 @@ const TaskDetail: React.FC = () => {
                   taskId={taskId!}
                   onProgressChange={(p) => setSubProgress(p)}
                   onTaskChanged={loadTask}
+                  reloadSignal={childReloadKey}
                   dense
                 />
               </div>
@@ -642,7 +649,7 @@ const TaskDetail: React.FC = () => {
 
                 {/* الموقّت — مسطّح بالنمط الملتصق (بلا wrapper) */}
                 <AccSection id="timer" title="تتبع الوقت" icon={<Timer size={14} />} open={!!accOpen.timer} onToggle={toggleAcc}>
-                  <TaskTimer taskId={taskId!} taskTitle={task.title} caseTitle={linkedCase?.title || ''} />
+                  <TaskTimer taskId={taskId!} taskTitle={task.title} caseTitle={linkedCase?.title || ''} onTimeLogged={loadTask} />
                 </AccSection>
 
                 {/* المرفقات */}

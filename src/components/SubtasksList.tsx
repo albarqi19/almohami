@@ -8,6 +8,8 @@ interface SubtasksListProps {
   onProgressChange?: (progress: number) => void;
   /** يُستدعى بعد إيقاف/استئناف/إنجاز فرعية — حالة المهمة الأم قد تغيّرت (من الجهتين #130) */
   onTaskChanged?: () => void;
+  /** إشارة نازلة من الأب: عند تغيّرها تُعاد جلب الفرعيات (فعل خارجي غيّرها: رائد ينشئ فرعية، استئناف الأم...) */
+  reloadSignal?: number;
   /** النمط الملتصق: يسطّح الحواف والخلفيات ويخفي الترويسة الداخلية (البلوك له رأسه) */
   dense?: boolean;
 }
@@ -19,7 +21,7 @@ interface MentionUser {
   role?: string;
 }
 
-const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, onTaskChanged, dense = false }) => {
+const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, onTaskChanged, reloadSignal, dense = false }) => {
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,6 +41,9 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
 
   useEffect(() => {
     loadSubtasks();
+  }, [taskId, reloadSignal]);
+
+  useEffect(() => {
     loadUsers();
   }, [taskId]);
 
@@ -615,8 +620,8 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
           pointer-events: none;
           background: var(--color-surface, #fff);
           border: 1px solid var(--color-border, #e5e5e5);
-          border-radius: var(--radius-md, 8px);
-          box-shadow: var(--shadow-lg, 0 8px 30px rgba(0, 0, 0, 0.12));
+          border-radius: 4px; /* مربّع بسيط بدل الحواف الدائرية */
+          box-shadow: none;   /* فلات — بلا ظلال */
           padding: 8px 12px;
           min-width: 240px;
           max-width: 360px;
