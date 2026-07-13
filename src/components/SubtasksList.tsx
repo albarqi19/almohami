@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Check, Trash2, GripVertical, ListChecks, AtSign, Pause, Play, PauseCircle } from 'lucide-react';
+import { Plus, Check, Trash2, GripVertical, ListChecks, AtSign, Pause, Play, PauseCircle, Search } from 'lucide-react';
 import { SubtaskService, type Subtask, type SubtasksResponse } from '../services/subtaskService';
 import { UserService } from '../services/UserService';
 
@@ -37,6 +37,7 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
   // Mention states
   const [users, setUsers] = useState<MentionUser[]>([]);
   const [assigneeDropdownId, setAssigneeDropdownId] = useState<string | null>(null);
+  const [assigneeSearch, setAssigneeSearch] = useState('');
   const mentionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,6 +53,7 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
     const handleClickOutside = (e: MouseEvent) => {
       if (mentionRef.current && !mentionRef.current.contains(e.target as Node)) {
         setAssigneeDropdownId(null);
+        setAssigneeSearch('');
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -60,9 +62,9 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
 
   const loadUsers = async () => {
     try {
-      const response = await UserService.getAllUsers({ limit: 100 });
-      const usersData = response.data || [];
-      setUsers(usersData.map(u => ({
+      // المحامون/الموظفون فقط — المهام الفرعية عمل داخلي لا يُسنَد لعميل (كالمهمة الأم)
+      const lawyersData = await UserService.getLawyers();
+      setUsers(lawyersData.map(u => ({
         id: u.id,
         name: u.name,
         avatar: u.avatar,
@@ -193,6 +195,7 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
           : s
       ));
       setAssigneeDropdownId(null);
+      setAssigneeSearch('');
 
       // إرسال للـ Backend - تحويل userId إلى integer
       const updatedSubtask = await SubtaskService.updateSubtask(subtaskId, {
@@ -296,7 +299,10 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
                 <div className="subtasks-list__assignee-container" ref={mentionRef}>
                   <button
                     className={`subtasks-list__assignee-btn ${subtask.assignee ? 'subtasks-list__assignee-btn--assigned' : ''}`}
-                    onClick={() => setAssigneeDropdownId(assigneeDropdownId === subtask.id ? null : subtask.id)}
+                    onClick={() => {
+                      setAssigneeSearch('');
+                      setAssigneeDropdownId(assigneeDropdownId === subtask.id ? null : subtask.id);
+                    }}
                     title={subtask.assignee?.name || 'تعيين مسؤول'}
                   >
                     {subtask.assignee?.name ? (
@@ -308,32 +314,49 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
                     )}
                   </button>
 
-                  {assigneeDropdownId === subtask.id && (
-                    <div className="subtasks-list__mention-dropdown">
-                      <div className="subtasks-list__mention-header">تعيين مسؤول</div>
-                      {users.map(user => (
-                        <button
-                          key={user.id}
-                          className="subtasks-list__mention-item"
-                          onClick={() => handleAssignUser(subtask.id, user.id, user.name)}
-                        >
-                          <span className="subtasks-list__mention-avatar">
-                            {user.avatar ? (
-                              <img src={user.avatar} alt={user.name} />
-                            ) : (
-                              getInitials(user.name)
-                            )}
-                          </span>
-                          <span className="subtasks-list__mention-info">
-                            <span className="subtasks-list__mention-name">{user.name}</span>
-                            {user.role && (
-                              <span className="subtasks-list__mention-role">{getRoleLabel(user.role)}</span>
-                            )}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  {assigneeDropdownId === subtask.id && (() => {
+                    const q = assigneeSearch.trim().toLowerCase();
+                    const filtered = q ? users.filter((u) => u.name.toLowerCase().includes(q)) : users;
+                    return (
+                      <div className="subtasks-list__mention-dropdown">
+                        <div className="subtasks-list__mention-search">
+                          <Search size={13} />
+                          <input
+                            type="text"
+                            placeholder="بحث عن محامٍ..."
+                            value={assigneeSearch}
+                            onChange={(e) => setAssigneeSearch(e.target.value)}
+                            autoFocus
+                          />
+                        </div>
+                        <div className="subtasks-list__mention-list">
+                          {filtered.length === 0 ? (
+                            <div className="subtasks-list__mention-empty">لا نتائج</div>
+                          ) : filtered.map((user) => (
+                            <button
+                              key={user.id}
+                              className="subtasks-list__mention-item"
+                              onClick={() => handleAssignUser(subtask.id, user.id, user.name)}
+                            >
+                              <span className="subtasks-list__mention-avatar">
+                                {user.avatar ? (
+                                  <img src={user.avatar} alt={user.name} />
+                                ) : (
+                                  getInitials(user.name)
+                                )}
+                              </span>
+                              <span className="subtasks-list__mention-info">
+                                <span className="subtasks-list__mention-name">{user.name}</span>
+                                {user.role && (
+                                  <span className="subtasks-list__mention-role">{getRoleLabel(user.role)}</span>
+                                )}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* إيقاف مؤقت / استئناف (#130) */}
@@ -773,30 +796,60 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
           top: 100%;
           left: 0;
           margin-top: 4px;
-          min-width: 200px;
+          width: 210px;
           background: var(--color-surface, #fff);
           border: 1px solid var(--color-border, #e5e5e5);
-          border-radius: var(--radius-md, 8px);
-          box-shadow: var(--shadow-lg, 0 8px 30px rgba(0, 0, 0, 0.12));
+          border-radius: 8px;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
           z-index: 100;
           overflow: hidden;
         }
 
-        .subtasks-list__mention-header {
-          padding: var(--space-2, 8px) var(--space-3, 12px);
-          font-size: var(--font-size-xs, 11px);
-          font-weight: 600;
-          color: var(--color-text-secondary, #666);
-          background: var(--color-surface-subtle, #f8f9fa);
+        /* صندوق البحث — أعلى القائمة */
+        .subtasks-list__mention-search {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 9px;
           border-bottom: 1px solid var(--color-border, #e5e5e5);
+          background: var(--color-surface-subtle, #f8f9fa);
+        }
+
+        .subtasks-list__mention-search svg {
+          color: var(--color-text-secondary, #888);
+          flex-shrink: 0;
+        }
+
+        .subtasks-list__mention-search input {
+          flex: 1;
+          min-width: 0;
+          border: none;
+          outline: none;
+          background: transparent;
+          font-size: 12.5px;
+          color: var(--color-text, #1a1a1a);
+          font-family: inherit;
+        }
+
+        /* القائمة — صغيرة وقابلة للتمرير */
+        .subtasks-list__mention-list {
+          max-height: 176px;
+          overflow-y: auto;
+        }
+
+        .subtasks-list__mention-empty {
+          padding: 14px;
+          font-size: 12px;
+          color: var(--color-text-secondary, #888);
+          text-align: center;
         }
 
         .subtasks-list__mention-item {
           display: flex;
           align-items: center;
-          gap: var(--space-2, 8px);
+          gap: 8px;
           width: 100%;
-          padding: var(--space-2, 8px) var(--space-3, 12px);
+          padding: 6px 10px;
           background: none;
           border: none;
           cursor: pointer;
@@ -809,12 +862,12 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
         }
 
         .subtasks-list__mention-avatar {
-          width: 28px;
-          height: 28px;
+          width: 24px;
+          height: 24px;
           border-radius: 50%;
           background: var(--color-primary, #0A192F);
           color: white;
-          font-size: 10px;
+          font-size: 9.5px;
           font-weight: 600;
           display: flex;
           align-items: center;
