@@ -8,6 +8,8 @@ interface SubtasksListProps {
   onProgressChange?: (progress: number) => void;
   /** يُستدعى بعد إيقاف/استئناف/إنجاز فرعية — حالة المهمة الأم قد تغيّرت (من الجهتين #130) */
   onTaskChanged?: () => void;
+  /** النمط الملتصق: يسطّح الحواف والخلفيات ويخفي الترويسة الداخلية (البلوك له رأسه) */
+  dense?: boolean;
 }
 
 interface MentionUser {
@@ -17,7 +19,7 @@ interface MentionUser {
   role?: string;
 }
 
-const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, onTaskChanged }) => {
+const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, onTaskChanged, dense = false }) => {
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -226,7 +228,7 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
   const completedCount = subtasks.filter(s => s.is_completed).length;
 
   return (
-    <div className="subtasks-list">
+    <div className={`subtasks-list${dense ? ' subtasks-list--fused' : ''}`}>
       {/* Header */}
       <div className="subtasks-list__header">
         <div className="subtasks-list__title">
@@ -918,6 +920,54 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
         body.dark .subtasks-list__input {
           background: var(--color-surface);
           border-color: var(--color-border);
+        }
+
+        /* ===== النمط الملتصق (dense) — يطابق وصفة ssp2/cpk: بلا حواف مائلة ولا بطاقات ===== */
+        .subtasks-list--fused {
+          border: none;
+          border-radius: 0;
+          padding: 0;
+          background: transparent;
+        }
+
+        .subtasks-list--fused .subtasks-list__header { display: none; }
+
+        .subtasks-list--fused .subtasks-list__items { gap: 0; }
+
+        .subtasks-list--fused .subtasks-list__row {
+          border-bottom: 1px solid var(--color-border, #e5e5e5);
+        }
+
+        .subtasks-list--fused .subtasks-list__row:last-child { border-bottom: none; }
+
+        .subtasks-list--fused .subtasks-list__item {
+          border-radius: 0;
+          background: transparent;
+          padding: 9px 4px;
+        }
+
+        .subtasks-list--fused .subtasks-list__item:hover {
+          background: var(--quiet-gray-50, #f6f7f9);
+          box-shadow: none;
+        }
+
+        /* الموقوفة تحتفظ بشريطها البرتقالي وتلوينها الخفيف داخل النمط الملتصق */
+        .subtasks-list--fused .subtasks-list__item--paused {
+          background: rgba(249, 115, 22, 0.06);
+        }
+
+        .subtasks-list--fused .subtasks-list__add-btn {
+          border-radius: 0;
+          margin-top: 8px;
+        }
+
+        .subtasks-list--fused .subtasks-list__pause-form,
+        .subtasks-list--fused .subtasks-list__add-form {
+          border-radius: 0;
+        }
+
+        body.dark .subtasks-list--fused .subtasks-list__item:hover {
+          background: var(--quiet-gray-100, #23262b);
         }
 
         /* Classic Theme */

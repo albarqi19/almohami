@@ -74,6 +74,28 @@ const TYPE_LABELS: Record<string, string> = {
   other: 'أخرى',
 };
 
+/** قسم أكورديون ملتصق في العمود الجانبي — رأس قابل للنقر يفتح/يغلق جسمه، والحالة تُحفظ */
+const AccSection: React.FC<{
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  meta?: React.ReactNode;
+  open: boolean;
+  onToggle: (id: string) => void;
+  children: React.ReactNode;
+}> = ({ id, title, icon, meta, open, onToggle, children }) => (
+  <section className={`twk-acc${open ? ' twk-acc--open' : ''}`}>
+    <button className="ssp2-card__head twk-acc__head" onClick={() => onToggle(id)} aria-expanded={open}>
+      <span className="ssp2-card__title">{icon} {title}</span>
+      <span className="ssp2-card__headtools">
+        {meta}
+        <ChevronDown size={15} className="twk-acc__chev" />
+      </span>
+    </button>
+    {open && <div className="twk-acc__body">{children}</div>}
+  </section>
+);
+
 const TaskDetail: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
@@ -100,6 +122,20 @@ const TaskDetail: React.FC = () => {
   const [sideCollapsed, setSideCollapsed] = useState(() => localStorage.getItem('twk_side_collapsed') === '1');
   const toggleSideCollapsed = () =>
     setSideCollapsed((v) => { localStorage.setItem('twk_side_collapsed', v ? '0' : '1'); return !v; });
+
+  /* أقسام العمود الجانبي أكورديون — كلٌّ يُفتح/يُغلق مستقلاً، والحالة تبقى عبر الجلسات */
+  const [accOpen, setAccOpen] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('twk_acc_sections');
+      if (saved) return JSON.parse(saved);
+    } catch { /* تجاهل JSON تالف */ }
+    return { details: true, timer: true, attachments: true, links: true };
+  });
+  const toggleAcc = (id: string) => setAccOpen((prev) => {
+    const next = { ...prev, [id]: !prev[id] };
+    try { localStorage.setItem('twk_acc_sections', JSON.stringify(next)); } catch { /* تجاهل */ }
+    return next;
+  });
 
   useEffect(() => {
     if (taskId) {
@@ -550,6 +586,7 @@ const TaskDetail: React.FC = () => {
                   taskId={taskId!}
                   onProgressChange={(p) => setSubProgress(p)}
                   onTaskChanged={loadTask}
+                  dense
                 />
               </div>
             </section>
@@ -576,10 +613,7 @@ const TaskDetail: React.FC = () => {
 
               <div className="cpk-sidecol__scroll">
                 {/* التفاصيل */}
-                <section className="ssp2-card">
-                  <div className="ssp2-card__head">
-                    <span className="ssp2-card__title"><FileText size={14} /> التفاصيل</span>
-                  </div>
+                <AccSection id="details" title="التفاصيل" icon={<FileText size={14} />} open={!!accOpen.details} onToggle={toggleAcc}>
                   <div className="twk-kvlist">
                     <div className="twk-kv">
                       <span className="twk-kv__label">أُنشئت</span>
@@ -604,26 +638,15 @@ const TaskDetail: React.FC = () => {
                       </div>
                     )}
                   </div>
-                </section>
+                </AccSection>
 
-                {/* الموقّت */}
-                <section className="ssp2-card">
-                  <div className="ssp2-card__head">
-                    <span className="ssp2-card__title"><Timer size={14} /> تتبع الوقت</span>
-                  </div>
-                  <div className="twk-sideblock">
-                    <TaskTimer taskId={taskId!} taskTitle={task.title} caseTitle={linkedCase?.title || ''} />
-                  </div>
-                </section>
+                {/* الموقّت — مسطّح بالنمط الملتصق (بلا wrapper) */}
+                <AccSection id="timer" title="تتبع الوقت" icon={<Timer size={14} />} open={!!accOpen.timer} onToggle={toggleAcc}>
+                  <TaskTimer taskId={taskId!} taskTitle={task.title} caseTitle={linkedCase?.title || ''} />
+                </AccSection>
 
                 {/* المرفقات */}
-                <section className="ssp2-card">
-                  <div className="ssp2-card__head">
-                    <span className="ssp2-card__title"><Paperclip size={14} /> المرفقات</span>
-                    <span className="ssp2-card__headtools">
-                      <span className="ssp2-card__meta">{documents.length}</span>
-                    </span>
-                  </div>
+                <AccSection id="attachments" title="المرفقات" icon={<Paperclip size={14} />} meta={<span className="ssp2-card__meta">{documents.length}</span>} open={!!accOpen.attachments} onToggle={toggleAcc}>
                   <div className="twk-sideblock">
                     {task.requires_attachment && documents.length === 0 && (
                       <p className="twk-attach-warn"><AlertCircle size={12} /> هذه المهمة تتطلب مرفقاً قبل إكمالها.</p>
@@ -666,13 +689,10 @@ const TaskDetail: React.FC = () => {
                       </>
                     )}
                   </div>
-                </section>
+                </AccSection>
 
                 {/* الارتباطات */}
-                <section className="ssp2-card">
-                  <div className="ssp2-card__head">
-                    <span className="ssp2-card__title"><Link2 size={14} /> الارتباطات</span>
-                  </div>
+                <AccSection id="links" title="الارتباطات" icon={<Link2 size={14} />} open={!!accOpen.links} onToggle={toggleAcc}>
                   <div className="twk-sideblock">
                     {linkedCase ? (
                       <Link to={`/cases/${linkedCase.id}`} className="twk-link">
@@ -696,7 +716,7 @@ const TaskDetail: React.FC = () => {
                       <p className="cpk-empty">مهمة عامة (غير مرتبطة بقضية أو عميل).</p>
                     )}
                   </div>
-                </section>
+                </AccSection>
               </div>
             </>
           )}
@@ -828,12 +848,35 @@ const TaskDetail: React.FC = () => {
         .twk-btn-danger { color: #ef4444; border-color: rgba(239,68,68,0.4); }
 
         /* المهام الفرعية داخل البلوك الملتصق — تسطيح بطاقة المكوّن */
-        .twk-subtasks .subtasks-list {
-          border: none;
-          border-radius: 0;
-          padding: 10px 14px;
-          background: transparent;
+        /* المهام الفرعية الملتصقة: الغلاف بلا padding (cpk-tasks يوفّره) — التسطيح داخل المكوّن (dense) */
+        .twk-subtasks .subtasks-list { padding: 0; }
+
+        /* أقسام العمود الجانبي أكورديون — ملتصقة، رأس <button> قابل للنقر يفتح/يغلق */
+        .twk-acc {
+          border-bottom: 1px solid var(--color-border, #e5e5e5);
+          flex-shrink: 0;
         }
+        .twk-acc:last-child { border-bottom: none; }
+        .twk-acc__head {
+          width: 100%;
+          cursor: pointer;
+          font-family: inherit;
+          text-align: inherit;
+          appearance: none;
+          border: none;
+          border-bottom: 1px solid var(--color-border, #e5e5e5);
+          transition: background 0.12s ease;
+        }
+        .twk-acc__head:hover { background: var(--quiet-gray-100, #eceef1); }
+        /* القسم المغلق: أزل حدّ الرأس السفلي كي لا يزدوج مع حدّ القسم */
+        .twk-acc:not(.twk-acc--open) .twk-acc__head { border-bottom: none; }
+        .twk-acc__chev {
+          color: var(--color-text-secondary, #999);
+          transition: transform 0.2s ease;
+          flex-shrink: 0;
+        }
+        .twk-acc--open .twk-acc__chev { transform: rotate(180deg); }
+        .twk-acc__body { min-width: 0; }
 
         /* عمود التفاصيل: بلوكات مدمجة وقوائم قيم */
         .twk-kvlist { display: flex; flex-direction: column; }

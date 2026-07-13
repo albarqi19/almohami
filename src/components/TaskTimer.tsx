@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, Clock, FileText } from 'lucide-react';
+import { Play, Pause, Clock, FileText, AlertCircle } from 'lucide-react';
 import { TimeService, type TimeEntry } from '../services/timeService';
 import { useTimer } from '../contexts/TimerContext';
 
@@ -177,61 +177,68 @@ const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle, com
     );
   }
 
+  // ── النسخة الكاملة: مسطّحة بالنمط الملتصق (تُستخدم في مساحة المهمة) ──
   return (
-    <div className="task-timer">
-      {/* Timer Display */}
-      <div className="task-timer__display">
-        <div className="task-timer__main">
-          <div className={`task-timer__value ${isTimerForThisTask ? 'task-timer__value--running' : ''}`}>
-            {isTimerForThisTask ? formatTime(timerState.elapsedSeconds) : '00:00:00'}
-          </div>
-          <button
-            className={`task-timer__toggle ${isTimerForThisTask ? 'task-timer__toggle--stop' : 'task-timer__toggle--start'}`}
-            onClick={isTimerForThisTask ? handleStopTimer : handleStartTimer}
-            disabled={isLoading || (timerState.isRunning && !isTimerForThisTask)}
-            title={
-              timerState.isRunning && !isTimerForThisTask
-                ? 'يوجد تايمر نشط في مهمة أخرى'
-                : isTimerForThisTask
-                  ? 'إيقاف التايمر'
-                  : 'بدء التايمر'
-            }
-          >
-            {isLoading ? (
-              <span className="task-timer__loader" />
-            ) : isTimerForThisTask ? (
-              <Pause size={20} />
+    <div className="task-timer task-timer--fused">
+      {/* شريط التحكم: القراءة الكبيرة + زر مسطّح */}
+      <div className="task-timer__bar">
+        <div className="task-timer__readout">
+          <span className={`task-timer__value ${isTimerForThisTask ? 'task-timer__value--running' : ''}`}>
+            {isTimerForThisTask ? formatTime(timerState.elapsedSeconds) : formatTime(displayTotalSeconds)}
+          </span>
+          <span className="task-timer__label">
+            {isTimerForThisTask ? (
+              <><span className="task-timer__live-dot" /> يعمل الآن</>
             ) : (
-              <Play size={20} />
+              'الإجمالي المسجّل'
             )}
-          </button>
+          </span>
         </div>
-
-        <div className="task-timer__total">
-          <Clock size={14} />
-          <span>الإجمالي: {formatTime(displayTotalSeconds)}</span>
-        </div>
-
-        {timerState.isRunning && !isTimerForThisTask && (
-          <div className="task-timer__warning">
-            التايمر يعمل على: {timerState.taskTitle || 'مهمة أخرى'}
-          </div>
-        )}
+        <button
+          className={`task-timer__btn ${isTimerForThisTask ? 'task-timer__btn--stop' : 'task-timer__btn--start'}`}
+          onClick={isTimerForThisTask ? handleStopTimer : handleStartTimer}
+          disabled={isLoading || (timerState.isRunning && !isTimerForThisTask)}
+          title={
+            timerState.isRunning && !isTimerForThisTask
+              ? 'يوجد تايمر نشط في مهمة أخرى'
+              : isTimerForThisTask
+                ? 'إيقاف التايمر'
+                : 'بدء التايمر'
+          }
+        >
+          {isLoading ? (
+            <span className="task-timer__loader" />
+          ) : isTimerForThisTask ? (
+            <Pause size={15} />
+          ) : (
+            <Play size={15} />
+          )}
+          <span>{isTimerForThisTask ? 'إيقاف' : 'بدء'}</span>
+        </button>
       </div>
 
-      {/* Time Entries */}
-      <div className="task-timer__entries">
-        <h4 className="task-timer__entries-title">
-          <Clock size={14} />
-          سجل الوقت
-        </h4>
+      {isTimerForThisTask && (
+        <div className="task-timer__running-total">
+          <Clock size={12} /> الإجمالي مع الجلسة الحالية: {formatTime(displayTotalSeconds)}
+        </div>
+      )}
+
+      {timerState.isRunning && !isTimerForThisTask && (
+        <div className="task-timer__warning">
+          <AlertCircle size={12} /> التايمر يعمل على: {timerState.taskTitle || 'مهمة أخرى'}
+        </div>
+      )}
+
+      {/* سجل الوقت */}
+      <div className="task-timer__log">
+        <div className="task-timer__log-head"><Clock size={13} /> سجل الوقت</div>
 
         {loadingEntries ? (
-          <div className="task-timer__entries-loading">جاري التحميل...</div>
+          <div className="task-timer__log-empty">جارٍ التحميل...</div>
         ) : entries.length === 0 ? (
-          <div className="task-timer__entries-empty">لم يتم تسجيل وقت بعد</div>
+          <div className="task-timer__log-empty">لم يُسجَّل وقت بعد</div>
         ) : (
-          <div className="task-timer__entries-list">
+          <div className="task-timer__log-list">
             {entries.slice(0, 5).map((entry) => {
               const hasNote = !!entry.description && entry.description.trim().length > 0;
               const isExpanded = expandedEntryId === entry.id;
@@ -272,7 +279,7 @@ const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle, com
             })}
 
             {entries.length > 5 && (
-              <div className="task-timer__entries-more">
+              <div className="task-timer__log-more">
                 +{entries.length - 5} سجلات أخرى
               </div>
             )}
@@ -281,271 +288,220 @@ const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, taskTitle, caseTitle, com
       </div>
 
       <style>{`
-        .task-timer {
-          background: var(--color-surface-subtle, #f8f9fa);
-          border-radius: var(--radius-md, 8px);
-          padding: var(--space-4, 16px);
-        }
+        .task-timer--fused { padding: 0; }
 
-        .task-timer__display {
-          text-align: center;
-          padding-bottom: var(--space-4, 16px);
-          border-bottom: 1px solid var(--color-border, #e5e5e5);
-          margin-bottom: var(--space-4, 16px);
-        }
-
-        .task-timer__main {
+        /* شريط التحكم */
+        .task-timer__bar {
           display: flex;
           align-items: center;
-          justify-content: center;
-          gap: var(--space-4, 16px);
-          margin-bottom: var(--space-3, 12px);
+          justify-content: space-between;
+          gap: 12px;
+          padding: 12px 14px;
+        }
+
+        .task-timer__readout {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          min-width: 0;
         }
 
         .task-timer__value {
-          font-size: 28px;
-          font-weight: var(--font-weight-bold, 700);
+          font-size: 24px;
+          font-weight: 700;
           font-family: 'SF Mono', 'Consolas', monospace;
-          color: var(--color-heading, #1a1a1a);
-          min-width: 120px;
+          color: var(--color-text-primary, #1a1a1a);
+          letter-spacing: 0.5px;
+          line-height: 1.1;
         }
 
-        .task-timer__value--running {
-          color: var(--color-success, #1B998B);
-          animation: timer-text-pulse 2s infinite;
-        }
+        .task-timer__value--running { color: var(--color-success, #1B998B); }
 
-        @keyframes timer-text-pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
-        }
-
-        .task-timer__toggle {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          border: none;
-          display: flex;
+        .task-timer__label {
+          display: inline-flex;
           align-items: center;
-          justify-content: center;
+          gap: 5px;
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--color-text-secondary, #777);
+        }
+
+        .task-timer__live-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: var(--color-success, #1B998B);
+          animation: twk-timer-pulse 1.6s infinite;
+        }
+
+        @keyframes twk-timer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+        .task-timer__btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
+          padding: 8px 16px;
+          border: none;
+          border-radius: 7px;
+          font-size: 13px;
+          font-weight: 700;
           cursor: pointer;
-          transition: all var(--transition-fast, 120ms ease);
+          transition: background 0.15s ease, transform 0.1s ease;
         }
 
-        .task-timer__toggle--start {
-          background: var(--color-primary, #0A192F);
-          color: white;
-        }
+        .task-timer__btn--start { background: var(--law-navy, #0A192F); color: #fff; }
+        .task-timer__btn--start:hover:not(:disabled) { background: #16305a; }
 
-        .task-timer__toggle--start:hover:not(:disabled) {
-          background: var(--color-primary-hover, #162d50);
-          transform: scale(1.05);
-        }
-
-        .task-timer__toggle--stop {
+        .task-timer__btn--stop {
           background: var(--color-error, #D1495B);
-          color: white;
-          animation: timer-button-pulse 2s infinite;
+          color: #fff;
+          animation: twk-timer-btn 2s infinite;
         }
 
-        @keyframes timer-button-pulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(209, 73, 91, 0.4); }
-          50% { box-shadow: 0 0 0 10px rgba(209, 73, 91, 0); }
+        @keyframes twk-timer-btn {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(209, 73, 91, 0.35); }
+          50% { box-shadow: 0 0 0 6px rgba(209, 73, 91, 0); }
         }
 
-        .task-timer__toggle--stop:hover:not(:disabled) {
-          background: #c13a4b;
-        }
-
-        .task-timer__toggle:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
+        .task-timer__btn--stop:hover:not(:disabled) { background: #c13a4b; }
+        .task-timer__btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .task-timer__loader {
-          width: 20px;
-          height: 20px;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-top-color: white;
+          width: 15px;
+          height: 15px;
+          border: 2px solid rgba(255, 255, 255, 0.35);
+          border-top-color: #fff;
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
 
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        .task-timer__total {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: var(--space-2, 8px);
-          color: var(--color-text-secondary, #666);
-          font-size: var(--font-size-sm, 13px);
-        }
-
+        /* أشرطة الحالة الرفيعة */
+        .task-timer__running-total,
         .task-timer__warning {
-          margin-top: var(--space-2, 8px);
-          padding: var(--space-2, 8px) var(--space-3, 12px);
-          background: var(--color-warning-soft, rgba(244, 162, 89, 0.15));
-          color: var(--color-warning, #a15c1e);
-          border-radius: var(--radius-sm, 4px);
-          font-size: var(--font-size-xs, 12px);
-        }
-
-        .task-timer__entries-title {
           display: flex;
           align-items: center;
-          gap: var(--space-2, 8px);
-          font-size: var(--font-size-sm, 13px);
-          font-weight: var(--font-weight-semibold, 600);
-          color: var(--color-text-secondary, #666);
-          margin-bottom: var(--space-3, 12px);
+          gap: 6px;
+          padding: 7px 14px;
+          font-size: 11.5px;
+          border-top: 1px solid var(--color-border, #e5e5e5);
         }
 
-        .task-timer__entries-loading,
-        .task-timer__entries-empty {
-          text-align: center;
-          color: var(--color-text-secondary, #666);
-          font-size: var(--font-size-sm, 13px);
-          padding: var(--space-4, 16px);
-        }
+        .task-timer__running-total { color: var(--color-text-secondary, #777); }
+        .task-timer__warning { color: var(--status-amber, #a15c1e); background: rgba(244, 162, 89, 0.1); }
 
-        .task-timer__entries-list {
+        /* سجل الوقت — صفوف ملتصقة بفواصل، بلا بطاقات */
+        .task-timer__log { border-top: 1px solid var(--color-border, #e5e5e5); }
+
+        .task-timer__log-head {
           display: flex;
-          flex-direction: column;
-          gap: var(--space-2, 8px);
+          align-items: center;
+          gap: 6px;
+          padding: 9px 14px 6px;
+          font-size: 11.5px;
+          font-weight: 700;
+          color: var(--color-text-secondary, #777);
         }
+
+        .task-timer__log-head svg { color: var(--law-gold, #C9A227); }
+
+        .task-timer__log-empty {
+          padding: 6px 14px 14px;
+          font-size: 11.5px;
+          color: var(--color-text-secondary, #777);
+        }
+
+        .task-timer__log-list { display: flex; flex-direction: column; }
+
+        .task-timer__entry-wrap { border-top: 1px dashed var(--color-border, #ececec); }
+        .task-timer__entry-wrap:first-child { border-top: none; }
 
         .task-timer__entry {
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          padding: var(--space-2, 8px);
-          background: var(--color-surface, #fff);
-          border: 1px solid var(--color-border, #e5e5e5);
-          border-radius: var(--radius-sm, 6px);
-          font-size: var(--font-size-xs, 12px);
-        }
-
-        .task-timer__entry-note-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 26px;
-          height: 26px;
-          margin-inline-start: var(--space-2, 8px);
-          border: 1px solid var(--color-border, #e5e5e5);
-          border-radius: var(--radius-sm, 6px);
-          background: var(--color-surface-subtle, #f8f9fa);
-          color: var(--color-text-secondary, #666);
-          cursor: pointer;
-          transition: all 0.15s ease;
-          flex-shrink: 0;
-        }
-
-        .task-timer__entry-note-btn:hover {
-          background: var(--color-primary-soft, rgba(10, 25, 47, 0.08));
-          border-color: var(--color-primary, #0A192F);
-          color: var(--color-primary, #0A192F);
-        }
-
-        .task-timer__entry-note-btn--open {
-          background: var(--color-primary, #0A192F);
-          border-color: var(--color-primary, #0A192F);
-          color: #fff;
-        }
-
-        .task-timer__entry-note {
-          margin-top: 6px;
-          padding: var(--space-2, 8px) var(--space-3, 12px);
-          background: var(--color-surface-subtle, #f8f9fa);
-          border: 1px solid var(--color-border, #e5e5e5);
-          border-radius: var(--radius-sm, 6px);
-          font-size: var(--font-size-xs, 12px);
-          line-height: 1.6;
-          color: var(--color-text, #1a1a1a);
-          white-space: pre-wrap;
-          word-break: break-word;
+          gap: 8px;
+          padding: 7px 14px;
+          font-size: 11.5px;
         }
 
         .task-timer__entry-user {
           display: flex;
           align-items: center;
-          gap: var(--space-2, 8px);
+          gap: 7px;
           flex: 1;
+          min-width: 0;
         }
 
         .task-timer__entry-avatar {
-          width: 24px;
-          height: 24px;
+          width: 22px;
+          height: 22px;
           border-radius: 50%;
-          background: var(--color-primary, #0A192F);
-          color: white;
+          background: var(--law-navy, #0A192F);
+          color: #fff;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 11px;
-          font-weight: var(--font-weight-semibold, 600);
+          font-size: 10px;
+          font-weight: 700;
+          flex-shrink: 0;
         }
 
         .task-timer__entry-name {
-          color: var(--color-text, #1a1a1a);
-          font-weight: var(--font-weight-medium, 500);
+          color: var(--color-text-primary, #1a1a1a);
+          font-weight: 600;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .task-timer__entry-duration {
           font-family: 'SF Mono', 'Consolas', monospace;
-          color: var(--color-text, #1a1a1a);
-          font-weight: var(--font-weight-semibold, 600);
+          font-weight: 700;
+          color: var(--color-text-primary, #1a1a1a);
+          flex-shrink: 0;
         }
 
-        .task-timer__entry-running {
-          color: var(--color-success, #1B998B);
-          font-size: 11px;
-        }
+        .task-timer__entry-running { color: var(--color-success, #1B998B); font-size: 10.5px; }
+        .task-timer__entry-date { color: var(--color-text-secondary, #777); font-size: 10.5px; flex-shrink: 0; }
 
-        .task-timer__entry-date {
-          color: var(--color-text-secondary, #666);
-          font-size: 11px;
-        }
-
-        .task-timer__entries-more {
-          text-align: center;
-          color: var(--color-primary, #0A192F);
-          font-size: var(--font-size-xs, 12px);
-          padding: var(--space-2, 8px);
+        .task-timer__entry-note-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 24px;
+          height: 24px;
+          flex-shrink: 0;
+          border: 1px solid var(--color-border, #e5e5e5);
+          border-radius: 6px;
+          background: transparent;
+          color: var(--color-text-secondary, #777);
           cursor: pointer;
+          transition: all 0.15s ease;
         }
 
-        .task-timer__entries-more:hover {
-          text-decoration: underline;
+        .task-timer__entry-note-btn:hover { border-color: var(--law-navy, #0A192F); color: var(--law-navy, #0A192F); }
+        .task-timer__entry-note-btn--open { background: var(--law-navy, #0A192F); border-color: var(--law-navy, #0A192F); color: #fff; }
+
+        .task-timer__entry-note {
+          padding: 8px 14px;
+          background: var(--quiet-gray-50, #f6f7f9);
+          font-size: 11.5px;
+          line-height: 1.6;
+          color: var(--color-text-primary, #1a1a1a);
+          white-space: pre-wrap;
+          word-break: break-word;
         }
 
-        /* Dark Theme */
-        body.dark .task-timer {
-          background: var(--color-surface-subtle);
+        .task-timer__log-more {
+          padding: 8px 14px;
+          font-size: 11px;
+          color: var(--law-navy, #0A192F);
+          text-align: center;
         }
 
-        body.dark .task-timer__entry {
-          background: var(--color-surface);
-          border-color: var(--color-border);
-        }
-
-        body.dark .task-timer__entry-note,
-        body.dark .task-timer__entry-note-btn {
-          background: var(--color-surface);
-          border-color: var(--color-border);
-        }
-
-        /* Classic Theme */
-        body.classic .task-timer__toggle--start {
-          background: var(--color-primary);
-        }
-
-        body.classic .task-timer__entry-avatar {
-          background: var(--color-primary);
-        }
+        body.dark .task-timer__entry-note { background: var(--quiet-gray-100, #23262b); }
       `}</style>
     </div>
   );
