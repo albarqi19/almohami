@@ -2,7 +2,7 @@ import {
   Home, FileText, FileCheck, Calendar, Scale, Briefcase, Users, Clock, CheckSquare,
   BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature, Receipt, CreditCard,
   TrendingUp, Bell, Settings, ClipboardList, BarChart3, FolderUp, QrCode, Lightbulb,
-  Landmark, AlarmClock, Archive, UserCog, Trash2,
+  Landmark, AlarmClock, Archive, UserCog, Trash2, Inbox,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -23,9 +23,9 @@ export interface SidebarItem {
   roles?: string[];
   /**
    * بوّابة ميزة — تُخفي العنصر تماماً حتى تكون الميزة متاحة للمنشأة.
-   * 'zatca' يُقرأ من useZatcaFeature() (context)، و'hr' من user.tenant.hr_enabled — داخل ClickUpSidebar (لا hook هنا، هذا ملف بيانات).
+   * 'zatca' يُقرأ من useZatcaFeature() (context)، و'hr'/'email_intake' من user.tenant.*_enabled — داخل ClickUpSidebar (لا hook هنا، هذا ملف بيانات).
    */
-  featureGate?: 'zatca' | 'hr';
+  featureGate?: 'zatca' | 'hr' | 'email_intake';
   /** شارة نصية صغيرة بجوار الاسم (مثل "مؤقتة" لميزة تجريبية). */
   badge?: string;
 }
@@ -61,6 +61,8 @@ export const mainMenuItems: SidebarItem[] = [
   // any: يمنح المحامي وصول تبويب العقود حتى لو لم تكن له billing.view (التبويبات تُحرَس داخلياً — UX-07).
   { icon: FileSignature, label: 'العقود والمالية', path: '/finance', any: ['billing.view', 'contracts.view'] },
   { icon: Archive, label: 'الصادر والوارد', path: '/correspondence', permission: 'correspondence.view' },
+  // صندوق الطلبات الذكي — طلبات واردة من بريد Outlook (خلف بوابة email_intake_enabled)
+  { icon: Inbox, label: 'صندوق البريد الذكي', path: '/intake-requests', permission: 'legal-services.manage', featureGate: 'email_intake', badge: 'جديد' },
   { icon: FileCheck, label: 'اعتمادات المذكرات', path: '/memos/approvals', permission: 'memos.approve', badge: 'تجريبي' },
   // الموارد البشرية — للمدير فقط (permission: hr.view مبذورة لـ owner/admin حصراً) + خلف بوابة hr_enabled.
   { icon: UserCog, label: 'الموارد البشرية', path: '/hr', permission: 'hr.view', featureGate: 'hr', badge: 'جديد' },

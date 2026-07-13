@@ -37,6 +37,7 @@ export interface User {
     hr_enabled?: boolean;
     correspondence_enabled?: boolean;
     session_copilot_enabled?: boolean;
+    email_intake_enabled?: boolean;
     [key: string]: any;
   };
 }

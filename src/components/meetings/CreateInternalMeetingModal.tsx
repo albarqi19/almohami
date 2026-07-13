@@ -70,15 +70,22 @@ const CreateInternalMeetingModal: React.FC<Props> = ({ meeting, onClose, onSucce
   const [showParticipants, setShowParticipants] = useState(false);
 
   // Initialize date/time
+  // مهم: نستخرج التاريخ والوقت بالتوقيت المحلي في كليهما (getFullYear/getHours…)
+  // بدل خلط toISOString (UTC) مع toTimeString (محلي) الذي كان يُزحزح تاريخ
+  // الاجتماعات المسائية/الليلية يوماً كاملاً ويتراكم مع كل حفظ.
   useEffect(() => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const asLocalDate = (dt: Date) => `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+    const asLocalTime = (dt: Date) => `${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
     if (meeting?.scheduled_at) {
       const dt = new Date(meeting.scheduled_at);
-      setDate(dt.toISOString().split('T')[0]);
-      setTime(dt.toTimeString().slice(0, 5));
+      setDate(asLocalDate(dt));
+      setTime(asLocalTime(dt));
     } else {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      setDate(tomorrow.toISOString().split('T')[0]);
+      setDate(asLocalDate(tomorrow));
       setTime('10:00');
     }
   }, [meeting]);
@@ -135,18 +142,24 @@ const CreateInternalMeetingModal: React.FC<Props> = ({ meeting, onClose, onSucce
       return;
     }
 
-    const scheduledAt = new Date(`${date}T${time}`).toISOString();
+    // نرسل الوقت كسلسلة محلية خام (بلا Z / بلا toISOString) — الخادم بتوقيت
+    // Asia/Riyadh يفسّرها كما هي. toISOString كان يحوّلها إلى UTC فتُخزَّن
+    // بإزاحة −3 ساعات (10:00 تصبح 07:00). هذا نفس نمط «مواعيد العملاء» الصحيح.
+    const scheduledAt = `${date}T${time}:00`;
 
     try {
       setLoading(true);
 
+      // نرسل حقول النوع صراحةً بقيمة null (لا undefined) للحقل غير المستخدم،
+      // كي يمسحها الخادم عند تبديل نوع الاجتماع بدل الإبقاء على القيمة القديمة.
       const baseData = {
         title,
         agenda: agenda || undefined,
         scheduled_at: scheduledAt,
         duration_minutes: duration,
-        location: meetingType === 'physical' ? location : undefined,
-        video_meeting_url: meetingType === 'remote' ? videoUrl : undefined,
+        location: meetingType === 'physical' ? (location || null) : null,
+        video_meeting_url: meetingType === 'remote' ? (videoUrl || null) : null,
+        // video_provider عمود NOT NULL في الخادم — لا نرسله للحضوري (الخادم يضبطه)
         video_provider: meetingType === 'remote' ? 'manual' : undefined,
         participants: participantIds,
         join_button_minutes_before: joinBefore,

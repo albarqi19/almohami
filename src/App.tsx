@@ -77,6 +77,7 @@ const Feedback = lazyWithRetry(() => import('./pages/Feedback'));
 const WathqInquiryPage = lazyWithRetry(() => import('./pages/WathqInquiry'));
 const LawsPage = lazyWithRetry(() => import('./pages/laws/LawsPage'));
 const CorrespondenceRegisterPage = lazyWithRetry(() => import('./pages/CorrespondenceRegisterPage'));
+const IntakeRequestsPage = lazyWithRetry(() => import('./pages/IntakeRequestsPage'));
 const MemoApprovals = lazyWithRetry(() => import('./pages/MemoApprovals'));
 const ClientMessages = lazyWithRetry(() => import('./pages/ClientMessages'));
 const PersonalNotebook = lazyWithRetry(() => import('./pages/NotebookWorkspace'));
@@ -378,6 +379,12 @@ function App() {
               <Route path="correspondence" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'senior_lawyer', 'lawyer', 'accountant']}>
                   <CorrespondenceRegisterPage />
+                </ProtectedRoute>
+              } />
+              {/* صندوق الطلبات الذكي من البريد — خلف بوابة email_intake_enabled (الباك يفرضها أيضاً) */}
+              <Route path="intake-requests" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'senior_lawyer', 'lawyer']}>
+                  <IntakeRequestsPage />
                 </ProtectedRoute>
               } />
               <Route path="memos/approvals" element={

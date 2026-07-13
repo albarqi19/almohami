@@ -11,12 +11,15 @@ import {
     XCircle,
     Clock,
 } from 'lucide-react';
+import { Inbox } from 'lucide-react';
 import { microsoftIntegrationService } from '../../services/microsoftIntegrationService';
 import type {
     MicrosoftStatus,
     MicrosoftPreferences,
     MicrosoftSyncLogEntry,
+    MailReadStatus,
 } from '../../services/microsoftIntegrationService';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * Microsoft 365 integration settings (Calendar + To Do).
@@ -223,6 +226,17 @@ const MicrosoftIntegrationSettings: React.FC = () => {
                         prefs={prefs}
                         isSaving={isSavingPrefs}
                         onChange={handlePrefChange}
+                    />
+                )}
+
+                {/* صندوق الطلبات الذكي — يظهر فقط للمكاتب المفعَّلة لها الميزة (بوابة email_intake_enabled) */}
+                {status?.connected && prefs && (
+                    <MailIntakeCard
+                        prefs={prefs}
+                        isSaving={isSavingPrefs}
+                        onChange={handlePrefChange}
+                        onReconnect={handleConnect}
+                        isConnecting={isConnecting}
                     />
                 )}
 
@@ -518,6 +532,85 @@ const PreferencesCard: React.FC<{
     );
 };
 
+/**
+ * كرت «صندوق الطلبات الذكي» — التقاط طلبات العملاء من بريد المكتب.
+ * يظهر فقط عندما تكون بوابة email_intake_enabled مفعّلة للمكتب. إن كان الربط
+ * القائم بلا Mail.Read (ربط قديم قبل الميزة) يعرض بانر «أعد ربط الحساب».
+ */
+const MailIntakeCard: React.FC<{
+    prefs: MicrosoftPreferences;
+    isSaving: boolean;
+    onChange: (changes: Partial<MicrosoftPreferences>) => void;
+    onReconnect: () => void;
+    isConnecting: boolean;
+}> = ({ prefs, isSaving, onChange, onReconnect, isConnecting }) => {
+    const { user } = useAuth();
+    const [mailRead, setMailRead] = useState<MailReadStatus | null>(null);
+
+    const gateEnabled = !!user?.tenant?.email_intake_enabled;
+
+    useEffect(() => {
+        if (!gateEnabled) return;
+        microsoftIntegrationService
+            .getMailReadStatus()
+            .then(setMailRead)
+            .catch(() => setMailRead(null));
+    }, [gateEnabled]);
+
+    if (!gateEnabled) return null;
+
+    const needsRelink = mailRead?.mail_read === 'needs_relink';
+
+    return (
+        <div className="settings-option-card" style={{ marginTop: '12px' }}>
+            <div className="settings-option-card__title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Inbox size={15} /> صندوق الطلبات الذكي
+            </div>
+            <div className="settings-option-card__desc" style={{ marginTop: 4 }}>
+                يلتقط النظام الرسائل الجديدة على بريدك، ويحوّلها بالذكاء لاقتراحات
+                (خدمة/استشارة/قضية) تراجعها وتعتمدها من صفحة «صندوق البريد الذكي». لا يُنشأ
+                شيء تلقائياً — الاعتماد بيدك دائماً.
+            </div>
+
+            {needsRelink ? (
+                <div
+                    style={{
+                        marginTop: 12,
+                        padding: '10px 12px',
+                        background: 'rgba(245, 158, 11, 0.08)',
+                        borderRight: '3px solid #f59e0b',
+                        borderRadius: 6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 10,
+                        fontSize: 13,
+                    }}
+                >
+                    <span>
+                        <AlertTriangle size={14} color="#f59e0b" style={{ verticalAlign: 'middle', marginLeft: 6 }} />
+                        لتفعيل صندوق الطلبات الذكي، أعد ربط حساب مايكروسوفت لمنح صلاحية قراءة البريد.
+                    </span>
+                    <button className="btn btn-primary" onClick={onReconnect} disabled={isConnecting} style={{ minWidth: 120 }}>
+                        {isConnecting ? <Loader2 size={14} className="animate-spin" /> : 'إعادة الربط'}
+                    </button>
+                </div>
+            ) : (
+                <div style={{ marginTop: 12 }}>
+                    <PrefToggle
+                        icon={<Inbox size={14} />}
+                        label="تشغيل التقاط الطلبات من بريدي"
+                        description="تُفحص الرسائل الجديدة كل ٥ دقائق. الرسائل الأقدم من لحظة التفعيل لا تُلتقط."
+                        checked={!!prefs.mail_intake_enabled}
+                        disabled={isSaving || mailRead === null}
+                        onChange={(v) => onChange({ mail_intake_enabled: v })}
+                    />
+                </div>
+            )}
+        </div>
+    );
+};
+
 const PrefToggle: React.FC<{
     icon: React.ReactNode;
     label: string;
@@ -744,6 +837,7 @@ function translateScope(scope: string): string {
             'Calendars.ReadWrite': 'التقويم',
             'Tasks.ReadWrite': 'المهام',
             'Mail.Send': 'إرسال البريد',
+            'Mail.Read': 'قراءة البريد (صندوق الطلبات)',
             'Files.ReadWrite': 'الملفات',
             'Files.Read': 'قراءة الملفات',
         } as Record<string, string>

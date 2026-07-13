@@ -110,9 +110,9 @@ export interface CreateInternalMeetingData {
   scheduled_at: string;
   duration_minutes: number;
   timezone?: string;
-  location?: string;
-  video_meeting_url?: string;
-  video_provider?: string;
+  location?: string | null;
+  video_meeting_url?: string | null;
+  video_provider?: string | null;
   join_button_minutes_before?: number;
   join_button_minutes_after?: number;
   summary_permission?: 'creator_only' | 'all_attendees';
@@ -124,9 +124,9 @@ export interface UpdateInternalMeetingData {
   agenda?: string;
   scheduled_at?: string;
   duration_minutes?: number;
-  location?: string;
-  video_meeting_url?: string;
-  video_provider?: string;
+  location?: string | null;
+  video_meeting_url?: string | null;
+  video_provider?: string | null;
   join_button_minutes_before?: number;
   join_button_minutes_after?: number;
   summary_permission?: 'creator_only' | 'all_attendees';

@@ -155,6 +155,49 @@ export interface CopilotReportData {
   disclaimer?: string | null;
 }
 
+// ═══════════════════════════════════════════════════════
+//  Types — «مرآة الأداء» (تقييم ذاتي خاص بصاحب التشغيلة وحده)
+// ═══════════════════════════════════════════════════════
+
+export type SelfReviewStatus = 'none' | 'generating' | 'ready' | 'failed';
+export type SelfReviewBand = 'ممتاز' | 'قوي' | 'جيد' | 'يحتاج تطوير';
+
+export interface SelfReviewAxis {
+  axis: string;
+  band: SelfReviewBand;
+  note?: string | null;
+  quote?: string | null;
+  quote_verified?: boolean;
+}
+
+export interface SelfReviewPoint {
+  point: string;
+  quote?: string | null;
+  quote_verified?: boolean;
+  why?: string | null;        // strengths
+  suggestion?: string | null; // improvements
+}
+
+export interface SelfReviewMoment {
+  quote: string;
+  quote_verified?: boolean;
+  why?: string | null;  // best_moment
+  what?: string | null; // missed_opportunity
+}
+
+export interface SelfReviewData {
+  overall_band: SelfReviewBand;
+  summary?: string | null;
+  axes?: SelfReviewAxis[];
+  strengths?: SelfReviewPoint[];
+  improvements?: SelfReviewPoint[];
+  best_moment?: SelfReviewMoment | null;
+  missed_opportunity?: SelfReviewMoment | null;
+  limitations?: string[];
+  metrics?: Record<string, number | string>;
+  disclaimer?: string | null;
+}
+
 export interface CopilotReportResponse {
   report_status: ReportStatus;
   report: CopilotReportData | null;
@@ -163,6 +206,9 @@ export interface CopilotReportResponse {
     alerts_count: number;
     deep_checks_count: number;
   };
+  // يصلان فقط عندما يكون الطالب هو صاحب التشغيلة وقد فعّل المرآة
+  self_review_status?: SelfReviewStatus;
+  self_review?: SelfReviewData | null;
 }
 
 // ═══════════════════════════════════════════════════════

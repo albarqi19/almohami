@@ -902,3 +902,212 @@
   flex-direction: column;
   gap: 3px;
 }
+
+/* ═══════════════ «مرآة الأداء» — خاصة بصاحب التشغيلة ═══════════════ */
+
+.scp-mirror__private {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--law-navy);
+  border: 1px solid var(--law-gold);
+  background: rgba(197, 165, 114, 0.08);
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+
+.scp-mirror__body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.scp-mirror__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.scp-mirror__summary {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: var(--color-text);
+}
+
+/* نطاق التقدير — قائمة مغلقة بأربع درجات */
+.scp-mirror__band {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 2px 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+.scp-mirror__band--sm { font-size: 10px; padding: 1px 9px; }
+
+.scp-mirror__band--excellent {
+  color: var(--law-navy);
+  border-color: var(--law-gold);
+  background: rgba(197, 165, 114, 0.14);
+}
+
+.scp-mirror__band--strong {
+  color: var(--status-green);
+  border-color: var(--status-green);
+  background: var(--status-green-light);
+}
+
+.scp-mirror__band--good {
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+  background: var(--color-surface-subtle);
+}
+
+.scp-mirror__band--develop {
+  color: var(--status-orange);
+  border-color: var(--status-orange);
+  background: var(--status-orange-light);
+}
+
+/* المقاييس الحتمية */
+.scp-mirror__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.scp-mirror__metric {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+  border-radius: 999px;
+  padding: 2px 11px;
+}
+
+.scp-mirror__metric b { color: var(--law-navy); }
+
+/* المحاور */
+.scp-mirror__axes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+}
+
+.scp-mirror__axis {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: var(--color-surface);
+}
+
+.scp-mirror__axis-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.scp-mirror__axis-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--law-navy);
+}
+
+.scp-mirror__note {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--color-text-secondary);
+}
+
+.scp-mirror__quote {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-subtle);
+  border-inline-start: 2px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.scp-mirror__quote--gold { border-inline-start-color: var(--law-gold); }
+
+/* كتل: مواطن القوة / فرص التقوية / اللحظات */
+.scp-mirror__block {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--color-surface);
+}
+
+.scp-mirror__block--strength { border-inline-start: 3px solid var(--status-green); }
+.scp-mirror__block--improve  { border-inline-start: 3px solid var(--law-gold); }
+.scp-mirror__block--moment   { border-inline-start: 3px solid var(--law-gold); background: rgba(197, 165, 114, 0.05); }
+.scp-mirror__block--missed   { border-inline-start: 3px solid var(--status-orange); }
+
+.scp-mirror__block-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--law-navy);
+  margin-bottom: 6px;
+}
+
+.scp-mirror__block--strength .scp-mirror__block-title { color: var(--status-green); }
+
+.scp-mirror__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.scp-mirror__item { display: flex; flex-direction: column; gap: 2px; }
+
+.scp-mirror__point {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.8;
+}
+
+/* الصيغة الأقوى المقترحة — جوهرة كتلة التحسين */
+.scp-mirror__suggestion {
+  margin: 4px 0 0;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  line-height: 1.85;
+  font-weight: 600;
+  color: var(--law-navy);
+  background: rgba(197, 165, 114, 0.08);
+  border: 1px dashed var(--law-gold);
+  border-radius: 6px;
+}
+
+.scp-mirror__limitations {
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+.scp-mirror__disclaimer {
+  border-bottom: none;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0;
+  padding-top: 9px;
+}

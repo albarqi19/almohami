@@ -109,3 +109,4 @@ import './simple-service.css';
 import './extensionGuide.css';
 import './voice-task-widget.css';
 import './session-copilot.css';
+import './intake-requests.css';

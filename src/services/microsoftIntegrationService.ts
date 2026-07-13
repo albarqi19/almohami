@@ -30,6 +30,13 @@ export interface MicrosoftPreferences {
     sync_mode: SyncMode;
     timezone: string;
     needs_reauth: boolean;
+    mail_intake_enabled?: boolean;
+}
+
+/** حالة صلاحية قراءة البريد (صندوق الطلبات الذكي) */
+export interface MailReadStatus {
+    connected: boolean;
+    mail_read: 'granted' | 'needs_relink' | 'not_connected';
 }
 
 export interface MicrosoftSyncLogEntry {
@@ -88,8 +95,14 @@ class MicrosoftIntegrationService {
         todo_sync_enabled: boolean;
         default_reminder_minutes_before: number;
         sync_mode: SyncMode;
+        mail_intake_enabled: boolean;
     }>): Promise<{ success: boolean; message: string; data: MicrosoftPreferences }> {
         return await apiClient.put('/microsoft/preferences', prefs);
+    }
+
+    /** هل يحمل الربط الحالي صلاحية Mail.Read؟ (صندوق الطلبات الذكي) */
+    async getMailReadStatus(): Promise<MailReadStatus> {
+        return await apiClient.get<MailReadStatus>('/microsoft/mail-read-status');
     }
 
     async disconnect(): Promise<{ success: boolean; message: string }> {

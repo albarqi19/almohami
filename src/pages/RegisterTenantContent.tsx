@@ -209,6 +209,55 @@ const RegisterTenantContent: React.FC = () => {
     const [pendingApproval, setPendingApproval] = useState(false);
     const [success, setSuccess] = useState(false);
 
+    // بوابة إغلاق التسجيل — عند الإغلاق تُعرض قائمة انتظار بدل النموذج.
+    // null = جارٍ الفحص. عند تعذّر الفحص نفترض مفتوحاً (الباك يرفض على أي حال).
+    const [registrationOpen, setRegistrationOpen] = useState<boolean | null>(null);
+    const [waitlist, setWaitlist] = useState({ name: '', company_name: '', phone: '' });
+    const [waitlistErrors, setWaitlistErrors] = useState<FormErrors>({});
+    const [waitlistLoading, setWaitlistLoading] = useState(false);
+    const [waitlistError, setWaitlistError] = useState('');
+    const [waitlistDone, setWaitlistDone] = useState(false);
+
+    React.useEffect(() => {
+        let cancelled = false;
+        apiClient.get<{ success: boolean; data?: { registration_enabled?: boolean } }>('/subscription/plans')
+            .then((resp) => {
+                if (!cancelled) setRegistrationOpen(resp?.data?.registration_enabled !== false);
+            })
+            .catch(() => {
+                if (!cancelled) setRegistrationOpen(true);
+            });
+        return () => { cancelled = true; };
+    }, []);
+
+    const submitWaitlist = async () => {
+        const errs: FormErrors = {};
+        if (!waitlist.name.trim()) errs.name = 'الاسم مطلوب';
+        if (!waitlist.company_name.trim()) errs.company_name = 'اسم الشركة مطلوب';
+        if (!waitlist.phone.trim()) {
+            errs.phone = 'رقم الجوال مطلوب';
+        } else if (!/^05\d{8}$/.test(waitlist.phone)) {
+            errs.phone = 'أدخل رقم جوال سعودي صحيح (05XXXXXXXX)';
+        }
+        setWaitlistErrors(errs);
+        if (Object.keys(errs).length > 0) return;
+
+        setWaitlistLoading(true);
+        setWaitlistError('');
+        try {
+            const resp = await apiClient.post<{ success: boolean; message: string }>('/auth/waitlist', waitlist);
+            if (resp.success) {
+                setWaitlistDone(true);
+            } else {
+                setWaitlistError(resp.message || 'تعذّر إرسال طلبك، حاول مرة أخرى');
+            }
+        } catch (err: any) {
+            setWaitlistError(err?.message || 'تعذّر إرسال طلبك، حاول مرة أخرى');
+        } finally {
+            setWaitlistLoading(false);
+        }
+    };
+
     // خطوة التحقق بالهوية
     const [verifyId, setVerifyId] = useState('');
     const [verifying, setVerifying] = useState(false);
@@ -470,6 +519,121 @@ const RegisterTenantContent: React.FC = () => {
         { number: 2, title: 'بيانات المالك' },
         { number: 3, title: 'مراجعة وتأكيد' },
     ];
+
+    // ===== شاشة: جارٍ فحص حالة التسجيل =====
+    if (registrationOpen === null) {
+        return (
+            <motion.div className="auth-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="auth-success" style={{ padding: '48px 0' }}>
+                    <Loader2 size={28} className="auth-spinner-icon" />
+                </div>
+            </motion.div>
+        );
+    }
+
+    // ===== شاشة: التسجيل مغلق → قائمة الانتظار =====
+    if (!registrationOpen) {
+        if (waitlistDone) {
+            return (
+                <motion.div className="auth-card" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+                    <div className="auth-success">
+                        <span className="auth-success__icon"><Check size={32} /></span>
+                        <h2 className="auth-success__title">تم تسجيل اهتمامك!</h2>
+                        <p className="auth-success__desc">
+                            أنت الآن في قائمة الانتظار. سنتواصل معك على جوالك فور إتاحة التسجيل لمكتبك.
+                        </p>
+                        <Link to="/login" className="button button--primary" style={{ marginTop: 16 }}>
+                            العودة لتسجيل الدخول
+                        </Link>
+                    </div>
+                </motion.div>
+            );
+        }
+
+        return (
+            <motion.div className="auth-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                <header className="auth-card__brand">
+                    <span className="auth-card__logo"><AnimatedBrandMark size={36} /></span>
+                    <div>
+                        <h1 className="auth-card__title">انضم لقائمة الانتظار</h1>
+                        <p className="auth-card__subtitle">نستقبل المكاتب الجديدة على دفعات لضمان جودة الخدمة</p>
+                    </div>
+                </header>
+
+                <motion.div
+                    className="auth-alert"
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{ background: 'rgba(184,137,61,0.10)', borderColor: 'rgba(184,137,61,0.35)' }}
+                >
+                    <Clock size={18} style={{ flexShrink: 0 }} />
+                    <span>التسجيل المباشر متوقف مؤقتاً نظراً لارتفاع الطلب. سجّل بياناتك وسنتواصل معك فور فتح دفعة جديدة.</span>
+                </motion.div>
+
+                {waitlistError && (
+                    <motion.div className="auth-alert auth-alert--error" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
+                        <AlertCircle size={16} /> {waitlistError}
+                    </motion.div>
+                )}
+
+                <form className="auth-form" onSubmit={(e) => { e.preventDefault(); submitWaitlist(); }}>
+                    <div className="form-field">
+                        <label className="form-label" htmlFor="wl_name">الاسم <span className="form-required">*</span></label>
+                        <div className="auth-field">
+                            <span className="auth-field__icon"><User size={18} /></span>
+                            <input
+                                id="wl_name"
+                                type="text"
+                                className={`input auth-field__input--with-icon ${waitlistErrors.name ? 'input--error' : ''}`}
+                                placeholder="اسمك الكريم"
+                                value={waitlist.name}
+                                onChange={(e) => { setWaitlist(prev => ({ ...prev, name: e.target.value })); setWaitlistErrors(prev => { const n = { ...prev }; delete n.name; return n; }); }}
+                                autoFocus
+                            />
+                        </div>
+                        {waitlistErrors.name && <span className="form-error">{waitlistErrors.name}</span>}
+                    </div>
+
+                    <div className="form-field">
+                        <label className="form-label" htmlFor="wl_company">اسم الشركة / المكتب <span className="form-required">*</span></label>
+                        <div className="auth-field">
+                            <span className="auth-field__icon"><Building2 size={18} /></span>
+                            <input
+                                id="wl_company"
+                                type="text"
+                                className={`input auth-field__input--with-icon ${waitlistErrors.company_name ? 'input--error' : ''}`}
+                                placeholder="مثال: مكتب الريادة للمحاماة"
+                                value={waitlist.company_name}
+                                onChange={(e) => { setWaitlist(prev => ({ ...prev, company_name: e.target.value })); setWaitlistErrors(prev => { const n = { ...prev }; delete n.company_name; return n; }); }}
+                            />
+                        </div>
+                        {waitlistErrors.company_name && <span className="form-error">{waitlistErrors.company_name}</span>}
+                    </div>
+
+                    <div className="form-field">
+                        <label className="form-label" htmlFor="wl_phone">رقم الجوال <span className="form-required">*</span></label>
+                        <SaudiPhoneInput
+                            id="wl_phone"
+                            hasError={!!waitlistErrors.phone}
+                            value={waitlist.phone}
+                            onChange={(v) => { setWaitlist(prev => ({ ...prev, phone: v })); setWaitlistErrors(prev => { const n = { ...prev }; delete n.phone; return n; }); }}
+                        />
+                        {waitlistErrors.phone && <span className="form-error">{waitlistErrors.phone}</span>}
+                    </div>
+
+                    <button type="submit" className="button button--primary" disabled={waitlistLoading}>
+                        {waitlistLoading
+                            ? (<><Loader2 size={16} className="auth-spinner-icon" /> جارٍ الإرسال...</>)
+                            : (<><Check size={16} /> سجّلني في قائمة الانتظار</>)}
+                    </button>
+
+                    <div className="auth-form__actions" style={{ justifyContent: 'center' }}>
+                        <Link to="/login" className="auth-link">لديك حساب؟ سجّل الدخول</Link>
+                    </div>
+                </form>
+            </motion.div>
+        );
+    }
 
     // ===== شاشة: نجاح الموثّق (دخول مباشر) =====
     if (success) {

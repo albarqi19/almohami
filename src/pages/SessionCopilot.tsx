@@ -21,10 +21,12 @@ import {
   HelpCircle,
   Info,
   ListChecks,
+  Lock,
   Puzzle,
   Radar,
   RefreshCw,
   ScrollText,
+  Sparkles,
   Square,
   Target,
   X,
@@ -50,6 +52,9 @@ import type {
   CopilotAlertItem,
   CopilotReportData,
   ReportCommitment,
+  SelfReviewBand,
+  SelfReviewData,
+  SelfReviewPoint,
 } from '../services/sessionCopilotService';
 import '../styles/session-copilot.css';
 
@@ -255,6 +260,9 @@ const SessionCopilot: React.FC = () => {
   const stats = reportQ.data?.stats;
   const reportStatus = reportQ.data?.report_status ?? run?.report_status ?? 'none';
   const report = reportQ.data?.report ?? null;
+  // «مرآة الأداء» — يصل من الباك فقط لصاحب التشغيلة الذي فعّلها
+  const selfReviewStatus = reportQ.data?.self_review_status;
+  const selfReview = reportQ.data?.self_review ?? null;
 
   return (
     <div className="scp-page">
@@ -720,6 +728,41 @@ const SessionCopilot: React.FC = () => {
           {reportStatus === 'ready' && report && <ReportView report={report} />}
         </div>
       </section>
+
+      {/* ═══ (د) «مرآة الأداء» — لا تصل من الباك إلا لصاحب التشغيلة الذي فعّلها ═══ */}
+      {selfReviewStatus && (
+        <section className="scp-panel scp-mirror">
+          <div className="scp-panel__header">
+            <h2 className="scp-panel__title">
+              <Sparkles size={14} />
+              مرآة الأداء
+            </h2>
+            <div className="scp-panel__spacer" />
+            <span className="scp-mirror__private">
+              <Lock size={11} />
+              خاصة بك وحدك
+            </span>
+          </div>
+
+          <div className="scp-panel__body">
+            {selfReviewStatus === 'generating' && (
+              <div className="scp-state">
+                <div className="scp-spinner" />
+                <p>الخبير يراجع مرافعتك...</p>
+              </div>
+            )}
+
+            {selfReviewStatus === 'failed' && (
+              <div className="scp-state scp-state--error">
+                <AlertCircle size={24} />
+                <p>تعذّر إعداد المرآة لهذه الجلسة — قد تكون مادة كلامك المدوّنة قليلة.</p>
+              </div>
+            )}
+
+            {selfReviewStatus === 'ready' && selfReview && <SelfReviewView review={selfReview} />}
+          </div>
+        </section>
+      )}
     </div>
   );
 };
@@ -920,6 +963,143 @@ const ReportView: React.FC<{ report: CopilotReportData }> = ({ report }) => {
 };
 
 // ═══════════════════ نسخ التقرير كنص عربي منسّق ═══════════════════
+
+// ═══════════════════ «مرآة الأداء» ═══════════════════
+
+const BAND_CLASS: Record<SelfReviewBand, string> = {
+  'ممتاز': 'excellent',
+  'قوي': 'strong',
+  'جيد': 'good',
+  'يحتاج تطوير': 'develop',
+};
+
+const MIRROR_METRICS: Array<{ key: string; label: string }> = [
+  { key: 'slips_count', label: 'زلّات مرصودة' },
+  { key: 'whispers_count', label: 'همسات ردّ' },
+  { key: 'contradictions_count', label: 'تناقضات الخصم' },
+  { key: 'deadlines_count', label: 'مواعيد التُقطت' },
+];
+
+const MirrorBand: React.FC<{ band: SelfReviewBand; small?: boolean }> = ({ band, small }) => (
+  <span className={`scp-mirror__band scp-mirror__band--${BAND_CLASS[band] ?? 'good'}${small ? ' scp-mirror__band--sm' : ''}`}>
+    {band}
+  </span>
+);
+
+const MirrorPoints: React.FC<{
+  title: string;
+  items: SelfReviewPoint[];
+  tone: 'strength' | 'improve';
+}> = ({ title, items, tone }) => (
+  <div className={`scp-mirror__block scp-mirror__block--${tone}`}>
+    <div className="scp-mirror__block-title">
+      {tone === 'strength' ? <CheckCircle2 size={13} /> : <Target size={13} />}
+      {title}
+    </div>
+    <ul className="scp-mirror__list">
+      {items.map((it, i) => (
+        <li key={i} className="scp-mirror__item">
+          <div className="scp-mirror__point">{it.point}</div>
+          {it.quote && <blockquote className="scp-mirror__quote">«{it.quote}»</blockquote>}
+          {tone === 'strength' && it.why && <p className="scp-mirror__note">{it.why}</p>}
+          {tone === 'improve' && it.suggestion && (
+            <p className="scp-mirror__suggestion">{it.suggestion}</p>
+          )}
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+const SelfReviewView: React.FC<{ review: SelfReviewData }> = ({ review }) => {
+  const objectivesTotal = Number(review.metrics?.objectives_total ?? 0);
+  const objectivesCovered = Number(review.metrics?.objectives_covered ?? 0);
+
+  return (
+    <div className="scp-mirror__body">
+      {/* التقدير العام + الخلاصة */}
+      <div className="scp-mirror__head">
+        <MirrorBand band={review.overall_band} />
+        {review.summary && <p className="scp-mirror__summary">{review.summary}</p>}
+      </div>
+
+      {/* مقاييس حتمية — أرقام محسوبة لا رأي ذكاء */}
+      <div className="scp-mirror__metrics">
+        {objectivesTotal > 0 && (
+          <span className="scp-mirror__metric">
+            <b>{objectivesCovered} من {objectivesTotal}</b> أهداف غُطيت
+          </span>
+        )}
+        {MIRROR_METRICS.map(({ key, label }) => {
+          const value = Number(review.metrics?.[key] ?? 0);
+          if (!value) return null;
+          return (
+            <span key={key} className="scp-mirror__metric">
+              <b>{value}</b> {label}
+            </span>
+          );
+        })}
+      </div>
+
+      {/* المحاور الأربعة */}
+      {(review.axes?.length ?? 0) > 0 && (
+        <div className="scp-mirror__axes">
+          {review.axes!.map((ax, i) => (
+            <div key={i} className="scp-mirror__axis">
+              <div className="scp-mirror__axis-top">
+                <span className="scp-mirror__axis-name">{ax.axis}</span>
+                <MirrorBand band={ax.band} small />
+              </div>
+              {ax.note && <p className="scp-mirror__note">{ax.note}</p>}
+              {ax.quote && <blockquote className="scp-mirror__quote">«{ax.quote}»</blockquote>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* أقوى لحظة */}
+      {review.best_moment?.quote && (
+        <div className="scp-mirror__block scp-mirror__block--moment">
+          <div className="scp-mirror__block-title">
+            <Sparkles size={13} />
+            أقوى لحظة في مرافعتك
+          </div>
+          <blockquote className="scp-mirror__quote scp-mirror__quote--gold">«{review.best_moment.quote}»</blockquote>
+          {review.best_moment.why && <p className="scp-mirror__note">{review.best_moment.why}</p>}
+        </div>
+      )}
+
+      {(review.strengths?.length ?? 0) > 0 && (
+        <MirrorPoints title="مواطن قوتك" items={review.strengths!} tone="strength" />
+      )}
+
+      {(review.improvements?.length ?? 0) > 0 && (
+        <MirrorPoints title="فرص تقويتك في المرات القادمة" items={review.improvements!} tone="improve" />
+      )}
+
+      {/* فرصة فاتت */}
+      {review.missed_opportunity?.quote && (
+        <div className="scp-mirror__block scp-mirror__block--missed">
+          <div className="scp-mirror__block-title">
+            <Crosshair size={13} />
+            فرصة كانت سانحة
+          </div>
+          <blockquote className="scp-mirror__quote">«{review.missed_opportunity.quote}»</blockquote>
+          {review.missed_opportunity.what && <p className="scp-mirror__note">{review.missed_opportunity.what}</p>}
+        </div>
+      )}
+
+      {(review.limitations?.length ?? 0) > 0 && (
+        <p className="scp-mirror__limitations">{review.limitations!.join(' · ')}</p>
+      )}
+
+      <div className="scp-disclaimer scp-mirror__disclaimer">
+        <Lock size={13} />
+        <span>{review.disclaimer || 'مرآة الأداء — تقييم تطويري خاص بك وحدك، لا يراه أحد غيرك في المكتب.'}</span>
+      </div>
+    </div>
+  );
+};
 
 function buildReportText(report: CopilotReportData, caseTitle?: string | null, fileNumber?: string | null): string {
   const lines: string[] = [];
