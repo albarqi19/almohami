@@ -1,70 +1,78 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronRight,
   ChevronDown,
+  ChevronsLeft,
   User,
+  Users,
   Calendar,
-  Clock,
-  MessageSquare,
   CheckCircle,
-  Flag,
-  Share2,
   Trash2,
-  MoreHorizontal,
-  Plus,
   Paperclip,
-  Activity,
   Briefcase,
   ExternalLink,
-  ChevronLeft,
-  Layout,
   ListTodo,
   FileText,
-  SendHorizontal,
+  StickyNote,
   ShieldCheck,
-  Star,
   X,
   AlertCircle,
-  Loader2
+  Loader2,
+  PauseCircle,
+  Play,
+  Pencil,
+  PanelLeft,
+  MessagesSquare,
+  Gavel,
+  Timer,
+  Link2,
+  UploadCloud,
+  AlignRight,
+  Star,
 } from 'lucide-react';
 import { TaskService } from '../services/taskService';
-import { UserService } from '../services/UserService';
-import { TaskCommentService } from '../services/taskCommentService';
 import TaskTimer from '../components/TaskTimer';
 import SubtasksList from '../components/SubtasksList';
-import MentionInput from '../components/MentionInput';
+import TaskTeamChat from '../components/TaskTeamChat';
+import EditTaskModal from '../components/EditTaskModal';
 import { TasksCache } from '../utils/tasksCache';
-import type { Task, TaskComment, TaskStatus, Priority } from '../types';
-// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
+import type { Task, TaskStatus } from '../types';
+
+/**
+ * مساحة المهمة — «النمط الملتصق» (نفس وصفة غرفة تجهيز القضية حرفياً):
+ * ترويسة مدمجة (عنوان + حالة + حقائق)، ثم ثلاثة أعمدة ملتصقة بلا فراغات:
+ * [محادثة المهمة + رائد الذكي — يمين، قابلة للطي] [بيانات المهمة + الفريق +
+ * المهام الفرعية] [التفاصيل + الموقّت + المرفقات + الارتباطات — يسار، قابل
+ * للطي]. لا تمرير خارجي — كل عمود يتمرر داخلياً، وطي أي جانب يمدد الوسط.
+ */
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   todo: { label: 'لم تبدأ', color: '#64748b' },
   in_progress: { label: 'قيد التنفيذ', color: '#3b82f6' },
   review: { label: 'مراجعة', color: '#f59e0b' },
   pending_approval: { label: 'بانتظار الاعتماد', color: '#8b5cf6' },
+  on_hold: { label: 'موقوفة مؤقتاً', color: '#f97316' },
   completed: { label: 'مكتملة', color: '#10b981' },
   cancelled: { label: 'ملغية', color: '#ef4444' }
 };
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string }> = {
-  high: { label: 'عالية', color: '#ef4444' },
+  urgent: { label: 'عاجلة', color: '#ef4444' },
+  high: { label: 'عالية', color: '#f97316' },
   medium: { label: 'متوسطة', color: '#f59e0b' },
   low: { label: 'منخفضة', color: '#3b82f6' }
 };
 
-/** وقت التعليق بصيغة نسبية حقيقية (لا قيمة وهمية). */
-function formatCommentTime(iso?: string): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60) return 'الآن';
-  if (diff < 3600) return `منذ ${Math.floor(diff / 60)} د`;
-  if (diff < 86400) return `منذ ${Math.floor(diff / 3600)} س`;
-  if (diff < 604800) return `منذ ${Math.floor(diff / 86400)} ي`;
-  return d.toLocaleDateString('ar-SA');
-}
+const TYPE_LABELS: Record<string, string> = {
+  review: 'مراجعة',
+  research: 'بحث قانوني',
+  consultation: 'استشارة',
+  court: 'جلسة محكمة',
+  document: 'إعداد مستند',
+  meeting: 'اجتماع',
+  other: 'أخرى',
+};
 
 const TaskDetail: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
@@ -72,58 +80,42 @@ const TaskDetail: React.FC = () => {
 
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
-  const [taskComments, setTaskComments] = useState<TaskComment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [mentions, setMentions] = useState<string[]>([]);
-  const [submittingComment, setSubmittingComment] = useState(false);
-  const [users, setUsers] = useState<Record<string, { name: string }>>({});
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [documents, setDocuments] = useState<any[]>([]);
   const [onedriveConnected, setOnedriveConnected] = useState<boolean | null>(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [subProgress, setSubProgress] = useState<number | null>(null);
+  // الإيقاف المؤقت بسبب إلزامي (#130)
+  const [holdModalOpen, setHoldModalOpen] = useState(false);
+  const [holdReason, setHoldReason] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /* طيّ الأعمدة الجانبية — يبقى عبر الجلسات، وطيّ أيّها يمدد الوسط */
+  const [chatCollapsed, setChatCollapsed] = useState(() => localStorage.getItem('twk_chat_collapsed') === '1');
+  const toggleChatCollapsed = () =>
+    setChatCollapsed((v) => { localStorage.setItem('twk_chat_collapsed', v ? '0' : '1'); return !v; });
+
+  const [sideCollapsed, setSideCollapsed] = useState(() => localStorage.getItem('twk_side_collapsed') === '1');
+  const toggleSideCollapsed = () =>
+    setSideCollapsed((v) => { localStorage.setItem('twk_side_collapsed', v ? '0' : '1'); return !v; });
 
   useEffect(() => {
     if (taskId) {
       loadTask();
-      loadComments();
-      loadUsers();
       loadDocuments();
     }
   }, [taskId]);
 
   const loadTask = async () => {
     try {
-      setLoading(true);
       const taskData = await TaskService.getTask(taskId!);
       setTask(taskData);
     } catch (error) {
       console.error('Error loading task:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadComments = async () => {
-    try {
-      const comments = await TaskCommentService.getTaskComments(taskId!);
-      setTaskComments(comments);
-    } catch (error) {
-      console.error('Error loading comments:', error);
-    }
-  };
-
-  const loadUsers = async () => {
-    try {
-      const usersData = await UserService.getLawyers();
-      const usersMap: Record<string, { name: string }> = {};
-      usersData.forEach(user => {
-        usersMap[user.id] = { name: user.name };
-      });
-      setUsers(usersMap);
-    } catch (error) {
-      console.error('Error loading users:', error);
     }
   };
 
@@ -139,6 +131,14 @@ const TaskDetail: React.FC = () => {
 
   const handleStatusChange = async (newStatus: TaskStatus) => {
     if (!task) return;
+    if (newStatus === 'on_hold') {
+      // on_hold لا تمرّ عبر /status — سبب إلزامي عبر المودال ثم /hold (#130)
+      if (task.status !== 'on_hold') {
+        setHoldReason('');
+        setHoldModalOpen(true);
+      }
+      return;
+    }
     TasksCache.updateTask({ ...task, status: newStatus }); // تحديث متفائل للكانبان
     try {
       await TaskService.updateTaskStatus(taskId!, newStatus);
@@ -147,6 +147,33 @@ const TaskDetail: React.FC = () => {
       console.error('Status update failed', error);
       alert(error?.message || 'تعذّر تحديث حالة المهمة');
       loadTask();
+    }
+  };
+
+  const handleConfirmHold = async () => {
+    if (!holdReason.trim()) return;
+    setActionBusy(true);
+    try {
+      await TaskService.holdTask(taskId!, holdReason.trim());
+      setHoldModalOpen(false);
+      setHoldReason('');
+      await loadTask();
+    } catch (error: any) {
+      alert(error?.message || 'تعذّر إيقاف المهمة');
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleResume = async () => {
+    setActionBusy(true);
+    try {
+      await TaskService.resumeTask(taskId!);
+      await loadTask();
+    } catch (error: any) {
+      alert(error?.message || 'تعذّر استئناف المهمة');
+    } finally {
+      setActionBusy(false);
     }
   };
 
@@ -203,7 +230,7 @@ const TaskDetail: React.FC = () => {
     }
   };
 
-  const handleOpenDoc = async (docId: string) => {
+  const openDoc = async (docId: string) => {
     try {
       const url = await TaskService.getTaskDocumentUrl(taskId!, docId);
       window.open(url, '_blank', 'noopener');
@@ -212,376 +239,673 @@ const TaskDetail: React.FC = () => {
     }
   };
 
-  const toggleRequirement = async (field: 'requires_approval' | 'requires_attachment', value: boolean) => {
-    setActionBusy(true);
-    try {
-      const updated = await TaskService.configureRequirements(taskId!, { [field]: value });
-      setTask(prev => (prev ? { ...prev, ...updated } : prev));
-    } catch (error: any) {
-      alert(error?.message || 'تعذّر تحديث المتطلبات');
-    } finally {
-      setActionBusy(false);
-    }
-  };
-
   const handleDeleteTask = async () => {
-    if (confirm('هل أنت متأكد من حذف هذه المهمة؟')) {
-      try {
-        await TaskService.deleteTask(taskId!);
-        navigate('/tasks');
-      } catch (error) {
-        console.error("Delete failed", error);
-      }
+    if (!window.confirm('حذف هذه المهمة؟ ستنتقل إلى سلة المحذوفات.')) return;
+    try {
+      await TaskService.deleteTask(taskId!);
+      navigate('/tasks');
+    } catch (error: any) {
+      alert(error?.message || 'تعذّر حذف المهمة');
     }
   };
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--color-text-secondary)' }}>جاري تحميل تفاصيل المهمة...</div>;
-  if (!task) return <div style={{ padding: '40px', textAlign: 'center', color: '#ef4444' }}>لم يتم العثور على المهمة</div>;
+  if (loading) {
+    return (
+      <div className="ssp2-page" dir="rtl" style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <p className="ssp2-empty"><Loader2 size={16} className="ssp2-spin" /> جارٍ تحميل المهمة...</p>
+      </div>
+    );
+  }
+
+  if (!task) {
+    return (
+      <div className="ssp2-page" dir="rtl" style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <p className="ssp2-empty"><AlertCircle size={16} /> المهمة غير موجودة أو لا تملك صلاحية عرضها.</p>
+        <button className="ssp2-btn" onClick={() => navigate('/tasks')}>عودة للمهام</button>
+      </div>
+    );
+  }
 
   const currentStatus = STATUS_CONFIG[task.status] || STATUS_CONFIG.todo;
   const currentPriority = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
-  const assigneeName = (task.assignedTo && users[task.assignedTo]?.name) || 'غير محدد';
+  const dueDateObj = task.dueDate ? new Date(task.dueDate) : null;
+  const isOverdue = dueDateObj && dueDateObj < new Date()
+    && !['completed', 'cancelled', 'on_hold'].includes(task.status);
+  const teamMembers = (task.assignees && task.assignees.length > 0)
+    ? task.assignees
+    : (task.assignee ? [task.assignee] : []);
+  const linkedCase = (task as any).case;
+  const linkedClient = (task as any).client;
+  const linkedExec = (task as any).execution_request;
 
   return (
-    <div className="task-detail-page">
-      {/* Sticky Header */}
-      <div className="task-header">
-        <div className="task-header-left">
-          <button className="task-breadcrumb-btn" onClick={() => navigate('/tasks')}>
-            <ChevronRight size={16} />
-            المهام
-          </button>
-          <span className="task-bc-sep">/</span>
-          <span className="task-id-badge">TASK-{taskId?.slice(0, 4)}</span>
-        </div>
+    <div className="ssp2-page cpk-page twk-page" dir="rtl">
 
-        <div className="task-header-actions">
-          {/* Status Selector */}
-          <div className="status-select-wrapper">
-            <button
-              className="status-select-btn"
-              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              style={{
-                backgroundColor: currentStatus.color + '15',
-                color: currentStatus.color,
-              }}
-            >
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: currentStatus.color }}></span>
-              {currentStatus.label}
-              <ChevronDown size={14} />
+      {/* ── الترويسة: العنوان والحالة والإجراءات + صف الحقائق ── */}
+      <header className="ssp2-header">
+        <div className="ssp2-header__top">
+          <div className="ssp2-header__info">
+            <button className="ssp2-icon-btn" onClick={() => navigate('/tasks')} title="عودة للمهام">
+              <ChevronRight size={17} />
             </button>
+            <span className="ssp2-header__badge"><ListTodo size={13} /> مساحة المهمة</span>
+            <h1 className="ssp2-header__title">{task.title}</h1>
+            <span
+              className="twk-priority-chip"
+              style={{ color: currentPriority.color, borderColor: currentPriority.color }}
+            >
+              {currentPriority.label}
+            </span>
+          </div>
 
-            <AnimatePresence>
+          <div className="ssp2-header__actions">
+            {/* الحالة — قائمة منسدلة؛ «موقوفة مؤقتاً» تفتح مودال السبب (#130) */}
+            <div className="twk-status-wrap">
+              <button
+                className="ssp2-btn twk-status-btn"
+                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                style={{ color: currentStatus.color, borderColor: currentStatus.color + '55', background: currentStatus.color + '12' }}
+              >
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: currentStatus.color }} />
+                {currentStatus.label}
+                <ChevronDown size={13} />
+              </button>
               {showStatusDropdown && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="status-dropdown"
-                  >
+                  <div className="twk-overlay" onClick={() => setShowStatusDropdown(false)} />
+                  <div className="twk-status-menu">
                     {Object.entries(STATUS_CONFIG).filter(([key]) => key !== 'pending_approval').map(([key, config]) => (
                       <button
                         key={key}
-                        className="status-option"
-                        onClick={() => {
-                          handleStatusChange(key as TaskStatus);
-                          setShowStatusDropdown(false);
-                        }}
+                        className="twk-status-option"
+                        onClick={() => { handleStatusChange(key as TaskStatus); setShowStatusDropdown(false); }}
                         style={{ color: task.status === key ? config.color : 'inherit' }}
                       >
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: config.color }}></span>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: config.color, flexShrink: 0 }} />
                         {config.label}
-                        {task.status === key && <CheckCircle size={14} style={{ marginRight: 'auto' }} />}
+                        {task.status === key && <CheckCircle size={13} style={{ marginRight: 'auto' }} />}
                       </button>
                     ))}
-                  </motion.div>
+                  </div>
                 </>
               )}
-            </AnimatePresence>
+            </div>
+
+            {task.status === 'on_hold' ? (
+              <button className="ssp2-btn ssp2-btn--success" disabled={actionBusy} onClick={handleResume}>
+                <Play size={14} /> استئناف
+              </button>
+            ) : !['completed', 'cancelled', 'pending_approval'].includes(task.status) && (
+              <button className="ssp2-btn" disabled={actionBusy} onClick={() => { setHoldReason(''); setHoldModalOpen(true); }}>
+                <PauseCircle size={14} /> إيقاف مؤقت
+              </button>
+            )}
+
+            <button className="ssp2-btn" onClick={() => setEditOpen(true)}>
+              <Pencil size={14} /> تعديل البيانات
+            </button>
+            <button className="ssp2-icon-btn" onClick={handleDeleteTask} title="حذف المهمة">
+              <Trash2 size={15} />
+            </button>
+            <button
+              className="ssp2-icon-btn"
+              onClick={toggleSideCollapsed}
+              title={sideCollapsed ? 'فتح عمود التفاصيل والأدوات' : 'طيّ عمود التفاصيل والأدوات'}
+            >
+              <PanelLeft size={16} />
+            </button>
           </div>
-
-          <button className="task-icon-btn" onClick={handleDeleteTask} title="حذف">
-            <Trash2 size={16} />
-          </button>
-          <button className="task-icon-btn" title="خيارات إضافية">
-            <MoreHorizontal size={16} />
-          </button>
         </div>
-      </div>
 
-      <div className="task-content-wrapper">
+        <div className="ssp2-header__facts">
+          {subProgress !== null && (
+            <>
+              <span className="ssp2-fact cpk-progressfact">
+                <span className="cpk-progressbar"><span style={{ width: `${subProgress}%` }} /></span>
+                <b>{subProgress}%</b>
+                <span className="ssp2-fact__label">من الفرعيات</span>
+              </span>
+              <span className="ssp2-fact__sep" />
+            </>
+          )}
+          <span className="ssp2-fact">
+            <Calendar size={13} />
+            <span className="ssp2-fact__label">الاستحقاق</span>
+            <b style={isOverdue ? { color: '#ef4444' } : undefined}>
+              {dueDateObj ? dueDateObj.toLocaleDateString('ar-SA') : 'بلا موعد'}
+              {isOverdue ? ' (متأخرة!)' : ''}
+            </b>
+          </span>
+          <span className="ssp2-fact__sep" />
+          <span className="ssp2-fact">
+            <Users size={13} />
+            <span className="ssp2-fact__label">المكلّفون</span>
+            <b>{teamMembers.length ? teamMembers.map((m: any) => m.name).join('، ') : 'غير محدد'}</b>
+          </span>
+          <span className="ssp2-fact__sep" />
+          <span className="ssp2-fact">
+            {linkedCase ? <Briefcase size={13} /> : linkedClient ? <User size={13} /> : linkedExec ? <Gavel size={13} /> : <Link2 size={13} />}
+            <span className="ssp2-fact__label">الارتباط</span>
+            <b>
+              {linkedCase ? linkedCase.title
+                : linkedClient ? `العميل: ${linkedClient.name}`
+                : linkedExec ? `طلب تنفيذ ${linkedExec.request_number || ''}`
+                : 'مهمة عامة'}
+            </b>
+          </span>
+          {(task.requires_approval || task.requires_attachment) && (
+            <>
+              <span className="ssp2-fact__sep" />
+              <span className="ssp2-fact">
+                <ShieldCheck size={13} />
+                <span className="ssp2-fact__label">المتطلبات</span>
+                <b>
+                  {[task.requires_approval ? 'اعتماد الإنجاز' : null, task.requires_attachment ? 'مرفق إلزامي' : null]
+                    .filter(Boolean).join(' + ')}
+                </b>
+              </span>
+            </>
+          )}
+          {task.type && TYPE_LABELS[task.type] && (
+            <>
+              <span className="ssp2-fact__sep" />
+              <span className="ssp2-fact">
+                <FileText size={13} />
+                <span className="ssp2-fact__label">النوع</span>
+                <b>{TYPE_LABELS[task.type]}</b>
+              </span>
+            </>
+          )}
+        </div>
+      </header>
 
-        {/* Main Content Area (Left) */}
-        <div className="task-main-col">
-          <div className="task-main-inner">
-            {/* Task Title */}
-            <input
-              className="task-title-input"
-              defaultValue={task.title}
-              placeholder="عنوان المهمة"
-              spellCheck={false}
-            />
+      {/* ── ثلاثة أعمدة ملتصقة: [محادثة — يمين] [بيانات + فرعيات] [تفاصيل وأدوات — يسار] ── */}
+      <div className="ssp2-layout">
 
-            {/* شريط بوابة الاعتماد */}
+        {/* عمود المحادثة — متصل بالحواف، قابل للطيّ إلى شريط رفيع */}
+        <aside className={`ssp2-chatcol${chatCollapsed ? ' ssp2-chatcol--min' : ''}`}>
+          {chatCollapsed ? (
+            <button className="ssp2-chatcol__reopen" onClick={toggleChatCollapsed} title="فتح محادثة المهمة">
+              <MessagesSquare size={17} />
+              <span>محادثة المهمة</span>
+            </button>
+          ) : (
+            <TaskTeamChat taskId={taskId!} onCollapse={toggleChatCollapsed} onTaskMutated={loadTask} />
+          )}
+        </aside>
+
+        {/* مساحة العمل الوسطى: أشرطة الحالة ثم بيانات المهمة ثم المهام الفرعية */}
+        <main className="ssp2-work">
+          <div className="cpk-work__scroll">
+
+            {/* أشرطة الحالة — شرائح رفيعة أعلى العمود (لا بطاقات كبيرة) */}
+            {task.status === 'on_hold' && (
+              <div className="twk-bar twk-bar--hold">
+                <PauseCircle size={15} />
+                <span className="twk-bar__text">
+                  <b>موقوفة مؤقتاً{task.hold_reason ? `: ${task.hold_reason}` : ''}</b>
+                  <small>
+                    أوقفها {task.held_by_user?.name || 'غير معروف'}
+                    {task.held_at ? ` — ${new Date(task.held_at).toLocaleDateString('ar-SA')}` : ''}
+                    {task.status_before_hold && STATUS_CONFIG[task.status_before_hold]
+                      ? ` · تعود إلى «${STATUS_CONFIG[task.status_before_hold].label}» عند الاستئناف`
+                      : ''}
+                  </small>
+                </span>
+                <button className="ssp2-btn ssp2-btn--success" disabled={actionBusy} onClick={handleResume}>
+                  <Play size={13} /> استئناف
+                </button>
+              </div>
+            )}
             {task.status === 'pending_approval' && (
-              <div className="task-approval-bar pending">
-                <div className="task-approval-bar-text">
-                  <ShieldCheck size={18} />
-                  <span>أنهى المنفّذ هذه المهمة وهي بانتظار الاعتماد</span>
-                </div>
+              <div className="twk-bar twk-bar--pending">
+                <ShieldCheck size={15} />
+                <span className="twk-bar__text"><b>أنهى المنفّذ هذه المهمة وهي بانتظار الاعتماد</b></span>
                 {task.can_approve && (
-                  <div className="task-approval-bar-actions">
-                    <button className="task-approve-btn" disabled={actionBusy} onClick={handleApprove}>
-                      <CheckCircle size={15} /> اعتماد
+                  <span className="twk-bar__actions">
+                    <button className="ssp2-btn ssp2-btn--success" disabled={actionBusy} onClick={handleApprove}>
+                      <CheckCircle size={13} /> اعتماد
                     </button>
-                    <button className="task-reject-btn" disabled={actionBusy} onClick={handleReject}>
-                      <X size={15} /> رفض
+                    <button className="ssp2-btn twk-btn-danger" disabled={actionBusy} onClick={handleReject}>
+                      <X size={13} /> رفض
                     </button>
-                  </div>
+                  </span>
                 )}
               </div>
             )}
             {task.status === 'completed' && task.approved_by && (
-              <div className="task-approval-bar approved">
-                <ShieldCheck size={16} />
-                <span>
-                  اعتُمد الإنجاز{task.approver?.name ? ` بواسطة ${task.approver.name}` : ''}
-                  {task.approved_at ? ` — ${new Date(task.approved_at).toLocaleDateString('ar-SA')}` : ''}
+              <div className="twk-bar twk-bar--approved">
+                <ShieldCheck size={15} />
+                <span className="twk-bar__text">
+                  <b>
+                    اعتُمد الإنجاز{(task as any).approver?.name ? ` بواسطة ${(task as any).approver.name}` : ''}
+                    {task.approved_at ? ` — ${new Date(task.approved_at).toLocaleDateString('ar-SA')}` : ''}
+                  </b>
                 </span>
               </div>
             )}
-            {task.status !== 'pending_approval' && task.status !== 'completed' && task.rejection_reason && (
-              <div className="task-approval-bar rejected">
-                <AlertCircle size={16} />
-                <span>أُعيدت للتنفيذ: {task.rejection_reason}</span>
+            {!['pending_approval', 'completed'].includes(task.status) && task.rejection_reason && (
+              <div className="twk-bar twk-bar--rejected">
+                <AlertCircle size={15} />
+                <span className="twk-bar__text"><b>أُعيدت للتنفيذ: {task.rejection_reason}</b></span>
               </div>
             )}
 
-            {/* Description */}
-            <div className="task-section">
-              <div className="task-section-label">
-                <FileText size={16} /> الوصف
+            {/* بيانات المهمة: الوصف والملاحظات وفريق المهمة */}
+            <section className="ssp2-card cpk-block">
+              <div className="ssp2-card__head">
+                <span className="ssp2-card__title"><AlignRight size={15} /> بيانات المهمة</span>
+                <span className="ssp2-card__headtools">
+                  <button className="ssp2-icon-btn" onClick={() => setEditOpen(true)} title="تعديل بيانات المهمة">
+                    <Pencil size={14} />
+                  </button>
+                </span>
               </div>
-              <textarea
-                className="task-desc-editor"
-                placeholder="أضف وصفاً تفصيلياً..."
-                defaultValue={task.description}
-              />
-            </div>
 
-            {/* Subtasks */}
-            <div className="task-section">
-              <div className="section-header">
-                <ListTodo size={16} />
-                المهام الفرعية
-              </div>
-              <SubtasksList
-                taskId={taskId!}
-                onProgressChange={() => { }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Activity & Comments column */}
-        <aside className="task-activity-col">
-          <div className="section-header">
-            <Activity size={16} />
-            النشاط والتعليقات
-          </div>
-
-          {/* Comments List (تمرّر، بيانات حقيقية) */}
-          <div className="task-activity-feed">
-            {taskComments.length > 0 ? (
-              taskComments.map(comment => {
-                const authorName = comment.user?.name || users[comment.userId]?.name || 'مستخدم';
-                return (
-                  <div key={comment.id} className="tc-comment">
-                    <div className="tc-comment__avatar">{authorName.charAt(0) || '؟'}</div>
-                    <div className="tc-comment__body">
-                      <div className="tc-comment__head">
-                        <span className="tc-comment__author">{authorName}</span>
-                        <span className="tc-comment__time">{formatCommentTime(comment.createdAt)}</span>
-                      </div>
-                      <div className="tc-comment__text">{comment.comment}</div>
-                    </div>
+              <div className="cpk-info">
+                <div className="cpk-longfields">
+                  <div className="cpk-longfield">
+                    <span className="cpk-longfield__label"><AlignRight size={12} /> وصف المهمة</span>
+                    <p className="cpk-longfield__text">
+                      {task.description?.trim() || <span className="cpk-empty">لا وصف بعد — أضفه من «تعديل البيانات» ليفهم الفريق (ورائد) المطلوب.</span>}
+                    </p>
                   </div>
-                );
-              })
-            ) : (
-              <div className="task-empty">لا توجد تعليقات بعد</div>
-            )}
-          </div>
+                  <div className="cpk-longfield">
+                    <span className="cpk-longfield__label"><StickyNote size={12} /> الملاحظات</span>
+                    <p className="cpk-longfield__text">
+                      {task.notes?.trim() || <span className="cpk-empty">لا ملاحظات.</span>}
+                    </p>
+                  </div>
+                </div>
 
-          {/* Comment Input (مثبّت أسفل، ممتدّ للحواف) */}
-          <div className="comment-input-box">
-            <MentionInput
-              value={newComment}
-              onChange={setNewComment}
-              onMentionsChange={setMentions}
-              placeholder="اكتب تعليقاً… (اذكر زميلاً بـ @)"
+                <div className="cpk-lawyers">
+                  <span className="cpk-longfield__label"><Users size={12} /> فريق المهمة</span>
+                  <div className="cpk-lawyers__chips">
+                    {teamMembers.length === 0 ? (
+                      <span className="cpk-empty">لم يُكلَّف أحد بعد.</span>
+                    ) : (
+                      teamMembers.map((m: any) => {
+                        const isPrimary = m?.pivot?.is_primary || (teamMembers.length === 1);
+                        return (
+                          <span key={m.id} className={`cpk-lawyer-chip${isPrimary ? ' cpk-lawyer-chip--primary' : ''}`}>
+                            {isPrimary && <Star size={11} />}
+                            {m.name}
+                            {isPrimary && <span className="cpk-lawyer-chip__role">مسؤول</span>}
+                          </span>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* المهام الفرعية — تملأ الباقي وتتمرر داخلياً (إيقاف/استئناف #130 بداخلها) */}
+            <section className="ssp2-card cpk-block cpk-block--tasks">
+              <div className="ssp2-card__head">
+                <span className="ssp2-card__title"><ListTodo size={15} /> المهام الفرعية</span>
+              </div>
+              <div className="cpk-tasks twk-subtasks">
+                <SubtasksList
+                  taskId={taskId!}
+                  onProgressChange={(p) => setSubProgress(p)}
+                  onTaskChanged={loadTask}
+                />
+              </div>
+            </section>
+          </div>
+        </main>
+
+        {/* عمود التفاصيل والأدوات — أقصى اليسار، متصل وقابل للطيّ إلى شريط رفيع */}
+        <aside className={`cpk-sidecol${sideCollapsed ? ' cpk-sidecol--min' : ''}`}>
+          {sideCollapsed ? (
+            <button className="ssp2-chatcol__reopen" onClick={toggleSideCollapsed} title="فتح التفاصيل والأدوات">
+              <Paperclip size={17} />
+              <span>التفاصيل والأدوات</span>
+            </button>
+          ) : (
+            <>
+              <div className="ssp2-card__head cpk-sidecol__head">
+                <span className="ssp2-card__title"><Paperclip size={15} /> التفاصيل والأدوات</span>
+                <span className="ssp2-card__headtools">
+                  <button className="ssp2-icon-btn" onClick={toggleSideCollapsed} title="طيّ العمود">
+                    <ChevronsLeft size={15} />
+                  </button>
+                </span>
+              </div>
+
+              <div className="cpk-sidecol__scroll">
+                {/* التفاصيل */}
+                <section className="ssp2-card">
+                  <div className="ssp2-card__head">
+                    <span className="ssp2-card__title"><FileText size={14} /> التفاصيل</span>
+                  </div>
+                  <div className="twk-kvlist">
+                    <div className="twk-kv">
+                      <span className="twk-kv__label">أُنشئت</span>
+                      <b>{task.createdAt ? new Date(task.createdAt).toLocaleDateString('ar-SA') : '—'}</b>
+                    </div>
+                    <div className="twk-kv">
+                      <span className="twk-kv__label">أسندها</span>
+                      <b>{(task as any).assigner?.name || '—'}</b>
+                    </div>
+                    <div className="twk-kv">
+                      <span className="twk-kv__label">الساعات المقدرة</span>
+                      <b>{(task as any).estimatedHours ?? (task as any).estimated_hours ?? '—'}</b>
+                    </div>
+                    <div className="twk-kv">
+                      <span className="twk-kv__label">الساعات الفعلية</span>
+                      <b>{(task as any).actualHours ?? (task as any).actual_hours ?? '—'}</b>
+                    </div>
+                    {task.completedAt && (
+                      <div className="twk-kv">
+                        <span className="twk-kv__label">اكتملت</span>
+                        <b>{new Date(task.completedAt).toLocaleDateString('ar-SA')}</b>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* الموقّت */}
+                <section className="ssp2-card">
+                  <div className="ssp2-card__head">
+                    <span className="ssp2-card__title"><Timer size={14} /> تتبع الوقت</span>
+                  </div>
+                  <div className="twk-sideblock">
+                    <TaskTimer taskId={taskId!} taskTitle={task.title} caseTitle={linkedCase?.title || ''} />
+                  </div>
+                </section>
+
+                {/* المرفقات */}
+                <section className="ssp2-card">
+                  <div className="ssp2-card__head">
+                    <span className="ssp2-card__title"><Paperclip size={14} /> المرفقات</span>
+                    <span className="ssp2-card__headtools">
+                      <span className="ssp2-card__meta">{documents.length}</span>
+                    </span>
+                  </div>
+                  <div className="twk-sideblock">
+                    {task.requires_attachment && documents.length === 0 && (
+                      <p className="twk-attach-warn"><AlertCircle size={12} /> هذه المهمة تتطلب مرفقاً قبل إكمالها.</p>
+                    )}
+                    {documents.length === 0 ? (
+                      <p className="cpk-empty">لا مرفقات بعد.</p>
+                    ) : (
+                      <div className="twk-docs">
+                        {documents.map((doc: any) => (
+                          <div key={doc.id} className="twk-doc">
+                            <button className="twk-doc__open" onClick={() => openDoc(String(doc.id))} title="فتح المرفق">
+                              <FileText size={13} />
+                              <span>{doc.title || doc.file_name || doc.name || 'مستند'}</span>
+                              <ExternalLink size={11} style={{ opacity: 0.5 }} />
+                            </button>
+                            {task.can_manage_documents && (
+                              <button className="twk-doc__del" onClick={() => handleDeleteDoc(String(doc.id))} title="حذف المرفق">
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {task.can_manage_documents && (
+                      <>
+                        <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleUploadFile} />
+                        <button
+                          className="ssp2-btn twk-upload-btn"
+                          disabled={uploadingDoc || onedriveConnected === false}
+                          onClick={() => fileInputRef.current?.click()}
+                          title={onedriveConnected === false ? 'اربط OneDrive من الإعدادات أولاً' : 'رفع مرفق'}
+                        >
+                          {uploadingDoc ? <Loader2 size={13} className="ssp2-spin" /> : <UploadCloud size={13} />}
+                          {uploadingDoc ? 'جارٍ الرفع...' : 'رفع مرفق'}
+                        </button>
+                        {onedriveConnected === false && (
+                          <p className="cpk-empty" style={{ marginTop: 6 }}>OneDrive غير مربوط — اربطه من الإعدادات لرفع المرفقات.</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </section>
+
+                {/* الارتباطات */}
+                <section className="ssp2-card">
+                  <div className="ssp2-card__head">
+                    <span className="ssp2-card__title"><Link2 size={14} /> الارتباطات</span>
+                  </div>
+                  <div className="twk-sideblock">
+                    {linkedCase ? (
+                      <Link to={`/cases/${linkedCase.id}`} className="twk-link">
+                        <Briefcase size={13} />
+                        <span>{linkedCase.title}{linkedCase.file_number ? ` (${linkedCase.file_number})` : ''}</span>
+                        <ExternalLink size={11} style={{ opacity: 0.5 }} />
+                      </Link>
+                    ) : linkedClient ? (
+                      <Link to={`/clients/${linkedClient.id}`} className="twk-link">
+                        <User size={13} />
+                        <span>العميل: {linkedClient.name}</span>
+                        <ExternalLink size={11} style={{ opacity: 0.5 }} />
+                      </Link>
+                    ) : linkedExec ? (
+                      <Link to="/execution-requests" className="twk-link">
+                        <Gavel size={13} />
+                        <span>طلب تنفيذ {linkedExec.request_number || ''}</span>
+                        <ExternalLink size={11} style={{ opacity: 0.5 }} />
+                      </Link>
+                    ) : (
+                      <p className="cpk-empty">مهمة عامة (غير مرتبطة بقضية أو عميل).</p>
+                    )}
+                  </div>
+                </section>
+              </div>
+            </>
+          )}
+        </aside>
+      </div>
+
+      {/* مودال الإيقاف المؤقت — السبب إلزامي (#130) */}
+      {holdModalOpen && (
+        <div
+          onClick={() => !actionBusy && setHoldModalOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--dashboard-card, #fff)', borderRadius: 12, padding: 24, width: 420, maxWidth: '90vw', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(249,115,22,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <PauseCircle size={20} color="#f97316" />
+              </div>
+              <h3 style={{ margin: 0, fontSize: 16, color: 'var(--color-text)' }}>إيقاف المهمة مؤقتاً</h3>
+            </div>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, lineHeight: 1.7, marginBottom: 10 }}>
+              تُستثنى الموقوفة من تذكيرات التأخير وتعود لحالتها الحالية عند الاستئناف.
+            </p>
+            <textarea
+              autoFocus
+              value={holdReason}
+              onChange={(e) => setHoldReason(e.target.value)}
+              placeholder="سبب الإيقاف (إلزامي) — مثل: بانتظار رد العميل على الاستفسار..."
+              maxLength={300}
+              rows={3}
+              style={{
+                width: '100%', resize: 'vertical', boxSizing: 'border-box',
+                border: '1px solid var(--color-border, #e5e5e5)', borderRadius: 8,
+                padding: '10px 12px', fontSize: 13, fontFamily: 'inherit',
+                background: 'var(--color-surface, #fff)', color: 'var(--color-text)',
+                marginBottom: 16,
+              }}
             />
-            <div className="comment-footer">
+            <div style={{ display: 'flex', gap: 8 }}>
               <button
-                className="send-btn"
-                disabled={!newComment.trim() || submittingComment}
-                onClick={async () => {
-                  if (!newComment.trim()) return;
-                  setSubmittingComment(true);
-                  await TaskCommentService.createTaskComment(taskId!, { comment: newComment, mentions });
-                  setNewComment('');
-                  loadComments();
-                  setSubmittingComment(false);
-                }}
+                onClick={handleConfirmHold}
+                disabled={actionBusy || !holdReason.trim()}
+                style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: actionBusy || !holdReason.trim() ? 'default' : 'pointer', fontSize: 14, fontWeight: 600, opacity: actionBusy || !holdReason.trim() ? 0.6 : 1 }}
               >
-                {submittingComment ? 'جارٍ الإرسال…' : <>إرسال <SendHorizontal size={14} /></>}
+                {actionBusy ? 'جارٍ الإيقاف...' : 'إيقاف مؤقت'}
+              </button>
+              <button
+                onClick={() => setHoldModalOpen(false)}
+                disabled={actionBusy}
+                style={{ background: 'transparent', color: 'var(--color-text)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '9px 18px', cursor: actionBusy ? 'default' : 'pointer', fontSize: 14 }}
+              >
+                إلغاء
               </button>
             </div>
           </div>
-        </aside>
-
-        {/* Sidebar Properties (Right) */}
-        <div className="task-sidebar">
-
-          {/* Section 1: Core Info */}
-          <div className="sidebar-section task-sidebar-card">
-            <div className="sidebar-title">معلومات أساسية</div>
-
-            <div className="task-kv">
-              <span className="task-kv__label"><User size={14} /> المكلّفون</span>
-              <span className="task-kv__value">
-                {task.assignees && task.assignees.length > 0 ? (
-                  <span style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
-                    {task.assignees.map((a) => (
-                      <span key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        {a.pivot?.is_primary && (
-                          <Star size={12} fill="var(--law-gold, #c8a24a)" color="var(--law-gold, #c8a24a)" />
-                        )}
-                        <span>{a.name}</span>
-                      </span>
-                    ))}
-                  </span>
-                ) : (
-                  assigneeName
-                )}
-              </span>
-            </div>
-
-            <div className="task-kv">
-              <span className="task-kv__label"><Calendar size={14} /> الاستحقاق</span>
-              <span className="task-kv__value">
-                {task.dueDate ? new Date(task.dueDate).toLocaleDateString('ar-SA') : 'غير محدد'}
-              </span>
-            </div>
-
-            <div className="task-kv">
-              <span className="task-kv__label"><Flag size={14} /> الأولوية</span>
-              <span className="task-kv__value" style={{ color: currentPriority.color }}>
-                {currentPriority.label}
-              </span>
-            </div>
-          </div>
-
-          {/* Section: Attachments */}
-          <div className="sidebar-section task-sidebar-card">
-            <div className="sidebar-title sidebar-title--row">
-              <span>المرفقات{task.requires_attachment ? ' *' : ''}</span>
-              {task.can_manage_documents && (
-                <button className="task-attach-add" disabled={uploadingDoc} onClick={() => fileInputRef.current?.click()}>
-                  {uploadingDoc ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                  <span>إضافة</span>
-                </button>
-              )}
-            </div>
-            <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleUploadFile} />
-            {onedriveConnected === false && (
-              <div className="task-attach-note warn"><AlertCircle size={13} /> اربط OneDrive من الإعدادات لرفع المرفقات</div>
-            )}
-            {task.requires_attachment && documents.length === 0 && (
-              <div className="task-attach-note required"><AlertCircle size={13} /> هذه المهمة تتطلب إرفاق مستند</div>
-            )}
-            {documents.length === 0 ? (
-              <div className="task-attach-empty">لا توجد مرفقات</div>
-            ) : (
-              documents.map((d: any) => (
-                <div key={d.id} className="task-doc-row">
-                  <FileText size={14} />
-                  <button type="button" className="task-doc-name" onClick={() => handleOpenDoc(String(d.id))}>
-                    {d.title || d.file_name}
-                  </button>
-                  {task.can_manage_documents && (
-                    <button className="task-doc-del" onClick={() => handleDeleteDoc(String(d.id))} title="حذف المرفق">
-                      <Trash2 size={13} />
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Section: Requirements */}
-          <div className="sidebar-section task-sidebar-card">
-            <div className="sidebar-title">متطلبات الإنجاز</div>
-            <label className="task-req-toggle">
-              <input
-                type="checkbox"
-                checked={!!task.requires_approval}
-                disabled={actionBusy || !task.can_configure_requirements}
-                onChange={(e) => toggleRequirement('requires_approval', e.target.checked)}
-              />
-              <ShieldCheck size={14} />
-              <span>تتطلب موافقة قبل الإكمال</span>
-            </label>
-            <label className="task-req-toggle">
-              <input
-                type="checkbox"
-                checked={!!task.requires_attachment}
-                disabled={actionBusy || !task.can_configure_requirements}
-                onChange={(e) => toggleRequirement('requires_attachment', e.target.checked)}
-              />
-              <Paperclip size={14} />
-              <span>تتطلب إرفاق مستند</span>
-            </label>
-          </div>
-
-          {/* Section 2: Time Tracking */}
-          <div className="sidebar-section task-sidebar-card">
-            <div className="sidebar-title">تتبع الوقت</div>
-            <TaskTimer taskId={taskId!} taskTitle={task.title} caseTitle={(task as any).case?.title || ''} />
-          </div>
-
-          {/* Section 3: Related */}
-          <div className="sidebar-section task-sidebar-card">
-            <div className="sidebar-title">الارتباطات</div>
-            {(task as any).case ? (
-              <Link to={`/cases/${(task as any).case.id}`} className="task-kv task-kv--link">
-                <span className="task-kv__label"><Briefcase size={14} /> القضية</span>
-                <span className="task-kv__value">
-                  {(task as any).case.title} <ExternalLink size={11} style={{ opacity: 0.5 }} />
-                </span>
-              </Link>
-            ) : (task as any).client ? (
-              <Link to={`/clients/${(task as any).client.id}`} className="task-kv task-kv--link">
-                <span className="task-kv__label"><User size={14} /> العميل</span>
-                <span className="task-kv__value">
-                  {(task as any).client.name} <ExternalLink size={11} style={{ opacity: 0.5 }} />
-                </span>
-              </Link>
-            ) : (
-              <div className="task-kv-empty">مهمة عامة (غير مرتبطة)</div>
-            )}
-          </div>
-
-          {/* Meta Info */}
-          <div className="task-meta-foot">
-            تم الإنشاء: {new Date(task.createdAt || Date.now()).toLocaleDateString('ar-SA')}
-          </div>
-
         </div>
+      )}
 
-      </div>
+      <EditTaskModal
+        isOpen={editOpen}
+        onClose={() => setEditOpen(false)}
+        task={task}
+        onTaskUpdated={() => { setEditOpen(false); loadTask(); }}
+      />
+
+      {/* لمسات المساحة (twk-*) فوق وصفة ssp2/cpk المشتركة */}
+      <style>{`
+        .twk-priority-chip {
+          font-size: 11px;
+          font-weight: 700;
+          border: 1px solid;
+          border-radius: 999px;
+          padding: 2px 10px;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .twk-status-wrap { position: relative; }
+        .twk-status-btn { font-weight: 700; }
+        .twk-overlay { position: fixed; inset: 0; z-index: 90; }
+        .twk-status-menu {
+          position: absolute;
+          top: calc(100% + 4px);
+          inset-inline-end: 0;
+          z-index: 100;
+          min-width: 190px;
+          background: var(--dashboard-card, #fff);
+          border: 1px solid var(--color-border, #e5e5e5);
+          border-radius: 10px;
+          box-shadow: 0 12px 34px rgba(0,0,0,0.14);
+          padding: 4px;
+          display: flex;
+          flex-direction: column;
+        }
+        .twk-status-option {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          padding: 8px 10px;
+          background: none;
+          border: none;
+          border-radius: 7px;
+          font-size: 12.5px;
+          cursor: pointer;
+          text-align: right;
+          color: var(--color-text, #1a1a1a);
+        }
+        .twk-status-option:hover { background: var(--color-surface-subtle, #f4f5f7); }
+
+        /* أشرطة الحالة — شرائح رفيعة ملتصقة أعلى العمود الأوسط */
+        .twk-bar {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 14px;
+          font-size: 12.5px;
+          border-bottom: 1px solid var(--color-border, #e8e8e8);
+        }
+        .twk-bar__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+        .twk-bar__text b { font-size: 12.5px; }
+        .twk-bar__text small { font-size: 11px; opacity: 0.75; }
+        .twk-bar__actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .twk-bar--hold { background: rgba(249,115,22,0.07); color: #c2570b; }
+        .twk-bar--pending { background: rgba(139,92,246,0.07); color: #6d4fc4; }
+        .twk-bar--approved { background: rgba(16,185,129,0.07); color: #0b7a5c; }
+        .twk-bar--rejected { background: rgba(239,68,68,0.07); color: #c0392b; }
+        .twk-btn-danger { color: #ef4444; border-color: rgba(239,68,68,0.4); }
+
+        /* المهام الفرعية داخل البلوك الملتصق — تسطيح بطاقة المكوّن */
+        .twk-subtasks .subtasks-list {
+          border: none;
+          border-radius: 0;
+          padding: 10px 14px;
+          background: transparent;
+        }
+
+        /* عمود التفاصيل: بلوكات مدمجة وقوائم قيم */
+        .twk-kvlist { display: flex; flex-direction: column; }
+        .twk-kv {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 7px 14px;
+          font-size: 12px;
+          border-bottom: 1px dashed var(--color-border, #ececec);
+        }
+        .twk-kv:last-child { border-bottom: none; }
+        .twk-kv__label { color: var(--color-text-secondary, #777); }
+        .twk-sideblock { padding: 10px 14px; }
+
+        .twk-attach-warn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11.5px;
+          color: #c0392b;
+          background: rgba(239,68,68,0.07);
+          border-radius: 7px;
+          padding: 6px 9px;
+          margin: 0 0 8px;
+        }
+        .twk-docs { display: flex; flex-direction: column; gap: 4px; }
+        .twk-doc { display: flex; align-items: center; gap: 4px; }
+        .twk-doc__open {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          flex: 1;
+          min-width: 0;
+          padding: 6px 8px;
+          background: var(--color-surface-subtle, #f7f8f9);
+          border: 1px solid var(--color-border, #ececec);
+          border-radius: 7px;
+          font-size: 12px;
+          color: var(--color-text, #222);
+          cursor: pointer;
+          text-align: right;
+        }
+        .twk-doc__open span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .twk-doc__open:hover { border-color: var(--law-navy, #0A192F); }
+        .twk-doc__del {
+          background: none;
+          border: none;
+          color: var(--color-text-secondary, #999);
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 6px;
+        }
+        .twk-doc__del:hover { color: #ef4444; background: rgba(239,68,68,0.08); }
+        .twk-upload-btn { width: 100%; justify-content: center; margin-top: 8px; }
+
+        .twk-link {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 10px;
+          background: var(--color-surface-subtle, #f7f8f9);
+          border: 1px solid var(--color-border, #ececec);
+          border-radius: 8px;
+          font-size: 12.5px;
+          color: var(--color-text, #222);
+          text-decoration: none;
+        }
+        .twk-link span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .twk-link:hover { border-color: var(--law-navy, #0A192F); }
+      `}</style>
     </div>
   );
 };

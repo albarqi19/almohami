@@ -198,6 +198,7 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
       case 'completed': return 'مكتملة';
       case 'in_progress': return 'قيد التنفيذ';
       case 'pending': return 'معلقة';
+      case 'on_hold': return 'موقوفة مؤقتاً';
       case 'cancelled': return 'ملغية';
       default: return status;
     }

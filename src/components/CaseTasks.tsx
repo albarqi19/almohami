@@ -63,6 +63,7 @@ const CaseTasks: React.FC<CaseTasksProps> = ({
       case 'todo': return 'قيد الانتظار';
       case 'in_progress': return 'قيد التنفيذ';
       case 'review': return 'قيد المراجعة';
+      case 'on_hold': return 'موقوفة مؤقتاً';
       case 'completed': return 'مكتملة';
       case 'cancelled': return 'ملغية';
       case 'overdue': return 'متأخرة';

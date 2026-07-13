@@ -38,6 +38,7 @@ export interface User {
     correspondence_enabled?: boolean;
     session_copilot_enabled?: boolean;
     email_intake_enabled?: boolean;
+    establishment_portal_enabled?: boolean;
     [key: string]: any;
   };
 }
@@ -702,6 +703,7 @@ export interface Task {
   client?: { id: number | string; name: string } | null;
   // مهمة على مستوى طلب تنفيذ
   execution_request_id?: number | string | null;
+  execution_request?: { id: number | string; request_number?: string | null; main_document_type?: string | null; status?: string | null } | null;
   // اعتماد الإنجاز + إلزام المرفق (snake_case كما يرجعها الـ API)
   requires_approval?: boolean;
   requires_attachment?: boolean;
@@ -712,6 +714,12 @@ export interface Task {
   rejection_reason?: string | null;
   approver?: { id: string | number; name: string } | null;
   documents_count?: number;
+  // الإيقاف المؤقت بسبب إلزامي (#130) — snake_case كما يرجعها الـ API
+  hold_reason?: string | null;
+  held_at?: string | Date | null;
+  held_by?: string | number | null;
+  held_by_user?: { id: string | number; name: string } | null;
+  status_before_hold?: string | null;
   // أعلام القدرة (يحسبها الباك في show) — لإخفاء الإجراءات عمّن لا يملكها
   can_approve?: boolean;
   can_configure_requirements?: boolean;
@@ -723,6 +731,7 @@ export const TaskStatus = {
   IN_PROGRESS: 'in_progress',
   REVIEW: 'review',
   PENDING_APPROVAL: 'pending_approval',
+  ON_HOLD: 'on_hold',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
   OVERDUE: 'overdue',

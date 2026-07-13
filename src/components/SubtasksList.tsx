@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Check, Trash2, GripVertical, ListChecks, AtSign } from 'lucide-react';
+import { Plus, Check, Trash2, GripVertical, ListChecks, AtSign, Pause, Play, PauseCircle } from 'lucide-react';
 import { SubtaskService, type Subtask, type SubtasksResponse } from '../services/subtaskService';
 import { UserService } from '../services/UserService';
 
 interface SubtasksListProps {
   taskId: string;
   onProgressChange?: (progress: number) => void;
+  /** يُستدعى بعد إيقاف/استئناف/إنجاز فرعية — حالة المهمة الأم قد تغيّرت (من الجهتين #130) */
+  onTaskChanged?: () => void;
 }
 
 interface MentionUser {
@@ -15,13 +17,18 @@ interface MentionUser {
   role?: string;
 }
 
-const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange }) => {
+const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, onTaskChanged }) => {
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+
+  // الإيقاف المؤقت بسبب إلزامي (#130): الفرعية التي يُكتب سببها الآن
+  const [pausingId, setPausingId] = useState<string | null>(null);
+  const [pauseReason, setPauseReason] = useState('');
+  const [pauseBusy, setPauseBusy] = useState(false);
 
   // Mention states
   const [users, setUsers] = useState<MentionUser[]>([]);
@@ -100,17 +107,47 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange })
 
   const handleToggle = async (subtaskId: string) => {
     try {
-      const updated = await SubtaskService.toggleSubtask(subtaskId);
-      setSubtasks(subtasks.map(s => s.id === subtaskId ? updated : s));
+      const { subtask: updated } = await SubtaskService.toggleSubtask(subtaskId);
+      const newSubtasks = subtasks.map(s => s.id === subtaskId ? updated : s);
+      setSubtasks(newSubtasks);
 
       // Recalculate progress
-      const newSubtasks = subtasks.map(s => s.id === subtaskId ? updated : s);
       const completed = newSubtasks.filter(s => s.is_completed).length;
       const newProgress = newSubtasks.length > 0 ? Math.round((completed / newSubtasks.length) * 100) : 0;
       setProgress(newProgress);
       onProgressChange?.(newProgress);
+      onTaskChanged?.(); // إنجاز فرعية موقوفة قد يستأنف المهمة الأم
     } catch (error) {
       console.error('Failed to toggle subtask:', error);
+    }
+  };
+
+  // إيقاف فرعية بسبب إلزامي — المهمة الأم تصبح «موقوفة مؤقتاً» تلقائياً (#130)
+  const handleConfirmPause = async (subtaskId: string) => {
+    if (!pauseReason.trim()) return;
+    setPauseBusy(true);
+    try {
+      const { subtask: updated } = await SubtaskService.pauseSubtask(subtaskId, pauseReason.trim());
+      setSubtasks(prev => prev.map(s => s.id === subtaskId ? updated : s));
+      setPausingId(null);
+      setPauseReason('');
+      onTaskChanged?.();
+    } catch (error: any) {
+      console.error('Failed to pause subtask:', error);
+      alert(error?.message || 'تعذّر إيقاف المهمة الفرعية');
+    } finally {
+      setPauseBusy(false);
+    }
+  };
+
+  const handleResume = async (subtaskId: string) => {
+    try {
+      const { subtask: updated } = await SubtaskService.resumeSubtask(subtaskId);
+      setSubtasks(prev => prev.map(s => s.id === subtaskId ? updated : s));
+      onTaskChanged?.();
+    } catch (error: any) {
+      console.error('Failed to resume subtask:', error);
+      alert(error?.message || 'تعذّر استئناف المهمة الفرعية');
     }
   };
 
@@ -171,6 +208,9 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange })
     return name.split(' ').map(n => n[0]).join('').substring(0, 2);
   };
 
+  const fmtDate = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' }) : '';
+
   // ترجمة الدور
   const getRoleLabel = (role?: string) => {
     const roles: Record<string, string> = {
@@ -215,79 +255,167 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange })
       ) : (
         <div className="subtasks-list__items">
           {subtasks.map((subtask) => (
-            <div
-              key={subtask.id}
-              className={`subtasks-list__item ${subtask.is_completed ? 'subtasks-list__item--completed' : ''}`}
-            >
-              <button
-                className="subtasks-list__drag"
-                title="اسحب لإعادة الترتيب"
+            <div key={subtask.id} className="subtasks-list__row">
+              <div
+                className={`subtasks-list__item ${subtask.is_completed ? 'subtasks-list__item--completed' : ''} ${subtask.paused_at ? 'subtasks-list__item--paused' : ''}`}
               >
-                <GripVertical size={14} />
-              </button>
-
-              <button
-                className={`subtasks-list__checkbox ${subtask.is_completed ? 'subtasks-list__checkbox--checked' : ''}`}
-                onClick={() => handleToggle(subtask.id)}
-              >
-                {subtask.is_completed && <Check size={12} />}
-              </button>
-
-              <span className={`subtasks-list__text ${subtask.is_completed ? 'subtasks-list__text--completed' : ''}`}>
-                {subtask.title}
-              </span>
-
-              {/* زر تعيين المسؤول */}
-              <div className="subtasks-list__assignee-container" ref={mentionRef}>
                 <button
-                  className={`subtasks-list__assignee-btn ${subtask.assignee ? 'subtasks-list__assignee-btn--assigned' : ''}`}
-                  onClick={() => setAssigneeDropdownId(assigneeDropdownId === subtask.id ? null : subtask.id)}
-                  title={subtask.assignee?.name || 'تعيين مسؤول'}
+                  className="subtasks-list__drag"
+                  title="اسحب لإعادة الترتيب"
                 >
-                  {subtask.assignee?.name ? (
-                    <span className="subtasks-list__assignee-avatar">
-                      {getInitials(subtask.assignee.name)}
-                    </span>
-                  ) : (
-                    <AtSign size={14} />
-                  )}
+                  <GripVertical size={14} />
                 </button>
 
-                {assigneeDropdownId === subtask.id && (
-                  <div className="subtasks-list__mention-dropdown">
-                    <div className="subtasks-list__mention-header">تعيين مسؤول</div>
-                    {users.map(user => (
-                      <button
-                        key={user.id}
-                        className="subtasks-list__mention-item"
-                        onClick={() => handleAssignUser(subtask.id, user.id, user.name)}
-                      >
-                        <span className="subtasks-list__mention-avatar">
-                          {user.avatar ? (
-                            <img src={user.avatar} alt={user.name} />
-                          ) : (
-                            getInitials(user.name)
-                          )}
-                        </span>
-                        <span className="subtasks-list__mention-info">
-                          <span className="subtasks-list__mention-name">{user.name}</span>
-                          {user.role && (
-                            <span className="subtasks-list__mention-role">{getRoleLabel(user.role)}</span>
-                          )}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
+                <button
+                  className={`subtasks-list__checkbox ${subtask.is_completed ? 'subtasks-list__checkbox--checked' : ''}`}
+                  onClick={() => handleToggle(subtask.id)}
+                >
+                  {subtask.is_completed && <Check size={12} />}
+                </button>
+
+                <span className={`subtasks-list__text ${subtask.is_completed ? 'subtasks-list__text--completed' : ''}`}>
+                  {subtask.title}
+                </span>
+
+                {/* شارة الإيقاف — السبب ظاهر دائماً على الفرعية الموقوفة (#130) */}
+                {subtask.paused_at && (
+                  <span className="subtasks-list__paused-chip" title={subtask.pause_reason || ''}>
+                    <PauseCircle size={11} />
+                    {subtask.pause_reason}
+                  </span>
                 )}
+
+                {/* زر تعيين المسؤول */}
+                <div className="subtasks-list__assignee-container" ref={mentionRef}>
+                  <button
+                    className={`subtasks-list__assignee-btn ${subtask.assignee ? 'subtasks-list__assignee-btn--assigned' : ''}`}
+                    onClick={() => setAssigneeDropdownId(assigneeDropdownId === subtask.id ? null : subtask.id)}
+                    title={subtask.assignee?.name || 'تعيين مسؤول'}
+                  >
+                    {subtask.assignee?.name ? (
+                      <span className="subtasks-list__assignee-avatar">
+                        {getInitials(subtask.assignee.name)}
+                      </span>
+                    ) : (
+                      <AtSign size={14} />
+                    )}
+                  </button>
+
+                  {assigneeDropdownId === subtask.id && (
+                    <div className="subtasks-list__mention-dropdown">
+                      <div className="subtasks-list__mention-header">تعيين مسؤول</div>
+                      {users.map(user => (
+                        <button
+                          key={user.id}
+                          className="subtasks-list__mention-item"
+                          onClick={() => handleAssignUser(subtask.id, user.id, user.name)}
+                        >
+                          <span className="subtasks-list__mention-avatar">
+                            {user.avatar ? (
+                              <img src={user.avatar} alt={user.name} />
+                            ) : (
+                              getInitials(user.name)
+                            )}
+                          </span>
+                          <span className="subtasks-list__mention-info">
+                            <span className="subtasks-list__mention-name">{user.name}</span>
+                            {user.role && (
+                              <span className="subtasks-list__mention-role">{getRoleLabel(user.role)}</span>
+                            )}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* إيقاف مؤقت / استئناف (#130) */}
+                {!subtask.is_completed && (
+                  subtask.paused_at ? (
+                    <button
+                      className="subtasks-list__pause subtasks-list__pause--active"
+                      onClick={() => handleResume(subtask.id)}
+                      title="استئناف"
+                    >
+                      <Play size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      className="subtasks-list__pause"
+                      onClick={() => {
+                        setPauseReason('');
+                        setPausingId(pausingId === subtask.id ? null : subtask.id);
+                      }}
+                      title="إيقاف مؤقت"
+                    >
+                      <Pause size={14} />
+                    </button>
+                  )
+                )}
+
+                <button
+                  className="subtasks-list__delete"
+                  onClick={() => handleDelete(subtask.id)}
+                  title="حذف"
+                >
+                  <Trash2 size={14} />
+                </button>
+
+                {/* تتبّع «من كتبها/من أنجزها/من أوقفها» — يظهر أسفل السطر عند مرور الماوس */}
+                <div className="subtasks-list__track-tip">
+                  <div className="subtasks-list__track-line">
+                    ✏️ كتبها: {subtask.creator?.name || 'غير معروف'}
+                    {subtask.created_at ? ` — ${fmtDate(subtask.created_at)}` : ''}
+                  </div>
+                  {subtask.is_completed && (
+                    <div className="subtasks-list__track-line">
+                      ✅ أنجزها: {subtask.completed_by_user?.name || 'غير معروف'}
+                      {subtask.completed_at ? ` — ${fmtDate(subtask.completed_at)}` : ''}
+                    </div>
+                  )}
+                  {subtask.paused_at && (
+                    <div className="subtasks-list__track-line subtasks-list__track-line--paused">
+                      ⏸️ أوقفها: {subtask.paused_by_user?.name || 'غير معروف'}
+                      {` — ${fmtDate(subtask.paused_at)}`}
+                      {subtask.pause_reason ? ` · السبب: ${subtask.pause_reason}` : ''}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <button
-                className="subtasks-list__delete"
-                onClick={() => handleDelete(subtask.id)}
-                title="حذف"
-              >
-                <Trash2 size={14} />
-              </button>
+              {/* نموذج سبب الإيقاف — إلزامي (#130) */}
+              {pausingId === subtask.id && !subtask.paused_at && (
+                <div className="subtasks-list__pause-form">
+                  <input
+                    type="text"
+                    className="subtasks-list__input"
+                    placeholder="سبب الإيقاف (إلزامي) — مثل: بانتظار رد العميل..."
+                    value={pauseReason}
+                    maxLength={300}
+                    autoFocus
+                    onChange={(e) => setPauseReason(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleConfirmPause(subtask.id);
+                      if (e.key === 'Escape') { setPausingId(null); setPauseReason(''); }
+                    }}
+                  />
+                  <div className="subtasks-list__add-actions">
+                    <button
+                      className="button button--sm subtasks-list__pause-confirm"
+                      onClick={() => handleConfirmPause(subtask.id)}
+                      disabled={pauseBusy || !pauseReason.trim()}
+                    >
+                      {pauseBusy ? 'جارٍ الإيقاف...' : 'إيقاف مؤقت'}
+                    </button>
+                    <button
+                      className="button button--ghost button--sm"
+                      onClick={() => { setPausingId(null); setPauseReason(''); }}
+                    >
+                      إلغاء
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
 
@@ -389,6 +517,10 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange })
           gap: var(--space-2, 8px);
         }
 
+        .subtasks-list__row {
+          position: relative;
+        }
+
         .subtasks-list__item {
           display: flex;
           align-items: center;
@@ -397,6 +529,110 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange })
           border-radius: var(--radius-sm, 6px);
           background: var(--color-surface-subtle, #f8f9fa);
           transition: all var(--transition-fast, 120ms ease);
+        }
+
+        /* فرعية موقوفة مؤقتاً (#130) */
+        .subtasks-list__item--paused {
+          background: rgba(249, 115, 22, 0.07);
+          border-right: 3px solid #f97316;
+        }
+
+        .subtasks-list__paused-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          max-width: 180px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-size: 10.5px;
+          color: #c2570b;
+          background: rgba(249, 115, 22, 0.12);
+          border: 1px solid rgba(249, 115, 22, 0.25);
+          border-radius: var(--radius-pill, 999px);
+          padding: 2px 8px;
+          flex-shrink: 0;
+        }
+
+        .subtasks-list__pause {
+          background: none;
+          border: none;
+          color: var(--color-text-secondary, #999);
+          cursor: pointer;
+          padding: 4px;
+          opacity: 0;
+          transition: all var(--transition-fast, 120ms ease);
+          border-radius: var(--radius-sm, 4px);
+        }
+
+        .subtasks-list__item:hover .subtasks-list__pause {
+          opacity: 1;
+        }
+
+        .subtasks-list__pause:hover {
+          color: #f97316;
+          background: rgba(249, 115, 22, 0.1);
+        }
+
+        .subtasks-list__pause--active {
+          opacity: 1;
+          color: #f97316;
+        }
+
+        .subtasks-list__pause-form {
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-2, 8px);
+          padding: var(--space-2, 8px);
+          margin-top: 4px;
+          background: rgba(249, 115, 22, 0.06);
+          border: 1px dashed rgba(249, 115, 22, 0.4);
+          border-radius: var(--radius-sm, 6px);
+        }
+
+        .subtasks-list__pause-confirm {
+          background: #f97316;
+          color: #fff;
+          border: none;
+          border-radius: var(--radius-sm, 6px);
+          cursor: pointer;
+        }
+
+        .subtasks-list__pause-confirm:disabled {
+          opacity: 0.6;
+          cursor: default;
+        }
+
+        /* تتبّع «من كتبها/أنجزها/أوقفها» — يظهر أسفل السطر عند مرور الماوس */
+        .subtasks-list__track-tip {
+          display: none;
+          position: absolute;
+          top: calc(100% + 2px);
+          right: 28px;
+          z-index: 60;
+          pointer-events: none;
+          background: var(--color-surface, #fff);
+          border: 1px solid var(--color-border, #e5e5e5);
+          border-radius: var(--radius-md, 8px);
+          box-shadow: var(--shadow-lg, 0 8px 30px rgba(0, 0, 0, 0.12));
+          padding: 8px 12px;
+          min-width: 240px;
+          max-width: 360px;
+        }
+
+        .subtasks-list__row:hover .subtasks-list__track-tip {
+          display: block;
+        }
+
+        .subtasks-list__track-line {
+          font-size: 11px;
+          color: var(--color-text-secondary, #666);
+          line-height: 1.9;
+          white-space: normal;
+        }
+
+        .subtasks-list__track-line--paused {
+          color: #c2570b;
         }
 
         .subtasks-list__item:hover {

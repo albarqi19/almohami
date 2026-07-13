@@ -23,7 +23,9 @@ import {
   Sliders,
   Play,
   Pause,
-  AlertTriangle
+  PauseCircle,
+  AlertTriangle,
+  Gavel
 } from 'lucide-react';
 import {
   DndContext,
@@ -59,6 +61,7 @@ const TASK_STATUSES: { key: TaskStatus; label: string; color: string }[] = [
   { key: 'in_progress', label: 'قيد التنفيذ', color: '#3b82f6' },
   { key: 'review', label: 'مراجعة', color: '#f59e0b' },
   { key: 'pending_approval', label: 'بانتظار الاعتماد', color: '#8b5cf6' },
+  { key: 'on_hold', label: 'موقوفة مؤقتاً', color: '#f97316' },
   { key: 'completed', label: 'مكتملة', color: '#10b981' },
   { key: 'cancelled', label: 'ملغية', color: '#ef4444' }
 ];
@@ -207,9 +210,39 @@ const SortableTaskCard = ({
           <User size={11} className="case-icon" />
           <span className="case-text">العميل: {task.client.name}</span>
         </div>
+      ) : task.execution_request ? (
+        <div
+          className="task-card-case-badge task-card-exec-badge"
+          title={`طلب تنفيذ: ${task.execution_request.request_number || ''}`}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <Gavel size={11} className="case-icon" />
+          <span className="case-text">
+            طلب تنفيذ: {task.execution_request.request_number}
+            {task.execution_request.main_document_type ? ` — ${task.execution_request.main_document_type}` : ''}
+          </span>
+        </div>
       ) : null}
 
       <div className="task-card-title">{task.title}</div>
+
+      {task.status === 'on_hold' && task.hold_reason && (
+        <div
+          className="task-card-hold-strip"
+          title={`أوقفها: ${task.held_by_user?.name || 'غير معروف'}${task.held_at ? ' — ' + new Date(task.held_at).toLocaleDateString('ar-SA') : ''}`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            fontSize: 11, color: '#c2570b',
+            background: 'rgba(249, 115, 22, 0.08)',
+            border: '1px solid rgba(249, 115, 22, 0.25)',
+            borderRadius: 6, padding: '4px 8px', marginTop: 6,
+          }}
+        >
+          <PauseCircle size={12} style={{ flexShrink: 0 }} />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.hold_reason}</span>
+        </div>
+      )}
 
       {task.tags && task.tags.length > 0 && (
         <div className="task-card-tags">
@@ -387,6 +420,10 @@ const Tasks: React.FC = () => {
   const [menu, setMenu] = useState<{ task: Task; top: number; left: number; openUp: boolean } | null>(null);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [deleteTask, setDeleteTask] = useState<Task | null>(null);
+  // الإيقاف المؤقت بسبب إلزامي (#130): المهمة المرشّحة + نص السبب
+  const [holdTask, setHoldTask] = useState<Task | null>(null);
+  const [holdReason, setHoldReason] = useState('');
+  const [holding, setHolding] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // responsive layout mobile navigation state
@@ -603,6 +640,16 @@ const Tasks: React.FC = () => {
       }
     }
 
+    if (newStatus === 'on_hold') {
+      // الإيقاف بسبب إلزامي (#130): لا تحديث متفائل — مودال السبب أولاً ثم /hold
+      const task = tasks.find(t => t.id === taskId);
+      if (task && task.status !== 'on_hold') {
+        setHoldReason('');
+        setHoldTask(task);
+      }
+      return;
+    }
+
     if (newStatus) {
       const updatedTasks = tasks.map(t =>
         t.id === taskId ? { ...t, status: newStatus as TaskStatus } : t
@@ -766,6 +813,12 @@ const Tasks: React.FC = () => {
   const changeStatus = async (task: Task, status: TaskStatus) => {
     setMenu(null);
     if (task.status === status) return;
+    if (status === 'on_hold') {
+      // on_hold لا تمرّ عبر /status — سبب إلزامي عبر المودال ثم /hold
+      setHoldReason('');
+      setHoldTask(task);
+      return;
+    }
     const updated = tasks.map(t => (t.id === task.id ? { ...t, status } : t));
     setTasks(updated);
     TasksCache.set(updated);
@@ -774,6 +827,42 @@ const Tasks: React.FC = () => {
       loadStats();
     } catch (err) {
       console.error('Failed to update status', err);
+      loadTasks();
+    }
+  };
+
+  // تأكيد الإيقاف المؤقت من المودال — يخزّن السبب ومن أوقفها ويعيد الحالة من الخادم
+  const confirmHold = async () => {
+    if (!holdTask || !holdReason.trim()) return;
+    setHolding(true);
+    try {
+      const updated = await TaskService.holdTask(holdTask.id, holdReason.trim());
+      const next = tasks.map(t => (t.id === holdTask.id ? { ...t, ...updated, id: t.id } as Task : t));
+      setTasks(next);
+      TasksCache.set(next);
+      setHoldTask(null);
+      setHoldReason('');
+      loadStats();
+    } catch (err: any) {
+      console.error('Failed to hold task', err);
+      alert(err?.message || 'تعذّر إيقاف المهمة');
+    } finally {
+      setHolding(false);
+    }
+  };
+
+  // استئناف مهمة موقوفة — تعود لحالتها قبل الإيقاف (الخادم يحددها)
+  const resumeTask = async (task: Task) => {
+    setMenu(null);
+    try {
+      const updated = await TaskService.resumeTask(task.id);
+      const next = tasks.map(t => (t.id === task.id ? { ...t, ...updated, id: t.id } as Task : t));
+      setTasks(next);
+      TasksCache.set(next);
+      loadStats();
+    } catch (err: any) {
+      console.error('Failed to resume task', err);
+      alert(err?.message || 'تعذّر استئناف المهمة');
       loadTasks();
     }
   };
@@ -866,6 +955,15 @@ const Tasks: React.FC = () => {
                             <span className="task-case-subtext client" title={task.client.name}>
                               <User size={10} className="inline-icon" />
                               العميل: {task.client.name}
+                            </span>
+                          ) : task.execution_request ? (
+                            <span
+                              className="task-case-subtext exec"
+                              title={`طلب تنفيذ: ${task.execution_request.request_number || ''}`}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/execution-requests?open=${task.execution_request!.id}`); }}
+                            >
+                              <Gavel size={10} className="inline-icon" />
+                              طلب تنفيذ: {task.execution_request.request_number}
                             </span>
                           ) : null}
                         </div>
@@ -1442,6 +1540,15 @@ const Tasks: React.FC = () => {
               <Pencil size={14} /> تعديل المهمة
             </button>
 
+            {menu.task.status === 'on_hold' && (
+              <button
+                className="task-menu-item"
+                onClick={() => resumeTask(menu.task)}
+              >
+                <Play size={14} /> استئناف المهمة
+              </button>
+            )}
+
             <div className="task-menu-sep" />
             <div className="task-menu-label">تغيير الحالة إلى</div>
             {TASK_STATUSES.filter(s => s.key !== menu.task.status).map(s => (
@@ -1497,6 +1604,60 @@ const Tasks: React.FC = () => {
                 onClick={() => setDeleteTask(null)}
                 disabled={deleting}
                 style={{ background: 'transparent', color: 'var(--color-text)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '9px 18px', cursor: deleting ? 'default' : 'pointer', fontSize: 14 }}
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* مودال الإيقاف المؤقت — السبب إلزامي (#130) */}
+      {holdTask && (
+        <div
+          onClick={() => !holding && setHoldTask(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--dashboard-card, #fff)', borderRadius: 12, padding: 24, width: 420, maxWidth: '90vw', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(249,115,22,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <PauseCircle size={20} color="#f97316" />
+              </div>
+              <h3 style={{ margin: 0, fontSize: 16, color: 'var(--color-text)' }}>إيقاف المهمة مؤقتاً</h3>
+            </div>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, lineHeight: 1.7, marginBottom: 10 }}>
+              «<strong style={{ color: 'var(--color-text)' }}>{holdTask.title}</strong>» — تُستثنى الموقوفة من تذكيرات التأخير وتعود لحالتها الحالية عند الاستئناف.
+            </p>
+            <textarea
+              autoFocus
+              value={holdReason}
+              onChange={(e) => setHoldReason(e.target.value)}
+              placeholder="سبب الإيقاف (إلزامي) — مثل: بانتظار رد العميل على الاستفسار..."
+              maxLength={300}
+              rows={3}
+              style={{
+                width: '100%', resize: 'vertical', boxSizing: 'border-box',
+                border: '1px solid var(--color-border, #e5e5e5)', borderRadius: 8,
+                padding: '10px 12px', fontSize: 13, fontFamily: 'inherit',
+                background: 'var(--color-surface, #fff)', color: 'var(--color-text)',
+                marginBottom: 16,
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={confirmHold}
+                disabled={holding || !holdReason.trim()}
+                style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: holding || !holdReason.trim() ? 'default' : 'pointer', fontSize: 14, fontWeight: 600, opacity: holding || !holdReason.trim() ? 0.6 : 1 }}
+              >
+                {holding ? 'جارٍ الإيقاف...' : 'إيقاف مؤقت'}
+              </button>
+              <button
+                onClick={() => setHoldTask(null)}
+                disabled={holding}
+                style={{ background: 'transparent', color: 'var(--color-text)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '9px 18px', cursor: holding ? 'default' : 'pointer', fontSize: 14 }}
               >
                 إلغاء
               </button>

@@ -26,6 +26,7 @@ export interface TaskStats {
   in_progress: number;
   review: number;
   pending_approval: number;
+  on_hold: number;
   completed: number;
   cancelled: number;
   overdue: number;
@@ -251,6 +252,22 @@ export class TaskService {
     if (!response.success) {
       throw new Error(response.message || 'فشل في إعادة ترتيب المهام');
     }
+  }
+
+  // ===== الإيقاف المؤقت (#130) =====
+
+  /** إيقاف المهمة مؤقتاً بسبب إلزامي — on_hold لا تمرّ عبر /status. */
+  static async holdTask(id: string, reason: string): Promise<Task> {
+    const response = await apiClient.post<ApiResponse<Task>>(`/tasks/${id}/hold`, { reason });
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'تعذّر إيقاف المهمة');
+  }
+
+  /** استئناف مهمة موقوفة — تعود لحالتها قبل الإيقاف وتُستأنف فرعياتها الموقوفة. */
+  static async resumeTask(id: string): Promise<Task> {
+    const response = await apiClient.post<ApiResponse<Task>>(`/tasks/${id}/resume`, {});
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'تعذّر استئناف المهمة');
   }
 
   // ===== بوابة الاعتماد + المرفقات =====

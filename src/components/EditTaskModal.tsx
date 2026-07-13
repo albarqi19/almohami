@@ -429,6 +429,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                       <option value="todo">قيد الانتظار</option>
                       <option value="in_progress">قيد التنفيذ</option>
                       <option value="review">قيد المراجعة</option>
+                      {/* on_hold تُعرض فقط (الدخول إليها عبر زر الإيقاف بسبب إلزامي — #130) */}
+                      <option value="on_hold" disabled>موقوفة مؤقتاً</option>
                       <option value="completed">مكتملة</option>
                       <option value="cancelled">ملغية</option>
                     </select>
