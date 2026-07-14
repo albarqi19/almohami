@@ -243,8 +243,17 @@ const UpcomingSessions: React.FC = () => {
 		const t = new Date(date);
 		if (s.session_time) {
 			const m = s.session_time.match(/^(\d{1,2}):(\d{2})/);
-			if (m) t.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0);
-			else t.setHours(23, 59, 0, 0);
+			if (m) {
+				let hh = parseInt(m[1], 10);
+				const mm = parseInt(m[2], 10);
+				// session_time نصّي بصيغة 12 ساعة عربية («8:30 ص» / «1:45 م») — لا بد من
+				// تحويل ص/م، وإلا حُسب المساء صباحاً وانقلب الترتيب داخل اليوم.
+				if (/م|pm/i.test(s.session_time) && hh < 12) hh += 12; // مساءً
+				if (/ص|am/i.test(s.session_time) && hh === 12) hh = 0; // 12 منتصف الليل
+				t.setHours(hh, mm, 0, 0);
+			} else {
+				t.setHours(23, 59, 0, 0);
+			}
 		} else {
 			// No explicit time → push to end of day so timed sessions of same day rank above it
 			t.setHours(23, 59, 0, 0);
@@ -340,17 +349,9 @@ const UpcomingSessions: React.FC = () => {
 				return sessionDate >= startDate && sessionDate <= endDate;
 			});
 
-		// Match the on-screen ordering: upcoming first (nearest → farthest),
-		// then finished (most recent → oldest). Same logic as `sortedSessions`.
-		return filtered.sort((a, b) => {
-			const aFinished = isSessionFinished(a);
-			const bFinished = isSessionFinished(b);
-			if (aFinished !== bFinished) return aFinished ? 1 : -1;
-			const tsA = getSessionTimestamp(a);
-			const tsB = getSessionTimestamp(b);
-			if (aFinished && bFinished) return tsB - tsA;
-			return tsA - tsB;
-		});
+		// كشف مطبوع = تسلسل زمني تصاعدي بحت من بداية المدة لنهايتها. لا نطبّق تصنيف
+		// «منتهية/قادمة» الخاص بالشاشة (الذي يدفع جلسات اليوم المنقضية للذيل بترتيب معكوس).
+		return filtered.sort((a, b) => getSessionTimestamp(a) - getSessionTimestamp(b));
 	};
 
 	// Get export period label
