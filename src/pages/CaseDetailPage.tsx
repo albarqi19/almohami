@@ -45,6 +45,7 @@ import ClientPhoneModal from '../components/ClientPhoneModal';
 import CaseMessagesModal from '../components/CaseMessagesModal';
 import ShareCaseModal from '../components/ShareCaseModal';
 import LinkToNajizModal from '../components/LinkToNajizModal';
+import CasePartiesModal from '../components/CasePartiesModal';
 import LegalMemoWorkspace from '../components/LegalMemoWorkspace';
 import CasePrepKitchen from '../components/CasePrepKitchen';
 import LawSearchModal from '../components/LawSearchModal';
@@ -112,6 +113,7 @@ const CaseDetailPage: React.FC = () => {
   const [selectedJudgementSession, setSelectedJudgementSession] = useState<any>(null);
   const [judgementActiveTab, setJudgementActiveTab] = useState<string>('text');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showPartiesModal, setShowPartiesModal] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showDocumentsModal, setShowDocumentsModal] = useState(false);
   const [showMemoWorkspace, setShowMemoWorkspace] = useState(false);
@@ -760,6 +762,13 @@ const CaseDetailPage: React.FC = () => {
                   <Users size={16} />
                   أطراف الدعوى ({caseData.parties.length})
                 </div>
+                {/* الإدارة اليدوية للقضايا اليدوية فقط — أطراف ناجز تأتي من المزامنة */}
+                {caseData.source === 'manual' && (
+                  <button className="case-card__action" onClick={() => setShowPartiesModal(true)}>
+                    <Edit size={13} />
+                    إدارة الأطراف
+                  </button>
+                )}
               </div>
               <div className="case-card__content case-card__content--compact">
                 <div className="case-parties-inline">
@@ -830,15 +839,23 @@ const CaseDetailPage: React.FC = () => {
                   <Users size={16} />
                   أطراف الدعوى
                 </div>
-                <button className="case-card__action" onClick={() => setShowEditModal(true)}>
+                <button
+                  className="case-card__action"
+                  onClick={() => caseData.source === 'manual' ? setShowPartiesModal(true) : setShowEditModal(true)}
+                >
                   <Edit size={13} />
-                  إضافة الخصم
+                  {caseData.source === 'manual' ? 'إضافة الأطراف' : 'إضافة الخصم'}
                 </button>
               </div>
               <div className="case-card__content case-card__content--compact">
                 <div className="case-empty-state">
                   <Users size={20} />
-                  <span>لا توجد أطراف مسجّلة{caseData.source !== 'najiz' ? ' — أضِف الخصم ووكيله من «تعديل القضية»' : ''}</span>
+                  <span>
+                    لا توجد أطراف مسجّلة
+                    {caseData.source === 'manual'
+                      ? ' — أضِف المدعي والمدعى عليه ووكلاءهم من «إضافة الأطراف»'
+                      : caseData.source !== 'najiz' ? ' — أضِف الخصم ووكيله من «تعديل القضية»' : ''}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1539,6 +1556,14 @@ const CaseDetailPage: React.FC = () => {
         onClose={() => setShowEditModal(false)}
         caseData={caseData}
         onSave={async (updated) => { await handleUpdateCase(updated); refreshCaseData(); }}
+      />
+
+      <CasePartiesModal
+        isOpen={showPartiesModal}
+        caseId={caseData.id}
+        parties={caseData.parties || []}
+        onClose={() => setShowPartiesModal(false)}
+        onChanged={refreshCaseData}
       />
 
       <AddTaskModal

@@ -372,6 +372,8 @@ const Cases: React.FC = () => {
 					case_value: caseData.contractValue ? Number(caseData.contractValue) : null,
 					notes: caseData.notes || null,
 				opposing_party: caseData.opponentName || null,
+				// صفة العميل (اختياري) — عند تحديدها يزرع الباك أطراف الدعوى تلقائياً
+				client_role: caseData.clientRole || undefined,
 				status: caseData.status || 'active'
 			};
 

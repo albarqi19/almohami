@@ -1,0 +1,220 @@
+/* CasePartiesModal — إدارة أطراف الدعوى للقضايا اليدوية (نمط asm المضغوط) */
+.cpm-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.cpm-modal {
+  background: var(--dashboard-card, #fff);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+  border: 1px solid var(--color-border, #e5e7eb);
+  direction: rtl;
+}
+
+/* Header */
+.cpm-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border, #f0f0f0);
+}
+.cpm-header__icon {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: var(--law-navy-light, #eff2f7);
+  color: var(--law-navy, #1e3a5f);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.cpm-header__title {
+  font-size: 14px; font-weight: 600;
+  color: var(--color-text, #111); margin: 0;
+}
+.cpm-manual-badge {
+  font-size: 10px; padding: 2px 8px;
+  border-radius: 4px; background: #fef3c7;
+  color: #92400e; font-weight: 600;
+}
+.cpm-close-btn {
+  margin-right: auto;
+  background: none; border: none; cursor: pointer;
+  color: #9ca3af; padding: 4px; border-radius: 4px;
+}
+.cpm-close-btn:hover { background: #f3f4f6; color: #374151; }
+
+/* Error */
+.cpm-error {
+  display: flex; align-items: center; gap: 6px;
+  margin: 8px 16px 0;
+  padding: 6px 10px;
+  background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: 6px; color: #dc2626; font-size: 12px;
+}
+
+/* قائمة الأطراف الحالية */
+.cpm-list {
+  padding: 10px 16px 0;
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.cpm-list__empty {
+  font-size: 12px; color: #9ca3af;
+  padding: 10px; text-align: center;
+  border: 1px dashed var(--color-border, #e5e7eb);
+  border-radius: 6px;
+}
+.cpm-party {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--dashboard-card, #fff);
+}
+.cpm-party--editing { border-color: var(--law-gold, #b48c3c); }
+.cpm-party__icon {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  color: #fff; font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  background: #6b7280;
+}
+.cpm-party--plaintiff .cpm-party__icon { background: var(--status-green, #059669); }
+.cpm-party--defendant .cpm-party__icon { background: var(--status-red, #dc2626); }
+.cpm-party--lawyer .cpm-party__icon { background: var(--law-navy, #1e3a5f); }
+.cpm-party--agent .cpm-party__icon { background: #b48c3c; }
+.cpm-party--appellant .cpm-party__icon { background: #7c3aed; }
+.cpm-party--appellee .cpm-party__icon { background: #0e7490; }
+.cpm-party__info {
+  display: flex; flex-direction: column;
+  flex: 1; min-width: 0;
+}
+.cpm-party__name {
+  font-size: 12.5px; font-weight: 600;
+  color: var(--color-text, #111);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cpm-party__meta {
+  font-size: 11px; color: #6b7280;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cpm-party__action {
+  background: none; border: none; cursor: pointer;
+  color: #9ca3af; padding: 4px; border-radius: 4px;
+  flex-shrink: 0;
+  display: flex; align-items: center;
+}
+.cpm-party__action:hover { background: #f3f4f6; color: var(--law-navy, #1e3a5f); }
+.cpm-party__action--danger:hover { background: #fef2f2; color: #dc2626; }
+.cpm-party__action:disabled { opacity: 0.5; cursor: default; }
+
+/* نموذج الإضافة/التعديل */
+.cpm-form {
+  padding: 12px 16px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.cpm-form__title {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; font-weight: 600; color: #6b7280;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border, #f0f0f0);
+}
+.cpm-form__cancel-edit {
+  background: none; border: none; cursor: pointer;
+  font-size: 11px; color: var(--law-gold, #b48c3c);
+  font-family: inherit;
+  padding: 2px 4px;
+}
+
+/* اختيار الجهة (pills) */
+.cpm-side-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.cpm-side-pill {
+  padding: 5px 10px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--dashboard-card, #fff);
+  color: #6b7280;
+  font-size: 12px; font-family: inherit;
+  cursor: pointer;
+}
+.cpm-side-pill--active { font-weight: 600; }
+.cpm-side-pill--plaintiff.cpm-side-pill--active {
+  background: rgba(5, 150, 105, 0.1); border-color: var(--status-green, #059669); color: var(--status-green, #059669);
+}
+.cpm-side-pill--defendant.cpm-side-pill--active {
+  background: rgba(220, 38, 38, 0.1); border-color: var(--status-red, #dc2626); color: var(--status-red, #dc2626);
+}
+.cpm-side-pill--lawyer.cpm-side-pill--active {
+  background: var(--law-navy-light, #eff2f7); border-color: var(--law-navy, #1e3a5f); color: var(--law-navy, #1e3a5f);
+}
+.cpm-side-pill--agent.cpm-side-pill--active {
+  background: rgba(180, 140, 60, 0.08); border-color: #b48c3c; color: #b48c3c;
+}
+.cpm-side-pill--appellant.cpm-side-pill--active {
+  background: rgba(124, 58, 237, 0.08); border-color: #7c3aed; color: #7c3aed;
+}
+.cpm-side-pill--appellee.cpm-side-pill--active {
+  background: rgba(14, 116, 144, 0.08); border-color: #0e7490; color: #0e7490;
+}
+
+/* الحقول */
+.cpm-row { display: flex; gap: 8px; align-items: flex-end; }
+.cpm-field { display: flex; flex-direction: column; gap: 3px; }
+.cpm-field--grow { flex: 1; }
+.cpm-field label {
+  font-size: 11px; color: #6b7280; font-weight: 500;
+}
+.cpm-field input {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--dashboard-card, #fff);
+  color: var(--color-text, #111);
+  font-family: inherit;
+  height: 34px;
+}
+.cpm-field input:focus {
+  outline: none;
+  border-color: var(--law-navy, #1e3a5f);
+  box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.1);
+}
+
+/* الأزرار */
+.cpm-actions {
+  display: flex; gap: 8px; justify-content: flex-start;
+  padding-top: 4px;
+}
+.cpm-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.cpm-btn--submit {
+  background: var(--law-navy, #1e3a5f); color: #fff;
+}
+.cpm-btn--submit:hover { background: var(--law-navy-dark, #162c49); }
+.cpm-btn--submit:disabled { opacity: 0.6; cursor: default; }
+.cpm-btn--cancel {
+  background: var(--dashboard-card, #fff);
+  color: #6b7280;
+  border-color: var(--color-border, #e5e7eb);
+}
+.cpm-btn--cancel:hover { background: #f3f4f6; }

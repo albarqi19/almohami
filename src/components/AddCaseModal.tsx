@@ -50,6 +50,7 @@ interface CaseFormData {
   clientEmail: string;
   clientNationalId: string;
   isNewClient: boolean;
+  clientRole: '' | 'plaintiff' | 'defendant';
   opponentName: string;
   opponentLawyer: string;
   court: string;
@@ -104,6 +105,7 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     clientEmail: '',
     clientNationalId: '',
     isNewClient: true,
+    clientRole: '',
     opponentName: '',
     opponentLawyer: '',
     court: '',
@@ -281,6 +283,7 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
       clientEmail: '',
       clientNationalId: '',
       isNewClient: true,
+      clientRole: '',
       opponentName: '',
       opponentLawyer: '',
       court: '',
@@ -586,6 +589,28 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                         </div>
                       </div>
                     )}
+                    {/* صفة العميل — عند تحديدها تُنشأ أطراف الدعوى تلقائياً
+                        (العميل بجهته + الخصم بالجهة المقابلة + محاميه) */}
+                    <div className="erpc-field">
+                      <span className="erpc-field-label"><Scale />صفته في الدعوى</span>
+                      <div className="erpc-segmented">
+                        <button
+                          type="button"
+                          className={`erpc-seg-btn ${formData.clientRole === 'plaintiff' ? 'active' : ''}`}
+                          onClick={() => handleInputChange('clientRole', formData.clientRole === 'plaintiff' ? '' : 'plaintiff')}
+                        >
+                          مدعي
+                        </button>
+                        <button
+                          type="button"
+                          className={`erpc-seg-btn ${formData.clientRole === 'defendant' ? 'active' : ''}`}
+                          onClick={() => handleInputChange('clientRole', formData.clientRole === 'defendant' ? '' : 'defendant')}
+                        >
+                          مدعى عليه
+                        </button>
+                      </div>
+                      <span className="erpc-hint">تحديدها يسجّل أطراف الدعوى تلقائياً</span>
+                    </div>
                   </div>
                 </div>
 

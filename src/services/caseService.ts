@@ -243,6 +243,35 @@ export class CaseService {
     return [];
   }
 
+  // ========== أطراف القضية (يدوية فقط) ==========
+  // قضايا ناجز تُدار أطرافها من المزامنة — الباك يرفض الكتابة عليها (422)
+
+  static async addCaseParty(caseId: string | number, party: {
+    name: string;
+    side: 'plaintiff' | 'defendant' | 'lawyer' | 'agent' | 'appellant' | 'appellee';
+    role?: string;
+    national_id?: string;
+    commercial_reg?: string;
+    party_type?: string;
+    represents?: string;
+    phone?: string;
+  }): Promise<any> {
+    const response = await apiClient.post<ApiResponse<any>>(`/cases/${caseId}/parties`, party);
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'فشل في إضافة الطرف');
+  }
+
+  static async updateCaseParty(caseId: string | number, partyId: number, party: Record<string, any>): Promise<any> {
+    const response = await apiClient.put<ApiResponse<any>>(`/cases/${caseId}/parties/${partyId}`, party);
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'فشل في تحديث الطرف');
+  }
+
+  static async deleteCaseParty(caseId: string | number, partyId: number): Promise<void> {
+    const response = await apiClient.delete<ApiResponse>(`/cases/${caseId}/parties/${partyId}`);
+    if (!response.success) throw new Error(response.message || 'فشل في حذف الطرف');
+  }
+
   // ========== Najiz Linking Methods - ربط القضايا بناجز ==========
 
   /**
