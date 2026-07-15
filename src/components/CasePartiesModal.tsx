@@ -2,23 +2,15 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Users, Loader2, AlertCircle, Trash2, Pencil, Plus } from 'lucide-react';
 import { CaseService } from '../services/caseService';
+import type { CaseParty } from '../types';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 import '../styles/case-parties-modal.css';
 
 /**
  * إدارة أطراف الدعوى يدوياً — للقضايا اليدوية (source='manual') فقط.
  * قضايا ناجز تُجلب أطرافها من المزامنة ولا تُعدَّل من هنا.
+ * النوع CaseParty مصدره الوحيد types/index.ts (id عددي — يطابق قيد الباك whereNumber).
  */
-
-interface CaseParty {
-  id: number;
-  name: string;
-  role: string | null;
-  side: string;
-  national_id: string | null;
-  represents: string | null;
-  phone: string | null;
-}
 
 interface CasePartiesModalProps {
   isOpen: boolean;

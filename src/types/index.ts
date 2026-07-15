@@ -363,8 +363,8 @@ export interface BankruptcyDetail {
 
 // Case Party - طرف القضية
 export interface CaseParty {
-  id: string;
-  case_id: string;
+  id: number;
+  case_id: number;
   name: string;
   role: string;
   side: 'plaintiff' | 'defendant' | 'lawyer' | 'agent' | 'appellant' | 'appellee' | 'other';
