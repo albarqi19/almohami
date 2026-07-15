@@ -18,6 +18,9 @@ export interface TaskFilters {
   overdue?: number;
   due_today?: number;
   needs_attention?: number;
+  /* مجلدات المهام: folder_id = مهام مجلد بعينه، exclude_foldered = العام يخفي مهام المجلدات */
+  folder_id?: number;
+  exclude_foldered?: number;
 }
 
 export interface TaskStats {

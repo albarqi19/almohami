@@ -112,3 +112,4 @@ import './session-copilot.css';
 import './intake-requests.css';
 import './establishment-portal.css';
 import './case-parties-modal.css';
+import './task-folders.css';

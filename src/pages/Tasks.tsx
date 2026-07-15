@@ -25,16 +25,21 @@ import {
   Pause,
   PauseCircle,
   AlertTriangle,
-  Gavel
+  Gavel,
+  FolderClosed,
+  FolderInput
 } from 'lucide-react';
 import {
   DndContext,
   closestCorners,
+  pointerWithin,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
+  useDraggable,
   DragOverlay,
+  type CollisionDetection,
   type DragStartEvent,
   type DragEndEvent
 } from '@dnd-kit/core';
@@ -46,11 +51,13 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-import type { Task, TaskStatus, Priority } from '../types';
+import type { Task, TaskStatus, Priority, TaskFolder, TaskFolderColor } from '../types';
 import { TaskService, type TaskFilters, type TaskStats, type TaskWidgets } from '../services/taskService';
+import { TaskFolderService } from '../services/taskFolderService';
 import { UserService } from '../services/UserService';
 import AddTaskModal from '../components/AddTaskModal';
 import EditTaskModal from '../components/EditTaskModal';
+import { TaskFoldersPanel, TaskFolderModal } from '../components/tasks/TaskFoldersPanel';
 import VoiceTaskWidget from '../components/voice/VoiceTaskWidget';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { TasksCache, UsersCache } from '../utils/tasksCache';
@@ -363,6 +370,34 @@ const DroppableColumn = ({ id, title, count, color, children }: { id: string, ti
   );
 };
 
+// --- صف قابل للسحب في عرض القائمة (لإفلات المهمة على رقاقة مجلد) ---
+// PointerSensor بمسافة تفعيل 5px يحفظ نقرة فتح التفاصيل كما هي.
+const DraggableTaskRow: React.FC<{
+  task: Task;
+  onClick: () => void;
+  children: React.ReactNode;
+}> = ({ task, onClick, children }) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id, data: { ...task } });
+  return (
+    <tr
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      onClick={onClick}
+      style={{ cursor: 'pointer', opacity: isDragging ? 0.35 : 1 }}
+    >
+      {children}
+    </tr>
+  );
+};
+
+// إفلات دقيق: ما تحت المؤشر أولاً (رقاقات المجلدات)، ثم أقرب الزوايا (أعمدة الكانبان)
+const folderAwareCollision: CollisionDetection = (args) => {
+  const underPointer = pointerWithin(args);
+  if (underPointer.length > 0) return underPointer;
+  return closestCorners(args);
+};
+
 // --- Main Page Component ---
 const Tasks: React.FC = () => {
   const navigate = useNavigate();
@@ -389,6 +424,7 @@ const Tasks: React.FC = () => {
   // Filters
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'priority' | 'dueDate' | 'title' | 'createdAt'>('priority');
 
@@ -396,9 +432,18 @@ const Tasks: React.FC = () => {
   type SpecialFilter = 'overdue' | 'due_today' | 'needs_attention' | null;
   const [specialFilter, setSpecialFilter] = useState<SpecialFilter>(null);
 
+  // مجلدات المهام (تنظيم ظاهري): null = العرض العام (يُخفي مهام المجلدات)
+  const [folders, setFolders] = useState<TaskFolder[]>([]);
+  const [canManageShared, setCanManageShared] = useState(false);
+  const [activeFolderId, setActiveFolderId] = useState<number | null>(null);
+  const [folderModal, setFolderModal] = useState<{ folder: TaskFolder | null } | null>(null);
+  const [folderSaving, setFolderSaving] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<TaskFolder | null>(null);
+  const [folderDeleting, setFolderDeleting] = useState(false);
+
   // مرآة للفلاتر الحالية حتى تقرأها loadTasks من داخل أي callback بدون قيم قديمة
-  const filtersRef = useRef({ search: '', status: 'all' as TaskStatus | 'all', assignee: 'all', special: null as SpecialFilter });
-  filtersRef.current = { search: searchTerm, status: statusFilter, assignee: assigneeFilter, special: specialFilter };
+  const filtersRef = useRef({ search: '', status: 'all' as TaskStatus | 'all', assignee: 'all', priority: 'all', special: null as SpecialFilter, folderId: null as number | null });
+  filtersRef.current = { search: searchTerm, status: statusFilter, assignee: assigneeFilter, priority: priorityFilter, special: specialFilter, folderId: activeFolderId };
 
   // إحصائيات وقوائم ودجات حقيقية من الخادم (كل المهام لا الصفحة المحمّلة فقط)
   const [stats, setStats] = useState<TaskStats | null>(null);
@@ -532,7 +577,20 @@ const Tasks: React.FC = () => {
   useEffect(() => {
     loadUsers();
     loadStats();
+    loadFolders();
   }, []);
+
+  const loadFolders = async () => {
+    try {
+      const { folders: list, can_manage_shared } = await TaskFolderService.getFolders();
+      setFolders(list);
+      setCanManageShared(can_manage_shared);
+      // المجلد النشط حُذف من جلسة أخرى؟ نعود للعام
+      setActiveFolderId(prev => (prev !== null && !list.some(f => f.id === prev) ? null : prev));
+    } catch (error) {
+      console.error('Error loading task folders:', error);
+    }
+  };
 
   const loadStats = async () => {
     try {
@@ -550,12 +608,17 @@ const Tasks: React.FC = () => {
   const loadTasks = async () => {
     try {
       if (tasks.length === 0) setLoading(true);
-      const { search, status, assignee, special } = filtersRef.current;
+      const { search, status, assignee, priority, special, folderId } = filtersRef.current;
       const filters: TaskFilters = { per_page: loadedCountRef.current };
       if (search.trim()) filters.search = search.trim();
       if (status !== 'all') filters.status = status;
       if (assignee !== 'all' && assignee !== 'unassigned') filters.assigned_to = assignee;
+      if (priority !== 'all') filters.priority = priority;
       if (special) filters[special] = 1;
+      // مجلد نشط = مهامه فقط؛ العرض العام يخفي مهام المجلدات (المشتركة + شخصياتي)
+      // — الفلاتر الخاصة (متأخرة/اليوم/ضبط) تعرض كل شيء كي لا تضيع مهمة داخل مجلد
+      if (folderId !== null) filters.folder_id = folderId;
+      else if (!special) filters.exclude_foldered = 1;
       const response = await TaskService.getTasks(filters);
       const tasksData = response.data || [];
       setTasks(tasksData);
@@ -578,7 +641,7 @@ const Tasks: React.FC = () => {
       loadTasks();
     }, delay);
     return () => clearTimeout(t);
-  }, [searchTerm, statusFilter, assigneeFilter, specialFilter]);
+  }, [searchTerm, statusFilter, assigneeFilter, priorityFilter, specialFilter, activeFolderId]);
 
   const loadMore = async () => {
     loadedCountRef.current += PAGE_SIZE;
@@ -591,7 +654,7 @@ const Tasks: React.FC = () => {
   };
 
   const refreshAll = async () => {
-    await Promise.all([loadTasks(), loadStats()]);
+    await Promise.all([loadTasks(), loadStats(), loadFolders()]);
   };
 
   useAutoRefresh({
@@ -620,6 +683,30 @@ const Tasks: React.FC = () => {
     if (task) setActiveDragItem(task);
   };
 
+  // نقل مهمة إلى مجلد (folderId=null = إخراجها للعام) — تحديث متفائل + مزامنة العدّادات
+  const moveTaskToFolder = async (task: Task, folderId: number | null) => {
+    setMenu(null);
+    if ((task.task_folder_id ?? null) === folderId) return;
+
+    const targetFolder = folderId !== null ? folders.find(f => f.id === folderId) ?? null : null;
+    // في العرض العام النقل لمجلد يُخفي المهمة من القائمة؛ وفي عرض مجلد نقلُها لغيره يُخرجها منه
+    const hideFromCurrentList = activeFolderId === null ? folderId !== null : folderId !== activeFolderId;
+    const updated = hideFromCurrentList
+      ? tasks.filter(t => t.id !== task.id)
+      : tasks.map(t => (t.id === task.id ? { ...t, task_folder_id: folderId, folder: targetFolder } : t));
+    setTasks(updated);
+    TasksCache.set(updated);
+
+    try {
+      await TaskFolderService.moveTasks([task.id], folderId);
+      loadFolders(); // تحديث عدّادات المجلدات
+    } catch (err: any) {
+      console.error('Failed to move task to folder', err);
+      alert(err?.message || 'تعذّر نقل المهمة إلى المجلد');
+      loadTasks();
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveDragItem(null);
@@ -628,6 +715,15 @@ const Tasks: React.FC = () => {
 
     const taskId = active.id as string;
     const overId = over.id as string;
+
+    // إفلات على رقاقة مجلد (folder-<id>) أو على «العام» (folder-none)
+    if (overId.startsWith('folder-')) {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+      const folderId = overId === 'folder-none' ? null : Number(overId.slice('folder-'.length));
+      moveTaskToFolder(task, folderId);
+      return;
+    }
 
     let newStatus: TaskStatus | null = null;
 
@@ -680,7 +776,8 @@ const Tasks: React.FC = () => {
       const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
       const matchesAssignee = assigneeFilter === 'all'
         || (assigneeFilter === 'unassigned' ? !task.assignedTo : task.assignedTo === assigneeFilter);
-      return matchesSearch && matchesStatus && matchesAssignee;
+      const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter;
+      return matchesSearch && matchesStatus && matchesAssignee && matchesPriority;
     });
 
     const PRIORITY_RANK: Record<string, number> = {
@@ -793,11 +890,15 @@ const Tasks: React.FC = () => {
   };
 
   // «عرض الكل» من ودجة جانبية: يفعّل الفلتر الخاص على الجدول الرئيسي
+  // ويخرج من المجلد النشط — الفلاتر الخاصة شبكة أمان تعرض كل المهام أينما كانت
   const showAllOf = (key: Exclude<SpecialFilter, null>) => {
     setStatusFilter('all');
+    setActiveFolderId(null);
     setSpecialFilter(prev => (prev === key ? null : key));
     setMobileActiveTab('tasks');
   };
+
+  const activeFolder = activeFolderId !== null ? folders.find(f => f.id === activeFolderId) ?? null : null;
 
   const openTaskMenu = (e: React.MouseEvent, task: Task) => {
     e.stopPropagation();
@@ -885,6 +986,41 @@ const Tasks: React.FC = () => {
     }
   };
 
+  // حفظ مودال المجلد (إنشاء أو تعديل)
+  const saveFolderModal = async (data: { name: string; color: TaskFolderColor; scope: 'shared' | 'personal' }) => {
+    if (!folderModal) return;
+    setFolderSaving(true);
+    try {
+      if (folderModal.folder) {
+        await TaskFolderService.updateFolder(folderModal.folder.id, { name: data.name, color: data.color });
+      } else {
+        await TaskFolderService.createFolder(data);
+      }
+      setFolderModal(null);
+      await loadFolders();
+    } catch (err: any) {
+      alert(err?.message || 'تعذّر حفظ المجلد');
+    } finally {
+      setFolderSaving(false);
+    }
+  };
+
+  // حذف مجلد — مهامه تعود للعرض العام تلقائياً (الباك يصفّر task_folder_id)
+  const confirmDeleteFolder = async () => {
+    if (!folderToDelete) return;
+    setFolderDeleting(true);
+    try {
+      await TaskFolderService.deleteFolder(folderToDelete.id);
+      if (activeFolderId === folderToDelete.id) setActiveFolderId(null);
+      setFolderToDelete(null);
+      await Promise.all([loadFolders(), loadTasks()]);
+    } catch (err: any) {
+      alert(err?.message || 'تعذّر حذف المجلد');
+    } finally {
+      setFolderDeleting(false);
+    }
+  };
+
   const renderListView = () => {
     let groups: { id: string; label: string; color: string; tasks: Task[] }[] = [];
 
@@ -941,7 +1077,7 @@ const Tasks: React.FC = () => {
                     </td>
                   </tr>
                   {!isCollapsed && group.tasks.map(task => (
-                    <tr key={task.id} onClick={() => navigate(`/tasks/${task.id}`)} style={{ cursor: 'pointer' }}>
+                    <DraggableTaskRow key={task.id} task={task} onClick={() => navigate(`/tasks/${task.id}`)}>
                       <td>
                         <div className="task-title-cell">
                           <span className="task-title-text">{task.title}</span>
@@ -1014,7 +1150,7 @@ const Tasks: React.FC = () => {
                           <MoreHorizontal size={16} />
                         </button>
                       </td>
-                    </tr>
+                    </DraggableTaskRow>
                   ))}
                 </React.Fragment>
               );
@@ -1026,12 +1162,7 @@ const Tasks: React.FC = () => {
   };
 
   const renderBoardView = () => (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
+    <>
       <div className="board-view">
         {TASK_STATUSES.map(statusGroup => {
           const groupTasks = getTasksByStatus(statusGroup.key);
@@ -1071,22 +1202,7 @@ const Tasks: React.FC = () => {
           );
         })}
       </div>
-
-      <DragOverlay>
-        {activeDragItem ? (
-          <div
-            className="task-card"
-            style={{
-              transform: 'rotate(2deg)',
-              cursor: 'grabbing',
-              boxShadow: '0 10px 15px rgba(0,0,0,0.1)'
-            }}
-          >
-            <div className="task-card-title">{activeDragItem.title}</div>
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+    </>
   );
 
   return (
@@ -1116,8 +1232,16 @@ const Tasks: React.FC = () => {
         </button>
       </div>
 
+      {/* DndContext يلفّ الشبكة كلها: سحب مهمة (صف قائمة أو بطاقة كانبان)
+          وإفلاتها على رقاقة مجلد في العمود الجانبي، أو على عمود حالة في الكانبان */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={folderAwareCollision}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
       <div className="tasks-page-grid">
-        
+
         {/* Column 1: Right Panel (Filters, Stats) */}
         <aside className={`tasks-panel-right ${mobileActiveTab === 'filters' ? 'mobile-visible' : 'mobile-hidden'}`}>
           <div className="panel-section">
@@ -1151,10 +1275,22 @@ const Tasks: React.FC = () => {
             </div>
           </div>
 
-          {/* Status Filters List */}
+          {/* مجلدات المهام — تنظيم ظاهري (رقاقات قابلة للإفلات) */}
+          <TaskFoldersPanel
+            folders={folders}
+            canManageShared={canManageShared}
+            activeFolderId={activeFolderId}
+            dragging={!!activeDragItem}
+            onSelect={(id) => { setActiveFolderId(id); setSpecialFilter(null); if (window.innerWidth < 1024) setMobileActiveTab('tasks'); }}
+            onCreate={() => setFolderModal({ folder: null })}
+            onEdit={(f) => setFolderModal({ folder: f })}
+            onDelete={(f) => setFolderToDelete(f)}
+          />
+
+          {/* Status Filters List — شبكة كثيفة بعمودين */}
           <div className="panel-section">
             <h4 className="panel-section-title">تصفية حسب الحالة</h4>
-            <div className="vertical-filter-list">
+            <div className="vertical-filter-list vertical-filter-list--grid">
               <button
                 className={`vertical-filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
                 onClick={() => { setSpecialFilter(null); setStatusFilter('all'); if (window.innerWidth < 1024) setMobileActiveTab('tasks'); }}
@@ -1180,20 +1316,23 @@ const Tasks: React.FC = () => {
             </div>
           </div>
 
-          {/* Priority Filters */}
+          {/* Priority Filters — فلتر فعلي (وليس مجرد ترتيب): نقرة تُفعّل/تلغي */}
           <div className="panel-section">
-            <h4 className="panel-section-title">الأولويات</h4>
+            <h4 className="panel-section-title">تصفية حسب الأولوية</h4>
             <div className="priority-filter-grid">
               {Object.entries(PRIORITY_META).map(([prioKey, prioMeta]) => {
                 const count = stats?.by_priority?.[prioKey as keyof TaskStats['by_priority']]
                   ?? tasks.filter(t => t.priority === prioKey).length;
+                const isActive = priorityFilter === prioKey;
                 return (
                   <button
                     key={prioKey}
-                    className="prio-filter-card"
-                    style={{ borderColor: prioMeta.color }}
+                    className={`prio-filter-card${isActive ? ' active' : ''}`}
+                    style={isActive
+                      ? { borderColor: prioMeta.color, background: `${prioMeta.color}1A`, color: prioMeta.color, fontWeight: 600 }
+                      : { borderColor: prioMeta.color }}
                     onClick={() => {
-                      setSortBy('priority');
+                      setPriorityFilter(prev => (prev === prioKey ? 'all' : prioKey));
                       if (window.innerWidth < 1024) setMobileActiveTab('tasks');
                     }}
                   >
@@ -1203,37 +1342,6 @@ const Tasks: React.FC = () => {
                   </button>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Sorting & assignee filter panel */}
-          <div className="panel-section">
-            <div className="inline-field">
-              <h4 className="panel-section-title">ترتيب المهام</h4>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="tasks-sidebar-select"
-              >
-                <option value="priority">الأولوية</option>
-                <option value="dueDate">تاريخ الاستحقاق</option>
-                <option value="createdAt">تاريخ الإنشاء</option>
-                <option value="title">العنوان</option>
-              </select>
-            </div>
-            <div className="inline-field">
-              <h4 className="panel-section-title">حسب المحامي</h4>
-              <select
-                value={assigneeFilter}
-                onChange={(e) => { setAssigneeFilter(e.target.value); if (window.innerWidth < 1024) setMobileActiveTab('tasks'); }}
-                className="tasks-sidebar-select"
-              >
-                <option value="all">الكل</option>
-                {Object.entries(users).map(([uid, u]) => (
-                  <option key={uid} value={uid}>{u.name}</option>
-                ))}
-                <option value="unassigned">غير معيّن</option>
-              </select>
             </div>
           </div>
         </aside>
@@ -1253,11 +1361,47 @@ const Tasks: React.FC = () => {
               />
             </div>
 
+            {/* أدوات القائمة: الترتيب + تصفية المحامي (انتقلتا من العمود الجانبي) */}
+            <div className="tasks-header-controls">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="tasks-header-select"
+                title="ترتيب المهام"
+              >
+                <option value="priority">الترتيب: الأولوية</option>
+                <option value="dueDate">الترتيب: الاستحقاق</option>
+                <option value="createdAt">الترتيب: الإنشاء</option>
+                <option value="title">الترتيب: العنوان</option>
+              </select>
+              <select
+                value={assigneeFilter}
+                onChange={(e) => setAssigneeFilter(e.target.value)}
+                className="tasks-header-select"
+                title="تصفية حسب المحامي"
+              >
+                <option value="all">كل المحامين</option>
+                {Object.entries(users).map(([uid, u]) => (
+                  <option key={uid} value={uid}>{u.name}</option>
+                ))}
+                <option value="unassigned">غير معيّن</option>
+              </select>
+            </div>
+
             {/* شريحة الفلتر الخاص النشط (عرض الكل من ودجة) */}
             {specialFilter && (
               <div className="special-filter-chip">
                 <span>عرض: {SPECIAL_FILTER_LABELS[specialFilter]} ({totalCount})</span>
                 <button onClick={() => setSpecialFilter(null)} title="إلغاء التصفية">✕</button>
+              </div>
+            )}
+
+            {/* شريحة المجلد النشط */}
+            {activeFolder && (
+              <div className={`special-filter-chip tf-active-chip tf-color-${activeFolder.color}`}>
+                <FolderClosed size={13} />
+                <span>{activeFolder.name} ({totalCount})</span>
+                <button onClick={() => setActiveFolderId(null)} title="العودة للعرض العام">✕</button>
               </div>
             )}
 
@@ -1287,9 +1431,19 @@ const Tasks: React.FC = () => {
               <div className="tasks-loading">جاري التحميل...</div>
             ) : getFilteredTasks().length === 0 ? (
               <div className="tasks-empty">
-                <CheckCircle size={40} style={{ opacity: 0.2, margin: '0 auto 10px' }} />
-                <h3>لا توجد مهام مطابقة</h3>
-                <p>قم بتغيير خيارات التصفية أو أضف مهمة جديدة</p>
+                {activeFolder ? (
+                  <>
+                    <FolderClosed size={40} style={{ opacity: 0.2, margin: '0 auto 10px' }} />
+                    <h3>المجلد «{activeFolder.name}» فارغ</h3>
+                    <p>اسحب مهمة وأفلتها على رقاقة المجلد، أو انقلها من قائمة خيارات المهمة</p>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={40} style={{ opacity: 0.2, margin: '0 auto 10px' }} />
+                    <h3>لا توجد مهام مطابقة</h3>
+                    <p>قم بتغيير خيارات التصفية أو أضف مهمة جديدة</p>
+                  </>
+                )}
               </div>
             ) : (
               viewMode === 'list' ? renderListView() : renderBoardView()
@@ -1507,6 +1661,23 @@ const Tasks: React.FC = () => {
 
       </div>
 
+      <DragOverlay>
+        {activeDragItem ? (
+          <div
+            className="task-card tf-drag-overlay"
+            style={{
+              transform: 'rotate(2deg)',
+              cursor: 'grabbing',
+              boxShadow: '0 10px 15px rgba(0,0,0,0.1)'
+            }}
+          >
+            <FolderInput size={14} style={{ flexShrink: 0, opacity: 0.6 }} />
+            <div className="task-card-title">{activeDragItem.title}</div>
+          </div>
+        ) : null}
+      </DragOverlay>
+      </DndContext>
+
       <AddTaskModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -1530,6 +1701,8 @@ const Tasks: React.FC = () => {
               top: menu.top,
               left: menu.left,
               width: 210,
+              maxHeight: '72vh',
+              overflowY: 'auto',
               transform: menu.openUp ? 'translateY(-100%)' : 'none',
             }}
           >
@@ -1561,6 +1734,31 @@ const Tasks: React.FC = () => {
                 {s.label}
               </button>
             ))}
+
+            {folders.length > 0 && (
+              <>
+                <div className="task-menu-sep" />
+                <div className="task-menu-label">نقل إلى مجلد</div>
+                {folders.filter(f => f.id !== (menu.task.task_folder_id ?? null)).map(f => (
+                  <button
+                    key={f.id}
+                    className="task-menu-item"
+                    onClick={() => moveTaskToFolder(menu.task, f.id)}
+                  >
+                    <FolderClosed size={13} className={`tf-menu-folder-icon tf-color-${f.color}`} />
+                    <span className="tf-menu-folder-name">{f.name}</span>
+                  </button>
+                ))}
+                {menu.task.task_folder_id != null && (
+                  <button
+                    className="task-menu-item"
+                    onClick={() => moveTaskToFolder(menu.task, null)}
+                  >
+                    <FolderInput size={13} /> إخراج من المجلد
+                  </button>
+                )}
+              </>
+            )}
 
             <div className="task-menu-sep" />
             <button
@@ -1672,6 +1870,57 @@ const Tasks: React.FC = () => {
         task={editTask}
         onTaskUpdated={() => { setEditTask(null); refreshAll(); }}
       />
+
+      {/* مودال إنشاء/تعديل مجلد */}
+      <TaskFolderModal
+        open={!!folderModal}
+        folder={folderModal?.folder ?? null}
+        canManageShared={canManageShared}
+        saving={folderSaving}
+        onClose={() => setFolderModal(null)}
+        onSubmit={saveFolderModal}
+      />
+
+      {/* تأكيد حذف مجلد — المهام تعود للعام، لا تُحذف */}
+      {folderToDelete && (
+        <div
+          onClick={() => !folderDeleting && setFolderToDelete(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--dashboard-card, #fff)', borderRadius: 12, padding: 24, width: 400, maxWidth: '90vw', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <FolderClosed size={20} color="#ef4444" />
+              </div>
+              <h3 style={{ margin: 0, fontSize: 16, color: 'var(--color-text)' }}>حذف المجلد</h3>
+            </div>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, lineHeight: 1.7, marginBottom: 22 }}>
+              هل أنت متأكد من حذف مجلد «<strong style={{ color: 'var(--color-text)' }}>{folderToDelete.name}</strong>»؟
+              <br />
+              المهام بداخله <strong style={{ color: 'var(--color-text)' }}>لن تُحذف</strong> — ستعود للعرض العام.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={confirmDeleteFolder}
+                disabled={folderDeleting}
+                style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: folderDeleting ? 'default' : 'pointer', fontSize: 14, fontWeight: 600, opacity: folderDeleting ? 0.7 : 1 }}
+              >
+                {folderDeleting ? 'جارٍ الحذف...' : 'نعم، احذف المجلد'}
+              </button>
+              <button
+                onClick={() => setFolderToDelete(null)}
+                disabled={folderDeleting}
+                style={{ background: 'transparent', color: 'var(--color-text)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '9px 18px', cursor: folderDeleting ? 'default' : 'pointer', fontSize: 14 }}
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

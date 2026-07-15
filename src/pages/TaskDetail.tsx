@@ -30,14 +30,17 @@ import {
   UploadCloud,
   AlignRight,
   Star,
+  FolderClosed,
+  FolderInput,
 } from 'lucide-react';
 import { TaskService } from '../services/taskService';
+import { TaskFolderService } from '../services/taskFolderService';
 import TaskTimer from '../components/TaskTimer';
 import SubtasksList from '../components/SubtasksList';
 import TaskTeamChat from '../components/TaskTeamChat';
 import EditTaskModal from '../components/EditTaskModal';
 import { TasksCache } from '../utils/tasksCache';
-import type { Task, TaskStatus } from '../types';
+import type { Task, TaskStatus, TaskFolder } from '../types';
 
 /**
  * مساحة المهمة — «النمط الملتصق» (نفس وصفة غرفة تجهيز القضية حرفياً):
@@ -117,6 +120,35 @@ const TaskDetail: React.FC = () => {
   // الإيقاف المؤقت بسبب إلزامي (#130)
   const [holdModalOpen, setHoldModalOpen] = useState(false);
   const [holdReason, setHoldReason] = useState('');
+  // مجلد المهمة (تنظيم ظاهري): قائمة النقل تُحمَّل كسولاً عند أول فتح
+  const [folderMenuOpen, setFolderMenuOpen] = useState(false);
+  const [availableFolders, setAvailableFolders] = useState<TaskFolder[] | null>(null);
+  const [movingFolder, setMovingFolder] = useState(false);
+
+  const toggleFolderMenu = () => {
+    setFolderMenuOpen(v => !v);
+    if (availableFolders === null) {
+      TaskFolderService.getFolders()
+        .then(({ folders }) => setAvailableFolders(folders))
+        .catch(() => setAvailableFolders([]));
+    }
+  };
+
+  const moveToFolder = async (folderId: number | null) => {
+    if (!task || movingFolder) return;
+    setFolderMenuOpen(false);
+    if ((task.task_folder_id ?? null) === folderId) return;
+    setMovingFolder(true);
+    try {
+      await TaskFolderService.moveTasks([task.id], folderId);
+      const folder = folderId !== null ? (availableFolders ?? []).find(f => f.id === folderId) ?? null : null;
+      setTask(prev => (prev ? { ...prev, task_folder_id: folderId, folder } : prev));
+    } catch (err: any) {
+      alert(err?.message || 'تعذّر نقل المهمة إلى المجلد');
+    } finally {
+      setMovingFolder(false);
+    }
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* طيّ الأعمدة الجانبية — يبقى عبر الجلسات، وطيّ أيّها يمدد الوسط */
@@ -458,6 +490,47 @@ const TaskDetail: React.FC = () => {
               </span>
             </>
           )}
+          {/* شارة المجلد — نقر يفتح قائمة النقل بين المجلدات */}
+          <span className="ssp2-fact__sep" />
+          <span
+            className={`ssp2-fact tf-fact${task.folder ? ` tf-color-${task.folder.color}` : ''}`}
+            role="button"
+            title="نقل المهمة بين المجلدات"
+            onClick={toggleFolderMenu}
+          >
+            <FolderClosed size={13} className={task.folder ? 'tf-fact__icon' : undefined} />
+            <span className="ssp2-fact__label">المجلد</span>
+            <b>{movingFolder ? 'جارٍ النقل…' : task.folder ? task.folder.name : 'بلا مجلد'}</b>
+            <ChevronDown size={11} style={{ opacity: 0.5 }} />
+            {folderMenuOpen && (
+              <>
+                <span className="tf-fact__backdrop" onClick={(e) => { e.stopPropagation(); setFolderMenuOpen(false); }} />
+                <span className="tf-fact__menu" onClick={(e) => e.stopPropagation()}>
+                  {availableFolders === null ? (
+                    <span className="tf-fact__menu-empty">جارٍ التحميل…</span>
+                  ) : (
+                    <>
+                      {availableFolders.filter(f => f.id !== (task.task_folder_id ?? null)).map(f => (
+                        <button key={f.id} type="button" onClick={() => moveToFolder(f.id)}>
+                          <FolderClosed size={12} className={`tf-menu-folder-icon tf-color-${f.color}`} />
+                          <span>{f.name}</span>
+                        </button>
+                      ))}
+                      {task.task_folder_id != null && (
+                        <button type="button" onClick={() => moveToFolder(null)}>
+                          <FolderInput size={12} />
+                          <span>إخراج من المجلد</span>
+                        </button>
+                      )}
+                      {availableFolders.length === 0 && (
+                        <span className="tf-fact__menu-empty">لا توجد مجلدات — أنشئها من صفحة المهام</span>
+                      )}
+                    </>
+                  )}
+                </span>
+              </>
+            )}
+          </span>
         </div>
       </header>
 

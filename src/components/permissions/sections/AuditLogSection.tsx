@@ -69,6 +69,8 @@ const permissionArabic: Record<string, string> = {
   // tasks
   'tasks.view': 'عرض المهام', 'tasks.create': 'إضافة مهمة', 'tasks.edit': 'تعديل مهمة',
   'tasks.delete': 'حذف مهمة', 'tasks.assign': 'إسناد مهمة',
+  'tasks.approve': 'اعتماد إنجاز المهام', 'tasks.force-delete': 'حذف نهائي لمهمة من الأرشيف',
+  'tasks.manage-folders': 'إدارة مجلدات المهام المشتركة',
   // documents
   'documents.view': 'عرض الوثائق', 'documents.upload': 'رفع وثيقة',
   'documents.edit': 'تعديل وثيقة', 'documents.delete': 'حذف وثيقة',

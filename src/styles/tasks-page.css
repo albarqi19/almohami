@@ -216,23 +216,23 @@
 
 /* قسمان: النص فوق (شريط) والرقم تحت */
 .stats-grid .stat-label {
-    font-size: 10px;
+    font-size: 9.5px;
     color: var(--color-text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     text-align: center;
-    padding: 4px 6px;
+    padding: 3px 5px;
     background: var(--quiet-gray-50);
     border-bottom: 1px solid var(--color-border);
 }
 
 .stats-grid .stat-value {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--color-heading);
     text-align: center;
-    padding: 5px 6px 6px;
+    padding: 3px 5px 4px;
     margin: 0;
 }
 
@@ -245,6 +245,31 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+}
+
+/* الوضع الكثيف: شبكة بعمودين (8 حالات = 4 صفوف بدل 8) */
+.vertical-filter-list--grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px;
+}
+
+.vertical-filter-list--grid .vertical-filter-btn {
+    padding: 4px 6px;
+    font-size: 11px;
+    gap: 5px;
+    min-width: 0;
+}
+
+.vertical-filter-list--grid .filter-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vertical-filter-list--grid .filter-count {
+    padding: 0 4px;
+    font-size: 9px;
 }
 
 .vertical-filter-btn {
@@ -700,8 +725,34 @@ body.dark .side-task-card {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 10px;
+    flex-wrap: wrap; /* أدوات الترتيب/المحامي تلتف على الشاشات الضيقة */
     flex-shrink: 0;
+}
+
+/* أدوات القائمة في الهيدر (الترتيب + المحامي) — انتقلتا من العمود الجانبي */
+.tasks-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.tasks-header-select {
+    padding: 5px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-family: inherit;
+    outline: none;
+    background: var(--dashboard-card);
+    color: var(--color-text);
+    cursor: pointer;
+    max-width: 150px;
+}
+
+.tasks-header-select:hover {
+    border-color: var(--color-border-strong, var(--quiet-gray-300));
 }
 
 .middle-panel-content {

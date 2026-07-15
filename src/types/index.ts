@@ -724,7 +724,25 @@ export interface Task {
   can_approve?: boolean;
   can_configure_requirements?: boolean;
   can_manage_documents?: boolean;
+  // مجلد المهمة (تنظيم ظاهري — مشترك أو شخصي). الشخصي لغير مالكه يصل null من الباك
+  task_folder_id?: number | null;
+  folder?: TaskFolder | null;
 }
+
+/** مجلد مهام — تنظيم ظاهري بحت (لا يمسّ التقارير أو التذكيرات) */
+export interface TaskFolder {
+  id: number;
+  name: string;
+  /** مفتاح لون رمزي تحوّله الواجهة لمتغيرات الثيم */
+  color: TaskFolderColor;
+  /** shared = مشترك للمكتب | personal = شخصي لمالكه */
+  scope: 'shared' | 'personal';
+  owner_id?: number | null;
+  position?: number;
+  active_tasks_count?: number;
+}
+
+export type TaskFolderColor = 'gold' | 'navy' | 'green' | 'red' | 'purple' | 'blue' | 'orange' | 'gray';
 
 export const TaskStatus = {
   TODO: 'todo',
