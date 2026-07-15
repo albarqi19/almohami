@@ -30,6 +30,8 @@ const ClientExportModal: React.FC<ClientExportModalProps> = ({ isOpen, onClose, 
     config.cases.enabled ||
     config.upcomingSessions.enabled ||
     config.tasks.enabled ||
+    config.legalServices.enabled ||
+    config.letters.enabled ||
     config.documentsWekalat.enabled ||
     config.communicationsActivities.enabled ||
     config.notes.enabled;
@@ -122,6 +124,20 @@ const ClientExportModal: React.FC<ClientExportModalProps> = ({ isOpen, onClose, 
             ]}
           />
         </SectionRow>
+
+        <SectionRow
+          checked={config.legalServices.enabled}
+          onChange={(v) => setSection('legalServices', { enabled: v })}
+          label="الخدمات القانونية والاستشارات"
+          count={data.services.length}
+        />
+
+        <SectionRow
+          checked={config.letters.enabled}
+          onChange={(v) => setSection('letters', { enabled: v })}
+          label="الخطابات والمراسلات الصادرة"
+          count={data.letters.length}
+        />
 
         <SectionRow
           checked={config.documentsWekalat.enabled}

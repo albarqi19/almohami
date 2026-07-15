@@ -84,12 +84,43 @@ export interface ClientDocument {
   case?: { id?: number; file_number?: string | null; title?: string | null } | null;
 }
 
+/** خدمة قانونية / استشارة مرتبطة بالعميل مباشرةً (legal_services.client_id). */
+export interface ClientService {
+  id: number;
+  service_number?: string | null;
+  service_type?: string | null;
+  service_type_arabic?: string | null;
+  title?: string | null;
+  status?: string | null;
+  status_arabic?: string | null;
+  agreed_amount?: number | string | null;
+  due_date?: string | null;
+  assigned_lawyer?: { id: number; name: string } | null;
+  case_model?: { id: number; file_number?: string | null; title?: string | null } | null;
+}
+
+/** خطاب صادر حرّ (خطاب/إنذار/إشعار) موجّه للعميل مباشرةً (outgoing_letters.client_id). */
+export interface ClientLetter {
+  id: number;
+  document_type?: string | null;
+  type_label?: string | null;
+  title?: string | null;
+  outgoing_number?: string | null;
+  status?: string | null;
+  sent_at?: string | null;
+  created_at?: string | null;
+  case_id?: number | null;
+  case?: { id?: number; file_number?: string | null; title?: string | null } | null;
+}
+
 export interface ClientReportData {
   client: Client;
   stats: ClientStats;
   cases: ClientCase[];
   upcoming_sessions: ClientUpcomingSession[];
   tasks: ClientTask[];
+  services: ClientService[];
+  letters: ClientLetter[];
   communications: ClientCommunication[];
   documents: ClientDocument[];
   wekalat: ClientWekala[];
@@ -106,6 +137,8 @@ export interface ClientExportConfig {
   cases: { enabled: boolean; scope: CaseScope };
   upcomingSessions: { enabled: boolean; limit: number };
   tasks: { enabled: boolean; scope: TaskScope };
+  legalServices: { enabled: boolean };
+  letters: { enabled: boolean };
   documentsWekalat: { enabled: boolean };
   communicationsActivities: { enabled: boolean; limit: number };
   notes: { enabled: boolean };
@@ -118,6 +151,8 @@ export const DEFAULT_CLIENT_EXPORT_CONFIG: ClientExportConfig = {
   cases: { enabled: true, scope: 'active' },
   upcomingSessions: { enabled: false, limit: 10 },
   tasks: { enabled: false, scope: 'open' },
+  legalServices: { enabled: false },
+  letters: { enabled: false },
   documentsWekalat: { enabled: false },
   communicationsActivities: { enabled: false, limit: 30 },
   notes: { enabled: false },
@@ -134,6 +169,8 @@ export function buildClientReport(data: ClientReportData, config: ClientExportCo
   if (config.cases.enabled) sections.push(renderCasesSection(data.cases, config.cases.scope));
   if (config.upcomingSessions.enabled) sections.push(renderSessionsSection(data.upcoming_sessions, config.upcomingSessions.limit));
   if (config.tasks.enabled) sections.push(renderTasksSection(data.tasks, config.tasks.scope));
+  if (config.legalServices.enabled) sections.push(renderServicesSection(data.services));
+  if (config.letters.enabled) sections.push(renderLettersSection(data.letters));
   if (config.documentsWekalat.enabled) sections.push(renderDocumentsAndWekalatSection(data.documents, data.wekalat));
   if (config.communicationsActivities.enabled) {
     sections.push(renderCommunicationsSection(data.communications, config.communicationsActivities.limit));
@@ -331,6 +368,72 @@ function renderTasksSection(tasks: ClientTask[], scope: TaskScope): string {
           <th style="${TH_STYLE}">الأولوية</th>
           <th style="${TH_STYLE}">الموعد</th>
           <th style="${TH_STYLE}">الحالة</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `);
+}
+
+function renderServicesSection(services: ClientService[]): string {
+  if (services.length === 0) {
+    return sectionWrap('الخدمات القانونية والاستشارات', `<p style="color:#64748b;">لا توجد خدمات أو استشارات.</p>`);
+  }
+  const rows = services.map((s, i) => `
+    <tr>
+      <td style="${TD_STYLE}">${i + 1}</td>
+      <td style="${TD_STYLE}">${esc(s.service_type_arabic || s.service_type || '-')}</td>
+      <td style="${TD_STYLE}">${esc(s.title || '-')}</td>
+      <td style="${TD_STYLE}">${esc(s.status_arabic || s.status || '-')}</td>
+      <td style="${TD_STYLE}">${s.case_model ? esc(s.case_model.file_number || '-') : 'غير مرتبطة بقضية'}</td>
+      <td style="${TD_STYLE}">${esc(s.assigned_lawyer?.name || '-')}</td>
+      <td style="${TD_STYLE}">${formatNumber(s.agreed_amount != null ? Number(s.agreed_amount) : null)}</td>
+    </tr>
+  `).join('');
+  return sectionWrap('الخدمات القانونية والاستشارات', `
+    <table style="${TABLE_STYLE}">
+      <thead>
+        <tr>
+          <th style="${TH_STYLE}">#</th>
+          <th style="${TH_STYLE}">النوع</th>
+          <th style="${TH_STYLE}">العنوان</th>
+          <th style="${TH_STYLE}">الحالة</th>
+          <th style="${TH_STYLE}">القضية المرتبطة</th>
+          <th style="${TH_STYLE}">المحامي المسؤول</th>
+          <th style="${TH_STYLE}">المبلغ (SAR)</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `);
+}
+
+function renderLettersSection(letters: ClientLetter[]): string {
+  if (letters.length === 0) {
+    return sectionWrap('الخطابات والمراسلات الصادرة', `<p style="color:#64748b;">لا توجد خطابات صادرة.</p>`);
+  }
+  const rows = letters.map((l, i) => `
+    <tr>
+      <td style="${TD_STYLE}">${i + 1}</td>
+      <td style="${TD_STYLE}">${esc(l.type_label || l.document_type || '-')}</td>
+      <td style="${TD_STYLE}">${esc(l.title || '-')}</td>
+      <td style="${TD_STYLE}">${esc(l.outgoing_number || '-')}</td>
+      <td style="${TD_STYLE}">${l.case_id ? esc(l.case?.file_number || 'قضية') : 'عام'}</td>
+      <td style="${TD_STYLE}">${esc(letterStatusLabel(l.status))}</td>
+      <td style="${TD_STYLE}">${formatDate(l.sent_at || l.created_at)}</td>
+    </tr>
+  `).join('');
+  return sectionWrap('الخطابات والمراسلات الصادرة', `
+    <table style="${TABLE_STYLE}">
+      <thead>
+        <tr>
+          <th style="${TH_STYLE}">#</th>
+          <th style="${TH_STYLE}">النوع</th>
+          <th style="${TH_STYLE}">العنوان</th>
+          <th style="${TH_STYLE}">رقم الصادر</th>
+          <th style="${TH_STYLE}">القضية</th>
+          <th style="${TH_STYLE}">الحالة</th>
+          <th style="${TH_STYLE}">التاريخ</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -571,6 +674,13 @@ function taskStatusLabel(s: string | null | undefined): string {
   return ({
     pending: 'في الانتظار', in_progress: 'قيد التنفيذ', completed: 'منجَزة',
     overdue: 'متأخرة', paused: 'معلَّقة',
+  } as Record<string, string>)[s] || s;
+}
+
+function letterStatusLabel(s: string | null | undefined): string {
+  if (!s) return '-';
+  return ({
+    draft: 'مسودة', sent: 'مُرسَل', printed: 'طباعة (دون إرسال)', cancelled: 'ملغى',
   } as Record<string, string>)[s] || s;
 }
 

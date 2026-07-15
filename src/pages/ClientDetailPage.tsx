@@ -5,12 +5,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight, Phone, Mail, Star, Edit2, Download, FileSpreadsheet,
   Briefcase, Calendar, ListTodo, FileSignature, MessageSquare,
-  Activity, Building2, Hash, FileText, ExternalLink, Save, Receipt, Scale,
+  Activity, Building2, Hash, FileText, ExternalLink, Save, Receipt, Scale, Send,
 } from 'lucide-react';
 import ClientFeeProposalsTab from '../components/ClientFeeProposalsTab';
+import ClientLettersTab from '../components/ClientLettersTab';
 import ClientManagementService, { clientLanguageLabel, type Client, type ClientCommunication } from '../services/clientManagementService';
 import { UserService, type User as UserType } from '../services/UserService';
-import { LegalServiceService } from '../services/legalServiceService';
 import { SERVICE_TYPE_LABELS, type LegalService } from '../types/legalServices';
 import { useAuth } from '../contexts/AuthContext';
 import { useAnyPermission } from '../hooks/usePermission';
@@ -31,7 +31,7 @@ import ComposeCorrespondenceModal from '../components/ComposeCorrespondenceModal
 import EstablishmentAdminTab from '../components/clients/EstablishmentAdminTab';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
-type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'legal_services' | 'fee_proposals' | 'communications' | 'activities' | 'establishment';
+type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'legal_services' | 'fee_proposals' | 'letters' | 'communications' | 'activities' | 'establishment';
 
 const ClientDetailPage: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -56,6 +56,9 @@ const ClientDetailPage: React.FC = () => {
   const canComposeLetter = useAnyPermission(['correspondence.create', 'correspondence.send'])
     && Boolean(authUser?.tenant?.correspondence_enabled);
   const canViewLegalServices = useAnyPermission(['legal-services.view', 'legal-services.manage']);
+  // الخطابات (الصادر الحرّ): صلاحية رؤية المراسلات + بوابة تفعيلها (أسوة بـ canComposeLetter).
+  const canViewLetters = useAnyPermission(['correspondence.view'])
+    && Boolean(authUser?.tenant?.correspondence_enabled);
   // بوابة المنشأة: خلف establishment_portal_enabled؛ الكتابة داخل التبويب بـ clients.edit.
   const showEstablishmentTab = Boolean(authUser?.tenant?.establishment_portal_enabled);
   const canEditEstablishment = useAnyPermission(['clients.edit']);
@@ -117,10 +120,19 @@ const ClientDetailPage: React.FC = () => {
     staleTime: 30 * 1000,
   });
 
+  // تُجلب دائماً (لا فقط عند فتح التبويب) كي تتوفّر لتصدير «ملف العميل» في مودال التخصيص.
   const legalServicesQuery = useQuery({
     queryKey: ['client-legal-services', clientId],
-    queryFn: () => LegalServiceService.getServices({ client_id: Number(clientId), per_page: 100 }),
-    enabled: !!clientId && canViewLegalServices && activeTab === 'legal_services',
+    queryFn: () => ClientManagementService.getClientServices(clientId!, { per_page: 100 }),
+    enabled: !!clientId && canViewLegalServices,
+    staleTime: 30 * 1000,
+  });
+
+  // مفتاح رقمي ليطابق ClientLettersTab (clientId={Number(...)}) فيتشاركا نفس الـ cache بلا طلب مكرر.
+  const lettersQuery = useQuery({
+    queryKey: ['client-letters', Number(clientId)],
+    queryFn: () => ClientManagementService.getClientLetters(clientId!, { per_page: 100 }),
+    enabled: !!clientId && canViewLetters,
     staleTime: 30 * 1000,
   });
 
@@ -161,6 +173,10 @@ const ClientDetailPage: React.FC = () => {
     const raw: any = legalServicesQuery.data?.data;
     return Array.isArray(raw) ? raw : (raw?.data || []);
   }, [legalServicesQuery.data]);
+  const letters = useMemo(() => {
+    const raw: any = lettersQuery.data?.data;
+    return Array.isArray(raw) ? raw : (raw?.data || []);
+  }, [lettersQuery.data]);
 
   const totalRevenue = useMemo(
     () => cases.reduce((s: number, c: any) => s + (Number(c.contract_value) || 0), 0),
@@ -194,6 +210,8 @@ const ClientDetailPage: React.FC = () => {
     cases,
     upcoming_sessions: upcomingSessions,
     tasks,
+    services: legalServices,
+    letters,
     communications,
     documents,
     wekalat,
@@ -390,6 +408,9 @@ const ClientDetailPage: React.FC = () => {
               <TabBtn active={activeTab === 'legal_services'} onClick={() => setActiveTab('legal_services')} icon={<Scale size={13} />}>الخدمات القانونية</TabBtn>
             )}
             <TabBtn active={activeTab === 'fee_proposals'} onClick={() => setActiveTab('fee_proposals')} icon={<Receipt size={13} />}>عروض الأتعاب</TabBtn>
+            {canViewLetters && (
+              <TabBtn active={activeTab === 'letters'} onClick={() => setActiveTab('letters')} icon={<Send size={13} />}>الخطابات</TabBtn>
+            )}
             <TabBtn active={activeTab === 'communications'} onClick={() => setActiveTab('communications')} icon={<MessageSquare size={13} />}
               count={communications.length}>التواصل</TabBtn>
             <TabBtn active={activeTab === 'activities'} onClick={() => setActiveTab('activities')} icon={<Activity size={13} />}>النشاطات</TabBtn>
@@ -438,6 +459,9 @@ const ClientDetailPage: React.FC = () => {
                 clientName={client?.name}
                 cases={cases.map((c: any) => ({ id: c.id, title: c.title, file_number: c.file_number }))}
               />
+            )}
+            {activeTab === 'letters' && clientId && (
+              <ClientLettersTab clientId={Number(clientId)} />
             )}
             {activeTab === 'communications' && (
               <CommunicationsTab

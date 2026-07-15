@@ -563,6 +563,47 @@ export class ClientManagementService {
     static async deleteClientDocument(clientId: number | string, docId: number | string): Promise<void> {
         await apiClient.delete<any>(`/client-management/${clientId}/client-documents/${docId}`);
     }
+
+    // ===== أعمال العميل: الخدمات/الاستشارات + الخطابات + تصدير ملف العميل PDF =====
+
+    /**
+     * كل الخدمات القانونية والاستشارات المرتبطة بالعميل مباشرةً (legal_services.client_id)
+     * بلا قيد legal-service.access — أي كل أعمال العميل لا المسندة للمستخدم فقط.
+     */
+    static async getClientServices(clientId: number | string, params?: {
+        status?: string;
+        per_page?: number;
+        page?: number;
+    }): Promise<{ data: any; meta?: any }> {
+        const searchParams = new URLSearchParams();
+        if (params?.status) searchParams.append('status', params.status);
+        if (params?.per_page) searchParams.append('per_page', params.per_page.toString());
+        if (params?.page) searchParams.append('page', params.page.toString());
+        const query = searchParams.toString();
+        const response = await apiClient.get<any>(`/client-management/${clientId}/services${query ? `?${query}` : ''}`);
+        return response.data;
+    }
+
+    /**
+     * الصادر الحرّ (خطابات/إنذارات/إشعارات) الموجّه للعميل مباشرةً.
+     * scope: general=غير متعلق بقضية، case=متعلق بقضية، all/غير محدّد=الكل.
+     */
+    static async getClientLetters(clientId: number | string, params?: {
+        status?: string;
+        scope?: 'general' | 'case' | 'all';
+        per_page?: number;
+        page?: number;
+    }): Promise<{ data: any; meta?: any }> {
+        const searchParams = new URLSearchParams();
+        if (params?.status) searchParams.append('status', params.status);
+        if (params?.scope) searchParams.append('scope', params.scope);
+        if (params?.per_page) searchParams.append('per_page', params.per_page.toString());
+        if (params?.page) searchParams.append('page', params.page.toString());
+        const query = searchParams.toString();
+        const response = await apiClient.get<any>(`/client-management/${clientId}/letters${query ? `?${query}` : ''}`);
+        return response.data;
+    }
+
 }
 
 /** تصنيفات مستندات العميل الثابتة (تطابق ClientDocument::DOC_TYPES في الباك). */
