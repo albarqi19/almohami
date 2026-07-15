@@ -23,6 +23,7 @@ export function getEcho(authToken: string): Echo<'reverb'> {
             wssPort: 443,
             forceTLS: true,
             enabledTransports: ['ws', 'wss'],
+            authEndpoint: 'https://api.alraedlaw.com/api/broadcasting/auth',
             auth: {
                 headers: {
                     Authorization: `Bearer ${authToken}`,

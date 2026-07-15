@@ -36,9 +36,10 @@ export function useLawyerPresence(tenantId: number) {
             .catch(console.error)
             .finally(() => setIsLoading(false));
 
-        // 2. الاشتراك في الـ channel لتلقي التحديثات فورياً عبر Reverb
+        // 2. الاشتراك في الـ channel الخاصة لتلقي التحديثات فورياً عبر Reverb
+        // private: القناة تتطلب مصادقة — منسوبو الشركة نفسها فقط (routes/channels.php)
         const echo = getEcho(authToken);
-        const channel = echo.channel(`presence.tenant.${tenantId}`);
+        const channel = echo.private(`presence.tenant.${tenantId}`);
 
         channel.listen('.user.presence.updated', (payload: OnlineLawyer) => {
             setLawyers(prev => {
@@ -53,7 +54,7 @@ export function useLawyerPresence(tenantId: number) {
         channelRef.current = echo;
 
         return () => {
-            echo.leaveChannel(`presence.tenant.${tenantId}`);
+            echo.leave(`presence.tenant.${tenantId}`);
         };
     }, [tenantId]);
 
