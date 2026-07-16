@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-toastify';
 import {
   ArrowRight,
   ArrowLeft,
@@ -65,7 +66,8 @@ interface TenantInfo {
   phone?: string;
   address?: string;
   license_number?: string;
-  commercial_reg?: string;
+  // [ZATCA-AUDIT-P0] الباك يرجع العمود باسمه الحقيقي commercial_registration لا commercial_reg
+  commercial_registration?: string;
   iban?: string;
   bank_name?: string;
   manager_name?: string;
@@ -363,7 +365,7 @@ const ContractBuilder: React.FC = () => {
     // بيانات المكتب
     if (tenantData) {
       values.firm_name = tenantData.name || '';
-      values.firm_cr = tenantData.commercial_reg || '';
+      values.firm_cr = tenantData.commercial_registration || '';
       values.firm_license = tenantData.license_number || '';
       values.firm_address = tenantData.address || '';
       values.firm_phone = tenantData.phone || '';
@@ -417,7 +419,7 @@ const ContractBuilder: React.FC = () => {
         party_type: 'first',
         entity_type: 'company',
         name: tenantData?.name || 'مكتب المحاماة',
-        commercial_registration: tenantData?.commercial_reg,
+        commercial_registration: tenantData?.commercial_registration,
         phone: tenantData?.phone,
         email: tenantData?.email,
         address: tenantData?.address,
@@ -439,6 +441,8 @@ const ContractBuilder: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['finance', 'contracts'] });
       navigate(`/finance/contracts/${res.data.id}`);
     },
+    // [ZATCA-AUDIT-P0] الفشل كان صامتاً تماماً — السبينر يتوقف ولا شيء يحدث
+    onError: (e: Error) => toast.error(e.message || 'تعذّر إنشاء العقد'),
   });
 
   // التنقل بين الخطوات

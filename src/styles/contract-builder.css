@@ -1033,3 +1033,36 @@ body.dark .from-case-item {
   font-size: 14px;
   margin: 0;
 }
+
+/* [AUDIT-P2] فاصل الصفحة اليدوي بمحرر العقود — خط متقطع بتلميح (نفس فكرة محرر الخطابات) */
+.contract-template-editor .ProseMirror hr.page-break {
+  display: block;
+  position: relative;
+  border: none;
+  border-top: 2px dashed var(--color-border, #cbd5e1);
+  background: transparent;
+  height: 24px;
+  margin: 10px 0 0;
+  cursor: pointer;
+}
+.contract-template-editor .ProseMirror hr.page-break::before {
+  content: 'فاصل صفحة — ما بعده يبدأ صفحة جديدة في PDF';
+  position: absolute;
+  top: -9px;
+  right: 50%;
+  transform: translateX(50%);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-secondary, #7b8494);
+  background: var(--color-surface, #fff);
+  border: 1px dashed var(--color-border, #cbd5e1);
+  border-radius: 999px;
+  padding: 1px 10px;
+  white-space: nowrap;
+  z-index: 1;
+}
+.contract-template-editor .ProseMirror hr.page-break.ProseMirror-selectednode::before {
+  color: var(--law-navy, var(--color-primary));
+  border-color: var(--law-navy, var(--color-primary));
+  border-style: solid;
+}

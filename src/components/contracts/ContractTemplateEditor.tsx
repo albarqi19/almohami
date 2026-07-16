@@ -6,6 +6,7 @@ import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { Highlight } from '@tiptap/extension-highlight';
+import { Node as TiptapNode } from '@tiptap/core';
 import { VariableMention } from './VariableMentionExtension';
 import { FontSize } from './FontSizeExtension';
 import {
@@ -23,7 +24,26 @@ import {
   Eye,
   Braces,
   Pencil,
+  FilePlus,
 } from 'lucide-react';
+
+/**
+ * [AUDIT-P2] فاصل صفحة يدوي — يُخزَّن <hr class="page-break"> ويحوّله مولّد
+ * PDF العقد (ContractPdfService) إلى <pagebreak /> mPDF، فتطابق القفزة في
+ * المحرر القفزة في الملف المطبوع. (نفس عقدة محرر الخطابات TiptapEditor.)
+ */
+const PageBreak = TiptapNode.create({
+  name: 'pageBreak',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  parseHTML() {
+    return [{ tag: 'hr.page-break' }, { tag: 'div.page-break' }];
+  },
+  renderHTML() {
+    return ['hr', { class: 'page-break' }];
+  },
+});
 
 interface ContractTemplateEditorProps {
   content: string;
@@ -96,6 +116,7 @@ const ContractTemplateEditor = forwardRef<ContractTemplateEditorRef, ContractTem
         FontSize,
         Highlight.configure({ multicolor: true }),
         VariableMention,
+        PageBreak,
       ],
       content,
       editable,
@@ -186,6 +207,15 @@ const ContractTemplateEditor = forwardRef<ContractTemplateEditorRef, ContractTem
 
             <MenuButton onClick={() => ed.chain().focus().undo().run()} disabled={!ed.can().undo()} title="تراجع"><Undo size={16} /></MenuButton>
             <MenuButton onClick={() => ed.chain().focus().redo().run()} disabled={!ed.can().redo()} title="إعادة"><Redo size={16} /></MenuButton>
+            <Divider />
+
+            {/* [AUDIT-P2] فاصل صفحة يدوي — ينعكس في PDF العقد كصفحة جديدة */}
+            <MenuButton
+              onClick={() => ed.chain().focus().insertContent({ type: 'pageBreak' }).run()}
+              title="إدراج فاصل صفحة — يقفز ما بعده لصفحة جديدة في الملف المطبوع"
+            >
+              <FilePlus size={16} />
+            </MenuButton>
             <Divider />
 
             {/* [P4·UX-09/TPL-4.9] إدراج متغيّر — يفتح مُنتقي المتغيّرات بكتابة {{ */}
