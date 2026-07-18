@@ -29,6 +29,9 @@ import ClientDocumentsManager from '../components/ClientDocumentsManager';
 import WhatsAppSendModal from '../components/WhatsAppSendModal';
 import ComposeCorrespondenceModal from '../components/ComposeCorrespondenceModal';
 import EstablishmentAdminTab from '../components/clients/EstablishmentAdminTab';
+import ConfirmDialog from '../components/ConfirmDialog';
+import CredentialsModal from '../components/CredentialsModal';
+import { toast } from 'react-toastify';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'legal_services' | 'fee_proposals' | 'letters' | 'communications' | 'activities' | 'establishment';
@@ -51,6 +54,9 @@ const ClientDetailPage: React.FC = () => {
   const [docUploadSignal, setDocUploadSignal] = useState(0);
   const [notesDraft, setNotesDraft] = useState('');
   const [notesSaving, setNotesSaving] = useState(false);
+  const [isResendCredsOpen, setIsResendCredsOpen] = useState(false);
+  const [resendCredsLoading, setResendCredsLoading] = useState(false);
+  const [newCredsPin, setNewCredsPin] = useState<string | null>(null);
 
   // بوّابات الميزات: الصادر يظهر فقط لمكتب مفعَّل له + صلاحية؛ الخدمات القانونية بالصلاحية.
   const canComposeLetter = useAnyPermission(['correspondence.create', 'correspondence.send'])
@@ -62,6 +68,25 @@ const ClientDetailPage: React.FC = () => {
   // بوابة المنشأة: خلف establishment_portal_enabled؛ الكتابة داخل التبويب بـ clients.edit.
   const showEstablishmentTab = Boolean(authUser?.tenant?.establishment_portal_enabled);
   const canEditEstablishment = useAnyPermission(['clients.edit']);
+  // إرسال بيانات الدخول: نفس شرط manage.users بالباك (admin/owner أو مظلّة system.manage)
+  const hasSystemManage = useAnyPermission(['system.manage']);
+  const canResendCredentials = hasSystemManage
+    || (!!authUser && (authUser.role === 'admin' || authUser.role === 'super_admin' || Boolean(authUser.is_tenant_owner)));
+
+  const handleResendCredentials = async () => {
+    if (!clientId) return;
+    try {
+      setResendCredsLoading(true);
+      const result = await UserService.resendCredentials(clientId);
+      setIsResendCredsOpen(false);
+      setNewCredsPin(result.pin);
+    } catch (err) {
+      setIsResendCredsOpen(false);
+      toast.error(err instanceof Error ? err.message : 'تعذّر إرسال بيانات الدخول — تحقق من اتصال الواتساب');
+    } finally {
+      setResendCredsLoading(false);
+    }
+  };
 
   // ===== Parallel queries =====
   const detailsQuery = useQuery({
@@ -388,6 +413,7 @@ const ClientDetailPage: React.FC = () => {
         onLogCommunication={() => setIsLogCommModalOpen(true)}
         onCreateTask={() => setIsAddTaskModalOpen(true)}
         onUploadDocument={() => { setActiveTab('documents'); setDocUploadSignal((n) => n + 1); }}
+        onResendCredentials={canResendCredentials ? () => setIsResendCredsOpen(true) : undefined}
       />
 
       {/* === Main grid (right tabs + left side panel) === */}
@@ -611,6 +637,31 @@ const ClientDetailPage: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['client-communications', clientId] });
             queryClient.invalidateQueries({ queryKey: ['client-activities', clientId] });
           }}
+        />
+      )}
+      {client && (
+        <ConfirmDialog
+          isOpen={isResendCredsOpen}
+          title="إرسال بيانات الدخول للعميل"
+          message={<>سيُنشأ رمز دخول جديد لـ«{client.name}» ويُرسَل له عبر واتساب مع رابط البوابة.</>}
+          note="الرمز القديم لن يعمل بعد ذلك."
+          confirmLabel="إنشاء وإرسال"
+          loading={resendCredsLoading}
+          onConfirm={handleResendCredentials}
+          onClose={() => setIsResendCredsOpen(false)}
+        />
+      )}
+      {client && (
+        <CredentialsModal
+          isOpen={newCredsPin !== null}
+          title="تم إرسال بيانات الدخول ✅"
+          subtitle={`أُرسل الرمز الجديد للعميل «${client.name}» عبر واتساب (إذا كان الجهاز متصلاً والرقم صحيحاً)`}
+          fields={[
+            { label: 'رقم الهوية (اسم الدخول)', value: client.national_id, copyable: true, mono: true },
+            { label: 'الرمز السري الجديد', value: newCredsPin, copyable: true, mono: true },
+          ]}
+          note="انسخه الآن إن أردت تزويد العميل يدوياً — لن يظهر مرة أخرى."
+          onClose={() => setNewCredsPin(null)}
         />
       )}
     </div>

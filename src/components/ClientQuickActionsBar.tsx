@@ -1,5 +1,5 @@
 import React from 'react';
-import { ListTodo, MessageCircle, FileUp, MessageSquare, FileOutput } from 'lucide-react';
+import { ListTodo, MessageCircle, FileUp, MessageSquare, FileOutput, KeyRound } from 'lucide-react';
 
 /**
  * شريط عمل العميل الموحّد (ERP): إجراءات فعلية تفتح مودالات داخل الصفحة —
@@ -22,6 +22,8 @@ interface ClientQuickActionsBarProps {
   onLogCommunication: () => void;
   onCreateTask: () => void;
   onUploadDocument: () => void;
+  /** غير ممرَّر = المستخدم الحالي بلا صلاحية إدارة المستخدمين فلا يظهر الزر */
+  onResendCredentials?: () => void;
 }
 
 const ClientQuickActionsBar: React.FC<ClientQuickActionsBarProps> = ({
@@ -32,6 +34,7 @@ const ClientQuickActionsBar: React.FC<ClientQuickActionsBarProps> = ({
   onLogCommunication,
   onCreateTask,
   onUploadDocument,
+  onResendCredentials,
 }) => (
   <div className="client-workbar">
     <div className="client-workbar__actions">
@@ -55,6 +58,15 @@ const ClientQuickActionsBar: React.FC<ClientQuickActionsBarProps> = ({
       <ActionBtn icon={<MessageSquare size={14} />} label="تسجيل تواصل" onClick={onLogCommunication} />
       <ActionBtn icon={<ListTodo size={14} />} label="مهمة جديدة" onClick={onCreateTask} />
       <ActionBtn icon={<FileUp size={14} />} label="رفع مستند" onClick={onUploadDocument} />
+      {onResendCredentials && (
+        <ActionBtn
+          icon={<KeyRound size={14} />}
+          label="بيانات الدخول"
+          onClick={onResendCredentials}
+          disabled={!clientPhone}
+          title={!clientPhone ? 'لا يوجد جوال مسجل' : 'إنشاء رمز دخول جديد وإرساله للعميل واتساب — الرمز القديم سيتوقف'}
+        />
+      )}
     </div>
 
     <div className="client-workbar__stats">
