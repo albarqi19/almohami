@@ -155,7 +155,11 @@ const ContractDetailPage: React.FC = () => {
           <button type="button" className="fin-btn fin-btn--sm" onClick={() => setShowPreview(true)}><Eye size={14} /> معاينة</button>
           <button type="button" className="fin-btn fin-btn--sm" onClick={() => contractService.downloadPdf(contract.id, contract.contract_number).catch(() => toast.error('تعذّر تحميل PDF'))}><Download size={14} /> PDF</button>
           {canEdit && actions.canSend && (
-            <button type="button" className="fin-btn fin-btn--sm" disabled={sendMutation.isPending} onClick={() => sendMutation.mutate('email')}><Send size={14} /> إرسال للتوقيع</button>
+            <>
+              {/* قناتان صريحتان (نمط صفحة الفاتورة) — كان الزر المفرد يثبّت email فيفشل لعملاء بلا بريد رغم وجود جوالهم */}
+              <button type="button" className="fin-btn fin-btn--sm" disabled={sendMutation.isPending} onClick={() => sendMutation.mutate('email')}><Send size={14} /> للتوقيع: بريد</button>
+              <button type="button" className="fin-btn fin-btn--sm" disabled={sendMutation.isPending} onClick={() => sendMutation.mutate('whatsapp')}><Send size={14} /> للتوقيع: واتساب</button>
+            </>
           )}
           {canEdit && actions.canSign && (
             <button type="button" className="fin-btn fin-btn--primary fin-btn--sm" onClick={() => { setSignedBy(contract.client?.name ?? ''); setShowSign(true); }}><CheckCircle size={14} /> توقيع</button>
