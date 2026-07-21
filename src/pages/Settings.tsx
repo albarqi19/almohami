@@ -757,6 +757,46 @@ const Settings: React.FC = () => {
           }
         };
 
+        // تغيير رمز الدخول للموظفين — نص حر ≥4 خانات (رموز الإنتاج متفاوتة: 4-6+، أرقام وحروف)
+        const handleStaffPinChange = async () => {
+          if (!pinForm.current_pin || !pinForm.new_pin || !pinForm.confirm_pin) {
+            setPinMessage({ type: 'error', text: 'جميع الحقول مطلوبة' });
+            return;
+          }
+          if (pinForm.new_pin.length < 4) {
+            setPinMessage({ type: 'error', text: 'رمز الدخول الجديد يجب أن يكون 4 خانات على الأقل' });
+            return;
+          }
+          if (pinForm.new_pin !== pinForm.confirm_pin) {
+            setPinMessage({ type: 'error', text: 'تأكيد رمز الدخول غير متطابق' });
+            return;
+          }
+          if (pinForm.new_pin === pinForm.current_pin) {
+            setPinMessage({ type: 'error', text: 'رمز الدخول الجديد مطابق للحالي' });
+            return;
+          }
+
+          try {
+            setChangingPin(true);
+            const response: any = await apiClient.put('/auth/change-pin', {
+              current_pin: pinForm.current_pin,
+              new_pin: pinForm.new_pin,
+              new_pin_confirmation: pinForm.confirm_pin
+            });
+            if (response.success) {
+              setPinMessage({ type: 'success', text: 'تم تغيير رمز الدخول بنجاح، وسيصلك إشعار بالواتساب' });
+              setPinForm({ current_pin: '', new_pin: '', confirm_pin: '' });
+              setTimeout(() => setPinMessage({ type: '', text: '' }), 4000);
+            } else {
+              setPinMessage({ type: 'error', text: response.message || 'فشل في تغيير رمز الدخول' });
+            }
+          } catch (error: any) {
+            setPinMessage({ type: 'error', text: error.message || 'حدث خطأ أثناء تغيير رمز الدخول' });
+          } finally {
+            setChangingPin(false);
+          }
+        };
+
         return (
           <>
             {/* PIN Change Section - For Clients */}
@@ -838,22 +878,77 @@ const Settings: React.FC = () => {
               </div>
             )}
 
-            {/* Password Change Section - For Non-Clients */}
+            {/* PIN Change Section - For Non-Clients (staff) */}
             {userRole !== 'client' && (
               <div className="settings-section">
                 <div className="settings-section__header">
                   <div className="settings-section__icon">
                     <Shield size={14} />
                   </div>
-                  <span className="settings-section__title">كلمة المرور</span>
+                  <span className="settings-section__title">تغيير رمز الدخول</span>
                 </div>
                 <div className="settings-section__content">
-                  <div className="settings-option-card">
-                    <div className="settings-option-card__title">تغيير كلمة المرور</div>
-                    <div className="settings-option-card__desc">آخر تغيير: منذ 30 يوماً</div>
-                    <div className="settings-option-card__actions">
-                      <button className="settings-btn">تغيير كلمة المرور</button>
+                  <div className="settings-form-grid">
+                    <div className="settings-field">
+                      <label className="settings-field__label">رمز الدخول الحالي</label>
+                      <input
+                        type="password"
+                        className="settings-field__input"
+                        value={pinForm.current_pin}
+                        onChange={(e) => setPinForm(prev => ({ ...prev, current_pin: e.target.value }))}
+                        placeholder="••••"
+                        autoComplete="current-password"
+                      />
                     </div>
+                    <div className="settings-field">
+                      <label className="settings-field__label">رمز الدخول الجديد</label>
+                      <input
+                        type="password"
+                        className="settings-field__input"
+                        value={pinForm.new_pin}
+                        onChange={(e) => setPinForm(prev => ({ ...prev, new_pin: e.target.value }))}
+                        placeholder="4 خانات على الأقل"
+                        autoComplete="new-password"
+                      />
+                    </div>
+                    <div className="settings-field">
+                      <label className="settings-field__label">تأكيد رمز الدخول الجديد</label>
+                      <input
+                        type="password"
+                        className="settings-field__input"
+                        value={pinForm.confirm_pin}
+                        onChange={(e) => setPinForm(prev => ({ ...prev, confirm_pin: e.target.value }))}
+                        placeholder="••••"
+                        autoComplete="new-password"
+                      />
+                    </div>
+                  </div>
+
+                  {pinMessage.text && (
+                    <div style={{
+                      padding: '10px 14px',
+                      borderRadius: '6px',
+                      marginTop: '12px',
+                      background: pinMessage.type === 'error' ? 'var(--status-red-light)' : 'var(--status-green-light)',
+                      color: pinMessage.type === 'error' ? 'var(--status-red)' : 'var(--status-green)',
+                      fontSize: '13px'
+                    }}>
+                      {pinMessage.text}
+                    </div>
+                  )}
+
+                  <div className="settings-btn-group" style={{ marginTop: '16px' }}>
+                    <button
+                      className="settings-btn settings-btn--primary"
+                      onClick={handleStaffPinChange}
+                      disabled={changingPin}
+                    >
+                      {changingPin ? (
+                        <><Loader2 className="animate-spin" size={16} /> جاري التغيير...</>
+                      ) : (
+                        'تغيير رمز الدخول'
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>

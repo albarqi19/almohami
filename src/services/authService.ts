@@ -112,15 +112,16 @@ export class AuthService {
     }
   }
 
-  static async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    const response = await apiClient.put<ApiResponse>('/auth/password', {
-      current_password: currentPassword,
-      password: newPassword,
-      password_confirmation: newPassword,
+  /** تغيير رمز الدخول للموظفين — نص حر ≥4 خانات (يطابق قواعد التسجيل والدخول) */
+  static async changePin(currentPin: string, newPin: string): Promise<void> {
+    const response = await apiClient.put<ApiResponse>('/auth/change-pin', {
+      current_pin: currentPin,
+      new_pin: newPin,
+      new_pin_confirmation: newPin,
     });
 
     if (!response.success) {
-      throw new Error(response.message || 'فشل في تغيير كلمة المرور');
+      throw new Error(response.message || 'فشل في تغيير رمز الدخول');
     }
   }
 
