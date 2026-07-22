@@ -7,7 +7,7 @@ import {
     Wind, CalendarRange,
     CalendarDays, Wallet, Coins, Percent, ArrowRightLeft, Landmark,
     ClipboardList, BookText, Hash, Link as LinkIcon,
-    ListTodo, Dices, Watch, Coffee, Repeat, Heart, PartyPopper, Quote, Smile, AlarmClock, Sunrise, UserX,
+    ListTodo, Dices, Watch, Coffee, Repeat, PartyPopper, Quote, Smile, AlarmClock, Sunrise, UserX,
 } from 'lucide-react';
 
 import type { DashboardSummary } from '../../../services/dashboardService';
@@ -416,7 +416,6 @@ export const WIDGET_CATALOG: LabWidgetDef[] = [
 
     /* ===== الرفاهية (إضافية) ===== */
     { type: 'tasbeeh', title: 'المسبحة الرقمية', icon: <Repeat size={16} />, category: 'الرفاهية', desc: 'عدّاد أذكار بأهداف ٣٣/٩٩', w: 3, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/TasbeehCounterWidget')) },
-    { type: 'gratitude', title: 'متتبّع الامتنان', icon: <Heart size={16} />, category: 'الرفاهية', desc: 'أمتنّ اليوم لـ...', w: 4, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/GratitudeWidget')) },
     { type: 'wins', title: 'سجلّ الإنجازات', icon: <PartyPopper size={16} />, category: 'الرفاهية', desc: 'سجّل إنجازاً واحتفل 🎉', w: 4, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/WinsConfettiWidget')) },
     { type: 'team-mood', title: 'مزاجي اليوم', icon: <Smile size={16} />, category: 'الرفاهية', desc: 'سجّل حالتك اليوم — تُحفظ وتتزامن', w: 4, h: 4, minW: 3, minH: 3, render: lazyWidget(() => import('../widgets/lab/TeamMoodWidget')) },
     { type: 'aurora', title: 'أجواء متدرّجة', icon: <Sunrise size={16} />, category: 'الرفاهية', desc: 'خلفية حيّة مع تحية ووقت', w: 4, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/AuroraAmbientWidget')) },
