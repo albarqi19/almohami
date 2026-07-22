@@ -10,6 +10,8 @@ import FloatingTimer from './FloatingTimer';
 import NotebookFloatingWidget from './NotebookFloatingWidget';
 import LawSearchFab from './LawSearchFab';
 import CaseLawNotesWidget from './CaseLawNotesWidget';
+// 🧪📌 الودجتس المثبتة من مختبر اللوحة — حارس خفيف لا يجلب أي كود إضافي ما لم يثبّت المستخدم شيئاً
+import PinnedWidgetsGate from './dashboard/lab/PinnedWidgetsGate';
 import ClickUpHeader from './ClickUpHeader';
 import PresenceTracker from './PresenceTracker';
 import CompanyPolicyModal from './CompanyPolicyModal';
@@ -173,6 +175,9 @@ const Layout: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* 📌 الودجتس المثبتة من مختبر اللوحة — تطفو فوق كل الصفحات الداخلية */}
+          {user && user.role !== 'client' && <PinnedWidgetsGate />}
 
           {/* Presence Tracker - Invisible component for tracking lawyer activity */}
           <PresenceTracker />

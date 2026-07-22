@@ -7,22 +7,31 @@ import { Loader2, Lightbulb } from 'lucide-react';
 import deadlineService, { type DeadlineSummary } from '../../../services/deadlineService';
 import { daysLabel } from '../../../pages/LegalDeadlines';
 
-const UpcomingDeadlinesWidget: React.FC = () => {
+interface Props {
+  /** 🎛️ خصائص ودجت اللوحة القابلة للتخصيص (اختيارية — الافتراضي سلوك اللوحة الكلاسيكية) */
+  limit?: number;
+  days?: number;                                   // ضمن N يوماً فقط
+  mine?: boolean;                                  // مهلي فقط
+  obligated?: 'client' | 'opponent' | 'all';       // طرف الالتزام
+}
+
+const UpcomingDeadlinesWidget: React.FC<Props> = ({ limit = 5, days, mine, obligated }) => {
   const navigate = useNavigate();
   const [summary, setSummary] = useState<DeadlineSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     deadlineService
-      .summary(5)
+      .summary(limit, { days, mine, obligated })
       .then((s) => mounted && setSummary(s))
       .catch(() => mounted && setSummary(null))
       .finally(() => mounted && setLoading(false));
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [limit, days, mine, obligated]);
 
   if (loading) {
     return (

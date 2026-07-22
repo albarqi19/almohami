@@ -137,8 +137,15 @@ class DeadlineService {
     return res.data ?? [];
   }
 
-  async summary(limit = 5): Promise<DeadlineSummary> {
-    const res = await apiClient.get<ApiResponse<DeadlineSummary>>(`/deadlines/summary?limit=${limit}`);
+  async summary(
+    limit = 5,
+    opts?: { days?: number; mine?: boolean; obligated?: 'client' | 'opponent' | 'all' }
+  ): Promise<DeadlineSummary> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (opts?.days) params.set('days', String(opts.days));
+    if (opts?.mine) params.set('mine', '1');
+    if (opts?.obligated && opts.obligated !== 'client') params.set('obligated', opts.obligated);
+    const res = await apiClient.get<ApiResponse<DeadlineSummary>>(`/deadlines/summary?${params.toString()}`);
     return res.data!;
   }
 
