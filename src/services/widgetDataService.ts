@@ -12,6 +12,11 @@ import { useAuth } from '../contexts/AuthContext';
  *
  * كاش ذاكرة 60 ثانية لكل (مفتاح+خصائص) — إعادة الرندر/التنقل لا تعيد الجلب.
  * فشل مفتاح (forbidden…) يصل كـ rejection للودجت المعنية وحدها.
+ *
+ * 💾 local-first (نمط صفحة القضايا): آخر رد حقيقي يُخبّأ في localStorage
+ * **معزولاً بمعرّف المستخدم** (لا تسريب بين حسابات نفس الجهاز)، فالزيارة
+ * التالية تعرض بياناتك الحقيقية فوراً بلا هيكل تحميل، والتحديث يجري صامتاً
+ * بالخلفية. عمر البذرة الأقصى 24 ساعة. لا بيانات وهمية في أي حال.
  */
 
 type Opts = Record<string, unknown>;
@@ -33,6 +38,28 @@ let queue: Pending[] = [];
 let timer: ReturnType<typeof setTimeout> | null = null;
 
 const hashOf = (key: string, opts: Opts) => `${key}:${JSON.stringify(opts ?? {})}`;
+
+/* بذرة localStorage — معزولة بالمستخدم، بعمر أقصى 24 ساعة */
+const SEED_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const seedStorageKey = (userId: number | string, hash: string) => `widget_data_v1:u${userId}:${hash}`;
+
+function readSeed<T>(userId: number | string | undefined, hash: string): T | null {
+    if (!userId) return null;
+    try {
+        const raw = window.localStorage.getItem(seedStorageKey(userId, hash));
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as { at?: number; value?: T };
+        if (typeof parsed.at !== 'number' || Date.now() - parsed.at > SEED_MAX_AGE_MS) return null;
+        return (parsed.value ?? null) as T | null;
+    } catch { return null; }
+}
+
+function writeSeed(userId: number | string | undefined, hash: string, value: unknown): void {
+    if (!userId) return;
+    try {
+        window.localStorage.setItem(seedStorageKey(userId, hash), JSON.stringify({ at: Date.now(), value }));
+    } catch { /* تخزين ممتلئ — نتجاهل */ }
+}
 
 export function invalidateWidgetData(key?: string): void {
     if (!key) { cache.clear(); return; }
@@ -120,20 +147,30 @@ export function useLiveWidget<T = unknown>(key: string, opts: Opts = {}, enabled
     const live = !!user?.tenant?.custom_dashboard_enabled;
     const active = live && enabled;
     const optsKey = JSON.stringify(opts ?? {});
+    const userId = user?.id;
 
-    const [state, setState] = useState<{ data: T | null; loading: boolean; error: string | null }>(
-        { data: null, loading: active, error: null }
-    );
+    const [state, setState] = useState<{ data: T | null; loading: boolean; error: string | null }>(() => {
+        // 💾 بذرة local-first: آخر بيانات حقيقية للمستخدم نفسه تظهر فوراً،
+        // والجلب يستمر بالخلفية (loading=true لكن الودجت ترسم البيانات المتاحة)
+        const seed = active ? readSeed<T>(userId, hashOf(key, JSON.parse(optsKey))) : null;
+        return { data: seed, loading: active, error: null };
+    });
 
     useEffect(() => {
         if (!active) return;
         let alive = true;
         setState((s) => (s.loading ? s : { ...s, loading: true }));
         requestWidgetData<T>(key, JSON.parse(optsKey))
-            .then((d) => { if (alive) setState({ data: d, loading: false, error: null }); })
-            .catch((e: Error) => { if (alive) setState({ data: null, loading: false, error: e.message }); });
+            .then((d) => {
+                writeSeed(userId, hashOf(key, JSON.parse(optsKey)), d);
+                if (alive) setState({ data: d, loading: false, error: null });
+            })
+            .catch((e: Error) => {
+                // فشل التحديث لا يمحو بيانات حقيقية معروضة — تبقى (stale) مع تسجيل الخطأ
+                if (alive) setState((s) => ({ data: s.data, loading: false, error: e.message }));
+            });
         return () => { alive = false; };
-    }, [key, optsKey, active]);
+    }, [key, optsKey, active, userId]);
 
     return { ...state, live };
 }

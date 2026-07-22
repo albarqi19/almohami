@@ -40,10 +40,8 @@ const COLORS = [
     '#ea580c',
 ];
 
-const SEED: Win[] = [
-    { text: 'كسب قضية تنفيذ لعميل بعد 3 جلسات', ts: Date.now() - 5 * 60 * 60 * 1000 },
-    { text: 'إغلاق ملفّين متعثّرين هذا الأسبوع', ts: Date.now() - 30 * 60 * 60 * 1000 },
-];
+// لا إنجازات وهمية — يبدأ فارغاً (قرار المالك 2026-07-22)
+const SEED: Win[] = [];
 
 const parseWins = (raw: unknown): Win[] => {
     if (Array.isArray(raw)) {

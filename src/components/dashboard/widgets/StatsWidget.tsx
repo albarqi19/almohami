@@ -24,13 +24,14 @@ const StatsWidget: React.FC<StatsWidgetProps> = ({
     stats: customStats,
     onStatClick
 }) => {
+    // لا أرقام وهمية أبداً — بلا stats حقيقية تُعرض أصفار (قرار المالك 2026-07-22)
     const stats = customStats || {
-        totalCases: 42,
-        activeCases: 15,
-        totalTasks: 87,
-        completedTasks: 64,
-        upcomingSessions: 8,
-        documentsCount: 156
+        totalCases: 0,
+        activeCases: 0,
+        totalTasks: 0,
+        completedTasks: 0,
+        upcomingSessions: 0,
+        documentsCount: 0
     };
 
     const cards = [

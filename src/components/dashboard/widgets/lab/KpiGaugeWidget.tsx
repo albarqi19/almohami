@@ -12,8 +12,8 @@ import { Gauge } from 'lucide-react';
  * مثل GET /dashboard/win-rate  →  COUNT(cases WHERE outcome='won') / COUNT(cases closed).
  */
 
-// النسبة الافتراضية (٠..١) — تُتجاوز من خصائص الودجت 🎛️
-const DEFAULT_PCT = 78;
+// النسبة الافتراضية — صفر حتى يضبطها المستخدم من الترس (لا أرقام وهمية)
+const DEFAULT_PCT = 0;
 
 // هندسة القوس (نصف دائرة علوية)
 const CX = 100;

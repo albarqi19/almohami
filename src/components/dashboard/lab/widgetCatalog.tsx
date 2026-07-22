@@ -1,20 +1,19 @@
 import React, { Suspense, lazy } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import {
-    Clock, Sparkles, Newspaper, Calendar, Bell, BarChart3, Zap, Timer, LayoutGrid,
+    Clock, Sparkles, Calendar, Bell, BarChart3, Zap, Timer, LayoutGrid,
     Hourglass, CalendarClock, Globe, ListChecks, StickyNote, Flame, Target, Scale,
-    Calculator, Compass, History, TrendingUp, Gauge, CircleDollarSign, Users,
-    MoonStar, Wind, CalendarRange, CloudSun,
-    CalendarDays, Wallet, Coins, Percent, ArrowRightLeft, Landmark, CalendarX, Filter,
-    ClipboardList, BookText, Activity, Radar, CircleDot, Hash, UserPlus, Trophy, Link as LinkIcon,
-    ListTodo, Dices, Watch, Coffee, Repeat, Heart, PartyPopper, Quote, Smile, AlarmClock, Sunrise, Phone, UserX,
+    Calculator, TrendingUp, Gauge, CircleDollarSign, Users,
+    Wind, CalendarRange,
+    CalendarDays, Wallet, Coins, Percent, ArrowRightLeft, Landmark,
+    ClipboardList, BookText, Hash, Link as LinkIcon,
+    ListTodo, Dices, Watch, Coffee, Repeat, Heart, PartyPopper, Quote, Smile, AlarmClock, Sunrise, UserX,
 } from 'lucide-react';
 
-import type { DashboardSummary, UpcomingSession, RecentActivity } from '../../../services/dashboardService';
+import type { DashboardSummary } from '../../../services/dashboardService';
 
 import ClockWidget from '../widgets/ClockWidget';
 import DailyWisdomWidget from '../widgets/DailyWisdomWidget';
-import NewsWidget from '../widgets/NewsWidget';
 import SessionsWidget from '../widgets/SessionsWidget';
 import ActivityFeedWidget from '../widgets/ActivityFeedWidget';
 import StatsWidget from '../widgets/StatsWidget';
@@ -23,9 +22,13 @@ import UpcomingDeadlinesWidget from '../widgets/UpcomingDeadlinesWidget';
 
 import type { WidgetOptionDef, WidgetOpts } from './widgetOptions';
 
-/** السياق الممرَّر لكل ودجت (بيانات حقيقية من getSummary إن توفّرت، وإلا null → ديمو). */
+/** السياق الممرَّر لكل ودجت — بيانات getSummary الحقيقية فقط.
+    قرار المالك (2026-07-22): لا بيانات وهمية أبداً — أثناء الجلب skeleton،
+    وبعده إمّا البيانات الحقيقية وإمّا حالة فارغة صادقة. */
 export interface LabCtx {
     summary: DashboardSummary | null;
+    /** جلب getSummary ما زال جارياً (null + false = فشل/لا بيانات). */
+    summaryLoading: boolean;
 }
 
 /** تعريف ودجت في المعرض. */
@@ -53,22 +56,24 @@ export interface LabWidgetDef {
     render: (ctx: LabCtx, opts: WidgetOpts) => React.ReactNode;
 }
 
-/* ============ بيانات تجريبية (تعمل بلا اتصال بالخادم) ============ */
-const DEMO_SESSIONS: UpcomingSession[] = [
-    { id: 1, case_id: 101, case_title: 'شركة الأفق ضد مؤسسة البناء', case_number: '4450123', court: 'المحكمة التجارية', date: new Date(Date.now() + 86400000).toISOString(), time: '10:00', type: 'hearing', status: 'scheduled', days_until: 1, is_urgent: true, notes: null },
-    { id: 2, case_id: 102, case_title: 'قضية عمالية — أحمد الشمري', case_number: '4450088', court: 'محكمة العمل', date: new Date(Date.now() + 3 * 86400000).toISOString(), time: '09:30', type: 'hearing', status: 'scheduled', days_until: 3, is_urgent: false, notes: null },
-    { id: 3, case_id: 0, case_title: 'اجتماع مع العميل — عقد شراكة', case_number: '', court: 'مكتب المحاماة', date: new Date(Date.now() + 5 * 86400000).toISOString(), time: '13:00', type: 'meeting', status: 'scheduled', days_until: 5, is_urgent: false, notes: null },
-];
-
-const DEMO_ACTIVITIES: RecentActivity[] = [
-    { id: 1, type: 'document', description: 'رفع مذكرة الدفاع', details: null, case_id: 101, case_title: 'شركة الأفق', task_id: null, performer_id: 1, performer_name: 'م. سارة', performer_avatar: null, created_at: new Date().toISOString(), time_ago: 'قبل 10 دقائق' },
-    { id: 2, type: 'task', description: 'إنجاز مهمة: مراجعة العقد', details: null, case_id: 102, case_title: 'قضية عمالية', task_id: 5, performer_id: 2, performer_name: 'أ. خالد', performer_avatar: null, created_at: new Date().toISOString(), time_ago: 'قبل ساعة' },
-    { id: 3, type: 'session', description: 'تحديث موعد جلسة', details: null, case_id: 101, case_title: 'شركة الأفق', task_id: null, performer_id: 1, performer_name: 'م. سارة', performer_avatar: null, created_at: new Date().toISOString(), time_ago: 'قبل 3 ساعات' },
-    { id: 4, type: 'case', description: 'فتح قضية جديدة', details: null, case_id: 103, case_title: 'نزاع إيجار', task_id: null, performer_id: 3, performer_name: 'أ. نورة', performer_avatar: null, created_at: new Date().toISOString(), time_ago: 'أمس' },
-];
+/* ============ هيكل تحميل موحّد (لا بيانات وهمية أثناء الجلب أبداً) ============ */
+const CtxSkeleton: React.FC<{ rows?: number }> = ({ rows = 3 }) => (
+    <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '6px 2px' }} aria-busy="true">
+        <style>{`@keyframes ctxsk { 0% { opacity: .45; } 50% { opacity: .9; } 100% { opacity: .45; } }`}</style>
+        {Array.from({ length: rows }, (_, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', animation: `ctxsk 1.4s ease-in-out ${i * 0.15}s infinite` }}>
+                <span style={{ width: 34, height: 34, borderRadius: 9, background: 'var(--quiet-gray-100, #f3f4f6)', flexShrink: 0 }} />
+                <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <span style={{ height: 9, width: '62%', borderRadius: 5, background: 'var(--quiet-gray-100, #f3f4f6)' }} />
+                    <span style={{ height: 8, width: '38%', borderRadius: 5, background: 'var(--quiet-gray-100, #f3f4f6)', opacity: 0.8 }} />
+                </span>
+            </div>
+        ))}
+    </div>
+);
 
 /** ودجت متعدّد التبويبات — يجسّد ميزة «تبويبات داخل المربع الواحد». */
-const TabsWidget: React.FC<LabCtx & { defaultTab?: string }> = ({ summary, defaultTab }) => {
+const TabsWidget: React.FC<LabCtx & { defaultTab?: string }> = ({ summary, summaryLoading, defaultTab }) => {
     const triggerStyle: React.CSSProperties = {
         border: 'none',
         background: 'transparent',
@@ -101,10 +106,10 @@ const TabsWidget: React.FC<LabCtx & { defaultTab?: string }> = ({ summary, defau
             </Tabs.List>
             <div style={{ flex: 1, overflow: 'auto' }}>
                 <Tabs.Content value="sessions">
-                    <SessionsWidget sessions={summary?.upcoming_sessions ?? DEMO_SESSIONS} />
+                    {summaryLoading ? <CtxSkeleton /> : <SessionsWidget sessions={summary?.upcoming_sessions ?? []} />}
                 </Tabs.Content>
                 <Tabs.Content value="activity">
-                    <ActivityFeedWidget activities={summary?.recent_activities ?? DEMO_ACTIVITIES} limit={5} />
+                    {summaryLoading ? <CtxSkeleton /> : <ActivityFeedWidget activities={summary?.recent_activities ?? []} limit={5} />}
                 </Tabs.Content>
                 <Tabs.Content value="deadlines">
                     <UpcomingDeadlinesWidget />
@@ -202,9 +207,9 @@ export const WIDGET_CATALOG: LabWidgetDef[] = [
         options: [
             { key: 'limit', label: 'عدد الجلسات', type: 'number', min: 3, max: 12, default: 5 },
         ],
-        render: (ctx, o) => (
-            <SessionsWidget sessions={(ctx.summary?.upcoming_sessions ?? DEMO_SESSIONS).slice(0, Number(o.limit) || 5)} />
-        ),
+        render: (ctx, o) => ctx.summaryLoading
+            ? <CtxSkeleton />
+            : <SessionsWidget sessions={(ctx.summary?.upcoming_sessions ?? []).slice(0, Number(o.limit) || 5)} />,
     },
     {
         type: 'activity',
@@ -218,9 +223,9 @@ export const WIDGET_CATALOG: LabWidgetDef[] = [
         options: [
             { key: 'limit', label: 'عدد الأنشطة', type: 'number', min: 3, max: 15, default: 6 },
         ],
-        render: (ctx, o) => (
-            <ActivityFeedWidget activities={ctx.summary?.recent_activities ?? DEMO_ACTIVITIES} limit={Number(o.limit) || 6} />
-        ),
+        render: (ctx, o) => ctx.summaryLoading
+            ? <CtxSkeleton />
+            : <ActivityFeedWidget activities={ctx.summary?.recent_activities ?? []} limit={Number(o.limit) || 6} />,
     },
     {
         type: 'tabs',
@@ -240,9 +245,19 @@ export const WIDGET_CATALOG: LabWidgetDef[] = [
         title: 'الإحصائيات',
         icon: <BarChart3 size={16} />,
         category: 'المكتب',
-        desc: 'بطاقات القضايا والمهام والجلسات',
+        desc: 'بطاقات القضايا والمهام والجلسات الفعلية',
         w: 6, h: 3, minW: 4, minH: 3,
-        render: () => <StatsWidget />,
+        live: true,
+        render: (ctx) => ctx.summaryLoading ? <CtxSkeleton rows={2} /> : (
+            <StatsWidget stats={{
+                totalCases: ctx.summary?.stats?.total_cases ?? 0,
+                activeCases: ctx.summary?.stats?.active_cases ?? 0,
+                totalTasks: ctx.summary?.stats?.total_tasks ?? 0,
+                completedTasks: ctx.summary?.stats?.completed_tasks ?? 0,
+                upcomingSessions: ctx.summary?.stats?.upcoming_sessions ?? 0,
+                documentsCount: ctx.summary?.stats?.documents_count ?? 0,
+            }} />
+        ),
     },
     {
         type: 'quick-actions',
@@ -288,16 +303,6 @@ export const WIDGET_CATALOG: LabWidgetDef[] = [
         ],
         render: (_ctx, o) => <DailyWisdomWidget showSource={o.showSource !== false} />,
     },
-    {
-        type: 'news',
-        title: 'أخبار وتحديثات',
-        icon: <Newspaper size={16} />,
-        category: 'أخبار',
-        desc: 'مستجدّات نظامية وإعلانات المكتب',
-        w: 4, h: 5, minW: 3, minH: 4,
-        render: () => <NewsWidget />,
-    },
-
     /* ===== الوقت والتركيز ===== */
     {
         type: 'pomodoro', title: 'مؤقّت تركيز', icon: <Timer size={16} />, category: 'الوقت والتركيز',
@@ -331,7 +336,7 @@ export const WIDGET_CATALOG: LabWidgetDef[] = [
         options: [
             { key: 'label', label: 'اسم الهدف', type: 'text', placeholder: 'قضايا مغلقة هذا الشهر' },
             { key: 'target', label: 'الهدف', type: 'number', min: 1, max: 1000, default: 10 },
-            { key: 'current', label: 'المنجز حالياً', type: 'number', min: 0, max: 1000, default: 7 },
+            { key: 'current', label: 'المنجز حالياً', type: 'number', min: 0, max: 1000, default: 0 },
         ],
         render: lazyWidget(() => import('../widgets/lab/GoalProgressWidget')),
     },
@@ -339,8 +344,6 @@ export const WIDGET_CATALOG: LabWidgetDef[] = [
     /* ===== أدوات قانونية ===== */
     { type: 'deadline-calc', title: 'حاسبة المهل', icon: <Scale size={16} />, category: 'أدوات قانونية', desc: 'احسب تاريخ استحقاق المهلة', w: 4, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/DeadlineCalculatorWidget')) },
     { type: 'fee-vat', title: 'حاسبة الأتعاب والضريبة', icon: <Calculator size={16} />, category: 'أدوات قانونية', desc: 'الأساس + ضريبة 15% + الإجمالي', w: 3, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/FeeVatCalculatorWidget')) },
-    { type: 'eisenhower', title: 'مصفوفة الأولويات', icon: <Compass size={16} />, category: 'أدوات قانونية', desc: 'عاجل/مهم — آيزنهاور 2×2', w: 5, h: 6, minW: 4, minH: 5, render: lazyWidget(() => import('../widgets/lab/EisenhowerMatrixWidget')) },
-    { type: 'case-timeline', title: 'الخط الزمني للقضية', icon: <History size={16} />, category: 'أدوات قانونية', desc: 'مراحل القضية بعُقد ملوّنة', w: 4, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/CaseTimelineWidget')) },
 
     /* ===== المالية والمؤشرات ===== */
     {
@@ -357,7 +360,7 @@ export const WIDGET_CATALOG: LabWidgetDef[] = [
         desc: 'عدّاد دائري بإبرة — سمّه واضبط نسبته', w: 3, h: 5, minW: 3, minH: 4,
         options: [
             { key: 'title', label: 'العنوان', type: 'text', placeholder: 'نسبة كسب القضايا' },
-            { key: 'percent', label: 'النسبة ٪', type: 'number', min: 0, max: 100, default: 78 },
+            { key: 'percent', label: 'النسبة ٪', type: 'number', min: 0, max: 100, default: 0 },
         ],
         render: lazyWidget(() => import('../widgets/lab/KpiGaugeWidget')),
     },
@@ -369,7 +372,6 @@ export const WIDGET_CATALOG: LabWidgetDef[] = [
     },
 
     /* ===== الرفاهية ===== */
-    { type: 'prayer', title: 'مواقيت الصلاة', icon: <MoonStar size={16} />, category: 'الرفاهية', desc: 'الأوقات مع عدّاد للأذان القادم', w: 4, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/PrayerTimesWidget')) },
     { type: 'breathing', title: 'تمرين تنفّس', icon: <Wind size={16} />, category: 'الرفاهية', desc: 'دائرة تنفّس للاسترخاء', w: 3, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/BreathingWidget')) },
     {
         type: 'day-progress', title: 'تقدّم الوقت', icon: <CalendarRange size={16} />, category: 'الرفاهية',
@@ -381,8 +383,6 @@ export const WIDGET_CATALOG: LabWidgetDef[] = [
         ],
         render: lazyWidget(() => import('../widgets/lab/DayProgressWidget')),
     },
-    { type: 'weather', title: 'الطقس', icon: <CloudSun size={16} />, category: 'الرفاهية', desc: 'بطاقة طقس بتوقّع 3 أيام', w: 4, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/WeatherWidget')) },
-
     /* ===== حاسبات ===== */
     { type: 'date-diff', title: 'فرق التواريخ', icon: <CalendarDays size={16} />, category: 'حاسبات', desc: 'أيام/أشهر/سنوات + أيام العمل', w: 4, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/DateDiffWidget')) },
     { type: 'end-of-service', title: 'مكافأة نهاية الخدمة', icon: <Wallet size={16} />, category: 'حاسبات', desc: 'حسب نظام العمل السعودي', w: 4, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/EndOfServiceWidget')) },
@@ -392,43 +392,33 @@ export const WIDGET_CATALOG: LabWidgetDef[] = [
     { type: 'loan', title: 'حاسبة القسط', icon: <Landmark size={16} />, category: 'حاسبات', desc: 'القسط الشهري + جدول الإطفاء', w: 4, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/LoanCalculatorWidget')) },
 
     /* ===== أدوات قانونية (إضافية) ===== */
-    { type: 'limitation', title: 'مسطرة التقادم', icon: <CalendarX size={16} />, category: 'أدوات قانونية', desc: 'قضايا تقترب من سقوط الحق', w: 4, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/LimitationTrackerWidget')) },
-    { type: 'case-pipeline', title: 'قمع مراحل القضايا', icon: <Filter size={16} />, category: 'أدوات قانونية', desc: 'قيد النظر ← تنفيذ', w: 4, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/CasePipelineWidget')) },
     { type: 'clause-snippets', title: 'قصاصات قانونية', icon: <ClipboardList size={16} />, category: 'أدوات قانونية', desc: 'عبارات جاهزة قابلة للنسخ', w: 4, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/ClauseSnippetsWidget')) },
     { type: 'law-quickref', title: 'مرجع الأنظمة السريع', icon: <BookText size={16} />, category: 'أدوات قانونية', desc: 'بحث سريع بأرقام المواد', w: 4, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/LawQuickRefWidget')) },
 
     /* ===== تحليلات ===== */
-    { type: 'activity-heatmap', title: 'خريطة النشاط', icon: <Activity size={16} />, category: 'تحليلات', desc: 'شبكة سنوية بنمط GitHub', w: 6, h: 4, minW: 5, minH: 3, render: lazyWidget(() => import('../widgets/lab/ActivityHeatmapWidget')) },
-    { type: 'radar', title: 'رادار المجالات', icon: <Radar size={16} />, category: 'تحليلات', desc: 'توازن مجالات الممارسة', w: 4, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/RadarChartWidget')) },
-    { type: 'activity-rings', title: 'حلقات النشاط', icon: <CircleDot size={16} />, category: 'تحليلات', desc: 'قضايا/مهام/جلسات (Apple Watch)', w: 3, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/ActivityRingsWidget')) },
     {
         type: 'big-counter', title: 'عدّاد بطل', icon: <Hash size={16} />, category: 'تحليلات',
         desc: 'رقم كبير بعدّ تصاعدي — اعرض أي مؤشر تفتخر به', w: 3, h: 4, minW: 2, minH: 3,
         options: [
             { key: 'title', label: 'العنوان', type: 'text', placeholder: 'الأداء السنوي' },
-            { key: 'value', label: 'الرقم', type: 'number', min: 0, max: 1000000, default: 348 },
+            { key: 'value', label: 'الرقم', type: 'number', min: 0, max: 1000000, default: 0 },
             { key: 'label', label: 'الوصف تحت الرقم', type: 'text', placeholder: 'قضية نُفّذت هذا العام' },
-            { key: 'changePct', label: 'نسبة التغيّر ٪', type: 'number', min: -100, max: 1000, default: 14 },
+            { key: 'changePct', label: 'نسبة التغيّر ٪', type: 'number', min: -100, max: 1000, default: 0 },
         ],
         render: lazyWidget(() => import('../widgets/lab/BigCounterWidget')),
     },
-    { type: 'stat-grid', title: 'شبكة المؤشرات', icon: <LayoutGrid size={16} />, category: 'تحليلات', desc: 'عدة مؤشرات بأسهم اتجاه', w: 5, h: 4, minW: 4, minH: 3, render: lazyWidget(() => import('../widgets/lab/StatGridWidget')) },
-    { type: 'lead-funnel', title: 'قمع التحويل', icon: <UserPlus size={16} />, category: 'تحليلات', desc: 'محتملون ← موكّلون ← قضايا', w: 4, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/LeadFunnelWidget')) },
-    { type: 'win-by-type', title: 'الكسب حسب النوع', icon: <Trophy size={16} />, category: 'تحليلات', desc: 'معدّل الكسب لكل نوع قضية', w: 4, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/WinByTypeWidget')) },
-
     /* ===== الإنتاجية (إضافية) ===== */
     { type: 'quick-links', title: 'روابط سريعة', icon: <LinkIcon size={16} />, category: 'الإنتاجية', desc: 'اختصارات قابلة للتخصيص', w: 4, h: 4, minW: 3, minH: 3, render: lazyWidget(() => import('../widgets/lab/QuickLinksWidget')) },
     { type: 'top3-today', title: 'أولويات اليوم', icon: <ListTodo size={16} />, category: 'الإنتاجية', desc: 'أهم ٣ مهام لليوم', w: 3, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/TopThreeTodayWidget')) },
     { type: 'decision-wheel', title: 'عجلة القرار', icon: <Dices size={16} />, category: 'الإنتاجية', desc: 'أدِر العجلة لاختيار عشوائي', w: 3, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/DecisionWheelWidget')) },
     { type: 'stopwatch', title: 'مؤقّت عام', icon: <Watch size={16} />, category: 'الإنتاجية', desc: 'ساعة إيقاف / عدّ تنازلي', w: 3, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/StopwatchTimerWidget')) },
     { type: 'break-reminder', title: 'الاستراحة والماء', icon: <Coffee size={16} />, category: 'الإنتاجية', desc: 'تذكير صحي بالماء والاستراحة', w: 3, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/BreakReminderWidget')) },
-    { type: 'speed-dial', title: 'اتصال سريع', icon: <Phone size={16} />, category: 'الإنتاجية', desc: 'جهات مفضّلة (اتصال/واتساب)', w: 4, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/SpeedDialWidget')) },
 
     /* ===== الرفاهية (إضافية) ===== */
     { type: 'tasbeeh', title: 'المسبحة الرقمية', icon: <Repeat size={16} />, category: 'الرفاهية', desc: 'عدّاد أذكار بأهداف ٣٣/٩٩', w: 3, h: 6, minW: 3, minH: 5, render: lazyWidget(() => import('../widgets/lab/TasbeehCounterWidget')) },
     { type: 'gratitude', title: 'متتبّع الامتنان', icon: <Heart size={16} />, category: 'الرفاهية', desc: 'أمتنّ اليوم لـ...', w: 4, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/GratitudeWidget')) },
     { type: 'wins', title: 'سجلّ الإنجازات', icon: <PartyPopper size={16} />, category: 'الرفاهية', desc: 'سجّل إنجازاً واحتفل 🎉', w: 4, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/WinsConfettiWidget')) },
-    { type: 'team-mood', title: 'مزاج الفريق', icon: <Smile size={16} />, category: 'الرفاهية', desc: 'حالتك اليوم + متوسّط الفريق', w: 4, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/TeamMoodWidget')) },
+    { type: 'team-mood', title: 'مزاجي اليوم', icon: <Smile size={16} />, category: 'الرفاهية', desc: 'سجّل حالتك اليوم — تُحفظ وتتزامن', w: 4, h: 4, minW: 3, minH: 3, render: lazyWidget(() => import('../widgets/lab/TeamMoodWidget')) },
     { type: 'aurora', title: 'أجواء متدرّجة', icon: <Sunrise size={16} />, category: 'الرفاهية', desc: 'خلفية حيّة مع تحية ووقت', w: 4, h: 5, minW: 3, minH: 4, render: lazyWidget(() => import('../widgets/lab/AuroraAmbientWidget')) },
 
     /* ===== إلهام / وقت ===== */

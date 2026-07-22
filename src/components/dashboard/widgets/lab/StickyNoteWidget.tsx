@@ -25,8 +25,9 @@ const PALETTE: Record<NoteColor, { bg: string; fold: string; text: string; line:
     blue: { bg: '#dbeafe', fold: '#93c5fd', text: '#1e3a8a', line: 'rgba(30,58,138,0.12)' },
 };
 
+// لا نص وهمي — تبدأ فارغة بplaceholder «اكتب ملاحظتك هنا…» (قرار المالك 2026-07-22)
 const DEFAULT_STATE: NoteState = {
-    text: 'تذكير: مراجعة مهلة الاعتراض للقضية رقم ٤٤١٢ قبل الخميس.',
+    text: '',
     color: 'yellow',
 };
 

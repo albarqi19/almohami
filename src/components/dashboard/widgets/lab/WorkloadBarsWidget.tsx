@@ -8,7 +8,8 @@ import { useLiveWidget } from '../../../../services/widgetDataService';
  * ولونها يتدرّج حسب الحمل (أخضر خفيف → برتقالي → أحمر مرتفع).
  *
  * 📡 حيّة: تجلب المهام المفتوحة الفعلية حسب الموظف من /dashboard/widget-data
- * (مفتاح workload — للإدارة)؛ وإلا ديمو محلي بشارة «تجريبي».
+ * (مفتاح workload — للإدارة). لا أسماء وهمية أبداً — فشل الجلب أو غياب
+ * البيانات = رسالة صادقة (قرار المالك 2026-07-22).
  */
 
 interface Lawyer {
@@ -19,15 +20,6 @@ interface Lawyer {
 interface WorkloadPayload {
     by_assignee: Array<{ user_id: number; user_name: string; open: number; overdue: number }>;
 }
-
-// مرتّبة تنازلياً حسب الحمل — ديمو
-const LAWYERS: readonly Lawyer[] = [
-    { name: 'أحمد الغامدي', tasks: 14 },
-    { name: 'سارة القحطاني', tasks: 11 },
-    { name: 'خالد العتيبي', tasks: 9 },
-    { name: 'نورة الشهري', tasks: 6 },
-    { name: 'فهد الدوسري', tasks: 4 },
-];
 
 // السعة التي تُعتبر عندها الحمولة «مرتفعة» (لتطبيع النسبة واللون)
 const CAPACITY = 15;
@@ -62,12 +54,26 @@ function loadColor(frac: number): string {
 }
 
 const WorkloadBarsWidget: React.FC = () => {
-    const { data: srv, live } = useLiveWidget<WorkloadPayload>('workload');
+    const { data: srv, loading, live, error } = useLiveWidget<WorkloadPayload>('workload');
 
-    const isReal = live && !!srv?.by_assignee?.length;
-    const rows: readonly Lawyer[] = isReal
-        ? srv!.by_assignee.map((r) => ({ name: r.user_name, tasks: r.open }))
-        : LAWYERS;
+    if (loading && !srv) {
+        return (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--color-text-secondary)', direction: 'rtl' }}>
+                جارٍ جلب عبء العمل…
+            </div>
+        );
+    }
+    if (!live || !srv?.by_assignee?.length) {
+        return (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 12, color: 'var(--color-text-secondary)', direction: 'rtl', padding: '0 10px' }}>
+                {error === 'forbidden'
+                    ? 'هذه الودجت للإدارة فقط'
+                    : (!live || !srv) ? 'تعذّر جلب عبء العمل' : 'لا مهام مفتوحة عند الفريق ✅'}
+            </div>
+        );
+    }
+
+    const rows: readonly Lawyer[] = srv.by_assignee.map((r) => ({ name: r.user_name, tasks: r.open }));
     const capacity = Math.max(CAPACITY, ...rows.map((r) => r.tasks));
 
     const totalTasks = rows.reduce((sum, l) => sum + l.tasks, 0);
@@ -104,7 +110,7 @@ const WorkloadBarsWidget: React.FC = () => {
                     عبء العمل
                 </span>
                 <span style={{ marginInlineStart: 'auto', fontSize: '10px', color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
-                    {isReal ? `${fmt(totalTasks)} مهمة مفتوحة` : 'بيانات تجريبية'}
+                    {`${fmt(totalTasks)} مهمة مفتوحة`}
                 </span>
             </div>
 

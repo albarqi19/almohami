@@ -28,7 +28,7 @@ const GoalProgressWidget: React.FC<{ label?: string; target?: number; current?: 
     const goalLabel = (label || '').trim() || DEFAULT_LABEL;
 
     const [value, setValue] = useState<number>(() =>
-        Math.max(0, Math.min(goalTarget, Math.round(Number(current ?? 7))))
+        Math.max(0, Math.min(goalTarget, Math.round(Number(current ?? 0))))
     );
     const [mounted, setMounted] = useState<boolean>(false);
 

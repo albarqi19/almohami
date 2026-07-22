@@ -8,12 +8,9 @@ import { useLiveWidget } from '../../../../services/widgetDataService';
  * النسبة ٪ في المنتصف، ومفتاح ألوان بالمبالغ (ريال) أسفله.
  *
  * 📡 حيّة: تجلب ملخص التحصيل الفعلي من /dashboard/widget-data (مفتاح
- * collection_summary — يتطلب billing.view)؛ وإلا ديمو محلي بشارة «تجريبي».
+ * collection_summary — يتطلب billing.view). لا مبالغ وهمية أبداً —
+ * فشل الجلب أو غياب الفواتير = رسالة صادقة (قرار المالك 2026-07-22).
  */
-
-// المبالغ (ريال) — ديمو
-const TOTAL = 1250000;    // إجمالي المستحق للفوترة
-const COLLECTED = 890000; // المحصّل فعلاً
 
 const CX = 60;
 const CY = 60;
@@ -27,12 +24,26 @@ interface CollectionPayload {
 }
 
 const CollectionDonutWidget: React.FC = () => {
-    const { data: srv, live } = useLiveWidget<CollectionPayload>('collection_summary');
+    const { data: srv, loading, live } = useLiveWidget<CollectionPayload>('collection_summary');
 
-    const isReal = live && !!srv && (srv.total_invoiced || 0) > 0;
-    const total = isReal ? srv!.total_invoiced : TOTAL;
-    const collected = isReal ? srv!.total_collected : COLLECTED;
-    const remaining = isReal ? Math.max(0, srv!.total_remaining) : TOTAL - COLLECTED;
+    if (loading && !srv) {
+        return (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--color-text-secondary)', direction: 'rtl' }}>
+                جارٍ جلب بيانات التحصيل…
+            </div>
+        );
+    }
+    if (!live || !srv || (srv.total_invoiced || 0) <= 0) {
+        return (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 12, color: 'var(--color-text-secondary)', direction: 'rtl', padding: '0 10px' }}>
+                {(!live || !srv) ? 'تعذّر جلب بيانات التحصيل' : 'لا فواتير بعد — ستظهر الدائرة مع أول فاتورة'}
+            </div>
+        );
+    }
+
+    const total = srv.total_invoiced;
+    const collected = srv.total_collected;
+    const remaining = Math.max(0, srv.total_remaining);
 
     const collectedFrac = total > 0 ? Math.min(1, collected / total) : 0;
     const pct = Math.round(collectedFrac * 100);
@@ -73,11 +84,6 @@ const CollectionDonutWidget: React.FC = () => {
                 <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-heading)' }}>
                     التحصيل المالي
                 </span>
-                {!isReal && (
-                    <span style={{ marginInlineStart: 'auto', fontSize: '10px', color: 'var(--color-text-secondary)' }}>
-                        بيانات تجريبية
-                    </span>
-                )}
             </div>
 
             {/* الدائرة */}

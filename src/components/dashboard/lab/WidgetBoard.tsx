@@ -184,7 +184,23 @@ const WidgetBoard: React.FC<Props> = ({ storageKey, starter, serverSync = false,
     const [freeFlow, setFreeFlow] = useState<boolean>(!!initial.freeFlow);
     const [editMode, setEditMode] = useState(initialEditMode);
     const [pickerOpen, setPickerOpen] = useState(false);
-    const [summary, setSummary] = useState<DashboardSummary | null>(null);
+
+    /* 💾 summary بنمط صفحة القضايا (local-first): آخر نسخة حقيقية للمستخدم
+       نفسه تُعرض فوراً من localStorage (skeleton أول زيارة فقط)، والتحديث
+       يجري صامتاً بالخلفية. الكاش معزول بمعرّف المستخدم — لا تسريب بين
+       حسابات نفس الجهاز. عمر البذرة الأقصى 24 ساعة. */
+    const summaryCacheKey = user?.id ? `dash_summary_v1:u${user.id}` : null;
+    const [summary, setSummary] = useState<DashboardSummary | null>(() => {
+        if (!summaryCacheKey) return null;
+        try {
+            const raw = localStorage.getItem(summaryCacheKey);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw) as { at?: number; value?: DashboardSummary };
+            if (typeof parsed.at !== 'number' || Date.now() - parsed.at > 24 * 60 * 60 * 1000) return null;
+            return parsed.value ?? null;
+        } catch { return null; }
+    });
+    const [summaryLoading, setSummaryLoading] = useState(summary === null);
     const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set(loadPins().map((p) => p.id)));
 
     const { width, containerRef, mounted } = useContainerWidth();
@@ -196,13 +212,22 @@ const WidgetBoard: React.FC<Props> = ({ storageKey, starter, serverSync = false,
         [adminish, has]
     );
 
-    /* بيانات summary الحقيقية (جلسات/أنشطة) إن توفّرت */
+    /* بيانات summary الحقيقية (جلسات/أنشطة/إحصائيات) — لا ديمو أبداً:
+       skeleton أول زيارة فقط، ثم بذرة محلية + تحديث خلفي صامت؛
+       فشل التحديث لا يمحو بيانات حقيقية معروضة (تبقى stale). */
     useEffect(() => {
         let alive = true;
         DashboardService.getSummary()
-            .then((s) => { if (alive) setSummary(s); })
-            .catch(() => { /* الديمو يكفي */ });
+            .then((s) => {
+                if (summaryCacheKey) {
+                    try { localStorage.setItem(summaryCacheKey, JSON.stringify({ at: Date.now(), value: s })); } catch { /* تجاهل */ }
+                }
+                if (alive) setSummary(s);
+            })
+            .catch(() => { /* تبقى البذرة/null → حالات صادقة */ })
+            .finally(() => { if (alive) setSummaryLoading(false); });
         return () => { alive = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     /* مزامنة أزرار الدبوس 📌 */
@@ -373,7 +398,7 @@ const WidgetBoard: React.FC<Props> = ({ storageKey, starter, serverSync = false,
         setFreeFlow(false);
     }, [starter]);
 
-    const ctx = useMemo(() => ({ summary }), [summary]);
+    const ctx = useMemo(() => ({ summary, summaryLoading }), [summary, summaryLoading]);
 
     const api: BoardApi = {
         editMode, setEditMode,

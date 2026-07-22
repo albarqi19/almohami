@@ -21,15 +21,6 @@ interface Payload {
     }>;
 }
 
-const DEMO: Payload = {
-    total: 9,
-    by_assignee: [
-        { user_id: 1, user_name: 'أحمد الغامدي', count: 4, oldest_due: '2026-07-02', tasks: [{ id: 1, title: 'رفع مذكرة جوابية', due_date: '2026-07-02' }, { id: 2, title: 'مراجعة لائحة اعتراض', due_date: '2026-07-08' }] },
-        { user_id: 2, user_name: 'سارة القحطاني', count: 3, oldest_due: '2026-07-05', tasks: [{ id: 3, title: 'تجهيز حافظة مستندات', due_date: '2026-07-05' }] },
-        { user_id: 3, user_name: 'خالد العتيبي', count: 2, oldest_due: '2026-07-10', tasks: [{ id: 4, title: 'متابعة طلب تنفيذ', due_date: '2026-07-10' }] },
-    ],
-};
-
 const fmtNum = (n: number) => n.toLocaleString('ar-SA');
 
 function lateDays(date: string | null): number {
@@ -52,11 +43,19 @@ const OverdueByAssigneeWidget: React.FC = () => {
         );
     }
 
-    const payload = (live && data) ? data : DEMO;
-    const isReal = live && !!data;
+    // لا بيانات وهمية أبداً — فشل/رفض = رسالة صادقة (قرار المالك 2026-07-22)
+    if (!live || !data) {
+        return (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--color-text-secondary)', direction: 'rtl' }}>
+                {error === 'forbidden' ? 'هذه الودجت للإدارة فقط' : 'تعذّر جلب متأخرات الفريق — حدّث الصفحة'}
+            </div>
+        );
+    }
+
+    const payload = data;
     const rows = payload.by_assignee;
 
-    if (isReal && (payload.total === 0 || rows.length === 0)) {
+    if (payload.total === 0 || rows.length === 0) {
         return (
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'var(--status-green, #16a34a)' }}>
                 <ShieldCheck size={30} />
@@ -70,8 +69,8 @@ const OverdueByAssigneeWidget: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <UserX size={14} style={{ color: 'var(--status-red, #dc2626)' }} />
                 <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-heading)' }}>متأخرات الفريق</span>
-                <span style={{ marginInlineStart: 'auto', fontSize: 10, color: isReal ? 'var(--status-red, #dc2626)' : 'var(--color-text-secondary)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                    {isReal ? `${fmtNum(payload.total)} مهمة متأخرة` : (error === 'forbidden' ? 'للإدارة فقط' : 'بيانات تجريبية')}
+                <span style={{ marginInlineStart: 'auto', fontSize: 10, color: 'var(--status-red, #dc2626)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                    {`${fmtNum(payload.total)} مهمة متأخرة`}
                 </span>
             </div>
 

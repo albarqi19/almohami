@@ -23,9 +23,10 @@ const DAY_FULL = ['السبت', 'الأحد', 'الاثنين', 'الثلاثا�
 // getDay(): 0=الأحد … 6=السبت → موضعه في ترتيبنا الذي يبدأ بالسبت
 const JS_DAY_TO_POS = [1, 2, 3, 4, 5, 6, 0];
 
+// الاسم مجرد اقتراح قابل للتحرير؛ الأيام تبدأ كلها فارغة — لا إنجاز وهمي (قرار المالك 2026-07-22)
 const DEFAULT_STATE: HabitState = {
     name: 'قراءة مذكرة يومياً',
-    days: [true, true, true, false, true, false, false],
+    days: [false, false, false, false, false, false, false],
 };
 
 function parseHabit(raw: unknown): HabitState {

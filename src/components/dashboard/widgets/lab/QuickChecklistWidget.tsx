@@ -18,13 +18,7 @@ interface ChecklistItem {
 
 const STORAGE_KEY = 'lab_checklist_v1';
 
-const DEMO_ITEMS: ChecklistItem[] = [
-    { id: 1, text: 'مراجعة مذكرة الدائرة التجارية الثالثة', done: true },
-    { id: 2, text: 'رفع لائحة الاعتراض قبل انتهاء المهلة', done: false },
-    { id: 3, text: 'الاتصال بالعميل بخصوص الوكالة المحدّثة', done: false },
-    { id: 4, text: 'تجهيز مسودة عقد الأتعاب', done: false },
-];
-
+// لا مهام وهمية — تبدأ فارغة برسالة «لا مهام بعد» (قرار المالك 2026-07-22)
 function parseItems(raw: unknown): ChecklistItem[] {
     if (Array.isArray(raw)) {
         return raw.filter(
@@ -35,7 +29,7 @@ function parseItems(raw: unknown): ChecklistItem[] {
                 typeof (i as ChecklistItem).done === 'boolean'
         );
     }
-    return DEMO_ITEMS;
+    return [];
 }
 
 const QuickChecklistWidget: React.FC = () => {

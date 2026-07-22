@@ -9,7 +9,7 @@ import { useLiveWidget } from '../../../../services/widgetDataService';
  *
  * 📡 حيّة: تجلب اتجاه السنة الحالية من /dashboard/widget-data (مفتاح
  * revenue_trend — يتطلب billing.view). 🎛️ خاصية «المقياس»: محصّل/مفوتر.
- * إن كانت البوابة مطفأة أو الصلاحية غائبة، تعمل بالديمو المحلي بشارة «تجريبي».
+ * لا أرقام وهمية أبداً — فشل الجلب أو قلّة البيانات = رسالة صادقة.
  */
 
 const W = 300;
@@ -17,12 +17,6 @@ const H = 88;
 const PAD_X = 5;
 const PAD_TOP = 12;
 const PAD_BOTTOM = 8;
-
-// إيرادات آخر 12 شهراً (ريال) — ديمو واقعي لمكتب محاماة
-const REVENUE: readonly number[] = [
-    220000, 245000, 238000, 262000, 290000, 275000,
-    310000, 335000, 322000, 358000, 402000, 448000,
-];
 
 interface ServerMonth {
     year: number;
@@ -58,23 +52,21 @@ function buildSmoothLine(pts: Pt[]): string {
 }
 
 const RevenueSparklineWidget: React.FC<{ metric?: 'collected' | 'invoiced' }> = ({ metric = 'collected' }) => {
-    const { data: trend, live } = useLiveWidget<RevenueTrendPayload>('revenue_trend');
+    const { data: trend, loading, live } = useLiveWidget<RevenueTrendPayload>('revenue_trend');
 
-    // بيانات حية حتى آخر شهر له حركة؛ وإلا الديمو المحلي
+    // بيانات حية حتى آخر شهر له حركة — لا ديمو أبداً (قرار المالك 2026-07-22)
     const series: readonly number[] = useMemo(() => {
         const months = trend?.months;
-        if (!months?.length) return REVENUE;
+        if (!months?.length) return [];
         let lastActive = -1;
         months.forEach((m, i) => { if ((m.invoiced || 0) > 0 || (m.collected || 0) > 0) lastActive = i; });
         const nowMonth = new Date().getMonth(); // 0-11
         const upTo = Math.max(lastActive, Math.min(nowMonth, months.length - 1));
-        const cut = months.slice(0, upTo + 1).map((m) => (metric === 'invoiced' ? m.invoiced : m.collected) || 0);
-        return cut.length >= 2 ? cut : REVENUE;
+        return months.slice(0, upTo + 1).map((m) => (metric === 'invoiced' ? m.invoiced : m.collected) || 0);
     }, [trend, metric]);
 
-    const isReal = live && !!trend?.months?.length && series !== REVENUE;
-
     const { linePath, areaPath, dotLeft, dotTop } = useMemo(() => {
+        if (series.length < 2) return { linePath: '', areaPath: '', dotLeft: 0, dotTop: 0 };
         const min = Math.min(...series);
         const max = Math.max(...series);
         const range = max - min || 1;
@@ -94,6 +86,22 @@ const RevenueSparklineWidget: React.FC<{ metric?: 'collected' | 'invoiced' }> = 
             dotTop: (last.y / H) * 100,
         };
     }, [series]);
+
+    // حالتا الجلب/غياب البيانات — قبل أي رسم
+    if (loading && !trend) {
+        return (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--color-text-secondary)', direction: 'rtl' }}>
+                جارٍ جلب الإيرادات…
+            </div>
+        );
+    }
+    if (!live || !trend?.months?.length || series.length < 2) {
+        return (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 12, color: 'var(--color-text-secondary)', direction: 'rtl', padding: '0 10px' }}>
+                {(!live || !trend) ? 'تعذّر جلب بيانات الإيرادات' : 'لا تتوفر بيانات كافية بعد — يلزم شهران بحركة مالية'}
+            </div>
+        );
+    }
 
     const current = series[series.length - 1];
     const prev = series[series.length - 2] || current || 1;
@@ -163,7 +171,7 @@ const RevenueSparklineWidget: React.FC<{ metric?: 'collected' | 'invoiced' }> = 
                     {metric === 'invoiced' ? 'المفوتر شهرياً' : 'نبض التحصيل'}
                 </span>
                 <span style={{ marginInlineStart: 'auto', fontSize: '10px', color: 'var(--color-text-secondary)' }}>
-                    {isReal ? `سنة ${trend?.year}` : 'بيانات تجريبية'}
+                    {`سنة ${trend.year}`}
                 </span>
             </div>
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import { Laugh, Smile, Meh, Frown, Annoyed } from 'lucide-react';
 
 import { useWidgetContent } from '../../lab/widgetContent';
@@ -32,9 +32,6 @@ const MOODS: Mood[] = [
     { id: 'tired', score: 1, label: 'متعب', Icon: Annoyed, color: '#dc2626', light: '#fee2e2' },
 ];
 
-// توزيع ديمو لأعضاء الفريق (عدد لكل حالة) — يُستبدل ببيانات حقيقية لاحقاً
-const TEAM_DEMO: Record<MoodId, number> = { great: 4, good: 6, okay: 3, stressed: 2, tired: 1 };
-
 const STORAGE_KEY = 'lab_mood_v1';
 
 const todayStamp = (): string => {
@@ -63,19 +60,6 @@ const TeamMoodWidget: React.FC = () => {
         [setStored]
     );
 
-    const { total, avgMood } = useMemo(() => {
-        const t = MOODS.reduce((s, m) => s + TEAM_DEMO[m.id], 0);
-        const weighted = MOODS.reduce((s, m) => s + m.score * TEAM_DEMO[m.id], 0);
-        const avgScore = t ? weighted / t : 3;
-        // أقرب حالة للمتوسّط
-        const nearest = MOODS.reduce((best, m) =>
-            Math.abs(m.score - avgScore) < Math.abs(best.score - avgScore) ? m : best,
-        MOODS[2]);
-        return { total: t, avgMood: nearest };
-    }, []);
-
-    const AvgIcon = avgMood.Icon;
-
     return (
         <div
             dir="rtl"
@@ -94,8 +78,6 @@ const TeamMoodWidget: React.FC = () => {
                 .tmw-face { transition: transform .16s ease, background .18s ease, border-color .18s ease; cursor: pointer; }
                 .tmw-face:hover { transform: translateY(-2px); }
                 .tmw-face.tmw-on { animation: tmw-pop .32s ease; }
-                @keyframes tmw-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-                .tmw-seg { transform-origin: right center; animation: tmw-grow .5s ease both; }
             `}</style>
 
             {/* الرأس */}
@@ -149,56 +131,7 @@ const TeamMoodWidget: React.FC = () => {
                 })}
             </div>
 
-            {/* متوسّط الفريق */}
-            <div
-                style={{
-                    marginTop: 'auto',
-                    flex: '0 0 auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '7px',
-                    paddingTop: '9px',
-                    borderTop: '1px solid var(--color-border, #e5e7eb)',
-                }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary, #6b7280)' }}>
-                        متوسّط الفريق
-                    </span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                        <AvgIcon size={16} strokeWidth={2.3} style={{ color: avgMood.color }} />
-                        <span style={{ fontSize: '12px', fontWeight: 800, color: avgMood.color }}>{avgMood.label}</span>
-                    </span>
-                </div>
-
-                {/* شريط التوزيع الملوّن */}
-                <div
-                    style={{
-                        display: 'flex',
-                        height: '10px',
-                        borderRadius: '5px',
-                        overflow: 'hidden',
-                        background: 'var(--quiet-gray-100, #f3f4f6)',
-                    }}
-                >
-                    {MOODS.map((m) => {
-                        const pct = total ? (TEAM_DEMO[m.id] / total) * 100 : 0;
-                        if (pct === 0) return null;
-                        return (
-                            <span
-                                key={m.id}
-                                className="tmw-seg"
-                                title={`${m.label}: ${TEAM_DEMO[m.id]}`}
-                                style={{ width: `${pct}%`, background: m.color, display: 'block' }}
-                            />
-                        );
-                    })}
-                </div>
-
-                <span style={{ fontSize: '10px', color: 'var(--quiet-gray-500, #6b7280)', fontVariantNumeric: 'tabular-nums' }}>
-                    شارك {total} من الفريق اليوم
-                </span>
-            </div>
+            {/* لا «متوسّط فريق» وهمياً — يُضاف فقط عند بناء تجميع حقيقي بالباك (قرار المالك 2026-07-22) */}
         </div>
     );
 };

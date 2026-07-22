@@ -15,15 +15,6 @@ interface Payload {
     next: Array<{ id: number; title: string; status: string; priority: string | null; due_date: string | null; case_id: number | null }>;
 }
 
-const DEMO: Payload = {
-    counts: { open: 7, in_progress: 3, overdue: 2, completed_week: 5 },
-    next: [
-        { id: 1, title: 'صياغة مذكرة الدفاع — قضية الأفق', status: 'in_progress', priority: 'high', due_date: new Date(Date.now() + 86400000).toISOString().slice(0, 10), case_id: 101 },
-        { id: 2, title: 'مراجعة عقد الشراكة', status: 'pending', priority: 'medium', due_date: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10), case_id: null },
-        { id: 3, title: 'تجهيز مستندات الجلسة', status: 'pending', priority: 'high', due_date: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10), case_id: 102 },
-    ],
-};
-
 const fmtNum = (n: number) => n.toLocaleString('ar-SA');
 
 function dueLabel(due: string | null): { text: string; late: boolean } {
@@ -39,10 +30,7 @@ function dueLabel(due: string | null): { text: string; late: boolean } {
 
 const MyTasksWidget: React.FC<{ showCompleted?: boolean }> = ({ showCompleted = true }) => {
     const navigate = useNavigate();
-    const { data, loading, live } = useLiveWidget<Payload>('tasks_summary');
-
-    const payload = (live && data) ? data : DEMO;
-    const isReal = live && !!data;
+    const { data, loading } = useLiveWidget<Payload>('tasks_summary');
 
     if (loading && !data) {
         return (
@@ -52,7 +40,16 @@ const MyTasksWidget: React.FC<{ showCompleted?: boolean }> = ({ showCompleted = 
         );
     }
 
-    const { counts, next } = payload;
+    // لا بيانات وهمية أبداً — فشل الجلب = رسالة صادقة (قرار المالك 2026-07-22)
+    if (!data) {
+        return (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--color-text-secondary)', direction: 'rtl' }}>
+                تعذّر جلب مهامك — حدّث الصفحة
+            </div>
+        );
+    }
+
+    const { counts, next } = data;
 
     const stat = (value: number, label: string, color: string) => (
         <div style={{ flex: 1, minWidth: 0, textAlign: 'center', padding: '8px 4px', borderRadius: 12, background: 'color-mix(in srgb, ' + color + ' 8%, transparent)' }}>
@@ -68,7 +65,7 @@ const MyTasksWidget: React.FC<{ showCompleted?: boolean }> = ({ showCompleted = 
                 <ListTodo size={14} style={{ color: 'var(--law-gold, #c9a227)' }} />
                 <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-heading)' }}>مهامي</span>
                 <span style={{ marginInlineStart: 'auto', fontSize: 10, color: 'var(--color-text-secondary)' }}>
-                    {isReal ? (showCompleted ? `أنجزت ${fmtNum(counts.completed_week)} هذا الأسبوع` : '') : 'بيانات تجريبية'}
+                    {showCompleted ? `أنجزت ${fmtNum(counts.completed_week)} هذا الأسبوع` : ''}
                 </span>
             </div>
 

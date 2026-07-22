@@ -15,7 +15,8 @@ import './pinned-widgets.css';
 
 const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
 
-const PIN_CTX = { summary: null };
+/* البطاقات العائمة لا تجلب summary — الودجتس المعتمدة عليه تعرض حالتها الفارغة الصادقة */
+const PIN_CTX = { summary: null, summaryLoading: false };
 const BUBBLE = 48;               // قطر الفقاعة عند الطي
 const MIN_W = 230, MAX_W = 640;  // حدود التحجيم الحر بالبكسل
 const MIN_H = 150, MAX_H = 700;

@@ -22,8 +22,9 @@ interface Props {
 }
 
 const BigCounterWidget: React.FC<Props> = ({ title, label, value, changePct }) => {
-    const target = Math.max(0, Math.round(Number(value) || 348));
-    const change = Number(changePct ?? 14);
+    // صفر افتراضاً — المستخدم يضبط رقمه من الترس (لا أرقام وهمية)
+    const target = Math.max(0, Math.round(Number(value) || 0));
+    const change = Number(changePct ?? 0);
     const [val, setVal] = useState(0);
     const rafRef = useRef<number | null>(null);
 

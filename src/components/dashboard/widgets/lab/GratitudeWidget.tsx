@@ -19,10 +19,8 @@ interface Entry {
 const STORAGE_KEY = 'lab_gratitude_v1';
 const MAX_STORED = 50;
 
-const SEED: Entry[] = [
-    { text: 'إنجاز مذكرة الاعتراض قبل الموعد بيومين', ts: Date.now() - 26 * 60 * 60 * 1000 },
-    { text: 'ثقة العميل ودعمه في القضية الأخيرة', ts: Date.now() - 3 * 60 * 60 * 1000 },
-];
+// لا مدخلات وهمية — يبدأ فارغاً (قرار المالك 2026-07-22)
+const SEED: Entry[] = [];
 
 const parseEntries = (raw: unknown): Entry[] => {
     if (Array.isArray(raw)) {
