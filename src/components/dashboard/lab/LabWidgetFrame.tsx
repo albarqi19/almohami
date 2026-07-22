@@ -122,6 +122,10 @@ const SettingsPopover: React.FC<{
     onReset: () => void;
     onDuplicate: () => void;
 }> = ({ def, s, onChange, onReset, onDuplicate }) => {
+    /* الغلاف الكلاسيكي حرفي لا يتأثر بأدوات المظهر (خلفية/شريط/إطار/زوايا/
+       كثافة/رأس) — فلا تُعرض إلا بالنمط الحديث حتى لا توهم بعطل. */
+    const isApple = s.chrome === 'apple';
+
     return (
         <Popover.Root>
             <Popover.Trigger asChild>
@@ -134,7 +138,7 @@ const SettingsPopover: React.FC<{
                     <div className="lab-settings__head">تخصيص «{s.title || def.title}»</div>
 
                     <div className="lab-settings__scroll">
-                        {/* 🎛️ خصائص الودجت (Schema من الكتالوج — رندر تلقائي) */}
+                        {/* 🎛️ خصائص الودجت (Schema من الكتالوج — رندر تلقائي، بالنمطين) */}
                         {def.options && def.options.length > 0 && (
                             <>
                                 <div className="lab-settings__section">
@@ -159,12 +163,7 @@ const SettingsPopover: React.FC<{
                             />
                         </div>
 
-                        {/* الرأس */}
-                        <Row label="رأس المربع">
-                            <Toggle on={s.showHeader} onClick={() => onChange({ showHeader: !s.showHeader })} />
-                        </Row>
-
-                        {/* العنوان المخصّص */}
+                        {/* العنوان المخصّص (بالنمطين) */}
                         <div className="lab-settings__field">
                             <span className="lab-settings__label">العنوان</span>
                             <input
@@ -175,59 +174,68 @@ const SettingsPopover: React.FC<{
                             />
                         </div>
 
-                        {/* الخلفية */}
-                        <Row label="خلفية (بطاقة)">
-                            <Toggle on={s.filled} onClick={() => onChange({ filled: !s.filled })} />
-                        </Row>
-                        {s.filled && (
-                            <Swatches
-                                active={s.bg}
-                                mode="bg"
-                                onPick={(key) => onChange({ bg: key })}
-                            />
+                        {isApple && (
+                            <>
+                                {/* الرأس */}
+                                <Row label="رأس المربع">
+                                    <Toggle on={s.showHeader} onClick={() => onChange({ showHeader: !s.showHeader })} />
+                                </Row>
+
+                                {/* الخلفية */}
+                                <Row label="خلفية (بطاقة)">
+                                    <Toggle on={s.filled} onClick={() => onChange({ filled: !s.filled })} />
+                                </Row>
+                                {s.filled && (
+                                    <Swatches
+                                        active={s.bg}
+                                        mode="bg"
+                                        onPick={(key) => onChange({ bg: key })}
+                                    />
+                                )}
+
+                                {/* الشريط اللوني */}
+                                <div className="lab-settings__field">
+                                    <span className="lab-settings__label">شريط لوني</span>
+                                    <Segmented
+                                        value={s.accent}
+                                        options={[{ v: 'none', l: 'بدون' }, { v: 'side', l: 'جانبي' }, { v: 'top', l: 'علوي' }]}
+                                        onPick={(v) => onChange({ accent: v as WidgetSettings['accent'] })}
+                                    />
+                                </div>
+                                {s.accent !== 'none' && (
+                                    <Swatches
+                                        active={s.accentColor}
+                                        mode="solid"
+                                        onPick={(key) => onChange({ accentColor: key })}
+                                    />
+                                )}
+
+                                {/* الإطار */}
+                                <Row label="الإطار">
+                                    <Toggle on={s.border} onClick={() => onChange({ border: !s.border })} />
+                                </Row>
+
+                                {/* الزوايا */}
+                                <div className="lab-settings__field">
+                                    <span className="lab-settings__label">الزوايا</span>
+                                    <Segmented
+                                        value={s.radius}
+                                        options={[{ v: 'sm', l: 'حادّة' }, { v: 'md', l: 'وسط' }, { v: 'lg', l: 'دائرية' }]}
+                                        onPick={(v) => onChange({ radius: v as WidgetSettings['radius'] })}
+                                    />
+                                </div>
+
+                                {/* الكثافة */}
+                                <div className="lab-settings__field">
+                                    <span className="lab-settings__label">الكثافة</span>
+                                    <Segmented
+                                        value={s.density}
+                                        options={[{ v: 'compact', l: 'مضغوط' }, { v: 'cozy', l: 'مريح' }]}
+                                        onPick={(v) => onChange({ density: v as WidgetSettings['density'] })}
+                                    />
+                                </div>
+                            </>
                         )}
-
-                        {/* الشريط اللوني */}
-                        <div className="lab-settings__field">
-                            <span className="lab-settings__label">شريط لوني</span>
-                            <Segmented
-                                value={s.accent}
-                                options={[{ v: 'none', l: 'بدون' }, { v: 'side', l: 'جانبي' }, { v: 'top', l: 'علوي' }]}
-                                onPick={(v) => onChange({ accent: v as WidgetSettings['accent'] })}
-                            />
-                        </div>
-                        {s.accent !== 'none' && (
-                            <Swatches
-                                active={s.accentColor}
-                                mode="solid"
-                                onPick={(key) => onChange({ accentColor: key })}
-                            />
-                        )}
-
-                        {/* الإطار */}
-                        <Row label="الإطار">
-                            <Toggle on={s.border} onClick={() => onChange({ border: !s.border })} />
-                        </Row>
-
-                        {/* الزوايا */}
-                        <div className="lab-settings__field">
-                            <span className="lab-settings__label">الزوايا</span>
-                            <Segmented
-                                value={s.radius}
-                                options={[{ v: 'sm', l: 'حادّة' }, { v: 'md', l: 'وسط' }, { v: 'lg', l: 'دائرية' }]}
-                                onPick={(v) => onChange({ radius: v as WidgetSettings['radius'] })}
-                            />
-                        </div>
-
-                        {/* الكثافة */}
-                        <div className="lab-settings__field">
-                            <span className="lab-settings__label">الكثافة</span>
-                            <Segmented
-                                value={s.density}
-                                options={[{ v: 'compact', l: 'مضغوط' }, { v: 'cozy', l: 'مريح' }]}
-                                onPick={(v) => onChange({ density: v as WidgetSettings['density'] })}
-                            />
-                        </div>
                     </div>
 
                     <div className="lab-settings__foot">
