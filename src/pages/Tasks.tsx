@@ -26,6 +26,7 @@ import {
   PauseCircle,
   AlertTriangle,
   Gavel,
+  Scale,
   FolderClosed,
   FolderInput
 } from 'lucide-react';
@@ -228,6 +229,19 @@ const SortableTaskCard = ({
           <span className="case-text">
             طلب تنفيذ: {task.execution_request.request_number}
             {task.execution_request.main_document_type ? ` — ${task.execution_request.main_document_type}` : ''}
+          </span>
+        </div>
+      ) : task.legal_service ? (
+        <div
+          className="task-card-case-badge task-card-exec-badge"
+          title={`خدمة قانونية: ${task.legal_service.title || ''}`}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <Scale size={11} className="case-icon" />
+          <span className="case-text">
+            خدمة: {task.legal_service.title}
+            {task.legal_service.service_number ? ` — ${task.legal_service.service_number}` : ''}
           </span>
         </div>
       ) : null}
@@ -1100,6 +1114,15 @@ const Tasks: React.FC = () => {
                             >
                               <Gavel size={10} className="inline-icon" />
                               طلب تنفيذ: {task.execution_request.request_number}
+                            </span>
+                          ) : task.legal_service ? (
+                            <span
+                              className="task-case-subtext exec"
+                              title={`خدمة قانونية: ${task.legal_service.title || ''}`}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/legal-services/${task.legal_service!.id}`); }}
+                            >
+                              <Scale size={10} className="inline-icon" />
+                              خدمة: {task.legal_service.title}
                             </span>
                           ) : null}
                         </div>

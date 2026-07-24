@@ -10,7 +10,6 @@ import {
   Calendar,
   Clock,
   User,
-  Briefcase,
   Loader2,
   CheckCircle2,
   Tag,
@@ -20,6 +19,7 @@ import {
 import { UserService, type User as ServiceUser } from '../services/UserService';
 import { TaskService } from '../services/taskService';
 import MultiSelectDropdown from './MultiSelectDropdown';
+import TaskLinkPicker, { EMPTY_TASK_LINK, type TaskLinkValue } from './TaskLinkPicker';
 import type { CreateTaskForm } from '../types';
 // ستايلات Notion (add-appointment-modal.css) تُحمَّل مركزياً عبر styles/appStyles.ts
 
@@ -63,6 +63,9 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
   // تعدّد المكلّفين — assigneeIds تشمل المسؤول؛ responsibleId هو المسؤول (المُرقّى بالنجمة)
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [responsibleId, setResponsibleId] = useState<string>('');
+  // ربط المهمة من الصفحة العامة (قضية/عميل/تنفيذ/خدمة) — يظهر فقط بلا سياق
+  const hasContext = Boolean(caseId || clientId);
+  const [link, setLink] = useState<TaskLinkValue>(EMPTY_TASK_LINK);
 
   // تبديل مكلّف: إضافة/إزالة مع صون المسؤول (أول اختيار = المسؤول؛ إزالته تُرقّي التالي)
   const toggleAssignee = (value: string) => {
@@ -97,6 +100,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
       setFormData(initialFormState);
       setAssigneeIds([]);
       setResponsibleId('');
+      setLink(EMPTY_TASK_LINK);
       setError(null);
     }
   }, [isOpen]);
@@ -130,12 +134,17 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 
     try {
       // Prepare payload
+      // الربط: من السياق (صفحة قضية/عميل) أو من المنتقي الحر بالصفحة العامة
+      const chosenId = link.id != null && link.id !== '' ? String(link.id) : undefined;
+
       const taskData: CreateTaskForm = {
         title: formData.title.trim(),
         description: formData.description?.trim() || '',
         type: formData.type || 'other',
-        caseId: caseId || undefined,
-        clientId: clientId || undefined,
+        caseId: caseId || (link.type === 'case' ? chosenId : undefined),
+        clientId: clientId || (link.type === 'client' ? chosenId : undefined),
+        executionRequestId: link.type === 'execution' ? chosenId : undefined,
+        legalServiceId: link.type === 'service' ? chosenId : undefined,
         assignedTo: responsibleId || undefined,
         assigneeIds: assigneeIds.length ? assigneeIds : undefined,
         priority: formData.priority as any,
@@ -165,9 +174,8 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.98, y: 10 }}
           transition={{ duration: 0.15 }}
-          className="add-appointment-modal"
+          className="add-appointment-modal task-modal-dense"
           onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '750px' }}
         >
           {/* Header */}
           <div className="modal-header">
@@ -186,9 +194,9 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
           </div>
 
           {/* Body */}
-          <div className="modal-body" style={{ padding: '0 32px 32px' }}>
+          <div className="modal-body">
             {error && (
-              <div className="modal-error" style={{ margin: '20px 0' }}>
+              <div className="modal-error">
                 <AlertCircle size={16} />
                 <span>{error}</span>
               </div>
@@ -202,7 +210,6 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               value={formData.title}
               onChange={(e) => updateField('title', e.target.value)}
               autoFocus
-              style={{ marginTop: '20px' }}
             />
 
             {/* Properties List */}
@@ -300,63 +307,53 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                 </div>
               </div>
 
-              {/* Related Case (Ready Only) */}
-              {caseTitle && (
-                <div className="notion-property">
-                  <div className="notion-property-label">
-                    <Briefcase size={14} />
-                    <span>القضية</span>
-                  </div>
-                  <div className="notion-property-value">
-                    <span style={{ fontSize: '13px', color: 'var(--color-text)', opacity: 0.8 }}>
-                      {caseTitle}
-                    </span>
+              {/* المتطلبات — شريحتان تملآن الخلية السادسة فلا يبقى ثقب بالشبكة.
+                  التفصيل في tooltip بدل سطرَي شرح مطوّلين. */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <ShieldCheck size={14} />
+                  <span>المتطلبات</span>
+                </div>
+                <div className="notion-property-value">
+                  <div className="task-req-chips">
+                    <label
+                      className={`task-req-chip${formData.requires_approval ? ' is-on' : ''}`}
+                      title="لن تُعدّ المهمة مكتملة حتى يعتمدها المدير"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.requires_approval}
+                        onChange={(e) => updateField('requires_approval', e.target.checked)}
+                      />
+                      <ShieldCheck size={12} />
+                      تتطلب موافقة
+                    </label>
+                    <label
+                      className={`task-req-chip${formData.requires_attachment ? ' is-on' : ''}`}
+                      title="لا يمكن إكمال المهمة قبل رفع مرفق"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.requires_attachment}
+                        onChange={(e) => updateField('requires_attachment', e.target.checked)}
+                      />
+                      <Paperclip size={12} />
+                      تتطلب مرفقاً
+                    </label>
                   </div>
                 </div>
-              )}
-
-              {/* Related Client (مهمة على مستوى العميل لا قضية) */}
-              {clientName && !caseTitle && (
-                <div className="notion-property">
-                  <div className="notion-property-label">
-                    <User size={14} />
-                    <span>العميل</span>
-                  </div>
-                  <div className="notion-property-value">
-                    <span style={{ fontSize: '13px', color: 'var(--color-text)', opacity: 0.8 }}>
-                      {clientName}
-                    </span>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
 
-            <div className="notion-section-divider"></div>
-
-            {/* متطلبات الإنجاز */}
-            <div className="task-requirements-block">
-              <div className="notion-content-label">متطلبات الإنجاز</div>
-              <label className="task-req-row">
-                <input
-                  type="checkbox"
-                  checked={formData.requires_approval}
-                  onChange={(e) => updateField('requires_approval', e.target.checked)}
-                />
-                <ShieldCheck size={15} className="task-req-icon" />
-                <span className="task-req-title">تتطلب موافقة قبل الإكمال</span>
-                <span className="task-req-hint">لن تُعدّ مكتملة حتى يعتمدها المدير</span>
-              </label>
-              <label className="task-req-row">
-                <input
-                  type="checkbox"
-                  checked={formData.requires_attachment}
-                  onChange={(e) => updateField('requires_attachment', e.target.checked)}
-                />
-                <Paperclip size={15} className="task-req-icon" />
-                <span className="task-req-title">تتطلب إرفاق مستند</span>
-                <span className="task-req-hint">لا يمكن إكمالها قبل رفع مرفق</span>
-              </label>
-            </div>
+            {/* ربط المهمة — من الصفحة العامة فقط. مع سياق قضية/عميل تكفي
+                الترويسة (كانت تُكرَّر كصفَّي قراءة فقط داخل الشبكة). */}
+            {!hasContext && (
+              <>
+                <div className="notion-section-divider"></div>
+                <div className="notion-content-label">ربط المهمة (اختياري)</div>
+                <TaskLinkPicker value={link} onChange={setLink} disabled={loading} />
+              </>
+            )}
 
             <div className="notion-section-divider"></div>
 
@@ -366,7 +363,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               <textarea
                 className="notion-textarea"
                 placeholder="أضف وصفاً، روابط، أو تفاصيل المهمة هنا..."
-                rows={8}
+                rows={3}
                 value={formData.description}
                 onChange={(e) => updateField('description', e.target.value)}
               />

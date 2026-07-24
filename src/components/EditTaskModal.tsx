@@ -18,6 +18,7 @@ import {
 import { UserService, type User as ServiceUser } from '../services/UserService';
 import { TaskService } from '../services/taskService';
 import MultiSelectDropdown from './MultiSelectDropdown';
+import TaskLinkPicker, { EMPTY_TASK_LINK, type TaskLinkValue } from './TaskLinkPicker';
 import type { Task } from '../types';
 
 interface EditTaskModalProps {
@@ -26,6 +27,19 @@ interface EditTaskModalProps {
   task: Task | null;
   onTaskUpdated: () => void;
 }
+
+// ربط المهمة الحالي كقيمة منتقي — أولوية العرض نفسها المتّبعة في شارات البطاقات
+const taskToLink = (t: Task): TaskLinkValue => {
+  if (t.case) {
+    return { type: 'case', id: t.case.id, label: t.case.file_number ? `${t.case.title} (${t.case.file_number})` : t.case.title };
+  }
+  if (t.client) return { type: 'client', id: t.client.id, label: t.client.name };
+  if (t.execution_request) {
+    return { type: 'execution', id: t.execution_request.id, label: `طلب تنفيذ: ${t.execution_request.request_number || ''}` };
+  }
+  if (t.legal_service) return { type: 'service', id: t.legal_service.id, label: t.legal_service.title || 'خدمة قانونية' };
+  return EMPTY_TASK_LINK;
+};
 
 // datetime-local يتطلب صيغة محلية YYYY-MM-DDTHH:mm — نبنيها من التوقيت المحلي (لا toISOString
 // كي لا نُزيح الساعة إلى UTC كما حدث سابقاً مع الاجتماعات).
@@ -65,6 +79,10 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
   // تعدّد المكلّفين — assigneeIds تشمل المسؤول؛ responsibleId هو المسؤول (المُرقّى بالنجمة)
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [responsibleId, setResponsibleId] = useState<string>('');
+  // ربط المهمة — تُرسل حقوله للباك فقط إذا غيّره المستخدم فعلاً
+  // (كي لا يمسح تعديلٌ عادي ربطاً قائماً بأكثر من كيان)
+  const [link, setLink] = useState<TaskLinkValue>(EMPTY_TASK_LINK);
+  const [initialLink, setInitialLink] = useState<TaskLinkValue>(EMPTY_TASK_LINK);
 
   const toggleAssignee = (value: string) => {
     setAssigneeIds((prev) => {
@@ -115,6 +133,11 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         setResponsibleId('');
       }
 
+      // تهيئة ربط المهمة الحالي
+      const currentLink = taskToLink(task);
+      setLink(currentLink);
+      setInitialLink(currentLink);
+
       fetchLawyers();
     } else if (!isOpen) {
       setError(null);
@@ -162,6 +185,15 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         actual_hours: formData.actual_hours ? parseFloat(formData.actual_hours) : undefined,
         assigned_to: responsibleId || formData.assigned_to,
         assignee_ids: assigneeIds.length ? assigneeIds.map((v) => Number(v)) : [],
+        // حقول الربط تُرسل فقط عند تغييره — إرسال null صراحةً يفكّ الربط السابق
+        ...(link.type !== initialLink.type || String(link.id ?? '') !== String(initialLink.id ?? '')
+          ? {
+              case_id: link.type === 'case' && link.id ? link.id : null,
+              client_id: link.type === 'client' && link.id ? link.id : null,
+              execution_request_id: link.type === 'execution' && link.id ? link.id : null,
+              legal_service_id: link.type === 'service' && link.id ? link.id : null,
+            }
+          : {}),
       };
 
       await TaskService.updateTask(task.id, updateData);
@@ -211,9 +243,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.98, y: 10 }}
           transition={{ duration: 0.15 }}
-          className="add-appointment-modal"
+          className="add-appointment-modal task-modal-dense"
           onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '750px' }}
         >
           {/* Header */}
           <div className="modal-header">
@@ -230,9 +261,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
           </div>
 
           {/* Body */}
-          <div className="modal-body" style={{ padding: '0 32px 32px' }}>
+          <div className="modal-body">
             {error && (
-              <div className="modal-error" style={{ margin: '20px 0' }}>
+              <div className="modal-error">
                 <AlertCircle size={16} />
                 <span>{error}</span>
               </div>
@@ -246,7 +277,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
               value={formData.title}
               onChange={(e) => updateField('title', e.target.value)}
               autoFocus
-              style={{ marginTop: '20px' }}
             />
 
             {/* Properties List */}
@@ -384,59 +414,76 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                   />
                 </div>
               </div>
+
+              {/* المتطلبات — شريحتان داخل الشبكة (كانتا كتلة مستقلة بسطرَي شرح) */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <ShieldCheck size={14} />
+                  <span>المتطلبات</span>
+                </div>
+                <div className="notion-property-value">
+                  <div className="task-req-chips">
+                    <label
+                      className={`task-req-chip${formData.requires_approval ? ' is-on' : ''}`}
+                      title="لن تُعدّ المهمة مكتملة حتى يعتمدها المدير"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.requires_approval}
+                        onChange={(e) => updateField('requires_approval', e.target.checked)}
+                      />
+                      <ShieldCheck size={12} />
+                      تتطلب موافقة
+                    </label>
+                    <label
+                      className={`task-req-chip${formData.requires_attachment ? ' is-on' : ''}`}
+                      title="لا يمكن إكمال المهمة قبل رفع مرفق"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.requires_attachment}
+                        onChange={(e) => updateField('requires_attachment', e.target.checked)}
+                      />
+                      <Paperclip size={12} />
+                      تتطلب مرفقاً
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="notion-section-divider"></div>
 
-            {/* متطلبات الإنجاز */}
-            <div className="task-requirements-block">
-              <div className="notion-content-label">متطلبات الإنجاز</div>
-              <label className="task-req-row">
-                <input
-                  type="checkbox"
-                  checked={formData.requires_approval}
-                  onChange={(e) => updateField('requires_approval', e.target.checked)}
-                />
-                <ShieldCheck size={15} className="task-req-icon" />
-                <span className="task-req-title">تتطلب موافقة قبل الإكمال</span>
-                <span className="task-req-hint">لن تُعدّ مكتملة حتى يعتمدها المدير</span>
-              </label>
-              <label className="task-req-row">
-                <input
-                  type="checkbox"
-                  checked={formData.requires_attachment}
-                  onChange={(e) => updateField('requires_attachment', e.target.checked)}
-                />
-                <Paperclip size={15} className="task-req-icon" />
-                <span className="task-req-title">تتطلب إرفاق مستند</span>
-                <span className="task-req-hint">لا يمكن إكمالها قبل رفع مرفق</span>
-              </label>
-            </div>
+            {/* ربط المهمة — تعديل حر (قضية/عميل/تنفيذ/خدمة) */}
+            <div className="notion-content-label">ربط المهمة</div>
+            <TaskLinkPicker value={link} onChange={setLink} disabled={loading} />
 
             <div className="notion-section-divider"></div>
 
-            {/* الوصف */}
-            <div className="notion-content-area">
-              <div className="notion-content-label">وصف المهمة</div>
-              <textarea
-                className="notion-textarea"
-                placeholder="أضف وصفاً، روابط، أو تفاصيل المهمة هنا..."
-                rows={5}
-                value={formData.description}
-                onChange={(e) => updateField('description', e.target.value)}
-              />
-            </div>
+            {/* الوصف والملاحظات جنباً إلى جنب — بدل كتلتين متتاليتين */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="notion-content-area">
+                <div className="notion-content-label">وصف المهمة</div>
+                <textarea
+                  className="notion-textarea"
+                  placeholder="أضف وصفاً، روابط، أو تفاصيل المهمة هنا..."
+                  rows={3}
+                  value={formData.description}
+                  onChange={(e) => updateField('description', e.target.value)}
+                />
+              </div>
 
-            {/* الملاحظات — عمود مستقل يُعرض في صفحة التفاصيل */}
-            <div className="notion-content-area" style={{ marginTop: '16px' }}>
-              <div className="notion-content-label">الملاحظات</div>
-              <textarea
-                className="notion-textarea"
-                placeholder="ملاحظات داخلية للفريق (اختياري)..."
-                rows={3}
-                value={formData.notes}
-                onChange={(e) => updateField('notes', e.target.value)}
-              />
+              {/* الملاحظات — عمود مستقل يُعرض في صفحة التفاصيل */}
+              <div className="notion-content-area">
+                <div className="notion-content-label">الملاحظات</div>
+                <textarea
+                  className="notion-textarea"
+                  placeholder="ملاحظات داخلية للفريق (اختياري)..."
+                  rows={3}
+                  value={formData.notes}
+                  onChange={(e) => updateField('notes', e.target.value)}
+                />
+              </div>
             </div>
           </div>
 

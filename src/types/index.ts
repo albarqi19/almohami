@@ -704,6 +704,9 @@ export interface Task {
   // مهمة على مستوى طلب تنفيذ
   execution_request_id?: number | string | null;
   execution_request?: { id: number | string; request_number?: string | null; main_document_type?: string | null; status?: string | null } | null;
+  // مهمة على مستوى خدمة قانونية
+  legal_service_id?: number | string | null;
+  legal_service?: { id: number | string; service_number?: string | null; title?: string | null; service_type?: string | null; status?: string | null } | null;
   // اعتماد الإنجاز + إلزام المرفق (snake_case كما يرجعها الـ API)
   requires_approval?: boolean;
   requires_attachment?: boolean;
@@ -986,6 +989,7 @@ export interface CreateTaskForm {
   caseId?: string;
   clientId?: string;
   executionRequestId?: string | number;
+  legalServiceId?: string | number;
   assignedTo?: string;
   /** كل المكلّفين بالمهمة (تعدّد) — أرقام معرّفات المستخدمين؛ assignedTo هو المسؤول منهم */
   assigneeIds?: (string | number)[];

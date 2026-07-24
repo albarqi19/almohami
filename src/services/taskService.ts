@@ -137,6 +137,7 @@ export class TaskService {
       case_id: taskData.caseId,
       client_id: taskData.clientId,
       execution_request_id: taskData.executionRequestId,
+      legal_service_id: taskData.legalServiceId,
       assigned_to: taskData.assignedTo,
       // تعدّد المكلّفين — أرقام صحيحة؛ الباك يزامن pivot task_assignees
       assignee_ids: taskData.assigneeIds && taskData.assigneeIds.length
