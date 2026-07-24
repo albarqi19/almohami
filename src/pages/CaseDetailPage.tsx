@@ -1180,6 +1180,17 @@ const CaseDetailPage: React.FC = () => {
                   <div className="case-info-row__value">{caseData.court || 'غير محدد'}</div>
                 </div>
               </div>
+              {(caseData as any).department && (
+                <div className="case-info-row">
+                  <div className="case-info-row__icon">
+                    <Building size={14} />
+                  </div>
+                  <div className="case-info-row__content">
+                    <div className="case-info-row__label">الدائرة</div>
+                    <div className="case-info-row__value">{(caseData as any).department}</div>
+                  </div>
+                </div>
+              )}
               <div className="case-info-row">
                 <div className="case-info-row__icon">
                   <Calendar size={14} />
