@@ -32,8 +32,19 @@ const API_BASE_URL = 'https://api.alraedlaw.com/api/v1';
 // Reserved subdomains that should not be treated as tenant subdomains
 const RESERVED_SUBDOMAINS = ['www', 'api', 'app', 'admin', 'dashboard'];
 
-// Main domain (without subdomain)
-const MAIN_DOMAINS = ['alraedlaw.com', 'localhost', '127.0.0.1'];
+// النطاق الأم للمنصة — أي host خارجه (وخارج بيئات التطوير/المعاينة) يُعامل
+// كنطاق مخصص لشركة (custom domain) ويُستبان عبر by-domain endpoint
+const PLATFORM_APEX = 'alraedlaw.com';
+
+function isPlatformHost(host: string): boolean {
+  return (
+    host === PLATFORM_APEX ||
+    host.endsWith(`.${PLATFORM_APEX}`) ||
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host.endsWith('.vercel.app')
+  );
+}
 
 /**
  * Extract subdomain from hostname
@@ -98,12 +109,18 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Extract subdomain from current hostname
-  const subdomain = extractSubdomain(window.location.hostname);
-  const isSubdomain = subdomain !== null;
+  // hostname لا يحمل المنفذ؛ نطاق مخصص = أي host خارج المنصة وبيئات التطوير
+  const host = window.location.hostname.toLowerCase();
+  const isCustomDomain = !isPlatformHost(host);
+  const subdomainFromHost = isCustomDomain ? null : extractSubdomain(host);
+
+  // «موقع شركة» (الاسم isSubdomain تاريخي): subdomain على المنصة أو نطاق مخصص.
+  // على النطاق المخصص يُستكمل الـ slug من رد الـ API (يغذي الواجهات المخصصة).
+  const isSubdomain = isCustomDomain || subdomainFromHost !== null;
+  const subdomain = subdomainFromHost ?? tenant?.slug ?? null;
 
   const fetchTenant = useCallback(async () => {
-    if (!subdomain) {
+    if (!isCustomDomain && !subdomainFromHost) {
       setIsLoading(false);
       return;
     }
@@ -112,7 +129,11 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/public/tenant/${subdomain}`, {
+      const url = isCustomDomain
+        ? `${API_BASE_URL}/public/tenant/by-domain?host=${encodeURIComponent(host)}`
+        : `${API_BASE_URL}/public/tenant/${subdomainFromHost}`;
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -139,7 +160,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } finally {
       setIsLoading(false);
     }
-  }, [subdomain]);
+  }, [isCustomDomain, subdomainFromHost, host]);
 
   useEffect(() => {
     fetchTenant();
