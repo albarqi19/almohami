@@ -45,6 +45,7 @@ import SessionWorkflowSettingsComponent from '../components/settings/SessionWork
 import MicrosoftIntegrationSettings from '../components/settings/MicrosoftIntegrationSettings';
 import EmailIntegrationSection from '../components/settings/EmailIntegrationSection';
 import WordAddinSettings from '../components/settings/WordAddinSettings';
+import CaseNamingSettings from '../components/settings/CaseNamingSettings';
 import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
@@ -88,6 +89,7 @@ const Settings: React.FC = () => {
   const tabs: SettingsTab[] = [
     { id: 'notifications', label: 'الإشعارات', icon: Bell, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { id: 'najiz', label: 'إعدادات ناجز', icon: Cloud, roles: ['admin'] },
+    { id: 'case_naming', label: 'تسمية القضايا', icon: FileText, roles: ['admin'] },
     { id: 'profile', label: 'الملف الشخصي', icon: User, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { id: 'privacy', label: 'الخصوصية والأمان', icon: Shield, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
     { id: 'system', label: 'النظام', icon: Database, roles: ['admin'] },
@@ -517,6 +519,9 @@ const Settings: React.FC = () => {
 
       case 'word_addin':
         return <WordAddinSettings />;
+
+      case 'case_naming':
+        return <CaseNamingSettings />;
 
       case 'najiz':
         return (
