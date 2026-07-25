@@ -59,7 +59,10 @@ const Activities: React.FC = () => {
           performedAt: new Date(a.created_at || a.performed_at || new Date()),
           metadata: a.metadata || {},
           hidden_from_client: a.hidden_from_client,
-          system_hidden: a.system_hidden
+          system_hidden: a.system_hidden,
+          // زر/وسم الرؤية يُعرضان فقط لنشاط له جمهور عميل فعلي: قضية لها عميل مسجّل.
+          // أنشطة المهام المستقلة وإدارة المستخدمين وقضايا najiz بلا عميل — خارج مدى العميل بالبنية نفسها
+          client_relevant: !!(a.case_id && a.case && a.case.client_id)
         }));
 
         setActivities(transformedActivities);
@@ -263,25 +266,28 @@ const Activities: React.FC = () => {
           <span className="activity-card__badge">
             {getActivityTypeText(activity.type)}
           </span>
-          {activity.system_hidden || !canToggleVisibility ? (
-            activity.hidden_from_client && (
-              <span className="activity-card__tag" title="هذا الإجراء داخلي — لا يظهر للعميل في بوابته">
-                <EyeOff size={10} />
-                لا يظهر للعميل
-              </span>
+          {/* الرؤية للعميل: تظهر فقط لنشاط له جمهور عميل فعلي (قضية لها عميل) */}
+          {activity.client_relevant && (
+            activity.system_hidden || !canToggleVisibility ? (
+              activity.hidden_from_client && (
+                <span className="activity-card__tag" title="هذا الإجراء داخلي — لا يظهر للعميل في بوابته">
+                  <EyeOff size={10} />
+                  لا يظهر للعميل
+                </span>
+              )
+            ) : (
+              <button
+                type="button"
+                className={`activity-card__visibility-btn ${activity.hidden_from_client ? 'activity-card__visibility-btn--hidden' : ''}`}
+                title={activity.hidden_from_client
+                  ? 'مخفي عن العميل — اضغط لإظهاره في بوابته'
+                  : 'يظهر للعميل في بوابته — اضغط لإخفائه (لا يسحب إشعاراً سبق إرساله)'}
+                onClick={() => handleToggleVisibility(activity.id, !!activity.hidden_from_client)}
+              >
+                {activity.hidden_from_client ? <EyeOff size={10} /> : <Eye size={10} />}
+                {activity.hidden_from_client ? 'لا يظهر للعميل' : 'يظهر للعميل'}
+              </button>
             )
-          ) : (
-            <button
-              type="button"
-              className={`activity-card__visibility-btn ${activity.hidden_from_client ? 'activity-card__visibility-btn--hidden' : ''}`}
-              title={activity.hidden_from_client
-                ? 'مخفي عن العميل — اضغط لإظهاره في بوابته'
-                : 'يظهر للعميل في بوابته — اضغط لإخفائه (لا يسحب إشعاراً سبق إرساله)'}
-              onClick={() => handleToggleVisibility(activity.id, !!activity.hidden_from_client)}
-            >
-              {activity.hidden_from_client ? <EyeOff size={10} /> : <Eye size={10} />}
-              {activity.hidden_from_client ? 'لا يظهر للعميل' : 'يظهر للعميل'}
-            </button>
           )}
         </div>
       </motion.div>

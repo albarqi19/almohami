@@ -838,6 +838,8 @@ export interface Activity {
   hidden_from_client?: boolean;
   /** الحجب قسري بالنوع (آلي داخلي) — لا يُعرض له زر تبديل الرؤية */
   system_hidden?: boolean;
+  /** هل للنشاط جمهور عميل أصلاً؟ (مرتبط بقضية لها عميل مسجّل) — بدونه لا زر ولا وسم رؤية */
+  client_relevant?: boolean;
 }
 
 export const ActivityType = {

@@ -1152,7 +1152,9 @@ const CaseDetailPage: React.FC = () => {
               <Timeline
                 events={timelineEvents}
                 caseId={caseData.id}
-                onToggleClientVisibility={user?.role !== 'client' ? handleToggleActivityVisibility : undefined}
+                onToggleClientVisibility={user?.role !== 'client' && caseData.client_id
+                  ? handleToggleActivityVisibility
+                  : undefined}
               />
             </div>
           </div>
