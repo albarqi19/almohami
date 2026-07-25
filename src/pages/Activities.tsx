@@ -17,13 +17,17 @@ import {
   XCircle,
   RefreshCw,
   Play,
+  Eye,
   EyeOff
 } from 'lucide-react';
 import type { Activity } from '../types';
 import { ActivityService } from '../services/activityService';
+import { useAuth } from '../contexts/AuthContext';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const Activities: React.FC = () => {
+  const { user } = useAuth();
+  const canToggleVisibility = user?.role !== 'client';
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,7 +58,8 @@ const Activities: React.FC = () => {
           performedBy: a.performed_by ? String(a.performed_by) : 'system',
           performedAt: new Date(a.created_at || a.performed_at || new Date()),
           metadata: a.metadata || {},
-          hidden_from_client: a.hidden_from_client
+          hidden_from_client: a.hidden_from_client,
+          system_hidden: a.system_hidden
         }));
 
         setActivities(transformedActivities);
@@ -138,6 +143,24 @@ const Activities: React.FC = () => {
       case 'appointment_started': return 'بدء موعد';
       case 'appointment_completed': return 'انتهاء موعد';
       default: return type;
+    }
+  };
+
+  /**
+   * زر العين: تبديل رؤية النشاط للعميل — تحديث تفاؤلي مع تراجع عند الفشل.
+   * الإخفاء لا يسحب إشعاراً أُرسل سابقاً.
+   */
+  const handleToggleVisibility = async (activityId: string, visible: boolean) => {
+    setActivities(prev => prev.map(a =>
+      a.id === activityId ? { ...a, hidden_from_client: !visible } : a
+    ));
+    try {
+      await ActivityService.setActivityVisibility(activityId, visible);
+    } catch (error) {
+      console.error('Error toggling activity visibility:', error);
+      setActivities(prev => prev.map(a =>
+        a.id === activityId ? { ...a, hidden_from_client: visible } : a
+      ));
     }
   };
 
@@ -240,11 +263,25 @@ const Activities: React.FC = () => {
           <span className="activity-card__badge">
             {getActivityTypeText(activity.type)}
           </span>
-          {activity.hidden_from_client && (
-            <span className="activity-card__tag" title="هذا الإجراء داخلي — لا يظهر للعميل في بوابته">
-              <EyeOff size={10} />
-              لا يظهر للعميل
-            </span>
+          {activity.system_hidden || !canToggleVisibility ? (
+            activity.hidden_from_client && (
+              <span className="activity-card__tag" title="هذا الإجراء داخلي — لا يظهر للعميل في بوابته">
+                <EyeOff size={10} />
+                لا يظهر للعميل
+              </span>
+            )
+          ) : (
+            <button
+              type="button"
+              className={`activity-card__visibility-btn ${activity.hidden_from_client ? 'activity-card__visibility-btn--hidden' : ''}`}
+              title={activity.hidden_from_client
+                ? 'مخفي عن العميل — اضغط لإظهاره في بوابته'
+                : 'يظهر للعميل في بوابته — اضغط لإخفائه (لا يسحب إشعاراً سبق إرساله)'}
+              onClick={() => handleToggleVisibility(activity.id, !!activity.hidden_from_client)}
+            >
+              {activity.hidden_from_client ? <EyeOff size={10} /> : <Eye size={10} />}
+              {activity.hidden_from_client ? 'لا يظهر للعميل' : 'يظهر للعميل'}
+            </button>
           )}
         </div>
       </motion.div>

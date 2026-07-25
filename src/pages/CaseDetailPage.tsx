@@ -203,7 +203,8 @@ const CaseDetailPage: React.FC = () => {
           date: new Date(activity.date),
           user: activity.user,
           metadata: activity.metadata,
-          hidden_from_client: activity.hidden_from_client
+          hidden_from_client: activity.hidden_from_client,
+          system_hidden: activity.system_hidden
         }));
 
         setTimelineEvents(timelineEventsData);
@@ -299,7 +300,8 @@ const CaseDetailPage: React.FC = () => {
         date: new Date(activity.date),
         user: activity.user,
         metadata: activity.metadata,
-        hidden_from_client: activity.hidden_from_client
+        hidden_from_client: activity.hidden_from_client,
+        system_hidden: activity.system_hidden
       }));
 
       setTimelineEvents(timelineEventsData);
@@ -307,6 +309,24 @@ const CaseDetailPage: React.FC = () => {
       setError(err.message || 'فشل في جلب تفاصيل القضية');
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * زر العين بالمخطط الزمني: تبديل رؤية النشاط للعميل.
+   * تحديث تفاؤلي مع تراجع عند الفشل. الإخفاء لا يسحب إشعاراً أُرسل سابقاً.
+   */
+  const handleToggleActivityVisibility = async (eventId: string, visible: boolean) => {
+    setTimelineEvents(prev => prev.map(e =>
+      e.id === eventId ? { ...e, hidden_from_client: !visible } : e
+    ));
+    try {
+      await ActivityService.setActivityVisibility(eventId, visible);
+    } catch (error) {
+      console.error('Error toggling activity visibility:', error);
+      setTimelineEvents(prev => prev.map(e =>
+        e.id === eventId ? { ...e, hidden_from_client: visible } : e
+      ));
     }
   };
 
@@ -1129,7 +1149,11 @@ const CaseDetailPage: React.FC = () => {
               </button>
             </div>
             <div className="case-timeline-content">
-              <Timeline events={timelineEvents} caseId={caseData.id} />
+              <Timeline
+                events={timelineEvents}
+                caseId={caseData.id}
+                onToggleClientVisibility={user?.role !== 'client' ? handleToggleActivityVisibility : undefined}
+              />
             </div>
           </div>
         </div>

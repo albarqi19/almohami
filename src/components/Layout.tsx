@@ -10,6 +10,7 @@ import FloatingTimer from './FloatingTimer';
 import NotebookFloatingWidget from './NotebookFloatingWidget';
 import LawSearchFab from './LawSearchFab';
 import CaseLawNotesWidget from './CaseLawNotesWidget';
+import TeamChatWidget from './chat/TeamChatWidget';
 // 🧪📌 الودجتس المثبتة من مختبر اللوحة — حارس خفيف لا يجلب أي كود إضافي ما لم يثبّت المستخدم شيئاً
 import PinnedWidgetsGate from './dashboard/lab/PinnedWidgetsGate';
 import ClickUpHeader from './ClickUpHeader';
@@ -169,6 +170,7 @@ const Layout: React.FC = () => {
           {user && user.role !== 'client' && (
             <div className="floating-widgets-group">
               <div className="floating-widgets-row">
+                <TeamChatWidget />
                 <CaseLawNotesWidget />
                 <NotebookFloatingWidget />
                 <LawSearchFab />

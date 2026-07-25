@@ -38,6 +38,8 @@ import TenantLandingPage from './pages/TenantLandingPage';
    ============================================================ */
 const Layout = lazyWithRetry(() => import('./components/Layout'));
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+// 🧪 مختبر اللوحة القابلة للتخصيص (تجريبي — فرونت فقط، بلا backend)
+const DashboardLab = lazyWithRetry(() => import('./components/dashboard/lab/DashboardLab'));
 const Cases = lazyWithRetry(() => import('./pages/Cases'));
 const CaseDetailPage = lazyWithRetry(() => import('./pages/CaseDetailPage'));
 const BankruptcyDetailPage = lazyWithRetry(() => import('./pages/BankruptcyDetailPage'));
@@ -101,6 +103,9 @@ const InvoicesTab = lazyWithRetry(() => import('./pages/finance/tabs/InvoicesTab
 const PaymentsTab = lazyWithRetry(() => import('./pages/finance/tabs/PaymentsTab'));
 const CollectionsTab = lazyWithRetry(() => import('./pages/finance/tabs/CollectionsTab'));
 const ReportsTab = lazyWithRetry(() => import('./pages/finance/tabs/ReportsTab'));
+// وحدة المحاسبة (#141) — خلف بوابة accounting_enabled (تُفحص داخل التبويبين + الباك يفرضها)
+const ExpensesTab = lazyWithRetry(() => import('./pages/finance/tabs/ExpensesTab'));
+const AccountingTab = lazyWithRetry(() => import('./pages/finance/accounting/AccountingTab'));
 const ContractDetailPage = lazyWithRetry(() => import('./pages/finance/ContractDetailPage'));
 const InvoiceDetailPage = lazyWithRetry(() => import('./pages/finance/InvoiceDetailPage'));
 
@@ -182,6 +187,12 @@ function App() {
               </ProtectedRoute>
             }>
               <Route path="dashboard" element={<Dashboard />} />
+              {/* 🧪 مختبر اللوحة القابلة للتخصيص — تجريبي (نفس أدوار لوحة التحكم عدا العميل) */}
+              <Route path="dashboard-lab" element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                  <DashboardLab />
+                </ProtectedRoute>
+              } />
 
               {/* Routes for all users except clients */}
               <Route path="cases" element={
@@ -435,6 +446,13 @@ function App() {
                 } />
                 <Route path="reports" element={
                   <ProtectedRoute requiredPermission="billing.reports.view"><ReportsTab /></ProtectedRoute>
+                } />
+                {/* وحدة المحاسبة (#141): المصروفات (billing.view) والدفاتر (accounting.view) — بوابة accounting_enabled تُفحص داخل التبويب والباك */}
+                <Route path="expenses" element={
+                  <ProtectedRoute requiredPermission="billing.view"><ExpensesTab /></ProtectedRoute>
+                } />
+                <Route path="accounting" element={
+                  <ProtectedRoute requiredPermission="accounting.view"><AccountingTab /></ProtectedRoute>
                 } />
               </Route>
               {/* صفحة إنشاء العقد (Wizard) خارج حاوية التبويبات */}

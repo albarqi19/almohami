@@ -317,6 +317,28 @@ const AdminDashboard: React.FC = () => {
                         ))}
                     </div>
 
+                    {/* 🧪 مدخل مختبر اللوحة القابلة للتخصيص (تجريبي) */}
+                    <Link
+                        to="/dashboard-lab"
+                        title="جرّب اللوحة القابلة للتخصيص (تجريبي)"
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '7px 12px',
+                            borderRadius: '8px',
+                            border: '1px dashed var(--law-gold, #c9a227)',
+                            color: 'var(--law-gold, #c9a227)',
+                            background: 'transparent',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        🧪 لوحة قابلة للتخصيص
+                    </Link>
+
                     {/* Quick actions */}
                     <div className="dash-actions">
                         {quickActions.map((action) => {

@@ -22,6 +22,8 @@ export interface CreateActivityData {
   case_id?: string;
   task_id?: string;
   notify_client?: boolean;
+  /** إظهار الإجراء في بوابة العميل — الافتراضي مخفي، ويظهر تلقائياً عند تفعيل الإرسال */
+  visible_to_client?: boolean;
   metadata?: Record<string, any>;
 }
 
@@ -64,6 +66,17 @@ export class ActivityService {
       return response.data;
     } else {
       throw new Error(response.message || 'فشل في إنشاء النشاط');
+    }
+  }
+
+  /** تبديل رؤية النشاط للعميل (زر العين بواجهة المكتب) — لا يسحب إشعاراً أُرسل سابقاً */
+  static async setActivityVisibility(id: string | number, visible: boolean): Promise<Activity> {
+    const response = await apiClient.patch<ApiResponse<Activity>>(`/activities/${id}/visibility`, { visible });
+
+    if (response.success && response.data) {
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في تغيير رؤية النشاط');
     }
   }
 

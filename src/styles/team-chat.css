@@ -1,0 +1,858 @@
+/* ====================================================
+   دردشة الفريق — ودجت عائم + لوحة محادثات
+   فلات صرف بلا توهج.
+
+   ⚠️ كل الأسطح بـ var(--dashboard-card) لا #fff: السمات الأربع
+   (light / dark / diwan / classic) تُبدَّل عبر body.dark وأخواتها في
+   dashboard-theme.css، و--quiet-gray-900 ينقلب إلى لون فاتح في الداكن —
+   فسطحٌ أبيض ثابت يعني نصاً أبيض على أبيض. #fff الوحيد المسموح هو
+   ما يقع فوق --law-navy (يبقى داكناً في كل السمات).
+   ==================================================== */
+
+/* === الزر العائم === */
+.team-chat-fab {
+    position: relative;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--law-navy, #1E3A5F);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    box-shadow: 0 2px 12px rgba(30, 58, 95, 0.3);
+    transition: all 0.25s ease;
+    white-space: nowrap;
+    overflow: visible;
+}
+
+.team-chat-fab span {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-width 0.25s ease, opacity 0.2s ease, margin 0.25s ease;
+    margin-right: 0;
+}
+
+.team-chat-fab:hover {
+    padding: 6px 12px;
+    gap: 6px;
+    background: var(--law-navy-dark, #152A45);
+}
+
+.team-chat-fab:hover span {
+    max-width: 100px;
+    opacity: 1;
+}
+
+.team-chat-fab svg {
+    flex-shrink: 0;
+}
+
+/* شارة غير المقروء — تخرج عن حدود الزر فلا تتأثر بتوسّعه */
+.team-chat-fab__badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--status-red, #DC2626);
+    color: #fff;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 16px;
+    text-align: center;
+}
+
+/* === اللوحة === */
+.team-chat-panel {
+    position: fixed;
+    bottom: 84px;
+    left: 24px;
+    z-index: 950;
+    width: 340px;
+    height: 460px;
+    max-height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+    direction: rtl;
+    background: var(--dashboard-card, #fff);
+    border: 1px solid var(--quiet-gray-200, #EBECF0);
+    border-radius: 8px;
+    box-shadow: 0 8px 28px rgba(23, 43, 77, 0.16);
+    overflow: hidden;
+    font-size: 12px;
+}
+
+.team-chat-panel__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    background: var(--law-navy, #1E3A5F);
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.team-chat-panel__title {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+
+.team-chat-panel__title strong {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.team-chat-panel__title span {
+    font-size: 10px;
+    opacity: 0.75;
+}
+
+.team-chat-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+}
+
+.team-chat-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.24);
+}
+
+/* === البحث === */
+.team-chat-search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--quiet-gray-200, #EBECF0);
+    color: var(--quiet-gray-500, #97A0AF);
+    flex-shrink: 0;
+}
+
+.team-chat-search.is-inline {
+    padding: 6px 8px;
+    border: 1px solid var(--quiet-gray-300, #DFE1E6);
+    border-radius: 6px;
+    margin-bottom: 6px;
+}
+
+.team-chat-search input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--quiet-gray-900, #172B4D);
+}
+
+.team-chat-search input::placeholder {
+    color: var(--quiet-gray-400, #C1C7D0);
+}
+
+/* === قائمة المحادثات === */
+.team-chat-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.team-chat-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: right;
+    font-family: inherit;
+    transition: background 0.12s ease;
+}
+
+.team-chat-row:hover {
+    background: var(--quiet-gray-100, #F4F5F7);
+}
+
+.team-chat-row__avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    background: var(--law-navy-light, rgba(30, 58, 95, 0.1));
+    color: var(--law-navy, #1E3A5F);
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.team-chat-row__avatar.is-group {
+    background: var(--law-gold-light, rgba(184, 134, 11, 0.1));
+    color: var(--law-gold, #B8860B);
+}
+
+.team-chat-row__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.team-chat-row__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.team-chat-row__top strong {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--quiet-gray-900, #172B4D);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.team-chat-row__top time {
+    font-size: 10px;
+    color: var(--quiet-gray-500, #97A0AF);
+    flex-shrink: 0;
+}
+
+.team-chat-row__preview {
+    font-size: 11px;
+    color: var(--quiet-gray-600, #6B778C);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.team-chat-row__badge {
+    min-width: 17px;
+    height: 17px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--law-navy, #1E3A5F);
+    color: #fff;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 17px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.team-chat-suggest {
+    border-top: 1px solid var(--quiet-gray-200, #EBECF0);
+    margin-top: 4px;
+    padding-top: 4px;
+}
+
+.team-chat-suggest__label {
+    display: block;
+    padding: 4px 12px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--quiet-gray-500, #97A0AF);
+}
+
+/* === الحالات الفارغة والهياكل === */
+.team-chat-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 100%;
+    min-height: 140px;
+    color: var(--quiet-gray-400, #C1C7D0);
+}
+
+.team-chat-empty p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--quiet-gray-600, #6B778C);
+}
+
+.team-chat-empty button {
+    padding: 5px 12px;
+    border: 1px solid var(--law-navy, #1E3A5F);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--law-navy, #1E3A5F);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.team-chat-empty button:hover {
+    background: var(--law-navy, #1E3A5F);
+    color: #fff;
+}
+
+.team-chat-skeletons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+}
+
+.team-chat-skeleton {
+    height: 34px;
+    border-radius: 6px;
+    background: linear-gradient(
+        90deg,
+        var(--quiet-gray-100, #F4F5F7) 25%,
+        var(--quiet-gray-200, #EBECF0) 50%,
+        var(--quiet-gray-100, #F4F5F7) 75%
+    );
+    background-size: 200% 100%;
+    animation: team-chat-shimmer 1.3s ease-in-out infinite;
+}
+
+@keyframes team-chat-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* === نافذة الرسائل === */
+.team-chat-thread {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--quiet-gray-50, #FAFBFC);
+}
+
+.team-chat-msg {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-width: 82%;
+}
+
+.team-chat-msg.is-mine {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.team-chat-msg__author {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--law-navy, #1E3A5F);
+    margin-bottom: 2px;
+    padding: 0 2px;
+}
+
+.team-chat-msg__bubble {
+    padding: 6px 9px;
+    border-radius: 8px;
+    background: var(--dashboard-card, #fff);
+    border: 1px solid var(--quiet-gray-200, #EBECF0);
+    border-top-right-radius: 2px;
+}
+
+.team-chat-msg.is-mine .team-chat-msg__bubble {
+    background: var(--law-navy, #1E3A5F);
+    border-color: var(--law-navy, #1E3A5F);
+    border-top-right-radius: 8px;
+    border-top-left-radius: 2px;
+}
+
+.team-chat-msg__bubble p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--quiet-gray-900, #172B4D);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.team-chat-msg.is-mine .team-chat-msg__bubble p {
+    color: #fff;
+}
+
+.team-chat-msg__meta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    margin-top: 2px;
+}
+
+.team-chat-msg__meta time {
+    font-size: 9px;
+    color: var(--quiet-gray-500, #97A0AF);
+}
+
+.team-chat-msg.is-mine .team-chat-msg__meta time {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.team-chat-msg__meta button {
+    display: none;
+    align-items: center;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.65);
+    cursor: pointer;
+    padding: 0;
+}
+
+.team-chat-msg:hover .team-chat-msg__meta button {
+    display: flex;
+}
+
+.team-chat-msg__meta button:hover {
+    color: #fff;
+}
+
+/* === صندوق الكتابة === */
+.team-chat-composer {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--quiet-gray-200, #EBECF0);
+    background: var(--dashboard-card, #fff);
+    flex-shrink: 0;
+}
+
+.team-chat-composer textarea {
+    flex: 1;
+    max-height: 90px;
+    padding: 7px 9px;
+    border: 1px solid var(--quiet-gray-300, #DFE1E6);
+    border-radius: 6px;
+    resize: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.5;
+    /* الحقول تحتاج خلفية صريحة — بدونها يرسمها المتصفح بيضاء في الداكن */
+    background: var(--dashboard-bg, #fff);
+    color: var(--quiet-gray-900, #172B4D);
+}
+
+.team-chat-composer textarea::placeholder {
+    color: var(--quiet-gray-400, #C1C7D0);
+}
+
+.team-chat-composer textarea:focus {
+    border-color: var(--law-navy, #1E3A5F);
+}
+
+.team-chat-composer button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    background: var(--law-navy, #1E3A5F);
+    color: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+}
+
+.team-chat-composer button:hover:not(:disabled) {
+    background: var(--law-navy-dark, #152A45);
+}
+
+.team-chat-composer button:disabled {
+    background: var(--quiet-gray-300, #DFE1E6);
+    cursor: not-allowed;
+}
+
+/* أيقونة الإرسال تشير لليسار في الواجهة العربية */
+.team-chat-composer button svg {
+    transform: scaleX(-1);
+}
+
+/* === مودال القروب === */
+.team-chat-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(23, 43, 77, 0.42);
+    padding: 16px;
+    direction: rtl;
+}
+
+.team-chat-modal {
+    width: 100%;
+    max-width: 420px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--dashboard-card, #fff);
+    border: 1px solid var(--quiet-gray-200, #EBECF0);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 12px 36px rgba(23, 43, 77, 0.2);
+}
+
+.team-chat-modal__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--law-navy, #1E3A5F);
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.team-chat-modal__head strong {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.team-chat-modal__head button {
+    display: flex;
+    align-items: center;
+    border: none;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    padding: 0;
+}
+
+.team-chat-modal__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.team-chat-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.team-chat-field > span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--quiet-gray-700, #42526E);
+}
+
+.team-chat-field input[type='text'] {
+    padding: 7px 10px;
+    border: 1px solid var(--quiet-gray-300, #DFE1E6);
+    border-radius: 6px;
+    outline: none;
+    font-family: inherit;
+    font-size: 12px;
+    background: var(--dashboard-bg, #fff);
+    color: var(--quiet-gray-900, #172B4D);
+}
+
+.team-chat-field input[type='text']::placeholder {
+    color: var(--quiet-gray-400, #C1C7D0);
+}
+
+.team-chat-field input[type='text']:focus {
+    border-color: var(--law-navy, #1E3A5F);
+}
+
+/* الأعضاء الحاليون */
+.team-chat-members {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: 130px;
+    overflow-y: auto;
+}
+
+.team-chat-member {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 9px;
+    border-radius: 6px;
+    background: var(--quiet-gray-100, #F4F5F7);
+    font-size: 12px;
+    color: var(--quiet-gray-900, #172B4D);
+}
+
+.team-chat-member__tag {
+    margin-right: 6px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--law-gold-light, rgba(184, 134, 11, 0.1));
+    color: var(--law-gold, #B8860B);
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 600;
+}
+
+.team-chat-member button {
+    display: flex;
+    align-items: center;
+    border: none;
+    background: transparent;
+    color: var(--quiet-gray-500, #97A0AF);
+    cursor: pointer;
+    padding: 0;
+}
+
+.team-chat-member button:hover {
+    color: var(--status-red, #DC2626);
+}
+
+/* منتقي الأعضاء */
+.team-chat-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 190px;
+    overflow-y: auto;
+    border: 1px solid var(--quiet-gray-200, #EBECF0);
+    border-radius: 6px;
+    padding: 4px;
+}
+
+.team-chat-picker__empty {
+    margin: 0;
+    padding: 14px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--quiet-gray-500, #97A0AF);
+}
+
+.team-chat-pick {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    cursor: pointer;
+    text-align: right;
+    font-family: inherit;
+    transition: background 0.12s ease;
+}
+
+.team-chat-pick:hover {
+    background: var(--quiet-gray-100, #F4F5F7);
+}
+
+.team-chat-pick.is-on {
+    background: var(--law-navy-light, rgba(30, 58, 95, 0.1));
+}
+
+.team-chat-pick__check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--quiet-gray-400, #C1C7D0);
+    border-radius: 4px;
+    background: var(--dashboard-bg, #fff);
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.team-chat-pick.is-on .team-chat-pick__check {
+    background: var(--law-navy, #1E3A5F);
+    border-color: var(--law-navy, #1E3A5F);
+}
+
+.team-chat-pick__name {
+    flex: 1;
+    font-size: 12px;
+    color: var(--quiet-gray-900, #172B4D);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.team-chat-pick__role {
+    font-size: 10px;
+    color: var(--quiet-gray-500, #97A0AF);
+    flex-shrink: 0;
+}
+
+/* تذييل المودال */
+.team-chat-modal__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 14px;
+    border-top: 1px solid var(--quiet-gray-200, #EBECF0);
+    flex-shrink: 0;
+}
+
+.team-chat-modal__actions {
+    display: flex;
+    gap: 8px;
+    margin-right: auto;
+}
+
+.team-chat-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border: 1px solid var(--quiet-gray-300, #DFE1E6);
+    border-radius: 6px;
+    background: var(--dashboard-card, #fff);
+    color: var(--quiet-gray-700, #42526E);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.team-chat-btn:hover:not(:disabled) {
+    background: var(--quiet-gray-100, #F4F5F7);
+}
+
+.team-chat-btn.is-primary {
+    background: var(--law-navy, #1E3A5F);
+    border-color: var(--law-navy, #1E3A5F);
+    color: #fff;
+}
+
+.team-chat-btn.is-primary:hover:not(:disabled) {
+    background: var(--law-navy-dark, #152A45);
+}
+
+.team-chat-btn.is-danger {
+    border-color: transparent;
+    color: var(--status-red, #DC2626);
+}
+
+.team-chat-btn.is-danger:hover:not(:disabled) {
+    background: var(--status-red-light, rgba(220, 38, 38, 0.1));
+}
+
+.team-chat-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* ====================================================
+   الثيم الداكن — ما لا تحلّه المتغيرات وحدها
+   الظلال هنا زرقاء فاتحة (rgba(23,43,77,…)) فتذوب على خلفية داكنة،
+   والحدود تحتاج درجة أعلى ليبقى السطح مفصولاً عمّا تحته.
+   ==================================================== */
+
+body.dark .team-chat-panel {
+    border-color: var(--quiet-gray-300, #30363D);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+
+body.dark .team-chat-modal {
+    border-color: var(--quiet-gray-300, #30363D);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+}
+
+body.dark .team-chat-modal-overlay {
+    background: rgba(0, 0, 0, 0.62);
+}
+
+body.dark .team-chat-fab {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* الفقاعة الواردة: أفتح من مجرى المحادثة لتبرز — مع حدّ يفصلها */
+body.dark .team-chat-msg__bubble {
+    border-color: var(--quiet-gray-300, #30363D);
+}
+
+/* حقول الإدخال أغمق من السطح الحامل لها (عكس الفاتح) */
+body.dark .team-chat-composer textarea,
+body.dark .team-chat-field input[type='text'] {
+    background: var(--quiet-gray-100, #161B22);
+    border-color: var(--quiet-gray-300, #30363D);
+}
+
+body.dark .team-chat-picker {
+    border-color: var(--quiet-gray-300, #30363D);
+}
+
+/* زر ثانوي: الحدّ الفاتح يصير مرئياً أكثر من اللازم على الداكن */
+body.dark .team-chat-btn {
+    border-color: var(--quiet-gray-300, #30363D);
+}
+
+body.dark .team-chat-pick__check {
+    border-color: var(--quiet-gray-500, #6E7681);
+}
+
+/* في الداكن --quiet-gray-100 يساوي --dashboard-card حرفياً (#161B22)، فكل
+   تأثير hover مبنيّ عليه يختفي. ارفعه درجة ليبقى التفاعل محسوساً. */
+body.dark .team-chat-row:hover,
+body.dark .team-chat-pick:hover,
+body.dark .team-chat-btn:hover:not(:disabled) {
+    background: var(--quiet-gray-200, #21262D);
+}
+
+body.dark .team-chat-member {
+    background: var(--quiet-gray-200, #21262D);
+}
+
+/* الهيكل العظمي (skeleton) — التدرّج الفاتح يومض بقوة على الداكن */
+body.dark .team-chat-skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--quiet-gray-100, #161B22) 25%,
+        var(--quiet-gray-200, #21262D) 50%,
+        var(--quiet-gray-100, #161B22) 75%
+    );
+    background-size: 200% 100%;
+}
+
+/* === الشاشات الصغيرة — اللوحة تملأ العرض === */
+@media (max-width: 480px) {
+    .team-chat-panel {
+        left: 12px;
+        right: 12px;
+        width: auto;
+        bottom: 78px;
+        height: 70vh;
+    }
+}

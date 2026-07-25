@@ -8,6 +8,7 @@ import {
   FileSearch,
   Edit3,
   Eye,
+  EyeOff,
   Building2,
   Calendar,
   FileText,
@@ -54,7 +55,9 @@ const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
   const [selectedAction, setSelectedAction] = useState<QuickAction | null>(null);
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [notifyClient, setNotifyClient] = useState(true);
+  // الإرسال والإظهار للعميل قراران واعيان — الافتراضي مطفآن: الإجراء داخلي لا يراه العميل
+  const [notifyClient, setNotifyClient] = useState(false);
+  const [visibleToClient, setVisibleToClient] = useState(false);
 
   // الإجراءات التي يمكن إرسال إشعار للعميل عنها
   const NOTIFIABLE_ACTIONS = [
@@ -250,7 +253,8 @@ const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
   const handleActionClick = (action: QuickAction) => {
     setSelectedAction(action);
     setDescription('');
-    setNotifyClient(true);
+    setNotifyClient(false);
+    setVisibleToClient(false);
   };
 
   const handleSubmit = async () => {
@@ -260,12 +264,15 @@ const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
     setIsSubmitting(true);
     try {
       const isNotifiable = NOTIFIABLE_ACTIONS.includes(selectedAction.id);
+      const shouldNotify = isNotifiable && notifyClient;
       await ActivityService.createActivity({
         title: selectedAction.title,
         action: selectedAction.id,
         description: description.trim() || selectedAction.title,
         case_id: caseId,
-        notify_client: isNotifiable && notifyClient,
+        notify_client: shouldNotify,
+        // المُرسَل يظهر للعميل تلقائياً؛ وغير المُرسَل يظهر فقط إذا فُعّل الإظهار صراحة
+        visible_to_client: shouldNotify || visibleToClient,
         metadata: {
           action_type: 'quick_action',
           action_title: selectedAction.title,
@@ -534,53 +541,107 @@ const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
             alignItems: 'center',
             gap: '12px'
           }}>
-            {/* Toggle إرسال للعميل - يظهر فقط للإجراءات القابلة للإشعار */}
-            {selectedAction && NOTIFIABLE_ACTIONS.includes(selectedAction.id) && (
-              <button
-                onClick={() => setNotifyClient(!notifyClient)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  border: `1px solid ${notifyClient ? '#10b981' : 'var(--color-border)'}`,
-                  background: notifyClient ? '#10b98115' : 'transparent',
-                  color: notifyClient ? '#10b981' : 'var(--color-text-secondary)',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  marginLeft: 'auto'
-                }}
-              >
-                <Send size={14} />
-                إرسال للعميل
-                <div style={{
-                  width: '34px',
-                  height: '18px',
-                  borderRadius: '9px',
-                  backgroundColor: notifyClient ? '#10b981' : '#d1d5db',
-                  position: 'relative',
-                  transition: 'all 0.2s',
-                  flexShrink: 0
-                }}>
-                  <div style={{
-                    width: '14px',
-                    height: '14px',
-                    borderRadius: '50%',
-                    backgroundColor: 'white',
-                    position: 'absolute',
-                    top: '2px',
-                    transition: 'all 0.2s',
-                    ...(notifyClient ? { left: '2px' } : { right: '2px' })
-                  }} />
-                </div>
-              </button>
-            )}
+            {/* مفتاحا الإرسال والإظهار للعميل — الافتراضي: إجراء داخلي (مطفآن) */}
+            {selectedAction ? (() => {
+              const isNotifiable = NOTIFIABLE_ACTIONS.includes(selectedAction.id);
+              const notifyOn = isNotifiable && notifyClient;
+              const visibleOn = notifyOn || visibleToClient;
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+                  {/* إظهار للعميل — يُقفل مفعّلاً عند تفعيل الإرسال (المُرسَل يظهر حكماً) */}
+                  <button
+                    onClick={() => { if (!notifyOn) setVisibleToClient(!visibleToClient); }}
+                    title={notifyOn
+                      ? 'سيظهر للعميل حكماً لأنه سيُرسَل له'
+                      : visibleOn
+                        ? 'سيظهر في بوابة العميل دون إرسال إشعار'
+                        : 'إجراء داخلي — لا يظهر في بوابة العميل'}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${visibleOn ? 'var(--law-navy)' : 'var(--color-border)'}`,
+                      background: visibleOn ? 'var(--quiet-gray-100)' : 'transparent',
+                      color: visibleOn ? 'var(--law-navy)' : 'var(--color-text-secondary)',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: notifyOn ? 'default' : 'pointer',
+                      opacity: notifyOn ? 0.7 : 1,
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {visibleOn ? <Eye size={14} /> : <EyeOff size={14} />}
+                    إظهار للعميل
+                    <div style={{
+                      width: '34px',
+                      height: '18px',
+                      borderRadius: '9px',
+                      backgroundColor: visibleOn ? 'var(--law-navy)' : '#d1d5db',
+                      position: 'relative',
+                      transition: 'all 0.2s',
+                      flexShrink: 0
+                    }}>
+                      <div style={{
+                        width: '14px',
+                        height: '14px',
+                        borderRadius: '50%',
+                        backgroundColor: 'white',
+                        position: 'absolute',
+                        top: '2px',
+                        transition: 'all 0.2s',
+                        ...(visibleOn ? { left: '2px' } : { right: '2px' })
+                      }} />
+                    </div>
+                  </button>
 
-            {/* Spacer when no toggle */}
-            {(!selectedAction || !NOTIFIABLE_ACTIONS.includes(selectedAction.id)) && (
+                  {/* إرسال للعميل — للإجراءات القابلة للإشعار فقط */}
+                  {isNotifiable && (
+                    <button
+                      onClick={() => setNotifyClient(!notifyClient)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${notifyClient ? '#10b981' : 'var(--color-border)'}`,
+                        background: notifyClient ? '#10b98115' : 'transparent',
+                        color: notifyClient ? '#10b981' : 'var(--color-text-secondary)',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <Send size={14} />
+                      إرسال للعميل
+                      <div style={{
+                        width: '34px',
+                        height: '18px',
+                        borderRadius: '9px',
+                        backgroundColor: notifyClient ? '#10b981' : '#d1d5db',
+                        position: 'relative',
+                        transition: 'all 0.2s',
+                        flexShrink: 0
+                      }}>
+                        <div style={{
+                          width: '14px',
+                          height: '14px',
+                          borderRadius: '50%',
+                          backgroundColor: 'white',
+                          position: 'absolute',
+                          top: '2px',
+                          transition: 'all 0.2s',
+                          ...(notifyClient ? { left: '2px' } : { right: '2px' })
+                        }} />
+                      </div>
+                    </button>
+                  )}
+                </div>
+              );
+            })() : (
               <div style={{ flex: 1 }} />
             )}
 

@@ -430,6 +430,35 @@ body.dark .activity-card__tag {
     color: var(--law-navy);
 }
 
+/* زر العين — تبديل رؤية النشاط للعميل؛ نفس هيئة الوسم لكنه قابل للنقر */
+.activity-card__visibility-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 10px;
+    font-family: inherit;
+    color: var(--law-navy);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.activity-card__visibility-btn:hover {
+    background: var(--quiet-gray-100);
+}
+
+.activity-card__visibility-btn--hidden {
+    color: var(--color-text-secondary);
+    background: var(--quiet-gray-200);
+}
+
+body.dark .activity-card__visibility-btn--hidden {
+    background: var(--quiet-gray-300);
+}
+
 /* === Column Empty State === */
 .activities-column-empty {
     display: flex;

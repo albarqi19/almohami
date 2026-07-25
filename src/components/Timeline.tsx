@@ -14,6 +14,7 @@ import {
   PlusCircle,
   History,
   Activity,
+  Eye,
   EyeOff
 } from 'lucide-react';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
@@ -33,16 +34,20 @@ export interface TimelineEvent {
     hearingDate?: Date;
     contactInfo?: string;
   };
-  /** نشاط آلي داخلي لا يظهر للعميل — يُعرض بمؤشر صغير في واجهة المكتب */
+  /** النشاط محجوب عن بوابة العميل (بالنوع الآلي أو بقرار الموظف) */
   hidden_from_client?: boolean;
+  /** الحجب قسري بالنوع (آلي داخلي) — لا يُعرض له زر تبديل */
+  system_hidden?: boolean;
 }
 
 interface TimelineProps {
   events: TimelineEvent[];
   caseId?: string;
+  /** زر العين: تبديل رؤية النشاط للعميل. غيابه يجعل المؤشر عرضاً فقط. */
+  onToggleClientVisibility?: (eventId: string, visible: boolean) => void;
 }
 
-const Timeline: React.FC<TimelineProps> = ({ events }) => {
+const Timeline: React.FC<TimelineProps> = ({ events, onToggleClientVisibility }) => {
   const getEventIcon = (type: TimelineEvent['type']) => {
     switch (type) {
       case 'case_created': return PlusCircle;
@@ -132,14 +137,28 @@ const Timeline: React.FC<TimelineProps> = ({ events }) => {
                     <span className="notion-timeline__object">
                       {event.type === 'status_changed' ? event.metadata?.newStatus : event.title}
                     </span>
-                    {event.hidden_from_client && (
-                      <span
-                        className="notion-timeline__hidden-tag"
-                        title="هذا الإجراء داخلي — لا يظهر للعميل في بوابته"
+                    {event.system_hidden || !onToggleClientVisibility ? (
+                      event.hidden_from_client && (
+                        <span
+                          className="notion-timeline__hidden-tag"
+                          title="هذا الإجراء داخلي — لا يظهر للعميل في بوابته"
+                        >
+                          <EyeOff size={11} />
+                          لا يظهر للعميل
+                        </span>
+                      )
+                    ) : (
+                      <button
+                        type="button"
+                        className={`notion-timeline__visibility-btn ${event.hidden_from_client ? 'notion-timeline__visibility-btn--hidden' : ''}`}
+                        title={event.hidden_from_client
+                          ? 'مخفي عن العميل — اضغط لإظهاره في بوابته'
+                          : 'يظهر للعميل في بوابته — اضغط لإخفائه (لا يسحب إشعاراً سبق إرساله)'}
+                        onClick={() => onToggleClientVisibility(event.id, !!event.hidden_from_client)}
                       >
-                        <EyeOff size={11} />
-                        لا يظهر للعميل
-                      </span>
+                        {event.hidden_from_client ? <EyeOff size={11} /> : <Eye size={11} />}
+                        {event.hidden_from_client ? 'لا يظهر للعميل' : 'يظهر للعميل'}
+                      </button>
                     )}
                   </div>
                   <span className="notion-timeline__date">

@@ -2,10 +2,10 @@
 // التبويبات تُشتقّ من مصدر حقيقة واحد (financeModule.ts) المشترك مع حراسة المسارات (UX-07).
 import React, { useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Plus, FileSignature, Receipt, ChevronDown } from 'lucide-react';
+import { Plus, FileSignature, Receipt, ChevronDown, Wallet } from 'lucide-react';
 import { usePermissionContext } from '../../contexts/PermissionContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { FINANCE_TABS, FINANCE_PERMISSIONS } from '../../config/financeModule';
+import { FINANCE_TABS, FINANCE_PERMISSIONS, type FinanceFeatureFlags } from '../../config/financeModule';
 import { useClickOutside } from '../../hooks/useClickOutside';
 
 const ContractsFinanceModule: React.FC = () => {
@@ -18,9 +18,15 @@ const ContractsFinanceModule: React.FC = () => {
 
   const checker = useMemo(() => ({ has, hasAny }), [has, hasAny]);
 
+  // أعلام الشركة المؤثرة في التبويبات (وحدة المحاسبة #141)
+  const flags = useMemo<FinanceFeatureFlags>(
+    () => ({ accountingEnabled: !!user?.tenant?.accounting_enabled }),
+    [user?.tenant?.accounting_enabled],
+  );
+
   const visibleTabs = useMemo(
-    () => FINANCE_TABS.filter((t) => t.isVisible(checker, user?.role)),
-    [checker, user?.role],
+    () => FINANCE_TABS.filter((t) => t.isVisible(checker, user?.role, flags)),
+    [checker, user?.role, flags],
   );
 
   const basePath = '/finance';
@@ -46,6 +52,11 @@ const ContractsFinanceModule: React.FC = () => {
       label: 'فاتورة جديدة',
       icon: Receipt,
       onClick: () => navigate('/finance/invoices?new=1'),
+    },
+    flags.accountingEnabled && has(FINANCE_PERMISSIONS.expensesManage) && {
+      label: 'مصروف جديد',
+      icon: Wallet,
+      onClick: () => navigate('/finance/expenses?new=1'),
     },
   ].filter(Boolean) as { label: string; icon: typeof FileSignature; onClick: () => void }[];
 

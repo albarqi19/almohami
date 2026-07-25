@@ -834,8 +834,10 @@ export interface Activity {
   performedBy: string;
   performedAt: Date;
   metadata?: Record<string, any>;
-  /** نشاط آلي داخلي لا يظهر للعميل في بوابته (يرسله الباك للمكتب فقط لعرض مؤشر) */
+  /** النشاط محجوب عن العميل في بوابته (بالنوع الآلي أو بقرار الموظف) */
   hidden_from_client?: boolean;
+  /** الحجب قسري بالنوع (آلي داخلي) — لا يُعرض له زر تبديل الرؤية */
+  system_hidden?: boolean;
 }
 
 export const ActivityType = {

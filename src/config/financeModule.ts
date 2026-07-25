@@ -7,7 +7,7 @@
 //   contracts.view · contracts.create · contracts.edit · contracts.delete · contracts.templates.manage
 
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, FileSignature, Receipt, CreditCard, TrendingUp, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, FileSignature, Receipt, CreditCard, TrendingUp, BarChart3, Wallet, Scale } from 'lucide-react';
 
 /** خريطة الصلاحيات المعتمدة عبر الوحدة (تُستهلَك في الأزرار والمسارات والتبويبات). */
 export const FINANCE_PERMISSIONS = {
@@ -23,11 +23,21 @@ export const FINANCE_PERMISSIONS = {
   reportsView: 'billing.reports.view',
   reportsExport: 'billing.reports.export',
   templatesManage: 'contracts.templates.manage',
+  // وحدة المحاسبة (#141) — خلف بوابة accounting_enabled أيضاً (tenant flag)
+  expensesView: 'billing.view',
+  expensesManage: 'billing.expenses.manage',
+  accountingView: 'accounting.view',
+  accountingManage: 'accounting.manage',
 } as const;
 
 export interface PermissionChecker {
   has: (perm: string) => boolean;
   hasAny: (perms: string[]) => boolean;
+}
+
+/** أعلام ميزات الشركة المؤثرة في تبويبات الوحدة (تُقرأ من user.tenant). */
+export interface FinanceFeatureFlags {
+  accountingEnabled?: boolean;
 }
 
 export interface FinanceTab {
@@ -37,7 +47,7 @@ export interface FinanceTab {
   path: string;
   icon: LucideIcon;
   /** يقرّر ظهور التبويب لهذا المستخدم. */
-  isVisible: (perms: PermissionChecker, role?: string) => boolean;
+  isVisible: (perms: PermissionChecker, role?: string, flags?: FinanceFeatureFlags) => boolean;
 }
 
 /** الأدوار التي ترى تبويب التحصيل العلوي المستقل (UX-06): billing.view + قيد دور. */
@@ -87,5 +97,20 @@ export const FINANCE_TABS: FinanceTab[] = [
     path: 'reports',
     icon: BarChart3,
     isVisible: (p) => p.has(FINANCE_PERMISSIONS.reportsView),
+  },
+  // ── وحدة المحاسبة (#141): تبويبان خلف بوابة accounting_enabled ──
+  {
+    key: 'expenses',
+    label: 'المصروفات',
+    path: 'expenses',
+    icon: Wallet,
+    isVisible: (p, _role, flags) => !!flags?.accountingEnabled && p.has(FINANCE_PERMISSIONS.expensesView),
+  },
+  {
+    key: 'accounting',
+    label: 'المحاسبة',
+    path: 'accounting',
+    icon: Scale,
+    isVisible: (p, _role, flags) => !!flags?.accountingEnabled && p.has(FINANCE_PERMISSIONS.accountingView),
   },
 ];

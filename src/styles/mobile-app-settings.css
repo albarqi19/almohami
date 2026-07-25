@@ -1,0 +1,178 @@
+/* تطبيق الجوال — تبويب الإعدادات (MobileAppSettings)
+   يبني على أصناف settings-page.css الجاهزة؛ هنا فقط ما لا وجود له هناك:
+   عرض الرمز بخط mono، العدّاد التنازلي، وتحذير الأمان.
+   فلات صرف: بلا توهج ولا ظلال — والألوان من متغيّرات --color-* / --law-* حصراً. */
+
+/* ===== خطوات الاستخدام ===== */
+.mob-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mob-steps li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    background: var(--dashboard-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    padding: 6px 10px;
+}
+
+.mob-steps li b {
+    color: var(--color-heading);
+    font-weight: 700;
+}
+
+/* ===== التحذير الأمني ===== */
+.mob-danger {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.8;
+    color: var(--status-red);
+    background: var(--status-red-light);
+    border: 1px solid var(--status-red);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+
+.mob-danger svg {
+    flex-shrink: 0;
+    margin-block-start: 2px;
+}
+
+/* ===== بطاقة الرمز ===== */
+.mob-code {
+    border: 1px solid var(--law-gold);
+    border-radius: 4px;
+    padding: 14px;
+    margin-bottom: 12px;
+    background: var(--dashboard-card);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.mob-code__value {
+    flex: 1 1 100%;
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    text-align: center;
+    direction: ltr;
+    color: var(--color-heading);
+    user-select: all;
+}
+
+.mob-code__timer {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.mob-code__timer--urgent {
+    color: var(--status-red);
+}
+
+.mob-code__note {
+    flex-basis: 100%;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--status-orange, #cf8a2e);
+}
+
+.mob-code__expired {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    background: var(--dashboard-bg);
+    border: 1px dashed var(--color-border);
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+/* ===== حالات عامة ===== */
+.mob-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    padding: 8px 0;
+    color: var(--color-text-secondary);
+}
+
+.mob-error {
+    font-size: 11.5px;
+    color: var(--status-red);
+    background: var(--status-red-light);
+    border: 1px solid var(--status-red);
+    border-radius: 4px;
+    padding: 7px 10px;
+    margin-bottom: 10px;
+}
+
+.mob-empty {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    padding: 14px 0;
+}
+
+/* ===== جدول الأجهزة ===== */
+.mob-devices {
+    overflow-x: auto;
+}
+
+.mob-devices .settings-table {
+    min-width: 620px;
+}
+
+.mob-device__name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-heading);
+    font-weight: 600;
+}
+
+.mob-device__meta {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--color-text-secondary);
+}
+
+.mob-devices__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+    .mob-code__value {
+        font-size: 24px;
+        letter-spacing: 4px;
+    }
+}
