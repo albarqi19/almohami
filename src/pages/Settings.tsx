@@ -30,6 +30,7 @@ import {
   Mail,
   ClipboardList,
   Sparkles,
+  Smartphone,
 } from 'lucide-react';
 import NotificationSettings from '../components/NotificationSettings';
 import PhoneField from '../components/PhoneField';
@@ -45,17 +46,33 @@ import SessionWorkflowSettingsComponent from '../components/settings/SessionWork
 import MicrosoftIntegrationSettings from '../components/settings/MicrosoftIntegrationSettings';
 import EmailIntegrationSection from '../components/settings/EmailIntegrationSection';
 import WordAddinSettings from '../components/settings/WordAddinSettings';
+import MobileAppSettings from '../components/settings/MobileAppSettings';
 import CaseNamingSettings from '../components/settings/CaseNamingSettings';
 import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermission } from '../hooks/usePermission';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
+
+/**
+ * نطاق ظهور تبويب الإعدادات — بديل قائمة أسماء الأدوار.
+ *
+ * كانت التبويبات محكومة بـ roles: ['admin','lawyer','legal_assistant','client']،
+ * فكل اسم دور خارج الأربعة يحصل على visibleTabs = [] أي **شريط تبويبات فارغ
+ * تماماً**: لا ملف شخصي ولا خصوصية ولا إشعارات. أصاب ذلك كل دور مخصّص ينشئه
+ * المكتب، والمحاسب والسكرتير والشريك — وحتى من أُسند إليه اسم الدور 'owner'.
+ *
+ *  personal : لكل مستخدم بلا استثناء (بياناته هو — لا علاقة لها بالإدارة).
+ *  staff    : لكل موظف في المكتب (أي من ليس عميلاً).
+ *  admin    : لمن يملك إدارة إعدادات المكتب — بالصلاحية لا بالاسم.
+ */
+type TabScope = 'personal' | 'staff' | 'admin';
 
 interface SettingsTab {
   id: string;
   label: string;
   icon: React.ComponentType<any>;
-  roles: string[];
-  ownerOnly?: boolean; // إن كانت true: يظهر فقط للأونر (is_tenant_owner=true) داخل الأدوار المسموحة
+  scope: TabScope;
+  ownerOnly?: boolean; // إن كانت true: يظهر فقط للأونر (is_tenant_owner=true)
 }
 
 const Settings: React.FC = () => {
@@ -87,36 +104,61 @@ const Settings: React.FC = () => {
   }, [location]);
 
   const tabs: SettingsTab[] = [
-    { id: 'notifications', label: 'الإشعارات', icon: Bell, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
-    { id: 'najiz', label: 'إعدادات ناجز', icon: Cloud, roles: ['admin'] },
-    { id: 'case_naming', label: 'تسمية القضايا', icon: FileText, roles: ['admin'] },
-    { id: 'profile', label: 'الملف الشخصي', icon: User, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
-    { id: 'privacy', label: 'الخصوصية والأمان', icon: Shield, roles: ['admin', 'lawyer', 'legal_assistant', 'client'] },
-    { id: 'system', label: 'النظام', icon: Database, roles: ['admin'] },
-    { id: 'company', label: 'إعدادات الشركة', icon: Building2, roles: ['admin'] },
-    { id: 'branding', label: 'هوية الشركة', icon: Image, roles: ['admin'] },
-    { id: 'letterheads', label: 'الكليشات', icon: FileText, roles: ['admin'] },
-    { id: 'session_defaults', label: 'قوالب الجلسات', icon: ClipboardList, roles: ['admin'] },
-    { id: 'session_report_templates', label: 'قوالب تقرير الجلسة', icon: FileText, roles: ['admin'] },
-    { id: 'fee_proposal_templates', label: 'قوالب عروض الأتعاب', icon: FileText, roles: ['admin'] },
-    { id: 'correspondence_templates', label: 'قوالب الصادر', icon: FileText, roles: ['admin'] },
-    { id: 'session_workflow', label: 'سير عمل الجلسات', icon: Bell, roles: ['admin'] },
-    { id: 'company_policy', label: 'سياسة الشركة', icon: ShieldCheck, roles: ['admin'] },
-    { id: 'integrations', label: 'التكاملات', icon: Link, roles: ['admin', 'lawyer', 'legal_assistant'] },
-    { id: 'word_addin', label: 'إضافة Word', icon: FileText, roles: ['admin', 'lawyer', 'legal_assistant'] },
-    { id: 'email', label: 'البريد الإلكتروني', icon: Mail, roles: ['admin'], ownerOnly: true },
-    { id: 'subscription', label: 'الاشتراك', icon: CreditCard, roles: ['admin'] },
-    { id: 'invoices', label: 'الفواتير', icon: Receipt, roles: ['admin'] },
+    { id: 'notifications', label: 'الإشعارات', icon: Bell, scope: 'personal' },
+    { id: 'najiz', label: 'إعدادات ناجز', icon: Cloud, scope: 'admin' },
+    { id: 'case_naming', label: 'تسمية القضايا', icon: FileText, scope: 'admin' },
+    { id: 'profile', label: 'الملف الشخصي', icon: User, scope: 'personal' },
+    { id: 'privacy', label: 'الخصوصية والأمان', icon: Shield, scope: 'personal' },
+    { id: 'system', label: 'النظام', icon: Database, scope: 'admin' },
+    { id: 'company', label: 'إعدادات الشركة', icon: Building2, scope: 'admin' },
+    { id: 'branding', label: 'هوية الشركة', icon: Image, scope: 'admin' },
+    { id: 'letterheads', label: 'الكليشات', icon: FileText, scope: 'admin' },
+    { id: 'session_defaults', label: 'قوالب الجلسات', icon: ClipboardList, scope: 'admin' },
+    { id: 'session_report_templates', label: 'قوالب تقرير الجلسة', icon: FileText, scope: 'admin' },
+    { id: 'fee_proposal_templates', label: 'قوالب عروض الأتعاب', icon: FileText, scope: 'admin' },
+    { id: 'correspondence_templates', label: 'قوالب الصادر', icon: FileText, scope: 'admin' },
+    { id: 'session_workflow', label: 'سير عمل الجلسات', icon: Bell, scope: 'admin' },
+    { id: 'company_policy', label: 'سياسة الشركة', icon: ShieldCheck, scope: 'admin' },
+    { id: 'integrations', label: 'التكاملات', icon: Link, scope: 'staff' },
+    { id: 'word_addin', label: 'إضافة Word', icon: FileText, scope: 'staff' },
+    { id: 'mobile_app', label: 'تطبيق الجوال', icon: Smartphone, scope: 'staff' },
+    { id: 'email', label: 'البريد الإلكتروني', icon: Mail, scope: 'admin', ownerOnly: true },
+    { id: 'subscription', label: 'الاشتراك', icon: CreditCard, scope: 'admin' },
+    { id: 'invoices', label: 'الفواتير', icon: Receipt, scope: 'admin' },
   ];
 
-  // الحصول على دور المستخدم من AuthContext
   const userRole = user?.role || 'client';
   const isTenantOwner = !!user?.is_tenant_owner;
+  const isClient = userRole === 'client';
+
+  // «إداري» بالصلاحية لا بالاسم — فالدور المخصّص الذي منحه المكتب إدارة الإعدادات
+  // يرى التبويبات الإدارية، ويبقى اسما admin/owner للتوافق الخلفي.
+  const canManageOfficeSettings =
+    usePermission('tenant.settings.manage') ||
+    usePermission('system.manage') ||
+    userRole === 'admin' ||
+    userRole === 'owner' ||
+    isTenantOwner;
+
   const visibleTabs = tabs.filter(tab => {
-    if (!tab.roles.includes(userRole)) return false;
     if (tab.ownerOnly && !isTenantOwner) return false;
-    return true;
+
+    switch (tab.scope) {
+      case 'personal':
+        return true;                       // بياناته الشخصية — لا تُحجب عن أحد
+      case 'staff':
+        return !isClient;
+      case 'admin':
+        return canManageOfficeSettings;
+    }
   });
+
+  // حارس التبويب النشط: ?tab= و#hash وstate تُضبط من العنوان مباشرةً، فكان
+  // /settings?tab=company يصيّر واجهة إعدادات الشركة لأي مستخدم (الباك يمنع
+  // الحفظ، لكن العرض وحده تسريب). نُرجعه لأول تبويب مسموح إن لم يكن ضمنها.
+  const effectiveTab = visibleTabs.some(t => t.id === activeTab)
+    ? activeTab
+    : (visibleTabs[0]?.id ?? 'profile');
 
   // Najiz Settings State
   const [najizSettings, setNajizSettings] = useState({
@@ -513,12 +555,15 @@ const Settings: React.FC = () => {
   };
 
   const renderTabContent = () => {
-    switch (activeTab) {
+    switch (effectiveTab) {
       case 'notifications':
         return <NotificationSettings />;
 
       case 'word_addin':
         return <WordAddinSettings />;
+
+      case 'mobile_app':
+        return <MobileAppSettings />;
 
       case 'case_naming':
         return <CaseNamingSettings />;
@@ -2319,7 +2364,7 @@ const Settings: React.FC = () => {
           <label className="settings-sidebar-mobile__label">القسم</label>
           <select
             className="settings-sidebar-mobile__select"
-            value={activeTab}
+            value={effectiveTab}
             onChange={(e) => setActiveTab(e.target.value)}
           >
             {visibleTabs.map((tab) => (
@@ -2335,7 +2380,7 @@ const Settings: React.FC = () => {
             return (
               <button
                 key={tab.id}
-                className={`settings-sidebar__tab ${activeTab === tab.id ? 'settings-sidebar__tab--active' : ''}`}
+                className={`settings-sidebar__tab ${effectiveTab === tab.id ? 'settings-sidebar__tab--active' : ''}`}
                 onClick={() => setActiveTab(tab.id)}
               >
                 <Icon size={16} />
@@ -2362,44 +2407,44 @@ const Settings: React.FC = () => {
           <div className="settings-help-panel__content">
             <div className="settings-help-panel__section">
               <div className="settings-help-panel__section-title">
-                💡 {activeTab === 'notifications' && 'إعدادات الإشعارات'}
-                {activeTab === 'najiz' && 'إعدادات ناجز'}
-                {activeTab === 'profile' && 'الملف الشخصي'}
-                {activeTab === 'privacy' && 'الخصوصية والأمان'}
-                {activeTab === 'system' && 'إعدادات النظام'}
-                {activeTab === 'company' && 'إعدادات الشركة'}
-                {activeTab === 'branding' && 'هوية الشركة'}
-                {activeTab === 'company_policy' && 'سياسة الشركة'}
-                {activeTab === 'subscription' && 'إدارة الاشتراك'}
-                {activeTab === 'invoices' && 'الفواتير'}
+                💡 {effectiveTab === 'notifications' && 'إعدادات الإشعارات'}
+                {effectiveTab === 'najiz' && 'إعدادات ناجز'}
+                {effectiveTab === 'profile' && 'الملف الشخصي'}
+                {effectiveTab === 'privacy' && 'الخصوصية والأمان'}
+                {effectiveTab === 'system' && 'إعدادات النظام'}
+                {effectiveTab === 'company' && 'إعدادات الشركة'}
+                {effectiveTab === 'branding' && 'هوية الشركة'}
+                {effectiveTab === 'company_policy' && 'سياسة الشركة'}
+                {effectiveTab === 'subscription' && 'إدارة الاشتراك'}
+                {effectiveTab === 'invoices' && 'الفواتير'}
               </div>
               <p className="settings-help-panel__section-text">
-                {activeTab === 'notifications' && 'تحكم في كيفية استلام التنبيهات والإشعارات من النظام.'}
-                {activeTab === 'najiz' && 'إدارة اتصال ناجز وخيارات الاستيراد التلقائي.'}
-                {activeTab === 'profile' && 'تحديث معلوماتك الشخصية وبيانات الاتصال.'}
-                {activeTab === 'privacy' && 'إدارة إعدادات الأمان وكلمة المرور.'}
-                {activeTab === 'system' && 'إدارة النسخ الاحتياطي وتصدير البيانات.'}
-                {activeTab === 'company' && 'تحديث معلومات شركتك مثل الاسم والبريد والعنوان.'}
-                {activeTab === 'branding' && 'خصص مظهر صفحة تسجيل الدخول الخاصة بشركتك.'}
-                {activeTab === 'company_policy' && 'إدارة سياسة الشركة التي يجب على المستخدمين الموافقة عليها للوصول إلى النظام.'}
-                {activeTab === 'subscription' && 'إدارة اشتراكك الحالي، الترقية للسنوي، أو الإلغاء.'}
-                {activeTab === 'invoices' && 'عرض وتحميل جميع الفواتير السابقة.'}
+                {effectiveTab === 'notifications' && 'تحكم في كيفية استلام التنبيهات والإشعارات من النظام.'}
+                {effectiveTab === 'najiz' && 'إدارة اتصال ناجز وخيارات الاستيراد التلقائي.'}
+                {effectiveTab === 'profile' && 'تحديث معلوماتك الشخصية وبيانات الاتصال.'}
+                {effectiveTab === 'privacy' && 'إدارة إعدادات الأمان وكلمة المرور.'}
+                {effectiveTab === 'system' && 'إدارة النسخ الاحتياطي وتصدير البيانات.'}
+                {effectiveTab === 'company' && 'تحديث معلومات شركتك مثل الاسم والبريد والعنوان.'}
+                {effectiveTab === 'branding' && 'خصص مظهر صفحة تسجيل الدخول الخاصة بشركتك.'}
+                {effectiveTab === 'company_policy' && 'إدارة سياسة الشركة التي يجب على المستخدمين الموافقة عليها للوصول إلى النظام.'}
+                {effectiveTab === 'subscription' && 'إدارة اشتراكك الحالي، الترقية للسنوي، أو الإلغاء.'}
+                {effectiveTab === 'invoices' && 'عرض وتحميل جميع الفواتير السابقة.'}
               </p>
             </div>
 
             <div className="settings-help-panel__tip">
               <span className="settings-help-panel__tip-icon">💡</span>
               <span className="settings-help-panel__tip-text">
-                {activeTab === 'notifications' && 'فعّل إشعارات الجلسات لتذكيرك بمواعيد الجلسات القادمة'}
-                {activeTab === 'najiz' && 'تأكد من صحة بيانات اتصال ناجز قبل الاستيراد'}
-                {activeTab === 'profile' && 'تأكد من تحديث رقم الهاتف لاستقبال الإشعارات'}
-                {activeTab === 'privacy' && 'غيّر كلمة المرور بشكل دوري لحماية حسابك'}
-                {activeTab === 'system' && 'قم بعمل نسخ احتياطي دوري للحفاظ على بياناتك'}
-                {activeTab === 'company' && 'تحديث بيانات الشركة يظهر في الفواتير والتقارير'}
-                {activeTab === 'branding' && 'رابط شركتك المخصص: company-slug.alraedlaw.com'}
-                {activeTab === 'company_policy' && 'حدد فترة التجديد المناسبة لضمان التزام المستخدمين بالسياسة بشكل دوري'}
-                {activeTab === 'subscription' && 'الاشتراك السنوي يوفر لك شهرين مجاناً!'}
-                {activeTab === 'invoices' && 'يمكنك تحميل الفواتير بصيغة PDF للأرشفة'}
+                {effectiveTab === 'notifications' && 'فعّل إشعارات الجلسات لتذكيرك بمواعيد الجلسات القادمة'}
+                {effectiveTab === 'najiz' && 'تأكد من صحة بيانات اتصال ناجز قبل الاستيراد'}
+                {effectiveTab === 'profile' && 'تأكد من تحديث رقم الهاتف لاستقبال الإشعارات'}
+                {effectiveTab === 'privacy' && 'غيّر كلمة المرور بشكل دوري لحماية حسابك'}
+                {effectiveTab === 'system' && 'قم بعمل نسخ احتياطي دوري للحفاظ على بياناتك'}
+                {effectiveTab === 'company' && 'تحديث بيانات الشركة يظهر في الفواتير والتقارير'}
+                {effectiveTab === 'branding' && 'رابط شركتك المخصص: company-slug.alraedlaw.com'}
+                {effectiveTab === 'company_policy' && 'حدد فترة التجديد المناسبة لضمان التزام المستخدمين بالسياسة بشكل دوري'}
+                {effectiveTab === 'subscription' && 'الاشتراك السنوي يوفر لك شهرين مجاناً!'}
+                {effectiveTab === 'invoices' && 'يمكنك تحميل الفواتير بصيغة PDF للأرشفة'}
               </span>
             </div>
 
