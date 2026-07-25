@@ -16,6 +16,9 @@ import { toast } from 'react-toastify';
 const TeamChatWidget: React.FC = () => {
     const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
+    // إخفاء الشريط للجلسة الحالية فقط — لا يُحفظ، فيعود بتحديث الصفحة
+    const [isDismissed, setIsDismissed] = useState(false);
+    const [askDismiss, setAskDismiss] = useState(false);
     const [groupModal, setGroupModal] = useState<{ mode: 'create' | 'edit'; conversation?: ChatConversation } | null>(null);
     const [search, setSearch] = useState('');
     const [draft, setDraft] = useState('');
@@ -102,6 +105,9 @@ const TeamChatWidget: React.FC = () => {
     };
 
     if (!user || user.role === 'client') return null;
+    // الاشتراك الحيّ يبقى قائماً بعد الإخفاء عمداً: الودجت يختفي، لا الدردشة —
+    // فالرسائل ما زالت تصل بالتنبيه والصوت، ويعود الشريط بتحديث الصفحة.
+    if (isDismissed) return null;
 
     const filteredConversations = conversations.filter(c =>
         c.title.toLowerCase().includes(search.trim().toLowerCase()),
@@ -123,18 +129,52 @@ const TeamChatWidget: React.FC = () => {
 
     return (
         <>
-            <button
-                className="team-chat-fab"
-                onClick={() => setIsOpen(prev => !prev)}
-                title="دردشة الفريق"
-                aria-label="دردشة الفريق"
-            >
-                <MessageSquare size={15} />
-                <span>الدردشة</span>
-                {totalUnread > 0 && (
-                    <em className="team-chat-fab__badge">{totalUnread > 99 ? '99+' : totalUnread}</em>
-                )}
-            </button>
+            <div className="team-chat-dock">
+                <button
+                    className="team-chat-fab"
+                    onClick={() => setIsOpen(prev => !prev)}
+                    title="دردشة الفريق"
+                    aria-label="دردشة الفريق"
+                >
+                    <MessageSquare size={14} />
+                    <span>الدردشة</span>
+                    {totalUnread > 0 && (
+                        <em className="team-chat-fab__badge">{totalUnread > 99 ? '99+' : totalUnread}</em>
+                    )}
+                </button>
+                <button
+                    className="team-chat-dock__close"
+                    onClick={() => {
+                        setIsOpen(false);
+                        setAskDismiss(true);
+                    }}
+                    title="إخفاء شريط الدردشة"
+                    aria-label="إخفاء شريط الدردشة"
+                >
+                    <X size={13} />
+                </button>
+            </div>
+
+            {askDismiss && (
+                <div className="team-chat-dock__confirm" role="alertdialog" aria-label="تأكيد إخفاء الدردشة">
+                    <p>
+                        إخفاء شريط الدردشة؟
+                        <small>يعود بتحديث الصفحة، والرسائل تظل تصلك.</small>
+                    </p>
+                    <div className="team-chat-dock__confirm-actions">
+                        <button
+                            className="is-yes"
+                            onClick={() => {
+                                setAskDismiss(false);
+                                setIsDismissed(true);
+                            }}
+                        >
+                            نعم، أخفِه
+                        </button>
+                        <button onClick={() => setAskDismiss(false)}>تراجع</button>
+                    </div>
+                </div>
+            )}
 
             {isOpen && (
                 <div className="team-chat-panel" role="dialog" aria-label="دردشة الفريق">

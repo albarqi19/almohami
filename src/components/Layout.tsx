@@ -4,7 +4,7 @@ import '../styles/appStyles';
 import React, { useState, createContext, useContext, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import PageLoader from './PageLoader';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, X } from 'lucide-react';
 import ClickUpSidebar from './ClickUpSidebar';
 import FloatingTimer from './FloatingTimer';
 import NotebookFloatingWidget from './NotebookFloatingWidget';
@@ -46,6 +46,11 @@ const Layout: React.FC = () => {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  // إخفاء ودجتات الصف العائم — للجلسة الحالية فقط، تعود بتحديث الصفحة عمداً
+  // (لا localStorage: الإخفاء تنحية مؤقتة لا تفضيل دائم)
+  const [hiddenWidgets, setHiddenWidgets] = useState<string[]>([]);
+  const hideWidget = (key: string) =>
+    setHiddenWidgets(prev => (prev.includes(key) ? prev : [...prev, key]));
 
   // Policy Check
   const { needsAcknowledgment, policyData, handleAcknowledged } = usePolicyCheck();
@@ -170,13 +175,44 @@ const Layout: React.FC = () => {
           {user && user.role !== 'client' && (
             <div className="floating-widgets-group">
               <div className="floating-widgets-row">
-                <TeamChatWidget />
+                {/* مذكرات القضية مشروطة أصلاً (تظهر داخل القضية ولها ملاحظات)
+                    فلا زرّ إخفاء لها — تنحّي نفسها بلا تدخّل */}
                 <CaseLawNotesWidget />
-                <NotebookFloatingWidget />
-                <LawSearchFab />
+
+                {!hiddenWidgets.includes('notebook') && (
+                  <span className="fw-dismissible">
+                    <NotebookFloatingWidget />
+                    <button
+                      className="fw-dismiss"
+                      onClick={() => hideWidget('notebook')}
+                      title="إخفاء المفكرة"
+                      aria-label="إخفاء المفكرة"
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                )}
+
+                {!hiddenWidgets.includes('lawSearch') && (
+                  <span className="fw-dismissible">
+                    <LawSearchFab />
+                    <button
+                      className="fw-dismiss"
+                      onClick={() => hideWidget('lawSearch')}
+                      title="إخفاء باحث الأنظمة"
+                      aria-label="إخفاء باحث الأنظمة"
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                )}
               </div>
             </div>
           )}
+
+          {/* 💬 دردشة الفريق — شريط ملتصق بالحافة السفلية يميناً، مستقل عن
+              مجموعة الودجتات (يسار) وعن BottomActionBar (يبدأ من 36px صعوداً) */}
+          {user && user.role !== 'client' && <TeamChatWidget />}
 
           {/* 📌 الودجتس المثبتة من مختبر اللوحة — تطفو فوق كل الصفحات الداخلية */}
           {user && user.role !== 'client' && <PinnedWidgetsGate />}
