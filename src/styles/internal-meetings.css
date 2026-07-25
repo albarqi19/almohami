@@ -1,6 +1,15 @@
 /* ====================================================================
-   الاجتماعات الداخلية — أسلوب ERP كثيف بمحور زمني
-   كل الألوان عبر متغيرات الثيم (:root / body.dark / body.classic)
+   الاجتماعات — أسلوب ERP كثيف بمحور زمني
+   كل الألوان عبر متغيرات الثيم (:root / body.dark / body.diwan / body.classic)
+
+   ── قاعدة اللون في هذه الصفحة ──────────────────────────────────────
+   اللون **للتصنيف وحده**. الحالة رقاقة نصّية، والمجموعة عنوان نصّي،
+   والزر الوحيد المملوء هو زر الإجراء الأساسي.
+
+   السبب: حين يحمل اللونُ ثلاثةَ معانٍ في شاشة واحدة (حالة + مجموعة +
+   تصنيف) يكفّ عن حمل أيٍّ منها، فتبدو الصفحة «غريبة لونياً» بلا سبب
+   يمكن الإشارة إليه. وهذا ما كان يحدث: إطار أخضر كامل حول مجموعة،
+   وإطار برتقالي حول أخرى، وشريط جانبي ذهبي، وزر أخضر ممتلئ.
    ==================================================================== */
 
 .im-page {
@@ -150,14 +159,59 @@
   border-radius: 9px;
   text-align: center;
 }
-.im-kpi svg { color: var(--color-accent); }
+.im-kpi svg { color: var(--color-text-secondary); }
 .im-kpi b { font-size: 15.5px; font-weight: 800; color: var(--color-heading); line-height: 1.1; }
 .im-kpi span { font-size: 10.5px; color: var(--color-text-secondary); }
+/* المؤشران اللذان يستدعيان فعلاً يبقيان ملوّنين — والباقي محايد.
+   ستة مربعات ملوّنة معاً لا تُرتّب أولوية، بل تُلغيها. */
 .im-kpi--warn svg, .im-kpi--warn b { color: var(--color-warning); }
-.im-kpi--live { border-color: var(--color-success); }
 .im-kpi--live svg, .im-kpi--live b { color: var(--color-success); }
 
+/* ---------- تبويب القائمة/التقويم ---------- */
+.im-views {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+.im-views button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.im-views button.is-active {
+  background: var(--color-surface);
+  color: var(--color-heading);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ---------- هيكل تحميل حقيقي (لا بيانات ديمو) ---------- */
+.im-skeleton { display: flex; flex-direction: column; gap: 6px; }
+.im-skeleton__row {
+  height: 46px;
+  border-radius: 8px;
+  background: var(--color-surface-subtle);
+  animation: im-pulse 1.4s ease-in-out infinite;
+}
+@keyframes im-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) {
+  .im-skeleton__row { animation: none; }
+}
+
 /* ---------- الاجتماع التالي ---------- */
+/* بلا شريط تمييز لوني جانبي: الرقاقة النصّية «اجتماعك التالي» هي حاملة
+   المعنى، والشريط يكرّرها بلا إضافة ويكسر انتظام الحافة اليمنى للصفحة. */
 .im-next {
   display: flex;
   align-items: center;
@@ -165,17 +219,19 @@
   padding: 10px 14px;
   margin-bottom: 10px;
   background: var(--color-surface);
-  border: 1px solid var(--color-accent);
-  border-inline-start: 4px solid var(--color-accent);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
 }
 .im-next__label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  font-size: 10.5px;
   font-weight: 800;
-  color: var(--color-accent);
+  color: var(--color-heading);
   white-space: nowrap;
 }
 .im-next__info { flex: 1; min-width: 0; }
@@ -221,21 +277,23 @@
 }
 .im-group__toggle { margin-inline-start: auto; color: var(--color-text-secondary); display: flex; }
 
-.im-group--live .im-group__head svg,
-.im-group--live .im-group__head h2 { color: var(--color-success); }
-.im-group--warn .im-group__head svg,
-.im-group--warn .im-group__head h2 { color: var(--color-warning); }
-.im-group--dim .im-group__head svg,
-.im-group--dim .im-group__head h2 { color: var(--color-text-secondary); }
+/* المجموعة تُميَّز بأيقونتها وعدّادها لا بإطار ملوّن حول قائمة كاملة.
+   الإطار الأخضر/البرتقالي كان يصبغ عشرات الصفوف بلونٍ يخصّ عنوانها. */
+.im-group--live .im-group__head svg { color: var(--color-success); }
+.im-group--warn .im-group__head svg { color: var(--color-warning); }
+.im-group--dim .im-group__head svg { color: var(--color-text-secondary); }
+.im-group__head h2 { color: var(--color-heading); }
 
+/* ⚠️ بلا overflow:hidden — كان يقصّ قائمة الإجراءات المنسدلة (position:absolute
+   داخل الصفّ) فتظهر مبتورة «داخل المربع». استدارة الحواف تُنجز بتدوير أول
+   صفّ وآخره بدل قصّ كل ما يفيض. */
 .im-group__rows {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 10px;
-  overflow: hidden;
+  border-radius: 12px;
 }
-.im-group--live .im-group__rows { border-color: var(--color-success); }
-.im-group--warn .im-group__rows { border-color: var(--color-warning); }
+.im-group__rows > .im-row:first-child { border-start-start-radius: 11px; border-start-end-radius: 11px; }
+.im-group__rows > .im-row:last-child { border-end-start-radius: 11px; border-end-end-radius: 11px; }
 
 /* ---------- صف الاجتماع ---------- */
 .im-row {
@@ -292,12 +350,14 @@
 .im-type--remote { color: var(--color-info); }
 
 .im-row__people { display: flex; align-items: center; }
+/* أفاتار محايد: كلها بلون الهوية الواحد لم تكن تميّز شخصاً عن شخص، وكانت
+   تضيف كتلة لونية رابعة إلى صفٍّ فيه ألوان تكفي. */
 .im-avatar {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--color-primary);
-  color: var(--color-surface);
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -368,12 +428,19 @@
   transition: opacity .15s, background .15s;
 }
 .im-smart:disabled { cursor: default; }
-.im-smart--join { background: var(--color-success); color: #fff; }
-.im-smart--join:hover { opacity: .9; }
-.im-smart--summary { background: var(--color-primary); color: var(--color-surface); }
-.im-smart--summary:hover { background: var(--color-primary-hover); }
-.im-smart--view { background: var(--color-info-soft); color: var(--color-info); }
-.im-smart--view:hover { opacity: .85; }
+/* زرٌّ مملوءٌ واحد في الصف: «دخول الاجتماع». الأخضر الممتلئ كان يصرخ في
+   كل صفّ وينافس التصنيف على الانتباه، فصار الفعل الأساسي بلون الهوية
+   والثانوي محايداً بحدّ. */
+.im-smart--join { background: var(--color-primary); color: var(--color-surface); }
+.im-smart--join:hover { background: var(--color-primary-hover); }
+.im-smart--summary,
+.im-smart--view {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+.im-smart--summary:hover,
+.im-smart--view:hover { border-color: var(--color-accent); background: var(--color-accent-soft); }
 
 /* ---------- قائمة الإجراءات ---------- */
 .im-dropdown { position: relative; }
@@ -381,13 +448,23 @@
   position: absolute;
   top: 100%;
   inset-inline-end: 0;
+  margin-top: 4px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, .15));
-  min-width: 130px;
-  z-index: 50;
+  min-width: 140px;
+  /* فوق الصفوف المجاورة وترويسات المجموعات */
+  z-index: 120;
   overflow: hidden;
+}
+
+/* الفتح لأعلى قرب أسفل الشاشة — يُضبط بالقياس عند النقر لا بالتخمين */
+.im-dropdown__menu--up {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 4px;
 }
 .im-dropdown__menu button {
   display: flex;

@@ -1,0 +1,585 @@
+/* ====================================================================
+   تبويب «التقويم» (mdc) + لوحة التفاصيل (mdp) + الإنشاء السريع (qam)
+   + مودال البند الشخصي (pem)
+
+   يعتمد: ssp2-* للبنية، cat-* لألوان المصادر، fin-* للحقول والأزرار.
+   بلا أي قيمة لونية مثبّتة — الألوان توكنات تتبع الثيمات الأربعة.
+   ==================================================================== */
+
+/* ---------- التخطيط: أجندة يميناً وشبكة يساراً ---------- */
+
+.mdc {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+}
+
+.mdc-side {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  flex-shrink: 0;
+  min-height: 0;
+  padding: 10px;
+  gap: 10px;
+  border-inline-end: 1px solid var(--color-border);
+}
+
+.mdc-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 10px 12px 12px;
+}
+
+/* ---------- مفتاح المصادر = مرشّح ---------- */
+
+.mdc-side__filters {
+  padding: 9px 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.mdc-side__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--color-text-secondary);
+}
+.mdc-sources { display: flex; flex-wrap: wrap; gap: 4px; }
+.mdc-sources .cat-chip { cursor: pointer; font-size: 10.5px; padding: 3px 8px; }
+/* المطفأ يبهت ولا يختفي — العنصر الغائب لا يقول للمستخدم كيف يعيده */
+.mdc-sources .cat-chip.is-off { opacity: .38; }
+
+/* ---------- الأجندة الجارية ---------- */
+
+.mdc-agenda {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.mdc-agenda__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--color-border);
+}
+.mdc-agenda__head b { font-size: 12.5px; font-weight: 800; color: var(--color-heading); }
+.mdc-agenda__clear {
+  padding: 2px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mdc-agenda__clear:hover { border-color: var(--color-accent); color: var(--color-heading); }
+
+.mdc-agenda__day + .mdc-agenda__day { margin-top: 10px; }
+.mdc-agenda__day h4 {
+  margin: 0 0 5px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-text-secondary);
+}
+.mdc-agenda__day ul { display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.mdc-agenda__empty { margin: 6px 0; font-size: 11.5px; color: var(--color-text-secondary); }
+
+/* صفّ الأجندة: الوقت عمود ثابت فتصطفّ الأوقات رأسياً وتُقرأ مسحاً واحداً */
+.mdc-arow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.mdc-arow:hover { background: var(--color-surface-subtle); border-color: var(--color-border); }
+
+.mdc-arow__time {
+  flex-shrink: 0;
+  min-width: 48px;
+  padding-top: 1px;
+  font-size: 10.5px;
+  font-weight: 800;
+  /* اللون من طقم المصدر المشبع لا الباستيل — الباستيل على خلفية السطح
+     يهبط إلى ~١٫٨:١ فيصير الوقت غير مقروء */
+  color: var(--cat-c, var(--color-text-secondary));
+}
+.mdc-arow__body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mdc-arow__body b {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mdc-arow__body em {
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mdc-skel { display: flex; flex-direction: column; gap: 6px; }
+.mdc-skel span {
+  height: 34px;
+  border-radius: 9px;
+  background: var(--color-surface-subtle);
+  animation: mdc-pulse 1.4s ease-in-out infinite;
+}
+@keyframes mdc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) {
+  .mdc-skel span { animation: none; }
+}
+
+/* ---------- شريط الشهر ---------- */
+
+.mdc-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.mdc-bar__title { display: flex; flex-direction: column; gap: 1px; }
+.mdc-bar__title b { font-size: 15px; font-weight: 800; color: var(--color-heading); }
+.mdc-bar__title span { font-size: 10.5px; color: var(--color-text-secondary); }
+
+.mdc-bar__mid { display: flex; align-items: center; gap: 10px; margin-inline-start: auto; }
+.mdc-bar__fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+.mdc-bar__fact b { color: var(--color-heading); font-weight: 800; }
+.mdc-bar__fact--warn { color: var(--color-warning); }
+
+.mdc-bar__nav { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+.mdc-bar__nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.mdc-bar__nav button:hover { border-color: var(--color-accent); background: var(--color-accent-soft); }
+.mdc-bar__nav button:disabled { opacity: .5; cursor: default; }
+.mdc-bar__today { width: auto !important; padding: 0 10px; font-family: inherit; font-size: 11.5px; font-weight: 700; }
+.mdc-bar__nav .is-spin { animation: mdc-spin 1s linear infinite; }
+@keyframes mdc-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .mdc-bar__nav .is-spin { animation: none; }
+}
+
+.mdc-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 7px 11px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  font-size: 11.5px;
+  color: var(--color-warning);
+}
+.mdc-error button {
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ---------- الشبكة ---------- */
+
+.mdc-weekdays,
+.mdc-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+
+.mdc-weekdays { margin-bottom: 4px; }
+.mdc-weekdays span {
+  padding: 3px 0;
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--color-text-secondary);
+}
+
+/* 42 خلية دائماً ⇒ ارتفاع ثابت لا يقفز بين الأشهر (أكثر ما يجعل تقويماً
+   يبدو غير مصقول). الصفوف تتقاسم المتاح فتملأ العمود بلا تمرير خارجي. */
+.mdc-grid {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+}
+.mdc-grid.is-loading { opacity: .55; pointer-events: none; }
+
+.mdc-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  padding: 3px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+/* أيام الشهر المجاور باهتة لا فارغة — الخلية الفارغة تقول «لا شيء» وهي كذبة */
+.mdc-cell.is-outside { background: var(--color-surface-subtle); }
+.mdc-cell.is-outside .mdc-cell__num { opacity: .45; }
+.mdc-cell.is-today { border-color: var(--color-accent); box-shadow: inset 0 0 0 1px var(--color-accent); }
+.mdc-cell.is-selected { background: var(--color-primary-soft); border-color: var(--color-primary); }
+
+.mdc-cell__num {
+  align-self: flex-start;
+  position: relative;
+  z-index: 2;
+  min-width: 22px;
+  padding: 1px 5px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mdc-cell__num:hover { background: var(--color-surface-subtle); }
+.mdc-cell.is-today .mdc-cell__num { color: var(--color-heading); font-weight: 800; }
+
+.mdc-cell__chips {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* طبقة الإنشاء: تملأ الخلية وتقع **تحت** الرقم والرقائق (z-index 1 مقابل 2)
+   فيبقى النقر على بندٍ فتحاً له، والنقر على الفراغ إنشاءً. */
+.mdc-cell__add {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+}
+.mdc-cell__add:hover { background: var(--color-accent-soft); }
+.mdc-cell__add:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+/* ---------- رقاقة البند في الخلية ---------- */
+
+/* نفس اشتقاق .cat-chip من --cat-c: تينت خلفاً وحدٌّ باهت ونصٌّ **مشبَّع**.
+   الباستيل نصّاً فوق تينت يعطي تبايناً دون 2:1 — الطقم المشبع وحده يقرأ. */
+.mdc-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 2px 5px;
+  border: 1px solid color-mix(in srgb, var(--cat-c) 34%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--cat-c) var(--cat-tint), transparent);
+  color: var(--cat-c);
+  font-family: inherit;
+  font-size: 10px;
+  text-align: start;
+  cursor: pointer;
+}
+.mdc-chip:hover { filter: brightness(1.06); }
+.mdc-chip .cat-dot { flex-shrink: 0; width: 5px; height: 5px; }
+.mdc-chip__t { flex-shrink: 0; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mdc-chip__x { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdc-chip.is-done .mdc-chip__x { text-decoration: line-through; opacity: .7; }
+
+/* العدد صريح: «+٣ أخرى» لا قصّ صامت */
+.mdc-more {
+  align-self: flex-start;
+  padding: 1px 5px;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 9.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mdc-more:hover { color: var(--color-heading); text-decoration: underline; }
+
+/* ---------- لوحة التفاصيل: تنزلق من اليسار ---------- */
+
+.mdp-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(0, 0, 0, .28);
+}
+
+.mdp {
+  position: fixed;
+  inset-block: 0;
+  /* «من اليسار» بالمعنى البصري — ثابت لا منطقي، فالصفحة RTL والطلب صريح */
+  left: 0;
+  z-index: 901;
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  max-width: 92vw;
+  background: var(--color-surface);
+  border-inline-end: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg, 0 10px 40px rgba(0, 0, 0, .18));
+  animation: mdp-in .18s ease-out;
+}
+@keyframes mdp-in { from { transform: translateX(-14px); opacity: .4; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .mdp { animation: none; }
+}
+
+.mdp__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--color-border);
+}
+.mdp__badge { font-size: 10.5px; }
+.mdp__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.mdp__close:hover { border-color: var(--color-accent); color: var(--color-heading); }
+
+.mdp__body { flex: 1; min-height: 0; overflow-y: auto; padding: 13px; }
+
+.mdp__title { margin: 0 0 3px; font-size: 15px; font-weight: 800; color: var(--color-heading); }
+.mdp__sub { margin: 0 0 12px; font-size: 12px; color: var(--color-text-secondary); }
+
+.mdp__facts { margin: 0 0 12px; display: flex; flex-direction: column; gap: 8px; }
+.mdp__facts > div { display: flex; flex-direction: column; gap: 2px; }
+.mdp__facts dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--color-text-secondary);
+}
+.mdp__facts dd { margin: 0; font-size: 12px; color: var(--color-text); }
+.mdp__notes { white-space: pre-wrap; }
+
+.mdp__join { width: 100%; justify-content: center; margin-bottom: 10px; }
+
+.mdp__hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 7px 9px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--color-warning);
+}
+
+.mdp__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+
+/* ---------- خيط التعليقات ---------- */
+
+.mdp__comments { padding-top: 12px; border-top: 1px solid var(--color-border); }
+.mdp__comments h4 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--color-text-secondary);
+}
+
+.mdp__empty { margin: 0 0 8px; font-size: 11.5px; color: var(--color-text-secondary); }
+
+.mdp__thread { display: flex; flex-direction: column; gap: 8px; margin: 0 0 10px; padding: 0; list-style: none; }
+.mdp__thread li {
+  padding: 7px 9px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+}
+.mdp__thread p { margin: 3px 0 0; font-size: 12px; color: var(--color-text); white-space: pre-wrap; }
+
+.mdp__cmeta { display: flex; align-items: center; gap: 6px; }
+.mdp__cmeta b { font-size: 11px; font-weight: 800; color: var(--color-heading); }
+.mdp__cmeta span { font-size: 10px; color: var(--color-text-secondary); }
+.mdp__cmeta button {
+  margin-inline-start: auto;
+  display: inline-flex;
+  padding: 2px;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.mdp__cmeta button:hover { color: var(--color-danger, var(--color-warning)); }
+
+.mdp__compose { display: flex; flex-direction: column; gap: 6px; }
+.mdp__compose .fin-btn { align-self: flex-start; }
+
+.mdp__error { margin: 8px 0 0; font-size: 11px; color: var(--color-warning); }
+
+/* ---------- قائمة الإنشاء السريع ---------- */
+
+.qam {
+  position: fixed;
+  z-index: 950;
+  width: 236px;
+  padding: 5px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+  box-shadow: var(--shadow-lg, 0 10px 30px rgba(0, 0, 0, .16));
+}
+
+.qam__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 7px 7px;
+  margin-bottom: 3px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+.qam__time {
+  width: 92px;
+  padding: 2px 5px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.qam__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.qam__item:hover { background: var(--color-surface-subtle); }
+.qam__item svg { flex-shrink: 0; color: var(--color-text-secondary); }
+.qam__item span { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.qam__item b { font-size: 12px; font-weight: 700; color: var(--color-heading); }
+.qam__item em { font-style: normal; font-size: 10px; color: var(--color-text-secondary); }
+
+/* ---------- مودال البند الشخصي ---------- */
+
+.pem { display: flex; flex-direction: column; gap: 12px; }
+.pem .mfm-types { align-self: flex-start; }
+
+.pem-times { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.pem-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.pem-check span { display: flex; flex-direction: column; gap: 1px; }
+.pem-check em { font-style: normal; font-size: 10.5px; color: var(--color-text-secondary); }
+
+.pem-colors { display: flex; flex-wrap: wrap; gap: 6px; }
+.pem-color {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--cat-c, var(--color-text-secondary));
+  cursor: pointer;
+}
+.pem-color.is-selected { box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--cat-c); }
+
+.pem-error { margin: 0; font-size: 11.5px; color: var(--color-warning); }
+
+/* ---------- تجاوب ---------- */
+
+@media (max-width: 1180px) {
+  .mdc { flex-direction: column; }
+  .mdc-side {
+    width: 100%;
+    border-inline-end: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .mdc-agenda { max-height: 260px; }
+  /* الشبكة تفقد ارتفاعها المرن فتحتاج حدّاً أدنى لكل صفّ */
+  .mdc-grid { grid-template-rows: repeat(6, minmax(78px, auto)); }
+}
+
+@media (max-width: 720px) {
+  /* الشبكة على الجوال تصير مؤشّرات لا رقائق: عرض ٥٠px لا يسع عنواناً */
+  .mdc-chip__x, .mdc-chip__t { display: none; }
+  .mdc-chip { justify-content: center; padding: 3px; }
+  .mdc-grid { grid-template-rows: repeat(6, minmax(56px, auto)); }
+}

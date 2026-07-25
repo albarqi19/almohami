@@ -1,0 +1,244 @@
+/* ====================================================================
+   مساحة عمل الاجتماعات — «النمط الملتصق» (im2-*)
+   البنية المشتركة ssp2-* من simple-service.css؛ هنا ما يخصّ الاجتماعات فقط.
+
+   ما عالجه هذا الملف من الشكل السابق:
+     · خمسة مربّعات مؤشرات أغلبها أصفار كانت تحتلّ ثلث الشاشة → حقائق سطر واحد
+     · بانر «اجتماعك التالي» كان يكرّر الصفّ الظاهر تحته → حقيقة في الترويسة
+     · أربع طبقات صناديق منفصلة تعوم فوق فراغ أبيض → عمودان ملتصقان بالحواف
+     · التقويم في تبويب منفصل → عمود ملاحة يُصفّي القائمة في مكانه
+   ==================================================================== */
+
+.im2 { font-size: 12.5px; }
+
+.im2-sub {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+/* ---------- مبدّل العرض: تقويم | قائمة ---------- */
+
+.im2-views {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+}
+.im2-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.im2-view.is-active {
+  background: var(--color-surface);
+  color: var(--color-heading);
+  box-shadow: var(--shadow-xs);
+}
+
+/* أدوات الترويسة تنكمش قبل أن تلفّ */
+.im2 .ssp2-header__actions { flex-wrap: wrap; gap: 6px; }
+.im2 .im-search { min-width: 200px; height: 30px; }
+.im2 .im-select { height: 30px; }
+
+/* حقائق مميّزة — التلوين هنا حالة لا زينة، فيبقى نادراً */
+.im2-fact--live b { color: var(--color-success); }
+.im2-fact--live svg { color: var(--color-success); }
+.im2-fact--warn b { color: var(--color-warning); }
+.im2-fact--warn svg { color: var(--color-warning); }
+.im2-fact--next b { color: var(--color-heading); }
+
+/* ---------- حواف ناعمة داخل بنية ملتصقة ----------
+   الوصفة الأصلية تجعل البطاقات `border-radius: 0` ملتصقةً بالحواف. أبقيت
+   البنية (عمودان بملء الارتفاع، بلا تمرير خارجي، بلا فراغ ميت) وأعدت
+   الاستدارة إلى الأسطح: حوافّ حادّة على مساحة بهذا الحجم تبدو خشنة.
+   الفرق بينها وبين «البطاقات العائمة» المرفوضة أن هذه ملء العمود لا
+   مربّعات صغيرة تسبح في بياض. */
+
+.im2-calcol { width: 316px; flex-shrink: 0; padding: 10px; }
+.im2-calcol .ssp2-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: 12px;
+  /* ⚠️ لا overflow:hidden — يقصّ أي قائمة منسدلة داخل العمود */
+  overflow: visible;
+}
+.im2-calcol .ssp2-card__head {
+  border-start-start-radius: 11px;
+  border-start-end-radius: 11px;
+}
+
+.im2-cal { padding: 10px; }
+
+.im2-cal__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.im2-cal__title { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.im2-cal__title b { font-size: 13px; font-weight: 800; color: var(--color-heading); }
+.im2-cal__title span { font-size: 10px; color: var(--color-text-secondary); }
+
+.im2-cal__nav { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+.im2-cal__nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.im2-cal__nav button:hover { border-color: var(--color-accent); background: var(--color-accent-soft); }
+.im2-cal__today { width: auto !important; padding: 0 9px; font-family: inherit; font-size: 11px; font-weight: 700; }
+
+.im2-cal__weekdays,
+.im2-cal__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+
+.im2-cal__weekdays span {
+  padding: 2px 0;
+  text-align: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.im2-cal__grid { margin-top: 2px; }
+.im2-cal__grid.is-loading { opacity: .5; pointer-events: none; }
+
+/* 42 خلية دائماً ⇒ ارتفاع ثابت لا يقفز بين الأشهر */
+.im2-cal__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 34px;
+  padding: 3px 0 2px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+.im2-cal__day:hover { background: var(--color-surface-subtle); }
+
+/* أيام الشهر المجاور باهتة لا فارغة — الخلية الفارغة تقول «لا شيء» وهي كذبة */
+.im2-cal__day.is-outside { opacity: .35; }
+.im2-cal__day.is-today { box-shadow: inset 0 0 0 1.5px var(--color-accent); }
+.im2-cal__day.is-selected {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+.im2-cal__num { font-size: 11.5px; font-weight: 700; color: var(--color-text); }
+.im2-cal__day.is-selected .im2-cal__num { color: var(--color-heading); }
+
+/* نقاط التصنيفات: العمود ملاحٌ لا عارض — التفاصيل في القائمة المجاورة،
+   وتكرار العناوين في العمودين يكتب الاجتماع مرتين في شاشة واحدة. */
+.im2-cal__dots { display: flex; align-items: center; gap: 2px; min-height: 6px; }
+.im2-cal__dots .cat-dot { width: 5px; height: 5px; }
+.im2-cal__plus { font-size: 8px; color: var(--color-text-secondary); line-height: 1; }
+
+/* ---------- مفتاح الألوان = تصفية ---------- */
+
+.im2-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+.im2-legend__head {
+  width: 100%;
+  margin-bottom: 2px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--color-text-secondary);
+}
+.im2-legend .cat-chip { cursor: pointer; font-size: 10px; padding: 2px 7px; }
+.im2-legend .cat-chip.is-selected { box-shadow: inset 0 0 0 1.5px var(--cat-c); font-weight: 800; }
+
+/* ---------- عمود القائمة ---------- */
+
+/* العمود يتمرّر داخلياً — لا تمرير خارجي للصفحة (شرط النمط الملتصق) */
+.im2-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px 24px;
+}
+
+/* شريط سياق التصفية: يقول ما الظاهر ولماذا وكيف يُلغى */
+.im2-scope {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 7px 11px;
+  background: var(--color-primary-soft);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--color-text);
+}
+.im2-scope b { color: var(--color-heading); }
+.im2-scope__clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.im2-scope__clear:hover { border-color: var(--color-accent); color: var(--color-heading); }
+
+/* عنوان الاجتماع يلتفّ بدل أن يقصّ الشاشة */
+.im2 .im-row__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* داخل مساحة العمل: صفوف كثيفة بحواف ناعمة */
+.im2 .im-group { margin-bottom: 12px; }
+.im2 .im-row { padding: 8px 11px; }
+
+/* الترويسة: حافّة سفلية ناعمة بدل قاطعٍ مستقيم عبر الشاشة */
+.im2 .ssp2-header {
+  border-end-start-radius: 14px;
+  border-end-end-radius: 14px;
+}
+
+/* الحالة الفارغة تملأ العمود بدل أن تتكوّم أعلاه */
+.im2 .im-state {
+  flex: 1;
+  justify-content: center;
+  border: 1px dashed var(--color-border);
+  border-radius: 12px;
+}
+
+/* ---------- تجاوب: الأعمدة تتراص والصفحة تعود للتمرير الطبيعي ---------- */
+
+@media (max-width: 1100px) {
+  .im2-calcol { width: 100%; }
+  .im2-cal__day { min-height: 40px; }
+}

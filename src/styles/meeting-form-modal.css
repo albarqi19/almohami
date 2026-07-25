@@ -1,0 +1,266 @@
+/* ====================================================================
+   مودال الاجتماع (mfm) — يعتمد fin-* من erp.css ويضيف ما يخصّه فقط
+   بلا أي <style> مضمّن، وبلا قيمة لونية مثبّتة
+   ==================================================================== */
+
+/* ---------- عمودا النموذج ----------
+   «ماذا ومتى» يميناً و«من ومع أي ملف» يساراً. الشريط الطولي الواحد كان
+   يضع تسع كتل فوق بعضها، فيصير زرّ الحفظ بعد تمرير طويل ويبقى الحضور
+   والربط تحت الطيّة فلا يُستعملان. */
+.mfm-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 20px;
+  align-items: start;
+}
+
+.mfm-col { display: flex; flex-direction: column; min-width: 0; }
+/* فاصل بين العمودين — الحدّ أهدأ من خلفية ملوّنة، ويحفظ إحساس الكثافة */
+.mfm-col + .mfm-col { padding-inline-start: 20px; border-inline-start: 1px solid var(--color-border); }
+
+.mfm-col__head {
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: .3px;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 900px) {
+  .mfm-cols { grid-template-columns: 1fr; }
+  .mfm-col + .mfm-col {
+    margin-top: 14px;
+    padding-inline-start: 0;
+    border-inline-start: none;
+  }
+}
+
+.mfm-inline-link {
+  margin-inline-start: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ---------- منتقي التصنيف ---------- */
+.mfm-categories { display: flex; flex-wrap: wrap; gap: 6px; }
+.mfm-categories .cat-chip { cursor: pointer; border-width: 1px; }
+.mfm-categories .cat-chip.is-selected {
+  /* التحديد بحدٍّ سميك لا بتغيير اللون — اللون يخصّ التصنيف نفسه */
+  box-shadow: inset 0 0 0 1.5px var(--cat-c);
+  font-weight: 800;
+}
+
+/* ---------- مبدّل النوع ---------- */
+.mfm-types {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+.mfm-type {
+  padding: 5px 16px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mfm-type.is-active {
+  background: var(--color-surface);
+  color: var(--color-heading);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ---------- البحث واختيار الأشخاص ---------- */
+.mfm-search { position: relative; display: flex; align-items: center; }
+.mfm-search svg {
+  position: absolute;
+  inset-inline-start: 9px;
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+.mfm-search .fin-input { padding-inline-start: 28px; }
+
+.mfm-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 132px;
+  margin-top: 6px;
+  padding: 6px;
+  overflow-y: auto;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.mfm-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.mfm-person em { font-style: normal; font-size: 10px; color: var(--color-text-secondary); }
+.mfm-person:hover { border-color: var(--color-accent); }
+.mfm-person.is-selected {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+  font-weight: 700;
+}
+
+.mfm-empty { margin: 4px; font-size: 11.5px; color: var(--color-text-secondary); }
+
+/* ---------- المشاركون الخارجيون ---------- */
+.mfm-guests { display: flex; flex-direction: column; gap: 10px; }
+.mfm-guests__hint { margin: 0; font-size: 11.5px; color: var(--color-text-secondary); }
+
+.mfm-guest {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+}
+.mfm-guest__head { display: flex; align-items: center; justify-content: space-between; }
+.mfm-guest__index { font-size: 11px; font-weight: 800; color: var(--color-text-secondary); }
+
+.mfm-guest__consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 11.5px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.mfm-guest__consent em { font-style: normal; color: var(--color-text-secondary); }
+
+.mfm-guest__warn {
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-warning);
+}
+
+/* ---------- منتقي الربط ---------- */
+.mfm-link { display: flex; flex-direction: column; gap: 8px; }
+.mfm-link__types { display: flex; flex-wrap: wrap; gap: 5px; }
+.mfm-link__type {
+  padding: 4px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mfm-link__type.is-active {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+  color: var(--color-heading);
+}
+
+.mfm-link__search { position: relative; display: flex; align-items: center; }
+.mfm-link__search svg {
+  position: absolute;
+  inset-inline-start: 9px;
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+.mfm-link__search .fin-input { padding-inline-start: 28px; }
+
+.mfm-link__state { margin: 0; font-size: 11.5px; color: var(--color-text-secondary); }
+
+.mfm-link__results {
+  display: flex;
+  flex-direction: column;
+  max-height: 176px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+.mfm-link__results button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 11px;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: start;
+  cursor: pointer;
+}
+.mfm-link__results li:last-child button { border-bottom: none; }
+.mfm-link__results button:hover { background: var(--color-surface-subtle); }
+.mfm-link__results em { font-style: normal; font-size: 10.5px; color: var(--color-text-secondary); }
+
+.mfm-link__chosen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 11px;
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.mfm-link__chosen em { font-style: normal; color: var(--color-text-secondary); }
+
+/* ---------- متقدّم وملاحظات ---------- */
+.mfm-advanced-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mfm-advanced-toggle:hover { color: var(--color-heading); }
+
+.mfm-note {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 640px) {
+  .mfm-people { max-height: 156px; }
+}

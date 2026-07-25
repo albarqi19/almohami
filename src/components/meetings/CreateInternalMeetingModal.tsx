@@ -1,45 +1,62 @@
-import React, { useState, useEffect } from 'react';
-import {
-  X,
-  Calendar,
-  Clock,
-  MapPin,
-  Video,
-  Users,
-  Check,
-  Search,
-  FileText,
-  ChevronDown,
-  Sparkles,
-  Settings,
-  Shield,
-  Clock3
-} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CalendarClock, Check, Search, Settings2, Tag, Users } from 'lucide-react';
+import Modal from '../erp/Modal';
+import DualDateInput from '../common/DualDateInput';
+import ExternalGuestsEditor from './ExternalGuestsEditor';
+import LinkTargetPicker from './LinkTargetPicker';
 import {
   internalMeetingService,
-  type InternalMeeting,
+  type AttendeeInput,
   type CreateInternalMeetingData,
-  type UpdateInternalMeetingData
+  type InternalMeeting,
+  type LinkTargetType,
+  type MeetingCategory,
+  type UpdateInternalMeetingData,
 } from '../../services/meetingService';
+import meetingCategoryService from '../../services/meetingCategoryService';
 import { apiClient } from '../../utils/api';
 
 interface Props {
   meeting?: InternalMeeting | null;
   onClose: () => void;
   onSuccess: () => void;
+  onManageCategories?: () => void;
+  /** «YYYY-MM-DD» — تعبئة مسبقة من خلية التقويم المنقورة */
+  initialDate?: string;
+  /** «HH:mm» — تعبئة مسبقة من الوقت المختار في قائمة الإنشاء السريع */
+  initialTime?: string;
 }
 
 interface UserOption {
   id: number;
   name: string;
-  email: string;
+  /** قابل للفراغ فعلاً — موظفون كثيرون بلا بريد. النوع غير القابل للفراغ
+   *  هو ما أخفى انهيار البحث عن TypeScript. */
+  email: string | null;
   role: string;
 }
 
-const CreateInternalMeetingModal: React.FC<Props> = ({ meeting, onClose, onSuccess }) => {
-  const isEditing = !!meeting;
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'مدير', owner: 'مالك', partner: 'شريك', lawyer: 'محامي',
+  senior_lawyer: 'محامٍ أول', legal_assistant: 'مساعد قانوني',
+  accountant: 'محاسب', secretary: 'سكرتير', client: 'عميل',
+};
 
-  // Form State
+const DURATIONS = [15, 30, 45, 60, 90, 120, 180];
+
+/**
+ * إنشاء/تعديل اجتماع.
+ *
+ * أُعيدت كتابته على components/erp/Modal + fin-* بدل نسخة notion-* المنشقّة
+ * التي كانت تحمل 460 سطر <style> مضمّن يصارع add-appointment-modal.css.
+ * السبب ليس تجميلياً: كانت ستُضاف خمس كتل حقول جديدة (تصنيف، حضور بثلاثة
+ * أنواع، ربط، تاريخ مزدوج) فوق ستايل منشقّ أصلاً.
+ */
+const CreateInternalMeetingModal: React.FC<Props> = ({
+  meeting, onClose, onSuccess, onManageCategories, initialDate, initialTime,
+}) => {
+  const isEditing = Boolean(meeting);
+
   const [title, setTitle] = useState(meeting?.title || '');
   const [agenda, setAgenda] = useState(meeting?.agenda || '');
   const [date, setDate] = useState('');
@@ -50,11 +67,34 @@ const CreateInternalMeetingModal: React.FC<Props> = ({ meeting, onClose, onSucce
   const [meetingType, setMeetingType] = useState<'physical' | 'remote'>(
     meeting?.video_meeting_url ? 'remote' : 'physical'
   );
-  const [participantIds, setParticipantIds] = useState<number[]>(
-    meeting?.participants?.map(p => p.user_id) || []
+
+  const [categoryId, setCategoryId] = useState<number | null>(meeting?.meeting_category_id ?? null);
+  const [categories, setCategories] = useState<MeetingCategory[]>([]);
+
+  // الحضور بثلاثة أنواع: موظفون وعملاء (بحسابات) وخارجيون (بلقطات)
+  const [staffIds, setStaffIds] = useState<number[]>(
+    meeting?.attendees?.filter((a) => a.attendee_type === 'user' && a.user_id).map((a) => a.user_id as number)
+      ?? meeting?.participants?.map((p) => p.user_id).filter((id): id is number => Boolean(id))
+      ?? []
+  );
+  const [clientIds, setClientIds] = useState<number[]>(
+    meeting?.attendees?.filter((a) => a.attendee_type === 'client' && a.user_id).map((a) => a.user_id as number) ?? []
+  );
+  const [guests, setGuests] = useState<AttendeeInput[]>(
+    meeting?.attendees?.filter((a) => a.attendee_type === 'external').map((a) => ({
+      type: 'external' as const,
+      name: a.display_name ?? '',
+      email: a.email ?? '',
+      phone: a.phone ?? '',
+      notify_opted_in: false,
+    })) ?? []
   );
 
-  // Advanced State
+  const [link, setLink] = useState<{ type: LinkTargetType | null; id: number | null }>({
+    type: meeting?.linked_type ?? null,
+    id: meeting?.linked_id ?? null,
+  });
+
   const [joinBefore, setJoinBefore] = useState(meeting?.join_button_minutes_before || 15);
   const [joinAfter, setJoinAfter] = useState(meeting?.join_button_minutes_after || 30);
   const [summaryPermission, setSummaryPermission] = useState<'creator_only' | 'all_attendees'>(
@@ -62,17 +102,20 @@ const CreateInternalMeetingModal: React.FC<Props> = ({ meeting, onClose, onSucce
   );
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // UI State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [users, setUsers] = useState<UserOption[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showParticipants, setShowParticipants] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [staff, setStaff] = useState<UserOption[]>([]);
+  const [clients, setClients] = useState<UserOption[]>([]);
+  const [staffSearch, setStaffSearch] = useState('');
+  const [clientSearch, setClientSearch] = useState('');
 
-  // Initialize date/time
-  // مهم: نستخرج التاريخ والوقت بالتوقيت المحلي في كليهما (getFullYear/getHours…)
-  // بدل خلط toISOString (UTC) مع toTimeString (محلي) الذي كان يُزحزح تاريخ
-  // الاجتماعات المسائية/الليلية يوماً كاملاً ويتراكم مع كل حفظ.
+  /**
+   * ⚠️ لا تُلمس هذه الكتلة.
+   * نستخرج التاريخ والوقت بالتوقيت المحلي في كليهما (getFullYear/getHours…)
+   * بدل خلط toISOString (UTC) مع toTimeString (محلي) الذي كان يُزحزح تاريخ
+   * الاجتماعات المسائية/الليلية يوماً كاملاً ويتراكم مع كل حفظ.
+   */
   useEffect(() => {
     const pad = (n: number) => String(n).padStart(2, '0');
     const asLocalDate = (dt: Date) => `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
@@ -82,846 +125,435 @@ const CreateInternalMeetingModal: React.FC<Props> = ({ meeting, onClose, onSucce
       const dt = new Date(meeting.scheduled_at);
       setDate(asLocalDate(dt));
       setTime(asLocalTime(dt));
+    } else if (initialDate) {
+      // من خلية التقويم: سلسلتان جاهزتان بصيغة العرض نفسها — لا Date وسيطة
+      // تُدخل منطقة زمنية في المسار.
+      setDate(initialDate);
+      setTime(initialTime ?? '10:00');
     } else {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       setDate(asLocalDate(tomorrow));
       setTime('10:00');
     }
-  }, [meeting]);
+  }, [meeting, initialDate, initialTime]);
 
-  // Fetch users
   useEffect(() => {
-    const fetchUsers = async () => {
+    const unwrap = <T,>(payload: T[] | { data: T[] } | undefined): T[] =>
+      Array.isArray(payload) ? payload : payload?.data ?? [];
+
+    (async () => {
       try {
-        // فريق المكتب كاملاً (بلا عملاء) — limit مرتفع لأن الرد paginated
-        const response = await apiClient.get<{ success: boolean; data: { data: UserOption[] } | UserOption[] }>(
-          '/users?roles=admin,owner,partner,lawyer,senior_lawyer,legal_assistant,accountant&limit=200'
-        );
-        let usersData: UserOption[] = [];
-        if (response.data && 'data' in response.data && Array.isArray((response.data as any).data)) {
-          usersData = (response.data as any).data;
-        } else if (Array.isArray(response.data)) {
-          usersData = response.data;
-        }
-        setUsers(usersData);
-      } catch (err) {
-        console.error('Error fetching users:', err);
+        const [staffRes, clientRes, cats] = await Promise.all([
+          apiClient.get<{ data: UserOption[] | { data: UserOption[] } }>(
+            '/users?roles=admin,owner,partner,lawyer,senior_lawyer,legal_assistant,accountant,secretary&limit=200'
+          ),
+          apiClient.get<{ data: UserOption[] | { data: UserOption[] } }>('/users?role=client&limit=200'),
+          meetingCategoryService.list(),
+        ]);
+
+        setStaff(unwrap(staffRes.data));
+        setClients(unwrap(clientRes.data));
+        setCategories(cats.categories.filter((c) => c.is_active || c.id === meeting?.meeting_category_id));
+      } catch {
+        // فشل جلب القوائم لا يمنع الحفظ — الخادم يتحقّق على أي حال
       }
-    };
-    fetchUsers();
-  }, []);
+    })();
+  }, [meeting?.meeting_category_id]);
 
-  const filteredUsers = users.filter(user => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return user.name.toLowerCase().includes(term) || user.email.toLowerCase().includes(term);
-  });
+  /**
+   * مطابقة بحث آمنة أمام الحقول الفارغة.
+   *
+   * ⚠️ العلّة التي أصلحتها: `u.email.toLowerCase()` مباشرةً كانت ترمي
+   * TypeError أثناء الرسم لأي موظف بلا بريد — والنوع يقول `email: string`
+   * بينما الخادم يُرجع null، فلم يمسكها TypeScript. ولم تظهر إلا **عند
+   * الكتابة**: الحقل الفارغ يعود مبكّراً قبل لمس email.
+   *
+   * والتطبيع العربي مقصود: «احمد» يجب أن تجد «أحمد». البحث العلوي يفعلها
+   * بالخادم، وهذا منتقٍ محلي على 200 صفاً فيكفيه التطبيع هنا.
+   */
+  const matches = (u: UserOption, term: string): boolean => {
+    const norm = (v: unknown) =>
+      String(v ?? '')
+        .toLowerCase()
+        .replace(/[أإآٱ]/g, 'ا')
+        .replace(/ى/g, 'ي')
+        .replace(/ة/g, 'ه')
+        .replace(/[ً-ْٰ]/g, '');
 
-  const toggleParticipant = (userId: number) => {
-    if (participantIds.includes(userId)) {
-      setParticipantIds(participantIds.filter(id => id !== userId));
-    } else {
-      setParticipantIds([...participantIds, userId]);
-    }
+    const needle = norm(term);
+    return norm(u.name).includes(needle) || norm(u.email).includes(needle);
+  };
+
+  const filteredStaff = useMemo(() => {
+    const term = staffSearch.trim();
+    if (!term) return staff;
+    return staff.filter((u) => matches(u, term));
+  }, [staff, staffSearch]);
+
+  const filteredClients = useMemo(() => {
+    const term = clientSearch.trim();
+    // منتقي العملاء مؤجَّل بالبحث: مكتب بثلاثة آلاف عميل يرى أول 200 صامتاً
+    if (term.length < 2) return [];
+    return clients.filter((u) => matches(u, term));
+  }, [clients, clientSearch]);
+
+  const toggle = (list: number[], setList: (next: number[]) => void, id: number) => {
+    setList(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   };
 
   const handleSubmit = async () => {
     setError(null);
+    setFieldErrors({});
 
-    if (!title.trim()) {
-      setError('يرجى إدخال عنوان الاجتماع');
-      return;
-    }
-    if (!date || !time) {
-      setError('يرجى تحديد تاريخ ووقت الاجتماع');
-      return;
-    }
-    if (participantIds.length === 0) {
-      setError('يرجى اختيار مشارك واحد على الأقل');
-      return;
-    }
+    if (!title.trim()) return setError('يرجى إدخال عنوان الاجتماع');
+    if (!date || !time) return setError('يرجى تحديد تاريخ ووقت الاجتماع');
 
-    // نرسل الوقت كسلسلة محلية خام (بلا Z / بلا toISOString) — الخادم بتوقيت
-    // Asia/Riyadh يفسّرها كما هي. toISOString كان يحوّلها إلى UTC فتُخزَّن
-    // بإزاحة −3 ساعات (10:00 تصبح 07:00). هذا نفس نمط «مواعيد العملاء» الصحيح.
+    const attendees: AttendeeInput[] = [
+      ...staffIds.map((id) => ({ type: 'user' as const, user_id: id })),
+      ...clientIds.map((id) => ({ type: 'client' as const, user_id: id })),
+      ...guests.filter((g) => (g.name ?? '').trim()),
+    ];
+
+    if (attendees.length === 0) return setError('أضِف مشاركاً واحداً على الأقل');
+
+    /**
+     * ⚠️ لا تُلمس. نرسل الوقت كسلسلة محلية خام (بلا Z / بلا toISOString) —
+     * الخادم بتوقيت Asia/Riyadh يفسّرها كما هي. toISOString كان يحوّلها إلى
+     * UTC فتُخزَّن بإزاحة −3 ساعات (10:00 تصبح 07:00).
+     */
     const scheduledAt = `${date}T${time}:00`;
+
+    // القيمة null صريحة (لا undefined) للحقل غير المستخدم، كي يمسحه الخادم
+    // عند تبديل نوع الاجتماع بدل الإبقاء على القيمة القديمة.
+    const payload = {
+      title,
+      agenda: agenda || undefined,
+      scheduled_at: scheduledAt,
+      duration_minutes: duration,
+      location: meetingType === 'physical' ? (location || null) : null,
+      video_meeting_url: meetingType === 'remote' ? (videoUrl || null) : null,
+      video_provider: meetingType === 'remote' ? 'manual' : undefined,
+      attendees,
+      meeting_category_id: categoryId,
+      linked_type: link.id ? link.type : null,
+      linked_id: link.id ?? null,
+      join_button_minutes_before: joinBefore,
+      join_button_minutes_after: joinAfter,
+      summary_permission: summaryPermission,
+    };
 
     try {
       setLoading(true);
-
-      // نرسل حقول النوع صراحةً بقيمة null (لا undefined) للحقل غير المستخدم،
-      // كي يمسحها الخادم عند تبديل نوع الاجتماع بدل الإبقاء على القيمة القديمة.
-      const baseData = {
-        title,
-        agenda: agenda || undefined,
-        scheduled_at: scheduledAt,
-        duration_minutes: duration,
-        location: meetingType === 'physical' ? (location || null) : null,
-        video_meeting_url: meetingType === 'remote' ? (videoUrl || null) : null,
-        // video_provider عمود NOT NULL في الخادم — لا نرسله للحضوري (الخادم يضبطه)
-        video_provider: meetingType === 'remote' ? 'manual' : undefined,
-        participants: participantIds,
-        join_button_minutes_before: joinBefore,
-        join_button_minutes_after: joinAfter,
-        summary_permission: summaryPermission,
-      };
-
       if (isEditing && meeting) {
-        await internalMeetingService.update(meeting.id, baseData as UpdateInternalMeetingData);
+        await internalMeetingService.update(meeting.id, payload as UpdateInternalMeetingData);
       } else {
-        await internalMeetingService.create(baseData as CreateInternalMeetingData);
+        await internalMeetingService.create(payload as CreateInternalMeetingData);
       }
-
       onSuccess();
-    } catch (err: any) {
-      console.error('Error saving meeting:', err);
-      setError(err.message || 'حدث خطأ في حفظ الاجتماع');
+    } catch (err: unknown) {
+      // 422 حقلاً بحقل: رسالة عامة واحدة تترك المستخدم يبحث عن الحقل المعطوب
+      const e = err as { message?: string; errors?: Record<string, string[]> };
+      setFieldErrors(e.errors ?? {});
+      setError(e.message || 'حدث خطأ في حفظ الاجتماع');
     } finally {
       setLoading(false);
     }
   };
 
-  const getRoleLabel = (role: string) => {
-    const labels: Record<string, string> = {
-      admin: 'مدير', owner: 'مالك', partner: 'شريك', lawyer: 'محامي',
-      senior_lawyer: 'محامٍ أول', legal_assistant: 'مساعد قانوني', accountant: 'محاسب',
-    };
-    return labels[role] || role;
-  };
-
-  const selectedUsers = users.filter(u => participantIds.includes(u.id));
+  const fieldError = (key: string) => fieldErrors[key]?.[0];
 
   return (
-    <div className="notion-modal-overlay" onClick={onClose}>
-      <div className="notion-modal" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="notion-modal__header">
-          <div className="notion-modal__icon">
-            <Sparkles size={20} />
-          </div>
-          <input
-            type="text"
-            className="notion-modal__title-input"
-            placeholder="عنوان الاجتماع..."
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            autoFocus
-          />
-          <button className="notion-close-btn" onClick={onClose}>
-            <X size={18} />
+    <Modal
+      open
+      onClose={onClose}
+      size="wide"
+      icon={CalendarClock}
+      title={isEditing ? 'تعديل الاجتماع' : 'اجتماع جديد'}
+      footerAlign="end"
+      footer={
+        <>
+          <button type="button" className="fin-btn" onClick={onClose} disabled={loading}>إلغاء</button>
+          <button type="button" className="fin-btn fin-btn--primary" onClick={handleSubmit} disabled={loading}>
+            {loading ? 'جارٍ الحفظ…' : isEditing ? 'حفظ التعديلات' : 'إنشاء الاجتماع'}
           </button>
+        </>
+      }
+    >
+      {error && <div className="fin-state fin-state--error">{error}</div>}
+
+      {/* عمودان: «ماذا ومتى» يميناً و«من ومع أي ملف» يساراً.
+          الشريط الطولي الواحد كان يضع تسع كتل فوق بعضها فيصير الحفظ بعد
+          تمرير طويل، ويُخفي الحضور والربط تحت الطيّة فلا يُستعملان. */}
+      <div className="mfm-cols">
+      <section className="mfm-col">
+      <h3 className="mfm-col__head">تفاصيل الاجتماع</h3>
+
+      <div className="fin-field">
+        <label className="fin-field__label">عنوان الاجتماع <span className="req">*</span></label>
+        <input
+          className="fin-input"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="مثال: مراجعة موقف قضية الشركة"
+          autoFocus
+        />
+        {fieldError('title') && <span className="fin-field__error">{fieldError('title')}</span>}
+      </div>
+
+      <div className="fin-field">
+        <label className="fin-field__label">التاريخ <span className="req">*</span></label>
+        <DualDateInput value={date} onChange={setDate} />
+        {fieldError('scheduled_at') && <span className="fin-field__error">{fieldError('scheduled_at')}</span>}
+      </div>
+
+      <div className="fin-grid fin-grid--2">
+        <div className="fin-field">
+          <label className="fin-field__label">الوقت <span className="req">*</span></label>
+          <input className="fin-input" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </div>
 
-        {/* Body */}
-        <div className="notion-modal__body">
-          {error && (
-            <div className="notion-error">{error}</div>
+        <div className="fin-field">
+          <label className="fin-field__label">المدة</label>
+          <select className="fin-input" value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
+            {DURATIONS.map((d) => <option key={d} value={d}>{d} دقيقة</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* ── التصنيف ── */}
+      <div className="fin-field">
+        <label className="fin-field__label">
+          <Tag size={13} /> التصنيف
+          {onManageCategories && (
+            <button type="button" className="mfm-inline-link" onClick={onManageCategories}>إدارة التصنيفات</button>
           )}
-
-          {/* Properties */}
-          <div className="notion-properties">
-            {/* Date & Time */}
-            <div className="notion-property">
-              <div className="notion-property__label">
-                <Calendar size={14} />
-                <span>التاريخ</span>
-              </div>
-              <div className="notion-property__value">
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="notion-property">
-              <div className="notion-property__label">
-                <Clock size={14} />
-                <span>الوقت</span>
-              </div>
-              <div className="notion-property__value">
-                <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="notion-property">
-              <div className="notion-property__label">
-                <Clock size={14} />
-                <span>المدة</span>
-              </div>
-              <div className="notion-property__value">
-                <select value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
-                  <option value={15}>15 دقيقة</option>
-                  <option value={30}>30 دقيقة</option>
-                  <option value={45}>45 دقيقة</option>
-                  <option value={60}>ساعة واحدة</option>
-                  <option value={90}>ساعة ونصف</option>
-                  <option value={120}>ساعتين</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Meeting Type */}
-            <div className="notion-property">
-              <div className="notion-property__label">
-                {meetingType === 'remote' ? <Video size={14} /> : <MapPin size={14} />}
-                <span>النوع</span>
-              </div>
-              <div className="notion-property__value notion-property__value--buttons">
-                <button
-                  className={`notion-type-btn ${meetingType === 'physical' ? 'notion-type-btn--active' : ''}`}
-                  onClick={() => setMeetingType('physical')}
-                >
-                  <MapPin size={12} /> حضوري
-                </button>
-                <button
-                  className={`notion-type-btn ${meetingType === 'remote' ? 'notion-type-btn--active' : ''}`}
-                  onClick={() => setMeetingType('remote')}
-                >
-                  <Video size={12} /> عن بعد
-                </button>
-              </div>
-            </div>
-
-            {/* Location or Video URL */}
-            {meetingType === 'physical' ? (
-              <div className="notion-property">
-                <div className="notion-property__label">
-                  <MapPin size={14} />
-                  <span>المكان</span>
-                </div>
-                <div className="notion-property__value">
-                  <input
-                    type="text"
-                    placeholder="أدخل مكان الاجتماع..."
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="notion-property">
-                <div className="notion-property__label">
-                  <Video size={14} />
-                  <span>الرابط</span>
-                </div>
-                <div className="notion-property__value">
-                  <input
-                    type="url"
-                    placeholder="https://meet.google.com/..."
-                    value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Participants */}
-            <div className="notion-property notion-property--participants">
-              <div className="notion-property__label">
-                <Users size={14} />
-                <span>المشاركون</span>
-              </div>
-              <div
-                className="notion-property__value notion-property__value--clickable"
-                onClick={() => setShowParticipants(!showParticipants)}
-              >
-                {selectedUsers.length > 0 ? (
-                  <div className="notion-selected-users">
-                    {selectedUsers.slice(0, 5).map(user => (
-                      <span key={user.id} className="notion-user-chip">
-                        {user.name}
-                      </span>
-                    ))}
-                    {selectedUsers.length > 5 && (
-                      <span className="notion-more">+{selectedUsers.length - 5}</span>
-                    )}
-                  </div>
-                ) : (
-                  <span className="notion-placeholder">اختر المشاركين...</span>
-                )}
-                <ChevronDown size={14} className={showParticipants ? 'rotated' : ''} />
-              </div>
-
-              {showParticipants && (
-                <div className="notion-users-dropdown">
-                  <div className="notion-users-search">
-                    <Search size={14} />
-                    <input
-                      type="text"
-                      placeholder="بحث..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      autoFocus
-                    />
-                  </div>
-                  <div className="notion-users-list">
-                    {filteredUsers.map(user => (
-                      <div
-                        key={user.id}
-                        className="notion-user-option"
-                        onClick={() => toggleParticipant(user.id)}
-                      >
-                        <div className="notion-user-avatar">{user.name.charAt(0)}</div>
-                        <span className="notion-user-name">{user.name}</span>
-                        {participantIds.includes(user.id) && (
-                          <Check size={14} className="notion-check" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Advanced Settings Toggle */}
-          <div className="notion-advanced-section">
-            <div
-              className="notion-advanced-toggle"
-              onClick={() => setShowAdvanced(!showAdvanced)}
+        </label>
+        <div className="mfm-categories">
+          <button
+            type="button"
+            className={`cat-chip cat-none${categoryId === null ? ' is-selected' : ''}`}
+            onClick={() => setCategoryId(null)}
+          >
+            غير مصنّف
+          </button>
+          {categories.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className={`cat-chip cat-${c.color}${categoryId === c.id ? ' is-selected' : ''}`}
+              onClick={() => setCategoryId(c.id)}
             >
-              <div className="toggle-label">
-                <Settings size={14} />
-                <span>إعدادات متقدمة</span>
-              </div>
-              <ChevronDown size={14} className={`transform-transition ${showAdvanced ? 'rotate-180' : ''}`} />
-            </div>
-
-            {showAdvanced && (
-              <div className="notion-advanced-content">
-                {/* Smart Button Windows */}
-                <div className="notion-property">
-                  <div className="notion-property__label">
-                    <Clock3 size={14} />
-                    <span>ظهور الزر</span>
-                  </div>
-                  <div className="notion-property__value" style={{ gap: '12px' }}>
-                    <div className="mini-input-group">
-                      <label>قبل (دقيقة)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={joinBefore}
-                        onChange={(e) => setJoinBefore(Number(e.target.value))}
-                      />
-                    </div>
-                    <div className="mini-input-group">
-                      <label>بعد (دقيقة)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={joinAfter}
-                        onChange={(e) => setJoinAfter(Number(e.target.value))}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Summary Permission */}
-                <div className="notion-property">
-                  <div className="notion-property__label">
-                    <Shield size={14} />
-                    <span>صلاحية الملخص</span>
-                  </div>
-                  <div className="notion-property__value">
-                    <select
-                      value={summaryPermission}
-                      onChange={(e) => setSummaryPermission(e.target.value as any)}
-                    >
-                      <option value="creator_only">المنشئ فقط</option>
-                      <option value="all_attendees">جميع المشاركين</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Agenda */}
-          <div className="notion-agenda">
-            <div className="notion-agenda__label">
-              <FileText size={14} />
-              <span>جدول الأعمال</span>
-            </div>
-            <textarea
-              placeholder="اكتب جدول الأعمال والنقاط المراد مناقشتها..."
-              value={agenda}
-              onChange={(e) => setAgenda(e.target.value)}
-              rows={4}
-            />
-          </div>
+              <span className="cat-dot" aria-hidden="true" />
+              {c.name}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Footer */}
-        <div className="notion-modal__footer">
-          <button className="notion-btn notion-btn--secondary" onClick={onClose}>
-            إلغاء
+      {/* ── النوع والمكان ── */}
+      <div className="fin-field">
+        <label className="fin-field__label">نوع الاجتماع</label>
+        <div className="mfm-types">
+          <button
+            type="button"
+            className={`mfm-type${meetingType === 'physical' ? ' is-active' : ''}`}
+            onClick={() => setMeetingType('physical')}
+          >
+            حضوري
           </button>
           <button
-            className="notion-btn notion-btn--primary"
-            onClick={handleSubmit}
-            disabled={loading}
+            type="button"
+            className={`mfm-type${meetingType === 'remote' ? ' is-active' : ''}`}
+            onClick={() => setMeetingType('remote')}
           >
-            {loading ? 'جاري الحفظ...' : isEditing ? 'حفظ التعديلات' : 'إنشاء الاجتماع'}
+            عن بُعد
           </button>
         </div>
-
-        <style>{`
-          .notion-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(4px);
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            z-index: 1000;
-            padding: 60px 20px 20px;
-            overflow-y: auto;
-          }
-
-          .notion-modal {
-            background: var(--color-surface);
-            border-radius: 8px;
-            width: 100%;
-            max-width: 560px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            border: 1px solid var(--color-border, #e5e7eb);
-            animation: slideUp 0.2s ease-out;
-          }
-
-          @keyframes slideUp {
-            from {
-              opacity: 0;
-              transform: translateY(10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-
-          .notion-modal__header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 20px 20px 0;
-          }
-
-          .notion-modal__icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            background: var(--color-accent-soft, rgba(197, 165, 114, 0.15));
-            color: var(--color-accent, #C5A572);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-          }
-
-          .notion-modal__title-input {
-            flex: 1;
-            border: none;
-            background: none;
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--color-text);
-            outline: none;
-          }
-
-          .notion-modal__title-input::placeholder {
-            color: var(--color-text-secondary);
-            opacity: 0.5;
-          }
-
-          .notion-close-btn {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            border: none;
-            background: transparent;
-            color: var(--color-text-secondary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.15s;
-          }
-
-          .notion-close-btn:hover {
-            background: var(--color-surface-subtle);
-          }
-
-          .notion-modal__body {
-            padding: 20px;
-          }
-
-          .notion-error {
-            padding: 10px 12px;
-            border-radius: 6px;
-            background: var(--color-error-soft, #FEF2F2);
-            color: var(--color-error, #DC2626);
-            font-size: 13px;
-            margin-bottom: 16px;
-          }
-
-          .notion-properties {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            margin-bottom: 20px;
-          }
-
-          .notion-property {
-            display: flex;
-            align-items: center;
-            min-height: 34px;
-            border-radius: 4px;
-            transition: background 0.1s;
-          }
-
-          .notion-property:hover {
-            background: var(--color-surface-subtle);
-          }
-
-          .notion-property__label {
-            width: 120px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: var(--color-text-secondary);
-            padding: 0 8px;
-            flex-shrink: 0;
-          }
-
-          .notion-property__value {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 0 8px;
-          }
-
-          .notion-property__value input,
-          .notion-property__value select {
-            width: 100%;
-            border: none;
-            background: transparent;
-            font-size: 14px;
-            color: var(--color-text);
-            outline: none;
-            padding: 6px 0;
-          }
-
-          .notion-property__value--buttons {
-            gap: 6px;
-          }
-
-          .notion-type-btn {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 10px;
-            border-radius: 4px;
-            border: 1px solid var(--color-border, #e5e7eb);
-            background: var(--color-surface);
-            font-size: 12px;
-            color: var(--color-text-secondary);
-            cursor: pointer;
-            transition: all 0.15s;
-          }
-
-          .notion-type-btn:hover {
-            background: var(--color-surface-subtle);
-          }
-
-          .notion-type-btn--active {
-            background: var(--color-primary, #0A192F);
-            color: white;
-            border-color: var(--color-primary, #0A192F);
-          }
-
-          .notion-property__value--clickable {
-            cursor: pointer;
-            justify-content: space-between;
-            min-height: 34px;
-            padding: 4px 8px;
-            border-radius: 4px;
-          }
-
-          .notion-property__value--clickable:hover {
-            background: var(--color-surface-subtle);
-          }
-
-          .notion-selected-users {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-          }
-
-          .notion-user-chip {
-            padding: 2px 8px;
-            border-radius: 4px;
-            background: var(--color-surface-subtle);
-            font-size: 12px;
-            color: var(--color-text);
-          }
-
-          .notion-more {
-            padding: 2px 6px;
-            font-size: 11px;
-            color: var(--color-text-secondary);
-          }
-
-          .notion-placeholder {
-            color: var(--color-text-secondary);
-            opacity: 0.6;
-            font-size: 14px;
-          }
-
-          .rotated {
-            transform: rotate(180deg);
-          }
-
-          .notion-property--participants {
-            position: relative;
-          }
-
-          .notion-users-dropdown {
-            position: absolute;
-            top: 100%;
-            right: 120px; /* Align with value start */
-            left: 0;
-            background: var(--color-surface);
-            border: 1px solid var(--color-border, #e5e7eb);
-            border-radius: 8px;
-            margin-top: 4px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            z-index: 100;
-          }
-
-          .notion-users-search {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--color-border, #e5e7eb);
-          }
-
-          .notion-users-search input {
-            flex: 1;
-            border: none;
-            background: none;
-            font-size: 13px;
-            outline: none;
-            color: var(--color-text);
-          }
-
-          .notion-users-search svg {
-            color: var(--color-text-secondary);
-          }
-
-          .notion-users-list {
-            max-height: 200px;
-            overflow-y: auto;
-          }
-
-          .notion-user-option {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
-            cursor: pointer;
-            transition: background 0.1s;
-          }
-
-          .notion-user-option:hover {
-            background: var(--color-surface-subtle);
-          }
-
-          .notion-user-option input {
-            display: none;
-          }
-
-          .notion-user-avatar {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: var(--color-primary, #0A192F);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 600;
-          }
-
-          .notion-user-info {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-          }
-
-          .notion-user-name {
-            font-size: 13px;
-            color: var(--color-text);
-          }
-
-          .notion-user-role {
-            font-size: 11px;
-            color: var(--color-text-secondary);
-          }
-
-          .notion-check {
-            color: var(--color-success, #10B981);
-          }
-
-          .notion-agenda {
-            border-top: 1px solid var(--color-border, #e5e7eb);
-            padding-top: 16px;
-          }
-
-          .notion-agenda__label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: var(--color-text-secondary);
-            margin-bottom: 8px;
-          }
-
-          .notion-agenda textarea {
-            width: 100%;
-            border: none;
-            background: transparent;
-            font-size: 14px;
-            color: var(--color-text);
-            outline: none;
-            resize: vertical;
-            min-height: 80px;
-            line-height: 1.6;
-          }
-
-          .notion-agenda textarea::placeholder {
-            color: var(--color-text-secondary);
-            opacity: 0.5;
-          }
-
-          .notion-users-search svg {
-            color: var(--color-text-secondary);
-          }
-
-          .notion-advanced-section {
-            margin-top: 8px;
-            border-top: 1px solid var(--color-border, #e5e7eb);
-            padding-top: 8px;
-          }
-
-          .notion-advanced-toggle {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            color: var(--color-text-secondary);
-            font-size: 13px;
-            font-weight: 500;
-          }
-
-          .notion-advanced-toggle:hover {
-            background: var(--color-surface-subtle);
-            color: var(--color-text);
-          }
-
-          .toggle-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-
-          .transform-transition {
-            transition: transform 0.2s;
-          }
-
-          .rotate-180 {
-            transform: rotate(180deg);
-          }
-
-          .notion-advanced-content {
-            padding-top: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-          }
-
-          .mini-input-group {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: var(--color-surface-subtle);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            color: var(--color-text-secondary);
-          }
-
-          .mini-input-group input {
-            width: 40px !important;
-            text-align: center;
-            font-weight: 500;
-          }
-
-          .notion-modal__footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            padding: 16px 20px;
-            border-top: 1px solid var(--color-border, #e5e7eb);
-          }
-
-          .notion-btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.15s;
-          }
-
-          .notion-btn--secondary {
-            border: 1px solid var(--color-border, #e5e7eb);
-            background: var(--color-surface);
-            color: var(--color-text);
-          }
-
-          .notion-btn--secondary:hover {
-            background: var(--color-surface-subtle);
-          }
-
-          .notion-btn--primary {
-            border: none;
-            background: var(--color-primary, #0A192F);
-            color: white;
-          }
-
-          .notion-btn--primary:hover {
-            opacity: 0.9;
-          }
-
-          .notion-btn--primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-          }
-        `}</style>
       </div>
-    </div >
+
+      {meetingType === 'physical' ? (
+        <div className="fin-field">
+          <label className="fin-field__label">المكان</label>
+          <input
+            className="fin-input"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="قاعة الاجتماعات الرئيسية"
+          />
+        </div>
+      ) : (
+        <div className="fin-field">
+          <label className="fin-field__label">رابط الاجتماع</label>
+          <input
+            className="fin-input"
+            value={videoUrl}
+            onChange={(e) => setVideoUrl(e.target.value)}
+            placeholder="https://…"
+            dir="ltr"
+          />
+          {fieldError('video_meeting_url') && (
+            <span className="fin-field__error">{fieldError('video_meeting_url')}</span>
+          )}
+        </div>
+      )}
+
+      <div className="fin-field">
+        <label className="fin-field__label">الأجندة</label>
+        <textarea
+          className="fin-textarea"
+          rows={3}
+          value={agenda}
+          onChange={(e) => setAgenda(e.target.value)}
+          placeholder="نقاط النقاش…"
+        />
+      </div>
+
+      </section>
+
+      <section className="mfm-col">
+      <h3 className="mfm-col__head">الحضور والارتباط</h3>
+
+      {/* ── الحضور ── */}
+      <div className="fin-field">
+        <label className="fin-field__label"><Users size={13} /> فريق المكتب</label>
+        <div className="mfm-search">
+          <Search size={14} aria-hidden="true" />
+          <input
+            className="fin-input"
+            value={staffSearch}
+            onChange={(e) => setStaffSearch(e.target.value)}
+            placeholder="ابحث بالاسم أو البريد…"
+          />
+        </div>
+        <div className="mfm-people">
+          {filteredStaff.map((u) => (
+            <button
+              key={u.id}
+              type="button"
+              className={`mfm-person${staffIds.includes(u.id) ? ' is-selected' : ''}`}
+              onClick={() => toggle(staffIds, setStaffIds, u.id)}
+            >
+              {staffIds.includes(u.id) && <Check size={12} aria-hidden="true" />}
+              <span>{u.name}</span>
+              <em>{ROLE_LABELS[u.role] || u.role}</em>
+            </button>
+          ))}
+          {filteredStaff.length === 0 && <p className="mfm-empty">لا نتائج</p>}
+        </div>
+      </div>
+
+      <div className="fin-field">
+        <label className="fin-field__label">عملاء</label>
+        <div className="mfm-search">
+          <Search size={14} aria-hidden="true" />
+          <input
+            className="fin-input"
+            value={clientSearch}
+            onChange={(e) => setClientSearch(e.target.value)}
+            placeholder="ابحث عن عميل بحرفين على الأقل…"
+          />
+        </div>
+        {clientIds.length > 0 && (
+          <div className="mfm-people">
+            {clients.filter((c) => clientIds.includes(c.id)).map((u) => (
+              <button
+                key={u.id}
+                type="button"
+                className="mfm-person is-selected"
+                onClick={() => toggle(clientIds, setClientIds, u.id)}
+              >
+                <Check size={12} aria-hidden="true" />
+                <span>{u.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {filteredClients.length > 0 && (
+          <div className="mfm-people">
+            {filteredClients.map((u) => (
+              <button
+                key={u.id}
+                type="button"
+                className={`mfm-person${clientIds.includes(u.id) ? ' is-selected' : ''}`}
+                onClick={() => toggle(clientIds, setClientIds, u.id)}
+              >
+                {clientIds.includes(u.id) && <Check size={12} aria-hidden="true" />}
+                <span>{u.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="fin-field">
+        <label className="fin-field__label">مشاركون من خارج المكتب</label>
+        <ExternalGuestsEditor guests={guests} onChange={setGuests} disabled={loading} />
+      </div>
+
+      {/* ── الربط ── */}
+      <div className="fin-field">
+        <label className="fin-field__label">مرتبط بـ</label>
+        <LinkTargetPicker
+          value={link}
+          summary={meeting?.linked_id === link.id ? meeting?.linked : null}
+          onChange={setLink}
+          disabled={loading}
+        />
+      </div>
+
+      </section>
+      </div>
+
+      {/* ── إعدادات متقدمة: خارج العمودين، بعرض المودال ── */}
+      <button type="button" className="mfm-advanced-toggle" onClick={() => setShowAdvanced((v) => !v)}>
+        <Settings2 size={13} /> إعدادات متقدمة
+      </button>
+
+      {showAdvanced && (
+        <div className="fin-grid fin-grid--3">
+          <div className="fin-field">
+            <label className="fin-field__label">زر الدخول يظهر قبل (دقيقة)</label>
+            <input
+              className="fin-input"
+              type="number"
+              min={0}
+              max={60}
+              value={joinBefore}
+              onChange={(e) => setJoinBefore(Number(e.target.value))}
+            />
+          </div>
+          <div className="fin-field">
+            <label className="fin-field__label">ويبقى بعد (دقيقة)</label>
+            <input
+              className="fin-input"
+              type="number"
+              min={0}
+              max={120}
+              value={joinAfter}
+              onChange={(e) => setJoinAfter(Number(e.target.value))}
+            />
+          </div>
+          <div className="fin-field">
+            <label className="fin-field__label">من يكتب الملخص</label>
+            <select
+              className="fin-input"
+              value={summaryPermission}
+              onChange={(e) => setSummaryPermission(e.target.value as 'creator_only' | 'all_attendees')}
+            >
+              <option value="creator_only">المنشئ فقط</option>
+              <option value="all_attendees">كل الحاضرين</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {isEditing && (
+        <p className="mfm-note">
+          حفظ التعديلات لا يُلغي ردود المشاركين الحاليين ولا أوقات دخولهم.
+        </p>
+      )}
+    </Modal>
   );
 };
 

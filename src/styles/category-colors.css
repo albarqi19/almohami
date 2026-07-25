@@ -1,0 +1,137 @@
+/* ====================================================================
+   ألوان تصنيفات الاجتماعات — طقم توكنات مستقل لكل ثيم
+   ====================================================================
+
+   لماذا طقم مستقل لا اشتقاق من توكنات الهوية:
+
+   1) --law-navy **ليس كحلياً** في ثيمين: في classic بنّي (#4A2C1A) وفي diwan
+      أزرق مخضرّ. تصنيفٌ اسمه «كحلي» يظهر بنّياً = تسمية كاذبة.
+
+   2) body.dark لا يعيد تعريف --status-* ولا --law-gold، فربط الرقائق بها
+      يعطي في الوضع الداكن ألواناً مصمّمة لخلفية بيضاء فوق سطح داكن.
+
+   3) اللون هنا **حامل معنى** (تمييز تصنيف عن تصنيف)، لا زينة. فيلزمه
+      شرطان يُقاسان: تباين نصّ ≥ 4.5:1، وتمايز بصري بين أي لونين.
+
+   الاستعمال: أضف .cat-<key> على العنصر، ثم اشتقّ كل شيء من var(--cat-c):
+     <span class="cat-navy meeting-chip">…</span>
+   ================================================================= */
+
+:root,
+body.diwan,
+body.classic {
+  --cat-navy: #1E3A5F;
+  --cat-gold: #B8860B;
+  --cat-blue: #0EA5E9;
+  --cat-green: #059669;
+  --cat-red: #DC2626;
+  --cat-purple: #7C3AED;
+  --cat-orange: #EA580C;
+  --cat-gray: #6B7280;
+
+  /* نسبة التينت خلف الرقاقة على سطح فاتح */
+  --cat-tint: 12%;
+}
+
+body.dark {
+  /* نُسخ أفتح: نفس درجات اللون بإضاءة تصلح فوق سطح داكن */
+  --cat-navy: #7DA2CC;
+  --cat-gold: #D4A93C;
+  --cat-blue: #5AC8F5;
+  --cat-green: #34D399;
+  --cat-red: #F87171;
+  --cat-purple: #A78BFA;
+  --cat-orange: #FB923C;
+  --cat-gray: #9CA3AF;
+
+  /* تينت أعمق على الداكن: 12% فوق سطح داكن يكاد لا يُرى (نمط erp.css) */
+  --cat-tint: 26%;
+}
+
+.cat-navy   { --cat-c: var(--cat-navy); }
+.cat-gold   { --cat-c: var(--cat-gold); }
+.cat-blue   { --cat-c: var(--cat-blue); }
+.cat-green  { --cat-c: var(--cat-green); }
+.cat-red    { --cat-c: var(--cat-red); }
+.cat-purple { --cat-c: var(--cat-purple); }
+.cat-orange { --cat-c: var(--cat-orange); }
+.cat-gray   { --cat-c: var(--cat-gray); }
+
+/* بلا تصنيف — محايد صريح لا غياب صامت */
+.cat-none { --cat-c: var(--color-border-strong, #9ca3af); }
+
+/* ---------- رقاقة التصنيف ---------- */
+
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cat-c) var(--cat-tint), transparent);
+  /* اللون المشبّع نصّاً: الباستيل فوق تينت يعطي تبايناً دون 2:1 */
+  color: var(--cat-c);
+  border: 1px solid color-mix(in srgb, var(--cat-c) 38%, transparent);
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* نقطة مصمتة: إشارة غير لونية أولى — تبقى مميّزة لعمى الألوان بالشكل والموضع */
+.cat-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cat-c);
+}
+
+/* ---------- مربّع اختيار اللون ---------- */
+
+.cat-swatch {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: var(--cat-c);
+  cursor: pointer;
+  transition: transform .1s;
+}
+
+.cat-swatch:hover { transform: scale(1.08); }
+
+.cat-swatch.is-selected {
+  border-color: var(--color-text);
+  box-shadow: inset 0 0 0 2px var(--color-surface);
+}
+
+/* ---------- رقاقة حدث في التقويم ---------- */
+
+.cat-event {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 2px 5px;
+  border: none;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--cat-c) var(--cat-tint), transparent);
+  color: var(--color-heading);
+  font-family: inherit;
+  font-size: 11px;
+  text-align: start;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.cat-event:hover { background: color-mix(in srgb, var(--cat-c) calc(var(--cat-tint) + 10%), transparent); }
+.cat-event__text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cat-swatch { transition: none; }
+  .cat-swatch:hover { transform: none; }
+}

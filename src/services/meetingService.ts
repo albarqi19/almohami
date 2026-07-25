@@ -29,6 +29,67 @@ export interface InternalMeeting {
   updated_at: string;
   creator?: User;
   participants?: MeetingParticipant[];
+
+  // ── العقد الموسَّع ─────────────────────────────────────────────
+  meeting_category_id?: number | null;
+  category?: MeetingCategoryRef | null;
+  attendees?: MeetingAttendee[];
+  /** internal | client | external — مشتقّ من أنواع الحاضرين */
+  audience?: 'internal' | 'client' | 'external';
+  linked_type?: LinkTargetType | null;
+  linked_id?: number | null;
+  linked?: LinkedSummary | null;
+  /** حالة الزر الذكي داخل الحمولة — تُغني عن طلب مستقل لكل اجتماع */
+  smart_button?: SmartButtonState;
+  scheduled_at_hijri?: string | null;
+  can?: {
+    update: boolean;
+    delete: boolean;
+    manage_state: boolean;
+    write_summary: boolean;
+  };
+}
+
+export type MeetingColor = 'navy' | 'gold' | 'blue' | 'green' | 'red' | 'purple' | 'orange' | 'gray';
+
+export interface MeetingCategoryRef {
+  id: number;
+  name: string;
+  color: MeetingColor;
+  system_code: string | null;
+}
+
+export interface MeetingCategory extends MeetingCategoryRef {
+  is_active: boolean;
+  position: number;
+  meetings_count?: number;
+}
+
+export type AttendeeType = 'user' | 'client' | 'external';
+
+export interface MeetingAttendee {
+  id: number;
+  meeting_id: number;
+  user_id: number | null;
+  attendee_type: AttendeeType;
+  status: 'pending' | 'accepted' | 'declined';
+  joined_at: string | null;
+  left_at: string | null;
+  display_name: string | null;
+  user?: Pick<User, 'id' | 'name' | 'email' | 'role'> | null;
+  /** لا يصل في القوائم — فقط في صفحة الاجتماع الواحد ولمن يملك تعديله */
+  email?: string | null;
+  phone?: string | null;
+}
+
+export type LinkTargetType = 'case' | 'legal_service' | 'task';
+
+export interface LinkedSummary {
+  type: LinkTargetType;
+  type_label: string;
+  id: number;
+  title: string;
+  reference: string | null;
 }
 
 export interface SummaryTask {
@@ -94,9 +155,13 @@ export interface CaseInfo {
 }
 
 export interface SmartButtonState {
-  status: 'upcoming' | 'join' | 'write_summary' | 'view_summary';
+  status: 'upcoming' | 'join' | 'write_summary' | 'view_summary' | 'cancelled' | 'unknown';
   label: string;
   disabled: boolean;
+  sublabel?: string;
+  color?: string;
+  action?: string | null;
+  url?: string;
   countdown?: number;
 }
 
@@ -116,7 +181,24 @@ export interface CreateInternalMeetingData {
   join_button_minutes_before?: number;
   join_button_minutes_after?: number;
   summary_permission?: 'creator_only' | 'all_attendees';
-  participants: number[];
+  /** الشكل القديم — أصحاب الحسابات فقط. يُقبل توافقاً. */
+  participants?: number[];
+  /** الشكل العام: موظف أو عميل أو طرف خارجي */
+  attendees?: AttendeeInput[];
+  meeting_category_id?: number | null;
+  linked_type?: LinkTargetType | null;
+  linked_id?: number | null;
+}
+
+export interface AttendeeInput {
+  type: AttendeeType;
+  user_id?: number | null;
+  /** إلزامي للطرف الخارجي وحده */
+  name?: string;
+  email?: string | null;
+  phone?: string | null;
+  /** موافقة صريحة على تنبيه واتساب — مطفأة افتراضياً */
+  notify_opted_in?: boolean;
 }
 
 export interface UpdateInternalMeetingData {
@@ -131,6 +213,10 @@ export interface UpdateInternalMeetingData {
   join_button_minutes_after?: number;
   summary_permission?: 'creator_only' | 'all_attendees';
   participants?: number[];
+  attendees?: AttendeeInput[];
+  meeting_category_id?: number | null;
+  linked_type?: LinkTargetType | null;
+  linked_id?: number | null;
 }
 
 export interface SaveSummaryData {
@@ -162,23 +248,53 @@ export interface CreateClientMeetingData {
 // ==========================================
 
 export const internalMeetingService = {
-  // جلب جميع الاجتماعات الداخلية
-  async getAll(params?: { status?: string; from?: string; to?: string }): Promise<InternalMeeting[]> {
-    let endpoint = '/meetings/internal';
-    if (params) {
-      const queryParams = new URLSearchParams();
-      if (params.status) queryParams.append('status', params.status);
-      if (params.from) queryParams.append('from', params.from);
-      if (params.to) queryParams.append('to', params.to);
-      const queryString = queryParams.toString();
-      if (queryString) endpoint += `?${queryString}`;
+  /**
+   * جلب الاجتماعات.
+   *
+   * ⚠️ أسماء الفلاتر: الخادم يقرأ from_date/to_date. كانت هذه الدالة ترسل
+   * from/to فتُهمَل بصمت — والصفحة تعرض «كل الاجتماعات» ظانّةً أنها مصفّاة.
+   * (الخادم صار يقبل الاسمين توافقاً، ونرسل الاسم الصحيح.)
+   *
+   * وper_page صريح: الافتراضي 15 صفاً، والمجموعات الزمنية والمؤشرات تُحسب
+   * على ما يصل — فمكتب نشط كان لا يرى مجموعة «اليوم» أصلاً.
+   */
+  async getAll(params?: {
+    status?: string;
+    from?: string;
+    to?: string;
+    meeting_category_id?: number;
+    linked_type?: string;
+    linked_id?: number;
+    per_page?: number;
+  }): Promise<InternalMeeting[]> {
+    const queryParams = new URLSearchParams();
+    queryParams.append('per_page', String(params?.per_page ?? 100));
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.from) queryParams.append('from_date', params.from);
+    if (params?.to) queryParams.append('to_date', params.to);
+    if (params?.meeting_category_id) queryParams.append('meeting_category_id', String(params.meeting_category_id));
+    if (params?.linked_type && params?.linked_id) {
+      queryParams.append('linked_type', params.linked_type);
+      queryParams.append('linked_id', String(params.linked_id));
     }
-    const response = await apiClient.get<{ success: boolean; data: { data: InternalMeeting[] } | InternalMeeting[] }>(endpoint);
-    // Handle both paginated and non-paginated responses
+
+    const response = await apiClient.get<{ success: boolean; data: { data: InternalMeeting[] } | InternalMeeting[] }>(
+      `/meetings/internal?${queryParams.toString()}`
+    );
+
+    // مغلّف الترقيم { data: { data: [...] } } أو مصفوفة مباشرة
     if (response.data && 'data' in response.data && Array.isArray((response.data as any).data)) {
       return (response.data as any).data || [];
     }
     return Array.isArray(response.data) ? response.data : [];
+  },
+
+  /** نطاق التقويم — بلا ترقيم، ويغطّي شبكة 42 خلية لا الشهر وحده. */
+  async getCalendar(month: string): Promise<InternalMeeting[]> {
+    const response = await apiClient.get<{ success: boolean; data: InternalMeeting[] }>(
+      `/meetings/internal/calendar?month=${encodeURIComponent(month)}`
+    );
+    return response.data || [];
   },
 
   // جلب الاجتماعات القادمة

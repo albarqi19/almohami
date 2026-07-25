@@ -1,0 +1,83 @@
+// تنسيق التواريخ بالعربية — بتقويم ومنطقة زمنية **مصرَّح بهما دائماً**.
+//
+// ── قاعدتان تحكمان هذا الملف ─────────────────────────────────────────
+//
+// 1) لا نعتمد على تقويم اللغة الافتراضي أبداً. سلوك 'ar-SA' المجرّدة يتباين
+//    بين إصدارات ICU ومحرّكات المتصفحات، فما يظهر ميلادياً على جهاز قد يظهر
+//    هجرياً على آخر — والمستخدم لا يملك ما يميّز. نمرّر '-u-ca-gregory'
+//    للميلادي و'-u-ca-islamic-umalqura' للهجري صراحةً.
+//
+// 2) timeZone: 'Asia/Riyadh' صريحاً. الخادم يخزّن ويحسب بتوقيت الرياض، فبلا
+//    تصريح يتبع العرضُ منطقةَ جهاز المستخدم: اجتماع 00:30 يظهر في يومٍ سابق
+//    لمن جهازه على توقيت مختلف، وقائمة «اليوم» تكذب.
+
+import { toHijri } from './hijriDate';
+
+const TZ = 'Asia/Riyadh';
+const AR = 'ar-SA-u-ca-gregory';
+
+// المُنسّقات على نطاق الوحدة: إنشاء Intl.DateTimeFormat يكلّف ~1.5ms،
+// وشبكة تقويم واحدة 42 خلية ⇒ عشرات المللي لكل رسم لو أُنشئت داخل الحلقة.
+const timeFmt = new Intl.DateTimeFormat(AR, { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
+const dayMonthFmt = new Intl.DateTimeFormat(AR, { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' });
+const shortDateFmt = new Intl.DateTimeFormat(AR, { timeZone: TZ, day: 'numeric', month: 'long', year: 'numeric' });
+const dayKeyFmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+
+/** أشهر ميلادية عربية مثبّتة — لا تتبع لغة الجهاز ولا تقويمه. */
+export const GREGORIAN_MONTHS_AR = [
+  'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+  'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+] as const;
+
+export const WEEKDAYS_AR = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'] as const;
+
+const asDate = (input: string | Date): Date => (input instanceof Date ? input : new Date(input));
+
+/** الساعة والدقيقة بتوقيت الرياض. */
+export const fmtTimeAr = (input: string | Date): string => timeFmt.format(asDate(input));
+
+/** «الخميس ١٢ يونيو» */
+export const fmtDayMonthAr = (input: string | Date): string => dayMonthFmt.format(asDate(input));
+
+/** «١٢ يونيو ٢٠٢٦» */
+export const fmtShortDateAr = (input: string | Date): string => shortDateFmt.format(asDate(input));
+
+/** «١٢ يونيو ٢٠٢٦ (٢١ ذو القعدة ١٤٤٧ هـ)» — التأكيد البصري المزدوج. */
+export function fmtDualAr(input: string | Date): string {
+  const gregorian = fmtShortDateAr(input);
+  const hijri = toHijri(input);
+  return hijri ? `${gregorian} (${hijri})` : gregorian;
+}
+
+/** عنوان شهر ميلادي: «يوليو ٢٠٢٦» من مصفوفة مثبّتة. */
+export function fmtMonthTitleAr(date: Date): string {
+  return `${GREGORIAN_MONTHS_AR[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+/**
+ * مفتاح اليوم «YYYY-MM-DD» **بتوقيت الرياض**.
+ *
+ * تجميع اجتماعات التقويم بمنطقة الجهاز يضع اجتماع 00:30 في اليوم السابق
+ * لمستخدم خارج المملكة. en-CA يُخرج الصيغة ISO مباشرةً بأرقام لاتينية.
+ */
+export function riyadhDayKey(input: string | Date): string {
+  return dayKeyFmt.format(asDate(input));
+}
+
+/** «اليوم» / «غداً» / «الخميس ١٢ يونيو» — نسبةً إلى يوم الرياض لا الجهاز. */
+export function relativeDayAr(input: string | Date): string {
+  const target = riyadhDayKey(input);
+  const today = riyadhDayKey(new Date());
+
+  if (target === today) return 'اليوم';
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (target === riyadhDayKey(tomorrow)) return 'غداً';
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (target === riyadhDayKey(yesterday)) return 'أمس';
+
+  return fmtDayMonthAr(input);
+}
