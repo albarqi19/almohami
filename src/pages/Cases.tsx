@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import useCaseAccessGuard from '../hooks/useCaseAccessGuard';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 import {
 	Plus,
@@ -126,6 +127,8 @@ const saveAdvFilters = (f: AdvancedFilters) => {
 
 const Cases: React.FC = () => {
 	const navigate = useNavigate();
+	// حارس القضايا المنقطعة عن ناجز — يعترض الضغط قبل الانتقال
+	const { guardOpen, accessModal } = useCaseAccessGuard();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const { prefs } = useDisplayPreferences();
 	// تنظيف كاش القائمة إن كان بحجم صفحة مختلف عن تفضيل المستخدم — قبل أن تقرأه
@@ -532,7 +535,7 @@ const Cases: React.FC = () => {
 							<tr
 								key={c.id}
 								className={c.is_bankruptcy ? 'is-bankruptcy' : ((c as any).is_grievance ? 'is-grievance' : undefined)}
-								onClick={() => navigate(caseDetailUrl(c))}
+								onClick={() => guardOpen(c as never, () => navigate(caseDetailUrl(c)))}
 							>
 								{/* العمود 1: القضية (عنوان + رقم + نوع) */}
 								<td>
@@ -542,6 +545,15 @@ const Cases: React.FC = () => {
 											{c.is_bankruptcy && <span className="erp-cell__tag erp-cell__tag--bankruptcy">إفلاس</span>}
 											{(c as any).is_reconciliation && <span className="erp-cell__tag" style={{ background: 'rgba(21,115,71,0.12)', color: '#157347', fontWeight: 700 }}>صلح</span>}
 											{(c as any).is_grievance && <span className="erp-cell__tag erp-cell__tag--grievance">ديوان المظالم</span>}
+											{(c as any).najiz_access_revoked && (
+												<span
+													className="erp-cell__tag"
+													title="انتهت علاقتك بهذه القضية في ناجز"
+													style={{ background: 'rgba(220,38,38,0.10)', color: 'var(--status-red, #dc2626)', fontWeight: 700 }}
+												>
+													انتهت العلاقة
+												</span>
+											)}
 											<span className="erp-cell__tag">{typeLabel}</span>
 										</div>
 									</div>
@@ -647,7 +659,7 @@ const Cases: React.FC = () => {
 				const typeLabel = (c as any).case_type_arabic || CASE_TYPE_LABELS[c.case_type] || c.case_type;
 
 				return (
-					<div key={c.id} className="case-card" onClick={() => navigate(caseDetailUrl(c))}>
+					<div key={c.id} className="case-card" onClick={() => guardOpen(c as never, () => navigate(caseDetailUrl(c)))}>
 						<div className="case-card__header">
 							<div>
 								<div className="case-card__title">{c.title}</div>
@@ -709,7 +721,7 @@ const Cases: React.FC = () => {
 									<div
 										key={c.id}
 										className="kanban-card"
-										onClick={() => navigate(caseDetailUrl(c))}
+										onClick={() => guardOpen(c as never, () => navigate(caseDetailUrl(c)))}
 									>
 										<div className="kanban-card__title">{c.title}</div>
 										<div className="kanban-card__meta">
@@ -1093,6 +1105,8 @@ const Cases: React.FC = () => {
 				clients={clients}
 				najizStatuses={najizStatuses}
 			/>
+
+			{accessModal}
 		</div >
 	);
 };

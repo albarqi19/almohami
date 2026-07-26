@@ -160,6 +160,11 @@ export interface Case {
   najiz_synced_at?: Date;
   najiz_status?: string;
   najiz_status_arabic?: string | null;
+  /**
+   * انقطعت علاقة المكتب بالقضية في ناجز (hasPermission=false): لم تُجلب بياناتها
+   * ولا يمكن فتحها. تبقى ظاهرة بالاسم والرقم وتُحتسب في تقارير الأداء.
+   */
+  najiz_access_revoked?: boolean | null;
   source?: string;
   // طلبات الإفلاس — صف مرساة يظهر في قائمة القضايا بلون مميّز ويوجّه لصفحة مختلفة
   is_bankruptcy?: boolean;

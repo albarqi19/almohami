@@ -136,9 +136,14 @@ class ApiClient {
             throw error;
           }
 
-          // خطأ 403 عام
-          const error = new Error(errorData.message || 'غير مصرح بهذا الإجراء') as Error & { errors?: Record<string, string[]> };
+          // خطأ 403 عام — نمرّر error_code كي تميّز المكوّنات حالات بعينها
+          // (مثل NAJIZ_ACCESS_REVOKED: قضية انقطعت علاقة المكتب بها في ناجز).
+          const error = new Error(errorData.message || 'غير مصرح بهذا الإجراء') as Error & {
+            errors?: Record<string, string[]>;
+            errorCode?: string;
+          };
           error.errors = errorData.errors;
+          error.errorCode = errorData.error_code;
           throw error;
         }
 

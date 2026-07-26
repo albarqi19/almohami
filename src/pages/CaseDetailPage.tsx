@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import NajizAccessRevokedModal, { NAJIZ_ACCESS_REVOKED_CODE } from '../components/NajizAccessRevokedModal';
 import {
   ArrowRight,
   Edit,
@@ -107,6 +108,8 @@ const CaseDetailPage: React.FC = () => {
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // شبكة أمان: فتح القضية برابط مباشر أو من موضع لم يمرّ بحارس القائمة
+  const [revokedInfo, setRevokedInfo] = useState<{ title?: string; file_number?: string } | null>(null);
   const [notifyModalSession, setNotifyModalSession] = useState<{ id: number; mode: NotifyMode | null; enabled: boolean } | null>(null);
   const [reportModalSession, setReportModalSession] = useState<number | null>(null);
   const [selectedDabtSession, setSelectedDabtSession] = useState<any>(null);
@@ -209,6 +212,10 @@ const CaseDetailPage: React.FC = () => {
 
         setTimelineEvents(timelineEventsData);
       } catch (err: any) {
+        // قضية انقطعت علاقة المكتب بها في ناجز — نعرض النافذة المخصّصة لا خطأً عاماً
+        if ((err as { errorCode?: string })?.errorCode === NAJIZ_ACCESS_REVOKED_CODE) {
+          setRevokedInfo({});
+        }
         setError(err.message || 'فشل في جلب تفاصيل القضية');
         hasFetchedRef.current = null; // Reset on error to allow retry
       } finally {
@@ -465,6 +472,13 @@ const CaseDetailPage: React.FC = () => {
             العودة إلى قائمة القضايا
           </Link>
         </div>
+
+        <NajizAccessRevokedModal
+          isOpen={revokedInfo !== null}
+          caseTitle={revokedInfo?.title}
+          fileNumber={revokedInfo?.file_number}
+          onClose={() => { setRevokedInfo(null); navigate('/cases'); }}
+        />
       </div>
     );
   }

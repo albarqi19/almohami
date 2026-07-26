@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, Briefcase, CheckSquare, Calendar, FileText, Loader2 } from 'lucide-react';
 import { globalSearch } from '../services/globalSearchService';
+import useCaseAccessGuard from '../hooks/useCaseAccessGuard';
 import type {
   GlobalSearchResults,
   GlobalSearchCase,
@@ -27,6 +28,8 @@ const DEBOUNCE_MS = 300;
 
 const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  // حارس القضايا المنقطعة عن ناجز
+  const { showRevoked, accessModal } = useCaseAccessGuard();
   const [query, setQuery] = React.useState('');
   const [results, setResults] = React.useState<GlobalSearchResults | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -92,9 +95,16 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
   const navigateToResult = React.useCallback(
     (result: FlatResult) => {
       switch (result.kind) {
-        case 'case':
+        case 'case': {
+          // قضية انقطعت علاقتها بناجز: نعرض النافذة ولا ننتقل ولا نُغلق البحث.
+          const c = result.item as { najiz_access_revoked?: boolean | null; title?: string; file_number?: string };
+          if (c?.najiz_access_revoked) {
+            showRevoked({ title: c.title, file_number: c.file_number });
+            return;
+          }
           navigate(`/cases/${result.item.id}`);
           break;
+        }
         case 'task':
           navigate(`/tasks/${result.item.id}`);
           break;
@@ -115,7 +125,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
       }
       onClose();
     },
-    [navigate, onClose]
+    [navigate, onClose, showRevoked]
   );
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -389,6 +399,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
               }
             `}</style>
           </motion.div>
+          {accessModal}
         </>
       )}
     </AnimatePresence>
