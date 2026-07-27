@@ -23,6 +23,7 @@ import AnnouncementBanner from './announcements/AnnouncementBanner';
 import AnnouncementTicker from './announcements/AnnouncementTicker';
 import AnnouncementModal from './announcements/AnnouncementModal';
 import AnnouncementToast from './announcements/AnnouncementToast';
+import MobileBetaInviteModal from './MobileBetaInviteModal';
 import { useAuth } from '../contexts/AuthContext';
 import { usePolicyCheck } from '../hooks/usePolicyCheck';
 
@@ -167,6 +168,9 @@ const Layout: React.FC = () => {
           {/* Announcement modal + toast channels (portal-style overlays) */}
           <AnnouncementModal />
           <AnnouncementToast />
+
+          {/* دعوة تجربة تطبيق الجوال — نافذة مستقلّة، تحرس أهليتها بنفسها */}
+          <MobileBetaInviteModal />
 
           {/* Floating Timer Widget */}
           <FloatingTimer />
