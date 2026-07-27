@@ -417,6 +417,8 @@ body.dark .ldx-btn--confirm { background: var(--law-gold); border-color: var(--l
   color: var(--color-text-secondary);
 }
 
+/* اسم القضية أولاً ورقم الملف بعده: القصّ على الاسم وحده — الرقم مُعرّف
+   يُبحث به في ناجز ويُذكر أمام الدائرة، فلا يُقصّ أبداً. */
 .ldx-caselink {
   background: none;
   border: none;
@@ -425,9 +427,27 @@ body.dark .ldx-btn--confirm { background: var(--law-gold); border-color: var(--l
   font-size: 10.5px;
   color: var(--law-navy);
   cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ldx-caselink__name {
+  max-width: 34ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   text-decoration: underline;
   text-underline-offset: 2px;
-  white-space: nowrap;
+}
+
+.ldx-caselink__no {
+  flex: none;
+  color: var(--color-text-secondary);
 }
 
 body.dark .ldx-caselink { color: var(--quiet-gray-700); }
@@ -591,9 +611,26 @@ body.dark .ldx-caselink { color: var(--quiet-gray-700); }
   font-family: inherit;
   color: var(--law-navy);
   cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* الويدجت أضيق من الصفحة — الاسم يتقلّص ورقم الملف يبقى كاملاً */
+.deadlines-widget__case-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   text-decoration: underline;
   text-underline-offset: 2px;
-  white-space: nowrap;
+}
+
+.deadlines-widget__case-no {
+  flex: none;
+  color: var(--quiet-gray-600);
 }
 
 body.dark .deadlines-widget__case-number { color: var(--quiet-gray-700); }

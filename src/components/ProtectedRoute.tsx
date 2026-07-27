@@ -91,7 +91,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         '/hearings',
         '/sessions',
         '/meetings',
-        '/reports',
+        '/firm-report',
         '/notifications',
         '/settings',
         '/account-status',

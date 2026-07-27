@@ -17,7 +17,6 @@ import {
     ChevronRight,
     ChevronLeft,
     Search,
-    Star,
     Clock,
     Scale,
     X,
@@ -130,7 +129,6 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
     // حالة ميزة ZATCA من الـ context (أعلى الشجرة) — لا تُستدعى داخل isItemVisible ولا في sidebarConfig.
     const { available: zatcaAvailable } = useZatcaFeature();
     const location = useLocation();
-    const [showFavorites, setShowFavorites] = React.useState(true);
 
     // عدادات حية بجوار عناصر القائمة (بحسب رؤية المستخدم — الباك يطبقها):
     //   المهل المفتوحة / المهام المفتوحة / الطلبات الإدارية بانتظار البت
@@ -212,12 +210,6 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
         return false;
     };
 
-    const favorites = [
-        { id: '1', label: 'القضية العقارية', type: 'case', color: '#1E3A5F' },
-        { id: '2', label: 'مهام هذا الأسبوع', type: 'task', color: '#059669' },
-        { id: '3', label: 'جلسات ديسمبر', type: 'session', color: '#D97706' },
-    ];
-
     const visibleMenuItems = mainMenuItems.filter(isItemVisible);
     const visibleSettingsItems = settingsMenuItems.filter(isItemVisible);
 
@@ -292,34 +284,11 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                         ))}
                     </div>
 
-                    {/* Favorites Section */}
-                    {!isCollapsed && user?.role !== 'client' && (
-                        <div className="sidebar__section">
-                            <div
-                                className="sidebar__section-title sidebar__section-title--clickable"
-                                onClick={() => setShowFavorites(!showFavorites)}
-                            >
-                                <span><Star size={12} /> المفضلة</span>
-                                <ChevronLeft size={12} style={{ transform: showFavorites ? 'rotate(-90deg)' : 'none' }} />
-                            </div>
-
-                            {showFavorites && (
-                                <div>
-                                    {favorites.map((fav) => (
-                                        <div key={fav.id} className="sidebar-link" style={{ cursor: 'pointer' }}>
-                                            <span style={{
-                                                width: '8px',
-                                                height: '8px',
-                                                borderRadius: '50%',
-                                                background: fav.color
-                                            }} />
-                                            <span className="sidebar-link__label">{fav.label}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    {/* حُذف قسم «المفضلة» — كان ثلاثة عناصر ديمو مزروعة في الكود
+                        («القضية العقارية»، «مهام هذا الأسبوع»، «جلسات ديسمبر») تُعرض
+                        لكل مستخدم غير العميل في أبرز موضع بالواجهة، وهي <div> غير
+                        قابلة للنقر أصلاً. يُعاد القسم متى بُنيت مفضلة حقيقية مربوطة
+                        بالمستخدم. */}
 
                     {/* Settings Section */}
                     <div className="sidebar__section">

@@ -54,13 +54,11 @@ const Tasks = lazyWithRetry(() => import('./pages/Tasks'));
 const TaskDetail = lazyWithRetry(() => import('./pages/TaskDetail'));
 const Documents = lazyWithRetry(() => import('./pages/Documents'));
 const Activities = lazyWithRetry(() => import('./pages/Activities'));
-const Reports = lazyWithRetry(() => import('./pages/Reports'));
 const LawyersReport = lazyWithRetry(() => import('./pages/LawyersReport'));
 const FirmReport = lazyWithRetry(() => import('./pages/FirmReport'));
 const MyPerformance = lazyWithRetry(() => import('./pages/MyPerformance'));
 const Notifications = lazyWithRetry(() => import('./pages/Notifications'));
 const Admin = lazyWithRetry(() => import('./pages/Admin'));
-const Statistics = lazyWithRetry(() => import('./pages/Statistics'));
 const Settings = lazyWithRetry(() => import('./pages/Settings'));
 const Archive = lazyWithRetry(() => import('./pages/Archive'));
 const WhatsappSettings = lazyWithRetry(() => import('./pages/WhatsappSettings'));
@@ -320,17 +318,22 @@ function App() {
                   <TaskDetail />
                 </ProtectedRoute>
               } />
+              {/* الوثائق — حراسة بالصلاحية لا بالدور.
+                  كان `allowedRoles={['admin','legal_assistant']}` يحجب المالك والشريك
+                  والمحامي والمحامي الأول عن صفحة يرونها في قائمتهم (عنصرها في
+                  sidebarConfig.ts محكوم بـ documents.view وهم يملكونها) — «باب شبح».
+                  الباك يفرض documents.* على مساراته أصلاً (routes/api.php:400-408). */}
               <Route path="documents" element={
-                <ProtectedRoute allowedRoles={['admin', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="documents.view">
                   <Documents />
                 </ProtectedRoute>
               } />
               <Route path="activities" element={<Activities />} />
-              <Route path="reports" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer']}>
-                  <Reports />
-                </ProtectedRoute>
-              } />
+              {/* حُذف المسار `reports` (pages/Reports.tsx) — كان يبني كل أرقامه من
+                  `mockReportsData` ثابتة (45 قضية، 850,000 ريال، 92% نجاح، أسماء
+                  محامين مختلَقة) ولا رابط إليه في sidebarConfig.ts، فكان يعرض أرقاماً
+                  كاذبة تبدو كأنها بيانات المكتب لمن يبلغه بالعنوان المباشر.
+                  التقارير الحقيقية: /firm-report و /lawyers-report و /my-performance. */}
               <Route path="firm-report" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner']}>
                   <FirmReport />
@@ -346,16 +349,19 @@ function App() {
                   <MyPerformance />
                 </ProtectedRoute>
               } />
+              {/* المستخدمون — مطابقة الباك: EnsureUserCanManageUsers يسمح لـ
+                  super_admin أو admin أو مالك المنشأة (is_tenant_owner) أو حامل
+                  system.manage. كان الحارس ['admin'] وحده فيحجب **مالك المكتب** عن
+                  إدارة مستخدميه رغم سماح الباك له. والأدوار المخصّصة مستثناة من هذا
+                  الحارس القديم فتُحكَم بالصلاحية (انظر ProtectedRoute.tsx:130-137). */}
               <Route path="users" element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'super_admin']}>
                   <Admin />
                 </ProtectedRoute>
               } />
-              <Route path="admin/statistics" element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <Statistics />
-                </ProtectedRoute>
-              } />
+              {/* حُذف المسار `admin/statistics` (pages/Statistics.tsx) — بيانات ثابتة
+                  مصلّبة (156 قضية، «2.4M») لثلاث فترات، وبلا رابط في sidebarConfig.ts.
+                  الإحصاءات الحقيقية في لوحة التحكم و/firm-report. */}
               <Route path="notifications" element={<Notifications />} />
               <Route path="settings" element={<Settings />} />
               <Route path="whatsapp-settings" element={<WhatsappSettings />} />

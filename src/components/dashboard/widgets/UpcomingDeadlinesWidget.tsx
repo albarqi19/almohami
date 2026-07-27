@@ -65,13 +65,17 @@ const UpcomingDeadlinesWidget: React.FC<Props> = ({ limit = 5, days, mine, oblig
                   {d.case && (
                     <button
                       className="deadlines-widget__case-number"
-                      title={d.case.title}
+                      title={[d.case.title, d.case.file_number].filter(Boolean).join(' — ')}
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/cases/${d.case!.id}`);
                       }}
                     >
-                      📂 {d.case.file_number || d.case.title}
+                      📂
+                      <span className="deadlines-widget__case-name">{d.case.title || d.case.file_number}</span>
+                      {d.case.title && d.case.file_number && (
+                        <span className="deadlines-widget__case-no">· {d.case.file_number}</span>
+                      )}
                     </button>
                   )}
                   {d.assignee && <span className="deadlines-widget__assignee">👤 {d.assignee.name}</span>}

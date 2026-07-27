@@ -224,17 +224,16 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
         }
     };
 
+    /**
+     * صلاحيات العميل — لا مسار خلفي لها بعد.
+     *
+     * كانت هذه الدالة تنتظر 500ms ثم تعرض «تم حفظ صلاحيات العميل» بلا أي نداء،
+     * فيظنّ المديرُ أنه قيّد وصول العميل إلى مستند سرّي ولم يُحفظ شيء — وهو ضررٌ
+     * أكبر من غياب الميزة نفسها. حتى يُبنى المسار (عمود على المستند + endpoint)
+     * نُفصح بصدق بدل الادّعاء، والمفاتيح معطّلة أعلاه لئلا توحي بأنها تعمل.
+     */
     const handleSaveClientPermissions = async () => {
-        setSaving(true);
-        try {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            setSuccess('تم حفظ صلاحيات العميل');
-            setTimeout(() => setSuccess(null), 3000);
-        } catch (err) {
-            setError('فشل في حفظ صلاحيات العميل');
-        } finally {
-            setSaving(false);
-        }
+        setError('صلاحيات العميل غير مفعّلة بعد — لم يُحفظ أي تغيير. استخدم تبويب «الصلاحيات» لتقييد الوصول.');
     };
 
     const filteredUsers = allUsers.filter(user =>
@@ -685,6 +684,25 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
                                     </div>
                                 </div>
 
+                                {/* إفصاح: لا مسار خلفي لهذه المفاتيح بعد — تُعرض للاطّلاع لا للضبط. */}
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    gap: '10px',
+                                    padding: '12px 14px',
+                                    marginBottom: '16px',
+                                    background: 'rgba(245, 158, 11, 0.08)',
+                                    border: '1px solid rgba(245, 158, 11, 0.35)',
+                                    borderRadius: '8px'
+                                }}>
+                                    <AlertCircle size={16} color="#f59e0b" style={{ flexShrink: 0, marginTop: '2px' }} />
+                                    <div style={{ fontSize: '12px', lineHeight: 1.7, color: 'var(--color-text-secondary)' }}>
+                                        <strong style={{ color: 'var(--color-heading)' }}>هذه المفاتيح غير مفعّلة بعد.</strong>{' '}
+                                        تغييرها لا يُحفظ ولا يؤثّر في وصول العميل. لتقييد الوصول فعلياً استخدم تبويب
+                                        {' '}<strong>«الصلاحيات»</strong> أو زرّ <strong>«تقييد»</strong>.
+                                    </div>
+                                </div>
+
                                 {/* Permission Toggles */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                     {/* View Permission */}
@@ -710,7 +728,9 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
                                             type="checkbox"
                                             checked={clientCanView}
                                             onChange={(e) => setClientCanView(e.target.checked)}
-                                            style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                                            disabled
+                                            title="غير مفعّلة بعد — التغيير لا يُحفظ"
+                                            style={{ width: '20px', height: '20px', cursor: 'not-allowed', opacity: 0.5 }}
                                         />
                                     </div>
 
@@ -737,7 +757,9 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
                                             type="checkbox"
                                             checked={clientCanDownload}
                                             onChange={(e) => setClientCanDownload(e.target.checked)}
-                                            style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                                            disabled
+                                            title="غير مفعّلة بعد — التغيير لا يُحفظ"
+                                            style={{ width: '20px', height: '20px', cursor: 'not-allowed', opacity: 0.5 }}
                                         />
                                     </div>
 
@@ -764,7 +786,9 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
                                             type="checkbox"
                                             checked={clientCanUpload}
                                             onChange={(e) => setClientCanUpload(e.target.checked)}
-                                            style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                                            disabled
+                                            title="غير مفعّلة بعد — التغيير لا يُحفظ"
+                                            style={{ width: '20px', height: '20px', cursor: 'not-allowed', opacity: 0.5 }}
                                         />
                                     </div>
                                 </div>

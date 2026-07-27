@@ -178,7 +178,7 @@ const ClientDashboard: React.FC = () => {
           </div>
         </Link>
 
-        <Link to="/my-documents" className="stat-card">
+        <Link to="/my-documents-required" className="stat-card">
           <div className="stat-card__icon stat-card__icon--purple">
             <Upload size={24} />
           </div>
@@ -208,7 +208,7 @@ const ClientDashboard: React.FC = () => {
               <Activity size={18} />
               آخر الأنشطة
             </h2>
-            <Link to="/my-activities" className="dashboard-section__link">
+            <Link to="/activities" className="dashboard-section__link">
               عرض الكل
               <ChevronLeft size={14} style={{ marginRight: 4 }} />
             </Link>
@@ -299,7 +299,7 @@ const ClientDashboard: React.FC = () => {
                 <span className="quick-action__text">عرض جميع القضايا</span>
               </Link>
 
-              <Link to="/my-documents" className="quick-action">
+              <Link to="/my-documents-required" className="quick-action">
                 <div className="quick-action__icon quick-action__icon--upload">
                   <Upload size={18} />
                 </div>

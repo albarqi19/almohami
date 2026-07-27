@@ -211,8 +211,16 @@ const DeadlineRow: React.FC<RowProps> = ({ deadline: d, busy, isManager, expande
       <div className="ldx-row__meta">
         <span>📅 آخر يوم: {formatDue(d.due_date)}</span>
         {d.case && (
-          <button className="ldx-caselink" onClick={() => onOpenCase(d.case!.id)}>
-            📂 {d.case.file_number || d.case.title}
+          <button
+            className="ldx-caselink"
+            title={[d.case.title, d.case.file_number].filter(Boolean).join(' — ')}
+            onClick={() => onOpenCase(d.case!.id)}
+          >
+            📂
+            <span className="ldx-caselink__name">{d.case.title || d.case.file_number}</span>
+            {d.case.title && d.case.file_number && (
+              <span className="ldx-caselink__no">· {d.case.file_number}</span>
+            )}
           </button>
         )}
         {d.assignee && <span>👤 {d.assignee.name}</span>}
