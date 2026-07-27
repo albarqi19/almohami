@@ -29,10 +29,12 @@ import {
   ArrowDown,
   Settings,
   Trash2,
+  FileWarning,
 } from 'lucide-react';
 import { WekalatService } from '../services/wekalatService';
 import { CaseWekalaService, type WekalaCaseItem } from '../services/caseWekalaService';
 import { AddWekalaModal } from '../components/AddWekalaModal';
+import { MissingWekalaCasesPanel } from '../components/MissingWekalaCasesPanel';
 import { useAuth } from '../contexts/AuthContext';
 import { Link as RouterLink } from 'react-router-dom';
 import type { Wekala, WekalaParty, WekalaPermission } from '../types';
@@ -401,6 +403,8 @@ const Wekalat: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('معتمدة');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+  /** ‏«الوكالات» أو «قضايا بلا وكالة» — الثاني يُحسب عند فتحه لا قبله */
+  const [mainTab, setMainTab] = useState<'wekalat' | 'missing'>('wekalat');
   const [sortByExpiry, setSortByExpiry] = useState<'asc' | 'desc' | null>(null);
   const [selectedWekala, setSelectedWekala] = useState<Wekala | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -823,13 +827,32 @@ const Wekalat: React.FC = () => {
   return (
     <div className="wekalat-page">
       {/* Header Bar */}
-      <header className="wekalat-header-bar">
+      {/* ‏في تبويب «قضايا بلا وكالة» يُخفى بحث الوكالات وفلاترها — أدواتٌ لا محلَّ لها هناك */}
+      <header className={`wekalat-header-bar ${mainTab === 'missing' ? 'wekalat-header-bar--compact' : ''}`}>
         {/* Start: Title + Stats */}
         <div className="wekalat-header-bar__start">
           <div className="wekalat-header-bar__title">
             <FileCheck size={20} />
             <span>الوكالات</span>
-            <span className="wekalat-header-bar__count">{stats.total}</span>
+            {mainTab === 'wekalat' && <span className="wekalat-header-bar__count">{stats.total}</span>}
+          </div>
+
+          {/* ‏تبويبان: الوكالات نفسها، والقضايا التي لا وكالة لها.
+              ‏الثاني بديلُ إشعارات wekala_missing المتقاعدة — يُحسب عند فتحه. */}
+          <div className="wekalat-view-tabs">
+            <button
+              className={`wekalat-view-tab ${mainTab === 'wekalat' ? 'wekalat-view-tab--active' : ''}`}
+              onClick={() => setMainTab('wekalat')}
+            >
+              الوكالات
+            </button>
+            <button
+              className={`wekalat-view-tab ${mainTab === 'missing' ? 'wekalat-view-tab--active' : ''}`}
+              onClick={() => setMainTab('missing')}
+            >
+              <FileWarning size={14} />
+              قضايا بلا وكالة
+            </button>
           </div>
           <div className="wekalat-header-bar__stats">
             <span className="wekala-stat-pill wekala-stat-pill--approved">
@@ -964,7 +987,9 @@ const Wekalat: React.FC = () => {
       </header>
 
       {/* Content */}
-      {loading ? (
+      {mainTab === 'missing' ? (
+        <MissingWekalaCasesPanel />
+      ) : loading ? (
         <div className="wekalat-loading">
           {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="wekalat-skeleton-row" />)}
         </div>
@@ -993,7 +1018,7 @@ const Wekalat: React.FC = () => {
       )}
 
       {/* Pagination */}
-      {!loading && filteredWekalat.length > 0 && (
+      {mainTab === 'wekalat' && !loading && filteredWekalat.length > 0 && (
         <div className="wekalat-pagination">
           <div className="wekalat-pagination__info">
             {filteredWekalat.length} وكالة • صفحة {pagination.currentPage} من {pagination.totalPages}

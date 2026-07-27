@@ -62,7 +62,45 @@ export interface WekalaCaseItem {
     next_hearing: string | null;
 }
 
+/**
+ * ‏قضية لا وكالة لها — بديل إشعارات `wekala_missing` المتقاعدة.
+ *
+ * ‏كان هذا يصل صندوق التنبيهات صفّاً لكل (قضية × مستخدم) يتكرّر كل سبعة
+ * ‏أيام؛ فبلغ 7,766 صفّاً 18.7% منها فقط صادق. صار قائمةً تُحسب عند فتحها،
+ * ‏فتعكس اللحظة: ما إن تُربط الوكالة حتى تخرج القضية منها.
+ */
+export interface MissingWekalaCase {
+    id: number;
+    file_number: string;
+    title: string;
+    client_name: string | null;
+    court: string | null;
+    status: string;
+    status_arabic: string;
+    next_hearing: string | null;
+    /** ‏وكالاتٌ سارية يظهر فيها أحد محامي القضية — مرشَّحاتٌ للربط بنقرة */
+    suggestions_count: number;
+}
+
+export interface MissingWekalaResponse {
+    data: MissingWekalaCase[];
+    meta: {
+        total: number;
+        returned: number;
+        scope: 'tenant' | 'own';
+        lookahead_days: number;
+    };
+}
+
 export class CaseWekalaService {
+    static async missingCases(sort: 'hearing' | 'oldest' = 'hearing'): Promise<MissingWekalaResponse> {
+        const res = await apiClient.get<ApiResponse<MissingWekalaCase[]> & { meta: MissingWekalaResponse['meta'] }>(
+            `/wekalat/missing-cases?sort=${sort}`
+        );
+        if (!res.success || !res.data) throw new Error(res.message || 'فشل جلب القضايا بلا وكالة');
+        return { data: res.data, meta: res.meta };
+    }
+
     static async forCase(caseId: number | string): Promise<CaseWekalatResponse> {
         const res = await apiClient.get<ApiResponse<CaseWekalatResponse>>(`/cases/${caseId}/wekalat`);
         if (!res.success || !res.data) throw new Error(res.message || 'فشل جلب وكالات القضية');
