@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, Check, Search, Settings2, Tag, Users } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Check, Search, Settings2, Sparkles, Tag, Users, X } from 'lucide-react';
 import Modal from '../erp/Modal';
 import DualDateInput from '../common/DualDateInput';
 import ExternalGuestsEditor from './ExternalGuestsEditor';
@@ -12,6 +12,7 @@ import {
   type LinkTargetType,
   type MeetingCategory,
   type UpdateInternalMeetingData,
+  type VideoProviderOption,
 } from '../../services/meetingService';
 import meetingCategoryService from '../../services/meetingCategoryService';
 import { apiClient } from '../../utils/api';
@@ -110,6 +111,14 @@ const CreateInternalMeetingModal: React.FC<Props> = ({
   const [staffSearch, setStaffSearch] = useState('');
   const [clientSearch, setClientSearch] = useState('');
 
+  // توليد رابط الاجتماع
+  const [videoProviders, setVideoProviders] = useState<VideoProviderOption[]>([]);
+  const [generatingVideo, setGeneratingVideo] = useState<string | null>(null);
+  const [videoNotice, setVideoNotice] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  // المزوّد المولَّد فعلاً — يُرسل مع الحفظ بدل تثبيت 'manual' دائماً
+  const [videoProvider, setVideoProvider] = useState<string>(meeting?.video_provider || 'manual');
+
   /**
    * ⚠️ لا تُلمس هذه الكتلة.
    * نستخرج التاريخ والوقت بالتوقيت المحلي في كليهما (getFullYear/getHours…)
@@ -161,6 +170,15 @@ const CreateInternalMeetingModal: React.FC<Props> = ({
     })();
   }, [meeting?.meeting_category_id]);
 
+  // المزوّدون المتاحون فعلاً على هذا الخادم — لا قائمة ثابتة بالواجهة.
+  // نستبعد «اليدوي» من أزرار التوليد: هو الحالة الافتراضية (الحقل نفسه).
+  useEffect(() => {
+    internalMeetingService
+      .getVideoProviders()
+      .then((list) => setVideoProviders(list.filter((p) => p.key !== 'manual')))
+      .catch(() => setVideoProviders([]));
+  }, []);
+
   /**
    * مطابقة بحث آمنة أمام الحقول الفارغة.
    *
@@ -202,6 +220,31 @@ const CreateInternalMeetingModal: React.FC<Props> = ({
     setList(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   };
 
+  /**
+   * يولّد رابطاً ويضعه في الحقل — بلا حفظ الاجتماع أولاً.
+   *
+   * الرابط يُولَّد على الخادم لا في المتصفّح: عنوان الخادم يأتي من إعداداته،
+   * وعشوائية اسم الغرفة تشفيرية (random_bytes) لا Math.random.
+   */
+  const generateVideoLink = async (providerKey: string) => {
+    setGeneratingVideo(providerKey);
+    setVideoError(null);
+    setVideoNotice(null);
+
+    try {
+      const link = await internalMeetingService.draftVideoLink(providerKey);
+      setVideoUrl(link.url);
+      setVideoProvider(link.provider);
+      if (link.notice) setVideoNotice(link.notice);
+    } catch (e) {
+      // الفشل يُقال صراحةً: اجتماع «عن بُعد» بلا رابط يبدو سليماً في القائمة
+      // ثم لا يجد أحدٌ أين يدخل.
+      setVideoError(e instanceof Error ? e.message : 'تعذّر توليد الرابط — ألصق رابطاً يدوياً.');
+    } finally {
+      setGeneratingVideo(null);
+    }
+  };
+
   const handleSubmit = async () => {
     setError(null);
     setFieldErrors({});
@@ -233,7 +276,9 @@ const CreateInternalMeetingModal: React.FC<Props> = ({
       duration_minutes: duration,
       location: meetingType === 'physical' ? (location || null) : null,
       video_meeting_url: meetingType === 'remote' ? (videoUrl || null) : null,
-      video_provider: meetingType === 'remote' ? 'manual' : undefined,
+      // المزوّد الفعلي لا 'manual' مثبّتاً: رابط Jitsi مولَّد كان يُحفظ موسوماً
+      // «يدوي» فيضيع أثر مصدره، ويتعذّر تمييز الغرفة العامة عن رابط المكتب.
+      video_provider: meetingType === 'remote' ? videoProvider : undefined,
       attendees,
       meeting_category_id: categoryId,
       linked_type: link.id ? link.type : null,
@@ -385,13 +430,58 @@ const CreateInternalMeetingModal: React.FC<Props> = ({
       ) : (
         <div className="fin-field">
           <label className="fin-field__label">رابط الاجتماع</label>
-          <input
-            className="fin-input"
-            value={videoUrl}
-            onChange={(e) => setVideoUrl(e.target.value)}
-            placeholder="https://…"
-            dir="ltr"
-          />
+
+          {videoProviders.length > 0 && (
+            <div className="mfm-video">
+              {videoProviders.map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  className="mfm-video__gen"
+                  onClick={() => generateVideoLink(p.key)}
+                  disabled={generatingVideo !== null}
+                >
+                  <Sparkles size={13} aria-hidden="true" />
+                  {generatingVideo === p.key ? 'يُولَّد…' : `ولّد رابط ${p.label}`}
+                </button>
+              ))}
+              <span className="mfm-video__or">أو ألصق رابطك أدناه</span>
+            </div>
+          )}
+
+          <div className="mfm-video__row">
+            <input
+              className="fin-input"
+              value={videoUrl}
+              onChange={(e) => {
+                setVideoUrl(e.target.value);
+                // لصقٌ يدوي يُلغي وسم المزوّد المولَّد — وإلا حُفظ رابط المكتب
+                // موسوماً «jitsi» وهو ليس كذلك.
+                setVideoProvider('manual');
+                setVideoNotice(null);
+              }}
+              placeholder="https://…"
+              dir="ltr"
+            />
+            {videoUrl && (
+              <button
+                type="button"
+                className="mfm-video__clear"
+                onClick={() => { setVideoUrl(''); setVideoProvider('manual'); setVideoNotice(null); }}
+                aria-label="مسح الرابط"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          {/* تحذير السرّية إلزامي مع الغرفة العامة — لا يُخفى بعد التوليد */}
+          {videoNotice && (
+            <p className="mfm-video__notice">
+              <AlertTriangle size={12} aria-hidden="true" /> {videoNotice}
+            </p>
+          )}
+          {videoError && <span className="fin-field__error">{videoError}</span>}
           {fieldError('video_meeting_url') && (
             <span className="fin-field__error">{fieldError('video_meeting_url')}</span>
           )}

@@ -4,6 +4,15 @@ import { apiClient } from '../utils/api';
 // Types - أنواع البيانات
 // ==========================================
 
+/**
+ * مفاتيح مزوّدي الرابط — مرآة لـVideoLinkService::storableKeys() بالخادم.
+ *
+ * ⚠️ كان الاتحاد هنا `'manual' | 'zoom' | 'google_meet' | 'teams'` بلا jitsi،
+ * وهو النوع نفسه الذي انحرف في تحقّق الخادم فرفض رابطاً ولّده الخادم نفسه.
+ * `google_meet` و`teams` مُبقاتان لأن صفوفاً قديمة تحملهما (العمود كان ENUM).
+ */
+export type VideoProviderKey = 'manual' | 'jitsi' | 'zoom' | 'google_meet' | 'teams';
+
 export interface InternalMeeting {
   id: number;
   tenant_id: number;
@@ -14,7 +23,7 @@ export interface InternalMeeting {
   timezone: string;
   location: string | null;
   video_meeting_url: string | null;
-  video_provider: 'manual' | 'zoom' | 'google_meet' | 'teams' | null;
+  video_provider: VideoProviderKey | null;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   join_button_minutes_before: number;
   join_button_minutes_after: number;
@@ -63,6 +72,12 @@ export interface MeetingCategory extends MeetingCategoryRef {
   is_active: boolean;
   position: number;
   meetings_count?: number;
+}
+
+/** مزوّد رابط اجتماع متاح على هذا الخادم — المفتاح يُخزَّن في video_provider */
+export interface VideoProviderOption {
+  key: string;
+  label: string;
 }
 
 export type AttendeeType = 'user' | 'client' | 'external';
@@ -388,6 +403,35 @@ export const internalMeetingService = {
   }> {
     const response = await apiClient.get<{ success: boolean; data: any }>('/meetings/internal/stats');
     return response.data;
+  },
+
+  /**
+   * المزوّدون المتاحون **فعلاً على هذا الخادم** — لا قائمة ثابتة بالواجهة.
+   *
+   * زوم مثلاً لا يظهر حتى تصل بيانات اعتماده: خيارٌ يفشل عند الضغط أسوأ من
+   * خيار غير معروض.
+   */
+  async getVideoProviders(): Promise<VideoProviderOption[]> {
+    const response = await apiClient.get<{ success: boolean; data: VideoProviderOption[] }>(
+      '/meetings/internal/video/providers'
+    );
+    return response.data || [];
+  },
+
+  /**
+   * يولّد رابطاً **قبل حفظ الاجتماع** — نموذج الإنشاء لا يملك معرّفاً بعد.
+   *
+   * الرابط يعود إلى الحقل ثم يُحفظ مع الاجتماع في طلب واحد، فلا تبقى نافذة
+   * يكون فيها اجتماعٌ «عن بُعد» بلا رابط.
+   */
+  async draftVideoLink(provider: string): Promise<{ url: string; provider: string; notice?: string }> {
+    const response = await apiClient.post<{
+      success: boolean;
+      notice?: string;
+      data: { url: string; provider: string };
+    }>('/meetings/internal/video/draft', { provider });
+
+    return { ...response.data, notice: response.notice };
   },
 };
 
