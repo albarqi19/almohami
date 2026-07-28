@@ -80,6 +80,7 @@ const MemoApprovals = lazyWithRetry(() => import('./pages/MemoApprovals'));
 const ClientMessages = lazyWithRetry(() => import('./pages/ClientMessages'));
 const ClientEstablishmentPage = lazyWithRetry(() => import('./pages/ClientEstablishmentPage'));
 const PersonalNotebook = lazyWithRetry(() => import('./pages/NotebookWorkspace'));
+const UserGuide = lazyWithRetry(() => import('./pages/UserGuide'));
 
 // Legal Services Pages
 const LegalServices = lazyWithRetry(() => import('./pages/legal-services/LegalServices'));
@@ -410,6 +411,15 @@ function App() {
               <Route path="notebook" element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
                   <PersonalNotebook />
+                </ProtectedRoute>
+              } />
+
+              {/* دليل الاستخدام — مسار محوِّل لا صفحة: يطلب تذكرة موقّعة ثم ينتقل
+                  إلى الدليل الذي يخدمه الخادم. لمستخدمي المكتب دون العميل (الحاجز
+                  الحقيقي في الخادم عبر internal.user، والصفحة تمنعه من صفحة بيضاء). */}
+              <Route path="guide" element={
+                <ProtectedRoute>
+                  <UserGuide />
                 </ProtectedRoute>
               } />
 
