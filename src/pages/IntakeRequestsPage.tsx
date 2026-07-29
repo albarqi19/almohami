@@ -1,434 +1,639 @@
-// «صندوق الطلبات الذكي» — طلبات واردة من بريد Outlook حوّلها الذكاء لاقتراحات
-// (خدمة/استشارة/قضية). الذكاء يقترح فقط — المراجع يصحّح ويعتمد/يرفض من هنا.
-import React, { useEffect, useMemo, useState } from 'react';
+// «الطلبات» — اللوح المنقسم: قائمة يميناً وتفصيل يساراً في شاشة واحدة،
+// بلا انتقال صفحات ولا فقدان موضع. الذكاء يقترح — والمراجع يصحّح ويعتمد/يرفض.
+//
+// ⚠️ شريط المراحل يعرض ما يبلغه الباك **فعلاً** اليوم (وارد ← مراجعة ← فُتح الملف).
+// مرحلتا «عُرض السعر» و«مقبول» تصلان مع م١/م٢ ولا تُرسمان قبل أن تكونا حقيقيتين —
+// واجهةٌ تعرض مرحلةً لا يبلغها الباك تكذب على مستعملها.
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Inbox, RefreshCw, X, Mail, Paperclip, Download, CheckCircle2, Ban,
-  Clock, AlertTriangle, Briefcase, MessageSquare, Scale, Sparkles, UserCheck,
+  Inbox, RefreshCw, X, Paperclip, Download, CheckCircle2, Ban,
+  AlertTriangle, Briefcase, MessageSquare, Scale, Zap, ChevronRight, ChevronLeft,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
-  intakeRequestService, INTAKE_SERVICE_TYPES,
-  type IntakeRequest, type IntakeTarget, type IntakeStatus,
+  intakeRequestService, INTAKE_SERVICE_TYPES, BILLING_TYPES,
+  type IntakeRequest, type IntakeTarget, type IntakeStatus, type ApprovePayload,
 } from '../services/intakeRequestService';
 import { UserService, type User } from '../services/UserService';
 import '../styles/intake-requests.css';
 
-const STATUS_TABS: { key: IntakeStatus | 'all'; label: string; icon: React.ReactNode }[] = [
-  { key: 'pending_review', label: 'قيد المراجعة', icon: <Clock size={13} /> },
-  { key: 'approved', label: 'معتمَدة', icon: <CheckCircle2 size={13} /> },
-  { key: 'rejected', label: 'مرفوضة', icon: <Ban size={13} /> },
-  { key: 'extraction_failed', label: 'فشل الاستخلاص', icon: <AlertTriangle size={13} /> },
+type TabKey = IntakeStatus | 'all';
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'pending_review', label: 'تحتاج تدخّلك' },
+  { key: 'needs_info', label: 'غير مكتملة' },
+  { key: 'extraction_failed', label: 'فشل الاستخلاص' },
+  { key: 'approved', label: 'فُتحت ملفاتها' },
+  { key: 'rejected', label: 'مرفوضة' },
+  { key: 'all', label: 'الكل' },
 ];
 
-const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  pending_review: { label: 'قيد المراجعة', cls: 'intake-status--pending' },
-  approved: { label: 'معتمَد', cls: 'intake-status--approved' },
-  rejected: { label: 'مرفوض', cls: 'intake-status--rejected' },
-  needs_info: { label: 'يحتاج توضيحاً', cls: 'intake-status--pending' },
-  extraction_failed: { label: 'فشل الاستخلاص', cls: 'intake-status--failed' },
+const STATUS_CHIP: Record<string, { label: string; cls: string }> = {
+  pending_review: { label: 'وارد', cls: 'rq-chip--new' },
+  needs_info: { label: 'غير مكتمل', cls: 'rq-chip--info' },
+  extraction_failed: { label: 'فشل الاستخلاص', cls: 'rq-chip--failed' },
+  approved: { label: 'فُتح الملف', cls: 'rq-chip--open' },
+  rejected: { label: 'مرفوض', cls: 'rq-chip--rejected' },
 };
 
 const TARGET_META: Record<IntakeTarget, { label: string; icon: React.ReactNode }> = {
-  service: { label: 'خدمة قانونية', icon: <Briefcase size={13} /> },
-  consultation: { label: 'استشارة', icon: <MessageSquare size={13} /> },
-  case: { label: 'قضية', icon: <Scale size={13} /> },
+  service: { label: 'خدمة', icon: <Briefcase size={11} /> },
+  consultation: { label: 'استشارة', icon: <MessageSquare size={11} /> },
+  case: { label: 'قضية', icon: <Scale size={11} /> },
 };
-
-const confidenceCls = (c: number) => (c >= 80 ? 'intake-conf--high' : c >= 40 ? 'intake-conf--mid' : 'intake-conf--low');
 
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString('ar-SA', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 
 const fmtSize = (bytes: number) =>
-  bytes > 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1024))}KB`;
+  bytes > 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} م.ب` : `${Math.max(1, Math.round(bytes / 1024))} ك.ب`;
 
+/** «منذ كم» لعمر الطلب — نُرجع null بدل تاريخ مزيّف حين لا نملك القيمة. */
+const sinceLabel = (iso: string | null): string | null => {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(ms) || ms < 0) return null;
+  const mins = Math.floor(ms / 60000);
+  if (mins < 60) return `${mins} دقيقة`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} ساعة`;
+  return `${Math.floor(hours / 24)} يوماً`;
+};
+
+const isPending = (s: IntakeStatus) =>
+  s === 'pending_review' || s === 'needs_info' || s === 'extraction_failed';
+
+/** رسالة الخطأ من الباك إن وُجدت — وإلا نصّ بديل. لا نعرض «[object Object]» أبداً. */
+const errorMessage = (e: unknown, fallback: string): string => {
+  const msg = (e as { response?: { data?: { message?: unknown } } })?.response?.data?.message;
+  return typeof msg === 'string' && msg.trim() ? msg : fallback;
+};
+
+// ─────────────────────────── شريط المراحل ───────────────────────────
+type RailNode = { key: string; label: string; kind: 'step' | 'gate'; state: 'done' | 'now' | 'todo' };
+
+const buildRail = (r: IntakeRequest): RailNode[] => {
+  const opened = r.status === 'approved';
+  const closed = r.status === 'rejected';
+  return [
+    { key: 'in', label: 'وارد', kind: 'step', state: 'done' },
+    { key: 'review', label: 'المراجعة', kind: 'step', state: opened || closed ? 'done' : 'now' },
+    { key: 'ready', label: 'اكتمال البيانات', kind: 'gate', state: opened ? 'done' : 'todo' },
+    { key: 'open', label: 'فُتح الملف', kind: 'step', state: opened ? 'done' : 'todo' },
+  ];
+};
+
+const StageRail: React.FC<{ request: IntakeRequest }> = ({ request }) => {
+  const nodes = buildRail(request);
+  const age = sinceLabel(request.received_at);
+
+  return (
+    <div className="rq-rail">
+      <div className="rq-rail__track">
+        {nodes.map((n, i) => (
+          <React.Fragment key={n.key}>
+            {i > 0 && <span className={`rq-rail__link ${nodes[i - 1].state === 'done' ? 'is-done' : ''}`} />}
+            <div className={`rq-rail__node ${n.state === 'now' ? 'is-current' : ''}`}>
+              <span className={`rq-rail__mark rq-rail__mark--${n.kind} is-${n.state}`}>
+                <b>{n.state === 'done' ? '✓' : n.kind === 'gate' ? '◇' : i + 1}</b>
+              </span>
+              <span className="rq-rail__label">{n.label}</span>
+            </div>
+          </React.Fragment>
+        ))}
+      </div>
+      <div className="rq-rail__foot">
+        <span className="rq-rail__exits">مخارج متاحة: <b>غير مكتمل</b> · <b>مرفوض</b></span>
+        {age && <span className="rq-rail__age">عمر الطلب {age}</span>}
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────── الصفحة ───────────────────────────
 const IntakeRequestsPage: React.FC = () => {
-  const [tab, setTab] = useState<IntakeStatus | 'all'>('pending_review');
+  const [tab, setTab] = useState<TabKey>('pending_review');
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [approveFor, setApproveFor] = useState<IntakeRequest | null>(null);
+  const [rejectFor, setRejectFor] = useState<IntakeRequest | null>(null);
+  const [undo, setUndo] = useState<{ label: string; href: string | null } | null>(null);
+  const undoTimer = useRef<number | null>(null);
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isFetching, refetch } = useQuery({
+  const { data, isLoading, isFetching, refetch, isError } = useQuery({
     queryKey: ['intake-requests', tab],
     queryFn: () => intakeRequestService.list({ status: tab, per_page: 50 }),
   });
 
-  const rows: IntakeRequest[] = data?.data?.data ?? [];
+  const rows: IntakeRequest[] = useMemo(() => data?.data?.data ?? [], [data]);
   const counts = data?.counts ?? {};
-  const pendingCount = counts['pending_review'] ?? 0;
+
+  // أوّل صفّ يُفتح تلقائياً — لا تبدأ الشاشة بلوح فارغ
+  useEffect(() => {
+    if (rows.length === 0) { setSelectedId(null); return; }
+    if (!rows.some((r) => r.id === selectedId)) setSelectedId(rows[0].id);
+  }, [rows, selectedId]);
+
+  const selected = useMemo(() => rows.find((r) => r.id === selectedId) ?? null, [rows, selectedId]);
+
+  const { data: detail } = useQuery({
+    queryKey: ['intake-request', selectedId],
+    queryFn: () => intakeRequestService.show(selectedId as number),
+    enabled: selectedId != null,
+  });
+  const full: IntakeRequest | null = detail?.data ?? selected;
+
+  const showUndo = (label: string, href: string | null) => {
+    setUndo({ label, href });
+    if (undoTimer.current) window.clearTimeout(undoTimer.current);
+    undoTimer.current = window.setTimeout(() => setUndo(null), 10_000);
+  };
+  useEffect(() => () => { if (undoTimer.current) window.clearTimeout(undoTimer.current); }, []);
+
+  const approveMut = useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: ApprovePayload }) =>
+      intakeRequestService.approve(id, payload),
+    onSuccess: (res, vars) => {
+      const d = res.data;
+      const href = d.case_id ? `/cases/${d.case_id}` : d.service_id ? `/legal-services/${d.service_id}` : null;
+      const promoted = d.attachments_promoted > 0 ? ` · نُقل ${d.attachments_promoted} مرفقاً إلى مستندات الملف` : '';
+      toast.success(`${res.message}${promoted}`);
+      showUndo(`${res.message}${promoted}`, href);
+      setApproveFor(null);
+      queryClient.invalidateQueries({ queryKey: ['intake-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['intake-request', vars.id] });
+    },
+    onError: (e: unknown) => toast.error(errorMessage(e, 'تعذّر اعتماد الطلب')),
+  });
+
+  const rejectMut = useMutation({
+    mutationFn: ({ id, note }: { id: number; note: string }) => intakeRequestService.reject(id, note),
+    onSuccess: (res) => {
+      toast.success(res.message);
+      setRejectFor(null);
+      queryClient.invalidateQueries({ queryKey: ['intake-requests'] });
+    },
+    onError: (e: unknown) => toast.error(errorMessage(e, 'تعذّر رفض الطلب')),
+  });
+
+  const pending = counts['pending_review'] ?? 0;
+  const currentIndex = full ? rows.findIndex((r) => r.id === full.id) : -1;
 
   return (
-    <div className="intake-page">
-      <header className="intake-topbar">
-        <div className="intake-topbar__title">
-          <Inbox size={20} />
-          <span>صندوق الطلبات الذكي</span>
-          {pendingCount > 0 && <span className="intake-topbar__badge">{pendingCount} بانتظارك</span>}
-        </div>
-        <button className="intake-btn" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw size={14} className={isFetching ? 'intake-spin' : ''} /> تحديث
+    <div className="rq-page">
+      <header className="rq-top">
+        <h1 className="rq-top__title">الطلبات</h1>
+        <span className="rq-top__kpi">
+          {isLoading ? '…' : `${data?.data?.total ?? 0} طلباً · ${pending} تحتاج تدخّلك`}
+        </span>
+        <span className="rq-top__spacer" />
+        <button className="rq-btn rq-btn--ghost" onClick={() => refetch()} disabled={isFetching}>
+          <RefreshCw size={13} className={isFetching ? 'rq-spin' : ''} /> تحديث
         </button>
       </header>
 
-      <div className="intake-tabs">
-        {STATUS_TABS.map((t) => (
+      <nav className="rq-tabs" role="tablist">
+        {TABS.map((t) => (
           <button
             key={t.key}
-            className={`intake-tab ${tab === t.key ? 'intake-tab--active' : ''}`}
+            role="tab"
+            aria-selected={tab === t.key}
+            className={`rq-tab ${tab === t.key ? 'is-active' : ''}`}
             onClick={() => setTab(t.key)}
           >
-            {t.icon} {t.label}
-            <span className="intake-tab__count">{counts[t.key] ?? 0}</span>
+            {t.label}
+            {counts[t.key] != null && <b className="rq-tab__count">{counts[t.key]}</b>}
           </button>
         ))}
+      </nav>
+
+      <div className="rq-split">
+        {/* ── القائمة ── */}
+        <section className="rq-list" aria-label="قائمة الطلبات">
+          {isLoading && (
+            <div className="rq-skeleton">
+              {[0, 1, 2, 3].map((i) => <div key={i} className="rq-skeleton__row" />)}
+            </div>
+          )}
+
+          {!isLoading && isError && (
+            <div className="rq-fallback">
+              <AlertTriangle size={22} strokeWidth={1.4} />
+              <p>تعذّر جلب الطلبات</p>
+              <button className="rq-btn rq-btn--ghost" onClick={() => refetch()}>
+                <RefreshCw size={13} /> أعد المحاولة
+              </button>
+            </div>
+          )}
+
+          {!isLoading && !isError && rows.length === 0 && (
+            <div className="rq-empty">
+              <Inbox size={28} strokeWidth={1.2} />
+              <p className="rq-empty__title">لا طلبات في هذا التبويب</p>
+              <p className="rq-empty__hint">تصل الطلبات من بريد المكتب تلقائياً كل خمس دقائق.</p>
+            </div>
+          )}
+
+          {rows.map((r) => {
+            const chip = STATUS_CHIP[r.status] ?? { label: r.status, cls: '' };
+            const target = r.suggested_target ? TARGET_META[r.suggested_target] : null;
+            const lowConfidence = (r.confidence ?? 0) < 60;
+            const ready = isPending(r.status) && !lowConfidence && !!r.matched_client_id;
+
+            return (
+              <article
+                key={r.id}
+                className={`rq-row ${selectedId === r.id ? 'is-open' : ''}`}
+                onClick={() => setSelectedId(r.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(r.id); }
+                }}
+              >
+                <div className="rq-row__head">
+                  <span className="rq-row__no">#{r.id}</span>
+                  <span className={`rq-chip ${chip.cls}`}>{chip.label}</span>
+                  <span className="rq-top__spacer" />
+                  {r.confidence != null && (
+                    <span className={`rq-conf ${lowConfidence ? 'is-low' : ''}`} title="ثقة الاستخلاص">
+                      <i style={{ width: `${Math.max(0, Math.min(100, r.confidence))}%` }} />
+                      <b>{r.confidence}٪</b>
+                    </span>
+                  )}
+                </div>
+
+                <p className="rq-row__subject">
+                  {r.extracted_payload?.title || r.subject || 'بلا عنوان'}
+                </p>
+
+                <div className="rq-row__meta">
+                  <span>{r.matched_client?.name || r.from_name || r.from_email || 'مُرسِل غير معروف'}</span>
+                  {!r.matched_client_id && <span className="rq-chip rq-chip--ghost">غير مطابق لعميل</span>}
+                  {target && <span className="rq-row__target">{target.icon}{target.label}</span>}
+                  {r.attachments_count ? (
+                    <span className="rq-row__att"><Paperclip size={10} />{r.attachments_count}</span>
+                  ) : null}
+                </div>
+
+                {isPending(r.status) && (
+                  <>
+                    <p className="rq-row__next">
+                      <b className="rq-you">أنتَ:</b>{' '}
+                      {lowConfidence ? 'راجع — ثقة الاستخلاص منخفضة'
+                        : !r.matched_client_id ? 'اربط الطلب بعميل قبل الاعتماد'
+                        : 'راجع واعتمد'}
+                    </p>
+                    <div className="rq-row__acts" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className={`rq-act ${ready ? 'is-primary' : 'is-blocked'}`}
+                        onClick={() => setApproveFor(r)}
+                      >
+                        {ready ? <><Zap size={11} /> اعتماد</> : 'راجع أولاً'}
+                      </button>
+                      <button className="rq-act" onClick={() => setRejectFor(r)}>رفض</button>
+                    </div>
+                  </>
+                )}
+              </article>
+            );
+          })}
+        </section>
+
+        {/* ── التفصيل ── */}
+        <section className="rq-pane" aria-label="تفصيل الطلب">
+          {!full && !isLoading && (
+            <div className="rq-pane__blank"><p>اختر طلباً من القائمة</p></div>
+          )}
+
+          {full && (
+            <>
+              <header className="rq-pane__head">
+                <span className="rq-pane__id">طلب #{full.id}</span>
+                <span className={`rq-chip ${STATUS_CHIP[full.status]?.cls ?? ''}`}>
+                  {STATUS_CHIP[full.status]?.label ?? full.status}
+                </span>
+                <span className="rq-top__spacer" />
+                <button
+                  className="rq-navbtn" disabled={currentIndex <= 0}
+                  onClick={() => currentIndex > 0 && setSelectedId(rows[currentIndex - 1].id)}
+                ><ChevronRight size={13} /> السابق</button>
+                <button
+                  className="rq-navbtn" disabled={currentIndex < 0 || currentIndex >= rows.length - 1}
+                  onClick={() => currentIndex >= 0 && currentIndex < rows.length - 1 && setSelectedId(rows[currentIndex + 1].id)}
+                >التالي <ChevronLeft size={13} /></button>
+              </header>
+
+              <StageRail request={full} />
+
+              {isPending(full.status) ? (
+                <div className="rq-now">
+                  <h3 className="rq-now__title">الخطوة الآن — <span className="rq-you">أنتَ:</span> راجع الطلب واعتمده</h3>
+                  <ul className="rq-check">
+                    <li className={full.matched_client_id ? 'is-ok' : 'is-missing'}>
+                      <b>{full.matched_client_id ? '✓' : '○'}</b> عميل مرتبط
+                      {full.matched_client?.name ? ` — ${full.matched_client.name}` : ' — لم يُطابَق بعد'}
+                    </li>
+                    <li className={(full.confidence ?? 0) >= 60 ? 'is-ok' : 'is-missing'}>
+                      <b>{(full.confidence ?? 0) >= 60 ? '✓' : '○'}</b> ثقة الاستخلاص {full.confidence ?? 0}٪
+                    </li>
+                    <li className={full.suggested_target ? 'is-ok' : 'is-missing'}>
+                      <b>{full.suggested_target ? '✓' : '○'}</b> وجهة مقترحة
+                      {full.suggested_target ? ` — ${TARGET_META[full.suggested_target].label}` : ''}
+                    </li>
+                    <li className="is-missing"><b>○</b> محامٍ مكلَّف — يُختار عند الاعتماد</li>
+                  </ul>
+                  <div className="rq-now__acts">
+                    <button className="rq-btn" onClick={() => setApproveFor(full)}>
+                      <CheckCircle2 size={13} /> اعتمد وافتح الملف
+                    </button>
+                    <button className="rq-btn rq-btn--ghost" onClick={() => setRejectFor(full)}>
+                      <Ban size={13} /> رفض
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rq-now rq-now--done">
+                  <h3 className="rq-now__title">
+                    {full.status === 'approved' ? 'انتهى مساره — فُتح الملف' : 'انتهى مساره'}
+                  </h3>
+                  {full.case && <p className="rq-now__line">القضية <b>{full.case.file_number}</b> — {full.case.title}</p>}
+                  {full.service && <p className="rq-now__line">الخدمة <b>{full.service.service_number}</b> — {full.service.title}</p>}
+                  {full.review_note && <p className="rq-now__note">ملاحظة المراجع: {full.review_note}</p>}
+                  {full.reviewer && <p className="rq-now__note">بواسطة {full.reviewer.name} · {fmtDate(full.reviewed_at)}</p>}
+                </div>
+              )}
+
+              <div className="rq-facts">
+                <div className="rq-fact"><span className="rq-fact__k">المُرسِل</span><span className="rq-fact__v">{full.from_name || '—'}</span></div>
+                <div className="rq-fact"><span className="rq-fact__k">البريد</span><span className="rq-fact__v rq-ltr">{full.from_email || '—'}</span></div>
+                <div className="rq-fact"><span className="rq-fact__k">الخصم</span><span className="rq-fact__v">{full.extracted_payload?.opponent_name || '—'}</span></div>
+                <div className="rq-fact"><span className="rq-fact__k">وصل</span><span className="rq-fact__v">{fmtDate(full.received_at)}</span></div>
+              </div>
+
+              <div className="rq-section">
+                <h4 className="rq-section__title">الموضوع</h4>
+                <p className="rq-section__body">
+                  {full.extracted_payload?.description || full.raw_body || 'لا نصّ في الرسالة.'}
+                </p>
+              </div>
+
+              {!!full.attachments?.length && (
+                <div className="rq-section">
+                  <h4 className="rq-section__title">
+                    المرفقات <span className="rq-section__hint">{full.attachments.length} ملف</span>
+                  </h4>
+                  <div className="rq-files">
+                    {full.attachments.map((a) => (
+                      <button
+                        key={a.id}
+                        className="rq-file"
+                        disabled={!a.storage_path}
+                        title={a.storage_path ? 'تنزيل' : 'انتقل إلى مستندات الملف'}
+                        onClick={() => intakeRequestService
+                          .downloadAttachment(full.id, a.id, a.file_name)
+                          .catch(() => toast.error('تعذّر تحميل الملف'))}
+                      >
+                        <Download size={11} />
+                        <span className="rq-file__name">{a.file_name}</span>
+                        <span className="rq-file__size">{fmtSize(a.size)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </section>
       </div>
 
-      <div className="intake-table-wrap">
-        {isLoading ? (
-          <div className="intake-empty"><RefreshCw size={28} className="intake-spin" /><span>جاري التحميل…</span></div>
-        ) : rows.length === 0 ? (
-          <div className="intake-empty">
-            <Mail size={40} />
-            <strong>لا طلبات في هذا التبويب</strong>
-            <span>الرسائل الجديدة على بريد المكتب تظهر هنا تلقائياً خلال دقائق</span>
-          </div>
-        ) : (
-          <table className="intake-table">
-            <thead>
-              <tr>
-                <th>المُرسِل</th>
-                <th>الموضوع</th>
-                <th>الاقتراح</th>
-                <th>الثقة</th>
-                <th>العميل المطابَق</th>
-                <th>الحالة</th>
-                <th>وصلت</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} onClick={() => setSelectedId(r.id)}>
-                  <td>
-                    <div className="intake-sender">
-                      <span className="intake-sender__name">{r.from_name || '—'}</span>
-                      <span className="intake-sender__email">{r.from_email}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="intake-subject" title={r.subject ?? ''}>
-                      {r.has_attachments && <Paperclip size={12} style={{ marginInlineEnd: 5, verticalAlign: 'middle' }} />}
-                      {r.extracted_payload?.title || r.subject || '(بلا موضوع)'}
-                    </div>
-                  </td>
-                  <td>
-                    {r.suggested_target ? (
-                      <span className="intake-target-badge">
-                        {TARGET_META[r.suggested_target].icon} {TARGET_META[r.suggested_target].label}
-                        {r.suggested_service_type && INTAKE_SERVICE_TYPES[r.suggested_service_type]
-                          ? ` — ${INTAKE_SERVICE_TYPES[r.suggested_service_type]}` : ''}
-                      </span>
-                    ) : <span style={{ color: 'var(--color-text-secondary)' }}>—</span>}
-                  </td>
-                  <td>
-                    <span className={`intake-conf ${confidenceCls(r.confidence)}`}>
-                      <Sparkles size={11} /> {r.confidence}%
-                    </span>
-                  </td>
-                  <td>
-                    {r.matched_client ? (
-                      <span className="intake-match-hint"><UserCheck size={13} /> {r.matched_client.name}</span>
-                    ) : <span style={{ color: 'var(--color-text-secondary)' }}>غير مطابَق</span>}
-                  </td>
-                  <td>
-                    <span className={`intake-status ${STATUS_BADGE[r.status]?.cls ?? ''}`}>
-                      {STATUS_BADGE[r.status]?.label ?? r.status}
-                    </span>
-                  </td>
-                  <td style={{ whiteSpace: 'nowrap', fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                    {fmtDate(r.received_at)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* التراجع بعد الفعل بدل التأكيد قبله */}
+      {undo && (
+        <div className="rq-undo" role="status">
+          <span className="rq-undo__text">{undo.label}</span>
+          {undo.href && <a href={undo.href} className="rq-undo__link">فتح</a>}
+          <span className="rq-undo__bar"><i /></span>
+          <button className="rq-undo__close" onClick={() => setUndo(null)} aria-label="إغلاق"><X size={12} /></button>
+        </div>
+      )}
 
-      {selectedId !== null && (
-        <ReviewModal
-          requestId={selectedId}
-          onClose={() => setSelectedId(null)}
-          onDone={() => {
-            setSelectedId(null);
-            queryClient.invalidateQueries({ queryKey: ['intake-requests'] });
-          }}
+      {approveFor && (
+        <ApproveModal
+          request={approveFor}
+          busy={approveMut.isPending}
+          onClose={() => setApproveFor(null)}
+          onSubmit={(payload) => approveMut.mutate({ id: approveFor.id, payload })}
+        />
+      )}
+
+      {rejectFor && (
+        <RejectModal
+          request={rejectFor}
+          busy={rejectMut.isPending}
+          onClose={() => setRejectFor(null)}
+          onSubmit={(note) => rejectMut.mutate({ id: rejectFor.id, note })}
         />
       )}
     </div>
   );
 };
 
-// ─────────────────────────────────────────────────────────────────────
-// مودال المراجعة الكثيف: يمين نص الإيميل الأصلي + المرفقات، يسار الحقول
-// المستخرَجة قابلة للتحرير + محددات الوجهة/العميل/المحامي + اعتماد/رفض.
-// ─────────────────────────────────────────────────────────────────────
-
-const ReviewModal: React.FC<{ requestId: number; onClose: () => void; onDone: () => void }> = ({ requestId, onClose, onDone }) => {
-  const { data, isLoading } = useQuery({
-    queryKey: ['intake-request', requestId],
-    queryFn: () => intakeRequestService.show(requestId),
-  });
-  const req = data?.data;
-
-  const [target, setTarget] = useState<IntakeTarget>('service');
-  const [serviceType, setServiceType] = useState('other');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [clientId, setClientId] = useState<number | ''>('');
+// ─────────────────────────── نافذة الاعتماد ───────────────────────────
+const ApproveModal: React.FC<{
+  request: IntakeRequest;
+  busy: boolean;
+  onClose: () => void;
+  onSubmit: (p: ApprovePayload) => void;
+}> = ({ request, busy, onClose, onSubmit }) => {
+  const [target, setTarget] = useState<IntakeTarget>(request.suggested_target ?? 'service');
+  const [serviceType, setServiceType] = useState<string>(request.suggested_service_type ?? 'other');
+  const [clientId, setClientId] = useState<number | ''>(request.matched_client_id ?? '');
   const [lawyerId, setLawyerId] = useState<number | ''>('');
+  const [title, setTitle] = useState(request.extracted_payload?.title || request.subject || '');
+  const [description, setDescription] = useState(request.extracted_payload?.description || '');
+  const [billingType, setBillingType] = useState<string>('');
+  const [amount, setAmount] = useState<string>('');
   const [sendConfirmation, setSendConfirmation] = useState(true);
-  const [rejectMode, setRejectMode] = useState(false);
-  const [reviewNote, setReviewNote] = useState('');
 
-  // تعبئة أولية من اقتراحات الذكاء (المراجع يصحّح فوقها)
-  useEffect(() => {
-    if (!req) return;
-    setTarget(req.suggested_target ?? 'service');
-    if (req.suggested_service_type && INTAKE_SERVICE_TYPES[req.suggested_service_type]) {
-      setServiceType(req.suggested_service_type);
-    }
-    setTitle(req.extracted_payload?.title || req.subject || '');
-    setDescription(req.extracted_payload?.description || '');
-    if (req.matched_client_id) setClientId(req.matched_client_id);
-  }, [req]);
+  const { data: clients } = useQuery<User[]>({
+    queryKey: ['intake-clients'], queryFn: () => UserService.getClients(),
+  });
+  const { data: lawyers } = useQuery<User[]>({
+    queryKey: ['intake-lawyers'], queryFn: () => UserService.getLawyers(),
+  });
 
-  const { data: clients } = useQuery<User[]>({ queryKey: ['intake-clients'], queryFn: () => UserService.getClients() });
-  const { data: lawyers } = useQuery<User[]>({ queryKey: ['intake-lawyers'], queryFn: () => UserService.getLawyers() });
+  const canSubmit = !!clientId && !!lawyerId && title.trim().length > 0 && !busy;
 
-  const approveMutation = useMutation({
-    mutationFn: () => intakeRequestService.approve(requestId, {
+  const submit = () => {
+    if (!canSubmit) return;
+    onSubmit({
       target,
       service_type: target === 'service' ? serviceType : null,
-      client_id: clientId as number,
-      assigned_lawyer_id: lawyerId as number,
+      client_id: Number(clientId),
+      assigned_lawyer_id: Number(lawyerId),
       title: title.trim(),
       description: description.trim() || null,
       send_confirmation: sendConfirmation,
-      review_note: reviewNote.trim() || null,
-    }),
-    onSuccess: (res) => { toast.success(res.message || 'اعتُمد الطلب'); onDone(); },
-    onError: (e: Error) => toast.error(e.message || 'تعذّر الاعتماد'),
-  });
-
-  const rejectMutation = useMutation({
-    mutationFn: () => intakeRequestService.reject(requestId, reviewNote.trim() || undefined),
-    onSuccess: () => { toast.success('رُفض الطلب'); onDone(); },
-    onError: (e: Error) => toast.error(e.message || 'تعذّر الرفض'),
-  });
-
-  const isPending = req && ['pending_review', 'needs_info', 'extraction_failed'].includes(req.status);
-  const canApprove = isPending && clientId !== '' && lawyerId !== '' && title.trim() !== ''
-    && !approveMutation.isPending && !rejectMutation.isPending;
-
-  const download = async (attachmentId: number, fileName: string) => {
-    try { await intakeRequestService.downloadAttachment(requestId, attachmentId, fileName); }
-    catch (e) { toast.error(e instanceof Error ? e.message : 'تعذّر التحميل'); }
+      billing_type: billingType ? (billingType as ApprovePayload['billing_type']) : null,
+      agreed_amount: amount ? Number(amount) : null,
+    });
   };
 
-  const clientOptions = useMemo(() => clients ?? [], [clients]);
-  const lawyerOptions = useMemo(() => lawyers ?? [], [lawyers]);
-
   return (
-    <div className="intake-modal-overlay" onClick={onClose}>
-      <div className="intake-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="intake-modal__header">
-          <div className="intake-modal__title"><Mail size={17} /> مراجعة الطلب الوارد #{requestId}</div>
-          <button className="intake-modal__close" onClick={onClose}><X size={16} /></button>
+    <div className="rq-overlay" onClick={onClose}>
+      <div className="rq-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <header className="rq-modal__head">
+          <span>اعتماد الطلب #{request.id}</span>
+          <button className="rq-modal__x" onClick={onClose} aria-label="إغلاق"><X size={14} /></button>
+        </header>
+
+        <div className="rq-modal__row">
+          <label className="rq-field">
+            <span>الوجهة *</span>
+            <select value={target} onChange={(e) => setTarget(e.target.value as IntakeTarget)}>
+              <option value="service">خدمة قانونية</option>
+              <option value="consultation">استشارة</option>
+              <option value="case">قضية</option>
+            </select>
+          </label>
+          <label className="rq-field">
+            <span>نوع الخدمة {target !== 'service' && <em>— لا ينطبق</em>}</span>
+            <select value={serviceType} onChange={(e) => setServiceType(e.target.value)} disabled={target !== 'service'}>
+              {Object.entries(INTAKE_SERVICE_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </label>
         </div>
 
-        {isLoading || !req ? (
-          <div className="intake-empty"><RefreshCw size={26} className="intake-spin" /><span>جاري التحميل…</span></div>
-        ) : (
-          <>
-            <div className="intake-modal__body">
-              {/* ── نص الإيميل الأصلي ── */}
-              <div className="intake-modal__email">
-                <div className="intake-modal__email-head">
-                  <div className="intake-modal__email-subject">{req.subject || '(بلا موضوع)'}</div>
-                  <div className="intake-modal__email-meta">
-                    <span>{req.from_name || 'مُرسِل غير معروف'}</span>
-                    <bdo>{req.from_email}</bdo>
-                    <span>{fmtDate(req.received_at)}</span>
-                  </div>
-                </div>
-                <div className="intake-modal__email-body">{req.raw_body || '(بلا محتوى نصي)'}</div>
+        <div className="rq-modal__row">
+          <label className="rq-field">
+            <span>العميل *</span>
+            <select value={clientId} onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : '')}>
+              <option value="">اختر العميل…</option>
+              {(clients ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </label>
+          <label className="rq-field">
+            <span>المحامي المكلَّف *</span>
+            <select value={lawyerId} onChange={(e) => setLawyerId(e.target.value ? Number(e.target.value) : '')}>
+              <option value="">اختر المحامي…</option>
+              {(lawyers ?? []).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </label>
+        </div>
 
-                {(req.attachments?.length ?? 0) > 0 && (
-                  <div className="intake-attachments">
-                    <div className="intake-attachments__title">المرفقات ({req.attachments!.length})</div>
-                    {req.attachments!.map((a) => (
-                      <div key={a.id} className="intake-attachment">
-                        <Paperclip size={12} />
-                        <span>{a.file_name}</span>
-                        <span className="intake-attachment__meta">
-                          {fmtSize(a.size)}
-                          {a.extraction_status === 'done' && ' · حُلّل نصياً'}
-                          {a.extraction_status === 'skipped' && ' · لم يُحلَّل'}
-                          {a.extraction_status === 'failed' && ' · فشل التحليل'}
-                        </span>
-                        {a.storage_path && (
-                          <button onClick={() => download(a.id, a.file_name)}><Download size={12} /> تنزيل</button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+        <div className="rq-modal__row rq-modal__row--single">
+          <label className="rq-field">
+            <span>العنوان *</span>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={255} />
+          </label>
+        </div>
 
-              {/* ── الحقول القابلة للتحرير ── */}
-              <div className="intake-modal__form">
-                {req.status === 'extraction_failed' ? (
-                  <div className="intake-ai-strip">
-                    <AlertTriangle size={14} />
-                    تعذّر الاستخلاص الآلي — راجع النص يدوياً وعبّئ الحقول بنفسك.
-                  </div>
-                ) : (
-                  <div className="intake-ai-strip">
-                    <Sparkles size={14} />
-                    اقتراح الذكاء بثقة <strong>{req.confidence}%</strong>
-                    {req.extracted_payload?.client_name && <span>· صاحب الطلب: {req.extracted_payload.client_name}</span>}
-                    {req.extracted_payload?.opponent_name && <span>· الخصم: {req.extracted_payload.opponent_name}</span>}
-                    {req.extracted_payload?.attachments_summary && <span>· المرفقات: {req.extracted_payload.attachments_summary}</span>}
-                  </div>
-                )}
+        <div className="rq-modal__row rq-modal__row--single">
+          <label className="rq-field">
+            <span>الوصف</span>
+            <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={10000} />
+          </label>
+        </div>
 
-                {!isPending && (
-                  <div className="intake-ai-strip">
-                    <CheckCircle2 size={14} />
-                    عولج هذا الطلب — الحالة: {STATUS_BADGE[req.status]?.label}
-                    {req.reviewer && ` بواسطة ${req.reviewer.name}`}
-                    {req.service && ` · ${req.service.service_number}`}
-                    {req.case && ` · ${req.case.file_number}`}
-                    {req.review_note && ` · ملاحظة: ${req.review_note}`}
-                  </div>
-                )}
-
-                {isPending && !rejectMode && (
-                  <>
-                    <div className="intake-field">
-                      <label>وجهة الطلب</label>
-                      <div className="intake-target-picker">
-                        {(Object.keys(TARGET_META) as IntakeTarget[]).map((t) => (
-                          <button key={t} className={target === t ? 'active' : ''} onClick={() => setTarget(t)}>
-                            {TARGET_META[t].icon} {TARGET_META[t].label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {target === 'service' && (
-                      <div className="intake-field">
-                        <label>نوع الخدمة</label>
-                        <select value={serviceType} onChange={(e) => setServiceType(e.target.value)}>
-                          {Object.entries(INTAKE_SERVICE_TYPES).map(([k, v]) => (
-                            <option key={k} value={k}>{v}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    <div className="intake-field">
-                      <label>العنوان</label>
-                      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="عنوان الخدمة/القضية" />
-                    </div>
-
-                    <div className="intake-field">
-                      <label>الوصف</label>
-                      <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف الطلب (يُعبأ من الإيميل تلقائياً)" />
-                    </div>
-
-                    <div className="intake-grid-2">
-                      <div className="intake-field">
-                        <label>العميل {req.matched_client && <span className="intake-match-hint" style={{ display: 'inline-flex' }}><UserCheck size={11} /> مطابَق آلياً</span>}</label>
-                        <select value={clientId} onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : '')}>
-                          <option value="">— اختر العميل —</option>
-                          {clientOptions.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="intake-field">
-                        <label>المحامي المكلّف</label>
-                        <select value={lawyerId} onChange={(e) => setLawyerId(e.target.value ? Number(e.target.value) : '')}>
-                          <option value="">— اختر المحامي —</option>
-                          {lawyerOptions.map((l) => (
-                            <option key={l.id} value={l.id}>{l.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {clientId === '' && (
-                      <div className="intake-ai-strip" style={{ borderStyle: 'solid' }}>
-                        <AlertTriangle size={13} />
-                        لا عميل مطابَق — إن كان المُرسِل عميلاً جديداً أنشئه أولاً من صفحة «العملاء» ثم اعتمد.
-                      </div>
-                    )}
-
-                    <label className="intake-check">
-                      <input
-                        type="checkbox"
-                        checked={sendConfirmation}
-                        onChange={(e) => setSendConfirmation(e.target.checked)}
-                      />
-                      إرسال إيميل «استلمنا طلبكم وبدأنا العمل» للمُرسِل بعد الاعتماد
-                    </label>
-                  </>
-                )}
-
-                {isPending && rejectMode && (
-                  <div className="intake-field">
-                    <label>سبب الرفض (اختياري)</label>
-                    <textarea value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} placeholder="سبام / ليست طلباً / مكررة…" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {isPending && (
-              <div className="intake-modal__footer">
-                {rejectMode ? (
-                  <>
-                    <button className="intake-btn" onClick={() => setRejectMode(false)}>رجوع</button>
-                    <button
-                      className="intake-btn intake-btn--danger"
-                      onClick={() => rejectMutation.mutate()}
-                      disabled={rejectMutation.isPending}
-                    >
-                      <Ban size={14} /> تأكيد الرفض
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button className="intake-btn intake-btn--danger" onClick={() => setRejectMode(true)}>
-                      <Ban size={14} /> رفض
-                    </button>
-                    <button
-                      className="intake-btn intake-btn--approve"
-                      onClick={() => approveMutation.mutate()}
-                      disabled={!canApprove}
-                      title={clientId === '' ? 'اختر العميل أولاً' : lawyerId === '' ? 'اختر المحامي أولاً' : ''}
-                    >
-                      {approveMutation.isPending
-                        ? <RefreshCw size={14} className="intake-spin" />
-                        : <CheckCircle2 size={14} />} اعتماد وإنشاء
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-          </>
+        {target !== 'case' && (
+          <div className="rq-modal__row">
+            <label className="rq-field">
+              <span>نوع الفوترة <em>— اختياري</em></span>
+              <select value={billingType} onChange={(e) => setBillingType(e.target.value)}>
+                <option value="">بلا تحديد</option>
+                {Object.entries(BILLING_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </label>
+            <label className="rq-field">
+              <span>الأتعاب المتّفق عليها <em>— اختياري</em></span>
+              <input
+                type="number" min={0} step="0.01" inputMode="decimal"
+                value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="بالريال"
+              />
+            </label>
+          </div>
         )}
+
+        <label className="rq-toggle">
+          <input type="checkbox" checked={sendConfirmation} onChange={(e) => setSendConfirmation(e.target.checked)} />
+          <span>أرسل رسالة «استلمنا طلبكم» إلى {request.from_email || 'المُرسِل'}</span>
+        </label>
+
+        <footer className="rq-modal__foot">
+          <span className="rq-modal__hint">
+            {request.attachments_count
+              ? `سيُنقل ${request.attachments_count} مرفقاً إلى مستندات الملف`
+              : 'لا مرفقات'}
+          </span>
+          <span className="rq-top__spacer" />
+          <button className="rq-btn rq-btn--ghost" onClick={onClose} disabled={busy}>إلغاء</button>
+          <button className="rq-btn" onClick={submit} disabled={!canSubmit}>
+            {busy ? 'جارٍ…' : 'اعتمد وافتح الملف'}
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────── نافذة الرفض ───────────────────────────
+const REJECT_REASONS = [
+  'خارج تخصّص المكتب',
+  'تعارض مصالح',
+  'بريد ترويجي أو آلي',
+  'مكرّر',
+  'تعذّر التواصل',
+  'العميل غير جادّ',
+];
+
+const RejectModal: React.FC<{
+  request: IntakeRequest;
+  busy: boolean;
+  onClose: () => void;
+  onSubmit: (note: string) => void;
+}> = ({ request, busy, onClose, onSubmit }) => {
+  const [reason, setReason] = useState(REJECT_REASONS[0]);
+  const [note, setNote] = useState('');
+
+  return (
+    <div className="rq-overlay" onClick={onClose}>
+      <div className="rq-modal rq-modal--sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <header className="rq-modal__head">
+          <span>رفض الطلب #{request.id}</span>
+          <button className="rq-modal__x" onClick={onClose} aria-label="إغلاق"><X size={14} /></button>
+        </header>
+
+        <div className="rq-modal__row rq-modal__row--single">
+          <label className="rq-field">
+            <span>السبب * <em>— من قائمة مغلقة كي يمكن تحليلها لاحقاً</em></span>
+            <select value={reason} onChange={(e) => setReason(e.target.value)}>
+              {REJECT_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </label>
+        </div>
+
+        <div className="rq-modal__row rq-modal__row--single">
+          <label className="rq-field">
+            <span>ملاحظة داخلية <em>— لا تُرسل للمُرسِل</em></span>
+            <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} maxLength={2000} />
+          </label>
+        </div>
+
+        <p className="rq-warn">
+          <AlertTriangle size={13} /> ستُحذف ملفات المرفقات نهائياً، ويبقى سجلّ الطلب.
+        </p>
+
+        <footer className="rq-modal__foot">
+          <span className="rq-top__spacer" />
+          <button className="rq-btn rq-btn--ghost" onClick={onClose} disabled={busy}>إلغاء</button>
+          <button
+            className="rq-btn rq-btn--danger" disabled={busy}
+            onClick={() => onSubmit(note.trim() ? `${reason} — ${note.trim()}` : reason)}
+          >
+            {busy ? 'جارٍ…' : 'ارفض الطلب'}
+          </button>
+        </footer>
       </div>
     </div>
   );

@@ -65,7 +65,26 @@ export interface ApprovePayload {
   description?: string | null;
   send_confirmation: boolean;
   review_note?: string | null;
+  /** الأتعاب — اختيارية؛ تمريرها يشغّل الفوترة التلقائية على الخدمة الناتجة */
+  billing_type?: 'flat_fee' | 'hourly' | 'retainer' | 'contingency' | null;
+  agreed_amount?: number | null;
+  hourly_rate?: number | null;
 }
+
+export interface ApproveResult {
+  service_id: number | null;
+  case_id: number | null;
+  /** عدد المرفقات التي انتقلت فعلاً إلى مستندات الكيان الناتج */
+  attachments_promoted: number;
+}
+
+/** أنواع الفوترة — مطابقة تحقّق IntakeRequestController::approve */
+export const BILLING_TYPES: Record<string, string> = {
+  flat_fee: 'مبلغ مقطوع',
+  hourly: 'بالساعة',
+  retainer: 'أتعاب شهرية',
+  contingency: 'نسبة من المحصّل',
+};
 
 /** أنواع الخدمات المقترَحة (مطابقة EmailIntakeService::SERVICE_TYPES بلا consultation) */
 export const INTAKE_SERVICE_TYPES: Record<string, string> = {
@@ -102,7 +121,7 @@ class IntakeRequestService {
   }
 
   async approve(id: number, payload: ApprovePayload) {
-    return await apiClient.post<{ success: boolean; message: string; data: { service_id: number | null; case_id: number | null } }>(
+    return await apiClient.post<{ success: boolean; message: string; data: ApproveResult }>(
       `/intake-requests/${id}/approve`,
       payload,
     );
