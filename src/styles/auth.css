@@ -885,7 +885,7 @@
 }
 
 .auth-page--tenant .auth-input:focus {
-  border-color: #0f172a;
+  border-color: var(--tenant-accent, #0f172a);
   box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
 }
 
@@ -895,14 +895,14 @@
 
 .auth-page--tenant .auth-btn--primary,
 .auth-page--tenant .button--primary {
-  background-color: #0f172a;
+  background-color: var(--tenant-accent, #0f172a);
   color: #ffffff;
 }
 
 .auth-page--tenant .auth-btn--primary:hover,
 .auth-page--tenant .button--primary:hover {
-  background-color: #1e293b;
-  filter: none;
+  background-color: var(--tenant-accent, #1e293b);
+  filter: brightness(1.08);
 }
 
 .auth-page--tenant .auth-checkbox-label,
@@ -1598,4 +1598,18 @@
     flex: 1;
     justify-content: center;
   }
+}
+/* شعار الشركة النصّي (tagline) — يظهر تحت اسمها في بطاقة الدخول.
+   كان يصل من الـAPI ولا يُعرض في صفحة الدخول إطلاقاً. */
+.auth-card__tagline {
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+/* لون التمييز داخل بطاقة المستأجر: العنوان والروابط تقرأ متغيّر الشركة */
+.auth-page--tenant .auth-link,
+.auth-page--tenant .auth-card__subtitle strong {
+  color: var(--tenant-accent, #0f172a);
 }

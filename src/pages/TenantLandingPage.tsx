@@ -23,9 +23,11 @@ const PALETTE = {
   accentHover: '#1e293b',
 } as const;
 
+const HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
 const TenantLandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { tenant, isLoading, error, subdomain } = useTenant();
+  const { tenant, isLoading, error, errorKind, subdomain, refetchTenant } = useTenant();
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   useEffect(() => {
@@ -57,20 +59,42 @@ const TenantLandingPage: React.FC = () => {
     );
   }
 
-  if (error || !tenant) {
+  // الشرط `!tenant` وحده: `error` وحده لا يكفي — فردٌّ فاشل متأخّر قد يضبط error
+  // وبيانات الشركة محمّلة فعلاً، فتُحجب صفحة سليمة بشاشة خطأ.
+  //
+  // والرسائل تُفرَّق بحسب السبب: دمجُها في «الشركة غير موجودة» كان يدفع صاحب
+  // المكتب إلى فكّ الـCNAME ظنّاً أن الربط فشل، والسبب انقطاعُ لحظة أو تعليقُ اشتراك.
+  if (!tenant) {
+    const isNetwork = errorKind === 'network';
+    const isSuspended = errorKind === 'suspended';
+
+    const title = isSuspended ? 'حساب المكتب معلّق'
+      : isNetwork ? 'تعذّر الاتصال'
+      : 'هذا النطاق غير مرتبط بمكتب';
+
+    const body = isSuspended
+      ? 'الاشتراك متوقّف حالياً. يرجى مراجعة مزوّد الخدمة لإعادة التنشيط.'
+      : isNetwork
+        ? 'لم نتمكّن من الوصول إلى الخدمة. تحقّق من اتصالك ثم أعد المحاولة.'
+        : 'لم يُربط هذا النطاق بأي مكتب بعد. إن كنت صاحب المكتب فراجع إعدادات النطاق لدى مزوّد الخدمة.';
+
     return (
       <div style={styles.errorContainer}>
         <Scale style={styles.errorIcon} />
-        <h1 style={styles.errorTitle}>الشركة غير موجودة</h1>
-        <p style={styles.errorText}>
-          عذراً، لم نتمكن من العثور على هذه الشركة.
-          <br />
-          تأكد من صحة الرابط أو تواصل مع مزود الخدمة.
-        </p>
-        <a href="https://alraedlaw.com" style={styles.errorButton}>
-          <ArrowLeft size={18} />
-          العودة للموقع الرئيسي
-        </a>
+        <h1 style={styles.errorTitle}>{title}</h1>
+        <p style={styles.errorText}>{body}</p>
+
+        {/* إعادة المحاولة تُعرض لأخطاء النقل وحدها — على 404 و403 هي عبث */}
+        {isNetwork ? (
+          <button type="button" onClick={() => { void refetchTenant(); }} style={styles.errorButton}>
+            إعادة المحاولة
+          </button>
+        ) : (
+          <a href="https://alraedlaw.com" style={styles.errorButton}>
+            <ArrowLeft size={18} />
+            العودة للموقع الرئيسي
+          </a>
+        )}
       </div>
     );
   }
@@ -90,6 +114,15 @@ const TenantLandingPage: React.FC = () => {
   }
 
   const logoUrl = tenant.logo_url || tenant.logo;
+
+  // لون التمييز: لون الشركة عند تفعيل التبييض، وإلا الكحلي المحايد.
+  // كان primary_color يصل من الـAPI ولا يُقرأ في سطر واحد.
+  const accent = tenant.custom_branding_enabled
+    && tenant.primary_color
+    && HEX_RE.test(tenant.primary_color)
+      ? tenant.primary_color
+      : PALETTE.accent;
+
   const cardStyle: React.CSSProperties = {
     ...styles.card,
     padding: isMobile ? '40px 24px' : '56px 48px',
@@ -130,9 +163,9 @@ const TenantLandingPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/login')}
-            style={styles.loginButton}
-            onMouseEnter={(e) => { e.currentTarget.style.background = PALETTE.accentHover; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = PALETTE.accent; }}
+            style={{ ...styles.loginButton, background: accent }}
+            onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.12)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }}
           >
             <LogIn size={18} />
             <span>تسجيل الدخول</span>
@@ -140,14 +173,20 @@ const TenantLandingPage: React.FC = () => {
         </motion.div>
       </main>
 
-      <footer style={styles.footer}>
-        <span>
-          مدعوم بواسطة{' '}
-          <a href="https://alraedlaw.com" target="_blank" rel="noopener noreferrer" style={styles.footerLink}>
-            الرائد لإدارة المحاماة
-          </a>
-        </span>
-      </footer>
+      {/* «مدعوم بواسطة الرائد» يُخفى عند تفعيل التبييض للشركة.
+          هذا هو الغرض الذي أُنشئ له العمود custom_branding_enabled في يناير
+          وبقي بلا مستهلك واحد — فكان التذييل يظهر على نطاق العميل الخاص بلا
+          أي علم يُخفيه. */}
+      {!tenant.custom_branding_enabled && (
+        <footer style={styles.footer}>
+          <span>
+            مدعوم بواسطة{' '}
+            <a href="https://alraedlaw.com" target="_blank" rel="noopener noreferrer" style={styles.footerLink}>
+              الرائد لإدارة المحاماة
+            </a>
+          </span>
+        </footer>
+      )}
       <style>{spinnerKeyframes}</style>
     </div>
   );

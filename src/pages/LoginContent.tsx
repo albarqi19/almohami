@@ -218,14 +218,23 @@ const LoginContent: React.FC = () => {
             transition={{ duration: 0.3 }}
         >
             <header className="auth-card__brand">
-                {isSubdomain && tenant ? (
+                {/* مضيف شركة ⇒ لا علامة «الرائد» بحال — سواء وصلت بيانات الشركة أو لا.
+                    كان الشرط `isSubdomain && tenant` فيسرّب هوية الرائد عند فشل الجلب. */}
+                {isSubdomain ? (
                     <div className="text-center" style={{ width: '100%' }}>
                         <h1 id="login-title" className="auth-card__title">
                             تسجيل الدخول
                         </h1>
-                        <p className="auth-card__subtitle">
-                            {tenant.name}
-                        </p>
+                        {tenant?.name && (
+                            <p className="auth-card__subtitle">
+                                {tenant.name}
+                            </p>
+                        )}
+                        {tenant?.tagline && (
+                            <p className="auth-card__tagline">
+                                {tenant.tagline}
+                            </p>
+                        )}
                     </div>
                 ) : (
                     <>

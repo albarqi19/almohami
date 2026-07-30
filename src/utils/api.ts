@@ -50,8 +50,13 @@ class ApiClient {
       ...(options.headers as Record<string, string> || {}),
     };
 
-    // Only add Content-Type if body is not FormData (let browser set it for FormData)
-    if (!(options.body instanceof FormData)) {
+    // Content-Type يُضاف حين يوجد جسم فعلاً وليس FormData (المتصفح يضبطه للـFormData).
+    //
+    // كان يُضاف لكل طلب بما فيها GET بلا جسم — وذلك يُخرج الطلب من «الطلبات
+    // البسيطة» فيُلزم المتصفح بـOPTIONS preflight قبل كل نداء: رحلتان بدل واحدة
+    // على كل نداء في التطبيق، ومضاعفةُ سطح الفشل الشبكي (خاصةً على النطاقات
+    // المخصّصة والفرعية عبر الشبكات المتذبذبة).
+    if (options.body && !(options.body instanceof FormData)) {
       headers['Content-Type'] = 'application/json';
     }
 

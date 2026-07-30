@@ -11,23 +11,55 @@ const DEFAULT_META = {
   themeColor: '#11233a',
 };
 
+const PLATFORM_APEX = 'alraedlaw.com';
+
+/** مضيف خارج مظلّة المنصة ⇒ نطاق عميل خاص، يُستبان بـby-domain لا بالـslug */
+function isCustomDomainHost(host: string): boolean {
+  const h = host.split(':')[0].toLowerCase();
+  return !!h && h !== PLATFORM_APEX && !h.endsWith(`.${PLATFORM_APEX}`) && !h.endsWith('.vercel.app');
+}
+
+/** hostname صالح الشكل فقط — ترويسة Host يتحكّم بها الطالب فلا تُبنى منها روابط بلا تحقّق */
+const HOSTNAME_RE = /^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$/;
+
+/** لون سداسي صالح فقط — primary_color عمود حرّ النص */
+const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Get subdomain from host header
-  const host = req.headers.host || '';
-  const subdomain = extractSubdomain(host);
+  const host = (req.headers.host || '').split(':')[0].toLowerCase();
+  const isCustomDomain = HOSTNAME_RE.test(host) && isCustomDomainHost(host);
+  const subdomain = isCustomDomain ? null : extractSubdomain(host);
 
   let meta = { ...DEFAULT_META };
-  const currentUrl = subdomain
-    ? `https://${subdomain}.alraedlaw.com`
-    : 'https://alraedlaw.com';
 
-  // Fetch tenant data from API if subdomain exists
-  if (subdomain && subdomain !== 'www' && subdomain !== 'app') {
+  // العنوان القانوني هو المضيف الفعلي دائماً.
+  //
+  // كان يُركَّب كـ`{subdomain}.alraedlaw.com`، فعلى دومين خاص مثل
+  // app.nuhaili-law.com كانت extractSubdomain تعيد 'app' فيصير canonical
+  // وog:url على `app.alraedlaw.com` — مضيفٌ محجوز لا يخدم المكتب أصلاً:
+  // لا معاينة للعميل، وإشارات SEO تُهدر على عنوان ميت.
+  const currentUrl = isCustomDomain
+    ? `https://${host}`
+    : subdomain
+      ? `https://${subdomain}.${PLATFORM_APEX}`
+      : `https://${PLATFORM_APEX}`;
+
+  // يُجلب المستأجر بمسار الـslug للنطاقات الفرعية، وبـby-domain للنطاقات الخاصة.
+  // استثناء 'app' يبقى للنطاقات الفرعية وحدها — فهو محجوز هناك، بينما
+  // app.nuhaili-law.com دومين عميل شرعي.
+  const shouldFetch = isCustomDomain || (subdomain && subdomain !== 'www' && subdomain !== 'app');
+
+  if (shouldFetch) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/public/tenant/${subdomain}`, {
+      const endpoint = isCustomDomain
+        ? `${API_BASE_URL}/api/v1/public/tenant/by-domain?host=${encodeURIComponent(host)}`
+        : `${API_BASE_URL}/api/v1/public/tenant/${subdomain}`;
+
+      const response = await fetch(endpoint, {
         headers: {
           'Accept': 'application/json',
         },
@@ -45,7 +77,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             description: tenantData.tagline || `${tenantData.name} - مكتب محاماة متخصص`,
             image: tenantData.logo_url || DEFAULT_META.image,
             siteName: tenantData.name,
-            themeColor: tenantData.primary_color || DEFAULT_META.themeColor,
+            themeColor: HEX_RE.test(String(tenantData.primary_color ?? ''))
+              ? tenantData.primary_color
+              : DEFAULT_META.themeColor,
           };
         }
       }
@@ -69,14 +103,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   <meta name="description" content="${escapeHtml(meta.description)}">
   <meta name="author" content="${escapeHtml(meta.siteName)}">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="${currentUrl}">
+  <link rel="canonical" href="${escapeHtml(currentUrl)}">
 
   <!-- Theme -->
-  <meta name="theme-color" content="${meta.themeColor}">
+  <meta name="theme-color" content="${escapeHtml(meta.themeColor)}">
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
-  <meta property="og:url" content="${currentUrl}">
+  <meta property="og:url" content="${escapeHtml(currentUrl)}">
   <meta property="og:title" content="${escapeHtml(meta.title)}">
   <meta property="og:description" content="${escapeHtml(meta.description)}">
   <meta property="og:image" content="${escapeHtml(meta.image)}">
@@ -85,7 +119,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:url" content="${currentUrl}">
+  <meta name="twitter:url" content="${escapeHtml(currentUrl)}">
   <meta name="twitter:title" content="${escapeHtml(meta.title)}">
   <meta name="twitter:description" content="${escapeHtml(meta.description)}">
   <meta name="twitter:image" content="${escapeHtml(meta.image)}">
@@ -97,7 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     "@type": "LegalService",
     "name": "${escapeHtml(meta.siteName)}",
     "description": "${escapeHtml(meta.description)}",
-    "url": "${currentUrl}",
+    "url": "${escapeHtml(currentUrl)}",
     "logo": "${escapeHtml(meta.image)}"
   }
   </script>

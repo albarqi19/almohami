@@ -59,9 +59,15 @@ const AuthLayout: React.FC = () => {
 
     const heroContent = getHeroContent();
 
-    // If it's a subdomain (tenant), show simplified ERP-style layout without hero
-    if (isSubdomain && tenant) {
-        const logoUrl = tenant.logo_url || tenant.logo;
+    // مضيف شركة ⇒ التخطيط المحايد، نجح جلب بياناتها أو فشل.
+    //
+    // كان الشرط `isSubdomain && tenant`، فإن فشل الجلب (انقطاع، مهلة، 5xx)
+    // سقط التنفيذ إلى التخطيط الافتراضي أدناه فظهر على **دومين المكتب**:
+    // hero «نظام الرائد» وعلامته ورابط «العودة للرئيسية» — أي اسم مزوّد آخر
+    // على نطاق العميل. و`isSubdomain` يُحسب من الـhost تزامنياً فهو صحيح دائماً؛
+    // أما `tenant` فيُستعمل لتعبئة الشعار فقط، وغيابه يعني نائباً محايداً.
+    if (isSubdomain) {
+        const logoUrl = tenant?.logo_url || tenant?.logo;
 
         return (
             <div
@@ -79,7 +85,7 @@ const AuthLayout: React.FC = () => {
                         {logoUrl ? (
                             <img
                                 src={logoUrl}
-                                alt={tenant.name}
+                                alt={tenant?.name ?? ''}
                                 className="auth-tenant-header-logo"
                             />
                         ) : (

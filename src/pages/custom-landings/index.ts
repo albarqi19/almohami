@@ -6,9 +6,13 @@
  */
 
 import React from 'react';
+import { lazyWithRetry } from '../../utils/lazyWithRetry';
 
-// Lazy load custom landing pages for better performance
-const AlkhibraLanding = React.lazy(() => import('./AlkhibraLanding'));
+// lazyWithRetry لا React.lazy الخام: بعد كل نشر جديد يطلب زائرٌ بنسخة قديمة
+// من index.html ملفَّ chunk اختفى اسمه، ولا يوجد حدّ خطأ حول الـSuspense في
+// TenantLandingPage ⇒ يصعد الاستثناء إلى ErrorBoundary العام فتُبتلع صفحة
+// المكتب كلها بشاشة خطأ عامة. الغلاف يعيد تحميل الصفحة مرة واحدة بدل ذلك.
+const AlkhibraLanding = lazyWithRetry(() => import('./AlkhibraLanding'));
 
 // يمكنك إضافة المزيد من الصفحات المخصصة هنا:
 // const AnotherCompanyLanding = React.lazy(() => import('./AnotherCompanyLanding'));
