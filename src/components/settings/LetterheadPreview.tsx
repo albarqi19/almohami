@@ -87,10 +87,11 @@ const LetterheadPreview: React.FC<LetterheadPreviewProps> = ({
         <div className="letterhead-info-bar">
           <div className="letterhead-info-bar__items">
             <span className="letterhead-info-bar__item">
-              النوع: {letterhead.type === 'image' ? 'صورية' : 'ديناميكية'}
+              النوع: {letterhead.type === 'full_page' ? 'ورقة كاملة' : letterhead.type === 'image' ? 'صورية' : 'ديناميكية'}
             </span>
             <span className="letterhead-info-bar__item">
-              الهوامش: {letterhead.margin_top_mm}/{letterhead.margin_bottom_mm}/
+              {letterhead.type === 'full_page' ? 'منطقة الكتابة' : 'الهوامش'}:{' '}
+              {letterhead.margin_top_mm}/{letterhead.margin_bottom_mm}/
               {letterhead.margin_right_mm}/{letterhead.margin_left_mm} مم
             </span>
             {letterhead.show_page_numbers && (

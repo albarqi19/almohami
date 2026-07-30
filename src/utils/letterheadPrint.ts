@@ -15,6 +15,7 @@ export function generateLetterheadHTML(
     footer_image_url,
     header_height_mm = 30,
     footer_height_mm = 25,
+    background_image_url,
     logo_url,
     logo_position = 'right',
     logo_width_px = 80,
@@ -62,12 +63,24 @@ export function generateLetterheadHTML(
     watermark_secondary_position = 'top',
   } = letterhead;
 
+  /**
+   * الورقة الكاملة: الورق المرفوع خلفيةً ثابتة تتكرّر على كل صفحة، وهوامش @page
+   * هي منطقة الكتابة — فلا رأس ولا تذييل ولا حشو إضافي للمتن.
+   */
+  const isFullPage = type === 'full_page';
+
   // Calculate content margins based on header/footer
-  const contentMarginTop = type === 'image' ? header_height_mm + 5 : 45;
-  const contentMarginBottom = type === 'image' ? footer_height_mm + 5 : 35;
+  const contentMarginTop = isFullPage ? 0 : type === 'image' ? header_height_mm + 5 : 45;
+  const contentMarginBottom = isFullPage ? 0 : type === 'image' ? footer_height_mm + 5 : 35;
+
+  const paperBackgroundHTML = isFullPage && background_image_url
+    ? `<div class="letterhead-paper-bg"><img src="${background_image_url}" alt="" /></div>`
+    : '';
 
   // Build header HTML
-  const headerHTML = type === 'image'
+  const headerHTML = isFullPage
+    ? ''
+    : type === 'image'
     ? buildImageHeader(header_image_url, header_height_mm)
     : buildDynamicHeader({
         logo_url,
@@ -84,7 +97,9 @@ export function generateLetterheadHTML(
       });
 
   // Build footer HTML
-  const footerHTML = type === 'image'
+  const footerHTML = isFullPage
+    ? ''
+    : type === 'image'
     ? buildImageFooter(footer_image_url, footer_height_mm)
     : buildDynamicFooter({
         footer_text,
@@ -97,7 +112,9 @@ export function generateLetterheadHTML(
       });
 
   // Page number CSS (only works in Chrome print)
-  const pageNumberCSS = show_page_numbers
+  // في الورقة الكاملة يُترك الترقيم لملف الـ PDF: صناديق هوامش @page تضع الرقم داخل
+  // الهامش السفلي — أي فوق تذييل الورق — بينما الباك يحجز له شريطاً داخل منطقة الكتابة.
+  const pageNumberCSS = show_page_numbers && ! isFullPage
     ? `
     @page {
       @bottom-center {
@@ -245,6 +262,26 @@ export function generateLetterheadHTML(
           background: white;
         }
 
+        /* الورق الرسمي كاملاً: ثابت ⇒ يكرّره Chrome على كل صفحة مطبوعة، وخلف المتن */
+        .letterhead-paper-bg {
+          position: fixed;
+          top: -${margin_top_mm}mm;
+          right: -${margin_right_mm}mm;
+          width: 210mm;
+          height: 297mm;
+          z-index: 0;
+          pointer-events: none;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        .letterhead-paper-bg img {
+          width: 210mm;
+          height: 297mm;
+          object-fit: fill;
+          display: block;
+        }
+
         .letterhead-header {
           position: fixed;
           top: -${margin_top_mm}mm;
@@ -268,10 +305,15 @@ export function generateLetterheadHTML(
         .content {
           padding-top: ${contentMarginTop}mm;
           padding-bottom: ${contentMarginBottom}mm;
+          ${isFullPage
+            ? /* هوامش @page هي منطقة الكتابة — لا حشو ولا سحب جانبي */ `
+          position: relative;
+          z-index: 1;`
+            : `
           padding-right: ${margin_right_mm}mm;
           padding-left: ${margin_left_mm}mm;
           margin-right: -${margin_right_mm}mm;
-          margin-left: -${margin_left_mm}mm;
+          margin-left: -${margin_left_mm}mm;`}
         }
 
         /* Content styles */
@@ -399,6 +441,7 @@ export function generateLetterheadHTML(
       </style>
     </head>
     <body>
+      ${paperBackgroundHTML}
       ${headerHTML}
 
       ${watermarkHTML}

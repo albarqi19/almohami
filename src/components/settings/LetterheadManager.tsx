@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Image as ImageIcon,
   Settings2,
+  FileImage,
 } from 'lucide-react';
 import { LetterheadService } from '../../services/letterheadService';
 import type { Letterhead } from '../../types/letterhead';
@@ -174,7 +175,12 @@ const LetterheadManager: React.FC = () => {
 
               {/* Type Badges */}
               <div className="flex items-center gap-2">
-                {letterhead.type === 'image' ? (
+                {letterhead.type === 'full_page' ? (
+                  <span className="letterhead-type-badge letterhead-type-badge--image">
+                    <FileImage style={{ width: 12, height: 12 }} />
+                    ورقة كاملة
+                  </span>
+                ) : letterhead.type === 'image' ? (
                   <span className="letterhead-type-badge letterhead-type-badge--image">
                     <ImageIcon style={{ width: 12, height: 12 }} />
                     صورية

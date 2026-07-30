@@ -76,11 +76,13 @@ export class LetterheadService {
   }
 
   /**
-   * رفع صورة للكليشة (Header/Footer/Logo/Watermark)
+   * رفع صورة للكليشة (Header/Footer/Logo/Watermark/Background)
+   *
+   * background = ورقة A4 كاملة؛ يفحص الباك أبعادها ويعيد ملاحظات في data.warnings.
    */
   static async uploadImage(
     file: File,
-    type: 'header' | 'footer' | 'logo' | 'watermark'
+    type: 'header' | 'footer' | 'logo' | 'watermark' | 'background'
   ): Promise<ImageUploadResponse> {
     const formData = new FormData();
     formData.append('image', file);

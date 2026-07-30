@@ -13,6 +13,8 @@ import {
   FileText,
   Mail,
   ScrollText,
+  FileImage,
+  AlertTriangle,
 } from 'lucide-react';
 import { LetterheadService } from '../../services/letterheadService';
 import type {
@@ -24,7 +26,13 @@ import type {
   WatermarkPosition,
   WatermarkRotation,
 } from '../../types/letterhead';
-import { DEFAULT_LETTERHEAD, WATERMARK_PRESETS } from '../../types/letterhead';
+import {
+  DEFAULT_LETTERHEAD,
+  WATERMARK_PRESETS,
+  A4_WIDTH_MM,
+  A4_HEIGHT_MM,
+  FULL_PAGE_RECOMMENDED_PX,
+} from '../../types/letterhead';
 
 interface LetterheadFormProps {
   letterhead: Letterhead | null;
@@ -40,7 +48,9 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
   const isEditing = !!letterhead;
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'header' | 'footer' | 'margins' | 'watermark'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'paper' | 'header' | 'footer' | 'margins' | 'watermark'>('general');
+  /** ملاحظات الباك على صورة الورقة المرفوعة (نسبة/دقة/اتجاه). */
+  const [paperWarnings, setPaperWarnings] = useState<string[]>([]);
 
   // Form state
   const [formData, setFormData] = useState<LetterheadFormData>({
@@ -53,6 +63,8 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
     footer_image_url: letterhead?.footer_image_url || null,
     header_height_mm: letterhead?.header_height_mm || DEFAULT_LETTERHEAD.header_height_mm,
     footer_height_mm: letterhead?.footer_height_mm || DEFAULT_LETTERHEAD.footer_height_mm,
+    // Full-page (ورقة كاملة)
+    background_image_url: letterhead?.background_image_url || null,
     // Dynamic - Header
     logo_url: letterhead?.logo_url || null,
     logo_position: letterhead?.logo_position || 'right',
@@ -108,16 +120,19 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
     watermark_apply_to_letters: letterhead?.watermark_apply_to_letters ?? DEFAULT_LETTERHEAD.watermark_apply_to_letters,
   });
 
+  const isFullPage = formData.type === 'full_page';
+
   // File input refs
   const headerImageRef = useRef<HTMLInputElement>(null);
   const footerImageRef = useRef<HTMLInputElement>(null);
   const logoRef = useRef<HTMLInputElement>(null);
   const watermarkImageRef = useRef<HTMLInputElement>(null);
+  const backgroundRef = useRef<HTMLInputElement>(null);
 
   // Handle image upload
   const handleImageUpload = async (
     file: File,
-    type: 'header' | 'footer' | 'logo' | 'watermark'
+    type: 'header' | 'footer' | 'logo' | 'watermark' | 'background'
   ) => {
     try {
       setUploadingImage(type);
@@ -128,17 +143,34 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
           footer: 'footer_image_url',
           logo: 'logo_url',
           watermark: 'watermark_image_url',
+          background: 'background_image_url',
         };
         setFormData((prev) => ({
           ...prev,
           [fieldMap[type]]: response.data.url,
         }));
+        if (type === 'background') {
+          setPaperWarnings(response.data.warnings ?? []);
+        }
       }
     } catch (err) {
       console.error(err);
       alert('فشل في رفع الصورة');
     } finally {
       setUploadingImage(null);
+    }
+  };
+
+  /**
+   * تبديل النوع: عند اختيار «ورقة كاملة» ننقل المستخدم إلى تبويبها مباشرةً —
+   * تبويبا الرأس/التذييل لا معنى لهما فيها.
+   */
+  const changeType = (type: LetterheadFormData['type']) => {
+    setFormData((prev) => ({ ...prev, type }));
+    if (type === 'full_page') {
+      if (activeTab === 'header' || activeTab === 'footer') setActiveTab('paper');
+    } else if (activeTab === 'paper') {
+      setActiveTab('header');
     }
   };
 
@@ -164,6 +196,12 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
 
     if (!formData.name.trim()) {
       alert('يرجى إدخال اسم الكليشة');
+      return;
+    }
+
+    if (isFullPage && !formData.background_image_url) {
+      setActiveTab('paper');
+      alert('كليشة «الورقة الكاملة» تتطلّب رفع صورة الورق الرسمي أولاً');
       return;
     }
 
@@ -193,7 +231,7 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
   const ImageUploadField: React.FC<{
     label: string;
     value: string | null | undefined;
-    type: 'header' | 'footer' | 'logo' | 'watermark';
+    type: 'header' | 'footer' | 'logo' | 'watermark' | 'background';
     inputRef: React.RefObject<HTMLInputElement | null>;
     onClear: () => void;
     hint?: string;
@@ -240,6 +278,36 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
     </div>
   );
 
+  /**
+   * معاينة الورقة الكاملة بنسبة A4 الحقيقية، والورق المرفوع خلفيةً، ومنطقة الكتابة
+   * مرسومة بالنِسب نفسها التي يحسبها الباك — فما يراه المستخدم هو ما سيُطبع.
+   */
+  const PaperPreview: React.FC = () => (
+    <div className="letterhead-paper-preview">
+      <div
+        className="letterhead-paper-preview__page"
+        style={{
+          aspectRatio: `${A4_WIDTH_MM} / ${A4_HEIGHT_MM}`,
+          backgroundImage: formData.background_image_url
+            ? `url(${formData.background_image_url})`
+            : undefined,
+        }}
+      >
+        <div
+          className="letterhead-paper-preview__safe"
+          style={{
+            top: `${((formData.margin_top_mm ?? 25) / A4_HEIGHT_MM) * 100}%`,
+            bottom: `${((formData.margin_bottom_mm ?? 20) / A4_HEIGHT_MM) * 100}%`,
+            right: `${((formData.margin_right_mm ?? 20) / A4_WIDTH_MM) * 100}%`,
+            left: `${((formData.margin_left_mm ?? 20) / A4_WIDTH_MM) * 100}%`,
+          }}
+        >
+          <span className="letterhead-paper-preview__label">منطقة الكتابة</span>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="letterhead-modal-overlay">
       <div className="letterhead-modal">
@@ -268,7 +336,7 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
                   name="type"
                   value="dynamic"
                   checked={formData.type === 'dynamic'}
-                  onChange={() => setFormData((prev) => ({ ...prev, type: 'dynamic' }))}
+                  onChange={() => changeType('dynamic')}
                   style={{ display: 'none' }}
                 />
                 <Settings2 className="letterhead-type-option__icon" />
@@ -285,21 +353,41 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
                   name="type"
                   value="image"
                   checked={formData.type === 'image'}
-                  onChange={() => setFormData((prev) => ({ ...prev, type: 'image' }))}
+                  onChange={() => changeType('image')}
                   style={{ display: 'none' }}
                 />
                 <ImageIcon className="letterhead-type-option__icon" />
                 <div>
                   <div className="letterhead-type-option__title">صورية</div>
-                  <div className="letterhead-type-option__desc">رفع صور جاهزة</div>
+                  <div className="letterhead-type-option__desc">رأس وتذييل منفصلان</div>
+                </div>
+              </label>
+              <label
+                className={`letterhead-type-option ${isFullPage ? 'letterhead-type-option--active' : ''}`}
+              >
+                <input
+                  type="radio"
+                  name="type"
+                  value="full_page"
+                  checked={isFullPage}
+                  onChange={() => changeType('full_page')}
+                  style={{ display: 'none' }}
+                />
+                <FileImage className="letterhead-type-option__icon" />
+                <div>
+                  <div className="letterhead-type-option__title">ورقة كاملة</div>
+                  <div className="letterhead-type-option__desc">صورة A4 واحدة كما هي</div>
                 </div>
               </label>
             </div>
           </div>
 
-          {/* Tabs */}
+          {/* Tabs — «الورقة» تحلّ محلّ الرأس/التذييل في نمط الورقة الكاملة */}
           <div className="letterhead-tabs">
-            {(['general', 'header', 'footer', 'margins', 'watermark'] as const).map((tab) => (
+            {(isFullPage
+              ? (['general', 'paper', 'margins', 'watermark'] as const)
+              : (['general', 'header', 'footer', 'margins', 'watermark'] as const)
+            ).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -307,9 +395,10 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
                 className={`letterhead-tab ${activeTab === tab ? 'letterhead-tab--active' : ''}`}
               >
                 {tab === 'general' && 'عام'}
+                {tab === 'paper' && 'الورقة'}
                 {tab === 'header' && 'الرأس'}
                 {tab === 'footer' && 'التذييل'}
-                {tab === 'margins' && 'الهوامش'}
+                {tab === 'margins' && (isFullPage ? 'منطقة الكتابة' : 'الهوامش')}
                 {tab === 'watermark' && 'العلامة المائية'}
               </button>
             ))}
@@ -406,6 +495,82 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
                       />
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Paper Tab — نمط «الورقة الكاملة» */}
+            {activeTab === 'paper' && (
+              <div className="letterhead-form-section">
+                <div className="letterhead-watermark-info">
+                  <Info />
+                  <p>
+                    ارفع ورقك الرسمي صورةً واحدة بمقاس A4 كما هو — بترويسته وتذييله وإطاره.
+                    يُرسم خلفيةً لكل صفحة، ويُكتب المتن داخل «منطقة الكتابة» التي تحدّدها.
+                  </p>
+                </div>
+
+                <ImageUploadField
+                  label="صورة الورق الرسمي"
+                  value={formData.background_image_url}
+                  type="background"
+                  inputRef={backgroundRef}
+                  onClear={() => {
+                    setFormData((prev) => ({ ...prev, background_image_url: null }));
+                    setPaperWarnings([]);
+                  }}
+                  hint={`PNG بخلفية بيضاء صلبة — المقاس الأمثل ${FULL_PAGE_RECOMMENDED_PX.width} × ${FULL_PAGE_RECOMMENDED_PX.height} بكسل`}
+                />
+
+                {paperWarnings.length > 0 && (
+                  <div className="letterhead-paper-warnings">
+                    {paperWarnings.map((w, i) => (
+                      <div key={i} className="letterhead-paper-warning">
+                        <AlertTriangle />
+                        <span>{w}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {formData.background_image_url && (
+                  <>
+                    <p className="letterhead-helper" style={{ marginTop: 20 }}>
+                      المستطيل المنقّط هو منطقة الكتابة — اضبطها من تبويب «منطقة الكتابة»
+                      حتى لا يركب النص على الترويسة أو التذييل.
+                    </p>
+                    <PaperPreview />
+                  </>
+                )}
+
+                {/* ترقيم الصفحات — تبويب التذييل مخفي في هذا النمط */}
+                <div className="letterhead-separator">
+                  <label className="letterhead-checkbox" style={{ marginBottom: 12 }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.show_page_numbers}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, show_page_numbers: e.target.checked }))}
+                    />
+                    <span className="letterhead-checkbox__label" style={{ fontWeight: 500 }}>
+                      إظهار ترقيم الصفحات
+                    </span>
+                  </label>
+                  {formData.show_page_numbers && (
+                    <div className="letterhead-field">
+                      <label className="letterhead-field__label">صيغة الترقيم</label>
+                      <select
+                        value={formData.page_number_format}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, page_number_format: e.target.value as PageNumberFormat }))}
+                        className="letterhead-field__select"
+                      >
+                        <option value="arabic">صفحة 1 من 5</option>
+                        <option value="english">Page 1 of 5</option>
+                      </select>
+                      <p className="letterhead-helper" style={{ marginTop: 8 }}>
+                        يُطبع داخل منطقة الكتابة أسفل المتن، فلا يقع على تذييل ورقك.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -650,7 +815,9 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
             {activeTab === 'margins' && (
               <div className="letterhead-form-section">
                 <p className="letterhead-helper">
-                  حدد هوامش الطباعة بالمليمتر. مقاس الصفحة A4 (210 × 297 مم)
+                  {isFullPage
+                    ? 'حدّد منطقة الكتابة داخل ورقك بالمليمتر — المسافة من كل حافة إلى حيث يبدأ النص. مقاس الصفحة A4 (210 × 297 مم)'
+                    : 'حدد هوامش الطباعة بالمليمتر. مقاس الصفحة A4 (210 × 297 مم)'}
                 </p>
                 <div className="letterhead-form-grid">
                   <div className="letterhead-field">
@@ -699,21 +866,25 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
                   </div>
                 </div>
 
-                {/* Visual Preview */}
-                <div className="letterhead-margin-preview">
-                  <div className="letterhead-margin-preview__page">
-                    <div
-                      className="letterhead-margin-preview__content"
-                      style={{
-                        top: `${(formData.margin_top_mm! / 297) * 100}%`,
-                        bottom: `${(formData.margin_bottom_mm! / 297) * 100}%`,
-                        left: `${(formData.margin_left_mm! / 210) * 100}%`,
-                        right: `${(formData.margin_right_mm! / 210) * 100}%`,
-                      }}
-                    />
-                    <span className="letterhead-margin-preview__label">المحتوى</span>
+                {/* Visual Preview — على الورق الحقيقي في نمط الورقة الكاملة */}
+                {isFullPage && formData.background_image_url ? (
+                  <PaperPreview />
+                ) : (
+                  <div className="letterhead-margin-preview">
+                    <div className="letterhead-margin-preview__page">
+                      <div
+                        className="letterhead-margin-preview__content"
+                        style={{
+                          top: `${(formData.margin_top_mm! / A4_HEIGHT_MM) * 100}%`,
+                          bottom: `${(formData.margin_bottom_mm! / A4_HEIGHT_MM) * 100}%`,
+                          left: `${(formData.margin_left_mm! / A4_WIDTH_MM) * 100}%`,
+                          right: `${(formData.margin_right_mm! / A4_WIDTH_MM) * 100}%`,
+                        }}
+                      />
+                      <span className="letterhead-margin-preview__label">المحتوى</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 

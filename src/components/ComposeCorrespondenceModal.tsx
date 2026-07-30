@@ -244,12 +244,19 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
   // نفس أولوية الـPDF: لون الخطاب ← لون الكليشة ← كحلي النظام
   const pageAccent = accentColor || selectedLetterhead?.primary_color || '#1f3a5f';
   const isImageLetterhead = selectedLetterhead?.type === 'image' && !!selectedLetterhead.header_image_url;
+  // ورقة كاملة: الورق المرفوع خلفيةً تتكرّر كل صفحة، والهوامش الأربعة هي منطقة الكتابة
+  const isFullPageLetterhead = selectedLetterhead?.type === 'full_page' && !!selectedLetterhead.background_image_url;
 
-  // مساحتا الترويسة/التذييل لكل صفحة (مرآة هوامش mPDF: صورة = ارتفاعها+3مم، ديناميكي = 30/26مم)
-  const headerAreaPx = isImageLetterhead
+  // مساحتا الترويسة/التذييل لكل صفحة (مرآة هوامش mPDF: صورة = ارتفاعها+3مم، ديناميكي = 30/26مم،
+  // ورقة كاملة = هامشا الكليشة العلوي/السفلي)
+  const headerAreaPx = isFullPageLetterhead
+    ? mmToPxN(selectedLetterhead?.margin_top_mm || 25)
+    : isImageLetterhead
     ? mmToPxN((selectedLetterhead?.header_height_mm || 30) + 3)
     : mmToPxN(30);
-  const footerAreaPx = selectedLetterhead?.type === 'image' && selectedLetterhead.footer_image_url
+  const footerAreaPx = isFullPageLetterhead
+    ? mmToPxN(selectedLetterhead?.margin_bottom_mm || 20)
+    : selectedLetterhead?.type === 'image' && selectedLetterhead.footer_image_url
     ? mmToPxN((selectedLetterhead.footer_height_mm || 25) + 3)
     : mmToPxN(26);
 
@@ -359,6 +366,8 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
 
   const renderLetterheadHeader = () => {
     const lh = selectedLetterhead;
+    // الورقة الكاملة تحمل ترويستها في الخلفية — لا عنصر ترويسة، والحشو العلوي من الهامش
+    if (isFullPageLetterhead) return null;
     if (lh?.type === 'image' && lh.header_image_url) {
       return <img className="clc-page__lhimg" src={lh.header_image_url} alt="" style={{ height: mmToPx(lh.header_height_mm || 30) }} />;
     }
@@ -376,6 +385,7 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
 
   const renderLetterheadFooter = () => {
     const lh = selectedLetterhead;
+    if (isFullPageLetterhead) return null;
     if (lh?.type === 'image' && lh.footer_image_url) {
       return <img className="clc-page__lhimg clc-page__lhimg--footer" src={lh.footer_image_url} alt="" style={{ height: mmToPx(lh.footer_height_mm || 25) }} />;
     }
@@ -623,7 +633,19 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
               <div
                 className="clc-page"
                 ref={pageRef}
-                style={{ ['--clc-zoom' as any]: zoom, minHeight: pageCount * A4_HEIGHT_PX }}
+                style={{
+                  ['--clc-zoom' as any]: zoom,
+                  minHeight: pageCount * A4_HEIGHT_PX,
+                  // الورق الرسمي يتكرّر ورقةً كاملة كل A4 — فيرى الكاتب ما سيُطبع
+                  ...(isFullPageLetterhead
+                    ? {
+                        backgroundImage: `url(${selectedLetterhead!.background_image_url})`,
+                        backgroundRepeat: 'repeat-y',
+                        backgroundSize: `100% ${A4_HEIGHT_PX}px`,
+                        backgroundPosition: 'top center',
+                      }
+                    : null),
+                }}
               >
                 {renderWatermark()}
                 {/* أشرطة حدود الصفحات: تذييل الصفحة + ترويسة التالية (بكليشة الصورة تُعرض صورتاهما) */}
@@ -641,7 +663,21 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
                   </div>
                 ))}
                 {renderLetterheadHeader()}
-                <div ref={pageInnerRef} className={`clc-page__inner ${isImageLetterhead ? 'clc-page__inner--imglh' : ''}`}>
+                <div
+                  ref={pageInnerRef}
+                  className={`clc-page__inner ${isImageLetterhead ? 'clc-page__inner--imglh' : ''}`}
+                  style={
+                    isFullPageLetterhead
+                      ? {
+                          // منطقة الكتابة الآمنة: نفس الهوامش التي يطبّقها الباك على الـPDF
+                          paddingTop: mmToPxN(selectedLetterhead!.margin_top_mm || 25),
+                          paddingBottom: mmToPxN(selectedLetterhead!.margin_bottom_mm || 20),
+                          paddingRight: mmToPxN(selectedLetterhead!.margin_right_mm || 20),
+                          paddingLeft: mmToPxN(selectedLetterhead!.margin_left_mm || 20),
+                        }
+                      : undefined
+                  }
+                >
                   <div className="clc-page__meta">
                     <span>صادر رقم: <b>يُخصَّص عند الإصدار</b></span>
                     <span className="clc-page__meta-dates">

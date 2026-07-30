@@ -61,9 +61,12 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
   // Get letterhead settings
   const lh = letterheadEnabled && letterhead ? letterhead : null;
 
+  // ورقة كاملة: لا رأس ولا تذييل — الورق المرفوع خلفية الصفحة، والهوامش منطقة الكتابة
+  const isFullPageLh = lh?.type === 'full_page' && !!lh.background_image_url;
+
   // Calculate dimensions based on letterhead
-  const headerHeightMM = lh?.type === 'image' ? (lh.header_height_mm || 30) : lh?.type === 'dynamic' ? 40 : 15;
-  const footerHeightMM = lh?.type === 'image' ? (lh.footer_height_mm || 25) : lh?.type === 'dynamic' ? 25 : 15;
+  const headerHeightMM = isFullPageLh ? 0 : lh?.type === 'image' ? (lh.header_height_mm || 30) : lh?.type === 'dynamic' ? 40 : 15;
+  const footerHeightMM = isFullPageLh ? 0 : lh?.type === 'image' ? (lh.footer_height_mm || 25) : lh?.type === 'dynamic' ? 25 : 15;
   const marginTopMM = lh?.margin_top_mm || 10;
   const marginBottomMM = lh?.margin_bottom_mm || 10;
   const marginRightMM = lh?.margin_right_mm || 20;
@@ -225,8 +228,8 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
   }, [imagesLoaded, previewContent, letterheadEnabled, letterhead, paginateContent]);
 
   // Print margins
-  const printHeaderHeight = lh?.type === 'image' ? (lh.header_height_mm || 30) : lh?.type === 'dynamic' ? 40 : 15;
-  const printFooterHeight = lh?.type === 'image' ? (lh.footer_height_mm || 25) : lh?.type === 'dynamic' ? 25 : 15;
+  const printHeaderHeight = isFullPageLh ? 0 : lh?.type === 'image' ? (lh.header_height_mm || 30) : lh?.type === 'dynamic' ? 40 : 15;
+  const printFooterHeight = isFullPageLh ? 0 : lh?.type === 'image' ? (lh.footer_height_mm || 25) : lh?.type === 'dynamic' ? 25 : 15;
   const printMarginRight = lh?.margin_right_mm || 15;
   const printMarginLeft = lh?.margin_left_mm || 15;
 
@@ -291,6 +294,7 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
   // Render header for a page
   const renderHeader = () => {
     if (!lh) return null;
+    if (isFullPageLh) return null; // الترويسة داخل صورة الورقة
 
     if (lh.type === 'image' && lh.header_image_url) {
       return (
@@ -342,6 +346,7 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
   // Render footer for a page
   const renderFooter = (pageNum: number, totalPages: number) => {
     if (!lh) return null;
+    if (isFullPageLh) return null; // التذييل داخل صورة الورقة
 
     if (lh.type === 'image' && lh.footer_image_url) {
       return (
@@ -514,7 +519,18 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
             {pages.map((pageContent, pageIndex) => (
               <div key={pageIndex} className="contract-preview-page">
                 {/* A4 Paper */}
-                <div className="contract-preview-paper">
+                <div
+                  className="contract-preview-paper"
+                  style={
+                    isFullPageLh
+                      ? {
+                          backgroundImage: `url(${lh!.background_image_url})`,
+                          backgroundSize: '100% 100%',
+                          backgroundRepeat: 'no-repeat',
+                        }
+                      : undefined
+                  }
+                >
                   {/* Header */}
                   {renderHeader()}
 

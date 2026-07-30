@@ -3,9 +3,22 @@
  * نظام الكليشات
  */
 
-export type LetterheadType = 'image' | 'dynamic';
+/**
+ * أنماط الكليشة:
+ *  - dynamic:   ترويسة تُبنى من بيانات المكتب وألوانه.
+ *  - image:     صورتا رأس وتذييل منفصلتان.
+ *  - full_page: ورقة A4 كاملة بصورة واحدة، والهوامش الأربعة منطقة الكتابة الآمنة داخلها.
+ */
+export type LetterheadType = 'image' | 'dynamic' | 'full_page';
 export type LogoPosition = 'right' | 'center' | 'left';
 export type PageNumberFormat = 'arabic' | 'english';
+
+/** أبعاد A4 بالمليمتر — أساس حساب معاينة «الورقة الكاملة». */
+export const A4_WIDTH_MM = 210;
+export const A4_HEIGHT_MM = 297;
+
+/** المقاس الموصى به لصورة الورقة الكاملة (٢٠٠dpi) — PNG بخلفية بيضاء صلبة. */
+export const FULL_PAGE_RECOMMENDED_PX = { width: 1654, height: 2339 } as const;
 
 // Watermark Types
 export type WatermarkType = 'text' | 'image';
@@ -43,6 +56,9 @@ export interface Letterhead {
   footer_image_url: string | null;
   header_height_mm: number;
   footer_height_mm: number;
+
+  // Full-page mode (ورقة كاملة)
+  background_image_url: string | null;
 
   // Dynamic mode - Header
   logo_url: string | null;
@@ -120,6 +136,9 @@ export interface LetterheadFormData {
   footer_image_url?: string | null;
   header_height_mm?: number;
   footer_height_mm?: number;
+
+  // Full-page mode (ورقة كاملة)
+  background_image_url?: string | null;
 
   // Dynamic mode - Header
   logo_url?: string | null;
@@ -200,6 +219,8 @@ export interface ImageUploadResponse {
   data: {
     url: string;
     path: string;
+    /** ملاحظات الباك على صورة الورقة الكاملة (نسبة/دقة/اتجاه) — لا تمنع الرفع. */
+    warnings?: string[];
   };
 }
 
@@ -209,6 +230,7 @@ export const DEFAULT_LETTERHEAD: Partial<LetterheadFormData> = {
   type: 'dynamic',
   is_default: false,
   is_active: true,
+  background_image_url: null,
   logo_position: 'right',
   logo_width_px: 80,
   show_border_bottom: true,
