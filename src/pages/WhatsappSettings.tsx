@@ -88,7 +88,8 @@ interface PrefEvent {
   /** يحكمه إعدادٌ آخر من شاشةٍ أخرى — يُعرَض ولا يُحرَّر هنا */
   locked: boolean;
   lock_screen: string | null;
-  note: string | null;
+  /** جملةٌ عربية للمكتب — و`note` التقنية لا تخرج من الـAPI أصلاً */
+  hint: string | null;
 }
 
 interface PrefGroup {
@@ -1591,8 +1592,8 @@ const WhatsappSettings: React.FC = () => {
                                   </span>
                                 )}
                               </div>
-                              {ev.note && (
-                                <div className="whatsapp-notification-item__desc">{ev.note}</div>
+                              {ev.hint && (
+                                <div className="whatsapp-notification-item__desc">{ev.hint}</div>
                               )}
                             </div>
                             <div className="whatsapp-notification-item__actions">
