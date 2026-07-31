@@ -78,6 +78,33 @@ interface WhatsappMessage {
   created_at: string;
 }
 
+/** حدثٌ قابل لتحكّم المكتب — مصدره GET /whatsapp/preferences */
+interface PrefEvent {
+  key: string;
+  label: string;
+  audience: 'client' | 'staff' | 'mixed' | 'external' | string;
+  enabled: boolean;
+  is_default: boolean;
+  /** يحكمه إعدادٌ آخر من شاشةٍ أخرى — يُعرَض ولا يُحرَّر هنا */
+  locked: boolean;
+  lock_screen: string | null;
+  note: string | null;
+}
+
+interface PrefGroup {
+  key: string;
+  label: string;
+  events: PrefEvent[];
+}
+
+/** رقاقةٌ نصّية تحمل المعنى — لا شريطَ تمييزٍ لوني */
+const AUDIENCE_LABEL: Record<string, string> = {
+  client: 'للعميل',
+  staff: 'للفريق',
+  mixed: 'للطرفين',
+  external: 'لطرفٍ خارجي',
+};
+
 interface MessageFilters {
   status: string;
   direction: string;
@@ -183,23 +210,6 @@ const DAY_NAMES: Record<string, string> = {
   wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة', saturday: 'السبت'
 };
 
-const NOTIFICATION_GROUPS = [
-  {
-    title: 'شؤون القضايا والعملاء',
-    desc: 'التنبيهات التلقائية المرسلة للعملاء بخصوص تحديثات قضاياهم والمواعيد',
-    keys: ['welcome_message', 'case_created', 'case_updated', 'case_procedure', 'hearing_reminder']
-  },
-  {
-    title: 'المدفوعات والمستندات',
-    desc: 'تنبيهات طلب الوثائق من العميل أو تذكيره بسداد الدفعات المالية المستحقة',
-    keys: ['payment_reminder', 'document_request', 'new_document_uploaded']
-  },
-  {
-    title: 'مهام ومتابعة المحامين',
-    desc: 'التنبيهات الإدارية الصادرة لفريق العمل والوكلاء داخل النظام لتنسيق المهام',
-    keys: ['lawyer_assigned', 'login_notification', 'task_assigned', 'task_due_reminder', 'task_overdue']
-  }
-];
 
 const formatDate = (d: string) => {
   const date = new Date(d);
@@ -292,8 +302,60 @@ const WhatsappSettings: React.FC = () => {
   const [casesLoading, setCasesLoading] = useState<boolean>(false);
   const [selectedCaseId, setSelectedCaseId] = useState<string>('');
   const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>('');
-  const [selectedNotificationKey, setSelectedNotificationKey] = useState<string>('case_created');
   const [selectedLogMsg, setSelectedLogMsg] = useState<WhatsappMessage | null>(null);
+
+  // ── تفضيلات الرسائل الآلية (مصدرها /whatsapp/preferences) ──
+  const [prefGroups, setPrefGroups] = useState<PrefGroup[]>([]);
+  const [prefsLoading, setPrefsLoading] = useState(false);
+  const [prefsSaving, setPrefsSaving] = useState(false);
+  const [prefsError, setPrefsError] = useState<string | null>(null);
+
+  const loadPreferences = useCallback(async () => {
+    setPrefsLoading(true);
+    setPrefsError(null);
+    try {
+      const res = await api.get('/v1/whatsapp/preferences');
+      if (res.data?.success) {
+        setPrefGroups(res.data.data.groups || []);
+      } else {
+        // 403 لمن لا يملك الصلاحية — رسالةٌ صادقة لا شاشةٌ فارغة
+        setPrefsError(res.data?.message || 'تعذّر تحميل تفضيلات الرسائل');
+      }
+    } catch {
+      setPrefsError('تعذّر الاتصال بالخادم');
+    } finally {
+      setPrefsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { if (activeTab === 'notifications') loadPreferences(); }, [activeTab, loadPreferences]);
+
+  /**
+   * تبديلٌ متفائل: نقلب المفتاح فوراً ثم نحفظ، ونرجع عن التبديل إن فشل الحفظ.
+   * ونرسل **المفتاح المتغيّر وحده** لا الخريطة كاملة — كي لا يمحو حفظٌ متزامن
+   * من جهازٍ آخر تفضيلاتٍ لم يرها هذا المتصفّح.
+   */
+  const togglePreference = async (eventKey: string, next: boolean) => {
+    const before = prefGroups;
+    setPrefGroups(gs => gs.map(g => ({
+      ...g,
+      events: g.events.map(e => (e.key === eventKey ? { ...e, enabled: next, is_default: false } : e)),
+    })));
+
+    setPrefsSaving(true);
+    try {
+      const res = await api.put('/v1/whatsapp/preferences', { events: { [eventKey]: next } });
+      if (!res.data?.success) {
+        setPrefGroups(before);
+        showToast(res.data?.message || 'تعذّر حفظ التفضيل', 'error');
+      }
+    } catch {
+      setPrefGroups(before);
+      showToast('تعذّر الاتصال بالخادم', 'error');
+    } finally {
+      setPrefsSaving(false);
+    }
+  };
 
   // Clear selected log message when tab changes
   useEffect(() => {
@@ -458,10 +520,8 @@ const WhatsappSettings: React.FC = () => {
         if (tKeys.length > 0) {
           setSelectedTemplateKey(prev => prev || tKeys[0]);
         }
-        const nKeys = Object.keys(data.notification_settings || {});
-        if (nKeys.length > 0) {
-          setSelectedNotificationKey(prev => prev || nKeys[0]);
-        }
+        // لا اختيارَ افتراضياً لمفتاح تنبيه: تبويب «الرسائل الآلية» صار
+        // مدفوعاً بـ/whatsapp/preferences ولا لوحةَ معاينةٍ تحتاج مفتاحاً محدَّداً.
       } else {
         setSettings({
           notifications_enabled: true, daily_report_enabled: false, daily_report_time: '09:00',
@@ -501,14 +561,6 @@ const WhatsappSettings: React.FC = () => {
   };
 
   // ── Settings Updaters ──
-
-  const updateNotificationSetting = (key: string, field: string, value: any) => {
-    if (!settings) return;
-    setSettings({
-      ...settings,
-      notification_settings: { ...settings.notification_settings, [key]: { ...settings.notification_settings[key], [field]: value } }
-    });
-  };
 
   const updateMessageTemplate = (key: string, field: string, value: string) => {
     if (!settings) return;
@@ -781,9 +833,10 @@ const WhatsappSettings: React.FC = () => {
     },
     {
       id: 'notifications',
-      name: 'التنبيهات',
+      name: 'الرسائل الآلية',
       icon: Bell,
-      badge: settings ? Object.values(settings.notification_settings || {}).filter((n: any) => n.enabled).length : 0
+      // العدد من التفضيلات الحقيقية لا من الخريطة الميتة
+      badge: prefGroups.reduce((n, g) => n + g.events.filter(e => e.enabled).length, 0)
     },
     {
       id: 'templates',
@@ -791,7 +844,11 @@ const WhatsappSettings: React.FC = () => {
       icon: FileText,
       badge: settings ? Object.keys(settings.message_templates || {}).length : 0
     },
-    { id: 'schedule', name: 'ساعات العمل', icon: Clock },
+    // ⚠️ أُزيل تبويب «ساعات العمل» (2026-08-01): كان يَعِد المكتب حرفياً بأن
+    //    «أي رسالة تنشأ خارج هذه الأوقات سيتم جدولتها تلقائياً» — و
+    //    isWithinWorkingHours() في الباك فيها `return true` غير مشروط قبل أي
+    //    كود، ونداؤها نفسه معلَّق. فالمفتاح والوعد كلاهما بلا أثر.
+    //    يعود حين تُبنى «ساعة الإرسال لكل مكتب» فعلياً.
   ];
 
   return (
@@ -1473,62 +1530,85 @@ const WhatsappSettings: React.FC = () => {
                     </div>
                   </div>
 
-                  {NOTIFICATION_GROUPS.map((grp, gIdx) => (
-                    <div key={gIdx} className="wa-card">
+                  {/* ═══ الرسائل الآلية — مدفوعةٌ بـ/whatsapp/preferences ═══
+                      حلّت محلّ مصفوفةٍ كانت تعرض ١٥ مفتاحاً وحقلَ «تأخير بالدقائق»
+                      بلا أي قارئ في الباك: تُحفظ في notification_settings ولا
+                      يقرؤها مسار إرسالٍ واحد. والآن كل مفتاح هنا يحجب فعلياً. */}
+
+                  {prefsLoading && (
+                    <div className="wa-card">
+                      <div className="wa-card__body">
+                        {[0, 1, 2].map(i => (
+                          <div key={i} style={{ height: 46, background: 'var(--quiet-gray-100)', borderRadius: 8, marginBottom: 10, opacity: 1 - i * 0.25 }} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {!prefsLoading && prefsError && (
+                    <div className="wa-card">
+                      <div className="wa-card__body" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <AlertCircle size={16} style={{ color: 'var(--status-red)' }} />
+                        <span style={{ fontSize: 13 }}>{prefsError}</span>
+                        <button className="wa-btn wa-btn--ghost" onClick={loadPreferences} style={{ marginRight: 'auto' }}>
+                          <RefreshCw size={14} /> إعادة المحاولة
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!prefsLoading && !prefsError && prefGroups.length === 0 && (
+                    <div className="wa-card">
+                      <div className="wa-card__body" style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                        لا رسائل آلية متاحة للتحكّم في هذا المكتب.
+                      </div>
+                    </div>
+                  )}
+
+                  {!prefsLoading && !prefsError && prefGroups.map(grp => (
+                    <div key={grp.key} className="wa-card">
                       <div className="wa-card__header">
                         <div className="wa-card__header-title">
                           <Bell size={16} />
-                          <span>{grp.title}</span>
+                          <span>{grp.label}</span>
                         </div>
-                        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{grp.desc}</span>
+                        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                          {grp.events.filter(e => e.enabled).length} من {grp.events.length} مفعّلة
+                        </span>
                       </div>
                       <div className="wa-card__body" style={{ gap: 12 }}>
-                        {grp.keys.map(key => {
-                          const setting = settings.notification_settings[key];
-                          const isSelected = selectedNotificationKey === key;
-                          return (
-                            <div 
-                              key={key} 
-                              className={`whatsapp-notification-item ${isSelected ? 'whatsapp-notification-item--selected' : ''}`} 
-                              style={{ margin: 0, cursor: 'pointer' }}
-                              onClick={() => setSelectedNotificationKey(key)}
-                            >
-                              <div className="whatsapp-notification-item__info">
-                                <div className="whatsapp-notification-item__title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <span>{NOTIFICATION_TITLES[key] || key}</span>
-                                  {isSelected && <span className="wa-tag" style={{ background: 'var(--color-primary-soft)', color: 'var(--color-primary)', border: '1px solid var(--color-primary-soft)' }}>نشط في المعاينة</span>}
-                                </div>
-                                <div className="whatsapp-notification-item__desc">{NOTIFICATION_DESCS[key] || ''}</div>
-                              </div>
-                              <div className="whatsapp-notification-item__actions" onClick={e => e.stopPropagation()}>
-                                <label className="whatsapp-toggle">
-                                  <input 
-                                    type="checkbox" 
-                                    className="whatsapp-toggle__checkbox" 
-                                    checked={setting?.enabled ?? false}
-                                    onChange={e => updateNotificationSetting(key, 'enabled', e.target.checked)} 
-                                  />
-                                  <span className="whatsapp-toggle__text">تفعيل</span>
-                                </label>
-                                {setting?.enabled && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--quiet-gray-100)', padding: '4px 8px', borderRadius: 6, border: '1px solid var(--color-border)' }}>
-                                    <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>تأخير:</span>
-                                    <input 
-                                      type="number" 
-                                      min="0" 
-                                      max="60" 
-                                      className="wa-detail-input" 
-                                      style={{ width: 45, padding: '2px 4px', fontSize: 12, textAlign: 'center' }}
-                                      value={setting?.delay_minutes ?? 0} 
-                                      onChange={e => updateNotificationSetting(key, 'delay_minutes', parseInt(e.target.value) || 0)} 
-                                    />
-                                    <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>دقيقة</span>
-                                  </div>
+                        {grp.events.map(ev => (
+                          <div key={ev.key} className="whatsapp-notification-item" style={{ margin: 0 }}>
+                            <div className="whatsapp-notification-item__info">
+                              <div className="whatsapp-notification-item__title" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <span>{ev.label}</span>
+                                <span className="wa-tag" style={{ background: 'var(--quiet-gray-100)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}>
+                                  {AUDIENCE_LABEL[ev.audience] || ev.audience}
+                                </span>
+                                {ev.locked && (
+                                  <span className="wa-tag" style={{ background: 'var(--quiet-gray-100)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}>
+                                    يُدار من {ev.lock_screen}
+                                  </span>
                                 )}
                               </div>
+                              {ev.note && (
+                                <div className="whatsapp-notification-item__desc">{ev.note}</div>
+                              )}
                             </div>
-                          );
-                        })}
+                            <div className="whatsapp-notification-item__actions">
+                              <label className="whatsapp-toggle" style={ev.locked ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}>
+                                <input
+                                  type="checkbox"
+                                  className="whatsapp-toggle__checkbox"
+                                  checked={ev.enabled}
+                                  disabled={ev.locked || prefsSaving}
+                                  onChange={e => togglePreference(ev.key, e.target.checked)}
+                                />
+                                <span className="whatsapp-toggle__text">{ev.enabled ? 'مفعّل' : 'موقوف'}</span>
+                              </label>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}
@@ -1606,97 +1686,15 @@ const WhatsappSettings: React.FC = () => {
             )}
 
             {/* ═══════════ TAB: Schedule ═══════════ */}
-            {activeTab === 'schedule' && (
-              <div className="wa-tab-content">
-                <div className="wa-card">
-                  <div className="wa-card__header">
-                    <div className="wa-card__header-title">
-                      <Clock size={16} />
-                      <span>إدارة ساعات العمل وتأخير التنبيهات</span>
-                    </div>
-                  </div>
-                  <div className="wa-card__body" style={{ gap: 16 }}>
-                    <div style={{ padding: 12, borderRadius: 8, background: 'var(--color-surface-subtle)', border: '1px solid var(--color-border)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                      <Info size={16} style={{ color: 'var(--color-primary)', flexShrink: 0, marginTop: 2 }} />
-                      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-                        ملاحظة: تمنع ساعات العمل إرسال الإشعارات التلقائية خارج أوقات عمل المكتب الرسمية. أي رسالة تنشأ خارج هذه الأوقات سيتم جدولتها تلقائياً لترسل فور بدء ساعات العمل الرسمية لليوم التالي تفادياً لإزعاج العملاء.
-                      </div>
-                    </div>
-
-                    <div className="whatsapp-schedule-grid" style={{ marginTop: 8 }}>
-                      {settings.working_hours && Object.keys(settings.working_hours).length > 0 ? (
-                        Object.entries(settings.working_hours).map(([day, hours]: [string, any]) => {
-                          const isEnabled = hours?.enabled ?? false;
-                          return (
-                            <div 
-                              key={day} 
-                              className="whatsapp-schedule-row"
-                              style={{ 
-                                opacity: isEnabled ? 1 : 0.75,
-                                background: isEnabled ? 'var(--quiet-gray-50)' : 'var(--quiet-gray-100)',
-                                border: isEnabled ? '1px solid var(--color-border)' : '1px dashed var(--color-border)',
-                                transition: 'all 0.2s'
-                              }}
-                            >
-                              <label className="whatsapp-toggle" style={{ minWidth: 120 }}>
-                                <input 
-                                  type="checkbox" 
-                                  className="whatsapp-toggle__checkbox" 
-                                  checked={isEnabled}
-                                  onChange={e => updateWorkingHour(day, 'enabled', e.target.checked)} 
-                                />
-                                <span className="whatsapp-schedule-row__day" style={{ fontWeight: isEnabled ? 700 : 500 }}>
-                                  {DAY_NAMES[day] || day}
-                                </span>
-                              </label>
-                              
-                              <div 
-                                className="whatsapp-schedule-row__inputs"
-                                style={{ 
-                                  pointerEvents: isEnabled ? 'auto' : 'none',
-                                  opacity: isEnabled ? 1 : 0.4,
-                                  transition: 'all 0.2s'
-                                }}
-                              >
-                                <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>من:</span>
-                                <input 
-                                  type="time" 
-                                  className="whatsapp-schedule-row__time" 
-                                  value={hours?.start || '08:00'}
-                                  onChange={e => updateWorkingHour(day, 'start', e.target.value)} 
-                                />
-                                <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>إلى:</span>
-                                <input 
-                                  type="time" 
-                                  className="whatsapp-schedule-row__time" 
-                                  value={hours?.end || '17:00'}
-                                  onChange={e => updateWorkingHour(day, 'end', e.target.value)} 
-                                />
-                              </div>
-
-                              {!isEnabled && (
-                                <span style={{ fontSize: 11, color: 'var(--status-red)', fontWeight: 500, marginRight: 'auto' }}>
-                                  يوم عطلة مغلق
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="wa-empty" style={{ padding: 40 }}>
-                          <Clock size={36} style={{ color: 'var(--color-text-secondary)', opacity: 0.4 }} />
-                          <p>لا توجد ساعات عمل. اضغط "إعادة التعيين" لتحميل الافتراضية.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+              {/* أُزيلت كتلة «ساعات العمل»: التبويب نفسه حُذف — المفتاح والوعد كلاهما بلا أثر في الباك. */}
           </div>
         </main>
 
-        {((activeTab === 'instances' && instances.length > 0) || activeTab === 'send' || activeTab === 'log' || activeTab === 'notifications' || activeTab === 'templates' || activeTab === 'schedule') && (
+        {/* ⚠️ أُزيل 'notifications' و'schedule' من الشرط: لوحتاهما اليمنى كانتا
+            تقرآن settings.notification_settings[selectedNotificationKey] —
+            خريطةٌ لم تعد تُملأ بعد استبدال التبويب، فالنتيجة undefined أو شاشة
+            بيضاء. والتبويب الجديد لا يحتاج معاينةً: كل مفتاح يحمل معناه بنصّه. */}
+        {((activeTab === 'instances' && instances.length > 0) || activeTab === 'send' || activeTab === 'log' || activeTab === 'templates') && (
           <aside className="whatsapp-preview">
             <div className="whatsapp-preview__header">
               {activeTab === 'instances' ? (
@@ -1713,11 +1711,6 @@ const WhatsappSettings: React.FC = () => {
                 <div className="whatsapp-preview__title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <History size={16} style={{ color: 'var(--color-primary)' }} />
                   <span>تفاصيل الرسالة المحددة</span>
-                </div>
-              ) : activeTab === 'notifications' ? (
-                <div className="whatsapp-preview__title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Bell size={16} style={{ color: 'var(--color-primary)' }} />
-                  <span>معاينة الإشعار التلقائي</span>
                 </div>
               ) : activeTab === 'templates' ? (
                 <div className="whatsapp-preview__title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1920,64 +1913,10 @@ const WhatsappSettings: React.FC = () => {
                 )
               )}
 
-              {activeTab === 'notifications' && (
-                <div className="wa-phone-mockup" style={{ height: 'auto', minHeight: 380 }}>
-                  <div className="wa-phone-header">
-                    <div className="wa-phone-header__back">
-                      <ChevronRight size={18} />
-                    </div>
-                    <div className="wa-phone-header__avatar">
-                      <User size={16} />
-                    </div>
-                    <div className="wa-phone-header__info">
-                      <div className="wa-phone-header__name">بوابة الإشعارات التلقائية</div>
-                      <div className="wa-phone-header__status">متصل حالياً</div>
-                    </div>
-                  </div>
-                  <div className="wa-phone-chat-bg" style={{ minHeight: 200 }}>
-                    <div className="wa-chat-bubble-container">
-                      <div className="wa-chat-bubble outbound">
-                        <div className="wa-chat-bubble__text">
-                          <span style={{ whiteSpace: 'pre-wrap' }}>
-                            {replaceTemplatePlaceholders(settings.message_templates[selectedNotificationKey]?.template) || (
-                              <span style={{ color: 'var(--color-text-secondary)', fontStyle: 'italic', fontSize: 12 }}>
-                                لا يوجد محتوى قالب متاح لهذا التنبيه حالياً.
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                        <div className="wa-chat-bubble__meta">
-                          <span className="wa-chat-bubble__time">
-                            {new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          <span className="wa-chat-bubble__ticks">
-                            <svg viewBox="0 0 16 11" width="14" height="10" fill="currentColor">
-                              <path d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.88a.32.32 0 0 1-.484.033L5.4 7.37a.364.364 0 0 0-.515.006l-.423.433a.364.364 0 0 0 .006.514l3.26 3.107a.32.32 0 0 0 .471-.019l6.234-7.585a.364.364 0 0 0-.022-.51z"/>
-                              <path d="M11.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L4.666 9.88a.32.32 0 0 1-.484.033L1.4 7.37a.364.364 0 0 0-.515.006l-.423.433a.364.364 0 0 0 .006.514l3.26 3.107a.32.32 0 0 0 .471-.019l6.234-7.585a.364.364 0 0 0-.022-.51z"/>
-                            </svg>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ background: 'var(--color-surface-subtle)', padding: 12, borderTop: '1px solid var(--color-border)', fontSize: 11, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--color-text-secondary)' }}>الحدث البرمجي:</span>
-                      <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>{selectedNotificationKey}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--color-text-secondary)' }}>الحالة الإجمالية:</span>
-                      <span style={{ fontWeight: 600, color: settings.notification_settings[selectedNotificationKey]?.enabled ? 'var(--status-green)' : 'var(--status-red)' }}>
-                        {settings.notification_settings[selectedNotificationKey]?.enabled ? 'مفعل ومجدول' : 'معطل حالياً'}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--color-text-secondary)' }}>تأخير الإرسال:</span>
-                      <span style={{ fontWeight: 600 }}>{settings.notification_settings[selectedNotificationKey]?.delay_minutes || 0} دقيقة</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* ⚠️ أُزيلت لوحة معاينة «الإشعار التلقائي» (2026-08-01): كانت تقرأ
+                  settings.notification_settings[selectedNotificationKey] وتعرض
+                  «مفعل ومجدول» و«تأخير الإرسال: N دقيقة» — وكلاهما بلا أي أثر في
+                  الباك. والخريطة لم تعد تُملأ أصلاً بعد استبدال التبويب. */}
 
               {activeTab === 'templates' && (
                 <div className="wa-phone-mockup" style={{ height: 'auto', minHeight: 380 }}>
@@ -2031,95 +1970,7 @@ const WhatsappSettings: React.FC = () => {
                 </div>
               )}
 
-              {activeTab === 'schedule' && (() => {
-                const getWorkingHoursStatus = () => {
-                  if (!settings.working_hours) return { open: false, text: 'ساعات العمل غير مهيأة' };
-                  const now = new Date();
-                  const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-                  const currentDayKey = daysMap[now.getDay()];
-                  const todayHours = settings.working_hours[currentDayKey];
-                  if (!todayHours || !todayHours.enabled) {
-                    return { open: false, text: `مغلق اليوم (${DAY_NAMES[currentDayKey]})` };
-                  }
-                  const startStr = todayHours.start || '08:00';
-                  const endStr = todayHours.end || '17:00';
-                  const [startH, startM] = startStr.split(':').map(Number);
-                  const [endH, endM] = endStr.split(':').map(Number);
-                  const currentH = now.getHours();
-                  const currentM = now.getMinutes();
-                  const startTotal = startH * 60 + startM;
-                  const endTotal = endH * 60 + endM;
-                  const currentTotal = currentH * 60 + currentM;
-                  if (currentTotal >= startTotal && currentTotal <= endTotal) {
-                    return { open: true, text: `مفتوح الآن (ينتهي عند ${endStr})` };
-                  } else {
-                    return { open: false, text: `مغلق حالياً (يبدأ عند ${startStr})` };
-                  }
-                };
-
-                const status = getWorkingHoursStatus();
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    <div className={`wa-stat ${status.open ? 'wa-stat--green' : 'wa-stat--red'}`} style={{ padding: 16, textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span className={`wa-status-tag wa-status-tag--${status.open ? 'connected' : 'disconnected'}`} style={{ margin: 0 }}>
-                          <span className="wa-status-tag__dot" />
-                          {status.open ? 'نشط الآن' : 'في وضع الانتظار'}
-                        </span>
-                      </div>
-                      <span className="wa-stat__value" style={{ fontSize: 15, marginTop: 4 }}>{status.text}</span>
-                      <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '4px 0 0 0', lineHeight: 1.5 }}>
-                        {status.open 
-                          ? 'بوابة الإرسال التلقائي نشطة حالياً وتقوم بمعالجة وإرسال كافة التنبيهات والإشعارات فوراً دون جدولة.'
-                          : 'النظام حالياً خارج أوقات العمل الرسمية. سيتم جدولة كافة التنبيهات التلقائية الصادرة لتُرسل فور بدء ساعات العمل الرسمية القادمة.'}
-                      </p>
-                    </div>
-
-                    <div className="wa-card">
-                      <div className="wa-card__header">
-                        <div className="wa-card__header-title">
-                          <Clock size={14} />
-                          <span>خريطة العمل الأسبوعية</span>
-                        </div>
-                      </div>
-                      <div className="wa-card__body" style={{ padding: '10px 0', gap: 2 }}>
-                        {Object.entries(settings.working_hours || {}).map(([day, hours]: [string, any]) => {
-                          const isToday = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() === day;
-                          return (
-                            <div 
-                              key={`schedule-preview-${day}`} 
-                              style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'space-between', 
-                                padding: '8px 12px', 
-                                borderRight: isToday ? '3px solid var(--color-primary)' : 'none',
-                                background: isToday ? 'var(--color-primary-soft)' : 'transparent',
-                                borderRadius: isToday ? '0 4px 4px 0' : '0'
-                              }}
-                            >
-                              <span style={{ fontSize: 12, fontWeight: isToday ? 600 : 500, color: hours?.enabled ? 'var(--color-text)' : 'var(--color-text-secondary)' }}>
-                                {DAY_NAMES[day] || day}
-                                {isToday && <span style={{ fontSize: 10, color: 'var(--color-primary)', marginRight: 6 }}>(اليوم)</span>}
-                              </span>
-                              
-                              {hours?.enabled ? (
-                                <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--color-text-secondary)' }}>
-                                  {hours.start} - {hours.end}
-                                </span>
-                              ) : (
-                                <span style={{ fontSize: 11, color: 'var(--status-red)', fontWeight: 500 }}>
-                                  عطلة نهاية الأسبوع
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
+              {/* أُزيلت كتلة «ساعات العمل»: التبويب نفسه حُذف — المفتاح والوعد كلاهما بلا أثر في الباك. */}
             </div>
           </aside>
         )}
