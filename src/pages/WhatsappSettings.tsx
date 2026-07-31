@@ -92,6 +92,16 @@ interface PrefEvent {
   hint: string | null;
 }
 
+/** عائلة تذكيراتٍ يمكن للمكتب ضبط ساعة إرسالها */
+interface SendWindowFamily {
+  key: string;
+  label: string;
+  /** null = يتبع ساعة المنصّة */
+  hour: number | null;
+  platform_default: number[];
+  is_default: boolean;
+}
+
 interface PrefGroup {
   key: string;
   label: string;
@@ -356,6 +366,61 @@ const WhatsappSettings: React.FC = () => {
     } finally {
       setPrefsSaving(false);
     }
+  };
+
+  // ── ساعة الإرسال لكل مكتب (مصدرها /whatsapp/send-windows) ──
+  const [windows, setWindows] = useState<SendWindowFamily[]>([]);
+  const [allowedHours, setAllowedHours] = useState<number[]>([]);
+  const [rangeHint, setRangeHint] = useState('');
+  const [windowsLoading, setWindowsLoading] = useState(false);
+  const [windowsError, setWindowsError] = useState<string | null>(null);
+
+  const loadWindows = useCallback(async () => {
+    setWindowsLoading(true);
+    setWindowsError(null);
+    try {
+      const res = await api.get('/v1/whatsapp/send-windows');
+      if (res.data?.success) {
+        setWindows(res.data.data.families || []);
+        setAllowedHours(res.data.data.allowed_hours || []);
+        setRangeHint(res.data.data.range_hint || '');
+      } else {
+        setWindowsError(res.data?.message || 'تعذّر تحميل أوقات الإرسال');
+      }
+    } catch {
+      setWindowsError('تعذّر الاتصال بالخادم');
+    } finally {
+      setWindowsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { if (activeTab === 'timing') loadWindows(); }, [activeTab, loadWindows]);
+
+  /** تبديلٌ متفائل يرجع عن نفسه إن فشل الحفظ — ويرسل العائلة المتغيّرة وحدها. */
+  const updateWindow = async (familyKey: string, hour: number | null) => {
+    const before = windows;
+    setWindows(ws => ws.map(w => (w.key === familyKey ? { ...w, hour, is_default: hour === null } : w)));
+
+    try {
+      const res = await api.put('/v1/whatsapp/send-windows', { windows: { [familyKey]: hour } });
+      if (res.data?.success) {
+        showToast('تم الحفظ — يسري ابتداءً من الغد');
+      } else {
+        setWindows(before);
+        showToast(res.data?.message || 'تعذّر حفظ الوقت', 'error');
+      }
+    } catch {
+      setWindows(before);
+      showToast('تعذّر الاتصال بالخادم', 'error');
+    }
+  };
+
+  /** «٥ عصراً» بدل «17» — المكتب لا يقرأ ٢٤ ساعة. */
+  const hourLabel = (h: number): string => {
+    if (h === 12) return '١٢ ظهراً';
+    const period = h < 12 ? 'صباحاً' : h < 18 ? 'عصراً' : 'مساءً';
+    const twelve = h % 12 === 0 ? 12 : h % 12;
+    return `${twelve.toLocaleString('ar-EG')} ${period}`;
   };
 
   // Clear selected log message when tab changes
@@ -838,6 +903,12 @@ const WhatsappSettings: React.FC = () => {
       icon: Bell,
       // العدد من التفضيلات الحقيقية لا من الخريطة الميتة
       badge: prefGroups.reduce((n, g) => n + g.events.filter(e => e.enabled).length, 0)
+    },
+    {
+      id: 'timing',
+      name: 'أوقات الإرسال',
+      icon: Clock,
+      badge: windows.filter(w => !w.is_default).length
     },
     {
       id: 'templates',
@@ -1613,6 +1684,84 @@ const WhatsappSettings: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* ═══════════ TAB: أوقات الإرسال ═══════════ */}
+            {activeTab === 'timing' && (
+              <div className="wa-tab-content">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                  {windowsLoading && (
+                    <div className="wa-card"><div className="wa-card__body">
+                      {[0, 1, 2].map(i => (
+                        <div key={i} style={{ height: 56, background: 'var(--quiet-gray-100)', borderRadius: 8, marginBottom: 10, opacity: 1 - i * 0.25 }} />
+                      ))}
+                    </div></div>
+                  )}
+
+                  {!windowsLoading && windowsError && (
+                    <div className="wa-card"><div className="wa-card__body" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <AlertCircle size={16} style={{ color: 'var(--status-red)' }} />
+                      <span style={{ fontSize: 13 }}>{windowsError}</span>
+                      <button className="wa-btn wa-btn--ghost" onClick={loadWindows} style={{ marginRight: 'auto' }}>
+                        <RefreshCw size={14} /> إعادة المحاولة
+                      </button>
+                    </div></div>
+                  )}
+
+                  {!windowsLoading && !windowsError && windows.length > 0 && (
+                    <div className="wa-card">
+                      <div className="wa-card__header">
+                        <div className="wa-card__header-title">
+                          <Clock size={16} />
+                          <span>متى تصل تذكيرات مكتبك؟</span>
+                        </div>
+                        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{rangeHint}</span>
+                      </div>
+                      <div className="wa-card__body" style={{ gap: 12 }}>
+                        {windows.map(w => (
+                          <div key={w.key} className="whatsapp-notification-item" style={{ margin: 0 }}>
+                            <div className="whatsapp-notification-item__info">
+                              <div className="whatsapp-notification-item__title" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <span>{w.label}</span>
+                                {w.is_default && (
+                                  <span className="wa-tag" style={{ background: 'var(--quiet-gray-100)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}>
+                                    الوقت الافتراضي
+                                  </span>
+                                )}
+                              </div>
+                              <div className="whatsapp-notification-item__desc">
+                                {w.is_default
+                                  ? `تصل حالياً ${w.platform_default.map(hourLabel).join(' و')}`
+                                  : `اخترتَ ${hourLabel(w.hour as number)} — والتغيير يسري ابتداءً من الغد`}
+                              </div>
+                            </div>
+                            <div className="whatsapp-notification-item__actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <select
+                                className="wa-detail-input"
+                                style={{ minWidth: 130, padding: '6px 8px', fontSize: 13 }}
+                                value={w.hour === null ? '' : String(w.hour)}
+                                onChange={e => updateWindow(w.key, e.target.value === '' ? null : Number(e.target.value))}
+                              >
+                                <option value="">الوقت الافتراضي</option>
+                                {allowedHours.map(h => (
+                                  <option key={h} value={h}>{hourLabel(h)}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {!windowsLoading && !windowsError && windows.length === 0 && (
+                    <div className="wa-card"><div className="wa-card__body" style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                      لا تذكيرات قابلة لضبط وقتها في هذا المكتب.
+                    </div></div>
+                  )}
                 </div>
               </div>
             )}
