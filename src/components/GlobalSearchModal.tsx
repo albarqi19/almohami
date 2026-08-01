@@ -383,11 +383,31 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                 gap: 2px;
               }
 
+              .gs-row__headline {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                min-width: 0;
+              }
+
+              /* داخل السطر المرن يلزم min-width:0 وإلا رفض العنوان الانكماش وانكسر القصّ بالنقاط. */
+              .gs-row__headline .gs-row__title {
+                flex: 0 1 auto;
+                min-width: 0;
+              }
+
               .gs-row__title {
                 font-weight: 500;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
+              }
+
+              /* رقاقة «مؤرشف»: erp-cell__tag الرمادية نفسها، بدرجة أغمق قليلاً
+                 كي تبقى مقروءة فوق خلفية الصف المُمرَّر عليه (--quiet-gray-100). */
+              .gs-row__archived {
+                flex-shrink: 0;
+                background: var(--quiet-gray-200);
               }
 
               .gs-row__meta {
@@ -430,6 +450,11 @@ interface RowProps<T> {
   onHover: () => void;
 }
 
+/**
+ * صف القضية بالبحث العلوي.
+ * قاعدة «الفلترة تُخفي والبحث يُظهر»: القضية المؤرشفة تظهر هنا عمداً — لا تُحجب ولا يُمنع فتحها،
+ * وإنما تُوسَم برقاقة نصّية رمادية بجوار العنوان (بلا شريط جانبي لوني).
+ */
 const CaseRow: React.FC<RowProps<GlobalSearchCase>> = ({ item, active, onSelect, onHover }) => (
   <button
     type="button"
@@ -441,7 +466,12 @@ const CaseRow: React.FC<RowProps<GlobalSearchCase>> = ({ item, active, onSelect,
       <Briefcase size={14} />
     </span>
     <span className="gs-row__body">
-      <span className="gs-row__title">{item.title}</span>
+      <span className="gs-row__headline">
+        <span className="gs-row__title">{item.title}</span>
+        {item.archived_at && (
+          <span className="erp-cell__tag gs-row__archived">مؤرشف</span>
+        )}
+      </span>
       <span className="gs-row__meta">
         {[item.file_number, item.client_name].filter(Boolean).join(' · ') || '—'}
       </span>

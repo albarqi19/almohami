@@ -28,7 +28,10 @@ import {
   Gavel,
   Scale,
   FolderClosed,
-  FolderInput
+  FolderInput,
+  Archive,
+  ArchiveRestore,
+  X
 } from 'lucide-react';
 import {
   DndContext,
@@ -52,10 +55,12 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-import type { Task, TaskStatus, Priority, TaskFolder, TaskFolderColor } from '../types';
+import type { ArchivedFilter, Task, TaskStatus, Priority, TaskFolder, TaskFolderColor } from '../types';
 import { TaskService, type TaskFilters, type TaskStats, type TaskWidgets } from '../services/taskService';
 import { TaskFolderService } from '../services/taskFolderService';
 import { UserService } from '../services/UserService';
+import { Can } from '../components/Can';
+import { ToneBadge } from '../components/erp/StatusBadge';
 import AddTaskModal from '../components/AddTaskModal';
 import EditTaskModal from '../components/EditTaskModal';
 import { TaskFoldersPanel, TaskFolderModal } from '../components/tasks/TaskFoldersPanel';
@@ -73,6 +78,17 @@ const TASK_STATUSES: { key: TaskStatus; label: string; color: string }[] = [
   { key: 'completed', label: 'مكتملة', color: '#10b981' },
   { key: 'cancelled', label: 'ملغية', color: '#ef4444' }
 ];
+
+/**
+ * [ARCHIVE] الباك يضبط `status='archived'` مع `archived_at` عند الأرشفة، وهي حالة خارج
+ * TASK_STATUSES — فبدون مجموعة/عمود لها تختفي الصفوف كلياً داخل وضع الأرشيف.
+ * تُضاف ديناميكياً فقط حين توجد مهام مؤرشفة معروضة، ولا تُقبل هدفاً للسحب.
+ */
+const ARCHIVED_STATUS: { key: TaskStatus; label: string; color: string } =
+  { key: 'archived', label: 'مؤرشفة', color: '#94a3b8' };
+
+/** المعيار الوحيد للأرشفة هو archived_at (لا status) — وهو مستقل تماماً عن سلة المحذوفات */
+const isArchivedTask = (t: Task) => t.archived_at != null || t.status === 'archived';
 
 type GroupBy = 'status' | 'assignee';
 
@@ -156,6 +172,7 @@ const SortableTaskCard = ({
           <span className="task-prio-dot" style={{ background: prio.color }} />
           {prio.label}
         </span>
+        {isArchivedTask(task) && <ToneBadge tone="neutral">مؤرشفة</ToneBadge>}
         <div className="task-card-actions" onClick={(e) => e.stopPropagation()}>
           {task.status === 'in_progress' && (
             <button
@@ -442,6 +459,12 @@ const Tasks: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'priority' | 'dueDate' | 'title' | 'createdAt'>('priority');
 
+  // [ARCHIVE] وضع الأرشيف: '0' الحيّة (افتراضي) | '1' المؤرشفة وحدها.
+  // appliedArchivedMode هو ما طبّقه الباك فعلاً — يصير 'all' تلقائياً مع البحث («الفلترة تُخفي والبحث يُظهر»).
+  const [archivedFilter, setArchivedFilter] = useState<ArchivedFilter>('0');
+  const [appliedArchivedMode, setAppliedArchivedMode] = useState<ArchivedFilter>('0');
+  const [archivedCount, setArchivedCount] = useState(0);
+
   // فلتر خاص من أزرار «عرض الكل» في الودجات الجانبية
   type SpecialFilter = 'overdue' | 'due_today' | 'needs_attention' | null;
   const [specialFilter, setSpecialFilter] = useState<SpecialFilter>(null);
@@ -456,8 +479,17 @@ const Tasks: React.FC = () => {
   const [folderDeleting, setFolderDeleting] = useState(false);
 
   // مرآة للفلاتر الحالية حتى تقرأها loadTasks من داخل أي callback بدون قيم قديمة
-  const filtersRef = useRef({ search: '', status: 'all' as TaskStatus | 'all', assignee: 'all', priority: 'all', special: null as SpecialFilter, folderId: null as number | null });
-  filtersRef.current = { search: searchTerm, status: statusFilter, assignee: assigneeFilter, priority: priorityFilter, special: specialFilter, folderId: activeFolderId };
+  const filtersRef = useRef({ search: '', status: 'all' as TaskStatus | 'all', assignee: 'all', priority: 'all', special: null as SpecialFilter, folderId: null as number | null, archived: '0' as ArchivedFilter });
+  filtersRef.current = { search: searchTerm, status: statusFilter, assignee: assigneeFilter, priority: priorityFilter, special: specialFilter, folderId: activeFolderId, archived: archivedFilter };
+
+  // [ARCHIVE] كاش localStorage للمهام مفتاحه ثابت (tasks_cache_v2) ولا يفرّق بين
+  // الحيّ والمؤرشف، فلا يُكتب إلا حين تكون الصفحة المعروضة حيّة صرفاً — وإلا سرّبت
+  // الصفوف المؤرشفة نفسها إلى القائمة الحيّة عند إعادة فتح الصفحة.
+  const cacheIsLiveRef = useRef(true);
+  const commitTasks = (next: Task[]) => {
+    setTasks(next);
+    if (cacheIsLiveRef.current) TasksCache.set(next);
+  };
 
   // إحصائيات وقوائم ودجات حقيقية من الخادم (كل المهام لا الصفحة المحمّلة فقط)
   const [stats, setStats] = useState<TaskStats | null>(null);
@@ -484,6 +516,10 @@ const Tasks: React.FC = () => {
   const [holdReason, setHoldReason] = useState('');
   const [holding, setHolding] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // [ARCHIVE] تأكيد الأرشفة / الإعادة من الأرشيف
+  const [archiveTarget, setArchiveTarget] = useState<Task | null>(null);
+  const [unarchiveTarget, setUnarchiveTarget] = useState<Task | null>(null);
+  const [archiveBusy, setArchiveBusy] = useState(false);
 
   // responsive layout mobile navigation state
   const [mobileActiveTab, setMobileActiveTab] = useState<'tasks' | 'filters' | 'alerts'>('tasks');
@@ -569,9 +605,7 @@ const Tasks: React.FC = () => {
         const newActualHours = (task.actualHours || 0) + hours;
         await TaskService.updateTask(activeTimerTaskId, { actual_hours: newActualHours });
         
-        const updatedTasks = tasks.map(t => t.id === activeTimerTaskId ? { ...t, actualHours: newActualHours } : t);
-        setTasks(updatedTasks);
-        TasksCache.set(updatedTasks);
+        commitTasks(tasks.map(t => t.id === activeTimerTaskId ? { ...t, actualHours: newActualHours } : t));
         alert('تم تسجيل الوقت بنجاح.');
       } catch (err) {
         console.error('Failed to log hours:', err);
@@ -622,8 +656,11 @@ const Tasks: React.FC = () => {
   const loadTasks = async () => {
     try {
       if (tasks.length === 0) setLoading(true);
-      const { search, status, assignee, priority, special, folderId } = filtersRef.current;
+      const { search, status, assignee, priority, special, folderId, archived } = filtersRef.current;
       const filters: TaskFilters = { per_page: loadedCountRef.current };
+      // «الفلترة تُخفي والبحث يُظهر»: في الوضع الحيّ مع بحثٍ نصّي نُسقِط المفتاح عمداً
+      // ليطبّق الباك قاعدته (archived_mode = 'all') فلا تضيع مهمة مؤرشفة على الباحث عنها.
+      if (archived !== '0' || !search.trim()) filters.archived = archived;
       if (search.trim()) filters.search = search.trim();
       if (status !== 'all') filters.status = status;
       if (assignee !== 'all' && assignee !== 'unassigned') filters.assigned_to = assignee;
@@ -635,9 +672,14 @@ const Tasks: React.FC = () => {
       else if (!special) filters.exclude_foldered = 1;
       const response = await TaskService.getTasks(filters);
       const tasksData = response.data || [];
+      // ما طبّقه الباك فعلاً هو مرجع العرض (قد يصير 'all' مع البحث)
+      const mode = response.archived_mode ?? '0';
+      setAppliedArchivedMode(mode);
+      setArchivedCount(response.archived_count ?? 0);
+      cacheIsLiveRef.current = mode === '0';
       setTasks(tasksData);
       setTotalCount((response as any).total ?? tasksData.length);
-      TasksCache.set(tasksData);
+      if (cacheIsLiveRef.current) TasksCache.set(tasksData);
     } catch (error) {
       console.error('Error loading tasks:', error);
     } finally {
@@ -655,7 +697,7 @@ const Tasks: React.FC = () => {
       loadTasks();
     }, delay);
     return () => clearTimeout(t);
-  }, [searchTerm, statusFilter, assigneeFilter, priorityFilter, specialFilter, activeFolderId]);
+  }, [searchTerm, statusFilter, assigneeFilter, priorityFilter, specialFilter, activeFolderId, archivedFilter]);
 
   const loadMore = async () => {
     loadedCountRef.current += PAGE_SIZE;
@@ -705,11 +747,9 @@ const Tasks: React.FC = () => {
     const targetFolder = folderId !== null ? folders.find(f => f.id === folderId) ?? null : null;
     // في العرض العام النقل لمجلد يُخفي المهمة من القائمة؛ وفي عرض مجلد نقلُها لغيره يُخرجها منه
     const hideFromCurrentList = activeFolderId === null ? folderId !== null : folderId !== activeFolderId;
-    const updated = hideFromCurrentList
+    commitTasks(hideFromCurrentList
       ? tasks.filter(t => t.id !== task.id)
-      : tasks.map(t => (t.id === task.id ? { ...t, task_folder_id: folderId, folder: targetFolder } : t));
-    setTasks(updated);
-    TasksCache.set(updated);
+      : tasks.map(t => (t.id === task.id ? { ...t, task_folder_id: folderId, folder: targetFolder } : t)));
 
     try {
       await TaskFolderService.moveTasks([task.id], folderId);
@@ -750,6 +790,12 @@ const Tasks: React.FC = () => {
       }
     }
 
+    // [ARCHIVE] عمود «مؤرشفة» عرضٌ لا مقصد: لا يُؤرشَف بالسحب ولا تُغيَّر حالة مؤرشفة
+    // إلا بـ«إعادة من الأرشيف» (زرّ مصرّح بصلاحية).
+    if (newStatus === 'archived') return;
+    const draggedTask = tasks.find(t => t.id === taskId);
+    if (draggedTask && isArchivedTask(draggedTask)) return;
+
     if (newStatus === 'on_hold') {
       // الإيقاف بسبب إلزامي (#130): لا تحديث متفائل — مودال السبب أولاً ثم /hold
       const task = tasks.find(t => t.id === taskId);
@@ -764,16 +810,13 @@ const Tasks: React.FC = () => {
       const updatedTasks = tasks.map(t =>
         t.id === taskId ? { ...t, status: newStatus as TaskStatus } : t
       );
-      setTasks(updatedTasks);
-      TasksCache.set(updatedTasks);
+      commitTasks(updatedTasks);
 
       try {
         const updated = await TaskService.updateTaskStatus(taskId, newStatus);
         const actualStatus = (updated as any)?.status as TaskStatus | undefined;
         if (actualStatus && actualStatus !== newStatus) {
-          const corrected = updatedTasks.map(t => t.id === taskId ? { ...t, status: actualStatus } : t);
-          setTasks(corrected);
-          TasksCache.set(corrected);
+          commitTasks(updatedTasks.map(t => t.id === taskId ? { ...t, status: actualStatus } : t));
         }
         loadStats();
       } catch (err: any) {
@@ -826,15 +869,20 @@ const Tasks: React.FC = () => {
     return getFilteredTasks().filter(t => t.status === status);
   };
 
+  // [ARCHIVE] ودجات اللوحة اليسرى (متأخرة/اليوم/الاعتماد/الضبط/الحمل) لا ترى المؤرشفة أبداً.
+  // الخادم يستثنيها أصلاً، وهذا المصدر المحلي هو الاحتياطي ريثما تصل بياناته — فيلزمه الاستثناء نفسه،
+  // وإلا امتلأت الودجات بالمؤرشفة لحظة الدخول إلى وضع الأرشيف.
+  const liveTasks = tasks.filter(t => !isArchivedTask(t));
+
   // Dynamically compute overdue and today tasks lists
-  const overdueTasks = tasks.filter(task => {
+  const overdueTasks = liveTasks.filter(task => {
     if (!task.dueDate) return false;
     const isCompletedOrCancelled = task.status === 'completed' || task.status === 'cancelled';
     const isPast = new Date(task.dueDate) < new Date();
     return isPast && !isCompletedOrCancelled;
   });
 
-  const todayTasks = tasks.filter(task => {
+  const todayTasks = liveTasks.filter(task => {
     if (!task.dueDate) return false;
     const isCompletedOrCancelled = task.status === 'completed' || task.status === 'cancelled';
     const isToday = new Date(task.dueDate).toDateString() === new Date().toDateString();
@@ -856,10 +904,10 @@ const Tasks: React.FC = () => {
   const isOpenTask = (t: Task) => t.status !== 'completed' && t.status !== 'cancelled';
 
   // بانتظار الاعتماد
-  const pendingApprovalTasks = tasks.filter(t => t.status === 'pending_approval');
+  const pendingApprovalTasks = liveTasks.filter(t => t.status === 'pending_approval');
 
   // مهام مفتوحة فيها نواقص ضبط (بلا مكلّف / بلا تاريخ / مرفق مطلوب لم يُرفع)
-  const attentionTasks = tasks
+  const attentionTasks = liveTasks
     .filter(isOpenTask)
     .map(task => {
       const reason = !task.assignedTo ? 'بلا مكلّف'
@@ -871,7 +919,7 @@ const Tasks: React.FC = () => {
     .filter((x): x is { task: Task; reason: string } => x !== null);
 
   // توزيع الحمل: عدد المهام المفتوحة لكل محامٍ
-  const openTasks = tasks.filter(isOpenTask);
+  const openTasks = liveTasks.filter(isOpenTask);
   const workload = Object.entries(users)
     .map(([uid, u]) => ({ uid, name: u.name, count: openTasks.filter(t => t.assignedTo === uid).length }))
     .filter(w => w.count > 0)
@@ -934,9 +982,7 @@ const Tasks: React.FC = () => {
       setHoldTask(task);
       return;
     }
-    const updated = tasks.map(t => (t.id === task.id ? { ...t, status } : t));
-    setTasks(updated);
-    TasksCache.set(updated);
+    commitTasks(tasks.map(t => (t.id === task.id ? { ...t, status } : t)));
     try {
       await TaskService.updateTaskStatus(task.id, status);
       loadStats();
@@ -952,9 +998,7 @@ const Tasks: React.FC = () => {
     setHolding(true);
     try {
       const updated = await TaskService.holdTask(holdTask.id, holdReason.trim());
-      const next = tasks.map(t => (t.id === holdTask.id ? { ...t, ...updated, id: t.id } as Task : t));
-      setTasks(next);
-      TasksCache.set(next);
+      commitTasks(tasks.map(t => (t.id === holdTask.id ? { ...t, ...updated, id: t.id } as Task : t)));
       setHoldTask(null);
       setHoldReason('');
       loadStats();
@@ -971,9 +1015,7 @@ const Tasks: React.FC = () => {
     setMenu(null);
     try {
       const updated = await TaskService.resumeTask(task.id);
-      const next = tasks.map(t => (t.id === task.id ? { ...t, ...updated, id: t.id } as Task : t));
-      setTasks(next);
-      TasksCache.set(next);
+      commitTasks(tasks.map(t => (t.id === task.id ? { ...t, ...updated, id: t.id } as Task : t)));
       loadStats();
     } catch (err: any) {
       console.error('Failed to resume task', err);
@@ -987,9 +1029,7 @@ const Tasks: React.FC = () => {
     setDeleting(true);
     try {
       await TaskService.deleteTask(deleteTask.id);
-      const updated = tasks.filter(t => t.id !== deleteTask.id);
-      setTasks(updated);
-      TasksCache.set(updated);
+      commitTasks(tasks.filter(t => t.id !== deleteTask.id));
       setDeleteTask(null);
       loadStats();
     } catch (err) {
@@ -997,6 +1037,54 @@ const Tasks: React.FC = () => {
       alert('فشل حذف المهمة. حاول مرة أخرى.');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // ===== [ARCHIVE] الأرشفة اليدوية الفردية — بلا تتالٍ ومستقلة عن سلة المحذوفات =====
+
+  /** أرشفة مهمة: تختفي من العرض الحيّ، وتبقى موسومة إن كان العرض يشمل المؤرشف */
+  const confirmArchive = async () => {
+    if (!archiveTarget) return;
+    setArchiveBusy(true);
+    try {
+      await TaskService.archiveTask(archiveTarget.id);
+      const stamp = new Date().toISOString();
+      commitTasks(appliedArchivedMode === '0'
+        ? tasks.filter(t => t.id !== archiveTarget.id)
+        : tasks.map(t => (t.id === archiveTarget.id ? { ...t, archived_at: stamp, status: 'archived' as TaskStatus } : t)));
+      setArchiveTarget(null);
+      loadStats();
+      loadFolders();
+    } catch (err: any) {
+      console.error('Failed to archive task', err);
+      alert(err?.message || 'تعذّر أرشفة المهمة');
+    } finally {
+      setArchiveBusy(false);
+    }
+  };
+
+  /**
+   * إعادة من الأرشيف: الباك يحفظ الحالة قبل الأرشفة في `status_before_archive`
+   * ويعيدها إليها (وإلى «لم تبدأ» فقط إن لم تكن محفوظة) — فالحالة تأتي من ردّه لا نفترضها.
+   */
+  const confirmUnarchive = async () => {
+    if (!unarchiveTarget) return;
+    setArchiveBusy(true);
+    try {
+      const updated = await TaskService.unarchiveTask(unarchiveTarget.id);
+      commitTasks(appliedArchivedMode === '1'
+        ? tasks.filter(t => t.id !== unarchiveTarget.id)
+        : tasks.map(t => (t.id === unarchiveTarget.id
+          ? { ...t, ...updated, id: t.id, archived_at: null } as Task
+          : t)));
+      setUnarchiveTarget(null);
+      loadStats();
+      loadFolders();
+    } catch (err: any) {
+      console.error('Failed to unarchive task', err);
+      alert(err?.message || 'تعذّر إعادة المهمة من الأرشيف');
+    } finally {
+      setArchiveBusy(false);
     }
   };
 
@@ -1035,11 +1123,15 @@ const Tasks: React.FC = () => {
     }
   };
 
+  /** حالات العرض = القياسية + «مؤرشفة» متى ظهرت صفوف مؤرشفة فعلاً (لئلا تختفي بلا مجموعة) */
+  const displayStatuses = (list: Task[]) =>
+    list.some(t => t.status === 'archived') ? [...TASK_STATUSES, ARCHIVED_STATUS] : TASK_STATUSES;
+
   const renderListView = () => {
     let groups: { id: string; label: string; color: string; tasks: Task[] }[] = [];
 
     if (groupBy === 'status') {
-      groups = TASK_STATUSES.map(s => ({
+      groups = displayStatuses(getFilteredTasks()).map(s => ({
         id: s.key,
         label: s.label,
         color: s.color,
@@ -1094,7 +1186,15 @@ const Tasks: React.FC = () => {
                     <DraggableTaskRow key={task.id} task={task} onClick={() => navigate(`/tasks/${task.id}`)}>
                       <td>
                         <div className="task-title-cell">
-                          <span className="task-title-text">{task.title}</span>
+                          <span className="task-title-text">
+                            {task.title}
+                            {isArchivedTask(task) && (
+                              <>
+                                {' '}
+                                <ToneBadge tone="neutral">مؤرشفة</ToneBadge>
+                              </>
+                            )}
+                          </span>
                           {task.case ? (
                             <span className="task-case-subtext" title={task.case.title} onClick={(e) => { e.stopPropagation(); navigate(`/cases/${task.caseId}`); }}>
                               <Layers size={10} className="inline-icon" />
@@ -1129,7 +1229,8 @@ const Tasks: React.FC = () => {
                       </td>
                       <td>
                         <span className={`status-badge ${task.status}`}>
-                          {TASK_STATUSES.find(s => s.key === task.status)?.label}
+                          {TASK_STATUSES.find(s => s.key === task.status)?.label
+                            ?? (task.status === 'archived' ? ARCHIVED_STATUS.label : task.status)}
                         </span>
                       </td>
                       <td>
@@ -1187,7 +1288,7 @@ const Tasks: React.FC = () => {
   const renderBoardView = () => (
     <>
       <div className="board-view">
-        {TASK_STATUSES.map(statusGroup => {
+        {displayStatuses(getFilteredTasks()).map(statusGroup => {
           const groupTasks = getTasksByStatus(statusGroup.key);
           return (
             <DroppableColumn
@@ -1214,19 +1315,46 @@ const Tasks: React.FC = () => {
                 ))}
               </SortableContext>
 
-              <button
-                type="button"
-                className="task-add-btn"
-                onClick={() => setIsAddModalOpen(true)}
-              >
-                <Plus size={14} /> إضافة مهمة
-              </button>
+              {statusGroup.key !== 'archived' && (
+                <button
+                  type="button"
+                  className="task-add-btn"
+                  onClick={() => setIsAddModalOpen(true)}
+                >
+                  <Plus size={14} /> إضافة مهمة
+                </button>
+              )}
             </DroppableColumn>
           );
         })}
       </div>
     </>
   );
+
+  // [ARCHIVE] وضعٌ ثنائيّ لا تبويبات: '0' القائمة الحيّة (الافتراضي) | '1' الأرشيف وحده.
+  // العدد من `archived_count` في ردّ الخادم حصراً — لا يُحسب من الصفحة المعروضة.
+  const isArchiveMode = archivedFilter === '1';
+
+  // تمييز العدد بالعربية الفصيحة: مهمة واحدة / مهمتان / مهام (٣–١٠) / مهمة (١١ فأكثر)
+  const tasksCountLabel = (n: number): string => {
+    if (n === 1) return 'مهمة واحدة';
+    if (n === 2) return 'مهمتان';
+    if (n <= 10) return `${n} مهام`;
+    return `${n} مهمة`;
+  };
+
+  // تبديل الوضع يُفرغ الصفوف فوراً: الصفوف الحيّة يجب ألّا تُرى لحظةً تحت ترويسة «أرشيف المهام».
+  // setTasks المباشرة مقصودة هنا (لا commitTasks) كي لا يُمسح كاش القائمة الحيّة.
+  // وتُصفَّر فلاتر الحالة/الودجات لأن المؤرشفة تحمل status='archived' فلا تطابق أياً منها.
+  const setArchiveMode = (next: ArchivedFilter) => {
+    if (next === archivedFilter) return;
+    setArchivedFilter(next);
+    setStatusFilter('all');
+    setSpecialFilter(null);
+    setTasks([]);
+    setLoading(true);
+    setMobileActiveTab('tasks');
+  };
 
   return (
     <div className="tasks-page">
@@ -1244,7 +1372,7 @@ const Tasks: React.FC = () => {
           onClick={() => setMobileActiveTab('tasks')}
         >
           <CheckSquare size={15} />
-          <span>قائمة المهام ({stats?.total ?? totalCount})</span>
+          <span>{isArchiveMode ? 'أرشيف المهام' : 'قائمة المهام'} ({isArchiveMode ? archivedCount : (stats?.total ?? totalCount)})</span>
         </button>
         <button
           className={`tasks-mobile-tab ${mobileActiveTab === 'alerts' ? 'active' : ''}`}
@@ -1290,11 +1418,11 @@ const Tasks: React.FC = () => {
             </div>
             <div className="stat-card in-progress" onClick={() => { setStatusFilter('in_progress'); setMobileActiveTab('tasks'); }}>
               <div className="stat-label">قيد التنفيذ</div>
-              <div className="stat-value">{stats?.in_progress ?? tasks.filter(t => t.status === 'in_progress').length}</div>
+              <div className="stat-value">{stats?.in_progress ?? liveTasks.filter(t => t.status === 'in_progress').length}</div>
             </div>
             <div className="stat-card pending" onClick={() => { setStatusFilter('pending_approval'); setMobileActiveTab('tasks'); }}>
               <div className="stat-label">بانتظار الاعتماد</div>
-              <div className="stat-value">{stats?.pending_approval ?? tasks.filter(t => t.status === 'pending_approval').length}</div>
+              <div className="stat-value">{stats?.pending_approval ?? liveTasks.filter(t => t.status === 'pending_approval').length}</div>
             </div>
           </div>
 
@@ -1323,7 +1451,7 @@ const Tasks: React.FC = () => {
                 <span className="filter-count">{stats?.total ?? totalCount}</span>
               </button>
               {TASK_STATUSES.map(s => {
-                const count = (stats?.[s.key as keyof TaskStats] as number | undefined) ?? tasks.filter(t => t.status === s.key).length;
+                const count = (stats?.[s.key as keyof TaskStats] as number | undefined) ?? liveTasks.filter(t => t.status === s.key).length;
                 return (
                   <button
                     key={s.key}
@@ -1345,7 +1473,7 @@ const Tasks: React.FC = () => {
             <div className="priority-filter-grid">
               {Object.entries(PRIORITY_META).map(([prioKey, prioMeta]) => {
                 const count = stats?.by_priority?.[prioKey as keyof TaskStats['by_priority']]
-                  ?? tasks.filter(t => t.priority === prioKey).length;
+                  ?? liveTasks.filter(t => t.priority === prioKey).length;
                 const isActive = priorityFilter === prioKey;
                 return (
                   <button
@@ -1409,7 +1537,48 @@ const Tasks: React.FC = () => {
                 ))}
                 <option value="unassigned">غير معيّن</option>
               </select>
+
+              {/* [ARCHIVE] زرّ-رقاقة الأرشيف — في شريط الأدوات المشترك فيسري على القائمة والكانبان معاً.
+                  خاملاً: زرّ ثانوي هادئ بصنف عناصر الشريط نفسه. نشطاً: رقاقة بلون الهوية وفيها ✕ للخروج. */}
+              {isArchiveMode ? (
+                <div
+                  className="special-filter-chip"
+                  style={{ border: '1px solid var(--law-navy)', padding: '5px 10px', fontSize: 11.5 }}
+                  title="أنت داخل أرشيف المهام"
+                >
+                  <Archive size={13} />
+                  <span>الأرشيف{archivedCount > 0 ? ` (${archivedCount})` : ''}</span>
+                  <button
+                    type="button"
+                    onClick={() => setArchiveMode('0')}
+                    title="الخروج من الأرشيف"
+                    aria-label="الخروج من الأرشيف والعودة إلى المهام الحيّة"
+                    style={{ display: 'inline-flex', alignItems: 'center' }}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="tasks-header-select"
+                  onClick={() => setArchiveMode('1')}
+                  title="عرض المهام المؤرشفة"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: 'none' }}
+                >
+                  <Archive size={13} />
+                  <span>الأرشيف{archivedCount > 0 ? ` (${archivedCount})` : ''}</span>
+                </button>
+              )}
             </div>
+
+            {/* [ARCHIVE] «الفلترة تُخفي والبحث يُظهر» — وسمُ الحالة حين شمل البحثُ المؤرشفة */}
+            {appliedArchivedMode === 'all' && searchTerm.trim() !== '' && (
+              <div className="special-filter-chip">
+                <Archive size={13} />
+                <span>البحث يشمل المهام المؤرشفة</span>
+              </div>
+            )}
 
             {/* شريحة الفلتر الخاص النشط (عرض الكل من ودجة) */}
             {specialFilter && (
@@ -1450,11 +1619,33 @@ const Tasks: React.FC = () => {
           </div>
 
           <div className="middle-panel-content">
+            {/* [ARCHIVE] ترويسة الوضع — تُطمئن المستخدم أن سجلّاته لم تختفِ بل هو داخل الأرشيف */}
+            {isArchiveMode && (
+              <div
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '8px 16px',
+                  background: 'var(--dashboard-card)',
+                  borderBottom: '1px solid var(--color-border)',
+                  color: 'var(--law-navy)',
+                  fontSize: 12.5, fontWeight: 600,
+                }}
+              >
+                <Archive size={14} />
+                <span>أرشيف المهام{archivedCount > 0 ? ` — ${tasksCountLabel(archivedCount)}` : ''}</span>
+              </div>
+            )}
             {loading ? (
               <div className="tasks-loading">جاري التحميل...</div>
             ) : getFilteredTasks().length === 0 ? (
               <div className="tasks-empty">
-                {activeFolder ? (
+                {isArchiveMode ? (
+                  <>
+                    <Archive size={40} style={{ opacity: 0.2, margin: '0 auto 10px' }} />
+                    <h3>لا توجد مهام مؤرشفة</h3>
+                    <p>الأرشفة يدوية: افتح خيارات أي مهمة واختر «أرشفة المهمة»</p>
+                  </>
+                ) : activeFolder ? (
                   <>
                     <FolderClosed size={40} style={{ opacity: 0.2, margin: '0 auto 10px' }} />
                     <h3>المجلد «{activeFolder.name}» فارغ</h3>
@@ -1745,18 +1936,23 @@ const Tasks: React.FC = () => {
               </button>
             )}
 
-            <div className="task-menu-sep" />
-            <div className="task-menu-label">تغيير الحالة إلى</div>
-            {TASK_STATUSES.filter(s => s.key !== menu.task.status).map(s => (
-              <button
-                key={s.key}
-                className="task-menu-item"
-                onClick={() => changeStatus(menu.task, s.key)}
-              >
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-                {s.label}
-              </button>
-            ))}
+            {/* المؤرشفة لا تُغيَّر حالتها مباشرةً — تُعاد من الأرشيف أولاً وإلا بقي archived_at قائماً */}
+            {!isArchivedTask(menu.task) && (
+              <>
+                <div className="task-menu-sep" />
+                <div className="task-menu-label">تغيير الحالة إلى</div>
+                {TASK_STATUSES.filter(s => s.key !== menu.task.status).map(s => (
+                  <button
+                    key={s.key}
+                    className="task-menu-item"
+                    onClick={() => changeStatus(menu.task, s.key)}
+                  >
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+                    {s.label}
+                  </button>
+                ))}
+              </>
+            )}
 
             {folders.length > 0 && (
               <>
@@ -1782,6 +1978,26 @@ const Tasks: React.FC = () => {
                 )}
               </>
             )}
+
+            {/* [ARCHIVE] الأرشفة/الإعادة — بوابة بالصلاحية لا بالدور */}
+            <Can permission="tasks.delete">
+              <div className="task-menu-sep" />
+              {isArchivedTask(menu.task) ? (
+                <button
+                  className="task-menu-item"
+                  onClick={() => { setUnarchiveTarget(menu.task); setMenu(null); }}
+                >
+                  <ArchiveRestore size={14} /> إعادة من الأرشيف
+                </button>
+              ) : (
+                <button
+                  className="task-menu-item"
+                  onClick={() => { setArchiveTarget(menu.task); setMenu(null); }}
+                >
+                  <Archive size={14} /> أرشفة المهمة
+                </button>
+              )}
+            </Can>
 
             <div className="task-menu-sep" />
             <button
@@ -1825,6 +2041,88 @@ const Tasks: React.FC = () => {
                 onClick={() => setDeleteTask(null)}
                 disabled={deleting}
                 style={{ background: 'transparent', color: 'var(--color-text)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '9px 18px', cursor: deleting ? 'default' : 'pointer', fontSize: 14 }}
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* [ARCHIVE] تأكيد الأرشفة */}
+      {archiveTarget && (
+        <div
+          onClick={() => !archiveBusy && setArchiveTarget(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--dashboard-card, #fff)', borderRadius: 12, padding: 24, width: 400, maxWidth: '90vw', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--quiet-gray-100, #f1f5f9)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Archive size={20} color="var(--law-navy, #1E3A5F)" />
+              </div>
+              <h3 style={{ margin: 0, fontSize: 16, color: 'var(--color-text)' }}>أرشفة المهمة</h3>
+            </div>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, lineHeight: 1.7, marginBottom: 22 }}>
+              ستُخفى «<strong style={{ color: 'var(--color-text)' }}>{archiveTarget.title}</strong>» من قائمة المهام وتنتقل إلى «الأرشيف» — تجدها بزرّ الأرشيف في شريط الأدوات.
+              <br />
+              الأرشفة ليست حذفاً، ولا تمتدّ إلى القضية أو المهام الفرعية أو المرفقات.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={confirmArchive}
+                disabled={archiveBusy}
+                style={{ background: 'var(--law-navy, #1E3A5F)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: archiveBusy ? 'default' : 'pointer', fontSize: 14, fontWeight: 600, opacity: archiveBusy ? 0.7 : 1 }}
+              >
+                {archiveBusy ? 'جارٍ الأرشفة...' : 'نعم، أرشِف'}
+              </button>
+              <button
+                onClick={() => setArchiveTarget(null)}
+                disabled={archiveBusy}
+                style={{ background: 'transparent', color: 'var(--color-text)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '9px 18px', cursor: archiveBusy ? 'default' : 'pointer', fontSize: 14 }}
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* [ARCHIVE] تأكيد الإعادة من الأرشيف — تنبيه القيد النظامي: الحالة تعود «لم تبدأ» */}
+      {unarchiveTarget && (
+        <div
+          onClick={() => !archiveBusy && setUnarchiveTarget(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--dashboard-card, #fff)', borderRadius: 12, padding: 24, width: 400, maxWidth: '90vw', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--quiet-gray-100, #f1f5f9)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <ArchiveRestore size={20} color="var(--law-navy, #1E3A5F)" />
+              </div>
+              <h3 style={{ margin: 0, fontSize: 16, color: 'var(--color-text)' }}>إعادة المهمة من الأرشيف</h3>
+            </div>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, lineHeight: 1.7, marginBottom: 22 }}>
+              ستعود «<strong style={{ color: 'var(--color-text)' }}>{unarchiveTarget.title}</strong>» إلى قائمة المهام.
+              <br />
+              تعود إلى حالتها قبل الأرشفة، وإلى «لم تبدأ» إن لم تكن تلك الحالة محفوظة.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={confirmUnarchive}
+                disabled={archiveBusy}
+                style={{ background: 'var(--law-navy, #1E3A5F)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: archiveBusy ? 'default' : 'pointer', fontSize: 14, fontWeight: 600, opacity: archiveBusy ? 0.7 : 1 }}
+              >
+                {archiveBusy ? 'جارٍ الإعادة...' : 'نعم، أعِدها'}
+              </button>
+              <button
+                onClick={() => setUnarchiveTarget(null)}
+                disabled={archiveBusy}
+                style={{ background: 'transparent', color: 'var(--color-text)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '9px 18px', cursor: archiveBusy ? 'default' : 'pointer', fontSize: 14 }}
               >
                 إلغاء
               </button>

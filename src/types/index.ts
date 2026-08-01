@@ -110,6 +110,12 @@ export interface CaseBilling {
   }[];
 }
 
+/**
+ * مفتاح الأرشيف الموحّد لكل القوائم: '0' المؤرشف مخفيّ (الافتراضي) | '1' المؤرشف وحده | 'all' الكل.
+ * القاعدة المركزية: الفلترة تُخفي والبحث يُظهر — أي `search` غير فارغ يشمل المؤرشف تلقائياً.
+ */
+export type ArchivedFilter = '0' | '1' | 'all';
+
 // Case management
 export interface Case {
   id: string;
@@ -206,6 +212,10 @@ export interface Case {
   ai_classification_status?: AiClassificationStatus | null;
   ai_classification?: CaseAiClassification | null;
   ai_classified_at?: string | null;
+  // الأرشفة — بُعد مستقل تماماً عن سلة المحذوفات (deleted_at) فلا تخلط بينهما
+  archived_at?: string | null;
+  archived_by?: number | null;
+  is_archived?: boolean;
 }
 
 // ===== التصنيف الذكي وفق شجرة ناجز (غرفة تجهيز القضية) =====
@@ -735,6 +745,8 @@ export interface Task {
   // مجلد المهمة (تنظيم ظاهري — مشترك أو شخصي). الشخصي لغير مالكه يصل null من الباك
   task_folder_id?: number | null;
   folder?: TaskFolder | null;
+  // الأرشفة — معيار الإخفاء هو archived_at وحده لا status، وهو مستقل عن سلة المحذوفات
+  archived_at?: string | null;
 }
 
 /** مجلد مهام — تنظيم ظاهري بحت (لا يمسّ التقارير أو التذكيرات) */
@@ -1139,6 +1151,9 @@ export interface Wekala {
   najiz_synced_at?: string;
   created_at: string;
   updated_at: string;
+  // الأرشفة — بُعد مستقل تماماً عن سلة المحذوفات (deleted_at) فلا تخلط بينهما
+  archived_at?: string | null;
+  archived_by?: number | null;
   // العلاقات
   agents?: WekalaParty[];
   clients?: WekalaParty[];
@@ -1151,6 +1166,8 @@ export interface WekalaFilters {
   search?: string;
   page?: number;
   limit?: number;
+  /** الفلترة تُخفي والبحث يُظهر: 0 = المؤرشف مخفيّ (افتراضي) | 1 = المؤرشف وحده | all = الكل */
+  archived?: ArchivedFilter;
 }
 
 // ==================== Execution Request Types ====================
@@ -1248,6 +1265,9 @@ export interface ExecutionRequest {
   payment_logs?: ExecutionPaymentLog[];
   tasks?: Task[];
   open_tasks_count?: number;
+  // الأرشفة — بُعد مستقل تماماً عن سلة المحذوفات (deleted_at) فلا تخلط بينهما
+  archived_at?: string | null;
+  archived_by?: number | null;
 }
 
 export interface ExecutionRequestFilters {
@@ -1258,6 +1278,8 @@ export interface ExecutionRequestFilters {
   search?: string;
   page?: number;
   limit?: number;
+  /** الفلترة تُخفي والبحث يُظهر: 0 = المؤرشف مخفيّ (افتراضي) | 1 = المؤرشف وحده | all = الكل */
+  archived?: ArchivedFilter;
 }
 
 export interface ExecutionRequestStats {

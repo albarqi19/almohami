@@ -24,10 +24,13 @@ import {
 	Swords,
 	AlertCircle,
 	Folder,
-	Download
+	Download,
+	Archive,
+	ArchiveRestore
 } from 'lucide-react';
-import type { Case, CaseStatus, CaseType, Priority } from '../types';
+import type { ArchivedFilter, Case, CaseStatus, CaseType, Priority } from '../types';
 import { CaseService } from '../services';
+import { Can } from '../components/Can';
 import { UserService, type User as UserType } from '../services/UserService';
 import AddCaseModal from '../components/AddCaseModal';
 import CasesExportModal from '../components/CasesExportModal';
@@ -83,8 +86,24 @@ const getLawyerName = (caseObj: unknown): string => {
 	return getPrimaryLawyerName(caseObj as never);
 };
 
+// مفتاح كاش الوضع الافتراضي (المؤرشف مخفيّ). يجب أن يبقى مطابقاً لـ CACHE_KEYS.CASES في
+// utils/cacheManager لأن CaseService (إنشاء/تعديل/حذف/أرشفة) يُبطله بهذا الاسم بالضبط —
+// تغييره يجعل التعديلات من صفحات أخرى لا تُنعش هذه القائمة.
 const CACHE_KEY = 'cases_data';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// حالة الأرشيف جزءٌ من هوية الكاش: لكل وضع مفتاحه، وإلا ظهرت صفوف مؤرشفة داخل القائمة الحيّة.
+// (الوضعان '1' و'all' لا يُكتبان أصلاً لأن shouldUseCache يمنعهما، والمفتاح خط دفاع ثانٍ.)
+const ARCHIVED_MODES: ArchivedFilter[] = ['0', '1', 'all'];
+const DEFAULT_ARCHIVED: ArchivedFilter = '0';
+const cacheKeyFor = (archived: ArchivedFilter): string =>
+	archived === DEFAULT_ARCHIVED ? CACHE_KEY : `${CACHE_KEY}_archived_${archived}`;
+const clearCasesCache = (): void => {
+	ARCHIVED_MODES.forEach(m => { try { localStorage.removeItem(cacheKeyFor(m)); } catch { /* تجاهل */ } });
+};
+
+// المعيار الوحيد للأرشفة: archived_at (is_archived يحسبه الباك في /cases). لا علاقة لها بسلة المحذوفات.
+const isCaseArchived = (c: Case): boolean => !!(c.archived_at || c.is_archived);
 
 // خيار المستخدم: عدد القضايا المعروضة في الصفحة الواحدة (يُحفظ ويُطبَّق على الترقيم).
 const PAGE_SIZE_KEY = 'cases_page_size';
@@ -135,16 +154,18 @@ const Cases: React.FC = () => {
 	// مُهيّئات الحالة أدناه (يمنع عرض حجم قديم بعد تغيير «عدد القضايا في الصفحة»).
 	useState(() => {
 		try {
-			const c = localStorage.getItem(CACHE_KEY);
+			const c = localStorage.getItem(cacheKeyFor(DEFAULT_ARCHIVED));
 			if (c && JSON.parse(c).pageSize !== getSavedPageSize()) {
-				localStorage.removeItem(CACHE_KEY);
+				clearCasesCache();
 			}
 		} catch { /* تجاهل */ }
 		return null;
 	});
+	// الصفحة تبدأ دائماً على القائمة الحيّة (المؤرشف مخفيّ)، لذا تقرأ المُهيّئات مفتاح ذلك الوضع وحده.
+	const [archivedFilter, setArchivedFilter] = useState<ArchivedFilter>(DEFAULT_ARCHIVED);
 	const [cases, setCases] = useState<Case[]>(() => {
 		try {
-			const cached = localStorage.getItem(CACHE_KEY);
+			const cached = localStorage.getItem(cacheKeyFor(DEFAULT_ARCHIVED));
 			if (cached) {
 				const { data, timestamp } = JSON.parse(cached);
 				if (Date.now() - timestamp < CACHE_DURATION) {
@@ -156,13 +177,24 @@ const Cases: React.FC = () => {
 	});
 	const [loading, setLoading] = useState(() => {
 		try {
-			const cached = localStorage.getItem(CACHE_KEY);
+			const cached = localStorage.getItem(cacheKeyFor(DEFAULT_ARCHIVED));
 			if (cached) {
 				const { timestamp } = JSON.parse(cached);
 				if (Date.now() - timestamp < CACHE_DURATION) return false;
 			}
 		} catch (e) { }
 		return true;
+	});
+	// عدّاد المؤرشفة يأتي من الباك مع كل قائمة — لا يُحسب عميلياً من الصفحة المعروضة.
+	const [archivedCount, setArchivedCount] = useState<number>(() => {
+		try {
+			const cached = localStorage.getItem(cacheKeyFor(DEFAULT_ARCHIVED));
+			if (cached) {
+				const { data, timestamp } = JSON.parse(cached);
+				if (Date.now() - timestamp < CACHE_DURATION) return data.archivedCount ?? 0;
+			}
+		} catch (e) { }
+		return 0;
 	});
 	const [error, setError] = useState<string | null>(null);
 	const [searchTerm, setSearchTerm] = useState('');
@@ -179,7 +211,7 @@ const Cases: React.FC = () => {
 	const [pageSize, setPageSize] = useState<number>(getSavedPageSize);
 	const [pagination, setPagination] = useState(() => {
 		try {
-			const cached = localStorage.getItem(CACHE_KEY);
+			const cached = localStorage.getItem(cacheKeyFor(DEFAULT_ARCHIVED));
 			if (cached) {
 				const { data, timestamp } = JSON.parse(cached);
 				if (Date.now() - timestamp < CACHE_DURATION && data.pagination) {
@@ -209,31 +241,44 @@ const Cases: React.FC = () => {
 
 	const [softRefreshing, setSoftRefreshing] = useState(false);
 
-	const fetchCases = async (page = 1, forceRefresh = false, sizeOverride?: number) => {
+	const fetchCases = async (
+		page = 1,
+		forceRefresh = false,
+		sizeOverride?: number,
+		archivedOverride?: ArchivedFilter,
+		showSkeleton = false,
+	) => {
 		try {
 			// حجم الصفحة الفعلي (خيار المستخدم) — يُمرَّر صراحة عند تغييره لأن الـ state
-			// لا يُحدَّث تزامنياً.
+			// لا يُحدَّث تزامنياً. ومثله وضع الأرشيف عند تبديله من زرّ الأرشيف.
 			const limit = sizeOverride ?? pageSize;
+			const archived = archivedOverride ?? archivedFilter;
 			// Only use cache for first page without filters (and not forcing refresh)
 			const hasAdvFilters = !!(advFilters.lawyer_id || advFilters.responsible_lawyer_id || advFilters.client_id || advFilters.najiz_status);
-			const hasFilters = searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || hasAdvFilters;
+			// وضع الأرشيف فلترٌ كسائر الفلاتر: أي وضع غير الافتراضي يمنع الكاش المشترك.
+			const hasFilters = !!(searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || hasAdvFilters || archived !== DEFAULT_ARCHIVED);
 			const shouldUseCache = !forceRefresh && page === 1 && !hasFilters;
+			const cacheKey = cacheKeyFor(archived);
 
 			if (shouldUseCache) {
-				const cached = localStorage.getItem(CACHE_KEY);
+				const cached = localStorage.getItem(cacheKey);
 				if (cached) {
 					const { data, timestamp } = JSON.parse(cached);
 					if (Date.now() - timestamp < CACHE_DURATION && data.cases?.length > 0) {
 						setCases(data.cases);
 						setPagination(data.pagination);
+						setArchivedCount(data.archivedCount ?? 0);
 						setLoading(false);
 						return;
 					}
 				}
 			}
 
-			// تحديث ذكي: لو فيه بيانات حالية، حدّث بالخلفية بدون إعادة تحميل
-			if (cases.length > 0 && forceRefresh) {
+			// تحديث ذكي: لو فيه بيانات حالية، حدّث بالخلفية بدون إعادة تحميل.
+			// عند تبديل وضع الأرشيف نُظهر الهيكل العظمي كي لا تبقى صفوف الوضع السابق معروضة.
+			if (showSkeleton) {
+				setLoading(true);
+			} else if (cases.length > 0 && forceRefresh) {
 				setSoftRefreshing(true);
 			} else {
 				setLoading(true);
@@ -249,6 +294,8 @@ const Cases: React.FC = () => {
 				...(advFilters.responsible_lawyer_id && { responsible_lawyer_id: advFilters.responsible_lawyer_id }),
 				...(advFilters.client_id && { client_id: advFilters.client_id }),
 				...(advFilters.najiz_status && { najiz_status: advFilters.najiz_status }),
+				// '0' هو افتراض الباك فلا داعي لإرساله؛ البحث يُظهر المؤرشف تلقائياً من جهة الباك.
+				...(archived !== DEFAULT_ARCHIVED && { archived }),
 			};
 			const response = await CaseService.getCases(filters);
 			const data = Array.isArray(response.data) ? response.data : [];
@@ -257,14 +304,16 @@ const Cases: React.FC = () => {
 				totalPages: response.last_page ?? 1,
 				total: response.total ?? data.length
 			};
+			const archivedTotal = response.archived_count ?? 0;
 
 			setCases(data);
 			setPagination(paginationData);
+			setArchivedCount(archivedTotal);
 
-			// Save to cache (only for first page without filters)
+			// Save to cache (only for first page without filters — أي وضع الأرشيف الافتراضي)
 			if (page === 1 && !hasFilters) {
-				localStorage.setItem(CACHE_KEY, JSON.stringify({
-					data: { cases: data, pagination: paginationData },
+				localStorage.setItem(cacheKey, JSON.stringify({
+					data: { cases: data, pagination: paginationData, archivedCount: archivedTotal },
 					timestamp: Date.now(),
 					pageSize: limit
 				}));
@@ -292,8 +341,8 @@ const Cases: React.FC = () => {
 	};
 
 	useEffect(() => {
-		// Only fetch if no cached data exists
-		const cached = localStorage.getItem(CACHE_KEY);
+		// Only fetch if no cached data exists (الصفحة تبدأ على وضع الأرشيف الافتراضي)
+		const cached = localStorage.getItem(cacheKeyFor(DEFAULT_ARCHIVED));
 		if (cached) {
 			try {
 				const { data, timestamp } = JSON.parse(cached);
@@ -341,6 +390,36 @@ const Cases: React.FC = () => {
 		setPageSize(size);
 		try { localStorage.setItem(PAGE_SIZE_KEY, String(size)); } catch {}
 		fetchCases(1, true, size);
+	};
+
+	// تبديل وضع الأرشيف — يُمرَّر الوضع صراحةً لأن الـ state لا يُحدَّث تزامنياً،
+	// ومع هيكل عظمي كي لا تبقى صفوف الوضع السابق معروضة تحت ترويسة جديدة.
+	const handleArchivedModeChange = (next: ArchivedFilter) => {
+		if (next === archivedFilter) return;
+		setArchivedFilter(next);
+		fetchCases(1, true, undefined, next, true);
+	};
+
+	// أرشفة/إعادة قضية — بُعد مستقل تماماً عن الحذف وسلة المحذوفات: القضية تبقى كاملة
+	// ولا يتتالى شيء على جلساتها ولا مهامها ولا عميلها.
+	// نقرة واحدة بلا نافذة تأكيد: الفعل قابل للعكس من زرّ «إعادة» نفسه في وضع الأرشيف.
+	const [archivingId, setArchivingId] = useState<string | null>(null);
+	const handleToggleArchive = async (e: React.MouseEvent, c: Case) => {
+		e.stopPropagation();
+		const archived = isCaseArchived(c);
+		try {
+			setArchivingId(String(c.id));
+			setError(null);
+			if (archived) await CaseService.unarchive(c.id);
+			else await CaseService.archive(c.id);
+			// الخدمة تُبطل مفتاح cases_data؛ نمسح بقية أوضاع الأرشيف كذلك.
+			clearCasesCache();
+			await fetchCases(pagination.currentPage, true);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : (archived ? 'تعذّرت إعادة القضية من الأرشيف' : 'تعذّرت أرشفة القضية'));
+		} finally {
+			setArchivingId(null);
+		}
 	};
 
 	const handleAddCase = async (caseData: any) => {
@@ -430,7 +509,7 @@ const Cases: React.FC = () => {
 			const created = await CaseService.createCase(createData);
 
 			// مسح الكاش وتحديث القضايا
-			localStorage.removeItem(CACHE_KEY);
+			clearCasesCache();
 			if (created?.id) {
 					setIsAddModalOpen(false);
 					navigate(`/cases/${created.id}`);
@@ -446,11 +525,15 @@ const Cases: React.FC = () => {
 		}
 	};
 
-	const handleDeleteCase = async (e: React.MouseEvent, caseId: string) => {
+	// نافذة التأكيد تذكر اسم القضية ورقمها معاً — الصفوف متجاورة والزرّ يظهر بمرور الماوس،
+	// فلا بدّ أن يتأكّد المستخدم من هوية ما يحذفه قبل الموافقة.
+	const handleDeleteCase = async (e: React.MouseEvent, c: Case) => {
 		e.stopPropagation();
-		if (!window.confirm('هل أنت متأكد من حذف هذه القضية؟')) return;
+		const fileNumber = (c as any).file_number;
+		const identity = fileNumber ? `«${c.title}» — رقم الملف ${fileNumber}` : `«${c.title}»`;
+		if (!window.confirm(`هل أنت متأكد من حذف القضية ${identity}؟`)) return;
 		try {
-			await CaseService.deleteCase(caseId);
+			await CaseService.deleteCase(c.id);
 			await fetchCases(pagination.currentPage);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'خطأ في حذف القضية');
@@ -458,7 +541,8 @@ const Cases: React.FC = () => {
 	};
 
 	const advFilterCount = (advFilters.lawyer_id ? 1 : 0) + (advFilters.responsible_lawyer_id ? 1 : 0) + (advFilters.client_id ? 1 : 0) + (advFilters.najiz_status ? 1 : 0);
-	const hasFilters = !!(searchTerm.trim() || statusFilter !== 'all' || typeFilter !== 'all' || advFilterCount);
+	// وضع الأرشيف فلترٌ كامل الأهلية هنا أيضاً — تجاهله يجعل «لا فلاتر» كذباً داخل الأرشيف.
+	const hasFilters = !!(searchTerm.trim() || statusFilter !== 'all' || typeFilter !== 'all' || advFilterCount || archivedFilter !== DEFAULT_ARCHIVED);
 	const resetFilters = () => {
 		setSearchTerm('');
 		setStatusFilter('all');
@@ -530,18 +614,26 @@ const Cases: React.FC = () => {
 					{cases.map(c => {
 						const statusConfig = STATUS_CONFIG[c.status] || STATUS_CONFIG.pending;
 						const typeLabel = (c as any).case_type_arabic || CASE_TYPE_LABELS[c.case_type] || c.case_type;
+						const archived = isCaseArchived(c);
 
 						return (
 							<tr
 								key={c.id}
 								className={c.is_bankruptcy ? 'is-bankruptcy' : ((c as any).is_grievance ? 'is-grievance' : undefined)}
-								onClick={() => guardOpen(c as never, () => navigate(caseDetailUrl(c)))}
+								onClick={(e) => {
+									// النقر داخل خلية الإجراءات لا يفتح القضية — حارسٌ على مستوى الصف
+									// لا يتّكل على stopPropagation وحده (نقرةٌ على حافة الأيقونة تفلت منه).
+									if ((e.target as HTMLElement).closest('.case-id-cell__actions')) return;
+									guardOpen(c as never, () => navigate(caseDetailUrl(c)));
+								}}
 							>
 								{/* العمود 1: القضية (عنوان + رقم + نوع) */}
 								<td>
 									<div className="erp-cell">
 										<div className="erp-cell__primary">{c.title}</div>
 										<div className="erp-cell__secondary">
+											{/* رقاقة نصّية رمادية هادئة — القضية مؤرشفة لا محذوفة */}
+											{archived && <span className="erp-cell__tag" title="قضية مؤرشفة — مخفيّة عن القائمة الحيّة">مؤرشفة</span>}
 											{c.is_bankruptcy && <span className="erp-cell__tag erp-cell__tag--bankruptcy">إفلاس</span>}
 											{(c as any).is_reconciliation && <span className="erp-cell__tag" style={{ background: 'rgba(21,115,71,0.12)', color: '#157347', fontWeight: 700 }}>صلح</span>}
 											{(c as any).is_grievance && <span className="erp-cell__tag erp-cell__tag--grievance">ديوان المظالم</span>}
@@ -634,13 +726,36 @@ const Cases: React.FC = () => {
 									</div>
 								</td>
 
-								{/* العمود 5: رقم الملف + حذف */}
+								{/* العمود 5: رقم الملف — يتوارى بمرور الماوس على الصف ليحلّ محلّه زرّا الأرشفة والحذف
+								    داخل الخلية نفسها وبعرضها نفسه (على اللمس يظهر الجميع معاً — انظر cases-page.css) */}
 								<td>
-									<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-										<span className="erp-cell__tag erp-cell__tag--id" style={{ fontSize: 11 }}>{(c as any).file_number || '—'}</span>
-										<button className="case-delete-btn" onClick={(e) => handleDeleteCase(e, c.id)} title="حذف">
-											<Trash2 size={14} />
-										</button>
+									<div className="case-id-cell">
+										<span className="case-id-cell__number erp-cell__tag erp-cell__tag--id">{(c as any).file_number || '—'}</span>
+										<div className="case-id-cell__actions">
+											<Can permission="cases.archive">
+												<button
+													type="button"
+													className="case-row-action"
+													onClick={(e) => handleToggleArchive(e, c)}
+													disabled={archivingId === String(c.id)}
+													title={archived ? 'إعادة من الأرشيف' : 'نقل إلى الأرشيف'}
+													aria-label={archived ? 'إعادة من الأرشيف' : 'نقل إلى الأرشيف'}
+												>
+													{archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+												</button>
+											</Can>
+											<Can permission="cases.delete">
+												<button
+													type="button"
+													className="case-row-action case-row-action--danger"
+													onClick={(e) => handleDeleteCase(e, c)}
+													title="حذف القضية"
+													aria-label="حذف القضية"
+												>
+													<Trash2 size={14} />
+												</button>
+											</Can>
+										</div>
 									</div>
 								</td>
 							</tr>
@@ -671,6 +786,7 @@ const Cases: React.FC = () => {
 							</span>
 						</div>
 						<div className="case-card__meta" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+							{isCaseArchived(c) && <span className="erp-cell__tag" title="قضية مؤرشفة — مخفيّة عن القائمة الحيّة">مؤرشفة</span>}
 							<span className="type-badge">{typeLabel}</span>
 							{(c as any).is_reconciliation && <span className="type-badge" style={{ background: 'rgba(21,115,71,0.12)', color: '#157347' }}>صلح</span>}
 							{(c as any).is_grievance && <span className="type-badge" style={{ background: 'var(--law-navy-light, #eef2f7)', color: 'var(--law-navy, #1E3A5F)' }}>ديوان المظالم</span>}
@@ -725,6 +841,7 @@ const Cases: React.FC = () => {
 									>
 										<div className="kanban-card__title">{c.title}</div>
 										<div className="kanban-card__meta">
+											{isCaseArchived(c) && <span className="erp-cell__tag" title="قضية مؤرشفة — مخفيّة عن القائمة الحيّة">مؤرشفة</span>}
 											<span><User size={11} /> {c.client_name || '-'}</span>
 											<span><Calendar size={11} /> {formatDate((c as any).filing_date)}</span>
 										</div>
@@ -737,6 +854,16 @@ const Cases: React.FC = () => {
 			</div>
 		);
 	};
+
+	// وضع الأرشيف نشط؟ الوضع ثنائي حصراً: '0' القائمة الحيّة (الافتراضي) و'1' المؤرشفة.
+	const archiveMode = archivedFilter === '1';
+	// نصّ زرّ الأرشيف — العدد من ردّ الخادم (archived_count) لا من الصفحة المعروضة،
+	// ويبقى الزرّ ظاهراً بلا عدد حين يكون صفراً كي يجده المستخدم بعد أوّل أرشفة.
+	const archiveChipLabel = `الأرشيف${archivedCount > 0 ? ` (${archivedCount})` : ''}`;
+	// ترويسة القائمة تظهر في وضع الأرشيف وحده — إعلاناً بأننا خارج القائمة الحيّة.
+	// في الوضع العادي لا سطر فوق الجدول: العدّاد موجود في ترويسة الصفحة، وعدد
+	// المؤرشفة داخل زرّ الأرشيف نفسه، فسطرٌ ثالث يكرّرهما ويشوّش.
+	const listCountLabel = archiveMode ? `أرشيف القضايا — ${stats.total} قضية` : null;
 
 	return (
 		<div className="cases-page">
@@ -806,6 +933,32 @@ const Cases: React.FC = () => {
 							<option key={key} value={key}>{label}</option>
 						))}
 					</select>
+
+					{/* زرّ الأرشيف: هادئ في وضع القائمة الحيّة، ويصير رقاقة كحلية نشطة فيها X للخروج */}
+					{archiveMode ? (
+						<span className="cases-archive-chip cases-archive-chip--active" data-tour="cases-archive-toggle">
+							<span className="cases-archive-chip__label">{archiveChipLabel}</span>
+							<button
+								type="button"
+								className="cases-archive-chip__close"
+								onClick={() => handleArchivedModeChange('0')}
+								title="الخروج من الأرشيف والعودة إلى القائمة الحيّة"
+								aria-label="الخروج من الأرشيف والعودة إلى القائمة الحيّة"
+							>
+								<X size={13} />
+							</button>
+						</span>
+					) : (
+						<button
+							type="button"
+							className="cases-archive-chip"
+							data-tour="cases-archive-toggle"
+							onClick={() => handleArchivedModeChange('1')}
+							title="عرض القضايا المؤرشفة"
+						>
+							{archiveChipLabel}
+						</button>
+					)}
 
 					<button
 						className="icon-btn"
@@ -965,6 +1118,9 @@ const Cases: React.FC = () => {
 				</div>
 			)}
 
+			{/* تُعلن صراحةً أننا داخل الأرشيف كي لا يظنّ المستخدم أن سجلّاته اختفت */}
+			{listCountLabel && <div className="cases-list-caption">{listCountLabel}</div>}
+
 			{/* Content */}
 			{
 				loading ? (
@@ -983,11 +1139,17 @@ const Cases: React.FC = () => {
 				) : cases.length === 0 ? (
 					<div className="cases-empty">
 						<FileText size={48} className="cases-empty__icon" />
-						<div className="cases-empty__title">لا توجد قضايا</div>
-						<div className="cases-empty__desc">جرّب تعديل معايير البحث أو إضافة قضية جديدة</div>
-						<button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
-							<Plus size={16} /> إضافة قضية
-						</button>
+						<div className="cases-empty__title">{archiveMode ? 'لا توجد قضايا مؤرشفة' : 'لا توجد قضايا'}</div>
+						<div className="cases-empty__desc">
+							{archiveMode
+								? 'لم تُنقل أي قضية إلى الأرشيف بعد — الأرشفة من زرّ الأرشفة الظاهر مكان رقم الملف في صفّ القضية.'
+								: 'جرّب تعديل معايير البحث أو إضافة قضية جديدة'}
+						</div>
+						{!archiveMode && (
+							<button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
+								<Plus size={16} /> إضافة قضية
+							</button>
+						)}
 					</div>
 				) : (
 					<div data-tour="cases-list">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, ArrowUpDown, Calendar, FileWarning, Link2, RefreshCw } from 'lucide-react';
+import { AlertCircle, Calendar, FileWarning, Link2 } from 'lucide-react';
 import { Link as RouterLink } from 'react-router-dom';
 import { CaseWekalaService, type MissingWekalaCase, type MissingWekalaResponse } from '../services/caseWekalaService';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
@@ -27,27 +27,51 @@ const formatHearing = (value: string | null): string => {
     }
 };
 
-export const MissingWekalaCasesPanel: React.FC = () => {
+export interface MissingWekalaCasesPanelProps {
+    /** ‏الترتيب يملكه الأب لأن زرّه انتقل إلى الشريط العلوي */
+    sort: 'hearing' | 'oldest';
+    /** ‏كل زيادةٍ تعيد الجلب — زرّ التحديث في الشريط العلوي يرفعه */
+    refreshToken?: number;
+    /** ‏الملخّص (العدد والنطاق ومدى الاستشراف) يُعرض في الشريط العلوي */
+    onMetaChange?: (meta: MissingWekalaResponse['meta'] | null) => void;
+    /** ‏لدوران أيقونة التحديث في الشريط العلوي */
+    onBusyChange?: (busy: boolean) => void;
+}
+
+export const MissingWekalaCasesPanel: React.FC<MissingWekalaCasesPanelProps> = ({
+    sort,
+    refreshToken = 0,
+    onMetaChange,
+    onBusyChange,
+}) => {
     const [result, setResult] = useState<MissingWekalaResponse | null>(null);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [sort, setSort] = useState<'hearing' | 'oldest'>('hearing');
 
     const load = async (nextSort: 'hearing' | 'oldest', isRefresh = false) => {
-        isRefresh ? setRefreshing(true) : setLoading(true);
+        if (!isRefresh) setLoading(true);
+        onBusyChange?.(true);
         setError(null);
         try {
-            setResult(await CaseWekalaService.missingCases(nextSort));
+            const res = await CaseWekalaService.missingCases(nextSort);
+            setResult(res);
+            onMetaChange?.(res.meta);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'تعذّر جلب القضايا');
+            onMetaChange?.(null);
         } finally {
             setLoading(false);
-            setRefreshing(false);
+            onBusyChange?.(false);
         }
     };
 
+    // أوّل تحميلٍ وأيّ تغيّر ترتيب يُظهران الهيكل العظمي؛ التحديث اليدوي لا يُخفي القائمة.
     useEffect(() => { load(sort); }, [sort]);
+    useEffect(() => {
+        if (refreshToken > 0) load(sort, true);
+    }, [refreshToken]);
+    // مغادرة التبويب تُفرغ ملخّص الشريط العلوي فلا يبقى عدّادٌ لقائمةٍ لا تُعرض.
+    useEffect(() => () => { onMetaChange?.(null); }, []);
 
     if (loading) {
         return (
@@ -84,32 +108,7 @@ export const MissingWekalaCasesPanel: React.FC = () => {
 
     return (
         <>
-            <div className="mwk-bar">
-                <div className="mwk-bar__summary">
-                    <strong>{result?.meta.total}</strong> قضية بلا وكالة
-                    <span className="mwk-bar__hint">
-                        {result?.meta.scope === 'own' ? 'من قضاياك' : 'في المكتب'} · تُحتسب القضايا النشطة
-                        وما له جلسة خلال {result?.meta.lookahead_days} يوماً
-                    </span>
-                </div>
-                <div className="mwk-bar__actions">
-                    <button
-                        className={`wekalat-icon-btn ${sort === 'oldest' ? 'wekalat-icon-btn--active' : ''}`}
-                        onClick={() => setSort(prev => (prev === 'hearing' ? 'oldest' : 'hearing'))}
-                        title={sort === 'hearing' ? 'مرتّبة بأقرب جلسة — اضغط للأقدم قيداً' : 'مرتّبة بالأقدم قيداً — اضغط لأقرب جلسة'}
-                    >
-                        <ArrowUpDown size={16} />
-                    </button>
-                    <button
-                        className="wekalat-icon-btn"
-                        onClick={() => load(sort, true)}
-                        title="تحديث"
-                    >
-                        <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-                    </button>
-                </div>
-            </div>
-
+            {/* الملخّص وزرّا الترتيب والتحديث في الشريط العلوي (Wekalat.tsx) — لا هنا */}
             <div className="wekalat-table-wrapper">
                 <table className="wekalat-table">
                     <thead>

@@ -1,6 +1,6 @@
 ﻿import { apiClient } from '../utils/api';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
-import type { Case } from '../types';
+import type { ArchivedFilter, Case } from '../types';
 import { cacheManager, CACHE_KEYS } from '../utils/cacheManager';
 
 export interface CaseFilters {
@@ -12,13 +12,21 @@ export interface CaseFilters {
   lawyer_id?: string | number;
   responsible_lawyer_id?: string | number;
   najiz_status?: string;
+  is_bankruptcy?: string | number;
   search?: string;
   page?: number;
   limit?: number;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+  /** الفلترة تُخفي والبحث يُظهر: '0' المؤرشف مخفيّ (افتراضي) | '1' المؤرشف وحده | 'all' الكل */
+  archived?: ArchivedFilter;
 }
 
+/** paginator القضايا ومعه عدّاد المؤرشفة من جذر الردّ — للعرض «١٢٤ قضية · ٣١ مؤرشفة» */
+export type CasesPage = PaginatedResponse<Case> & { archived_count: number };
+
 export class CaseService {
-  static async getCases(filters: CaseFilters = {}): Promise<PaginatedResponse<Case>> {
+  static async getCases(filters: CaseFilters = {}): Promise<CasesPage> {
     const params = new URLSearchParams();
 
     Object.entries(filters).forEach(([key, value]) => {
@@ -30,10 +38,11 @@ export class CaseService {
     const queryString = params.toString();
     const endpoint = queryString ? `/cases?${queryString}` : '/cases';
 
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<Case>>>(endpoint);
+    const response = await apiClient.get<ApiResponse<PaginatedResponse<Case>> & { archived_count?: number }>(endpoint);
 
     if (response.success && response.data) {
-      return response.data;
+      // archived_count يصل في جذر الردّ لا داخل الـpaginator
+      return { ...response.data, archived_count: response.archived_count ?? 0 };
     } else {
       throw new Error(response.message || 'فشل في جلب القضايا');
     }
@@ -97,6 +106,33 @@ export class CaseService {
     }
     // ✅ Invalidate cache after deleting case
     cacheManager.invalidate(CACHE_KEYS.CASES);
+  }
+
+  /**
+   * نقل القضية إلى الأرشيف — بُعد مستقل تماماً عن سلة المحذوفات، ولا يتتالى على
+   * الجلسات أو المهام أو العميل. العملية خاملة: أرشفة مؤرشفة تُرجع 200 بلا كتابة.
+   */
+  static async archive(id: string | number): Promise<{ id: number; archived_at: string | null }> {
+    const response = await apiClient.post<ApiResponse<{ id: number; archived_at: string | null }>>(`/cases/${id}/archive`);
+
+    if (response.success && response.data) {
+      cacheManager.invalidate(CACHE_KEYS.CASES);
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في أرشفة القضية');
+    }
+  }
+
+  /** إعادة القضية من الأرشيف (خاملة كذلك: إعادة غير مؤرشفة تُرجع 200) */
+  static async unarchive(id: string | number): Promise<{ id: number; archived_at: string | null }> {
+    const response = await apiClient.post<ApiResponse<{ id: number; archived_at: string | null }>>(`/cases/${id}/unarchive`);
+
+    if (response.success && response.data) {
+      cacheManager.invalidate(CACHE_KEYS.CASES);
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في إعادة القضية من الأرشيف');
+    }
   }
 
   static async assignLawyer(caseId: string, lawyerId: string, role: string = 'secondary'): Promise<void> {

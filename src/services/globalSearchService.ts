@@ -7,6 +7,8 @@ export interface GlobalSearchCase {
   file_number: string | null;
   client_name: string | null;
   status: string | null;
+  /** البحث يُظهر المؤرشف — غير null يعني «مؤرشفة» فتضع الواجهة رقاقة على الصف */
+  archived_at?: string | null;
 }
 
 export interface GlobalSearchTask {

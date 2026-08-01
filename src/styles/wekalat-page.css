@@ -248,18 +248,63 @@ body.dark .wekalat-view-tabs {
     background: var(--quiet-gray-200);
 }
 
+/* الأزرار نصّية لا أيقونية: العرض يتبع النص ولا يُقصّ. كان width:32px ثابتاً
+   (مصمَّماً لأيقونة مفردة) فكان نصّ «قضايا بلا وكالة» يفيض خارج حدّ الزرّ. */
 .wekalat-view-tab {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
+    gap: 6px;
+    min-width: 32px;
     height: 32px;
+    padding: 0 12px;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 500;
     border: none;
     background: transparent;
     border-radius: 4px;
     cursor: pointer;
     color: var(--color-text-secondary);
     transition: all 0.15s;
+}
+
+.wekalat-view-tab svg {
+    flex-shrink: 0;
+}
+
+/* رقاقة العدد داخل التبويب — لا تدفع النصّ ولا تتمدّد */
+.wekalat-view-tab .erp-cell__tag {
+    flex-shrink: 0;
+}
+
+/* ملخّص «قضايا بلا وكالة» وأدواته — في الشريط العلوي لا في شريطٍ مستقلٍّ فوق الجدول */
+.wekalat-missing-summary {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: var(--color-text);
+}
+
+.wekalat-missing-summary strong {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+.wekalat-missing-summary__hint {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+.wekalat-missing-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    /* إلى أقصى الشريط — __start يتمدّد في هذا التبويب وحده (انظر --compact أدناه) */
+    margin-inline-start: auto;
 }
 
 .wekalat-view-tab:hover {
@@ -273,12 +318,14 @@ body.dark .wekalat-view-tabs {
 }
 
 /* ==================== Table View ==================== */
+/* النمط الملتصق: الجدول يمتدّ من حافة إلى حافة ملاصقاً لشريط الأدوات فوقه،
+   بلا هوامش ولا حواف مستديرة، فتُقرأ الصفحة كتلةً واحدة (نظير صفحة القضايا). */
 .wekalat-table-wrapper {
     overflow-x: auto;
     background: var(--dashboard-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    margin: 16px 20px;
+    border: none;
+    border-radius: 0;
+    margin: 0;
 }
 
 .wekalat-table {
@@ -1094,44 +1141,8 @@ body.dark .wk-text-block { background: rgba(255,255,255,.02); }
    قائمةٌ تُحسب عند فتحها، بديلَ إشعارات wekala_missing المتقاعدة.
    تعيد استعمال .wekalat-table و.wekalat-empty كما هي — ما دونها أدناه. */
 
-.mwk-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin: 16px 20px 0;
-    padding: 12px 16px;
-    background: var(--dashboard-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    flex-wrap: wrap;
-}
-
-.mwk-bar__summary {
-    font-size: 13px;
-    color: var(--color-text);
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
-.mwk-bar__summary strong {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--color-heading);
-}
-
-.mwk-bar__hint {
-    font-size: 12px;
-    color: var(--color-text-secondary);
-}
-
-.mwk-bar__actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
+/* ملاحظة: الملخّص وزرّا الترتيب والتحديث انتقلا إلى الشريط العلوي
+   (.wekalat-missing-summary و .wekalat-missing-tools أعلاه) فحُذف شريط .mwk-bar. */
 
 .mwk-file-link {
     font-weight: 600;
@@ -1205,4 +1216,10 @@ body.dark .wk-text-block { background: rgba(255,255,255,.02); }
 .wekalat-header-bar--compact .wekalat-header-bar__end,
 .wekalat-header-bar--compact .wekalat-header-bar__stats {
     display: none;
+}
+
+/* __start يملأ الشريط في هذا التبويب وحده فتُدفع أدواته إلى طرفه الآخر */
+.wekalat-header-bar--compact .wekalat-header-bar__start {
+    flex: 1;
+    min-width: 0;
 }

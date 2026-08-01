@@ -22,6 +22,8 @@ export interface CaseWekalaItem {
     expiry_state: WekalaExpiryState;
     days_until_expiry: number | null;
     is_manual_include: boolean;
+    /** المؤرشفة تختفي من المقترحات وتبقى في matched/manual برقاقة «مؤرشفة» */
+    is_archived?: boolean;
     match_reason: { clients: string[]; agents: string[] };
     agents: { id: number; name: string; id_number: string | null; adjective?: string | null }[];
     clients: { id: number; name: string; id_number: string | null; adjective?: string | null }[];

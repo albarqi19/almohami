@@ -184,6 +184,62 @@
     color: var(--law-navy);
 }
 
+/* === زرّ الأرشيف / رقاقة وضع الأرشيف === */
+.cases-archive-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+    color: var(--color-text-secondary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.cases-archive-chip:hover {
+    border-color: var(--law-navy);
+    color: var(--law-navy);
+}
+
+/* الوضع النشط: رقاقة كحلية تُقرأ حالةً قائمة لا زرّاً عابراً — والخروج من X وحدها */
+.cases-archive-chip--active,
+.cases-archive-chip--active:hover {
+    background: var(--law-navy);
+    border-color: var(--law-navy);
+    color: white;
+    cursor: default;
+    /* الحشو أضيق من جهة X (يسار النصّ في RTL) لأنها زرٌّ له مساحته الخاصة */
+    padding-inline-start: 12px;
+    padding-inline-end: 4px;
+}
+
+.cases-archive-chip__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.12s linear;
+}
+
+.cases-archive-chip__close:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
 .cases-header-bar__end {
     display: flex;
     align-items: center;
@@ -305,13 +361,25 @@
     max-width: 300px;
 }
 
+/* === ترويسة القائمة (عدّاد الصفوف / إعلان وضع الأرشيف) === */
+/* شريط ملتصق بين أدوات الصفحة والجدول — لا يظهر إلا في وضع الأرشيف */
+.cases-list-caption {
+    padding: 8px 20px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    background: var(--dashboard-card);
+    border-bottom: 1px solid var(--color-border);
+}
+
 /* === Table View === */
+/* النمط الملتصق: الجدول يمتدّ من حافة إلى حافة ملاصقاً لشريط الأدوات فوقه
+   وشريط الترقيم تحته — بلا هوامش ولا حواف مستديرة، فتُقرأ الصفحة كتلةً واحدة. */
 .cases-table-wrapper {
     overflow-x: auto;
     background: var(--dashboard-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    margin: 16px 20px;
+    border: none;
+    border-radius: 0;
+    margin: 0;
 }
 
 .cases-table {
@@ -319,10 +387,6 @@
     min-width: 800px;
     table-layout: fixed;
     border-collapse: collapse;
-    font-size: 13px;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     font-size: 13px;
 }
 
@@ -358,6 +422,12 @@ body.dark .cases-table thead {
     overflow: hidden;
 }
 .cases-table td:last-child { border-left: none; }
+
+/* عمود رقم الملف يستضيف زرّي الإجراءات — حشوٌ أضيق ليتّسع لهما حتى عند أدنى عرض للجدول (800px) */
+.cases-table th:last-child,
+.cases-table td:last-child {
+    padding-inline: 6px;
+}
 
 .cases-table tbody tr:last-child td {
     border-bottom: none;
@@ -414,28 +484,113 @@ body.dark .cases-table thead {
     to { transform: rotate(360deg); }
 }
 
-/* ── Case Delete Button ── */
-.case-delete-btn {
+/* ── خلية رقم الملف: الرقم يتوارى وتحلّ محلّه إجراءات الصف ──
+   الأساس (شاشات اللمس ومَن لا hover لديه): الرقم فوق الزرّين وكلاهما ظاهر دائماً،
+   فالميزة لا تختفي على الجوال. أمّا حيث يوجد hover فالخلية شبكةٌ بخانةٍ واحدة
+   يتراكب فيها الرقم والزرّان — فلا يتغيّر عرض العمود ولا يقفز الجدول. */
+.case-id-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 4px;
+    /* عرضٌ ثابت لا يقلّ عن اتّساع الزرّين — يمنع قفز الجدول عند ظهورهما */
+    min-width: 58px;
+    min-height: 30px;
+}
+
+.case-id-cell__number {
+    font-size: 11px;
+}
+
+.case-id-cell__actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+@media (hover: hover) {
+    .case-id-cell {
+        display: grid;
+        grid-template-areas: 'stack';
+        align-items: center;
+        justify-items: start;
+        gap: 0;
+    }
+
+    .case-id-cell__number,
+    .case-id-cell__actions {
+        grid-area: stack;
+    }
+
+    .case-id-cell__number {
+        transition: opacity 0.12s linear;
+    }
+
+    /* الأزرار فوق الرقم في الترتيب الطبقي لا في ترتيب DOM وحده */
+    .case-id-cell__actions {
+        position: relative;
+        z-index: 2;
+    }
+
+    /* الرقم متوارٍ لكنه يبقى في التخطيط — لولا هذا لالتقط النقرَ بدل الزرّ */
+    .cases-table tbody tr:hover .case-id-cell__number,
+    .cases-table tbody tr:focus-within .case-id-cell__number {
+        pointer-events: none;
+    }
+
+    /* لا visibility: hidden — فهي تُخرج الزرّين من ترتيب Tab فيتعذّر بلوغهما بلوحة
+       المفاتيح أصلاً (ولا ينفع :focus-within حينها لأن التركيز لا يصلهما).
+       pointer-events تكفي لمنعهما من اعتراض نقر رقم الملف وهما متواريان. */
+    .case-id-cell__actions {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.12s linear;
+    }
+
+    .cases-table tbody tr:hover .case-id-cell__number,
+    .cases-table tbody tr:focus-within .case-id-cell__number {
+        opacity: 0;
+    }
+
+    /* focus-within: الوصول بلوحة المفاتيح يُظهرهما كما يفعل مرور الماوس */
+    .cases-table tbody tr:hover .case-id-cell__actions,
+    .cases-table tbody tr:focus-within .case-id-cell__actions {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+/* ── أزرار إجراءات الصف (أرشفة / حذف) ── */
+.case-row-action {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 28px;
     height: 28px;
+    flex-shrink: 0;
     border-radius: 5px;
     border: none;
+    padding: 0;
     background: transparent;
     color: var(--color-text-secondary);
     cursor: pointer;
-    opacity: 0;
-    transition: all 0.15s;
+    transition: background 0.12s linear, color 0.12s linear;
 }
-.cases-table tbody tr:hover .case-delete-btn {
-    opacity: 0.5;
+
+.case-row-action:hover {
+    background: var(--quiet-gray-100);
+    color: var(--law-navy);
 }
-.case-delete-btn:hover {
-    opacity: 1 !important;
-    background: #fef2f2;
-    color: #ef4444;
+
+.case-row-action:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.case-row-action--danger:hover {
+    background: var(--status-red-light);
+    color: var(--status-red);
 }
 
 /* ── ERP Stacked Cell ── */

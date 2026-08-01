@@ -1,6 +1,6 @@
 ﻿import { apiClient } from '../utils/api';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
-import type { Task, CreateTaskForm } from '../types';
+import type { ArchivedFilter, Task, CreateTaskForm } from '../types';
 
 export interface TaskFilters {
   status?: string;
@@ -21,6 +21,11 @@ export interface TaskFilters {
   /* مجلدات المهام: folder_id = مهام مجلد بعينه، exclude_foldered = العام يخفي مهام المجلدات */
   folder_id?: number;
   exclude_foldered?: number;
+  /**
+   * الفلترة تُخفي والبحث يُظهر: '0' المؤرشفة مخفيّة (افتراضي) | '1' المؤرشفة وحدها | 'all' الكل.
+   * إن أُرسل `search` بلا `archived` تحوّل الباك تلقائياً إلى 'all'؛ وإن أُرسل صراحةً فهو يفوز.
+   */
+  archived?: ArchivedFilter;
 }
 
 export interface TaskStats {
@@ -35,7 +40,16 @@ export interface TaskStats {
   overdue: number;
   due_today: number;
   by_priority: { low: number; medium: number; high: number; urgent: number };
+  /** عدد المؤرشفة — بقية العدّادات صارت تستثنيها */
+  archived: number;
 }
+
+/** paginator المهام ومعه عدّاد المؤرشفة — للعرض «١٢٤ مهمة · ٣١ مؤرشفة» */
+export type TasksPage = PaginatedResponse<Task> & {
+  archived_count: number;
+  /** الوضع الذي طبّقه الباك فعلياً (قد يصير 'all' تلقائياً مع البحث) */
+  archived_mode: ArchivedFilter;
+};
 
 export interface TaskWidgets {
   overdue: { id: number | string; title: string; due_date: string | null }[];
@@ -65,20 +79,22 @@ export class TaskService {
     throw new Error(response.message || 'فشل في جلب بيانات الودجات');
   }
 
-  static async getTasks(filters: TaskFilters = {}): Promise<PaginatedResponse<Task>> {
+  static async getTasks(filters: TaskFilters = {}): Promise<TasksPage> {
     const params = new URLSearchParams();
-    
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
         params.append(key, value.toString());
       }
     });
-    
+
     const queryString = params.toString();
     const endpoint = queryString ? `/tasks?${queryString}` : '/tasks';
-    
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<any>>>(endpoint);
-    
+
+    const response = await apiClient.get<
+      ApiResponse<PaginatedResponse<any>> & { archived_count?: number; archived_mode?: ArchivedFilter }
+    >(endpoint);
+
     if (response.success && response.data) {
       // Convert tasks data from snake_case to camelCase
       const convertedTasks = response.data.data.map((task: any) => ({
@@ -95,10 +111,13 @@ export class TaskService {
         assignees: Array.isArray(task.assignees) ? task.assignees : undefined
       }));
       
+      // archived_count و archived_mode يصلان في جذر الردّ لا داخل الـpaginator
       return {
         ...response.data,
-        data: convertedTasks
-      } as PaginatedResponse<Task>;
+        data: convertedTasks,
+        archived_count: response.archived_count ?? 0,
+        archived_mode: response.archived_mode ?? '0',
+      } as TasksPage;
     } else {
       throw new Error(response.message || 'فشل في جلب المهام');
     }
@@ -242,6 +261,16 @@ export class TaskService {
     if (!response.success) {
       throw new Error(response.message || 'فشل في أرشفة المهمة');
     }
+  }
+
+  /** إعادة المهمة من الأرشيف — archived_at تصير null والحالة تعود 'todo'. 422 إن لم تكن مؤرشفة. */
+  static async unarchiveTask(taskId: string): Promise<Task> {
+    const response = await apiClient.put<ApiResponse<Task>>(`/tasks/${taskId}/unarchive`, {});
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || 'فشل في إلغاء أرشفة المهمة');
   }
 
   /**

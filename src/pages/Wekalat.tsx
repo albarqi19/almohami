@@ -30,19 +30,34 @@ import {
   Settings,
   Trash2,
   FileWarning,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react';
 import { WekalatService } from '../services/wekalatService';
-import { CaseWekalaService, type WekalaCaseItem } from '../services/caseWekalaService';
+import { CaseWekalaService, type WekalaCaseItem, type MissingWekalaResponse } from '../services/caseWekalaService';
 import { AddWekalaModal } from '../components/AddWekalaModal';
 import { MissingWekalaCasesPanel } from '../components/MissingWekalaCasesPanel';
+import { Can } from '../components/Can';
 import { useAuth } from '../contexts/AuthContext';
 import { Link as RouterLink } from 'react-router-dom';
-import type { Wekala, WekalaParty, WekalaPermission } from '../types';
+import type { ArchivedFilter, Wekala, WekalaParty, WekalaPermission } from '../types';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
+
+type MissingWekalaMeta = MissingWekalaResponse['meta'];
 
 // ==================== Types ====================
 
 type ViewMode = 'table' | 'grid';
+
+/** ‏شكل صفحة الوكالات كما تخزّنها الاستعلامة والكاش — ومعها عدّادا الأرشيف */
+interface WekalatQueryData {
+  wekalat: Wekala[];
+  pagination: { currentPage: number; totalPages: number; total: number };
+  /** ‏عدد المؤرشف ضمن نفس الفلاتر المعروضة (يأتي من الردّ لا من طول المصفوفة) */
+  archivedCount: number;
+  /** ‏هل قد تحوي الصفحة المعروضة مؤرشفاً (يصير true تلقائياً مع البحث) */
+  archivedIncluded: boolean;
+}
 
 // ==================== Status Configuration ====================
 
@@ -218,6 +233,8 @@ export const WekalaModal: React.FC<WekalaModalProps> = ({ wekala, isOpen, onClos
           {(wekala as any).source === 'manual' && (
             <span className="wekala-source-badge wekala-source-badge--manual">يدوية</span>
           )}
+          {/* ‏الأرشفة بُعد مستقل عن سلة المحذوفات — رقاقة نصّية هادئة لا أكثر */}
+          {wekala.archived_at && <span className="erp-cell__tag">مؤرشفة</span>}
           {remaining && (
             <span className={`wk-remaining ${remaining.expired ? 'wk-remaining--expired' : ''} ${remaining.urgent && !remaining.expired ? 'wk-remaining--urgent' : ''}`}>
               <Clock size={11} />{remaining.text}
@@ -403,9 +420,17 @@ const Wekalat: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('معتمدة');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
-  /** ‏«الوكالات» أو «قضايا بلا وكالة» — الثاني يُحسب عند فتحه لا قبله */
-  const [mainTab, setMainTab] = useState<'wekalat' | 'missing'>('wekalat');
+  /** ‏«الوكالات» أو «المؤرشفة» أو «قضايا بلا وكالة» — الأخير يُحسب عند فتحه لا قبله */
+  type MainTab = 'wekalat' | 'archived' | 'missing';
+  const [mainTab, setMainTab] = useState<MainTab>('wekalat');
+  /** ‏مفتاح الأرشيف المرسَل للخادم: تبويب «المؤرشفة» يعرضها وحدها، وما عداه يُخفيها */
+  const archivedFilter: ArchivedFilter = mainTab === 'archived' ? '1' : '0';
   const [sortByExpiry, setSortByExpiry] = useState<'asc' | 'desc' | null>(null);
+  /** ‏«قضايا بلا وكالة»: ترويستها وزرّاها في الشريط العلوي، والقائمة وحدها في اللوحة */
+  const [missingSort, setMissingSort] = useState<'hearing' | 'oldest'>('hearing');
+  const [missingRefreshToken, setMissingRefreshToken] = useState(0);
+  const [missingMeta, setMissingMeta] = useState<MissingWekalaMeta | null>(null);
+  const [missingBusy, setMissingBusy] = useState(false);
   const [selectedWekala, setSelectedWekala] = useState<Wekala | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -421,16 +446,41 @@ const Wekalat: React.FC = () => {
   }, [searchTerm]);
 
   // Reset to page 1 when filter changes
-  useEffect(() => { setCurrentPage(1); }, [statusFilter]);
+  useEffect(() => { setCurrentPage(1); }, [statusFilter, archivedFilter]);
+
+  /** ‏تبديل التبويب: الأرشيف سلّة واحدة، فلا يرثه فلتر حالة يُخفي معظمه.
+   *  ‏نحفظ حالة المستخدم ونُعيدها عند الخروج كي لا نغيّر فلتره من تحته. */
+  const statusBeforeArchiveRef = useRef<string | null>(null);
+  const switchMainTab = (tab: MainTab) => {
+    if (tab === mainTab) return;
+    if (tab === 'archived') {
+      statusBeforeArchiveRef.current = statusFilter;
+      setStatusFilter('all');
+    } else if (mainTab === 'archived' && statusBeforeArchiveRef.current !== null) {
+      setStatusFilter(statusBeforeArchiveRef.current);
+      statusBeforeArchiveRef.current = null;
+    }
+    setMainTab(tab);
+  };
+
+  /** ‏مسح كل لقطات localStorage لهذه القائمة (بعد أي تغيير يمسّ ما يعرضه الخادم) */
+  const clearWekalatCache = () => {
+    try {
+      Object.keys(localStorage)
+        .filter(k => k.startsWith(CACHE_KEY))
+        .forEach(k => localStorage.removeItem(k));
+    } catch { /* ignore */ }
+  };
 
   // Per-filter cache key so each filter combo has its own snapshot
-  const buildCacheKey = (page: number, search: string, status: string) =>
-    `${CACHE_KEY}_${status || 'all'}_${search || 'none'}_p${page}`;
+  // ‏حالة الأرشيف جزء من المفتاح — بدونها تتسرّب صفوف مؤرشفة إلى القائمة الحيّة
+  const buildCacheKey = (page: number, search: string, status: string, archived: ArchivedFilter) =>
+    `${CACHE_KEY}_${status || 'all'}_${search || 'none'}_a${archived}_p${page}`;
 
-  const readCachedPage = (page: number, search: string, status: string):
-    { wekalat: Wekala[]; pagination: { currentPage: number; totalPages: number; total: number } } | undefined => {
+  const readCachedPage = (page: number, search: string, status: string, archived: ArchivedFilter):
+    WekalatQueryData | undefined => {
     try {
-      const cached = localStorage.getItem(buildCacheKey(page, search, status));
+      const cached = localStorage.getItem(buildCacheKey(page, search, status, archived));
       if (!cached) return undefined;
       const { data, timestamp } = JSON.parse(cached);
       if (Date.now() - timestamp >= CACHE_DURATION) return undefined;
@@ -447,12 +497,13 @@ const Wekalat: React.FC = () => {
     isFetching,
     error: queryError,
     refetch,
-  } = useQuery<{ wekalat: Wekala[]; pagination: { currentPage: number; totalPages: number; total: number } }>({
-    queryKey: ['wekalat', debouncedSearch, statusFilter, currentPage],
+  } = useQuery<WekalatQueryData>({
+    queryKey: ['wekalat', debouncedSearch, statusFilter, currentPage, archivedFilter],
     queryFn: async () => {
       const response = await WekalatService.getWekalat({
         page: currentPage,
         limit: 15,
+        archived: archivedFilter,
         ...(debouncedSearch && { search: debouncedSearch }),
         ...(statusFilter !== 'all' && { status: statusFilter }),
       });
@@ -464,16 +515,30 @@ const Wekalat: React.FC = () => {
           totalPages: response.last_page ?? 1,
           total: response.total ?? list.length,
         },
+        archivedCount: response.archived_count ?? 0,
+        archivedIncluded: response.archived_included ?? false,
       };
     },
-    placeholderData: () => readCachedPage(currentPage, debouncedSearch, statusFilter),
+    placeholderData: () => readCachedPage(currentPage, debouncedSearch, statusFilter, archivedFilter),
     staleTime: 60 * 1000,
     refetchInterval: 90 * 1000,
     refetchIntervalInBackground: false,
   });
 
+  /** ‏عدّاد شارة التبويب: الإجمالي الحقيقي للمؤرشف — لا يتأثّر بفلتر الحالة ولا بالصفحة،
+   *  ‏وإلا قال التبويب «لا مؤرشفة» بينما الأرشيف ممتلئ بوكالات منتهية والفلتر «معتمدة».
+   *  ‏مفتاحه يبدأ بـ'wekalat' فيُبطله كل invalidate للقائمة تلقائياً. */
+  const { data: archivedTotal = 0 } = useQuery({
+    queryKey: ['wekalat', 'archived-total'],
+    queryFn: async () => (await WekalatService.getWekalatStats()).archived,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const wekalat = queryData?.wekalat ?? [];
   const pagination = queryData?.pagination ?? { currentPage: 1, totalPages: 1, total: 0 };
+  /** ‏عدّاد المؤرشف ضمن الفلاتر المعروضة — من جذر الردّ لا من طول المصفوفة المفلترة عميلياً */
+  const archivedCount = queryData?.archivedCount ?? 0;
+  const archivedIncluded = queryData?.archivedIncluded ?? false;
   const loading = isLoading;
   const error = queryError ? (queryError instanceof Error ? queryError.message : 'خطأ في جلب الوكالات') : null;
 
@@ -482,11 +547,11 @@ const Wekalat: React.FC = () => {
     if (!queryData) return;
     try {
       localStorage.setItem(
-        buildCacheKey(currentPage, debouncedSearch, statusFilter),
+        buildCacheKey(currentPage, debouncedSearch, statusFilter, archivedFilter),
         JSON.stringify({ data: queryData, timestamp: Date.now() })
       );
     } catch { /* quota — ignore */ }
-  }, [queryData, currentPage, debouncedSearch, statusFilter]);
+  }, [queryData, currentPage, debouncedSearch, statusFilter, archivedFilter]);
 
   // Convenience aliases for the rest of the component to keep diffs small.
   const fetchWekalat = (page?: number, forceRefresh = false) => {
@@ -507,16 +572,32 @@ const Wekalat: React.FC = () => {
     try {
       await WekalatService.deleteWekala(wekalaToDelete.id);
       queryClient.invalidateQueries({ queryKey: ['wekalat'] });
-      try {
-        Object.keys(localStorage)
-          .filter(k => k.startsWith(CACHE_KEY))
-          .forEach(k => localStorage.removeItem(k));
-      } catch { /* ignore */ }
+      clearWekalatCache();
       setWekalaToDelete(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'فشل في حذف الوكالة');
     } finally {
       setDeletingWekala(false);
+    }
+  };
+
+  // ‏أرشفة/استعادة وكالة — بُعد مستقل تماماً عن الحذف: لا يُخفيها عن التقارير ولا يمسّ بياناتها
+  const [archivingId, setArchivingId] = useState<number | null>(null);
+
+  const handleToggleArchive = async (wekala: Wekala) => {
+    setArchivingId(wekala.id);
+    try {
+      if (wekala.archived_at) {
+        await WekalatService.unarchive(wekala.id);
+      } else {
+        await WekalatService.archive(wekala.id);
+      }
+      clearWekalatCache();
+      queryClient.invalidateQueries({ queryKey: ['wekalat'] });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'فشل في تنفيذ العملية');
+    } finally {
+      setArchivingId(null);
     }
   };
 
@@ -560,9 +641,7 @@ const Wekalat: React.FC = () => {
       setWekalaVisibility(value);
       setShowSettingsMenu(false);
       // Server-side filter changed → drop all cached pages for this list
-      Object.keys(localStorage)
-        .filter(k => k.startsWith(`${CACHE_KEY}_`))
-        .forEach(k => localStorage.removeItem(k));
+      clearWekalatCache();
       queryClient.invalidateQueries({ queryKey: ['wekalat'] });
     } catch (e) {
       console.error('Failed to update visibility:', e);
@@ -580,16 +659,22 @@ const Wekalat: React.FC = () => {
   };
 
   // Client-side filtered + sorted data
+  // ‏قاعدة الأرشيف هنا: لا فلترة عميلية على archived_at إطلاقاً — الخادم وحده يقرّر
+  // ‏أي الصفوف تُعرض (archived=0|1 والبحث يُظهر المؤرشف)، وإعادة تصفيتها هنا كانت
+  // ‏ستُفرغ تبويب «المؤرشفة» أو تُخفي ما كشفه البحث.
   const filteredWekalat = useMemo(() => {
     let result = wekalat;
 
-    // Filter by status
+    // Filter by status — نفس القيمة المرسَلة للخادم، فلا يسقط شيء عرضه لنا
+    // (‏في تبويب «المؤرشفة» تكون 'all' فيُتخطّى هذا الفلتر أصلاً)
     if (statusFilter && statusFilter !== 'all') {
       result = result.filter(w => w.status === statusFilter);
     }
 
-    // Filter by search
-    if (searchTerm) {
+    // ‏تضييق مؤقت أثناء الكتابة فقط: ما إن يلحق الخادم (searchTerm === debouncedSearch)
+    // ‏نثق بردّه — فهو يبحث بحقول أوسع (wekala_id، أرقام الهوية) ويُظهر المؤرشف عمداً،
+    // ‏ولو أعدنا تصفيته هنا لأسقطنا صفوفاً مطابقة منها المؤرشفة.
+    if (searchTerm && searchTerm !== debouncedSearch) {
       const term = searchTerm.toLowerCase();
       result = result.filter(w =>
         w.number?.toLowerCase().includes(term) ||
@@ -609,7 +694,7 @@ const Wekalat: React.FC = () => {
     }
 
     return result;
-  }, [wekalat, statusFilter, searchTerm, sortByExpiry]);
+  }, [wekalat, statusFilter, searchTerm, debouncedSearch, sortByExpiry]);
 
   const handleViewWekala = (wekala: Wekala) => {
     setSelectedWekala(wekala);
@@ -658,6 +743,9 @@ const Wekalat: React.FC = () => {
                   </span>
                   {(w as any).source === 'manual' && (
                     <span className="wekala-source-badge wekala-source-badge--manual" style={{ marginRight: 4 }}>يدوية</span>
+                  )}
+                  {w.archived_at && (
+                    <span className="erp-cell__tag" style={{ marginRight: 4 }}>مؤرشفة</span>
                   )}
                 </td>
                 <td>
@@ -710,6 +798,16 @@ const Wekalat: React.FC = () => {
                     >
                       <Eye size={16} />
                     </button>
+                    <Can permission="wekala.manage">
+                      <button
+                        className="wekala-action-btn"
+                        onClick={(e) => { e.stopPropagation(); handleToggleArchive(w); }}
+                        title={w.archived_at ? 'استعادة من الأرشيف' : 'أرشفة الوكالة'}
+                        disabled={archivingId === w.id}
+                      >
+                        {w.archived_at ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+                      </button>
+                    </Can>
                     <button
                       className="wekala-action-btn"
                       style={{ color: '#dc2626' }}
@@ -756,10 +854,13 @@ const Wekalat: React.FC = () => {
                 </div>
                 {w.type && <div className="wekala-card__type">{w.type}</div>}
               </div>
-              <span className={`wekala-status-badge ${statusConfig.class}`}>
-                <span className="wekala-status-badge__dot" />
-                {statusConfig.label}
-              </span>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                {w.archived_at && <span className="erp-cell__tag">مؤرشفة</span>}
+                <span className={`wekala-status-badge ${statusConfig.class}`}>
+                  <span className="wekala-status-badge__dot" />
+                  {statusConfig.label}
+                </span>
+              </div>
             </div>
 
             {clients.length > 0 && (
@@ -808,14 +909,26 @@ const Wekalat: React.FC = () => {
                   </span>
                 );
               })()}
-              <button
-                className="wekala-action-btn"
-                style={{ color: '#dc2626', marginInlineStart: 'auto' }}
-                onClick={(e) => { e.stopPropagation(); setWekalaToDelete(w); }}
-                title="حذف الوكالة"
-              >
-                <Trash2 size={14} />
-              </button>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginInlineStart: 'auto' }}>
+                <Can permission="wekala.manage">
+                  <button
+                    className="wekala-action-btn"
+                    onClick={(e) => { e.stopPropagation(); handleToggleArchive(w); }}
+                    title={w.archived_at ? 'استعادة من الأرشيف' : 'أرشفة الوكالة'}
+                    disabled={archivingId === w.id}
+                  >
+                    {w.archived_at ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+                  </button>
+                </Can>
+                <button
+                  className="wekala-action-btn"
+                  style={{ color: '#dc2626' }}
+                  onClick={(e) => { e.stopPropagation(); setWekalaToDelete(w); }}
+                  title="حذف الوكالة"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -834,26 +947,67 @@ const Wekalat: React.FC = () => {
           <div className="wekalat-header-bar__title">
             <FileCheck size={20} />
             <span>الوكالات</span>
-            {mainTab === 'wekalat' && <span className="wekalat-header-bar__count">{stats.total}</span>}
+            {mainTab !== 'missing' && <span className="wekalat-header-bar__count">{stats.total}</span>}
           </div>
 
-          {/* ‏تبويبان: الوكالات نفسها، والقضايا التي لا وكالة لها.
-              ‏الثاني بديلُ إشعارات wekala_missing المتقاعدة — يُحسب عند فتحه. */}
+          {/* ‏ثلاثة تبويبات: الوكالات الحيّة، والمؤرشفة، والقضايا التي لا وكالة لها.
+              ‏الأخير بديلُ إشعارات wekala_missing المتقاعدة — يُحسب عند فتحه. */}
           <div className="wekalat-view-tabs">
             <button
               className={`wekalat-view-tab ${mainTab === 'wekalat' ? 'wekalat-view-tab--active' : ''}`}
-              onClick={() => setMainTab('wekalat')}
+              onClick={() => switchMainTab('wekalat')}
             >
               الوكالات
             </button>
             <button
+              className={`wekalat-view-tab ${mainTab === 'archived' ? 'wekalat-view-tab--active' : ''}`}
+              onClick={() => switchMainTab('archived')}
+              title="الوكالات المؤرشفة — مخفيّة عن القائمة الحيّة، وأرقامها باقية في التقارير"
+            >
+              <Archive size={14} />
+              المؤرشفة
+              {/* ‏الرقم من الخادم (إجمالي المؤرشف) لا من طول المصفوفة المفلترة عميلياً */}
+              {archivedTotal > 0 && <span className="erp-cell__tag">{archivedTotal}</span>}
+            </button>
+            <button
               className={`wekalat-view-tab ${mainTab === 'missing' ? 'wekalat-view-tab--active' : ''}`}
-              onClick={() => setMainTab('missing')}
+              onClick={() => switchMainTab('missing')}
             >
               <FileWarning size={14} />
               قضايا بلا وكالة
             </button>
           </div>
+
+          {/* ملخّص «قضايا بلا وكالة» — رُفع إلى الشريط العلوي بدل شريطٍ مستقلٍّ فوق الجدول */}
+          {mainTab === 'missing' && missingMeta && (
+            <div className="wekalat-missing-summary">
+              <strong>{missingMeta.total}</strong> قضية بلا وكالة
+              <span className="wekalat-missing-summary__hint">
+                {missingMeta.scope === 'own' ? 'من قضاياك' : 'في المكتب'} · تُحتسب القضايا النشطة
+                وما له جلسة خلال {missingMeta.lookahead_days} يوماً
+              </span>
+            </div>
+          )}
+
+          {/* زرّا الترتيب والتحديث — يظهران هنا لأن __center يُخفى في هذا التبويب */}
+          {mainTab === 'missing' && (
+            <div className="wekalat-missing-tools">
+              <button
+                className={`wekalat-icon-btn ${missingSort === 'oldest' ? 'wekalat-icon-btn--active' : ''}`}
+                onClick={() => setMissingSort(prev => (prev === 'hearing' ? 'oldest' : 'hearing'))}
+                title={missingSort === 'hearing' ? 'مرتّبة بأقرب جلسة — اضغط للأقدم قيداً' : 'مرتّبة بالأقدم قيداً — اضغط لأقرب جلسة'}
+              >
+                <ArrowUpDown size={16} />
+              </button>
+              <button
+                className="wekalat-icon-btn"
+                onClick={() => setMissingRefreshToken(t => t + 1)}
+                title="تحديث"
+              >
+                <RefreshCw size={16} className={missingBusy ? 'animate-spin' : ''} />
+              </button>
+            </div>
+          )}
           <div className="wekalat-header-bar__stats">
             <span className="wekala-stat-pill wekala-stat-pill--approved">
               <span className="wekala-stat-pill__dot" />
@@ -988,7 +1142,12 @@ const Wekalat: React.FC = () => {
 
       {/* Content */}
       {mainTab === 'missing' ? (
-        <MissingWekalaCasesPanel />
+        <MissingWekalaCasesPanel
+          sort={missingSort}
+          refreshToken={missingRefreshToken}
+          onMetaChange={setMissingMeta}
+          onBusyChange={setMissingBusy}
+        />
       ) : loading ? (
         <div className="wekalat-loading">
           {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="wekalat-skeleton-row" />)}
@@ -1004,10 +1163,14 @@ const Wekalat: React.FC = () => {
         </div>
       ) : filteredWekalat.length === 0 ? (
         <div className="wekalat-empty">
-          <FileCheck size={48} className="wekalat-empty__icon" />
-          <div className="wekalat-empty__title">لا توجد وكالات</div>
+          {mainTab === 'archived' ? <Archive size={48} className="wekalat-empty__icon" /> : <FileCheck size={48} className="wekalat-empty__icon" />}
+          <div className="wekalat-empty__title">
+            {mainTab === 'archived' ? 'لا توجد وكالات مؤرشفة' : 'لا توجد وكالات'}
+          </div>
           <div className="wekalat-empty__desc">
-            {statusFilter !== 'all' ? 'جرّب تعديل معايير البحث' : 'استخدم إضافة ناجز لاستيراد الوكالات'}
+            {mainTab === 'archived'
+              ? 'ما تؤرشفه من الوكالات يظهر هنا — الأرشفة تُخفيه عن القائمة الحيّة ولا تحذفه.'
+              : statusFilter !== 'all' ? 'جرّب تعديل معايير البحث' : 'استخدم إضافة ناجز لاستيراد الوكالات'}
           </div>
         </div>
       ) : (
@@ -1018,10 +1181,19 @@ const Wekalat: React.FC = () => {
       )}
 
       {/* Pagination */}
-      {mainTab === 'wekalat' && !loading && filteredWekalat.length > 0 && (
+      {mainTab !== 'missing' && !loading && filteredWekalat.length > 0 && (
         <div className="wekalat-pagination">
+          {/* ‏الأرقام من الردّ لا من طول المصفوفة المفلترة عميلياً */}
           <div className="wekalat-pagination__info">
-            {filteredWekalat.length} وكالة • صفحة {pagination.currentPage} من {pagination.totalPages}
+            {mainTab === 'archived'
+              ? `${pagination.total} وكالة مؤرشفة`
+              : archivedCount > 0
+                ? `${pagination.total} وكالة · ${archivedCount} مؤرشفة`
+                : `${pagination.total} وكالة`}
+            {' • '}صفحة {pagination.currentPage} من {pagination.totalPages}
+            {mainTab !== 'archived' && archivedIncluded && (
+              <span className="erp-cell__tag" style={{ marginInlineStart: 6 }}>البحث يُظهر المؤرشف</span>
+            )}
           </div>
           <div className="wekalat-pagination__controls">
             <button

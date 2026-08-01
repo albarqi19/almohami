@@ -35,13 +35,17 @@ import {
   History,
   Check,
   UserPlus,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react';
 import { ExecutionRequestService } from '../services/executionRequestService';
 import { UserService } from '../services/UserService';
 import type { User } from '../services/UserService';
 import { CaseService } from '../services/caseService';
 import { TaskService } from '../services/taskService';
+import { Can } from '../components/Can';
 import type {
+  ArchivedFilter,
   ExecutionRequest,
   ExecutionRequestStats,
 } from '../types';
@@ -51,6 +55,11 @@ import type {
 
 type StatusKind = 'active' | 'completed' | 'stopped' | 'cancelled' | 'default';
 
+/**
+ * `status` نصّ حرّ قادم من ناجز (لا enum)، فنصنّفه بمطابقة نصّية.
+ * ⚠️ لا علاقة لهذا بالأرشفة إطلاقاً: معيار الأرشفة هو `archived_at != null` وحده،
+ *    و«مؤرشف» ليست حالة من حالات ناجز ولن تظهر هنا أبداً.
+ */
 const statusKind = (status: string): StatusKind => {
   if (!status) return 'default';
   if (status.includes('قيد') || status.includes('جار')) return 'active';
@@ -886,12 +895,16 @@ const ExecutionRequests: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [clientFilter, setClientFilter] = useState('all');
   const [sharedOnly, setSharedOnly] = useState(false);
+  // وضع الأرشيف ثنائيّ: '0' = المؤرشف مخفيّ (افتراضي) | '1' = المؤرشف وحده
+  const [archivedFilter, setArchivedFilter] = useState<ArchivedFilter>('0');
   const [selectedRequest, setSelectedRequest] = useState<ExecutionRequest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [deletingId, setDeletingId] = useState<number | string | null>(null);
   const [requestToDelete, setRequestToDelete] = useState<ExecutionRequest | null>(null);
+  const [archivingId, setArchivingId] = useState<number | string | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   // ربط عميق: /execution-requests?open=<id> يفتح نافذة تفاصيل الطلب مباشرة
@@ -915,16 +928,22 @@ const ExecutionRequests: React.FC = () => {
     return () => clearTimeout(t);
   }, [searchTerm]);
 
-  useEffect(() => { setCurrentPage(1); }, [statusFilter, roleFilter, clientFilter, sharedOnly]);
+  useEffect(() => { setCurrentPage(1); }, [statusFilter, roleFilter, clientFilter, sharedOnly, archivedFilter]);
 
-  // مفتاح cache لكل تركيبة فلاتر
-  const buildCacheKey = (page: number, search: string, status: string, role: string, client: string, shared: boolean) =>
-    `${CACHE_KEY}_${status}_${role}_${client}_${shared ? 's1' : 's0'}_${search || 'none'}_p${page}`;
+  type ListPayload = {
+    requests: ExecutionRequest[];
+    archivedCount: number;
+    pagination: { currentPage: number; totalPages: number; total: number };
+  };
 
-  const readCachedPage = (page: number, search: string, status: string, role: string, client: string, shared: boolean):
-    { requests: ExecutionRequest[]; pagination: { currentPage: number; totalPages: number; total: number } } | undefined => {
+  // مفتاح cache لكل تركيبة فلاتر — حالة الأرشيف جزء منه، وإلا ظهرت صفوف مؤرشفة داخل القائمة الحيّة
+  const buildCacheKey = (page: number, search: string, status: string, role: string, client: string, shared: boolean, archived: ArchivedFilter) =>
+    `${CACHE_KEY}_${status}_${role}_${client}_${shared ? 's1' : 's0'}_a${archived}_${search || 'none'}_p${page}`;
+
+  const readCachedPage = (page: number, search: string, status: string, role: string, client: string, shared: boolean, archived: ArchivedFilter):
+    ListPayload | undefined => {
     try {
-      const cached = localStorage.getItem(buildCacheKey(page, search, status, role, client, shared));
+      const cached = localStorage.getItem(buildCacheKey(page, search, status, role, client, shared, archived));
       if (!cached) return undefined;
       const { data, timestamp } = JSON.parse(cached);
       if (Date.now() - timestamp >= CACHE_DURATION) return undefined;
@@ -938,12 +957,13 @@ const ExecutionRequests: React.FC = () => {
     isFetching,
     error: queryError,
     refetch,
-  } = useQuery<{ requests: ExecutionRequest[]; pagination: { currentPage: number; totalPages: number; total: number } }>({
-    queryKey: ['execution-requests', debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly, currentPage],
+  } = useQuery<ListPayload>({
+    queryKey: ['execution-requests', debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly, archivedFilter, currentPage],
     queryFn: async () => {
       const requestsRes = await ExecutionRequestService.getRequests({
         page: currentPage,
         limit: 15,
+        archived: archivedFilter,
         ...(debouncedSearch && { search: debouncedSearch }),
         ...(statusFilter !== 'all' && { status: statusFilter }),
         ...(roleFilter !== 'all' && { party_role_id: roleFilter }),
@@ -953,6 +973,7 @@ const ExecutionRequests: React.FC = () => {
       const list = Array.isArray(requestsRes.data) ? requestsRes.data : [];
       return {
         requests: list,
+        archivedCount: requestsRes.archived_count ?? 0,
         pagination: {
           currentPage: requestsRes.current_page ?? currentPage,
           totalPages: requestsRes.last_page ?? 1,
@@ -960,7 +981,7 @@ const ExecutionRequests: React.FC = () => {
         },
       };
     },
-    placeholderData: () => readCachedPage(currentPage, debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly),
+    placeholderData: () => readCachedPage(currentPage, debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly, archivedFilter),
     staleTime: 60 * 1000,
     refetchInterval: 90 * 1000,
     refetchIntervalInBackground: false,
@@ -968,8 +989,8 @@ const ExecutionRequests: React.FC = () => {
 
   // الإحصائيات — تتبع فلتر العميل لتتحول لملخّص مالي للعميل المحدد
   const { data: stats } = useQuery<ExecutionRequestStats | null>({
-    queryKey: ['execution-requests', 'stats', clientFilter],
-    queryFn: () => ExecutionRequestService.getStatistics(clientFilter),
+    queryKey: ['execution-requests', 'stats', clientFilter, archivedFilter],
+    queryFn: () => ExecutionRequestService.getStatistics(clientFilter, archivedFilter),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -1002,6 +1023,7 @@ const ExecutionRequests: React.FC = () => {
   }, [latestPayments]);
 
   const requests = queryData?.requests ?? [];
+  const archivedCount = queryData?.archivedCount ?? 0;
   const pagination = queryData?.pagination ?? { currentPage: 1, totalPages: 1, total: 0 };
   const loading = isLoading;
   const refreshing = isFetching && !isLoading;
@@ -1012,11 +1034,11 @@ const ExecutionRequests: React.FC = () => {
     if (!queryData) return;
     try {
       localStorage.setItem(
-        buildCacheKey(currentPage, debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly),
+        buildCacheKey(currentPage, debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly, archivedFilter),
         JSON.stringify({ data: queryData, timestamp: Date.now() })
       );
     } catch { /* quota — ignore */ }
-  }, [queryData, currentPage, debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly]);
+  }, [queryData, currentPage, debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly, archivedFilter]);
 
   const fetchData = (page?: number) => {
     if (page && page !== currentPage) setCurrentPage(page);
@@ -1028,6 +1050,15 @@ const ExecutionRequests: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  /** مسح كل صفحات cache القائمة — بعد أي تغيير يُزحزح الصفوف بين القائمة الحيّة والأرشيف */
+  const clearListCache = () => {
+    try {
+      Object.keys(localStorage)
+        .filter(k => k.startsWith(CACHE_KEY))
+        .forEach(k => localStorage.removeItem(k));
+    } catch { /* ignore */ }
+  };
+
   const handleDeleteRequest = async () => {
     if (!requestToDelete) return;
     const id = requestToDelete.id;
@@ -1035,17 +1066,34 @@ const ExecutionRequests: React.FC = () => {
     try {
       await ExecutionRequestService.deleteRequest(id);
       queryClient.invalidateQueries({ queryKey: ['execution-requests'] });
-      try {
-        Object.keys(localStorage)
-          .filter(k => k.startsWith(CACHE_KEY))
-          .forEach(k => localStorage.removeItem(k));
-      } catch { /* ignore */ }
+      clearListCache();
       setRequestToDelete(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'فشل في حذف الطلب';
       alert(msg);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  /**
+   * أرشفة/إرجاع طلب — المعيار `archived_at` وحده، ولا علاقة له بـ`status` النصّي القادم من ناجز
+   * ولا بسلة المحذوفات (`deleted_at`). النداءان خاملان فتكرارهما آمن.
+   */
+  const handleToggleArchive = async (req: ExecutionRequest) => {
+    const id = req.id;
+    const wasArchived = !!req.archived_at;
+    setArchivingId(id);
+    setArchiveError(null);
+    try {
+      if (wasArchived) await ExecutionRequestService.unarchive(id);
+      else await ExecutionRequestService.archive(id);
+      clearListCache();
+      queryClient.invalidateQueries({ queryKey: ['execution-requests'] });
+    } catch (err) {
+      setArchiveError(err instanceof Error ? err.message : (wasArchived ? 'فشل في إرجاع الطلب من الأرشيف' : 'فشل في أرشفة الطلب'));
+    } finally {
+      setArchivingId(null);
     }
   };
 
@@ -1098,6 +1146,19 @@ const ExecutionRequests: React.FC = () => {
     [clientFilter, clients]
   );
 
+  // ==================== وضع الأرشيف ====================
+
+  // وضعٌ قائم لا فلتر عابر: خاملاً زرٌّ ثانويّ بعدّاد، ونشطاً رقاقةٌ بلون الهوية تُلغى بالضغط.
+  // العدّاد يأتي من `archived_count` في ردّ الخادم — لا يُحسب من الصفحة المعروضة.
+  const isArchiveView = archivedFilter === '1';
+  const archiveLabel = archivedCount > 0 ? `الأرشيف (${formatAmount(archivedCount)})` : 'الأرشيف';
+  const archiveChipStyle: React.CSSProperties = {
+    background: 'var(--law-navy)',
+    borderColor: 'var(--law-navy)',
+    color: 'white',
+    fontWeight: 700,
+  };
+
   // ==================== العرض ====================
 
   return (
@@ -1105,8 +1166,15 @@ const ExecutionRequests: React.FC = () => {
       {/* ===== الترويسة ===== */}
       <div className="exec-header">
         <div className="exec-header__title">
-          <h1><Scale size={19} /> طلبات التنفيذ</h1>
-          <span className="exec-header__sub">{formatAmount(pagination.total)} طلباً · تُسحب من ناجز عبر إضافة Chrome</span>
+          <h1>
+            {isArchiveView ? <Archive size={19} /> : <Scale size={19} />}
+            <span>{isArchiveView ? 'أرشيف طلبات التنفيذ' : 'طلبات التنفيذ'}</span>
+          </h1>
+          <span className="exec-header__sub">
+            {isArchiveView
+              ? `${formatAmount(pagination.total)} طلباً مؤرشفاً · محفوظةٌ كاملةً ولا تُنقص أرقام التقارير`
+              : `${formatAmount(pagination.total)} طلباً · تُسحب من ناجز عبر إضافة Chrome`}
+          </span>
         </div>
 
         <div className="exec-header__tools">
@@ -1145,11 +1213,33 @@ const ExecutionRequests: React.FC = () => {
           >
             <Share2 size={13} /> مشارَكة معي
           </button>
+          {/* زرّ-رقاقة الأرشيف — يبقى ظاهراً ولو كان العدّاد صفراً ليجد المستخدم أوّل ما يؤرشفه */}
+          <button
+            type="button"
+            className="exec-btn"
+            style={isArchiveView ? archiveChipStyle : undefined}
+            onClick={() => setArchivedFilter(isArchiveView ? '0' : '1')}
+            title={isArchiveView ? 'إلغاء وضع الأرشيف والعودة إلى القائمة الحيّة' : 'عرض الطلبات المؤرشفة وحدها'}
+          >
+            <Archive size={13} />
+            {archiveLabel}
+            {isArchiveView && <X size={13} />}
+          </button>
           <button className="exec-iconbtn exec-iconbtn--bordered" onClick={() => refetch()} title="تحديث">
             <RefreshCw size={14} className={refreshing ? 'exec-spin' : ''} />
           </button>
         </div>
       </div>
+
+      {/* ===== خطأ أرشفة/إرجاع ===== */}
+      {archiveError && (
+        <div className="exec-alert exec-alert--error">
+          <AlertCircle size={13} /> {archiveError}
+          <button className="exec-iconbtn" style={{ marginInlineStart: 'auto' }} title="إخفاء" onClick={() => setArchiveError(null)}>
+            <X size={13} />
+          </button>
+        </div>
+      )}
 
       {/* ===== بانر سدادات جديدة بعد الاستيراد ===== */}
       {unseenPayments.length > 0 && (
@@ -1260,9 +1350,13 @@ const ExecutionRequests: React.FC = () => {
         </div>
       ) : requests.length === 0 ? (
         <div className="exec-empty">
-          <Scale size={42} />
-          <p>لا توجد طلبات تنفيذ مطابقة</p>
-          <span>استخدم إضافة Chrome لسحب الطلبات من ناجز</span>
+          {isArchiveView ? <Archive size={42} /> : <Scale size={42} />}
+          <p>{isArchiveView ? 'لا توجد طلبات تنفيذ مؤرشفة' : 'لا توجد طلبات تنفيذ مطابقة'}</p>
+          <span>
+            {isArchiveView
+              ? 'أرشِف أي طلب من القائمة الحيّة ليظهر هنا — الأرشفة لا تحذف شيئاً ولا تُنقص أرقام التقارير'
+              : 'استخدم إضافة Chrome لسحب الطلبات من ناجز'}
+          </span>
         </div>
       ) : (
         <>
@@ -1290,7 +1384,15 @@ const ExecutionRequests: React.FC = () => {
                     <tr key={req.id} onClick={() => handleViewRequest(req)}>
                       <td>
                         <div className="exec-reqcell">
-                          <b>{req.request_number}</b>
+                          <b>
+                            {req.request_number}
+                            {/* المعيار `archived_at` وحده — لا `status` ولا `deleted_at` */}
+                            {req.archived_at && (
+                              <span className="erp-cell__tag" style={{ marginInlineStart: 6 }} title={`أُرشف في ${formatDate(req.archived_at)}`}>
+                                مؤرشف
+                              </span>
+                            )}
+                          </b>
                           <span>{req.filing_date_hijri || formatDate(req.filing_date_gregorian)}</span>
                         </div>
                       </td>
@@ -1331,6 +1433,28 @@ const ExecutionRequests: React.FC = () => {
                           <button className="exec-iconbtn" onClick={() => handleViewRequest(req)} title="عرض التفاصيل">
                             <Eye size={14} />
                           </button>
+                          {/* بوابة بالصلاحية لا بالدور — كي تعمل الأدوار المخصّصة الممنوحة execution.manage */}
+                          <Can permission="execution.manage">
+                            {req.archived_at ? (
+                              <button
+                                className="exec-iconbtn"
+                                onClick={() => handleToggleArchive(req)}
+                                title="إرجاع الطلب من الأرشيف"
+                                disabled={archivingId === req.id}
+                              >
+                                {archivingId === req.id ? <RefreshCw size={14} className="exec-spin" /> : <ArchiveRestore size={14} />}
+                              </button>
+                            ) : (
+                              <button
+                                className="exec-iconbtn"
+                                onClick={() => handleToggleArchive(req)}
+                                title="أرشفة الطلب — لا يُحذف ولا يُنقص أرقام التقارير، ويبقى قابلاً للإرجاع"
+                                disabled={archivingId === req.id}
+                              >
+                                {archivingId === req.id ? <RefreshCw size={14} className="exec-spin" /> : <Archive size={14} />}
+                              </button>
+                            )}
+                          </Can>
                           <button
                             className="exec-iconbtn exec-iconbtn--danger"
                             onClick={() => setRequestToDelete(req)}

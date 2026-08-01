@@ -1,6 +1,7 @@
 import { apiClient } from '../utils/api';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
 import type {
+  ArchivedFilter,
   ExecutionRequest,
   ExecutionRequestFilters,
   ExecutionRequestStats,
@@ -8,11 +9,22 @@ import type {
   ExecutionPaymentLogsResponse,
 } from '../types';
 
+/** paginator طلبات التنفيذ ومعه عدّاد المؤرشفة — للعرض «١٢٤ طلباً · ٣١ مؤرشفة» */
+export type ExecutionRequestsPage = PaginatedResponse<ExecutionRequest> & { archived_count: number };
+
+/** ردّ أرشفة/إرجاع طلب تنفيذ */
+export interface ExecutionRequestArchiveResult {
+  id: number;
+  request_number: string;
+  archived_at: string | null;
+  archived_by: number | null;
+}
+
 export class ExecutionRequestService {
   /**
    * جلب قائمة طلبات التنفيذ مع الفلاتر والتصفح
    */
-  static async getRequests(filters: ExecutionRequestFilters = {}): Promise<PaginatedResponse<ExecutionRequest>> {
+  static async getRequests(filters: ExecutionRequestFilters = {}): Promise<ExecutionRequestsPage> {
     const params = new URLSearchParams();
 
     Object.entries(filters).forEach(([key, value]) => {
@@ -24,10 +36,11 @@ export class ExecutionRequestService {
     const queryString = params.toString();
     const endpoint = queryString ? `/execution-requests?${queryString}` : '/execution-requests';
 
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<ExecutionRequest>>>(endpoint);
+    const response = await apiClient.get<ApiResponse<ExecutionRequestsPage>>(endpoint);
 
     if (response.success && response.data) {
-      return response.data;
+      // archived_count يصل داخل data لا في جذر الردّ
+      return { ...response.data, archived_count: response.data.archived_count ?? 0 };
     } else {
       throw new Error(response.message || 'فشل في جلب طلبات التنفيذ');
     }
@@ -49,8 +62,15 @@ export class ExecutionRequestService {
   /**
    * إحصائيات طلبات التنفيذ — clientId اختياري لملخّص مالي لعميل بعينه
    */
-  static async getStatistics(clientId?: string | number): Promise<ExecutionRequestStats> {
-    const qs = clientId && clientId !== 'all' ? `?client_id=${clientId}` : '';
+  static async getStatistics(
+    clientId?: string | number,
+    archived?: ArchivedFilter,
+  ): Promise<ExecutionRequestStats> {
+    // المؤشرات تتبع تبويب الجدول: بلا ذلك تعرض «المؤرشفة» أرقامَ غير المؤرشف.
+    const params = new URLSearchParams();
+    if (clientId && clientId !== 'all') params.set('client_id', String(clientId));
+    if (archived && archived !== '0') params.set('archived', archived);
+    const qs = params.toString() ? `?${params.toString()}` : '';
     const response = await apiClient.get<ApiResponse<ExecutionRequestStats>>(`/execution-requests/statistics${qs}`);
 
     if (response.success && response.data) {
@@ -160,5 +180,27 @@ export class ExecutionRequestService {
     if (!response.success) {
       throw new Error(response.message || 'فشل في حذف طلب التنفيذ');
     }
+  }
+
+  /**
+   * أرشفة طلب تنفيذ — بُعد مستقل تماماً عن سلة المحذوفات، وخامل (تكرار النداء يُرجع 200 بلا تغيير)
+   */
+  static async archive(id: number | string): Promise<ExecutionRequestArchiveResult> {
+    const response = await apiClient.post<ApiResponse<ExecutionRequestArchiveResult>>(`/execution-requests/${id}/archive`);
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || 'فشل في أرشفة طلب التنفيذ');
+  }
+
+  /** إرجاع طلب تنفيذ من الأرشيف (خامل كذلك) */
+  static async unarchive(id: number | string): Promise<ExecutionRequestArchiveResult> {
+    const response = await apiClient.post<ApiResponse<ExecutionRequestArchiveResult>>(`/execution-requests/${id}/unarchive`);
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || 'فشل في إرجاع طلب التنفيذ من الأرشيف');
   }
 }

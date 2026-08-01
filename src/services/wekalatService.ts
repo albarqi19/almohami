@@ -1,6 +1,13 @@
 ﻿import { apiClient } from '../utils/api';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
-import type { Wekala, WekalaFilters } from '../types';
+import type { ArchivedFilter, Wekala, WekalaFilters } from '../types';
+
+/** paginator الوكالات ومعه عدّاد المؤرشفة — للعرض «١٢٤ وكالة · ٣١ مؤرشفة» */
+export type WekalatPage = PaginatedResponse<Wekala> & {
+  archived_count: number;
+  /** هل تتضمّن الصفحة الحالية مؤرشفاً (true عند archived=all|1 أو عند البحث) */
+  archived_included: boolean;
+};
 
 export class WekalatService {
   /**
@@ -18,24 +25,26 @@ export class WekalatService {
   /**
    * الحصول على قائمة الوكالات مع الفلترة والتصفح
    */
-  static async getWekalat(filters: WekalaFilters = {}): Promise<PaginatedResponse<Wekala>> {
+  static async getWekalat(filters: WekalaFilters = {}): Promise<WekalatPage> {
     const params = new URLSearchParams();
-    
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
         params.append(key, value.toString());
       }
     });
-    
+
     const queryString = params.toString();
     const endpoint = queryString ? `/najiz/wekalat?${queryString}` : '/najiz/wekalat';
-    
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<Wekala>>>(endpoint);
+
+    const response = await apiClient.get<ApiResponse<WekalatPage>>(endpoint);
 
     if (response.success && response.data) {
       return {
         ...response.data,
         data: (response.data.data ?? []).map(w => this.fixNajizParties(w)),
+        archived_count: response.data.archived_count ?? 0,
+        archived_included: response.data.archived_included ?? false,
       };
     } else {
       throw new Error(response.message || 'فشل في جلب الوكالات');
@@ -125,6 +134,34 @@ export class WekalatService {
   }
 
   /**
+   * أرشفة وكالة — بُعد مستقل تماماً عن سلة المحذوفات، وخامل (تكرار النداء يُرجع 200 بلا تغيير)
+   */
+  static async archive(id: number | string): Promise<{ id: number; archived_at: string | null; archived_by: number | null }> {
+    const response = await apiClient.post<ApiResponse<{ id: number; archived_at: string | null; archived_by: number | null }>>(
+      `/wekalat/${id}/archive`
+    );
+
+    if (response.success && response.data) {
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في أرشفة الوكالة');
+    }
+  }
+
+  /** إلغاء أرشفة وكالة (خامل كذلك) */
+  static async unarchive(id: number | string): Promise<{ id: number; archived_at: string | null; archived_by: number | null }> {
+    const response = await apiClient.post<ApiResponse<{ id: number; archived_at: string | null; archived_by: number | null }>>(
+      `/wekalat/${id}/unarchive`
+    );
+
+    if (response.success && response.data) {
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في إلغاء أرشفة الوكالة');
+    }
+  }
+
+  /**
    * الحصول على إعداد خصوصية الوكالات
    */
   static async getVisibilitySetting(): Promise<string> {
@@ -150,23 +187,28 @@ export class WekalatService {
   /**
    * إحصائيات الوكالات
    */
-  static async getWekalatStats(): Promise<{
+  static async getWekalatStats(archived?: ArchivedFilter): Promise<{
     total: number;
     approved: number;
     expired: number;
     cancelled: number;
     pending: number;
+    /** العدد الكلّي للمؤرشف — لا يتأثّر بمفتاح archived */
+    archived: number;
   }> {
+    // نمرّر archived كي تتّسق الأرقام مع الجدول المعروض
+    const qs = archived ? `?archived=${archived}` : '';
     const response = await apiClient.get<ApiResponse<{
       total: number;
       approved: number;
       expired: number;
       cancelled: number;
       pending: number;
-    }>>('/najiz/wekalat/stats');
-    
+      archived: number;
+    }>>(`/najiz/wekalat/stats${qs}`);
+
     if (response.success && response.data) {
-      return response.data;
+      return { ...response.data, archived: response.data.archived ?? 0 };
     } else {
       // إرجاع قيم افتراضية
       return {
@@ -174,7 +216,8 @@ export class WekalatService {
         approved: 0,
         expired: 0,
         cancelled: 0,
-        pending: 0
+        pending: 0,
+        archived: 0
       };
     }
   }
