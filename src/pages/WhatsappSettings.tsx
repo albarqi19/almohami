@@ -30,7 +30,14 @@ import {
   X,
   Check,
   Loader2,
-  Info
+  Info,
+  Shield,
+  TrendingUp,
+  Moon,
+  UserCheck,
+  AlertTriangle,
+  ChevronDown,
+  CheckCircle2
 } from 'lucide-react';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
@@ -271,12 +278,40 @@ const replaceTemplatePlaceholders = (text: string) => {
 // ── Main Component ──
 
 
+interface NumberHealth {
+  connected: boolean;
+  headline: string;
+  hint?: string;
+  phone_number?: string | null;
+  enforced?: boolean;
+  degraded?: boolean;
+  tier?: { key: string; label: string; index: number; total: number; age_days: number | null; is_mature: boolean };
+  limits?: {
+    daily_cap: number; sent_today: number; remaining_today: number;
+    usage_percent: number; gap_seconds: number; recipient_daily_cap: number;
+  };
+  quiet_hours?: { enabled: boolean; start: string; end: string };
+  notes?: { icon: string; title: string; body: string }[];
+  guidelines?: { do: { title: string; body: string }[]; avoid: { title: string; body: string }[] };
+}
+
+const NOTE_ICONS: Record<string, React.ElementType> = {
+  shield: Shield, trending: TrendingUp, moon: Moon,
+  user: UserCheck, alert: AlertTriangle, clock: Info,
+};
+
 const WhatsappSettings: React.FC = () => {
   const [settings, setSettings] = useState<WhatsappSettingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('instances');
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  // حالة الرقم وحدوده — «شريط الحالة»
+  // حدود الحماية (سُلَّم التسخين، سقف الشخص، ساعات الهدوء) كانت داخلية لا يراها
+  // أحد، فمكتبٌ بـرقمٍ جديد يجد رسائله تتباعد ويظنّ ذلك عطلاً لا حماية.
+  const [health, setHealth] = useState<NumberHealth | null>(null);
+  const [guidesOpen, setGuidesOpen] = useState(false);
 
   // Instances
   const [instances, setInstances] = useState<WhatsappInstance[]>([]);
@@ -340,6 +375,19 @@ const WhatsappSettings: React.FC = () => {
   }, []);
 
   useEffect(() => { if (activeTab === 'notifications') loadPreferences(); }, [activeTab, loadPreferences]);
+
+  // حالة الرقم — تُجلب مع تبويب «الاتصال». الفشل يُبتلع بهدوء: الشريط
+  // معلوماتٌ مساعدة، وغيابه لا يجوز أن يمنع المكتب من ربط رقمه.
+  const loadHealth = useCallback(async () => {
+    try {
+      const res = await api.get('/v1/whatsapp/number-health');
+      if (res.data?.success) setHealth(res.data.data);
+    } catch {
+      setHealth(null);
+    }
+  }, []);
+
+  useEffect(() => { if (activeTab === 'instances') loadHealth(); }, [activeTab, loadHealth]);
 
   /**
    * تبديلٌ متفائل: نقلب المفتاح فوراً ثم نحفظ، ونرجع عن التبديل إن فشل الحفظ.
@@ -983,6 +1031,127 @@ const WhatsappSettings: React.FC = () => {
             {/* ═══════════ TAB: Instances ═══════════ */}
             {activeTab === 'instances' && (
               <div className="wa-tab-content">
+                {/* ═══ شريط حالة الرقم وحدوده ═══
+                    يُعرض متى كان الرقم مرتبطاً. غايته أن يعرف المكتب **لماذا**
+                    تتباعد رسائله وما حدّه اليوم — فالتباعد بلا تفسير يُقرأ عطلاً. */}
+                {health?.connected && health.limits && health.tier && (
+                  <div className="wa-health">
+                    <div className="wa-health__head">
+                      <div className="wa-health__title">
+                        <Shield size={16} />
+                        <span>حالة رقمك وحدوده</span>
+                      </div>
+                      <span className={`wa-health__badge wa-health__badge--${
+                        !health.enforced ? 'pending' : health.degraded ? 'warn' : health.tier.is_mature ? 'ok' : 'warm'
+                      }`}>
+                        {!health.enforced ? 'الحماية قيد التفعيل' : health.tier.label}
+                      </span>
+                    </div>
+
+                    <p className="wa-health__headline">{health.headline}</p>
+
+                    <div className="wa-health__meters">
+                      <div className="wa-health__meter">
+                        <div className="wa-health__meter-top">
+                          <span>الحدّ اليومي لرقمك</span>
+                          <b>{health.limits.sent_today} / {health.limits.daily_cap}</b>
+                        </div>
+                        <div className="wa-health__bar">
+                          <div
+                            className={`wa-health__fill${health.limits.usage_percent >= 80 ? ' is-high' : ''}`}
+                            style={{ width: `${Math.min(100, health.limits.usage_percent)}%` }}
+                          />
+                        </div>
+                        <span className="wa-health__hint">
+                          يتبقّى {health.limits.remaining_today} رسالة اليوم
+                        </span>
+                      </div>
+
+                      {!health.tier.is_mature && (
+                        <div className="wa-health__meter">
+                          <div className="wa-health__meter-top">
+                            <span>مرحلة التسخين</span>
+                            <b>{health.tier.index + 1} / {health.tier.total}</b>
+                          </div>
+                          <div className="wa-health__bar">
+                            <div
+                              className="wa-health__fill is-warm"
+                              style={{ width: `${((health.tier.index + 1) / health.tier.total) * 100}%` }}
+                            />
+                          </div>
+                          <span className="wa-health__hint">
+                            {health.tier.age_days !== null
+                              ? `عمر الرقم ${health.tier.age_days} يوماً — الحدّ يرتفع تلقائياً`
+                              : 'الحدّ يرتفع تلقائياً مع تقدّم عمر الرقم'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="wa-health__notes">
+                      {(health.notes ?? []).map((note, i) => {
+                        const Icon = NOTE_ICONS[note.icon] ?? Info;
+                        return (
+                          <div className="wa-health__note" key={i}>
+                            <Icon size={15} className="wa-health__note-icon" />
+                            <div>
+                              <b>{note.title}</b>
+                              <p>{note.body}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* إرشادات حماية الرقم — مطويّة كي لا تزاحم الحالة،
+                        ومفتوحةٌ بنقرة لمن يريد التفصيل. */}
+                    {health.guidelines && (
+                      <div className="wa-guides">
+                        <button
+                          type="button"
+                          className="wa-guides__toggle"
+                          onClick={() => setGuidesOpen(v => !v)}
+                          aria-expanded={guidesOpen}
+                        >
+                          <span>إرشادات حماية رقمك من الحظر</span>
+                          <ChevronDown
+                            size={16}
+                            className={`wa-guides__chev${guidesOpen ? ' is-open' : ''}`}
+                          />
+                        </button>
+
+                        {guidesOpen && (
+                          <div className="wa-guides__body">
+                            <div className="wa-guides__col">
+                              <div className="wa-guides__head wa-guides__head--do">
+                                <CheckCircle2 size={15} /> <span>افعل</span>
+                              </div>
+                              {health.guidelines.do.map((g, i) => (
+                                <div className="wa-guides__item" key={i}>
+                                  <b>{g.title}</b>
+                                  <p>{g.body}</p>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="wa-guides__col">
+                              <div className="wa-guides__head wa-guides__head--avoid">
+                                <XCircle size={15} /> <span>تجنّب</span>
+                              </div>
+                              {health.guidelines.avoid.map((g, i) => (
+                                <div className="wa-guides__item" key={i}>
+                                  <b>{g.title}</b>
+                                  <p>{g.body}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {instances.length === 0 ? (
                   <div className="wa-empty-state">
                     <Smartphone size={48} className="wa-empty-state__icon" />
