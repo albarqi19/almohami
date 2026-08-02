@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   X,
@@ -21,8 +21,10 @@ import {
   Sparkles,
   HelpCircle,
   ClipboardList,
-  FilePlus
+  FilePlus,
+  ExternalLink
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { useModalTour } from '../hooks/useModalTour';
 import Modal from './Modal';
 import DocumentPreviewModal from './DocumentPreviewModal';
@@ -34,11 +36,13 @@ import { usePermission } from '../hooks/usePermission';
 import { MEMO_APPROVAL_STATE_LABELS } from '../services/memoWorkflowService';
 import CloudFilePickerModal from './CloudFilePickerModal';
 import DocumentRequestsPanel from './DocumentRequests/DocumentRequestsPanel';
+import AddExternalLinkModal from './AddExternalLinkModal';
 
 import { DocumentService } from '../services/documentService';
 import { CloudStorageService } from '../services/cloudStorageService';
 import { LegalMemoService, type LegalMemo, type AnalysisStep } from '../services/legalMemoService';
 import type { Document as DocumentType } from '../types';
+import { isExternalLinkDoc, safeExternalHref, externalLinkHost, type ExternalLinkPayload } from '../types';
 
 // Add CSS for spinner animation
 const spinnerStyle = `
@@ -106,6 +110,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   const [showSmartUpload, setShowSmartUpload] = useState(false);
   const [showCreateMemo, setShowCreateMemo] = useState(false);
   const [showCloudPicker, setShowCloudPicker] = useState(false);
+  const [showAddLink, setShowAddLink] = useState(false);
   const [editingMemo, setEditingMemo] = useState<LegalMemo | null>(null);
   const [sendMemo, setSendMemo] = useState<LegalMemo | null>(null);
   // صلاحيات أزرار المذكرات (الباك يمنعها أيضاً — هذا لإخفاء الأزرار غير الصالحة)
@@ -514,6 +519,35 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
     e.target.value = ''; // السماح بإعادة رفع نفس الملف
   };
 
+  /**
+   * إضافة رابط خارجي كوثيقة للقضية.
+   * لا نلتقط الخطأ حول نداء الإنشاء عمداً: النافذة نفسها تعرض رسالة الباك (422) عربيةً في
+   * مكانها، وابتلاعُه هنا يُظهر نجاحاً كاذباً.
+   *
+   * أمّا إعادةُ التحميل فتُغلَّف بـcatch محلّي، لأنّ الإغلاق والتوست يسبقانها: لو تسرّب منها
+   * خطأ لَذهب إلى `catch` النافذة **وقد أُغلقت للتوّ**، فتُعرض رسالةُ الفشل في العدم بينما
+   * التوست يقول «تمت» — والرابط مُنشأٌ فعلاً، القائمةُ وحدها هي التي تأخّرت.
+   * (`loadDocuments` اليوم تلتقط خطأها داخلياً وتضعه في `error`؛ هذا الحارس يثبّت الشرط
+   * فلا يُبعَث العطب إن زال ذلك الالتقاط لاحقاً.)
+   */
+  const handleAddExternalLink = async (payload: ExternalLinkPayload) => {
+    await DocumentService.createCaseLink(caseId, payload);
+    setShowAddLink(false);
+    toast.success('تمت إضافة الرابط');
+    try {
+      await loadDocuments();
+    } catch (err) {
+      console.error('تعذّر تحديث قائمة الوثائق بعد إضافة الرابط:', err);
+    }
+  };
+
+  /**
+   * إغلاق نافذة الرابط بمرجعٍ ثابت — لا سهمٍ جديدٍ كلَّ تصيير.
+   * (انظر تعليق تصيير `AddExternalLinkModal` أسفل الملف: مرجعٌ متغيّر كان يُشغّل تنظيف
+   * `useEffect` داخل `Modal` مع كلّ re-render فيفكّ قفلَ تمرير الصفحة.)
+   */
+  const handleCloseAddLink = useCallback(() => setShowAddLink(false), []);
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     if (!isDragging) setIsDragging(true);
@@ -534,6 +568,16 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   };
 
   const handlePreview = (doc: DocumentType) => {
+    // الرابط الخارجي لا يمرّ بمسار المعاينة إطلاقاً: السيرفر لا يجلبه (منعاً لـSSRF) بل يعيد
+    // JSON، فتُعرض «تعذّر تحميل المعاينة» — رسالةُ فشلٍ كاذبة عن ملفٍ لا وجود له. نفتحه مباشرةً.
+    // ولا نفتح إلا ما اجتاز حارس العرض: حماية React لـ`href` لا تلمس `window.open` إطلاقاً.
+    if (isExternalLinkDoc(doc)) {
+      const href = safeExternalHref(doc.external_url);
+      if (!href) { toast.error('رابط غير صالح'); return; }
+      window.open(href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
     // Use official API URL
     const apiUrl = import.meta.env.VITE_API_URL || 'https://api.alraedlaw.com/api/v1';
 
@@ -551,7 +595,18 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
     setPreviewDocument(previewDoc);
   };
 
-  const handleDownload = async (docId: string, fileName: string) => {
+  const handleDownload = async (doc: DocumentType) => {
+    // لا ملفَ يُنزَّل للرابط الخارجي — مسار التنزيل يعيد JSON لا blob، فيسقط في catch صامت. نفتحه.
+    // وبالحارس نفسه: `window.open` لا يحرسه أحد، فما لم يكن المخطّط http/https لا يُفتح.
+    if (isExternalLinkDoc(doc)) {
+      const href = safeExternalHref(doc.external_url);
+      if (!href) { toast.error('رابط غير صالح'); return; }
+      window.open(href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    const docId = doc.id;
+    const fileName = doc.file_name || doc.fileName || 'document';
     try {
       const blob = await DocumentService.downloadDocument(docId);
       const url = window.URL.createObjectURL(blob);
@@ -568,6 +623,10 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   };
 
   const getFileIcon = (doc: DocumentType) => {
+    // الرابط الخارجي أولاً: mime_type فيه text/uri-list ولا يعني شيئاً للمستخدم
+    if (isExternalLinkDoc(doc)) {
+      return <ExternalLink size={20} style={{ color: 'var(--color-primary)' }} />;
+    }
     const mimeType = doc.mime_type || doc.mimeType || '';
     if (mimeType.includes('pdf')) {
       return <FileText size={20} style={{ color: '#dc2626' }} />;
@@ -725,6 +784,18 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                   : <FilePlus size={14} />}
                 {uploading && uploadProgress ? `جارٍ الرفع ${uploadProgress.done}/${uploadProgress.total}` : 'رفع'}
               </button>
+              {/* إضافة رابط خارجي — عمداً غير مشروطٍ بـoneDriveConnected ولا معطّلٍ بـuploading:
+                  لا يرفع ملفاً ولا يمسّ OneDrive، فحجبُه بشرط الرفع حجبٌ بلا سبب */}
+              <button
+                data-tour="docs-add-link"
+                title="إضافة رابط من درايف أو أي مصدر خارجي"
+                onClick={() => setShowAddLink(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'transparent', color: 'var(--color-primary)', border: '1px solid var(--color-primary)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-primary)'; e.currentTarget.style.color = 'white'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-primary)'; }}>
+                <ExternalLink size={14} />
+                إضافة من مصدر آخر
+              </button>
               <button data-tour="docs-upload" onClick={() => setShowSmartUpload(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'var(--color-primary)', color: 'white', border: '1px solid var(--color-primary)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
                 onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}>
@@ -819,7 +890,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                   flexDirection: 'column',
                   gap: '16px'
                 }}>
-                  <FileText size={48} style={{ color: 'var(--color-text-tertiary)' }} />
+                  <FileText size={48} style={{ color: 'var(--color-text-secondary)' }} />
                   <p style={{ color: 'var(--color-text-secondary)' }}>لا توجد وثائق أو مذكرات لهذه القضية</p>
                 </div>
               ) : (
@@ -929,7 +1000,15 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                       </div>
                     )}
 
-                    {documents.map((doc) => (
+                    {documents.map((doc) => {
+                      // حارس العرض للصفّ: نشتقّ الرابط والنطاق من الدالّة الواحدة، فيذوب الفحصان
+                      // في واحد. الباك يحرس عند الإنشاء وهذا يحرس عند العرض — صفٌّ قديم أو حمولةٌ
+                      // من مسارٍ آخر قد تحمل قيمةً لم تمرّ بقاعدة الإنشاء.
+                      const isLink = isExternalLinkDoc(doc);
+                      const linkHost = isLink ? externalLinkHost(doc.external_url) : null;
+                      // رابطٌ موجودٌ لكنه لا يجتاز الحارس: يُعلَن صراحةً ولا يُفتَح.
+                      const isBrokenLink = isLink && safeExternalHref(doc.external_url) === null;
+                      return (
                       <div
                         key={doc.id}
                         style={{
@@ -955,15 +1034,59 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                             <span style={{ fontSize: '14px', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
                               {doc.title || doc.file_name || doc.fileName}
                             </span>
+                            {/* رقاقة نصّية — لا شريط تمييزٍ جانبيّ على الصفّ */}
+                            {isExternalLinkDoc(doc) && (
+                              <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)', borderRadius: '2px', padding: '0 5px', flexShrink: 0, lineHeight: '17px' }}>رابط خارجي</span>
+                            )}
                             {(doc as any).ai_analysis && (
                               <span style={{ fontSize: '11px', color: 'var(--color-primary)', border: '1px solid var(--color-primary)', borderRadius: '2px', padding: '0 5px', flexShrink: 0, lineHeight: '17px' }}>يوجد تحليل</span>
                             )}
                           </div>
+                          {/* النطاق تحت العنوان: يكشف إلى أين يقود الرابط قبل النقر.
+                              وحين يسقط الرابط عن الحارس تحلّ رقاقةُ تحذيرٍ محلَّ النطاق: اختفاءُ
+                              النطاق وحده كان يحدث **حصراً في الحالة الخبيثة**، فيبدو الصفّ
+                              رابطاً عاديّاً — العنصر الوحيد الذي يكشف الخدعة يغيب حين تُرتكب. */}
+                          {isBrokenLink ? (
+                            <div style={{ marginTop: '2px' }}>
+                              <span style={{
+                                display: 'inline-block',
+                                fontSize: '11px',
+                                color: 'var(--color-warning)',
+                                border: '1px solid var(--color-warning)',
+                                borderRadius: '2px',
+                                padding: '0 5px',
+                                lineHeight: '17px'
+                              }}>
+                                رابط غير صالح
+                              </span>
+                            </div>
+                          ) : linkHost ? (
+                            <div style={{ marginTop: '2px' }}>
+                              <span
+                                dir="ltr"
+                                style={{
+                                  display: 'inline-block',
+                                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+                                  fontSize: '11px',
+                                  color: 'var(--color-text-secondary)',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  maxWidth: '100%'
+                                }}
+                              >
+                                {linkHost}
+                              </span>
+                            </div>
+                          ) : null}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                            {(doc.file_name || doc.fileName) && (
+                            {!isExternalLinkDoc(doc) && (doc.file_name || doc.fileName) && (
                               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>{doc.file_name || doc.fileName}</span>
                             )}
-                            <span style={{ whiteSpace: 'nowrap' }}>{formatFileSize(doc)}</span>
+                            {/* حجم الرابط صفرٌ دائماً — عرضُ «0 بايت» تشويشٌ لا معلومة */}
+                            {!isExternalLinkDoc(doc) && (
+                              <span style={{ whiteSpace: 'nowrap' }}>{formatFileSize(doc)}</span>
+                            )}
                             {doc.uploader?.name && <span style={{ whiteSpace: 'nowrap' }}>↑ {doc.uploader.name}</span>}
                             <span style={{ whiteSpace: 'nowrap' }}>{formatDate((doc.uploaded_at || doc.uploadedAt || new Date()).toString())}</span>
                             {doc.category && <span style={{ whiteSpace: 'nowrap' }}>{doc.category}</span>}
@@ -982,17 +1105,24 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
 
                         {/* Actions */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                          {/* زرّ الفتح معطَّلٌ لرابطٍ لا يجتاز الحارس — لا نعرض مِقبضاً يقود إلى لا شيء */}
                           <button onClick={(e) => { e.stopPropagation(); handlePreview(doc); }}
-                            style={{ background: 'none', border: 'none', padding: '5px', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', borderRadius: '2px' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-primary)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
-                            title="معاينة"><Eye size={13} /></button>
-                          <button onClick={(e) => { e.stopPropagation(); handleDownload(doc.id, doc.file_name || doc.fileName || 'document'); }}
-                            style={{ background: 'none', border: 'none', padding: '5px', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', borderRadius: '2px' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-success)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
-                            title="تحميل"><Download size={13} /></button>
-                          {(doc as any).ai_analysis && (
+                            disabled={isBrokenLink}
+                            style={{ background: 'none', border: 'none', padding: '5px', cursor: isBrokenLink ? 'not-allowed' : 'pointer', color: isBrokenLink ? 'var(--color-warning)' : 'var(--color-text-secondary)', display: 'flex', borderRadius: '2px', opacity: isBrokenLink ? 0.6 : 1 }}
+                            onMouseEnter={(e) => { if (!isBrokenLink) e.currentTarget.style.color = 'var(--color-primary)'; }}
+                            onMouseLeave={(e) => { if (!isBrokenLink) e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
+                            title={isBrokenLink ? 'رابط غير صالح' : (isLink ? 'فتح الرابط' : 'معاينة')}>{isLink ? <ExternalLink size={13} /> : <Eye size={13} />}</button>
+                          {/* لا زرّ تنزيلٍ للرابط: زرّ الفتح أعلاه يفعل الشيء نفسه، وأيقونة التنزيل تَعِد بملفٍ لا يُنزَّل.
+                              (الحارس في handleDownload باقٍ على كلّ حال.) */}
+                          {!isExternalLinkDoc(doc) && (
+                            <button onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}
+                              style={{ background: 'none', border: 'none', padding: '5px', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', borderRadius: '2px' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-success)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
+                              title="تحميل"><Download size={13} /></button>
+                          )}
+                          {/* التحليل بالذكاء يقرأ ملفاً — والرابط بلا ملفٍ يُقرأ */}
+                          {!isExternalLinkDoc(doc) && Boolean((doc as { ai_analysis?: unknown }).ai_analysis) && (
                             <button onClick={(e) => { e.stopPropagation(); handleViewAnalysis(doc); }} disabled={loadingAnalysis === doc.id}
                               style={{ background: 'none', border: 'none', padding: '5px 7px', cursor: loadingAnalysis === doc.id ? 'wait' : 'pointer', fontSize: '12px', color: 'var(--color-primary)', borderRadius: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}
                               title="عرض التحليل">
@@ -1000,14 +1130,15 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                               التحليل
                             </button>
                           )}
-                          <button onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc.id, doc.file_name || doc.fileName || 'الوثيقة'); }}
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc.id, isExternalLinkDoc(doc) ? (doc.title || 'الرابط') : (doc.file_name || doc.fileName || 'الوثيقة')); }}
                             style={{ background: 'none', border: 'none', padding: '5px', cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex', borderRadius: '2px' }}
                             onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-error)'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
                             title="حذف"><Trash2 size={14} /></button>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1103,7 +1234,7 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                             </span>
                             <span style={{
                               fontSize: 'var(--font-size-xs)',
-                              color: 'var(--color-text-tertiary)'
+                              color: 'var(--color-text-secondary)'
                             }}>
                               {formatDate(comment.created_at)}
                             </span>
@@ -1246,6 +1377,22 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
         steps={analysisSteps}
         isVisible={showAnalysisProgress}
       />
+
+      {/* إضافة رابط خارجي.
+          🔴 التصيير مشروطٌ عمداً، والإغلاقُ مرجعٌ ثابت (`handleCloseAddLink`) — وليس تجميلاً:
+          كان يُصيَّر دائماً، فيعمل `Modal` الداخلي ويسجّل `useEffect` بـdeps `[isOpen, onClose]`.
+          وإذ كان `onClose` سهماً جديداً كلَّ تصيير، كان التنظيف يجري مع كلّ re-render فيضع
+          `document.body.style.overflow = 'unset'` بلا شرط — بينما نافذة الوثائق الأمّ ما زالت
+          مفتوحة وقفلُها ضاع، فتصير الخلفيةُ قابلةً للتمرير خلف المودال.
+          (الإصلاح موضعيّ هنا؛ `Modal.tsx` ملفٌّ مشترك لا يُمَسّ في هذه الدفعة.) */}
+      {showAddLink && (
+        <AddExternalLinkModal
+          isOpen={showAddLink}
+          onClose={handleCloseAddLink}
+          onSubmit={handleAddExternalLink}
+          contextLabel={caseTitle ? `القضية: ${caseTitle}` : undefined}
+        />
+      )}
 
       {/* Cloud File Picker Modal */}
       <CloudFilePickerModal

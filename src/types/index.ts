@@ -566,6 +566,7 @@ export interface GrievanceRequest {
   ruling_date_text?: string;
   delivery_date_text?: string;
   attachments?: { type?: string; size?: string; desc?: string; notes?: string }[];
+  najiz_synced_at?: string | null;
   parties?: GrievanceParty[];
   sessions?: GrievanceSession[];
   rulings?: GrievanceRuling[];
@@ -804,6 +805,14 @@ export interface Document {
   is_confidential: boolean;
   version: number;
   tags: string[];
+  /**
+   * رابط خارجي بدل ملفٍ مرفوع. **وجودُه (غير فارغ) هو المميّز الوحيد المعتمد للرابط**.
+   * (`mime_type` يصير `text/uri-list` و`file_size` صفراً، لكن لا يُعوَّل عليهما.)
+   * 🔴 الروابط لا تمرّ بمسار المعاينة/التنزيل — السيرفر لا يجلبها إطلاقاً منعاً لـSSRF؛ تُفتح مباشرةً بـ<a href>.
+   */
+  external_url?: string | null;
+  /** نوع الرابط/الوثيقة كما صنّفه المستخدم: web | image | file | document | video | folder */
+  document_type?: string | null;
   // Cloud storage fields
   cloud_file_id?: string;
   cloud_provider?: 'onedrive' | 'google_drive';
@@ -839,6 +848,67 @@ export const DocumentCategory = {
 } as const;
 
 export type DocumentCategory = typeof DocumentCategory[keyof typeof DocumentCategory];
+
+// ── الروابط الخارجية (مستند بلا ملف) ──
+
+/** أنواع الرابط الخارجي كما يقبلها الباك (الافتراضي web). */
+export type ExternalLinkKind = 'web' | 'image' | 'file' | 'document' | 'video' | 'folder';
+
+/**
+ * حمولة «إضافة رابط» الموحّدة للمسارات الثلاثة:
+ *   POST /cases/{caseId}/documents/link
+ *   POST /tasks/{id}/documents/link
+ *   POST /legal-services/{id}/documents/link
+ */
+export interface ExternalLinkPayload {
+  url: string;
+  title: string;
+  kind?: ExternalLinkKind;
+  /** أحد قيَم DocumentCategory (الافتراضي other). */
+  category?: string;
+  description?: string;
+  is_confidential?: boolean;
+}
+
+/**
+ * المميّز الموحّد بين الرابط والملف — استعمله في كل موضع عرض بدل تكرار الفحص.
+ * وجود `external_url` وحده هو الفيصل (لا mime_type ولا file_size).
+ */
+export const isExternalLinkDoc = (d?: { external_url?: string | null } | null): boolean =>
+  !!d?.external_url;
+
+/**
+ * حارس العرض: يُعيد الرابط إن كان مخطّطه http/https، و`null` فيما عدا ذلك.
+ *
+ * الباك يحرس عند **الإنشاء**، وهذا يحرس عند **العرض** — وهما ليسا واحداً: صفٌّ
+ * قديم أو حمولةٌ وصلت من مسارٍ آخر قد تحمل قيمةً لم تمرّ بقاعدة الإنشاء. وحماية
+ * React لـ`href` تغطّي `javascript:` وحدها ولا تلمس `window.open` إطلاقاً، فهي
+ * اعتمادٌ ضمنيّ لا حارسٌ مكتوب.
+ *
+ * ويحلّ عطباً ثانياً: `new URL('javascript:x').hostname` يساوي `''` — أي أن رقاقة
+ * النطاق كانت تختفي **حصراً في الحالة الخبيثة**، فيبدو الصفّ رابطاً عاديّاً بعنوانٍ
+ * من اختيار زارعه. باشتقاق النطاق من هذه الدالّة يذوب الفحصان في واحد.
+ */
+export const safeExternalHref = (url?: string | null): string | null => {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url.trim());
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : null;
+  } catch {
+    return null;
+  }
+};
+
+/** نطاق الرابط للعرض بجوار العنوان — `null` لكل ما لا يجتاز حارس العرض. */
+export const externalLinkHost = (url?: string | null): string | null => {
+  const safe = safeExternalHref(url);
+  if (!safe) return null;
+  try {
+    return new URL(safe).hostname || null;
+  } catch {
+    return null;
+  }
+};
 
 // Activity and timeline
 export interface Activity {

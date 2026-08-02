@@ -47,19 +47,24 @@ import {
   Copy,
   Lock,
   Compass,
+  Pencil,
 } from 'lucide-react';
 
 import { toast } from 'react-toastify';
 
 import { LegalServiceService } from '../../services/legalServiceService';
-import { apiClient } from '../../utils/api';
+import { apiClient, API_BASE_URL } from '../../utils/api';
 import { getApiErrorMessage } from '../../utils/apiError';
+import AddExternalLinkModal from '../../components/AddExternalLinkModal';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { safeExternalHref, externalLinkHost, type ExternalLinkPayload } from '../../types';
 import TiptapEditor from '../../components/TiptapEditor';
 import LegalRichEditorField from '../../components/legal-services/LegalRichEditorField';
 import LegalRichText from '../../components/legal-services/LegalRichText';
 import DeliverablesPanel from '../../components/legal-services/DeliverablesPanel';
 import PortalLinksPanel from '../../components/legal-services/PortalLinksPanel';
 import ContractAuditPanel from '../../components/legal-services/ContractAuditPanel';
+import EditServiceModal from '../../components/legal-services/EditServiceModal';
 import { diffWords, stripHtml, diffSummary } from '../../utils/legalDiff';
 import type {
   LegalService,
@@ -68,6 +73,7 @@ import type {
   ChecklistItem,
   LegalReference,
   ContractDraftingVersion,
+  ServiceDeletionImpact,
 } from '../../types/legalServices';
 import {
   SERVICE_TYPE_LABELS,
@@ -364,11 +370,29 @@ function formatFileSize(bytes: number | null | undefined): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function getDocumentEmoji(fileType: string): string {
-  const t = (fileType || '').toLowerCase();
+function getDocumentEmoji(
+  mimeType?: string | null,
+  externalUrl?: string | null,
+  documentType?: string | null,
+): string {
+  // الرابط أوّلاً: كل الروابط mime_type واحد (text/uri-list) فلا يميّزها، والنوع في document_type.
+  if (externalUrl) {
+    switch ((documentType || '').toLowerCase()) {
+      case 'image': return '🖼️';
+      case 'video': return '🎬';
+      case 'folder': return '📁';
+      case 'web': return '🌐';
+      default: return '📄';
+    }
+  }
+
+  const t = (mimeType || '').toLowerCase();
   if (t.includes('pdf')) return '📄';
-  if (t.includes('word') || t.includes('doc')) return '📝';
+  // الجداول والعروض **قبل** الوورد: كل أنواع OOXML تحوي «officedocument» وهي تحوي «doc»،
+  // فلو سبق فرعُ doc لوُسِم xlsx وpptx بأيقونة الوورد بمجرّد تمرير mime_type الصحيح.
   if (t.includes('sheet') || t.includes('excel') || t.includes('xls')) return '📊';
+  if (t.includes('presentation') || t.includes('powerpoint') || t.includes('ppt')) return '📽️';
+  if (t.includes('word') || t.includes('doc')) return '📝';
   if (t.includes('image') || t.includes('png') || t.includes('jpg')) return '🖼️';
   if (t.includes('zip') || t.includes('rar')) return '🗜️';
   return '📎';
@@ -810,6 +834,50 @@ const NewVersionForm: React.FC<NewVersionFormProps> = ({ onSave, onCancel, loadi
   );
 };
 
+/**
+ * حذف الخدمة بنداءٍ مباشر لا عبر apiClient — عمداً لا سهواً:
+ * فرعُ 409 في utils/api.ts يبني Error من `message` وحده ويُسقط `error_code` و`impact`،
+ * وهما جوهر تدفّق التأكيد هنا (لا يمكن تمييز «يلزم تأكيد» عن أي تعارضٍ آخر بلا `error_code`،
+ * ولا عرض الأرقام بلا `impact`). وutils/api.ts سطحٌ مشترك لا يُعدَّل من أجل شاشةٍ واحدة.
+ *
+ * لا نعالج 401 هنا: الشاشة لا تُفتح أصلاً إلا بجلسةٍ حيّة، وأي نداءٍ آخر عبر apiClient
+ * سيتكفّل بالتوجيه لصفحة الدخول.
+ */
+/** جسم ردّ الحذف الذي نقرأه فعلاً — مصرَّحٌ بدل Record<string, any> كي لا يضيع التحقق النوعي. */
+interface ServiceDeletionResponseBody {
+  message?: string;
+  error_code?: string;
+  impact?: ServiceDeletionImpact;
+}
+
+async function requestServiceDeletion(
+  id: number,
+  confirm: boolean,
+): Promise<{ ok: boolean; status: number; body: ServiceDeletionResponseBody }> {
+  const token = localStorage.getItem('authToken');
+  const response = await fetch(
+    `${API_BASE_URL}/legal-services/${id}${confirm ? '?confirm=1' : ''}`,
+    {
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
+  );
+  const body: ServiceDeletionResponseBody = await response
+    .json()
+    .catch(() => ({} as ServiceDeletionResponseBody));
+  // الـfetch الخام يتجاوز فرع 401 في utils/api.ts الذي يمسح التوكن ويوجّه لصفحة الدخول،
+  // فبتوكنٍ منتهٍ كان المستخدم يرى توستاً إنجليزياً «Unauthenticated.» ويبقى في صفحةٍ ميتة.
+  if (response.status === 401) {
+    localStorage.removeItem('authToken');
+    window.location.href = '/login';
+  }
+
+  return { ok: response.ok, status: response.status, body };
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 const LegalServiceDetail: React.FC = () => {
@@ -830,7 +898,13 @@ const LegalServiceDetail: React.FC = () => {
   const [convertLoading, setConvertLoading] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
+  /** نافذة «تعديل بيانات الخدمة» — متاحة في كل الحالات، انظر تعليق الزر في الترويسة. */
+  const [showEditModal, setShowEditModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  /** غير null ⇒ الباك ردّ 409 CONFIRM_REQUIRED، فالنافذة تنتقل لمرحلة التحذير المالي. */
+  const [deleteImpact, setDeleteImpact] = useState<ServiceDeletionImpact | null>(null);
+  const [deleteImpactMessage, setDeleteImpactMessage] = useState('');
 
   // ── Timer state ──
   const [timerRunning, setTimerRunning] = useState(false);
@@ -864,6 +938,7 @@ const LegalServiceDetail: React.FC = () => {
 
   // ── Documents state ──
   const [docLoading, setDocLoading] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -932,6 +1007,26 @@ const LegalServiceDetail: React.FC = () => {
       setError(getApiErrorMessage(err, 'حدث خطأ في الاتصال بالخادم'));
     }
     setLoading(false);
+  }, [id]);
+
+  /**
+   * إعادة تحميلٍ صامتة: تحدّث بيانات الخدمة **بلا** إشعال `loading` العام.
+   *
+   * `fetchService` تُشعله، والمكوّن يُرجِع هيكل التحميل قبل أن يبلغ النوافذ
+   * (`if (loading)` سابقٌ لـ`<AddExternalLinkModal/>` في شجرة الإرجاع) — فأيّ تحديثٍ
+   * يقع ونافذةٌ مفتوحة يُفكّكها تحت يد المستخدم ويومض الصفحة كلها لأجل صفٍّ واحد.
+   *
+   * وتبتلع خطأها عمداً: النداء المُحدِّث نجح فعلاً قبلها، فرميُها هنا يعني إبلاغ
+   * المستخدم بفشلٍ لم يقع (والنافذة تلتقط الرمي وتعرضه خطأ إضافة).
+   */
+  const refreshServiceQuiet = useCallback(async () => {
+    if (!id) return;
+    try {
+      const res = await LegalServiceService.getService(Number(id));
+      if (res.success) setService(res.data);
+    } catch (err) {
+      console.warn('service-refresh:', getApiErrorMessage(err));
+    }
   }, [id]);
 
   useEffect(() => {
@@ -1022,22 +1117,64 @@ const LegalServiceDetail: React.FC = () => {
   };
 
   // ── Delete service ──
-  const handleDelete = async () => {
+  // الحذف **ناعم**: الخدمة تُنقل إلى سلّة المحذوفات وتُستعاد منها — فلا تُقال «لا يمكن التراجع».
+  const handleDelete = () => {
     if (!service) return;
-    if (!window.confirm('هل أنت متأكد من حذف هذه الخدمة؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+    setDeleteImpact(null);
+    setDeleteImpactMessage('');
+    setShowDeleteConfirm(true);
+  };
+
+  const closeDeleteConfirm = () => {
+    if (deleteLoading) return;
+    setShowDeleteConfirm(false);
+    setDeleteImpact(null);
+    setDeleteImpactMessage('');
+  };
+
+  /**
+   * نداءٌ واحد بمرحلتين: أول ضغطة بلا `confirm`، فإن كانت الخدمة مرتبطة بفواتير أو
+   * مصروفات ردّ الباك 409 مع `impact` — فتنتقل النافذة نفسها لمرحلة التحذير المالي،
+   * والضغطة التالية تُعيد النداء بـ`confirm=1`.
+   */
+  const runDelete = async (confirm: boolean) => {
+    if (!service) return;
     setDeleteLoading(true);
     try {
-      const res = await LegalServiceService.deleteService(service.id);
-      if (res.success) {
-        toast.success('تم حذف الخدمة بنجاح');
+      const { ok, status, body } = await requestServiceDeletion(service.id, confirm);
+
+      if (ok) {
+        setShowDeleteConfirm(false);
+        setDeleteImpact(null);
+        toast.success(body?.message || 'تم نقل الخدمة إلى سلّة المحذوفات، ويمكن استعادتها منها');
         navigate('/legal-services');
-      } else {
-        toast.error('تعذّر حذف الخدمة');
+        return;
       }
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'تعذّر حذف الخدمة'));
+
+      if (status === 409 && body?.error_code === 'CONFIRM_REQUIRED') {
+        // البديل الصفري ليس تجميلاً: `deleteImpact !== null` هو ما ينقل النافذة للمرحلة
+        // الثانية، فلو غاب `impact` لبقيت في الأولى وأعادت النداء بلا confirm إلى الأبد.
+        setDeleteImpact(
+          body.impact ?? {
+            invoices_count: 0,
+            invoices_total: 0,
+            paid_invoices_count: 0,
+            tasks_count: 0,
+            expenses_count: 0,
+          },
+        );
+        setDeleteImpactMessage(typeof body.message === 'string' ? body.message : '');
+        setShowDeleteConfirm(true);
+        return;
+      }
+
+      setShowDeleteConfirm(false);
+      toast.error(typeof body?.message === 'string' ? body.message : 'تعذّر حذف الخدمة');
+    } catch {
+      toast.error('تعذّر حذف الخدمة — تحقّق من الاتصال وأعد المحاولة');
+    } finally {
+      setDeleteLoading(false);
     }
-    setDeleteLoading(false);
   };
 
   // ── Timer actions ──
@@ -1231,16 +1368,36 @@ const LegalServiceDetail: React.FC = () => {
     setDocLoading(false);
   };
 
-  const handleRemoveDocument = async (docId: number) => {
+  /**
+   * ⚠️ `documentId` هنا هو **معرّف الوثيقة** لا معرّف صفّ الربط:
+   * المسار DELETE /legal-services/{id}/documents/{docId} يطابق `document_id` في جدول
+   * service_documents، فتمرير `id` الصفّ يعيد 404 «المستند غير مرتبط بهذه الخدمة».
+   */
+  const handleRemoveDocument = async (documentId: number) => {
     if (!service) return;
     if (!window.confirm('هل أنت متأكد من حذف هذا المستند؟')) return;
     try {
-      await LegalServiceService.removeDocument(service.id, docId);
+      await LegalServiceService.removeDocument(service.id, documentId);
       toast.success('تم حذف المستند بنجاح');
       fetchService();
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'تعذّر حذف المستند'));
     }
+  };
+
+  /**
+   * إضافة رابط خارجي كمستند للخدمة. الأخطاء تُترك تصعد عمداً: AddExternalLinkModal
+   * يلتقطها ويعرض رسالة الباك العربية (422) داخل النافذة دون إغلاقها ولا فقدان المُدخَل.
+   */
+  const handleAddDocumentLink = async (payload: ExternalLinkPayload) => {
+    // رميٌ لا خروجٌ صامت: النافذة تعتبر رجوع `onSubmit` بلا رمي نجاحاً، فتصفّر الحقول
+    // وتُغلق بلا أن يُنادى الخادم أصلاً. الرمي يُبقيها مفتوحة بالمُدخَل ويُظهر السبب.
+    if (!service) throw new Error('تعذّر تحديد الخدمة');
+    await LegalServiceService.addDocumentLink(service.id, payload);
+    // مُنتظَرة وصامتة: `fetchService` غير المُنتظَرة كانت تُشعل `loading` بعد إغلاق
+    // النافذة فتومض الصفحة كلها إلى هيكل التحميل لأجل صفٍّ واحد أُضيف.
+    await refreshServiceQuiet();
+    toast.success('تمت إضافة الرابط');
   };
 
   // ── Render helpers ────────────────────────────────────────────────────────
@@ -2308,15 +2465,29 @@ const LegalServiceDetail: React.FC = () => {
               المستندات
               {docs.length > 0 && <span className="lsd-tab__count">{docs.length}</span>}
             </div>
-            <button
-              className="lsd-card__action"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={docLoading || !oneDriveConnected}
-              title={!oneDriveConnected ? 'يلزم ربط OneDrive لرفع المستندات' : undefined}
-            >
-              <Upload size={13} />
-              رفع مستند
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {/*
+                «إضافة من مصدر آخر» لا تُقيَّد بـoneDriveConnected: الرابط لا يُرفع ولا يُخزَّن
+                ملفاً، فهو بالضبط المخرج حين لا يكون OneDrive مربوطاً.
+              */}
+              <button
+                className="lsd-card__action"
+                onClick={() => setShowLinkModal(true)}
+                title="أضف رابطاً من درايف أو شيربوينت أو أي مصدر خارجي"
+              >
+                <Link size={13} />
+                إضافة من مصدر آخر
+              </button>
+              <button
+                className="lsd-card__action"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={docLoading || !oneDriveConnected}
+                title={!oneDriveConnected ? 'يلزم ربط OneDrive لرفع المستندات' : undefined}
+              >
+                <Upload size={13} />
+                رفع مستند
+              </button>
+            </div>
           </div>
           <div className="lsd-card__content">
             {!oneDriveConnected && (
@@ -2345,27 +2516,111 @@ const LegalServiceDetail: React.FC = () => {
                 {docs.map((doc) => {
                   const docData = doc.document;
                   if (!docData) return null;
+                  // المميّز المعتمد بين الرابط والملف: external_url وحده (`rawUrl`).
+                  // و`linkUrl` حارسُ **عرض**: الباك يحرس عند الإنشاء وهذا يحرس عند العرض،
+                  // وهما ليسا واحداً — صفٌّ قديم أو حمولةٌ من مسارٍ آخر قد تحمل مخطّطاً لم
+                  // يمرّ بقاعدة الإنشاء، وحماية React لـ`href` لا تلمس `window.open`.
+                  const rawUrl = docData.external_url || null;
+                  const linkUrl = safeExternalHref(rawUrl);
+                  const linkHost = externalLinkHost(rawUrl);
+                  const invalidLink = !!rawUrl && !linkUrl;
                   return (
                     <div key={doc.id} className="lsd-document-item">
                       <div className="lsd-document-item__icon">
-                        {getDocumentEmoji(docData.file_type)}
+                        {getDocumentEmoji(docData.mime_type, rawUrl, docData.document_type)}
                       </div>
                       <div className="lsd-document-item__info">
-                        <div className="lsd-document-item__name">{docData.title}</div>
+                        {/*
+                          اسم المستند نفسه هو سطح الفتح: أزرار `__actions` مخفيّة بـ`opacity: 0`
+                          حتى التحويم (legal-service-detail.css)، فلو بقي الفتح حكراً عليها لتعذّر
+                          فتحُ الرابط على اللمس **بأي طريقة** — وهو وظيفته الوحيدة. أيقونة الفتح
+                          في `__actions` تبقى اختصار سطح مكتب لا غير.
+                        */}
+                        {linkUrl ? (
+                          <a
+                            className="lsd-document-item__name"
+                            href={linkUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={linkUrl}
+                            style={{
+                              display: 'block',
+                              color: 'inherit',
+                              textDecoration: 'underline',
+                              textUnderlineOffset: '3px',
+                              textDecorationColor: 'color-mix(in srgb, var(--color-heading) 35%, transparent)',
+                            }}
+                          >
+                            {docData.title}
+                          </a>
+                        ) : (
+                          <div className="lsd-document-item__name">{docData.title}</div>
+                        )}
                         <div className="lsd-document-item__meta">
-                          {formatFileSize(docData.file_size)}
+                          {invalidLink ? (
+                            <span
+                              className="lsd-relation-badge"
+                              style={{
+                                background: 'var(--color-warning-soft)',
+                                color: 'var(--color-warning)',
+                              }}
+                              title="مخطّط الرابط غير مدعوم — يُقبل http و https فقط"
+                            >
+                              رابط غير صالح
+                            </span>
+                          ) : linkUrl ? (
+                            <>
+                              <span className="lsd-relation-badge">رابط</span>
+                              {linkHost && (
+                                <span
+                                  style={{
+                                    marginInlineStart: 6,
+                                    direction: 'ltr',
+                                    unicodeBidi: 'isolate',
+                                  }}
+                                >
+                                  {linkHost}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            formatFileSize(docData.file_size)
+                          )}
                           {doc.relation_type && (
                             <span className="lsd-relation-badge">{doc.relation_type}</span>
                           )}
                         </div>
                       </div>
                       <div className="lsd-document-item__actions">
+                        {/*
+                          الرابط يُفتح مباشرةً — لا عبر مسار المعاينة/التنزيل: السيرفر لا يجلب
+                          العنوان الخارجي إطلاقاً (منعاً لـSSRF) ويردّ { external: true, url } بدل ملف.
+
+                          وللمستند **المرفوع** لا زرّ فتحٍ هنا عمداً، وهي فجوةٌ قائمة خارج نطاق
+                          هذه الدفعة: لا مسار «فتح/معاينة» لمستندات الخدمات في الباك، و
+                          DocumentPolicy::view ترفض مستند الخدمة لكل من ليس رافعه (لأنه بلا
+                          case_id) — فزرٌّ الآن يعني 403 لكل زميلٍ غير الرافع.
+                        */}
+                        {linkUrl && (
+                          <a
+                            className="lsd-doc-action-btn"
+                            href={linkUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="فتح الرابط في تبويب جديد"
+                            style={{ display: 'inline-flex', alignItems: 'center' }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink size={13} />
+                          </a>
+                        )}
                         <button
                           className="lsd-doc-action-btn"
                           title="حذف المستند"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleRemoveDocument(doc.id);
+                            // معرّف الوثيقة لا معرّف صفّ الربط — الباك يطابق document_id.
+                            handleRemoveDocument(doc.document_id);
                           }}
                         >
                           <Trash2 size={13} />
@@ -2394,7 +2649,9 @@ const LegalServiceDetail: React.FC = () => {
                 </div>
               </label>
             ) : (
-              <div className="lsd-empty">لا توجد مستندات — اربط OneDrive لبدء رفع المستندات.</div>
+              <div className="lsd-empty">
+                لا توجد مستندات — أضف رابطاً من مصدر آخر، أو اربط OneDrive لرفع الملفات.
+              </div>
             )}
           </div>
         </div>
@@ -3028,7 +3285,6 @@ const LegalServiceDetail: React.FC = () => {
   ];
 
   const ServiceIcon = SERVICE_TYPE_ICONS[service.service_type] ?? FileText;
-  const canDelete = service.status === 'new' || service.status === 'cancelled';
 
   // ── Main render ───────────────────────────────────────────────────────────
 
@@ -3117,6 +3373,28 @@ const LegalServiceDetail: React.FC = () => {
               </button>
             )}
 
+            {/*
+              تعديل بيانات الخدمة (العنوان/الأولوية/التسعير/التواريخ/المكلَّفين).
+
+              🔴 لا تُعطّل هذا الزر بحالٍ من الحالات ولا تربطه بـ`LOCKED_STATUSES`:
+              `LegalServiceController::update` **بلا أيّ حارس قفل** — يعمل حتى على
+              `closed`/`archived`/`cancelled`. أقفال هذه الصفحة (`LOCKED_STATUSES`
+              و`isContentLocked` في الباك) تخصّ **محتوى النوع** — الرأي والمسودات
+              والمهام والتدوين — لا بيانات الخدمة نفسها. «توحيدُ» القفلين لاحقاً
+              يكسر تعديلاً مشروعاً يقبله الخادم.
+
+              وما لا يُعدَّل من هنا لأن الباك لا يقبله في `update`: الحالة (لها مسار
+              انتقالات مستقلّ أعلاه)، ونوع الخدمة، والعميل.
+            */}
+            <button
+              className="lsd-header-btn"
+              onClick={() => setShowEditModal(true)}
+              title="تعديل بيانات الخدمة"
+            >
+              <Pencil size={15} />
+              <span>تعديل البيانات</span>
+            </button>
+
             {/* Create invoice */}
             <button
               className="lsd-header-btn lsd-header-btn--primary"
@@ -3126,18 +3404,20 @@ const LegalServiceDetail: React.FC = () => {
               <span>إنشاء فاتورة</span>
             </button>
 
-            {/* Delete (only if new or cancelled) */}
-            {canDelete && (
-              <button
-                className="lsd-header-btn lsd-header-btn--danger"
-                onClick={handleDelete}
-                disabled={deleteLoading}
-                title="حذف الخدمة"
-              >
-                <Trash2 size={15} />
-                <span>{deleteLoading ? 'جارٍ الحذف...' : 'حذف'}</span>
-              </button>
-            )}
+            {/*
+              الحذف متاح في كل الحالات: الصلاحية مفروضة في الباك على المسار
+              (legal-services.manage)، ولا توجد صلاحية legal-services.delete في المشروع.
+              حصرُه سابقاً بحالتَي new/cancelled كان قيداً واجهياً بلا سندٍ في الباك.
+            */}
+            <button
+              className="lsd-header-btn lsd-header-btn--danger"
+              onClick={handleDelete}
+              disabled={deleteLoading}
+              title="حذف الخدمة"
+            >
+              <Trash2 size={15} />
+              <span>{deleteLoading ? 'جارٍ الحذف...' : 'حذف'}</span>
+            </button>
           </div>
         </div>
       </header>
@@ -3217,6 +3497,75 @@ const LegalServiceDetail: React.FC = () => {
           />
         )}
       </AnimatePresence>
+
+      <AddExternalLinkModal
+        isOpen={showLinkModal}
+        onClose={() => setShowLinkModal(false)}
+        onSubmit={handleAddDocumentLink}
+        contextLabel={`الخدمة: ${service.service_number} — ${service.title}`}
+      />
+
+      {/*
+        `onSaved` يُسلِّم خدمةً **مدموجة** (أعمدة الباك الطازجة فوق الكائن الحالي بعلاقاته)،
+        فنكتفي بوضعها في الحالة. ولا نُنادي `fetchService` هنا: هي تُشعل `loading` العام،
+        والمكوّن يُرجِع هيكل التحميل قبل أن يبلغ النوافذ — فتومض الصفحة كلها لأجل صفٍّ واحد.
+      */}
+      <EditServiceModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        service={service}
+        onSaved={(updated) => setService(updated)}
+      />
+
+      {/*
+        نافذةٌ واحدة بمرحلتين: الأولى تقول الحقيقة (سلّة محذوفات لا إعدام)، والثانية —
+        حين يردّ الباك 409 — تعرض أرقام الأثر المالي قبل التأكيد بـconfirm=1.
+      */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        variant="danger"
+        loading={deleteLoading}
+        onClose={closeDeleteConfirm}
+        onConfirm={() => runDelete(deleteImpact !== null)}
+        confirmLabel={deleteImpact ? 'حذف رغم الارتباط المالي' : 'نقل إلى سلّة المحذوفات'}
+        title={deleteImpact ? 'الخدمة مرتبطة بسجلات مالية' : 'حذف الخدمة'}
+        message={
+          deleteImpact ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>{deleteImpactMessage || 'هذه الخدمة مرتبطة بسجلات مالية قائمة.'}</div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'auto 1fr',
+                  gap: '4px 14px',
+                  fontSize: 12.5,
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 4,
+                  padding: '8px 10px',
+                }}
+              >
+                <span style={{ color: 'var(--color-text-secondary)' }}>عدد الفواتير</span>
+                <strong>{deleteImpact.invoices_count}</strong>
+                <span style={{ color: 'var(--color-text-secondary)' }}>مجموع الفواتير</span>
+                <strong>{Number(deleteImpact.invoices_total).toLocaleString('ar-SA')} ريال</strong>
+                <span style={{ color: 'var(--color-text-secondary)' }}>المدفوع منها</span>
+                <strong>{deleteImpact.paid_invoices_count}</strong>
+                <span style={{ color: 'var(--color-text-secondary)' }}>المهام المرتبطة</span>
+                <strong>{deleteImpact.tasks_count}</strong>
+                <span style={{ color: 'var(--color-text-secondary)' }}>المصروفات</span>
+                <strong>{deleteImpact.expenses_count}</strong>
+              </div>
+            </div>
+          ) : (
+            'ستُنقل هذه الخدمة إلى سلّة المحذوفات مع مستنداتها ومخرجاتها وسجلّ وقتها، ويمكن استعادتها منها لاحقاً.'
+          )
+        }
+        note={
+          deleteImpact
+            ? 'الفواتير والمصروفات تبقى كما هي ويُذكر فيها أنّ الخدمة حُذفت. والمهام والمصروفات لا تفقد ارتباطها بالخدمة إلا عند الحذف النهائي من سلّة المحذوفات.'
+            : 'الحذف ناعم — لا يُفقد شيء، والاستعادة من سلّة المحذوفات تعيد الخدمة وأبناءها معاً.'
+        }
+      />
 
     </div>
   );

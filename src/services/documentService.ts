@@ -1,6 +1,6 @@
 import { apiClient } from '../utils/api';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
-import type { Document } from '../types';
+import type { Document, ExternalLinkPayload } from '../types';
 
 export interface DocumentFilters {
   case_id?: string;
@@ -160,6 +160,21 @@ export class DocumentService {
       return response.data;
     } else {
       throw new Error(response.message || 'فشل في جلب وثائق القضية');
+    }
+  }
+
+  /**
+   * إضافة رابط خارجي كوثيقة للقضية (بلا ملف مرفوع).
+   * POST /cases/{caseId}/documents/link — الردّ 201 والوثيقة في data.
+   * الباك يرفض ما لا يبدأ بـhttp://‏ أو https:// برسالة عربية (422).
+   */
+  static async createCaseLink(caseId: number | string, payload: ExternalLinkPayload): Promise<Document> {
+    const response = await apiClient.post<ApiResponse<Document>>(`/cases/${caseId}/documents/link`, payload);
+
+    if (response.success && response.data) {
+      return response.data;
+    } else {
+      throw new Error(response.message || 'فشل في إضافة الرابط');
     }
   }
 

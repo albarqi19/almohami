@@ -923,8 +923,31 @@ export interface ServiceDocumentItem {
     file_path: string;
     file_name: string;
     file_size: number;
-    file_type: string;
+    /**
+     * اسم العمود في الباك `mime_type` — لا وجود لـ`file_type` في جدول documents أصلاً.
+     * كان مُصرَّحاً باسمٍ كاذب، فكل قارئٍ له يحصل على undefined بلا أي خطأ يكشف ذلك.
+     */
+    mime_type?: string | null;
+    /**
+     * غير فارغ ⇒ الوثيقة رابطٌ خارجي لا ملفٌ مرفوع. **المميّز المعتمد وحده**
+     * (لا mime_type ولا file_size). يُفتح مباشرةً بـ<a> — السيرفر لا يجلبه (منعاً لـSSRF).
+     */
+    external_url?: string | null;
+    /** نوع الرابط: web | image | file | document | video | folder — لاختيار الأيقونة. */
+    document_type?: string | null;
   };
+}
+
+/**
+ * أثر حذف الخدمة كما يعيده الباك: مع 409 (`error_code: 'CONFIRM_REQUIRED'`) قبل التأكيد،
+ * ومع ردّ النجاح بعده. الحذف **ناعم** — الخدمة تذهب لسلّة المحذوفات وتُستعاد منها.
+ */
+export interface ServiceDeletionImpact {
+  invoices_count: number;
+  invoices_total: number;
+  paid_invoices_count: number;
+  tasks_count: number;
+  expenses_count: number;
 }
 
 export interface ServiceTimeEntryItem {

@@ -39,8 +39,10 @@ import TaskTimer from '../components/TaskTimer';
 import SubtasksList from '../components/SubtasksList';
 import TaskTeamChat from '../components/TaskTeamChat';
 import EditTaskModal from '../components/EditTaskModal';
+import AddExternalLinkModal from '../components/AddExternalLinkModal';
 import { TasksCache } from '../utils/tasksCache';
-import type { Task, TaskStatus, TaskFolder } from '../types';
+import { isExternalLinkDoc, safeExternalHref, externalLinkHost } from '../types';
+import type { Task, TaskStatus, TaskFolder, ExternalLinkPayload, Document } from '../types';
 
 /**
  * مساحة المهمة — «النمط الملتصق» (نفس وصفة غرفة تجهيز القضية حرفياً):
@@ -77,6 +79,13 @@ const TYPE_LABELS: Record<string, string> = {
   other: 'أخرى',
 };
 
+/*
+ * نطاق الرابط الخارجي وحارس فتحه: `externalLinkHost` و`safeExternalHref` من `../types`.
+ * لا نسخة محلّية — النسخة القديمة كانت تشتقّ النطاق من `new URL(url).hostname` مباشرةً،
+ * و`new URL('javascript:x').hostname === ''`، فرقاقة النطاق كانت تغيب *حصراً* في الحالة
+ * الخبيثة: العنصر الوحيد الذي يكشف الخدعة يختفي تحديداً حين تُرتكب.
+ */
+
 /** قسم أكورديون ملتصق في العمود الجانبي — رأس قابل للنقر يفتح/يغلق جسمه، والحالة تُحفظ */
 const AccSection: React.FC<{
   id: string;
@@ -108,6 +117,8 @@ const TaskDetail: React.FC = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [onedriveConnected, setOnedriveConnected] = useState<boolean | null>(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  // «إضافة من مصدر آخر» — رابط خارجي كمرفق؛ لا علاقة له بـOneDrive فلا يُقيَّد بحالة ربطه
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -293,6 +304,16 @@ const TaskDetail: React.FC = () => {
     }
   };
 
+  /**
+   * إضافة رابط خارجي كمرفق — يرمي عند الفشل عمداً: المودال يلتقط الرمية ويعرض رسالة الباك (422) عربيةً.
+   * إعادة تحميل المهمة لأنّ الرابط يُحتسب مرفقاً فيرفع عدّاد `requires_attachment` عند الباك.
+   */
+  const handleAddLink = async (payload: ExternalLinkPayload) => {
+    await TaskService.addTaskLink(taskId!, payload);
+    await loadDocuments();
+    await loadTask();
+  };
+
   const handleDeleteDoc = async (docId: string) => {
     if (!window.confirm('حذف هذا المرفق؟')) return;
     try {
@@ -304,10 +325,16 @@ const TaskDetail: React.FC = () => {
     }
   };
 
+  /**
+   * فتح مرفق مرفوع عبر رابطٍ مؤقّت من الباك.
+   * 🔴 الروابط الخارجية لا تمرّ من هنا — السيرفر لا يجلبها إطلاقاً (منعاً لـSSRF)،
+   * فتُفتح بـ<a href={external_url}> مباشرةً في صفّها.
+   */
   const openDoc = async (docId: string) => {
     try {
       const url = await TaskService.getTaskDocumentUrl(taskId!, docId);
-      window.open(url, '_blank', 'noopener');
+      // noreferrer إلى جانب noopener: بدونه يتسرّب Referer (مسار المهمة) إلى مضيف التخزين
+      window.open(url, '_blank', 'noopener,noreferrer');
     } catch (error: any) {
       alert(error?.message || 'تعذّر فتح المرفق');
     }
@@ -735,36 +762,92 @@ const TaskDetail: React.FC = () => {
                       <p className="cpk-empty">لا مرفقات بعد.</p>
                     ) : (
                       <div className="twk-docs">
-                        {documents.map((doc: any) => (
-                          <div key={doc.id} className="twk-doc">
-                            <button className="twk-doc__open" onClick={() => openDoc(String(doc.id))} title="فتح المرفق">
-                              <FileText size={13} />
-                              <span>{doc.title || doc.file_name || doc.name || 'مستند'}</span>
-                              <ExternalLink size={11} style={{ opacity: 0.5 }} />
-                            </button>
-                            {task.can_manage_documents && (
-                              <button className="twk-doc__del" onClick={() => handleDeleteDoc(String(doc.id))} title="حذف المرفق">
-                                <Trash2 size={12} />
-                              </button>
-                            )}
-                          </div>
-                        ))}
+                        {documents.map((doc: Document) => {
+                          const isLink = isExternalLinkDoc(doc);
+                          // حارس العرض: الباك يحرس عند الإنشاء، وصفٌّ قديم قد يحمل مخطّطاً آخر
+                          const href = isLink ? safeExternalHref(doc.external_url) : null;
+                          const host = isLink ? externalLinkHost(doc.external_url) : null;
+                          // `name` ليس في نوع Document لكنه يرد في بعض حمولات المرفقات القديمة
+                          const legacyName = (doc as { name?: string }).name;
+                          const label = doc.title || doc.file_name || legacyName || (isLink ? 'رابط' : 'مستند');
+                          return (
+                            <div key={doc.id} className="twk-doc">
+                              {isLink ? (
+                                href ? (
+                                  <a
+                                    className="twk-doc__open twk-doc__open--link"
+                                    href={href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={host || href}
+                                  >
+                                    <Link2 size={13} />
+                                    <span className="twk-doc__main">
+                                      <span className="twk-doc__title">{label}</span>
+                                      <span className="twk-doc__sub">
+                                        <span className="twk-doc__chip">رابط خارجي</span>
+                                        {host && <bdi dir="ltr" className="twk-doc__host">{host}</bdi>}
+                                      </span>
+                                    </span>
+                                    <ExternalLink size={11} style={{ opacity: 0.5 }} />
+                                  </a>
+                                ) : (
+                                  /* غير قابل للنقر عمداً: لا href ولا onClick — ولا يُعرض الرابط الخام حتى في التلميح */
+                                  <div
+                                    className="twk-doc__open twk-doc__open--link twk-doc__open--invalid"
+                                    title="رابط غير صالح — لا يمكن فتحه"
+                                  >
+                                    <AlertCircle size={13} />
+                                    <span className="twk-doc__main">
+                                      <span className="twk-doc__title">{label}</span>
+                                      <span className="twk-doc__sub">
+                                        <span className="twk-doc__chip twk-doc__chip--warn">رابط غير صالح</span>
+                                      </span>
+                                    </span>
+                                  </div>
+                                )
+                              ) : (
+                                <button className="twk-doc__open" onClick={() => openDoc(String(doc.id))} title="فتح المرفق">
+                                  <FileText size={13} />
+                                  <span>{label}</span>
+                                  <ExternalLink size={11} style={{ opacity: 0.5 }} />
+                                </button>
+                              )}
+                              {task.can_manage_documents && (
+                                <button className="twk-doc__del" onClick={() => handleDeleteDoc(String(doc.id))} title={isLink ? 'حذف الرابط' : 'حذف المرفق'}>
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                     {task.can_manage_documents && (
                       <>
                         <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleUploadFile} />
-                        <button
-                          className="ssp2-btn twk-upload-btn"
-                          disabled={uploadingDoc || onedriveConnected === false}
-                          onClick={() => fileInputRef.current?.click()}
-                          title={onedriveConnected === false ? 'اربط OneDrive من الإعدادات أولاً' : 'رفع مرفق'}
-                        >
-                          {uploadingDoc ? <Loader2 size={13} className="ssp2-spin" /> : <UploadCloud size={13} />}
-                          {uploadingDoc ? 'جارٍ الرفع...' : 'رفع مرفق'}
-                        </button>
+                        <div className="twk-doc-actions">
+                          <button
+                            className="ssp2-btn twk-upload-btn"
+                            disabled={uploadingDoc || onedriveConnected === false}
+                            onClick={() => fileInputRef.current?.click()}
+                            title={onedriveConnected === false ? 'اربط OneDrive من الإعدادات أولاً' : 'رفع مرفق'}
+                          >
+                            {uploadingDoc ? <Loader2 size={13} className="ssp2-spin" /> : <UploadCloud size={13} />}
+                            {uploadingDoc ? 'جارٍ الرفع...' : 'رفع مرفق'}
+                          </button>
+                          {/* لا يُقيَّد بربط OneDrive — الرابط لا يُرفع ولا يُخزَّن ملفاً */}
+                          <button
+                            className="ssp2-btn twk-upload-btn"
+                            onClick={() => setLinkModalOpen(true)}
+                            title="إضافة رابط خارجي (درايف، ناجز، موقع...) بلا رفع ملف"
+                          >
+                            <Link2 size={13} />
+                            إضافة من مصدر آخر
+                          </button>
+                        </div>
                         {onedriveConnected === false && (
-                          <p className="cpk-empty" style={{ marginTop: 6 }}>OneDrive غير مربوط — اربطه من الإعدادات لرفع المرفقات.</p>
+                          <p className="cpk-empty" style={{ marginTop: 6 }}>OneDrive غير مربوط — اربطه من الإعدادات لرفع المرفقات (الروابط الخارجية لا تحتاجه).</p>
                         )}
                       </>
                     )}
@@ -862,6 +945,13 @@ const TaskDetail: React.FC = () => {
         onClose={() => setEditOpen(false)}
         task={task}
         onTaskUpdated={() => { setEditOpen(false); loadTask(); }}
+      />
+
+      <AddExternalLinkModal
+        isOpen={linkModalOpen}
+        onClose={() => setLinkModalOpen(false)}
+        onSubmit={handleAddLink}
+        contextLabel={`المهمة: ${task.title}`}
       />
 
       {/* لمسات المساحة (twk-*) فوق وصفة ssp2/cpk المشتركة */}
@@ -1000,9 +1090,46 @@ const TaskDetail: React.FC = () => {
           color: var(--color-text, #222);
           cursor: pointer;
           text-align: right;
+          text-decoration: none;
         }
-        .twk-doc__open span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .twk-doc__open > span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .twk-doc__open:hover { border-color: var(--law-navy, #0A192F); }
+        /* صفّ الرابط الخارجي: سطران — العنوان، ثم رقاقة «رابط خارجي» والنطاق (بلا حجم؛ لا ملف له) */
+        .twk-doc__open--link { align-items: flex-start; }
+        .twk-doc__open--link > svg:first-child { margin-top: 2px; flex-shrink: 0; }
+        .twk-doc__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .twk-doc__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .twk-doc__sub { display: flex; align-items: center; gap: 5px; min-width: 0; }
+        .twk-doc__chip {
+          flex-shrink: 0;
+          padding: 0 5px;
+          font-size: 10px;
+          line-height: 15px;
+          border: 1px solid var(--color-border, #ececec);
+          border-radius: 3px;
+          background: var(--color-surface, #fff);
+          color: var(--color-text-secondary, #777);
+        }
+        /* صفّ رابطٍ لم يجتز حارس العرض: نصٌّ محض بلون تحذير، لا مؤشّر نقر ولا تفاعل */
+        .twk-doc__open--invalid {
+          cursor: default;
+          border-color: var(--color-warning, #f4a259);
+          background: var(--color-warning-soft, rgba(244,162,89,0.15));
+          color: var(--color-text-secondary, #777);
+        }
+        .twk-doc__open--invalid:hover { border-color: var(--color-warning, #f4a259); }
+        .twk-doc__chip--warn {
+          border-color: var(--color-warning, #f4a259);
+          color: var(--color-warning, #f4a259);
+          background: transparent;
+        }
+        .twk-doc__host {
+          font-size: 10.5px;
+          color: var(--color-text-secondary, #777);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
         .twk-doc__del {
           background: none;
           border: none;
@@ -1013,6 +1140,9 @@ const TaskDetail: React.FC = () => {
         }
         .twk-doc__del:hover { color: #ef4444; background: rgba(239,68,68,0.08); }
         .twk-upload-btn { width: 100%; justify-content: center; margin-top: 8px; }
+        /* الزرّان معاً: العمود ضيّق فيتراصّان رأسياً بعرضٍ كامل بدل أن يُقصّ نصّهما */
+        .twk-doc-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+        .twk-doc-actions .twk-upload-btn { margin-top: 0; }
 
         .twk-link {
           display: flex;

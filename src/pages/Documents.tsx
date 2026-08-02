@@ -37,6 +37,7 @@ import {
     FolderPlus
 } from 'lucide-react';
 import type { Document as DocumentType, Case } from '../types';
+import { isExternalLinkDoc, safeExternalHref, externalLinkHost } from '../types';
 import DocumentUploadModal from '../components/DocumentUploadModal';
 import LegalMemoWorkspace from '../components/LegalMemoWorkspace';
 import { usePermission } from '../hooks/usePermission';
@@ -249,8 +250,10 @@ const Documents: React.FC = () => {
         pollingInterval: 0, // بدون polling للمستندات
     });
 
-    const getFileIcon = (mimeType: string) => {
+    const getFileIcon = (mimeType: string, isLink: boolean = false) => {
         const type = mimeType?.toLowerCase() || '';
+        // الرابط الخارجي أولاً — لا ملف له إطلاقاً (المميّز: external_url)
+        if (isLink) return <Link2 style={{ color: 'var(--color-primary)' }} />;
         if (type.includes('pdf')) return <FileText className="text-red-500" />;
         if (type.includes('word') || type.includes('document')) return <FileText className="text-blue-500" />;
         if (type.includes('image')) return <Image className="text-purple-500" />;
@@ -285,7 +288,26 @@ const Documents: React.FC = () => {
         return searchMatch && categoryMatch;
     });
 
+    /**
+     * فتح الرابط الخارجي مباشرةً — السيرفر لا يجلبه (منعاً لـSSRF) فلا معاينة ولا تنزيل.
+     * حارس العرض إلزاميّ هنا: حماية React لـ`href` تغطّي `javascript:` وحدها ولا تلمس
+     * `window.open` إطلاقاً، وصفٌّ قديم قد يحمل قيمةً لم تمرّ بحارس الإنشاء في الباك.
+     */
+    const openExternalLink = (doc: DocumentType) => {
+        const href = safeExternalHref(doc.external_url);
+        if (!href) {
+            alert('رابط غير صالح — يُسمح بـ http/https فقط');
+            return;
+        }
+        window.open(href, '_blank', 'noopener,noreferrer');
+    };
+
     const handleDocumentClick = (doc: DocumentType) => {
+        // وثيقةٌ بلا ملف: افتح الرابط ولا تفتح لوحة المعاينة أبداً
+        if (isExternalLinkDoc(doc)) {
+            openExternalLink(doc);
+            return;
+        }
         if (selectedDocument?.id === doc.id) {
             // Deselect if already selected ?? Maybe keep it open to avoid accidental closes
             // setSelectedDocument(null); 
@@ -300,6 +322,12 @@ const Documents: React.FC = () => {
 
     // Preview Pane Content - Unified for both Local and OneDrive files
     const PreviewPane = ({ doc }: { doc: DocumentType }) => {
+        const isLink = isExternalLinkDoc(doc);
+        // ⓘ فروع `isLink` داخل هذه اللوحة (زرّ «فتح الرابط» ولوحة الرابط أدناه) احتياطيّةٌ لا
+        // تُبلَغ في التدفّق الحالي: `handleDocumentClick` يخرج مبكراً لكل رابط فلا يصير
+        // `selectedDocument` رابطاً قطّ. تُركت دفاعاً في العمق إن تغيّر التدفّق لاحقاً.
+        const linkHref = safeExternalHref(doc.external_url);
+        const linkHost = externalLinkHost(doc.external_url);
         return (
             <div className="docs-preview-pane">
                 {/* Header with action buttons - matching OneDrive */}
@@ -313,8 +341,9 @@ const Documents: React.FC = () => {
                 }}>
                     {/* Action buttons - compact style */}
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        {/* حالة «فتح الرابط» احتياطيّة لا تُبلَغ اليوم — انظر التعليق أعلى المكوّن */}
                         <button
-                            onClick={() => console.log('Download')}
+                            onClick={() => isLink ? openExternalLink(doc) : console.log('Download')}
                             style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -330,7 +359,7 @@ const Documents: React.FC = () => {
                                 transition: 'all 0.15s'
                             }}
                         >
-                            <Download size={12} /> تنزيل
+                            {isLink ? <><ExternalLink size={12} /> فتح الرابط</> : <><Download size={12} /> تنزيل</>}
                         </button>
                         <button
                             onClick={() => {
@@ -417,7 +446,9 @@ const Documents: React.FC = () => {
                     alignItems: 'center',
                     gap: '10px'
                 }}>
-                    <HardDrive size={18} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+                    {isLink
+                        ? <Link2 size={18} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+                        : <HardDrive size={18} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />}
                     <div style={{ minWidth: 0 }}>
                         <div style={{
                             fontSize: '13px',
@@ -435,7 +466,8 @@ const Documents: React.FC = () => {
                             display: 'flex',
                             gap: '8px'
                         }}>
-                            {doc.fileSize && <span>{formatSize(doc.fileSize || doc.file_size)}</span>}
+                            {isLink && <span>رابط خارجي</span>}
+                            {!isLink && doc.fileSize ? <span>{formatSize(doc.fileSize || doc.file_size)}</span> : null}
                             {doc.uploadedAt && <span>{new Date(doc.uploadedAt || doc.uploaded_at).toLocaleDateString('ar-SA')}</span>}
                         </div>
                     </div>
@@ -449,7 +481,76 @@ const Documents: React.FC = () => {
                     overflow: 'hidden',
                     background: 'var(--color-bg-primary)'
                 }}>
-                    <FilePreview doc={doc} />
+                    {isLink ? (
+                        // لا معاينة لرابطٍ خارجي — لا ملف أصلاً؛ نعرض الرابط ونفتحه مباشرةً
+                        <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '10px',
+                            padding: '32px 20px',
+                            textAlign: 'center'
+                        }}>
+                            <Link2 size={32} style={{ color: 'var(--color-text-secondary)' }} />
+                            <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                                {linkHref
+                                    ? 'هذه وثيقة رابط خارجي — تُفتح في تبويب جديد'
+                                    : 'هذه وثيقة رابط خارجي — لكن عنوانها غير صالح'}
+                            </span>
+                            {linkHref ? (
+                                <>
+                                    <a
+                                        href={linkHref}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                            fontSize: '12px',
+                                            color: 'var(--color-primary)',
+                                            wordBreak: 'break-all',
+                                            maxWidth: '100%'
+                                        }}
+                                    >
+                                        {doc.external_url}
+                                    </a>
+                                    {linkHost && (
+                                        <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                                            {linkHost}
+                                        </span>
+                                    )}
+                                </>
+                            ) : (
+                                // لا `href` ولا نقر — العنوان نصٌّ محضٌ مع رقاقة تحذير
+                                <>
+                                    <span style={{
+                                        fontSize: '12px',
+                                        color: 'var(--color-text-secondary)',
+                                        wordBreak: 'break-all',
+                                        maxWidth: '100%'
+                                    }}>
+                                        {doc.external_url}
+                                    </span>
+                                    <span style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '3px',
+                                        fontSize: '10px',
+                                        fontWeight: 500,
+                                        color: 'var(--color-warning)',
+                                        background: 'var(--color-warning-soft)',
+                                        border: '1px solid var(--color-warning)',
+                                        borderRadius: '3px',
+                                        padding: '1px 5px'
+                                    }}>
+                                        <AlertCircle size={10} /> رابط غير صالح
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                    ) : (
+                        <FilePreview doc={doc} />
+                    )}
                 </div>
             </div>
         );
@@ -1037,26 +1138,54 @@ const Documents: React.FC = () => {
                         {/* Grid View */}
                         {viewMode === 'grid' && !showOneDriveFiles && (
                             <div className="docs-grid">
-                                {filteredDocuments.map(doc => (
+                                {filteredDocuments.map(doc => {
+                                    const isLink = isExternalLinkDoc(doc);
+                                    const linkHref = safeExternalHref(doc.external_url);
+                                    // رابطٌ لا يجتاز حارس العرض: لا نقر ولا فتح — رقاقة تحذير فقط
+                                    const badLink = isLink && !linkHref;
+                                    return (
                                     <motion.div
                                         key={doc.id}
                                         layout
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         className={`doc-card ${selectedDocument?.id === doc.id ? 'selected' : ''}`}
-                                        onClick={() => handleDocumentClick(doc)}
+                                        onClick={badLink ? undefined : () => handleDocumentClick(doc)}
+                                        style={badLink ? { cursor: 'default' } : undefined}
                                     >
                                         <div className="doc-preview">
-                                            {getFileIcon(doc.mimeType || doc.mime_type)}
+                                            {getFileIcon(doc.mimeType || doc.mime_type, isLink)}
                                         </div>
                                         <div className="doc-info">
                                             <div className="doc-name" title={doc.title}>{doc.title || doc.fileName}</div>
+                                            {isLink && (
+                                                <div style={{ marginBottom: '4px' }}>
+                                                    <span style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '3px',
+                                                        fontSize: '10px',
+                                                        fontWeight: 500,
+                                                        color: badLink ? 'var(--color-warning)' : 'var(--color-primary)',
+                                                        background: badLink ? 'var(--color-warning-soft)' : 'var(--color-primary-soft)',
+                                                        border: `1px solid ${badLink ? 'var(--color-warning)' : 'var(--color-border)'}`,
+                                                        borderRadius: '3px',
+                                                        padding: '1px 5px'
+                                                    }}>
+                                                        {badLink
+                                                            ? <><AlertCircle size={10} /> رابط غير صالح</>
+                                                            : <><Link2 size={10} /> رابط خارجي</>}
+                                                    </span>
+                                                </div>
+                                            )}
                                             <div className="doc-meta">
-                                                {formatSize(doc.fileSize || doc.file_size)} • {new Date(doc.uploadedAt || doc.uploaded_at).toLocaleDateString('ar-SA')}
+                                                {!isLink && `${formatSize(doc.fileSize || doc.file_size)} • `}
+                                                {new Date(doc.uploadedAt || doc.uploaded_at).toLocaleDateString('ar-SA')}
                                             </div>
                                         </div>
                                     </motion.div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
 
@@ -1071,37 +1200,90 @@ const Documents: React.FC = () => {
                                     <div className="header-cell">التاريخ</div>
                                     <div className="header-cell"></div>
                                 </div>
-                                {filteredDocuments.map(doc => (
+                                {filteredDocuments.map(doc => {
+                                    const isLink = isExternalLinkDoc(doc);
+                                    const linkHref = safeExternalHref(doc.external_url);
+                                    const linkHost = externalLinkHost(doc.external_url);
+                                    // رابطٌ لا يجتاز حارس العرض: لا نقر ولا `href` — رقاقة تحذير فقط
+                                    const badLink = isLink && !linkHref;
+                                    return (
                                     <motion.div
                                         key={doc.id}
                                         layout
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         className={`doc-row ${selectedDocument?.id === doc.id ? 'selected' : ''}`}
-                                        onClick={() => handleDocumentClick(doc)}
+                                        onClick={badLink ? undefined : () => handleDocumentClick(doc)}
+                                        style={badLink ? { cursor: 'default' } : undefined}
                                     >
                                         <div className="doc-row-icon">
-                                            {getFileIcon(doc.mimeType || doc.mime_type)}
+                                            {getFileIcon(doc.mimeType || doc.mime_type, isLink)}
                                         </div>
-                                        <div className="doc-row-name">
-                                            {doc.title || doc.fileName}
+                                        <div className="doc-row-name" style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {doc.title || doc.fileName}
+                                            </span>
+                                            {isLink && (
+                                                <span style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '3px',
+                                                    flexShrink: 0,
+                                                    fontSize: '10px',
+                                                    fontWeight: 500,
+                                                    color: badLink ? 'var(--color-warning)' : 'var(--color-primary)',
+                                                    background: badLink ? 'var(--color-warning-soft)' : 'var(--color-primary-soft)',
+                                                    border: `1px solid ${badLink ? 'var(--color-warning)' : 'var(--color-border)'}`,
+                                                    borderRadius: '3px',
+                                                    padding: '1px 5px'
+                                                }}>
+                                                    {badLink
+                                                        ? <><AlertCircle size={10} /> رابط غير صالح</>
+                                                        : <><Link2 size={10} /> {linkHost || 'رابط خارجي'}</>}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="doc-row-meta">
-                                            {formatSize(doc.fileSize || doc.file_size)}
+                                            {isLink ? '—' : formatSize(doc.fileSize || doc.file_size)}
                                         </div>
                                         <div className="doc-row-meta">
-                                            {doc.mimeType?.split('/')[1] || 'Unknown'}
+                                            {isLink ? 'رابط' : (doc.mimeType?.split('/')[1] || 'Unknown')}
                                         </div>
                                         <div className="doc-row-meta">
                                             {new Date(doc.uploadedAt || doc.uploaded_at).toLocaleDateString('ar-SA')}
                                         </div>
                                         <div className="doc-row-icon">
-                                            <button className="view-toggle-btn">
-                                                <MoreHorizontal size={16} />
-                                            </button>
+                                            {isLink ? (
+                                                linkHref ? (
+                                                    <a
+                                                        href={linkHref}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="view-toggle-btn"
+                                                        title={linkHost ? `فتح الرابط — ${linkHost}` : 'فتح الرابط'}
+                                                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary)' }}
+                                                    >
+                                                        <ExternalLink size={16} />
+                                                    </a>
+                                                ) : (
+                                                    // لا عنصر قابل للنقر لرابطٍ غير صالح — أيقونة تحذير جامدة
+                                                    <span
+                                                        title="رابط غير صالح — يُسمح بـ http/https فقط"
+                                                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-warning)' }}
+                                                    >
+                                                        <AlertCircle size={16} />
+                                                    </span>
+                                                )
+                                            ) : (
+                                                <button className="view-toggle-btn">
+                                                    <MoreHorizontal size={16} />
+                                                </button>
+                                            )}
                                         </div>
                                     </motion.div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
 

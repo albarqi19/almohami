@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import {
   ArrowRight, Receipt, Download, Send, XCircle, CreditCard, CheckCircle, FileText, User, Calendar, X,
+  AlertTriangle,
 } from 'lucide-react';
 import { invoiceService } from '../../services/invoiceService';
 import { paymentService } from '../../services/paymentService';
@@ -28,6 +29,34 @@ import type { CreatePaymentData } from '../../types/billing';
 // صف قائمة تعريفات مضغوط (label ↔ value) للعمود الجانبي.
 const Def: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div className="fin-defrow"><span className="fin-defrow__label">{label}</span><span className="fin-defrow__value">{children}</span></div>
+);
+
+// رقاقة تحذير نصّية مسطّحة (بلا شريط جانبي ملوّن، بلا ظل، بلا تدرّج) — ألوانها من متغيّرات الحالة.
+// برتقالي = محذوف حذفاً ناعماً (قابل للاستعادة)، أحمر = محذوف نهائياً.
+//
+// 🔴 قيمة احتياطية داخل كل `var()` **إلزامية هنا**: المتغيّر يقع داخل `color-mix(...)`،
+// فإن غاب ملف السمة عن تتالي مسار المالية صار `color-mix` باطلاً وقت الحساب — فتسقط
+// الخلفية **والحدّ** معاً ويرث النصّ لون الجسم، فيتحوّل تحذيرٌ أحمر إلى نصٍّ عاديّ صامت.
+// (نفس نمط الاحتياطيات في `src/styles/accounting.css`.)
+const TONE_COLOR: Record<'orange' | 'red', string> = {
+  orange: 'var(--status-orange, #a05a00)',
+  red: 'var(--status-red, #b3261e)',
+};
+
+const GoneChip: React.FC<{ tone: 'orange' | 'red'; children: React.ReactNode }> = ({ tone, children }) => (
+  <div
+    style={{
+      display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 10,
+      padding: '6px 9px', borderRadius: 6,
+      fontSize: 12.5, fontWeight: 600, lineHeight: 1.7,
+      color: TONE_COLOR[tone],
+      background: `color-mix(in srgb, ${TONE_COLOR[tone]} 14%, var(--color-surface, transparent))`,
+      border: `1px solid color-mix(in srgb, ${TONE_COLOR[tone]} 32%, transparent)`,
+    }}
+  >
+    <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 3 }} />
+    <span>{children}</span>
+  </div>
 );
 
 const InvoiceDetailPage: React.FC = () => {
@@ -97,6 +126,22 @@ const InvoiceDetailPage: React.FC = () => {
   const docTitle = invoice.is_tax_invoice ? 'فاتورة ضريبية' : 'فاتورة';
   const dueLabel = formatDueLabel(invoice.due_date);
   const hasVat = toNumber(invoice.vat_amount) > 0;
+
+  // ── الخدمة القانونية المرتبطة: أربع حالات متمايزة ──
+  // 🔴 الحذف الناعم لا يصفّر legal_service_id (قيود FK لا تنطلق عليه)، فالتمييز يقوم على
+  //    وجود العلاقة و deleted_at داخلها — لا على «المفتاح فارغ» الذي يفوّت المسار الافتراضي.
+  const svc = invoice.legal_service;
+  const svcAlive = !!svc && !svc.deleted_at;                       // (1) خدمة حيّة
+  const svcTrashed = !!svc && !!svc.deleted_at;                    // (2) حذف ناعم — الصفّ محمّل بـwithTrashed ومعه deleted_at
+  // (3) حذف نهائي — لا يبقى إلا اللقطة النصّية. الشرط مبنيٌّ على نفي الحالتين قبله لا على
+  //     `legal_service_id == null`: اشتراط تصفير المفتاح كان يجعل الحالة الرابعة تسقط من
+  //     الأعلام الثلاثة جميعاً فتصمت الفاتورة تماماً عن مصدرها.
+  const svcPurged = !svcAlive && !svcTrashed && !!invoice.deleted_service_label;
+  // (4) مفتاحٌ موجود وعلاقةٌ غير محمّلة (استجابة بلا with، أو منعُ رؤية) وبلا لقطة نصّية —
+  //     يُعرض صراحةً بمعرّف الخدمة بدل الصمت.
+  const svcUnresolved = !svcAlive && !svcTrashed && !svcPurged && invoice.legal_service_id != null;
+  // «المبسطة» لها صفحة عمل مخصّصة، والبقية صفحة التفاصيل القياسية (مطابق لـLegalServices.openService).
+  const svcHref = svc ? (svc.service_type === 'simple' ? `/legal-services/simple/${svc.id}` : `/legal-services/${svc.id}`) : null;
 
   return (
     <div className="fin-detail">
@@ -189,6 +234,19 @@ const InvoiceDetailPage: React.FC = () => {
                     </button>
                   </Def>
                 )}
+                {svcAlive && svc && (
+                  <Def label="الخدمة القانونية">
+                    <button
+                      type="button"
+                      className="fin-btn fin-btn--ghost fin-btn--sm"
+                      style={{ padding: '2px 6px', display: 'inline-block', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      title={`${svc.service_number} — ${svc.title}`}
+                      onClick={() => svcHref && navigate(svcHref)}
+                    >
+                      {svc.service_number} — {svc.title}
+                    </button>
+                  </Def>
+                )}
                 <Def label="تاريخ الإصدار">{invoice.invoice_date?.split('T')[0] ?? '—'}</Def>
                 <Def label="الاستحقاق">
                   <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
@@ -199,6 +257,25 @@ const InvoiceDetailPage: React.FC = () => {
                 <Def label="قبل الضريبة">{formatSAR(invoice.subtotal)}</Def>
                 {toNumber(invoice.discount) > 0 && <Def label="الخصم">{formatSAR(invoice.discount)}</Def>}
               </div>
+
+              {/* الخدمة المرتبطة اختفت — رقاقة نصّية (لا شريط تمييز جانبي) */}
+              {svcTrashed && svc && (
+                <GoneChip tone="orange">
+                  الخدمة المرتبطة محذوفة — {svc.service_number} «{svc.title}» · موجودة في سلّة المحذوفات
+                </GoneChip>
+              )}
+              {svcPurged && (
+                <GoneChip tone="red">
+                  الخدمة المرتبطة محذوفة نهائياً — {invoice.deleted_service_label}
+                </GoneChip>
+              )}
+              {/* الحالة الرابعة: مفتاحٌ موجود بلا علاقةٍ محمّلة ولا لقطة — اذكر المعرّف بدل الصمت */}
+              {svcUnresolved && (
+                <GoneChip tone="orange">
+                  الفاتورة مرتبطة بخدمة قانونية رقم <span dir="ltr">#{invoice.legal_service_id}</span> — تعذّر تحميل بياناتها
+                </GoneChip>
+              )}
+
               {invoice.notes && <div style={{ marginTop: 10, fontSize: 13, color: 'var(--color-text-secondary)' }}>{invoice.notes}</div>}
             </div>
           </div>

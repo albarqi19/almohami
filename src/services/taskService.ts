@@ -1,6 +1,6 @@
 ﻿import { apiClient } from '../utils/api';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
-import type { ArchivedFilter, Task, CreateTaskForm } from '../types';
+import type { ArchivedFilter, Task, CreateTaskForm, ExternalLinkPayload, Document } from '../types';
 
 export interface TaskFilters {
   status?: string;
@@ -346,6 +346,17 @@ export class TaskService {
     const response = await apiClient.post<ApiResponse<any>>(`/tasks/${id}/documents`, form);
     if (response.success && response.data) return response.data;
     throw new Error(response.message || 'فشل رفع المرفق');
+  }
+
+  /**
+   * إضافة رابط خارجي كمرفق للمهمة (بلا ملف ولا OneDrive).
+   * POST /tasks/{id}/documents/link — الردّ 201 والوثيقة في data.
+   * الباك يرفض ما لا يبدأ بـhttp://‏ أو https:// برسالة عربية (422).
+   */
+  static async addTaskLink(id: string | number, payload: ExternalLinkPayload): Promise<Document> {
+    const response = await apiClient.post<ApiResponse<Document>>(`/tasks/${id}/documents/link`, payload);
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'فشل إضافة الرابط');
   }
 
   /** حذف مرفق من المهمة. */

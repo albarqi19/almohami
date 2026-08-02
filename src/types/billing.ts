@@ -73,6 +73,20 @@ export interface CaseInvoice {
     file_number: string;
     title: string;
   };
+  // === الخدمة القانونية المرتبطة ===
+  // الباك يحمّل العلاقة بـwithTrashed، فقد تعود ومعها deleted_at (حذف ناعم).
+  // ⚠ الحذف الناعم لا يصفّر legal_service_id — فلا تبنِ شرط «محذوفة» على المفتاح وحده.
+  legal_service_id?: number | null;
+  legal_service?: {
+    id: number;
+    service_number: string;
+    title: string;
+    service_type?: string;
+    status?: string;
+    deleted_at?: string | null;
+  } | null;
+  // لقطة نصّية تُكتب لحظة الحذف النهائي (حين يصير legal_service_id فارغاً ولا علاقة تُحمَّل).
+  deleted_service_label?: string | null;
   client?: {
     id: number;
     name: string;

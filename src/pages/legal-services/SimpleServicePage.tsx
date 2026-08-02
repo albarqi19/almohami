@@ -32,18 +32,22 @@ import {
   Radar,
   MessagesSquare,
   ChevronsLeft,
+  Pencil,
 } from 'lucide-react';
 import { LegalServiceService } from '../../services/legalServiceService';
-import { apiClient } from '../../utils/api';
+import { apiClient, API_BASE_URL } from '../../utils/api';
 import { getApiErrorMessage } from '../../utils/apiError';
 import SimpleLetterComposer from '../../components/legal-services/SimpleLetterComposer';
 import ServiceTeamChat from '../../components/legal-services/ServiceTeamChat';
+import EditServiceModal from '../../components/legal-services/EditServiceModal';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import type {
   LegalService,
   SimpleServiceDetail,
   SimpleStage,
   SimpleJournalEntry,
   ServiceDeliverableItem,
+  ServiceDeletionImpact,
 } from '../../types/legalServices';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (simple-service.css)
 
@@ -169,6 +173,49 @@ const DaysRing: React.FC<{ service: LegalService; stages: SimpleStage[]; size?: 
     </div>
   );
 };
+
+/**
+ * حذف الخدمة بنداء `fetch` مباشر لا عبر `apiClient` — عمداً لا سهواً:
+ * فرعُ 409 في `utils/api.ts` يبني Error من `message` و`errors` فقط ويُسقط `error_code`
+ * و`impact`، وهما جوهر تدفّق التأكيد هنا (لا تمييز بين «يلزم تأكيد» وأيّ تعارضٍ آخر بلا
+ * `error_code`، ولا عرض للأرقام بلا `impact`). و`utils/api.ts` سطحٌ مشترك لا يُعدَّل من
+ * أجل شاشة. النمط نفسه مطبَّق في `LegalServiceDetail.tsx`.
+ *
+ * ⚠️ لا تستبدل هذا بـ`LegalServiceService.deleteService` — تمرّ بـ`apiClient` فتبتلع الـ409.
+ */
+interface ServiceDeletionResponseBody {
+  message?: string;
+  error_code?: string;
+  impact?: ServiceDeletionImpact;
+}
+
+async function requestServiceDeletion(
+  id: number,
+  confirm: boolean,
+): Promise<{ ok: boolean; status: number; body: ServiceDeletionResponseBody }> {
+  const token = localStorage.getItem('authToken');
+  const response = await fetch(
+    `${API_BASE_URL}/legal-services/${id}${confirm ? '?confirm=1' : ''}`,
+    {
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
+  );
+  const body: ServiceDeletionResponseBody = await response
+    .json()
+    .catch(() => ({} as ServiceDeletionResponseBody));
+  // الـfetch الخام يتجاوز فرع 401 في utils/api.ts الذي يمسح التوكن ويوجّه لصفحة الدخول،
+  // فبتوكنٍ منتهٍ كان المستخدم يرى توستاً إنجليزياً «Unauthenticated.» ويبقى في صفحةٍ ميتة.
+  if (response.status === 401) {
+    localStorage.removeItem('authToken');
+    window.location.href = '/login';
+  }
+
+  return { ok: response.ok, status: response.status, body };
+}
 
 const SimpleServicePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -599,6 +646,82 @@ const SimpleServicePage: React.FC = () => {
     }
   };
 
+  // ── تعديل بيانات الخدمة ──
+  /**
+   * 🔴 لا تُلحِق هذه النافذة بـ`isLocked`: القفل يخصّ **المحتوى** (المهام/المراحل/التدوين)
+   * لأن `SimpleServiceController` يردّ 422 عند closed/cancelled/archived، أمّا
+   * `PUT /legal-services/{id}` (`LegalServiceController::update`) فبلا أيّ حارس قفل —
+   * يعمل في كل الحالات. توحيدُ الاثنين «تنظيماً» يكسر تصحيح بيانات خدمةٍ مغلقة.
+   * وما يُعدَّل هنا هو بيانات الخدمة فقط: لا الحالة (لها مسار انتقالات مستقل)،
+   * ولا نوع الخدمة، ولا العميل.
+   */
+  const [editOpen, setEditOpen] = useState(false);
+
+  // ── حذف الخدمة (ناعم — إلى سلّة المحذوفات) ──
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  /** غير null ⇒ الباك ردّ 409 CONFIRM_REQUIRED، فالنافذة تنتقل لمرحلة التحذير المالي. */
+  const [deleteImpact, setDeleteImpact] = useState<ServiceDeletionImpact | null>(null);
+  const [deleteImpactMessage, setDeleteImpactMessage] = useState('');
+
+  const openDeleteConfirm = () => {
+    setDeleteImpact(null);
+    setDeleteImpactMessage('');
+    setDeleteOpen(true);
+  };
+
+  const closeDeleteConfirm = () => {
+    if (deleteLoading) return;
+    setDeleteOpen(false);
+    setDeleteImpact(null);
+    setDeleteImpactMessage('');
+  };
+
+  /**
+   * نافذةٌ واحدة بمرحلتين: أول ضغطة بلا `confirm`، فإن كانت الخدمة مرتبطة بفواتير أو
+   * مصروفات ردّ الباك 409 مع `impact` — فتنتقل النافذة لمرحلة التحذير المالي بالأرقام،
+   * والضغطة التالية تُعيد النداء بـ`confirm=1`.
+   * 🔴 غير معطَّل بـ`isLocked`: الحذف مسموحٌ في كل الحالات — القفل للمحتوى لا للخدمة.
+   */
+  const runDelete = async (confirm: boolean) => {
+    setDeleteLoading(true);
+    try {
+      const { ok, status, body } = await requestServiceDeletion(serviceId, confirm);
+
+      if (ok) {
+        setDeleteOpen(false);
+        setDeleteImpact(null);
+        toast.success(body?.message || 'نُقلت الخدمة إلى سلّة المحذوفات، ويمكن استعادتها منها');
+        navigate('/legal-services');
+        return;
+      }
+
+      if (status === 409 && body?.error_code === 'CONFIRM_REQUIRED') {
+        // البديل الصفري ليس تجميلاً: `deleteImpact !== null` هو ما ينقل النافذة للمرحلة
+        // الثانية، فلو غاب `impact` لبقيت في الأولى وأعادت النداء بلا confirm إلى الأبد.
+        setDeleteImpact(
+          body.impact ?? {
+            invoices_count: 0,
+            invoices_total: 0,
+            paid_invoices_count: 0,
+            tasks_count: 0,
+            expenses_count: 0,
+          },
+        );
+        setDeleteImpactMessage(typeof body.message === 'string' ? body.message : '');
+        setDeleteOpen(true);
+        return;
+      }
+
+      setDeleteOpen(false);
+      toast.error(typeof body?.message === 'string' ? body.message : 'تعذّر حذف الخدمة');
+    } catch {
+      toast.error('تعذّر حذف الخدمة — تحقّق من الاتصال وأعد المحاولة');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   // ── تنسيقات صغيرة ──
   const fmtDateTime = (iso: string) =>
     new Date(iso).toLocaleString('ar-SA', { dateStyle: 'medium', timeStyle: 'short' });
@@ -679,6 +802,28 @@ const SimpleServicePage: React.FC = () => {
             {allowed.includes('closed') && (
               <button className="ssp2-btn" onClick={() => changeStatus('closed')}>إغلاق</button>
             )}
+            {/*
+              🔴 هذان الزرّان بلا `disabled={isLocked}` — عمداً:
+              `isLocked` يقفل **المحتوى** (المهام/المراحل/التدوين) لأن `SimpleServiceController`
+              يردّ 422 عند closed/cancelled/archived، أمّا `PUT /legal-services/{id}` و
+              `DELETE /legal-services/{id}` فبلا أيّ حارس قفل — يعملان في كل الحالات.
+              لا تُلحِقهما بـ`isLocked` «توحيداً» فتُعطَّل وظيفةٌ يسمح بها الباك.
+            */}
+            <button
+              className="ssp2-btn"
+              onClick={() => setEditOpen(true)}
+              title="تعديل بيانات الخدمة: العنوان والمسؤولين والأولوية والفوترة والمبالغ والتواريخ والملاحظات"
+            >
+              <Pencil size={14} /> تعديل البيانات
+            </button>
+            <button
+              className="ssp2-btn"
+              style={{ color: 'var(--status-red)', borderColor: 'var(--status-red)' }}
+              onClick={openDeleteConfirm}
+              title="نقل الخدمة إلى سلّة المحذوفات (يمكن استعادتها)"
+            >
+              <Trash2 size={14} /> حذف
+            </button>
           </div>
         </div>
 
@@ -1287,6 +1432,82 @@ const SimpleServicePage: React.FC = () => {
           )}
         </MiniModal>
       )}
+
+      {/*
+        تعديل بيانات الخدمة — بلا شرط `isLocked` (انظر تعليق الزرّ في الترويسة).
+        الحفظ يُحدَّث محلياً بلا إعادة جلب: المودال يسلّم كائناً مدموجاً، ونحفظ فوقه
+        `simple_service_detail` و`service_activities` المحمَّلَين لأن `update` يردّ
+        `$service->fresh()` — موديلاً عارياً بلا علاقات، فلا يُسمح له بمحوهما.
+      */}
+      {editOpen && (
+        <EditServiceModal
+          isOpen={editOpen}
+          onClose={() => setEditOpen(false)}
+          service={service}
+          onSaved={(updated) =>
+            setService((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    ...updated,
+                    simple_service_detail: updated.simple_service_detail ?? prev.simple_service_detail,
+                    service_activities: updated.service_activities ?? prev.service_activities,
+                  }
+                : updated,
+            )
+          }
+        />
+      )}
+
+      {/*
+        نافذةٌ واحدة بمرحلتين: الأولى تقول الحقيقة (سلّة محذوفات لا إعدام)، والثانية —
+        حين يردّ الباك 409 — تعرض أرقام الأثر المالي قبل التأكيد بـ`confirm=1`.
+      */}
+      <ConfirmDialog
+        isOpen={deleteOpen}
+        variant="danger"
+        loading={deleteLoading}
+        onClose={closeDeleteConfirm}
+        onConfirm={() => runDelete(deleteImpact !== null)}
+        confirmLabel={deleteImpact ? 'حذف رغم الارتباط المالي' : 'نقل إلى سلّة المحذوفات'}
+        title={deleteImpact ? 'الخدمة مرتبطة بسجلات مالية' : 'حذف الخدمة'}
+        message={
+          deleteImpact ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>{deleteImpactMessage || 'هذه الخدمة مرتبطة بسجلات مالية قائمة.'}</div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'auto 1fr',
+                  gap: '4px 14px',
+                  fontSize: 12.5,
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 4,
+                  padding: '8px 10px',
+                }}
+              >
+                <span style={{ color: 'var(--color-text-secondary)' }}>عدد الفواتير</span>
+                <strong>{deleteImpact.invoices_count}</strong>
+                <span style={{ color: 'var(--color-text-secondary)' }}>مجموع الفواتير</span>
+                <strong>{Number(deleteImpact.invoices_total).toLocaleString('ar-SA')} ريال</strong>
+                <span style={{ color: 'var(--color-text-secondary)' }}>المدفوع منها</span>
+                <strong>{deleteImpact.paid_invoices_count}</strong>
+                <span style={{ color: 'var(--color-text-secondary)' }}>المهام المرتبطة</span>
+                <strong>{deleteImpact.tasks_count}</strong>
+                <span style={{ color: 'var(--color-text-secondary)' }}>المصروفات</span>
+                <strong>{deleteImpact.expenses_count}</strong>
+              </div>
+            </div>
+          ) : (
+            'تنتقل الخدمة إلى سلّة المحذوفات مع مراحلها ومهامها وتدويناتها ومخرجاتها، ويمكن استعادتها منها.'
+          )
+        }
+        note={
+          deleteImpact
+            ? 'الفواتير والمصروفات تبقى كما هي ويُذكر فيها أنّ الخدمة حُذفت. ولا تفقد ارتباطها بالخدمة إلا عند الحذف النهائي من سلّة المحذوفات.'
+            : 'الحذف ناعم — لا يُفقد شيء، والاستعادة من سلّة المحذوفات تعيد الخدمة وأبناءها معاً.'
+        }
+      />
     </div>
   );
 };

@@ -14,8 +14,11 @@ import {
   MessageCircle,
   User,
   Building,
-  Clock
+  Clock,
+  Link2,
+  ExternalLink
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import { CaseService } from '../services/caseService';
 import ClientCaseMemos from '../components/ClientCaseMemos';
@@ -24,6 +27,7 @@ import { MessageService } from '../services/messageService';
 import { ActivityService } from '../services/activityService';
 import type { TimelineItem } from '../services/activityService';
 import type { Case, Document } from '../types';
+import { isExternalLinkDoc, safeExternalHref, externalLinkHost } from '../types';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const ClientCaseDetail: React.FC = () => {
@@ -145,12 +149,36 @@ const ClientCaseDetail: React.FC = () => {
     return roles[role] || role;
   };
 
+  /**
+   * الرابط الخارجي لا يمرّ بمسار المعاينة/التنزيل إطلاقاً — الباك يردّ له 200 ومعه
+   * JSON (`{success, external:true, url}`) لا ملفاً. فالمعاينة كانت تفتح للعميل تبويباً
+   * فيه JSON خام يحوي الرابط، والتنزيل كان ينجح (`response.ok` صادقة و`.blob()` يمرّ)
+   * فيحفظ ذلك الـJSON ملفاً باسم عنوان الرابط. الخروج المبكر هنا يقطع الحالتين معاً.
+   *
+   * ويمرّ الفتح بـ`safeExternalHref` لأن حراسة الباك عند **الإنشاء** ليست حراسةً عند
+   * **العرض**، وحماية React لـ`href` لا تلمس `window.open` إطلاقاً.
+   *
+   * @returns true إن كانت الوثيقة رابطاً — أي أن النداء عُولج هنا ويجب أن يتوقّف.
+   */
+  const openExternalDoc = (doc: Document): boolean => {
+    if (!isExternalLinkDoc(doc)) return false;
+    const href = safeExternalHref(doc.external_url);
+    if (!href) {
+      toast.error('رابط غير صالح — تعذّر فتح هذه الوثيقة');
+      return true;
+    }
+    window.open(href, '_blank', 'noopener,noreferrer');
+    return true;
+  };
+
   const handleDocumentPreview = (doc: Document) => {
+    if (openExternalDoc(doc)) return;
     const previewUrl = `https://api.alraedlaw.com/api/v1/documents/${doc.id}/preview`;
-    window.open(previewUrl, '_blank');
+    window.open(previewUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleDocumentDownload = async (doc: Document) => {
+    if (openExternalDoc(doc)) return;
     try {
       const blob = await DocumentService.downloadDocument(doc.id);
       const url = window.URL.createObjectURL(blob);
@@ -341,13 +369,40 @@ const ClientCaseDetail: React.FC = () => {
                 </div>
               ) : (
                 <div className="documents-list">
-                  {documents.map((doc) => (
+                  {documents.map((doc) => {
+                    // الرابط والملف صفّان مختلفان: الرابط بلا حجم ولا تنزيل، ونطاقه يُعرض قبل النقر.
+                    const isLink = isExternalLinkDoc(doc);
+                    const linkHref = isLink ? safeExternalHref(doc.external_url) : null;
+                    const linkHost = isLink ? externalLinkHost(doc.external_url) : null;
+                    const linkBroken = isLink && !linkHref;
+                    return (
                     <div key={doc.id} className="document-item">
                       <div className="document-item__icon">
-                        <FileText size={20} />
+                        {isLink ? <Link2 size={20} /> : <FileText size={20} />}
                       </div>
                       <div className="document-item__content">
-                        <h4 className="document-item__title">{doc.title}</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <h4 className="document-item__title">{doc.title}</h4>
+                          {isLink && !linkBroken && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0, fontSize: 11, lineHeight: '17px', padding: '0 5px', borderRadius: 2, border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}>
+                              <Link2 size={10} /> رابط خارجي
+                            </span>
+                          )}
+                          {linkBroken && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0, fontSize: 11, lineHeight: '17px', padding: '0 5px', borderRadius: 2, border: '1px solid var(--status-orange, #a05a00)', color: 'var(--status-orange, #a05a00)' }}>
+                              <AlertCircle size={10} /> رابط غير صالح
+                            </span>
+                          )}
+                        </div>
+                        {/* النطاق تحت العنوان: يكشف إلى أين يقود الرابط قبل النقر */}
+                        {linkHost && (
+                          <div
+                            dir="ltr"
+                            style={{ marginTop: 2, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 11, color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}
+                          >
+                            {linkHost}
+                          </div>
+                        )}
                         {doc.description && (
                           <p className="document-item__desc">{doc.description}</p>
                         )}
@@ -356,7 +411,7 @@ const ClientCaseDetail: React.FC = () => {
                             <Clock size={12} />
                             {formatDate(doc.uploaded_at || doc.uploadedAt)}
                           </span>
-                          {doc.file_size && (
+                          {!isLink && doc.file_size && (
                             <span className="document-item__meta-item">
                               {(doc.file_size / 1024 / 1024).toFixed(1)} MB
                             </span>
@@ -374,20 +429,25 @@ const ClientCaseDetail: React.FC = () => {
                         </div>
                       </div>
                       <div className="document-item__actions">
+                        {/* الرابط المعطوب لا يُنقَر أصلاً — لا فتحَ ولا تنزيل */}
                         <button
                           onClick={() => handleDocumentPreview(doc)}
                           className="document-item__btn"
-                          title="معاينة"
+                          disabled={linkBroken}
+                          style={linkBroken ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                          title={linkBroken ? 'رابط غير صالح' : isLink ? 'فتح الرابط' : 'معاينة'}
                         >
-                          <Eye size={16} />
+                          {isLink ? <ExternalLink size={16} /> : <Eye size={16} />}
                         </button>
-                        <button
-                          onClick={() => handleDocumentDownload(doc)}
-                          className="document-item__btn"
-                          title="تحميل"
-                        >
-                          <Download size={16} />
-                        </button>
+                        {!isLink && (
+                          <button
+                            onClick={() => handleDocumentDownload(doc)}
+                            className="document-item__btn"
+                            title="تحميل"
+                          >
+                            <Download size={16} />
+                          </button>
+                        )}
                         <button
                           onClick={() => setShowCommentForm(showCommentForm === parseInt(doc.id) ? null : parseInt(doc.id))}
                           className="document-item__btn"
@@ -427,7 +487,8 @@ const ClientCaseDetail: React.FC = () => {
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -447,7 +508,7 @@ const ClientCaseDetail: React.FC = () => {
             <div className="detail-card__body">
               <div className="timeline">
                 {activities.length === 0 ? (
-                  <p style={{ textAlign: 'center', color: '#999', padding: '1rem 0' }}>لا توجد أنشطة بعد</p>
+                  <p style={{ textAlign: 'center', color: 'var(--color-text-secondary)', padding: '1rem 0' }}>لا توجد أنشطة بعد</p>
                 ) : activities.map((activity) => (
                   <div key={`${activity.type}-${activity.id}`} className="timeline-item">
                     <div className={`timeline-item__icon ${getActivityIconClass(activity.type)}`}>

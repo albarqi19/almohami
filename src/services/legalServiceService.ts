@@ -19,6 +19,20 @@ import type {
   ServicePortalLinkItem,
   ContractAuditResult,
 } from '../types/legalServices';
+import type { ExternalLinkPayload } from '../types';
+
+/**
+ * صفّ ربط المستند بالخدمة كما يعيده مسار «إضافة رابط» — الوثيقة داخل `document`
+ * وتحمل `external_url` (المميّز الوحيد للرابط عن الملف).
+ */
+export type ServiceDocumentLinkRow = ServiceDocumentItem & {
+  document?: NonNullable<ServiceDocumentItem['document']> & {
+    external_url?: string | null;
+    document_type?: string | null;
+    category?: string | null;
+    is_confidential?: boolean;
+  };
+};
 
 export class LegalServiceService {
   private static buildQueryString(filters: LegalServiceFilters): string {
@@ -54,6 +68,17 @@ export class LegalServiceService {
     return apiClient.put<LegalServiceResponse>(`/legal-services/${id}`, { work_notes: workNotes });
   }
 
+  /**
+   * ⚠️ **لا تستعملها لحذف خدمة من شاشة التفاصيل.** تمرّ بـ`apiClient` وهو **يبتلع الـ409**:
+   * `src/utils/api.ts` (نحو 101–114) ينسخ `message` و`errors` فقط ويُسقط `error_code`
+   * و`impact`. والـ409 في هذا المسار ليس خطأً بل «يلزم تأكيد» ومعه أعداد ما سيُحذف —
+   * فبهذه الدالّة يصل المستخدمَ نصٌّ عامّ بلا أرقام، ولا سبيل لتمييز طلبِ التأكيد عن أيّ
+   * تعارضٍ آخر (كلاهما 409 بلا `error_code`).
+   *
+   * البديل القائم: `requestServiceDeletion` في `pages/legal-services/LegalServiceDetail.tsx`
+   * — `fetch` خام يقرأ الجسم كاملاً فيبني نافذة التأكيد بالأثر الحقيقي.
+   * لا مستدعيَ لهذه اليوم، وتُبقى للحذف المباشر بلا تدفّق تأكيد.
+   */
   static async deleteService(id: number): Promise<{ success: boolean; message: string }> {
     return apiClient.delete(`/legal-services/${id}`);
   }
@@ -161,6 +186,27 @@ export class LegalServiceService {
 
   static async removeDocument(id: number, docId: number): Promise<{ success: boolean; message: string }> {
     return apiClient.delete(`/legal-services/${id}/documents/${docId}`);
+  }
+
+  /**
+   * إضافة رابط خارجي كمستند للخدمة (بلا ملف مرفوع).
+   * POST /legal-services/{id}/documents/link — الردّ 201 و`data` صفُّ الربط والوثيقة داخل `data.document`.
+   * الباك يرفض ما لا يبدأ بـhttp://‏ أو https:// برسالة عربية (422).
+   *
+   * ترمي عند `success:false` أسوةً بشقيقتيها `documentService.createCaseLink` و
+   * `taskService.addTaskLink`: ردُّ 200 بجسمٍ فاشل لا يمرّ بمعالج أخطاء `apiClient`،
+   * فلو أُعيد خاماً لظنّت النافذةُ أن الإضافة تمّت — تُغلق، ويُصفَّر المُدخَل، ويُطلق توست
+   * النجاح، ولا صفَّ في القائمة. شكل الإرجاع يبقى كما هو (`res.data.document`).
+   */
+  static async addDocumentLink(id: number, payload: ExternalLinkPayload): Promise<{ success: boolean; data: ServiceDocumentLinkRow; message?: string }> {
+    const response = await apiClient.post<{ success: boolean; data: ServiceDocumentLinkRow; message?: string }>(
+      `/legal-services/${id}/documents/link`,
+      payload,
+    );
+    if (!response.success || !response.data) {
+      throw new Error(response.message || 'فشل إضافة الرابط');
+    }
+    return response;
   }
 
   // ── الخدمة المبسطة (مسار عمل حرّ) ──
@@ -577,6 +623,7 @@ export const legalServiceService = {
   getDocuments: LegalServiceService.getDocuments.bind(LegalServiceService),
   uploadDocument: LegalServiceService.uploadDocument.bind(LegalServiceService),
   removeDocument: LegalServiceService.removeDocument.bind(LegalServiceService),
+  addDocumentLink: LegalServiceService.addDocumentLink.bind(LegalServiceService),
   convertToCase: LegalServiceService.convertToCase.bind(LegalServiceService),
   createInvoice: LegalServiceService.createInvoice.bind(LegalServiceService),
   // المخرجات الرسمية
