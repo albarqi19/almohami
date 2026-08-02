@@ -7,7 +7,9 @@ export function generateLetterheadHTML(
   letterhead: Letterhead | Partial<Letterhead>,
   content: string,
   title?: string,
-  lawyerName?: string
+  lawyerName?: string,
+  /** رابط ملفّ خط المتن — يُسجَّل بـ@font-face فتطابق المعاينة المطبوع. */
+  bodyFontUrl?: string | null
 ): string {
   const {
     type = 'dynamic',
@@ -226,6 +228,17 @@ export function generateLetterheadHTML(
     }
   ` : '';
 
+  /**
+   * خط المتن: يُسجَّل من ملفّ الباك نفسه إن مُرِّر، وإلا بقي الاحتياطي النظامي.
+   * (اسم العائلة ثابت فلا يتسرّب مفتاح الخط إلى CSS.)
+   */
+  const bodyFontCSS = bodyFontUrl
+    ? `@font-face { font-family: 'lh-body'; src: url('${bodyFontUrl}'); font-display: swap; }`
+    : '';
+  const bodyFontStack = bodyFontUrl
+    ? `'lh-body', 'Times New Roman', 'Traditional Arabic', serif`
+    : `'Times New Roman', 'Traditional Arabic', serif`;
+
   return `
     <!DOCTYPE html>
     <html dir="rtl" lang="ar">
@@ -233,9 +246,12 @@ export function generateLetterheadHTML(
       <meta charset="UTF-8">
       <title>${title || 'طباعة'}</title>
       <style>
+        ${bodyFontCSS}
+
+        /* ترتيب اختصار margin هو: أعلى · يمين · أسفل · يسار */
         @page {
           size: A4;
-          margin: ${margin_top_mm}mm ${margin_left_mm}mm ${margin_bottom_mm}mm ${margin_right_mm}mm;
+          margin: ${margin_top_mm}mm ${margin_right_mm}mm ${margin_bottom_mm}mm ${margin_left_mm}mm;
         }
 
         ${pageNumberCSS}
@@ -254,12 +270,42 @@ export function generateLetterheadHTML(
         }
 
         body {
-          font-family: 'Times New Roman', 'Traditional Arabic', serif;
+          font-family: ${bodyFontStack};
           direction: rtl;
           color: ${text_color};
           font-size: 14px;
           line-height: 1.8;
           background: white;
+        }
+
+        /*
+         * على الشاشة (معاينة داخل iframe) لا أثر لـ@page إطلاقاً — المتصفح يطبّق
+         * هوامشه عند الطباعة وحدها. فبدونها كان النص يبدأ من الزاوية العليا فوق
+         * ترويسة الورق، وتُزاح صورة الورق خارج الإطار بمقدار الهوامش، فتظهر
+         * المعاينة مكسورةً بينما المطبوع سليم. هنا تُرسم ورقةٌ A4 حقيقية بالهوامش
+         * نفسها، فما يُرى هو ما يُطبع.
+         */
+        @media screen {
+          html {
+            background: #eef0f3;
+          }
+          body {
+            width: 210mm;
+            min-height: 297mm;
+            height: auto;
+            margin: 0 auto;
+            padding: ${margin_top_mm}mm ${margin_right_mm}mm ${margin_bottom_mm}mm ${margin_left_mm}mm;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.14);
+          }
+          /* الطبقات الثابتة تُثبَّت داخل الورقة لا داخل نافذة العرض */
+          .letterhead-paper-bg,
+          .letterhead-header,
+          .letterhead-footer,
+          .watermark-container {
+            position: absolute !important;
+          }
         }
 
         /* الورق الرسمي كاملاً: ثابت ⇒ يكرّره Chrome على كل صفحة مطبوعة، وخلف المتن */

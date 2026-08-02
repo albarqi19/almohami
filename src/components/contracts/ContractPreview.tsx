@@ -4,6 +4,7 @@ import { X, Printer, Download, Loader2, FileText } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { useContractVariables } from '../../hooks/useContractVariables';
 import { LetterheadService } from '../../services/letterheadService';
+import { letterheadGeometry } from '../../utils/letterheadGeometry';
 import type { Letterhead } from '../../types/letterhead';
 
 export interface ContractPreviewProps {
@@ -61,20 +62,20 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
   // Get letterhead settings
   const lh = letterheadEnabled && letterhead ? letterhead : null;
 
-  // ورقة كاملة: لا رأس ولا تذييل — الورق المرفوع خلفية الصفحة، والهوامش منطقة الكتابة
-  const isFullPageLh = lh?.type === 'full_page' && !!lh.background_image_url;
+  /**
+   * الهندسة من المصدر الواحد المشترك مع الباك — كانت تُحسب هنا بأرقامٍ خاصة
+   * (رأس ديناميكي ٤٠مم، هامش افتراضي ١٠مم) فتفترق المعاينة عن الملف المولَّد.
+   */
+  const geo = letterheadGeometry(lh);
+  const isFullPageLh = geo.isFullPage;
+  const { headerHeightMM, footerHeightMM } = geo;
+  const marginTopMM = geo.contentTopMM;
+  const marginBottomMM = geo.contentBottomMM;
+  const marginRightMM = geo.contentRightMM;
+  const marginLeftMM = geo.contentLeftMM;
 
-  // Calculate dimensions based on letterhead
-  const headerHeightMM = isFullPageLh ? 0 : lh?.type === 'image' ? (lh.header_height_mm || 30) : lh?.type === 'dynamic' ? 40 : 15;
-  const footerHeightMM = isFullPageLh ? 0 : lh?.type === 'image' ? (lh.footer_height_mm || 25) : lh?.type === 'dynamic' ? 25 : 15;
-  const marginTopMM = lh?.margin_top_mm || 10;
-  const marginBottomMM = lh?.margin_bottom_mm || 10;
-  const marginRightMM = lh?.margin_right_mm || 20;
-  const marginLeftMM = lh?.margin_left_mm || 20;
-
-  // Content area height per page (excluding header, footer, and margins)
-  const contentAreaHeightMM = A4_HEIGHT_MM - headerHeightMM - footerHeightMM - marginTopMM - marginBottomMM;
-  const contentAreaHeightPx = contentAreaHeightMM * MM_TO_PX;
+  // ارتفاع منطقة المتن على الصفحة الواحدة (الهندسة تحسب الكروم داخل الهوامش)
+  const contentAreaHeightPx = geo.contentHeightMM * MM_TO_PX;
 
   // Fetch letterhead
   useEffect(() => {
@@ -104,6 +105,45 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
     };
     fetchLetterhead();
   }, [letterheadProp, letterheadId, useLetterhead]);
+
+  /**
+   * خط المتن: يُسجَّل ملفُّ الخط نفسه الذي يُضمَّن في الـPDF بـ@font-face، فتُقرأ
+   * المعاينة بعين ما سيُطبع. يبقى الاحتياطي حتى يصل السجلّ.
+   */
+  const [bodyFontFamily, setBodyFontFamily] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!letterheadEnabled) {
+      setBodyFontFamily(undefined);
+      return;
+    }
+
+    let cancelled = false;
+    const STYLE_ID = 'contract-preview-font-face';
+
+    LetterheadService.getFonts()
+      .then((res) => {
+        if (cancelled || !res?.success) return;
+        const key = letterhead?.body_font ?? res.default;
+        const font = res.data.find((f) => f.key === key);
+        if (!font) return;
+
+        let style = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
+        if (!style) {
+          style = document.createElement('style');
+          style.id = STYLE_ID;
+          document.head.appendChild(style);
+        }
+        style.textContent =
+          `@font-face{font-family:'cpv-${font.key}';src:url('${font.file_url}');font-display:swap;}`;
+        setBodyFontFamily(`'cpv-${font.key}', 'Times New Roman', serif`);
+      })
+      .catch(() => setBodyFontFamily(undefined));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [letterhead?.body_font, letterheadEnabled]);
 
   // Preload images
   useEffect(() => {
@@ -146,13 +186,16 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
 
     setIsCalculating(true);
 
+    // القياس بخطّ العرض نفسه — قياسٌ بخطٍّ آخر يقطع الصفحات في مواضع خاطئة
+    const measureFont = bodyFontFamily || `'Times New Roman', 'Traditional Arabic', serif`;
+
     // Create a temporary container to measure content
     const tempContainer = document.createElement('div');
     tempContainer.style.cssText = `
       position: absolute;
       visibility: hidden;
       width: ${A4_WIDTH_MM - marginRightMM - marginLeftMM}mm;
-      font-family: 'Times New Roman', 'Traditional Arabic', serif;
+      font-family: ${measureFont};
       font-size: 14px;
       line-height: 1.8;
       direction: rtl;
@@ -173,7 +216,7 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
         position: absolute;
         visibility: hidden;
         width: ${A4_WIDTH_MM - marginRightMM - marginLeftMM}mm;
-        font-family: 'Times New Roman', 'Traditional Arabic', serif;
+        font-family: ${measureFont};
         font-size: 14px;
         line-height: 1.8;
         direction: rtl;
@@ -216,7 +259,8 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
 
     setPages(paginatedPages.length > 0 ? paginatedPages : [previewContent]);
     setIsCalculating(false);
-  }, [previewContent, contentAreaHeightPx, marginRightMM, marginLeftMM]);
+    // يُعاد التقطيع حين يصل ملفّ الخط — مقاساتُ الأسطر تتغيّر بتغيّر الخط
+  }, [previewContent, contentAreaHeightPx, marginRightMM, marginLeftMM, bodyFontFamily]);
 
   // Recalculate pages when content or letterhead changes
   useEffect(() => {
@@ -227,20 +271,21 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
     }
   }, [imagesLoaded, previewContent, letterheadEnabled, letterhead, paginateContent]);
 
-  // Print margins
-  const printHeaderHeight = isFullPageLh ? 0 : lh?.type === 'image' ? (lh.header_height_mm || 30) : lh?.type === 'dynamic' ? 40 : 15;
-  const printFooterHeight = isFullPageLh ? 0 : lh?.type === 'image' ? (lh.footer_height_mm || 25) : lh?.type === 'dynamic' ? 25 : 15;
-  const printMarginRight = lh?.margin_right_mm || 15;
-  const printMarginLeft = lh?.margin_left_mm || 15;
-
-  // Print handler using react-to-print
+  /**
+   * الطباعة: كل ورقة `.contract-preview-paper` مقصوصةٌ مسبقاً بمقاس A4 كامل وتحمل
+   * كليشتها وهوامشها داخلها. فهامش @page هنا **صفر** — أيّ هامشٍ يُضاف يُقلّص الورقة
+   * ويُدخل صفحةً فارغة بعد كل صفحة.
+   *
+   * (كان يضع ارتفاعَي الرأس والتذييل مكان هامشَي أعلى/أسفل، وهما صفران في «الورقة
+   * الكاملة»، ويقلب اليمين واليسار — فيختلف المطبوع عن المعاينة بلا سبب ظاهر.)
+   */
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: title,
     pageStyle: `
       @page {
         size: A4;
-        margin: ${printHeaderHeight}mm ${printMarginLeft}mm ${printFooterHeight}mm ${printMarginRight}mm;
+        margin: 0;
       }
       @media print {
         html, body {
@@ -248,6 +293,8 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
           margin: 0 !important;
           padding: 0 !important;
         }
+        .contract-preview-page { break-after: page; }
+        .contract-preview-page:last-child { break-after: auto; }
       }
     `,
   });
@@ -535,19 +582,22 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({
                   {renderHeader()}
 
                   {/* Content */}
+                  {/*
+                    الهوامش مقيسةٌ من حافة الورقة وتشمل ارتفاع الكروم أصلاً، فالمتن
+                    يمتدّ على الورقة كاملةً ويُزاح بالحشو وحده — لا بـtop/bottom فوقه،
+                    وإلا حُسب ارتفاع الرأس/التذييل مرتين وانكمشت منطقة الكتابة.
+                  */}
                   <div
                     className="contract-content"
                     style={{
                       position: 'absolute',
-                      top: `${headerHeightMM}mm`,
-                      bottom: `${footerHeightMM}mm`,
-                      left: 0,
-                      right: 0,
+                      inset: 0,
                       paddingTop: `${marginTopMM}mm`,
                       paddingBottom: `${marginBottomMM}mm`,
                       paddingRight: `${marginRightMM}mm`,
                       paddingLeft: `${marginLeftMM}mm`,
                       overflow: 'hidden',
+                      fontFamily: bodyFontFamily,
                     }}
                     dangerouslySetInnerHTML={{ __html: pageContent }}
                   />

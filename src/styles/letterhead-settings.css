@@ -364,6 +364,73 @@ body.dark .letterhead-type-selection {
     color: var(--color-text-secondary);
 }
 
+/* === اختيار خط المتن === */
+/* كل بطاقة تعرض عيّنتها بملفّ الخط نفسه الذي يدخل الـPDF (@font-face من الباك). */
+
+.letterhead-font-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+}
+
+.letterhead-font-option {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    text-align: right;
+    background: var(--dashboard-card);
+    border: 2px solid var(--color-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+    font-family: inherit;
+}
+
+.letterhead-font-option:hover {
+    border-color: var(--law-navy-light);
+}
+
+.letterhead-font-option--active {
+    border-color: var(--law-navy);
+}
+
+.letterhead-font-option__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--law-navy);
+}
+
+.letterhead-font-option__name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.letterhead-font-option__badge {
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 3px;
+    background: var(--law-navy-light);
+    color: var(--law-navy);
+}
+
+/* العيّنة: أكبر قليلاً ليَبين فرقُ الرسم بين الخطوط، وسطرٌ واحد بلا التفاف */
+.letterhead-font-option__sample {
+    font-size: 19px;
+    line-height: 1.9;
+    color: var(--color-heading);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.letterhead-font-option__note {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
 /* === Tabs === */
 .letterhead-tabs {
     display: flex;
@@ -850,7 +917,9 @@ body.dark .letterhead-preview-panel {
 
 .letterhead-preview-frame iframe {
     width: 100%;
-    height: 600px;
+    /* ورقة A4 كاملة (297مم ≈ 1123px) + هامشٌ يسير — أقلُّ من ذلك يقصّ الورقة
+       فيظنّ المستخدم أن التذييل مفقود. اللوحة الحاوية تتكفّل بالتمرير. */
+    height: 1160px;
     border: none;
 }
 

@@ -4,6 +4,7 @@ import type {
   LetterheadFormData,
   LetterheadResponse,
   LetterheadListResponse,
+  LetterheadFontsResponse,
   ImageUploadResponse,
 } from '../types/letterhead';
 
@@ -38,6 +39,14 @@ export class LetterheadService {
    */
   static async getDefault(): Promise<LetterheadResponse> {
     return apiClient.get<LetterheadResponse>('/letterheads/default');
+  }
+
+  /**
+   * الخطوط المتاحة لمتن المستند، ومعها رابط ملفّ كلٍّ منها للمعاينة الحيّة.
+   * القائمة من الباك حصراً — أيّ نسخةٍ منها هنا تفترق يوماً عمّا يُطبع فعلاً.
+   */
+  static async getFonts(): Promise<LetterheadFontsResponse> {
+    return apiClient.get<LetterheadFontsResponse>('/letterheads/fonts');
   }
 
   /**

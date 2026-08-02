@@ -20,6 +20,26 @@ export const A4_HEIGHT_MM = 297;
 /** المقاس الموصى به لصورة الورقة الكاملة (٢٠٠dpi) — PNG بخلفية بيضاء صلبة. */
 export const FULL_PAGE_RECOMMENDED_PX = { width: 1654, height: 2339 } as const;
 
+/**
+ * خطّ متن المستند — سجلّه على الباك (MpdfFactory::FONTS)، ويُجلب بـLetterheadService.getFonts()
+ * فلا تُكرَّر القائمة هنا وتفترق عمّا يُطبع فعلاً.
+ */
+export interface LetterheadFont {
+  key: string;
+  label: string;
+  note: string;
+  has_bold: boolean;
+  is_default: boolean;
+  /** ملفّ الخط نفسه — يُسجَّل بـ@font-face فتكون المعاينة بعين ما سيُطبع. */
+  file_url: string;
+}
+
+export interface LetterheadFontsResponse {
+  success: boolean;
+  data: LetterheadFont[];
+  default: string;
+}
+
 // Watermark Types
 export type WatermarkType = 'text' | 'image';
 export type WatermarkPosition = 'center' | 'top' | 'bottom' | 'repeat';
@@ -84,11 +104,21 @@ export interface Letterhead {
   secondary_color: string;
   text_color: string;
 
+  /** خط متن المستند (مفتاح من LetterheadFont) — null = الخط الموحّد. */
+  body_font: string | null;
+
   // Margins (in mm)
   margin_top_mm: number;
   margin_bottom_mm: number;
   margin_right_mm: number;
   margin_left_mm: number;
+
+  /**
+   * هل الهوامش الأربعة مسافاتٌ مطلقة من حافة الورقة؟
+   * الكليشات المنشأة قبل هذا الحقل تُبقيه مطفأً فلا يتزحزح مستندٌ صدر.
+   * «الورقة الكاملة» مطلقةٌ دائماً بغضّ النظر عنه.
+   */
+  margins_are_absolute: boolean;
 
   // Watermark - Primary
   watermark_enabled: boolean;
@@ -163,12 +193,14 @@ export interface LetterheadFormData {
   primary_color?: string;
   secondary_color?: string;
   text_color?: string;
+  body_font?: string | null;
 
   // Margins
   margin_top_mm?: number;
   margin_bottom_mm?: number;
   margin_right_mm?: number;
   margin_left_mm?: number;
+  margins_are_absolute?: boolean;
 
   // Watermark - Primary
   watermark_enabled?: boolean;
@@ -240,12 +272,15 @@ export const DEFAULT_LETTERHEAD: Partial<LetterheadFormData> = {
   primary_color: '#C5A059',
   secondary_color: '#1a1a1a',
   text_color: '#333333',
+  body_font: null,
   header_height_mm: 30,
   footer_height_mm: 25,
   margin_top_mm: 25,
   margin_bottom_mm: 20,
   margin_right_mm: 20,
   margin_left_mm: 20,
+  // الكليشات الجديدة تحترم أرقام الهوامش كما كُتبت — القديمة تبقى على سلوكها.
+  margins_are_absolute: true,
   // Watermark defaults
   watermark_enabled: false,
   watermark_type: 'text',

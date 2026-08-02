@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   Upload,
@@ -19,6 +19,7 @@ import {
 import { LetterheadService } from '../../services/letterheadService';
 import type {
   Letterhead,
+  LetterheadFont,
   LetterheadFormData,
   LogoPosition,
   PageNumberFormat,
@@ -51,6 +52,8 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
   const [activeTab, setActiveTab] = useState<'general' | 'paper' | 'header' | 'footer' | 'margins' | 'watermark'>('general');
   /** ملاحظات الباك على صورة الورقة المرفوعة (نسبة/دقة/اتجاه). */
   const [paperWarnings, setPaperWarnings] = useState<string[]>([]);
+  /** سجلّ الخطوط من الباك — لا تُكرَّر القائمة هنا فتفترق عمّا يُطبع. */
+  const [fonts, setFonts] = useState<LetterheadFont[]>([]);
 
   // Form state
   const [formData, setFormData] = useState<LetterheadFormData>({
@@ -86,11 +89,14 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
     primary_color: letterhead?.primary_color || DEFAULT_LETTERHEAD.primary_color,
     secondary_color: letterhead?.secondary_color || DEFAULT_LETTERHEAD.secondary_color,
     text_color: letterhead?.text_color || DEFAULT_LETTERHEAD.text_color,
+    body_font: letterhead?.body_font ?? DEFAULT_LETTERHEAD.body_font,
     // Margins
     margin_top_mm: letterhead?.margin_top_mm || DEFAULT_LETTERHEAD.margin_top_mm,
     margin_bottom_mm: letterhead?.margin_bottom_mm || DEFAULT_LETTERHEAD.margin_bottom_mm,
     margin_right_mm: letterhead?.margin_right_mm || DEFAULT_LETTERHEAD.margin_right_mm,
     margin_left_mm: letterhead?.margin_left_mm || DEFAULT_LETTERHEAD.margin_left_mm,
+    // كليشةٌ قائمة تحتفظ بدلالتها؛ الجديدة تحترم الأرقام كما كُتبت.
+    margins_are_absolute: letterhead?.margins_are_absolute ?? DEFAULT_LETTERHEAD.margins_are_absolute,
     // Watermark - Primary
     watermark_enabled: letterhead?.watermark_enabled ?? DEFAULT_LETTERHEAD.watermark_enabled,
     watermark_type: letterhead?.watermark_type || DEFAULT_LETTERHEAD.watermark_type,
@@ -121,6 +127,50 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
   });
 
   const isFullPage = formData.type === 'full_page';
+
+  /**
+   * سجلّ الخطوط + تسجيلها في المتصفح بـ@font-face.
+   *
+   * تُحمَّل ملفّات الخطوط نفسها التي يضمّنها الـPDF، فالمعاينة هي المطبوع بعينه لا
+   * محاكاةٌ بخطٍّ نظاميّ قريب. `font-display: swap` يُظهر النص فوراً بخطٍّ احتياطي
+   * ريثما يصل الملف، و`immutable` على الباك يجعلها تُحمَّل مرةً واحدة للأبد.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    const STYLE_ID = 'letterhead-font-faces';
+
+    LetterheadService.getFonts()
+      .then((res) => {
+        if (cancelled || !res?.success || !Array.isArray(res.data)) return;
+        setFonts(res.data);
+
+        const css = res.data
+          .map(
+            (f) =>
+              `@font-face{font-family:'lhf-${f.key}';src:url('${f.file_url}');font-display:swap;}`
+          )
+          .join('\n');
+
+        let style = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
+        if (!style) {
+          style = document.createElement('style');
+          style.id = STYLE_ID;
+          document.head.appendChild(style);
+        }
+        style.textContent = css;
+      })
+      .catch(() => {
+        // تعذّر جلب السجلّ: يبقى الخط الافتراضي، ولا يُعرض المنتقي فارغاً بلا معنى
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** اسم عائلة الخط في المتصفح لمفتاحٍ من السجلّ. */
+  const previewFamily = (key: string | null | undefined) =>
+    key ? `'lhf-${key}', serif` : undefined;
 
   // File input refs
   const headerImageRef = useRef<HTMLInputElement>(null);
@@ -496,6 +546,54 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* خط متن المستند — المعاينة بملفّ الخط نفسه الذي يدخل الـPDF */}
+                {fonts.length > 0 && (
+                  <div style={{ marginTop: 24 }}>
+                    <label className="letterhead-field__label">خط متن المستند</label>
+                    <p className="letterhead-helper" style={{ marginBottom: 10 }}>
+                      يُطبَّق على متن المستندات الصادرة بهذه الكليشة — الخطابات والمذكرات
+                      وعروض الأتعاب وتقارير الجلسات. المعاينة أدناه بالخط نفسه الذي سيُطبع.
+                    </p>
+                    <div className="letterhead-font-grid">
+                      {fonts.map((f) => {
+                        // الافتراضي يُخزَّن null لا مفتاحاً — فيتبع تغيير الافتراضي مستقبلاً
+                        const active = f.is_default ? !formData.body_font : formData.body_font === f.key;
+                        return (
+                          <button
+                            key={f.key}
+                            type="button"
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                body_font: f.is_default ? null : f.key,
+                              }))
+                            }
+                            className={`letterhead-font-option ${active ? 'letterhead-font-option--active' : ''}`}
+                          >
+                            <span className="letterhead-font-option__head">
+                              <span className="letterhead-font-option__name">{f.label}</span>
+                              {f.is_default && (
+                                <span className="letterhead-font-option__badge">الافتراضي</span>
+                              )}
+                              {active && <Check style={{ width: 15, height: 15 }} />}
+                            </span>
+                            <span
+                              className="letterhead-font-option__sample"
+                              style={{ fontFamily: previewFamily(f.key) }}
+                            >
+                              بسم الله الرحمن الرحيم — مذكرة جوابية ١٤٤٧هـ
+                            </span>
+                            <span className="letterhead-font-option__note">
+                              {f.note}
+                              {!f.has_bold && ' · العريض يُحاكى برسمٍ أثقل'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -819,6 +917,49 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
                     ? 'حدّد منطقة الكتابة داخل ورقك بالمليمتر — المسافة من كل حافة إلى حيث يبدأ النص. مقاس الصفحة A4 (210 × 297 مم)'
                     : 'حدد هوامش الطباعة بالمليمتر. مقاس الصفحة A4 (210 × 297 مم)'}
                 </p>
+
+                {/*
+                  دلالة الأرقام في النمطين الصوري والديناميكي. «الورقة الكاملة» مطلقةٌ
+                  دائماً فلا مفتاح لها — لكنّ الصمت عن ذلك يجعل المستخدم يبحث عن مفتاحٍ
+                  مفقود، فيُصرَّح بالسبب بدله.
+                */}
+                {isFullPage && (
+                  <div className="letterhead-watermark-info" style={{ marginBottom: 16 }}>
+                    <Info />
+                    <p style={{ margin: 0 }}>
+                      في «الورقة الكاملة» تُقاس هذه الأرقام من حافة الورقة دائماً — لا مفتاح
+                      لها ولا استثناء. النص يبدأ عند الرقم الذي تكتبه بالضبط، في الصفحة
+                      الأولى وما بعدها سواء.
+                      {formData.show_page_numbers && ' ورقمُ الصفحة يُحجز له شريطٌ داخل المنطقة فلا يقع على تذييل ورقك.'}
+                    </p>
+                  </div>
+                )}
+
+                {!isFullPage && (
+                  <div className="letterhead-watermark-info" style={{ marginBottom: 16 }}>
+                    <Info />
+                    <div style={{ flex: 1 }}>
+                      <label className="letterhead-checkbox" style={{ marginBottom: 6 }}>
+                        <input
+                          type="checkbox"
+                          checked={!!formData.margins_are_absolute}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, margins_are_absolute: e.target.checked }))
+                          }
+                        />
+                        <span className="letterhead-checkbox__label">
+                          اعتبر الأرقام مسافاتٍ مطلقة من حافة الورقة
+                        </span>
+                      </label>
+                      <p style={{ margin: 0 }}>
+                        {formData.margins_are_absolute
+                          ? 'النص يقف عند الرقم الذي تكتبه مقيساً من حافة الورقة. وإن كانت صورة الرأس أو التذييل أطول من رقمك، أُخذ الأكبر حمايةً من ركوب النص عليها.'
+                          : 'الدلالة القديمة: يُحسب الهامش من ارتفاع صورة الرأس/التذييل، وأرقامك أدناه لا أثر لها. أبقِه مطفأً إن كنت لا تريد تغيّر شكل مستنداتٍ صدرت بهذه الكليشة.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="letterhead-form-grid">
                   <div className="letterhead-field">
                     <label className="letterhead-field__label">الهامش العلوي (مم)</label>
