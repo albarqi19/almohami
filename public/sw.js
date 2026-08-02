@@ -5,7 +5,7 @@
 
 // 🔑 مفتاح الإصدار - يتم تحديثه تلقائياً عند كل build
 // يمكن تغييره يدوياً أو عبر script
-const SW_VERSION = '2026.08.01.0624';
+const SW_VERSION = '2026.08.02.1700';
 const CACHE_NAME = `law-firm-system-${SW_VERSION}`;
 
 // الملفات الأساسية للتخزين المؤقت

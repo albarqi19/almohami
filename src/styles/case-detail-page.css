@@ -1468,6 +1468,17 @@ body.dark .case-subject-content {
     opacity: 0.9;
 }
 
+/* معين — ديوان المظالم: نفس البنية بكحلي الديوان تمييزاً له عن أخضر ناجز */
+.case-najiz-link--moeen {
+    background: var(--law-navy-light);
+    border-color: color-mix(in srgb, var(--law-navy) 22%, transparent);
+}
+
+.case-najiz-link--moeen .case-najiz-link__icon,
+.case-najiz-link--moeen .case-najiz-link__btn {
+    background: var(--law-navy);
+}
+
 /* === Fees Section === */
 .case-fees-summary {
     display: grid;

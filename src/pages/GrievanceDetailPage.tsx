@@ -22,6 +22,7 @@ import {
   MapPin,
   X,
   Eye,
+  ExternalLink,
 } from 'lucide-react';
 import LegalMemoWorkspace from '../components/LegalMemoWorkspace';
 import CaseDocumentsModal from '../components/CaseDocumentsModal';
@@ -57,6 +58,29 @@ const parseHijri = (dateStr?: string | null) => {
   if (!m) return { day: '--', month: '--' };
   const monthIdx = Math.min(Math.max(parseInt(m[2], 10), 1), 12) - 1;
   return { day: String(parseInt(m[3], 10)), month: HIJRI_MONTHS[monthIdx] };
+};
+
+const MOEEN_HOST = 'moen.bog.gov.sa';
+
+// رابط تفاصيل الدعوى في بوابة معين. الإضافة تحفظ في vals_token رابطاً مطلقاً،
+// والاستيرادات الأقدم قد تحفظ مساراً نسبياً أو التوكن وحده — وأي مضيف سوى الديوان يُرفض.
+const moeenCaseUrl = (valsToken?: string | null): string | null => {
+  const raw = String(valsToken || '').trim();
+  if (!raw) return null;
+  try {
+    const path = raw.startsWith('/') ? raw : `/EServices/Tasks/Pages/Cases.aspx?vals=${encodeURIComponent(raw)}`;
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : path, `https://${MOEEN_HOST}`);
+    return url.hostname === MOEEN_HOST ? url.href : null;
+  } catch {
+    return null;
+  }
+};
+
+const formatSyncedAt = (value?: string | null): string => {
+  if (!value) return '';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
 const isSessionUpcoming = (s: GrievanceSession): boolean => {
@@ -158,6 +182,8 @@ export default function GrievanceDetailPage() {
   const memos = request.memos || [];
   const attachments = request.attachments || [];
   const isDecided = /مفصول/.test(request.case_status || '');
+  const portalUrl = moeenCaseUrl(request.vals_token);
+  const syncedAt = formatSyncedAt(request.najiz_synced_at);
 
   const basicFields: { label: string; value?: string | null }[] = [
     { label: 'رقم قيد الدعوى', value: request.register_no },
@@ -254,6 +280,31 @@ export default function GrievanceDetailPage() {
       {/* Layout بعمودين */}
       <div className="case-detail-layout">
         <div className="case-main-content">
+          {/* فتح في معين */}
+          {portalUrl && (
+            <div className="case-najiz-link case-najiz-link--moeen">
+              <div className="case-najiz-link__info">
+                <div className="case-najiz-link__icon">
+                  <ExternalLink size={18} />
+                </div>
+                <div className="case-najiz-link__text">
+                  <strong>مستوردة من معين — ديوان المظالم</strong>
+                  <span>{syncedAt ? `آخر مزامنة: ${syncedAt}` : 'يلزم تسجيل الدخول في بوابة معين'}</span>
+                </div>
+              </div>
+              <a
+                href={portalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="case-najiz-link__btn"
+                title="يفتح صفحة الدعوى في بوابة معين — يتطلب جلسة مفتوحة، وقد يبطل الرابط حتى إعادة السحب"
+              >
+                <ExternalLink size={14} />
+                فتح في معين
+              </a>
+            </div>
+          )}
+
           {/* بيانات الدعوى الأساسية */}
           <div className="case-card">
             <div className="case-card__header">
