@@ -20,6 +20,7 @@ import { UserService, type User as ServiceUser } from '../services/UserService';
 import { TaskService } from '../services/taskService';
 import MultiSelectDropdown from './MultiSelectDropdown';
 import TaskLinkPicker, { EMPTY_TASK_LINK, type TaskLinkValue } from './TaskLinkPicker';
+import { toDatetimeInputValue } from '../utils/dateAr';
 import type { CreateTaskForm } from '../types';
 // ستايلات Notion (add-appointment-modal.css) تُحمَّل مركزياً عبر styles/appStyles.ts
 
@@ -89,7 +90,8 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(9, 0, 0, 0);
-      const tomorrowStr = tomorrow.toISOString().slice(0, 16);
+      // من الحقول المحلّية لا عبر toISOString، وإلا ظهرت ٠٦:٠٠ بدل ٠٩:٠٠
+      const tomorrowStr = toDatetimeInputValue(tomorrow);
 
       setFormData(prev => ({
         ...prev,

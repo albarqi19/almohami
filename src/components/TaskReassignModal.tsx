@@ -2,6 +2,7 @@
 import Modal from './Modal';
 import { Save, X, User, MessageSquare, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toDateInputValue } from '../utils/dateAr';
 import type { Task } from '../types';
 
 interface ReassignData {
@@ -30,7 +31,7 @@ const TaskReassignModal: React.FC<TaskReassignModalProps> = ({
     newAssignee: '',
     reason: '',
     priority: task?.priority || 'medium',
-    dueDate: task?.dueDate ? String(task.dueDate).split('T')[0] : '',
+    dueDate: toDateInputValue(task?.dueDate),
     transferNotes: '',
     notifyAssignee: true
   });
@@ -76,7 +77,7 @@ const TaskReassignModal: React.FC<TaskReassignModalProps> = ({
         newAssignee: '',
         reason: '',
         priority: task.priority,
-        dueDate: task.dueDate ? task.dueDate.toISOString().split('T')[0] : '',
+        dueDate: toDateInputValue(task.dueDate),
         transferNotes: '',
         notifyAssignee: true
       });
@@ -130,7 +131,7 @@ const TaskReassignModal: React.FC<TaskReassignModalProps> = ({
       newAssignee: '',
       reason: '',
       priority: task?.priority || 'medium',
-      dueDate: task?.dueDate ? task.dueDate.toISOString().split('T')[0] : '',
+      dueDate: toDateInputValue(task?.dueDate),
       transferNotes: '',
       notifyAssignee: true
     });

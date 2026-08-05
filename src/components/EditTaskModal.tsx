@@ -19,6 +19,7 @@ import { UserService, type User as ServiceUser } from '../services/UserService';
 import { TaskService } from '../services/taskService';
 import MultiSelectDropdown from './MultiSelectDropdown';
 import TaskLinkPicker, { EMPTY_TASK_LINK, type TaskLinkValue } from './TaskLinkPicker';
+import { toDatetimeInputValue } from '../utils/dateAr';
 import type { Task } from '../types';
 
 interface EditTaskModalProps {
@@ -39,16 +40,6 @@ const taskToLink = (t: Task): TaskLinkValue => {
   }
   if (t.legal_service) return { type: 'service', id: t.legal_service.id, label: t.legal_service.title || 'خدمة قانونية' };
   return EMPTY_TASK_LINK;
-};
-
-// datetime-local يتطلب صيغة محلية YYYY-MM-DDTHH:mm — نبنيها من التوقيت المحلي (لا toISOString
-// كي لا نُزيح الساعة إلى UTC كما حدث سابقاً مع الاجتماعات).
-const toLocalDatetimeInput = (value?: Date | string | null): string => {
-  if (!value) return '';
-  const d = value instanceof Date ? value : new Date(value);
-  if (isNaN(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
 const EditTaskModal: React.FC<EditTaskModalProps> = ({
@@ -106,7 +97,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         notes: task.notes || '',
         type: task.type || 'other',
         priority: task.priority || 'medium',
-        due_date: toLocalDatetimeInput(task.dueDate),
+        due_date: toDatetimeInputValue(task.dueDate),
         estimated_hours: task.estimatedHours?.toString() || '',
         actual_hours: task.actualHours?.toString() || '',
         assigned_to: task.assignedTo || '',

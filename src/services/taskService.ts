@@ -1,4 +1,5 @@
 ﻿import { apiClient } from '../utils/api';
+import { toApiDatetime } from '../utils/dateAr';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
 import type { ArchivedFilter, Task, CreateTaskForm, ExternalLinkPayload, Document } from '../types';
 
@@ -163,7 +164,8 @@ export class TaskService {
         ? taskData.assigneeIds.map((id) => Number(id))
         : undefined,
       priority: taskData.priority,
-      due_date: taskData.dueDate?.toISOString(),
+      // ساعةُ حائط لا لحظةٌ كونية — toISOString كان يُزيح الاستحقاق ثلاث ساعات
+      due_date: toApiDatetime(taskData.dueDate),
       estimated_hours: taskData.estimatedHours,
       requires_approval: taskData.requiresApproval ?? false,
       requires_attachment: taskData.requiresAttachment ?? false,
