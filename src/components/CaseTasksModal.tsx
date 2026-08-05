@@ -1,6 +1,8 @@
 ﻿import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Reorder } from 'framer-motion';
 import {
+  ExternalLink,
   CheckSquare,
   User,
   Calendar,
@@ -39,6 +41,7 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
   caseId,
   caseTitle
 }) => {
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [comments, setComments] = useState<TaskComment[]>([]);
@@ -540,6 +543,34 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
                               )}
                             </div>
                           </div>
+
+                          {/* فتح المهمة كاملةً — بدل الذهاب إلى صفحة المهام ثم البحث عنها (ملاحظة 116).
+                              نُغلق المودال قبل الانتقال كي لا يعود مفتوحاً لو رجع المستخدم بزرّ المتصفّح. */}
+                          <button
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();   // النقر على الصفّ يختار المهمة — لا نريده هنا
+                              onClose();
+                              navigate(`/tasks/${task.id}`);
+                            }}
+                            title="فتح المهمة كاملةً"
+                            aria-label="فتح المهمة كاملةً"
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--color-text-tertiary)',
+                              padding: 0,
+                              marginTop: '3px',
+                              cursor: 'pointer',
+                              flexShrink: 0,
+                              opacity: 0.45,
+                              transition: 'opacity 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.45'; }}
+                          >
+                            <ExternalLink size={13} />
+                          </button>
                         </div>
                       </Reorder.Item>
                       );
