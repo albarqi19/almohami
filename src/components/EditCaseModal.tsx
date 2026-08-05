@@ -25,6 +25,7 @@ import {
   Hash,
   Trophy,
   Sparkles,
+  Lock,
 } from 'lucide-react';
 import type { Case } from '../types';
 import { apiClient } from '../utils/api';
@@ -124,7 +125,37 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
   const toggleMemoApprover = (id: string) =>
     setMemoApprovers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
-  const isNajizCase = !!caseData.najiz_id || caseData.source === 'najiz';
+  // دعاوى ديوان المظالم تُخزَّن مفاتيحها في نفس أعمدة ناجز (najiz_id = object_key الخاص بمعين)،
+  // فلا يكفي وجود najiz_id للحكم بالمصدر — وإلا ظهرت شارة «ناجز» على دعوى من معين.
+  const isGrievanceCase = Boolean(caseData.is_grievance) || caseData.source === 'moeen';
+  const isNajizCase = (!!caseData.najiz_id || caseData.source === 'najiz') && !isGrievanceCase;
+  const isImportedCase = isNajizCase || isGrievanceCase;
+  const portalName = isGrievanceCase ? 'معين' : 'ناجز';
+  const portalColor = isGrievanceCase ? 'var(--law-navy, #1E3A5F)' : '#059669';
+
+  // بيانات صحيفة الدعوى تعيدها كل مزامنة من معين — تُعرض للقراءة لا للتعديل، لئلا يظنّ
+  // الموظف أن تصحيحه سيبقى ثم يجده مُعاداً بصمت. (العنوان والحالة وصفة الموكّل مقفولة
+  // بالباك فتبقى قابلة للتعديل هنا.) حقول العميل تتحرّر متى رُبط بعميل حقيقي — وهو نفس
+  // شرط الباك: client_id لم يعد مفتاح معين المؤقّت 'BOG-…'.
+  const clientLinkedManually = !String(caseData.client_id || '').startsWith('BOG-');
+  const portalOwnsCaseSheet = isGrievanceCase;
+  const portalOwnsClient = isGrievanceCase && !clientLinkedManually;
+
+  const portalHint = `يكتبه ${portalName} في كل مزامنة — التعديل هنا لا يصمد`;
+  const portalFieldStyle: React.CSSProperties = {
+    opacity: 0.65,
+    cursor: 'not-allowed',
+    backgroundColor: 'var(--color-bg-tertiary, #f4f5f7)',
+  };
+  const PortalTag = () => (
+    <span
+      title={portalHint}
+      style={{ marginRight: '6px', fontSize: '10px', fontWeight: 600, color: portalColor, whiteSpace: 'nowrap' }}
+    >
+      <Lock size={9} style={{ verticalAlign: '-1px', marginLeft: '2px' }} />
+      {portalName}
+    </span>
+  );
 
   const updateField = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -219,7 +250,7 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
               <h2>تعديل بيانات القضية</h2>
               <span className="modal-header-subtitle">
                 رقم الملف: {caseData.file_number}
-                {isNajizCase && <span style={{ marginRight: '8px', color: '#059669', fontSize: '11px', fontWeight: 600 }}>ناجز</span>}
+                {isImportedCase && <span style={{ marginRight: '8px', color: portalColor, fontSize: '11px', fontWeight: 600 }}>{portalName}</span>}
               </span>
             </div>
             <button className="modal-close-btn" onClick={onClose}>
@@ -233,6 +264,25 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
               <div className="modal-error" style={{ margin: '20px 0' }}>
                 <AlertCircle size={16} />
                 <span>{error}</span>
+              </div>
+            )}
+
+            {/* توضيح قسمة التحرير في الدعاوى المستوردة من معين — قبل أن يكتب الموظف لا بعد أن يفاجأ */}
+            {isGrievanceCase && (
+              <div
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: '8px', margin: '20px 0 0',
+                  padding: '10px 12px', borderRadius: '6px', fontSize: '12px', lineHeight: 1.7,
+                  background: 'var(--color-bg-tertiary, #f4f5f7)', color: 'var(--color-text-secondary, #5a6472)',
+                }}
+              >
+                <Lock size={13} style={{ marginTop: '3px', flexShrink: 0, color: portalColor }} />
+                <span>
+                  الحقول الموسومة بـ<strong style={{ color: portalColor }}> معين </strong>
+                  يعيدها الديوان في كل مزامنة فلا يصمد تعديلها. أما
+                  <strong> العنوان</strong> و<strong>الحالة</strong> و<strong>صفة الموكّل</strong>
+                  {' '}فتُحفظ باسم المكتب ولا تدوسها المزامنة.
+                </span>
               </div>
             )}
 
@@ -315,9 +365,18 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
                 <div className="notion-property-label">
                   <Building2 size={14} />
                   <span>المحكمة</span>
+                  {portalOwnsCaseSheet && <PortalTag />}
                 </div>
                 <div className="notion-property-value">
-                  <input type="text" placeholder="اسم المحكمة..." value={formData.court} onChange={(e) => updateField('court', e.target.value)} />
+                  <input
+                    type="text"
+                    placeholder="اسم المحكمة..."
+                    value={formData.court}
+                    onChange={(e) => updateField('court', e.target.value)}
+                    readOnly={portalOwnsCaseSheet}
+                    title={portalOwnsCaseSheet ? portalHint : undefined}
+                    style={portalOwnsCaseSheet ? portalFieldStyle : undefined}
+                  />
                 </div>
               </div>
 
@@ -390,9 +449,18 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
                 <div className="notion-property-label">
                   <User size={14} />
                   <span>اسم العميل</span>
+                  {portalOwnsClient && <PortalTag />}
                 </div>
                 <div className="notion-property-value">
-                  <input type="text" placeholder="اسم العميل..." value={formData.client_name} onChange={(e) => updateField('client_name', e.target.value)} />
+                  <input
+                    type="text"
+                    placeholder="اسم العميل..."
+                    value={formData.client_name}
+                    onChange={(e) => updateField('client_name', e.target.value)}
+                    readOnly={portalOwnsClient}
+                    title={portalOwnsClient ? `${portalHint} — اربط الدعوى بعميل من النظام ليثبت` : undefined}
+                    style={portalOwnsClient ? portalFieldStyle : undefined}
+                  />
                 </div>
               </div>
 
@@ -401,9 +469,15 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
                 <div className="notion-property-label">
                   <Phone size={14} />
                   <span>هاتف العميل</span>
+                  {portalOwnsClient && <PortalTag />}
                 </div>
                 <div className="notion-property-value">
-                  <PhoneField value={formData.client_phone} onChange={(v) => updateField('client_phone', v)} placeholder="5X XXX XXXX" />
+                  <PhoneField
+                    value={formData.client_phone}
+                    onChange={(v) => updateField('client_phone', v)}
+                    placeholder="5X XXX XXXX"
+                    disabled={portalOwnsClient}
+                  />
                 </div>
               </div>
 
@@ -412,9 +486,18 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
                 <div className="notion-property-label">
                   <Mail size={14} />
                   <span>إيميل العميل</span>
+                  {portalOwnsClient && <PortalTag />}
                 </div>
                 <div className="notion-property-value">
-                  <input type="email" placeholder="email@example.com" value={formData.client_email} onChange={(e) => updateField('client_email', e.target.value)} />
+                  <input
+                    type="email"
+                    placeholder="email@example.com"
+                    value={formData.client_email}
+                    onChange={(e) => updateField('client_email', e.target.value)}
+                    readOnly={portalOwnsClient}
+                    title={portalOwnsClient ? portalHint : undefined}
+                    style={portalOwnsClient ? portalFieldStyle : undefined}
+                  />
                 </div>
               </div>
 
@@ -423,9 +506,18 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
                 <div className="notion-property-label">
                   <User size={14} />
                   <span>المدعي</span>
+                  {portalOwnsCaseSheet && <PortalTag />}
                 </div>
                 <div className="notion-property-value">
-                  <input type="text" placeholder="اسم المدعي..." value={formData.plaintiff_name} onChange={(e) => updateField('plaintiff_name', e.target.value)} />
+                  <input
+                    type="text"
+                    placeholder="اسم المدعي..."
+                    value={formData.plaintiff_name}
+                    onChange={(e) => updateField('plaintiff_name', e.target.value)}
+                    readOnly={portalOwnsCaseSheet}
+                    title={portalOwnsCaseSheet ? portalHint : undefined}
+                    style={portalOwnsCaseSheet ? portalFieldStyle : undefined}
+                  />
                 </div>
               </div>
 
@@ -445,9 +537,18 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
                 <div className="notion-property-label">
                   <User size={14} />
                   <span>الخصم</span>
+                  {portalOwnsCaseSheet && <PortalTag />}
                 </div>
                 <div className="notion-property-value">
-                  <input type="text" placeholder="اسم الخصم..." value={formData.opponent_name} onChange={(e) => updateField('opponent_name', e.target.value)} />
+                  <input
+                    type="text"
+                    placeholder="اسم الخصم..."
+                    value={formData.opponent_name}
+                    onChange={(e) => updateField('opponent_name', e.target.value)}
+                    readOnly={portalOwnsCaseSheet}
+                    title={portalOwnsCaseSheet ? portalHint : undefined}
+                    style={portalOwnsCaseSheet ? portalFieldStyle : undefined}
+                  />
                 </div>
               </div>
 
@@ -522,31 +623,33 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
 
             <div className="notion-section-divider"></div>
 
-            {/* ============ القسم 4: ناجز (يظهر فقط للقضايا المستوردة) ============ */}
-            {isNajizCase && (
+            {/* ============ القسم 4: البوابة المصدر (يظهر فقط للقضايا المستوردة) ============ */}
+            {isImportedCase && (
               <>
-                <div className="edit-case-section-label" style={{ color: '#059669' }}>
+                <div className="edit-case-section-label" style={{ color: portalColor }}>
                   <ExternalLink size={13} />
-                  بيانات ناجز
+                  بيانات {portalName}
                 </div>
                 <div className="notion-properties-grid">
-                  {/* Najiz Status */}
-                  <div className="notion-property">
-                    <div className="notion-property-label">
-                      <Activity size={14} />
-                      <span>حالة ناجز</span>
+                  {/* حالة ناجز — عمودٌ لا يستعمله استيراد معين (حالة الدعوى الإدارية تُقرأ من ملفها) */}
+                  {isNajizCase && (
+                    <div className="notion-property">
+                      <div className="notion-property-label">
+                        <Activity size={14} />
+                        <span>حالة ناجز</span>
+                      </div>
+                      <div className="notion-property-value">
+                        <input type="text" placeholder="حالة القضية في ناجز..." value={formData.najiz_status} onChange={(e) => updateField('najiz_status', e.target.value)} />
+                      </div>
                     </div>
-                    <div className="notion-property-value">
-                      <input type="text" placeholder="حالة القضية في ناجز..." value={formData.najiz_status} onChange={(e) => updateField('najiz_status', e.target.value)} />
-                    </div>
-                  </div>
+                  )}
 
-                  {/* Najiz ID - Read Only */}
+                  {/* المعرّف في البوابة — للقراءة فقط */}
                   {caseData.najiz_id && (
                     <div className="notion-property">
                       <div className="notion-property-label">
                         <Hash size={14} />
-                        <span>رقم ناجز</span>
+                        <span>{isGrievanceCase ? 'مُعرّف الدعوى في معين' : 'رقم ناجز'}</span>
                       </div>
                       <div className="notion-property-value">
                         <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>{caseData.najiz_id}</span>
@@ -559,11 +662,11 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
                     <div className="notion-property">
                       <div className="notion-property-label">
                         <ExternalLink size={14} />
-                        <span>رابط ناجز</span>
+                        <span>رابط {portalName}</span>
                       </div>
                       <div className="notion-property-value">
-                        <a href={caseData.najiz_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#059669', textDecoration: 'none' }}>
-                          فتح في ناجز
+                        <a href={caseData.najiz_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: portalColor, textDecoration: 'none' }}>
+                          فتح في {portalName}
                         </a>
                       </div>
                     </div>
