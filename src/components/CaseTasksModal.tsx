@@ -21,7 +21,7 @@ import MentionInput from './MentionInput';
 import TaskTimer from './TaskTimer';
 import SubtasksList from './SubtasksList';
 import { TaskService } from '../services/taskService';
-import { TaskCommentService } from '../services/taskCommentService';
+import { TaskCommentService, TASK_COMMENT_MAX_LENGTH } from '../services/taskCommentService';
 import type { Task, TaskComment } from '../types';
 
 interface CaseTasksModalProps {
@@ -842,6 +842,7 @@ const CaseTasksModal: React.FC<CaseTasksModalProps> = ({
                             onMentionsChange={setMentions}
                             placeholder="اكتب تعليقاً... استخدم @ للإشارة"
                             onSubmit={handleAddComment}
+                            maxLength={TASK_COMMENT_MAX_LENGTH}
                           />
                           <button
                             onClick={handleAddComment}

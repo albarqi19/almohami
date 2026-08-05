@@ -11,7 +11,24 @@ interface MentionInputProps {
   className?: string;
   /* أعضاء افتراضيون يتصدرون قائمة @ (مثل «رائد الذكي» بمعرّف 'raed') */
   virtualMembers?: MentionUser[];
+  /**
+   * أقصى طول مسموح — يجب أن يطابق حدّ الخادم وإلا رُدّ النصّ بـ422 بعد كتابته.
+   * العدّاد يظهر عند اقتراب الحافة فقط كي لا يزحم الحقل في الكتابة القصيرة.
+   */
+  maxLength?: number;
 }
+
+/**
+ * تمييزُ العدد بالعربية: من ٣ إلى ١٠ جمعٌ مجرور («٥ أحرف»)، وما فوقها مفردٌ
+ * منصوب («١١ حرفاً»). العدّاد يظهر في آخر ٢٠٪ من المساحة فتمرّ الأعداد الصغيرة
+ * كلُّها — فلا يكفي «حرفاً» وحدها.
+ */
+const remainingLabel = (n: number): string => {
+  if (n === 1) return 'بقي حرف واحد';
+  if (n === 2) return 'بقي حرفان';
+  if (n <= 10) return `بقيت ${n} أحرف`;
+  return `بقي ${n} حرفاً`;
+};
 
 export interface MentionUser {
   id: string;
@@ -34,7 +51,8 @@ const MentionInput: React.FC<MentionInputProps> = ({
   placeholder = 'اكتب تعليقاً... استخدم @ للإشارة',
   disabled = false,
   className = '',
-  virtualMembers
+  virtualMembers,
+  maxLength
 }) => {
   const [showMentionList, setShowMentionList] = useState(false);
   const [mentionSearch, setMentionSearch] = useState('');
@@ -260,6 +278,10 @@ const MentionInput: React.FC<MentionInputProps> = ({
     return role ? roles[role] || role : '';
   };
 
+  // العدّاد يصمت حتى يبقى ٢٠٪ من المساحة — ثم يُنذر على الحافة الأخيرة
+  const remaining = maxLength ? maxLength - value.length : null;
+  const showCounter = remaining !== null && remaining <= maxLength! * 0.2;
+
   return (
     <div className={`mention-input-container ${className}`}>
       <textarea
@@ -270,7 +292,14 @@ const MentionInput: React.FC<MentionInputProps> = ({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={disabled}
+        maxLength={maxLength}
       />
+
+      {showCounter && (
+        <span className={`mention-input__counter${remaining! <= 0 ? ' mention-input__counter--full' : ''}`}>
+          {remaining! <= 0 ? 'بلغتَ الحدّ الأقصى' : remainingLabel(remaining!)}
+        </span>
+      )}
 
       {showMentionList && filteredUsers.length > 0 && (
         <div
@@ -344,6 +373,18 @@ const MentionInput: React.FC<MentionInputProps> = ({
         .mention-input__textarea:disabled {
           background: var(--color-surface-subtle, #f8f9fa);
           cursor: not-allowed;
+        }
+
+        .mention-input__counter {
+          display: block;
+          margin-top: var(--space-1, 4px);
+          text-align: left;
+          font-size: var(--font-size-xs, 11px);
+          color: var(--color-text-secondary, #999);
+        }
+
+        .mention-input__counter--full {
+          color: var(--color-danger, #ef4444);
         }
 
         .mention-input__list {

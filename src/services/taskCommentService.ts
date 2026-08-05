@@ -3,6 +3,9 @@ import type { ApiResponse } from '../utils/api';
 import type { TaskComment, CreateTaskCommentForm } from '../types';
 import type { RaedMessageMeta, RaedState } from '../types/legalServices';
 
+/** أقصى طول للتعليق — يطابق TaskComment::MAX_LENGTH في الخادم؛ تغييرُ أحدهما يلزمه الآخر. */
+export const TASK_COMMENT_MAX_LENGTH = 5000;
+
 /** رسالة محادثة فريق المهمة — نفس عقد CaseTeamMessageItem مع task_id وحقل comment */
 export interface TaskChatMessage {
   id: number;

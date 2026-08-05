@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { BookOpenText, CheckCircle2, ChevronsRight, Loader2, MessagesSquare, Send, Sparkles, Trash2 } from 'lucide-react';
 import MentionInput from './MentionInput';
-import { TaskCommentService, type TaskChatMessage } from '../services/taskCommentService';
+import { TaskCommentService, TASK_COMMENT_MAX_LENGTH, type TaskChatMessage } from '../services/taskCommentService';
 import { getApiErrorMessage } from '../utils/apiError';
 import { useAuth } from '../contexts/AuthContext';
 import type { RaedState } from '../types/legalServices';
@@ -337,6 +337,7 @@ const TaskTeamChat: React.FC<{
           disabled={busy}
           className="stc-compose__input"
           virtualMembers={raed?.enabled ? [RAED_VIRTUAL_MEMBER] : undefined}
+          maxLength={TASK_COMMENT_MAX_LENGTH}
         />
         <button className="ssp2-btn ssp2-btn--primary" onClick={send} disabled={busy || !text.trim()}>
           {busy ? <Loader2 size={14} className="ssp2-spin" /> : <Send size={14} />} إرسال
