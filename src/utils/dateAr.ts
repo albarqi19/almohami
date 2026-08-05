@@ -10,6 +10,11 @@
 // 2) timeZone: 'Asia/Riyadh' صريحاً. الخادم يخزّن ويحسب بتوقيت الرياض، فبلا
 //    تصريح يتبع العرضُ منطقةَ جهاز المستخدم: اجتماع 00:30 يظهر في يومٍ سابق
 //    لمن جهازه على توقيت مختلف، وقائمة «اليوم» تكذب.
+//
+// 3) ما يكتبه المستخدم في <input type="date|datetime-local"> ساعةُ حائط لا
+//    لحظةٌ كونية. تمريرُه على toISOString() يزيحه إلى UTC فيصل الخادمَ ناقصاً
+//    ثلاث ساعات — وهي شكوى العملاء المتكرّرة في المهام والاجتماعات. النقل في
+//    الاتجاهين يجري بصيغةٍ ساذجة بلا لاحقة Z: ما كُتب هو ما يُخزَّن ويُعرَض.
 
 import { toHijri } from './hijriDate';
 
@@ -62,6 +67,50 @@ export function fmtMonthTitleAr(date: Date): string {
  */
 export function riyadhDayKey(input: string | Date): string {
   return dayKeyFmt.format(asDate(input));
+}
+
+// ── ساعة الحائط: حقولُ الإدخال والإرسالُ إلى الخادم (القاعدة 3) ──────
+
+const pad = (n: number): string => String(n).padStart(2, '0');
+
+/** «YYYY-MM-DD» لقيمة <input type="date"> — من حقول الوقت المحلّية لا عبر toISOString. */
+export function toDateInputValue(input?: string | Date | null): string {
+  if (!input) return '';
+  const d = asDate(input);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** «YYYY-MM-DDTHH:mm» لقيمة <input type="datetime-local">. */
+export function toDatetimeInputValue(input?: string | Date | null): string {
+  if (!input) return '';
+  const d = asDate(input);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${toDateInputValue(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * عكس toDateInputValue: «YYYY-MM-DD» ⇐ منتصفُ ليلها **محلياً**. الضرورة أنّ
+ * new Date('2026-08-06') يقرؤها المحرّك منتصفَ ليل UTC لا المحلي، فتنزلق إلى
+ * اليوم السابق لمن جهازه غربَ غرينتش.
+ */
+export function fromDateInputValue(value?: string | null): Date | undefined {
+  if (!value) return undefined;
+  const [y, m, d] = value.split('-').map(Number);
+  if (!y || !m || !d) return undefined;
+  return new Date(y, m - 1, d);
+}
+
+/**
+ * «YYYY-MM-DD HH:mm:ss» كما يتوقّعها الخادم (منطقته Asia/Riyadh): بلا لاحقة Z
+ * فتُخزَّن الساعة كما كتبها المستخدم. تُعيد undefined للقيم الفارغة أو الفاسدة
+ * كي يسقط المفتاح من حمولة الطلب بدل إرسال قيمة كاذبة.
+ */
+export function toApiDatetime(input?: string | Date | null): string | undefined {
+  if (!input) return undefined;
+  const d = asDate(input);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return `${toDateInputValue(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 /** «اليوم» / «غداً» / «الخميس ١٢ يونيو» — نسبةً إلى يوم الرياض لا الجهاز. */

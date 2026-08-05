@@ -43,6 +43,7 @@ import { UserService } from '../services/UserService';
 import type { User } from '../services/UserService';
 import { CaseService } from '../services/caseService';
 import { TaskService } from '../services/taskService';
+import { fromDateInputValue, toDateInputValue } from '../utils/dateAr';
 import { Can } from '../components/Can';
 import type {
   ArchivedFilter,
@@ -435,7 +436,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ requestId, initial, isOpen, o
       executionRequestId: request.id,
       assignedTo: taskAssignee,
       priority: taskPriority as any,
-      dueDate: taskDueDate ? new Date(taskDueDate) : undefined,
+      dueDate: fromDateInputValue(taskDueDate),
     } as any);
     setShowTaskForm(false);
     setTaskTitle('');
@@ -769,7 +770,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ requestId, initial, isOpen, o
                         type="date"
                         className="exec-input"
                         value={taskDueDate}
-                        min={new Date().toISOString().slice(0, 10)}
+                        min={toDateInputValue(new Date())}
                         onChange={e => setTaskDueDate(e.target.value)}
                       />
                     </div>
