@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import {
   ArrowRight, Receipt, Download, Send, XCircle, CreditCard, CheckCircle, FileText, User, Calendar, X,
-  AlertTriangle,
+  AlertTriangle, Trash2,
 } from 'lucide-react';
 import { invoiceService } from '../../services/invoiceService';
 import { paymentService } from '../../services/paymentService';
@@ -71,6 +71,7 @@ const InvoiceDetailPage: React.FC = () => {
   const [showSend, setShowSend] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [showDelete, setShowDelete] = useState(false);
 
   const invoiceId = Number(id);
   const { data, isLoading, isError, refetch } = useQuery({
@@ -101,6 +102,13 @@ const InvoiceDetailPage: React.FC = () => {
     mutationFn: () => invoiceService.cancelInvoice(invoiceId, cancelReason),
     onSuccess: () => { toast.success('تم إلغاء الفاتورة'); invalidate(); setShowCancel(false); setCancelReason(''); },
     onError: (e: Error) => toast.error(e.message || 'تعذّر إلغاء الفاتورة'),
+  });
+  // الحذف نهائي وللمسودّة وحدها — الباك يرفض ما سواها ويرفض ما له مدفوعات
+  // (CaseInvoiceController::destroy)، فنُبقي رسالته كما هي بدل ابتلاعها.
+  const deleteMutation = useMutation({
+    mutationFn: () => invoiceService.deleteInvoice(invoiceId),
+    onSuccess: () => { toast.success('تم حذف الفاتورة'); invalidate(); navigate('/finance/invoices'); },
+    onError: (e: Error) => { toast.error(e.message || 'تعذّر حذف الفاتورة'); setShowDelete(false); },
   });
 
   const handleSubmitPayment = async (payload: CreatePaymentData, receiptFile?: File) => {
@@ -171,6 +179,9 @@ const InvoiceDetailPage: React.FC = () => {
           )}
           {canManage && a.canCancel && (
             <button type="button" className="fin-btn fin-btn--danger fin-btn--sm" onClick={() => setShowCancel(true)}><XCircle size={14} /> إلغاء</button>
+          )}
+          {canManage && a.canDelete && (
+            <button type="button" className="fin-btn fin-btn--danger fin-btn--sm" onClick={() => setShowDelete(true)}><Trash2 size={14} /> حذف</button>
           )}
         </div>
       </div>
@@ -325,6 +336,28 @@ const InvoiceDetailPage: React.FC = () => {
           <label className="fin-field__label">سبب الإلغاء (اختياري)</label>
           <textarea className="fin-textarea" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} rows={3} />
         </div>
+      </Modal>
+
+      {/* مودال الحذف — الفرق عن الإلغاء جوهري: الإلغاء يُبقي السجلّ، والحذف يمحوه */}
+      <Modal
+        open={showDelete}
+        onClose={() => setShowDelete(false)}
+        title="حذف الفاتورة"
+        icon={Trash2}
+        size="narrow"
+        footer={(
+          <>
+            <button type="button" className="fin-btn" onClick={() => setShowDelete(false)}>تراجع</button>
+            <button type="button" className="fin-btn fin-btn--danger" disabled={deleteMutation.isPending} onClick={() => deleteMutation.mutate()}>
+              {deleteMutation.isPending ? 'جارٍ الحذف...' : 'تأكيد الحذف'}
+            </button>
+          </>
+        )}
+      >
+        <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+          سيتم حذف الفاتورة {invoice.invoice_number} نهائياً. لا يُحذف إلا ما كان مسودّةً بلا مدفوعات —
+          وما جاوز ذلك فالإلغاء بديلُه، إذ يُبقي السجلّ للمراجعة.
+        </p>
       </Modal>
     </div>
   );
