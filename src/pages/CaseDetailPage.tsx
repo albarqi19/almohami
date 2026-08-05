@@ -59,6 +59,8 @@ import OutcomeBadge from '../components/OutcomeBadge';
 import WinCelebrationModal from '../components/WinCelebrationModal';
 import ReplayCelebrationButton from '../components/ReplayCelebrationButton';
 import ReconciliationSection from '../components/ReconciliationSection';
+import NajizRequestsSection from '../components/NajizRequestsSection';
+import type { CaseRequestsSummary } from '../services/caseRequestService';
 import { useAuth } from '../contexts/AuthContext';
 import type { TimelineEvent } from '../components/Timeline';
 import { apiClient } from '../utils/api';
@@ -132,6 +134,8 @@ const CaseDetailPage: React.FC = () => {
   const [showLawSearch, setShowLawSearch] = useState(false);
   const [showPrecedents, setShowPrecedents] = useState(false);
   const [showWekalatModal, setShowWekalatModal] = useState(false);
+  // ملخّص «المذكّرات المودَعة» — يرفعه القسمُ ليُغذّي عدّاد زرّ الترويسة
+  const [najizRequestsSummary, setNajizRequestsSummary] = useState<CaseRequestsSummary | null>(null);
   const [documentsCount, setDocumentsCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
   const [caseDeadlines, setCaseDeadlines] = useState<LegalDeadline[]>([]);
@@ -635,6 +639,29 @@ const CaseDetailPage: React.FC = () => {
               </span>
               السوابق القضائية
             </button>
+            {/* المذكّرات المودَعة — يظهر متى وُجدت مذكّرات، وينقل إلى قسمها في الصفحة.
+                عدّادُه عددُ ما ينتظر رداً إن وُجد، وإلا الإجمالي. */}
+            {najizRequestsSummary && najizRequestsSummary.total > 0 && (
+              <button
+                className="case-header-tab"
+                onClick={() => document.getElementById('najiz-requests')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                title={
+                  najizRequestsSummary.awaiting_reply > 0
+                    ? `${najizRequestsSummary.awaiting_reply} مذكّرة من الخصم بلا ردّ`
+                    : 'المذكّرات المودَعة في المحكمة'
+                }
+              >
+                <span className="case-header-tab__icon case-header-tab__icon--teal">
+                  <Scale size={14} />
+                </span>
+                المذكّرات المودَعة
+                <span className="case-header-tab__count">
+                  {najizRequestsSummary.awaiting_reply > 0
+                    ? najizRequestsSummary.awaiting_reply
+                    : najizRequestsSummary.total}
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Actions */}
@@ -1149,6 +1176,9 @@ const CaseDetailPage: React.FC = () => {
 
           {/* Reconciliation (تراضي) — يحلّ محلّ «الأحكام»: معلومات الصلح + الأطراف + الجلسات + وثيقة الصلح */}
           {caseData.is_reconciliation && <ReconciliationSection data={reconciliationData} />}
+
+          {/* المذكّرات المودَعة (طلبات ناجز) — بعد الأحكام: المذكّرة نصٌّ يُقرأ في سياقه */}
+          <NajizRequestsSection caseId={Number(caseData.id)} onSummaryChange={setNajizRequestsSummary} />
 
           {/* Timeline Section */}
           <div className="case-timeline-section" data-tour="case-timeline">
