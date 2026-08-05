@@ -23,12 +23,14 @@ import {
   X,
   Eye,
   ExternalLink,
+  Edit,
 } from 'lucide-react';
 import LegalMemoWorkspace from '../components/LegalMemoWorkspace';
 import CaseDocumentsModal from '../components/CaseDocumentsModal';
 import CaseTasksModal from '../components/CaseTasksModal';
 import CaseMessagesModal from '../components/CaseMessagesModal';
 import ShareCaseModal from '../components/ShareCaseModal';
+import EditCaseModal from '../components/EditCaseModal';
 import { CaseService } from '../services/caseService';
 import { GrievanceService } from '../services/grievanceService';
 import { DocumentService } from '../services/documentService';
@@ -108,6 +110,7 @@ export default function GrievanceDetailPage() {
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [showMessagesModal, setShowMessagesModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [documentsCount, setDocumentsCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
 
@@ -266,6 +269,16 @@ export default function GrievanceDetailPage() {
           </div>
 
           <div className="case-detail-header__actions">
+            {anchorCase && (
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="case-header-btn case-header-btn--primary"
+                title="تعديل بيانات الملف — ما تعدّله يدوياً من العنوان والحالة وصفة الموكّل لا تدوسه مزامنة معين"
+              >
+                <Edit size={16} />
+                <span>تعديل</span>
+              </button>
+            )}
             <button
               onClick={() => setShowShareModal(true)}
               className="case-header-btn case-header-btn--share"
@@ -834,6 +847,19 @@ export default function GrievanceDetailPage() {
           onClose={() => setShowShareModal(false)}
           caseId={String(anchor.id) as any}
           caseTitle={title}
+        />
+      )}
+
+      {/* تعديل صفّ المرساة — الحقول التي يقفلها التعديل اليدوي تصمد أمام مزامنة معين */}
+      {showEditModal && anchorCase && (
+        <EditCaseModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          caseData={anchorCase}
+          onSave={async (updated) => {
+            const saved = await CaseService.updateCase(String(anchor.id), updated);
+            setAnchorCase(saved);
+          }}
         />
       )}
     </div>
