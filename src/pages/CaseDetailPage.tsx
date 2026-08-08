@@ -640,14 +640,15 @@ const CaseDetailPage: React.FC = () => {
               السوابق القضائية
             </button>
             {/* المذكّرات المودَعة — يظهر متى وُجدت مذكّرات، وينقل إلى قسمها في الصفحة.
-                عدّادُه عددُ ما ينتظر رداً إن وُجد، وإلا الإجمالي. */}
+                عدّادُه ما لم نُودع بعده شيئاً إن وُجد، وإلا الإجمالي.
+                ⚠️ لا يُقال «بلا ردّ»: ناجز لا يربط مذكّرةً بمذكّرة، فهذا خبرٌ لا حكم. */}
             {najizRequestsSummary && najizRequestsSummary.total > 0 && (
               <button
                 className="case-header-tab"
                 onClick={() => document.getElementById('najiz-requests')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                 title={
                   najizRequestsSummary.awaiting_reply > 0
-                    ? `${najizRequestsSummary.awaiting_reply} مذكّرة من الخصم بلا ردّ`
+                    ? `${najizRequestsSummary.awaiting_reply} مذكّرة من الخصم لم نُودع بعدها شيئاً`
                     : 'المذكّرات المودَعة في المحكمة'
                 }
               >
@@ -1178,7 +1179,11 @@ const CaseDetailPage: React.FC = () => {
           {caseData.is_reconciliation && <ReconciliationSection data={reconciliationData} />}
 
           {/* المذكّرات المودَعة (طلبات ناجز) — بعد الأحكام: المذكّرة نصٌّ يُقرأ في سياقه */}
-          <NajizRequestsSection caseId={Number(caseData.id)} onSummaryChange={setNajizRequestsSummary} />
+          <NajizRequestsSection
+            caseId={Number(caseData.id)}
+            onSummaryChange={setNajizRequestsSummary}
+            onOpenMemoWorkspace={() => setShowMemoWorkspace(true)}
+          />
 
           {/* Timeline Section */}
           <div className="case-timeline-section" data-tour="case-timeline">

@@ -1,41 +1,54 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Building, Calendar, CheckCircle2, ChevronDown, ChevronUp, FileText, Paperclip, RotateCcw, Scale } from 'lucide-react';
+import {
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  EyeOff,
+  FileText,
+  Info,
+  Inbox,
+  RotateCcw,
+  Scale,
+  Sparkles,
+} from 'lucide-react';
 import {
   caseRequestService,
   type CaseRequestItem,
   type CaseRequestsSummary,
 } from '../services/caseRequestService';
+import '../styles/najiz-requests.css';
 
 /**
  * «المذكّرات المودَعة» — طلبات القضية في ناجز ومذكّراتها، بخطٍّ زمنيٍّ واحد.
  *
- * ثلاثة مواضع لهذه الوحدة في الصفحة، ولكلٍّ وظيفة:
- *   - شريطُ الإنذار (هنا، أعلى القسم): مذكّرةُ الخصم المعلّقة **إنذارٌ لا عنصرُ قائمة**.
- *   - خطُّ زمنيٍّ بالنص الكامل: المذكّرة نصٌّ قانونيٌّ يُقرأ ويُقارَن بما قبله.
- *   - زرٌّ في الترويسة بعدّاد (في الصفحة الأمّ) للاتّساق مع الوثائق/المهام/الجلسات.
- *
  * ⚠️ التسمية: «إنشاء مذكرة» في النظام تعني ما نكتبه نحن. وهذه **المودَعة** في المحكمة.
+ *
+ * 🩸 قاعدتان فرضتهما بياناتٌ حقيقية:
+ *
+ *  1) **أوصافُ المرفقات هي المحتوى.** مذكّرةُ خصمٍ مرصودة نصُّها فارغٌ تماماً وحجّتُها
+ *     كلُّها في `reason_text` لمرفقاتها الخمسة. فالأوصافُ تُعرض دائماً وبارزة —
+ *     إخفاؤها خلف «عرض المرفقات» يُظهر مذكّرةً فارغةً وفيها ما يهدم الدعوى.
+ *
+ *  2) **نُخبِر ولا نحكم.** «أودع الخصمُ مذكّرة» حقيقةٌ نقيسها من بياناتٍ صريحة. أمّا
+ *     «تنتظر الرد» فحكمٌ لا نملكه: ناجز لا يعطي أيَّ حقلٍ يربط مذكّرةً بمذكّرة، وقد
+ *     تكون المذكّرةُ في موضوعٍ مستقلٍّ تماماً. فحالةُ الردّ تُعرض **معلومةً سياقية**
+ *     هادئة، والحكمُ للمحامي. (والصمتُ الخاطئ أخطرُ من الإزعاج: إغلاقٌ آليٌّ لمذكّرةٍ
+ *     تحتاج رداً يُفوّت مهلة.)
  */
 
 interface Props {
   caseId: number;
-  /** يُرفع للأعلى ليُحدِّث عدّاد زرّ الترويسة وشريطَ الإنذار في الصفحة الأمّ */
+  /** يُرفع للأعلى ليُحدِّث عدّاد زرّ الترويسة في الصفحة الأمّ */
   onSummaryChange?: (summary: CaseRequestsSummary | null) => void;
+  /** تفتحه الصفحةُ الأمّ بعد توليد المسوّدة — المذكّرات مساحةٌ لا مسار */
+  onOpenMemoWorkspace?: () => void;
 }
 
-const SIDE_STYLE: Record<string, { bg: string; color: string }> = {
-  opponent: { bg: 'rgba(209,73,91,0.12)', color: '#b91c1c' },
-  ours: { bg: 'rgba(37,99,235,0.10)', color: '#2563eb' },
-  co_party: { bg: 'rgba(217,119,6,0.14)', color: '#b45309' },
-  unknown: { bg: 'rgba(100,116,139,0.14)', color: '#475569' },
-};
-
-const REPLY_STYLE: Record<string, { bg: string; color: string }> = {
-  awaiting_reply: { bg: 'rgba(209,73,91,0.12)', color: '#b91c1c' },
-  replied: { bg: 'rgba(21,115,71,0.12)', color: '#157347' },
-  dismissed: { bg: 'rgba(100,116,139,0.14)', color: '#475569' },
-  stale: { bg: 'rgba(100,116,139,0.14)', color: '#475569' },
-  unclassified: { bg: 'rgba(217,119,6,0.14)', color: '#b45309' },
+const SIDE_LABEL: Record<string, string> = {
+  opponent: 'من الخصم',
+  ours: 'منّا',
+  co_party: 'طرف مشارك',
+  unknown: 'غير مصنَّفة',
 };
 
 const fmtDate = (d?: string | null): string => {
@@ -47,29 +60,41 @@ const fmtDate = (d?: string | null): string => {
   }
 };
 
-const Badge: React.FC<{ label: string; style: { bg: string; color: string } }> = ({ label, style }) => (
-  <span
-    style={{
-      fontSize: 12,
-      fontWeight: 700,
-      padding: '3px 12px',
-      borderRadius: 999,
-      background: style.bg,
-      color: style.color,
-      whiteSpace: 'nowrap',
-    }}
-  >
-    {label}
-  </span>
-);
+/**
+ * حالةُ الردّ كمعلومةٍ سياقية — لا حكم.
+ * تُصاغ بصيغة الخبر («وأودعنا مذكّرةً بعدها») لا بصيغة الأمر («تنتظر الرد»).
+ */
+const contextLine = (request: CaseRequestItem, all: CaseRequestItem[]): string | null => {
+  if (request.side !== 'opponent') return null;
 
-const NajizRequestsSection: React.FC<Props> = ({ caseId, onSummaryChange }) => {
+  if (request.dismissed_at) {
+    return request.dismiss_reason
+      ? `أُخفيت من المتابعة — ${request.dismiss_reason}`
+      : 'أُخفيت من المتابعة';
+  }
+
+  if (request.replied_by_request_id) {
+    const reply = all.find((r) => r.id === request.replied_by_request_id);
+    return reply
+      ? `وأودعنا نحن مذكّرةً بعدها في ${fmtDate(reply.request_date)}`
+      : 'وأودعنا نحن مذكّرةً بعدها';
+  }
+
+  if (request.reply_status === 'unclassified') {
+    return 'موقعُ موكّلنا غير محدَّد، فلم يُميَّز المودِع';
+  }
+
+  return 'ولم نُودع بعدها شيئاً حتى الآن';
+};
+
+const NajizRequestsSection: React.FC<Props> = ({ caseId, onSummaryChange, onOpenMemoWorkspace }) => {
   const [requests, setRequests] = useState<CaseRequestItem[]>([]);
   const [summary, setSummary] = useState<CaseRequestsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [draftNotice, setDraftNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -102,7 +127,7 @@ const NajizRequestsSection: React.FC<Props> = ({ caseId, onSummaryChange }) => {
 
   const handleDismiss = async (request: CaseRequestItem) => {
     const reason = window.prompt(
-      'سببُ الإغلاق (اختياري) — مثلاً: رُدَّ عليها ورقياً في الجلسة، أو لا تستحق رداً'
+      'سببُ الإخفاء (اختياري) — مثلاً: رُدَّ عليها ورقياً في الجلسة، أو لا تخصّنا'
     );
     if (reason === null) return; // ألغى
 
@@ -111,7 +136,26 @@ const NajizRequestsSection: React.FC<Props> = ({ caseId, onSummaryChange }) => {
       await caseRequestService.dismiss(caseId, request.id, reason || undefined);
       await load();
     } catch {
-      setError('تعذّر إغلاق المذكّرة');
+      setError('تعذّر إخفاء المذكّرة');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleReplyDraft = async (request: CaseRequestItem) => {
+    try {
+      setBusyId(request.id);
+      setError(null);
+      setDraftNotice(null);
+
+      const memo = await caseRequestService.generateReplyDraft(caseId, request.id);
+
+      // المذكّرات تُفتح في مساحةٍ داخل الصفحة لا في مسارٍ مستقل — فنُبلّغ ونفتحها
+      // عبر الصفحة الأمّ بدل تنقّلٍ إلى رابطٍ لا وجود له.
+      setDraftNotice(memo.title);
+      onOpenMemoWorkspace?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذّر توليد مسوّدة الردّ');
     } finally {
       setBusyId(null);
     }
@@ -129,12 +173,19 @@ const NajizRequestsSection: React.FC<Props> = ({ caseId, onSummaryChange }) => {
     }
   };
 
-  const awaiting = useMemo(
-    () => requests.filter((r) => r.reply_status === 'awaiting_reply'),
+  /** مذكّراتُ الخصم التي لم يعقبها شيءٌ منّا — خبرٌ يُعرض، لا إنذارٌ يُطلق. */
+  const unanswered = useMemo(
+    () =>
+      requests.filter(
+        (r) => r.side === 'opponent' && !r.dismissed_at && !r.replied_by_request_id
+      ),
     [requests]
   );
 
-  // لا تُعرض بطاقةٌ فارغة: القضايا التي لم يُمسح فيها شيء بعد لا شأن لها بهذا القسم.
+  const roleUnknown =
+    summary && summary.client_role !== 'plaintiff' && summary.client_role !== 'defendant';
+
+  // لا تُعرض بطاقةٌ فارغة: قضيةٌ لم يُمسح فيها شيءٌ بعد لا شأن لها بهذا القسم.
   if (!loading && !error && requests.length === 0) return null;
 
   return (
@@ -148,201 +199,187 @@ const NajizRequestsSection: React.FC<Props> = ({ caseId, onSummaryChange }) => {
       </div>
 
       <div className="case-card__content">
-        {loading && <div style={{ color: '#64748b', fontSize: 13 }}>جارٍ التحميل…</div>}
+        {loading && <div className="najiz-req__muted">جارٍ التحميل…</div>}
 
-        {error && (
-          <div style={{ color: '#b91c1c', fontSize: 13, marginBottom: 10 }}>{error}</div>
-        )}
+        {error && <div className="najiz-req__error">{error}</div>}
 
-        {/* شريط الإنذار — يُرى قبل أن يُنقر شيء */}
-        {!loading && awaiting.length > 0 && (
-          <div
-            style={{
-              background: 'rgba(209,73,91,0.08)',
-              border: '1px solid rgba(209,73,91,0.25)',
-              borderRadius: 8,
-              padding: '12px 14px',
-              marginBottom: 14,
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 10,
-            }}
-          >
-            <AlertTriangle size={18} color="#b91c1c" style={{ flexShrink: 0, marginTop: 2 }} />
-            <div style={{ fontSize: 13.5, lineHeight: 1.9, color: '#7f1d1d' }}>
-              <strong>
-                {awaiting.length === 1
-                  ? 'مذكّرةٌ من الخصم بلا ردّ'
-                  : `${awaiting.length} مذكّرات من الخصم بلا ردّ`}
-              </strong>
-              <div style={{ color: '#991b1b' }}>
-                أقدمُها من «{awaiting[0].submitter_name || 'الخصم'}» بتاريخ {fmtDate(awaiting[0].request_date)}.
+        {draftNotice && (
+          <div className="najiz-req__notice">
+            <Sparkles size={17} />
+            <div>
+              <strong>أُنشئت مسوّدة: «{draftNotice}»</strong>
+              <div className="najiz-req__notice-sub">
+                مسوّدةٌ أوّلية تحتاج مراجعتك قبل الاعتماد — تجدها في مساحة المذكّرات.
               </div>
             </div>
           </div>
         )}
 
-        {/* موقع الموكّل غير محدَّد ⟵ لا تصنيف ولا تذكير حتى يُحدَّد */}
-        {!loading && summary && summary.client_role !== 'plaintiff' && summary.client_role !== 'defendant' && (
-          <div
-            style={{
-              background: 'rgba(217,119,6,0.08)',
-              border: '1px solid rgba(217,119,6,0.25)',
-              borderRadius: 8,
-              padding: '10px 14px',
-              marginBottom: 14,
-              fontSize: 13,
-              color: '#92400e',
-              lineHeight: 1.9,
-            }}
-          >
-            موقعُ موكّلنا في هذه القضية غير محدَّد، فلا يُميَّز مُودِع المذكّرة ولا يصل تذكير.
-            حدِّده من بيانات القضية ليعمل التمييز.
+        {/* خبرٌ لا حكم: كم مذكّرةً من الخصم لم يعقبها شيءٌ منّا */}
+        {!loading && unanswered.length > 0 && (
+          <div className="najiz-req__notice najiz-req__notice--attention">
+            <Inbox size={17} />
+            <div>
+              <strong>
+                {unanswered.length === 1
+                  ? 'مذكّرةٌ من الخصم لم نُودع بعدها شيئاً'
+                  : `${unanswered.length} مذكّرات من الخصم لم نُودع بعدها شيئاً`}
+              </strong>
+              <div className="najiz-req__notice-sub">
+                أحدثُها من «{unanswered[unanswered.length - 1].submitter_name || 'الخصم'}» بتاريخ{' '}
+                {fmtDate(unanswered[unanswered.length - 1].request_date)} — راجعها لتقرّر.
+              </div>
+            </div>
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {/* موقعُ الموكّل غير محدَّد ⟵ لا تمييز ولا تذكير حتى يُحدَّد */}
+        {!loading && roleUnknown && (
+          <div className="najiz-req__notice">
+            <Info size={17} />
+            <div>
+              موقعُ موكّلنا في هذه القضية غير محدَّد، فلا يُميَّز مُودِعُ المذكّرة ولا يصل تذكير.
+              <div className="najiz-req__notice-sub">حدِّده من بيانات القضية ليعمل التمييز.</div>
+            </div>
+          </div>
+        )}
+
+        <div className="najiz-req">
           {requests.map((request) => {
             const isOpen = expanded.has(request.id);
-            const sideStyle = SIDE_STYLE[request.side] ?? SIDE_STYLE.unknown;
-            const replyStyle = REPLY_STYLE[request.reply_status];
             const busy = busyId === request.id;
+            const isOpponent = request.side === 'opponent';
+            const context = contextLine(request, requests);
+
+            // الحجّة: أوصافُ المرفقات. تُعرض دائماً — وهي المحتوى حين يغيب النصّ.
+            const points = request.attachments.filter((a) => (a.reason_text || '').trim() !== '');
+            const hasText = (request.memo_text || '').trim() !== '';
 
             return (
               <div
                 key={request.id}
-                style={{
-                  border: '1px solid var(--border-color, #e2e8f0)',
-                  borderRadius: 8,
-                  padding: '12px 14px',
-                  background: 'var(--card-bg, #fff)',
-                }}
+                className={`najiz-req__item${isOpponent ? ' najiz-req__item--opponent' : ''}`}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 600, fontSize: 14 }}>
-                    {request.request_type_name || 'طلب'}
-                    {request.request_code ? ` — ${request.request_code}` : ''}
+                <div className="najiz-req__head">
+                  <span className="najiz-req__who">
+                    {request.submitter_name || request.request_type_name || 'طلب'}
+                    {request.submitter_role_name && (
+                      <span className="najiz-req__role"> · {request.submitter_role_name}</span>
+                    )}
                   </span>
 
-                  {request.is_memo && <Badge label={request.side_arabic} style={sideStyle} />}
-
-                  {replyStyle && (
-                    <Badge label={request.reply_status_arabic} style={replyStyle} />
+                  {request.is_memo && (
+                    <span className={`najiz-req__chip najiz-req__chip--${request.side}`}>
+                      {SIDE_LABEL[request.side] || request.side_arabic}
+                    </span>
                   )}
-                </div>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: 14,
-                    flexWrap: 'wrap',
-                    fontSize: 12.5,
-                    color: '#64748b',
-                    marginTop: 6,
-                  }}
-                >
-                  <span>
-                    <Calendar size={12} /> {fmtDate(request.request_date)}
+                  {!request.is_memo && request.request_type_name && (
+                    <span className="najiz-req__chip najiz-req__chip--unknown">
+                      {request.request_type_name}
+                    </span>
+                  )}
+
+                  <span className="najiz-req__spacer" />
+
+                  <span className="najiz-req__date">
+                    <Calendar size={12} />
+                    {fmtDate(request.request_date)}
                   </span>
-                  {request.submitter_name && (
-                    <span>
-                      المودِع: {request.submitter_name}
-                      {request.submitter_role_name ? ` (${request.submitter_role_name})` : ''}
-                    </span>
-                  )}
-                  {request.filed_by_agent_name && request.filed_by_agent_name !== request.submitter_name && (
-                    <span>بوكالة: {request.filed_by_agent_name}</span>
-                  )}
-                  {request.court_name && (
-                    <span>
-                      <Building size={12} /> {request.court_name}
-                    </span>
-                  )}
-                  {request.attachments.length > 0 && (
-                    <span>
-                      <Paperclip size={12} /> {request.attachments.length} مرفق
-                    </span>
-                  )}
                 </div>
 
-                {request.dismiss_reason && (
-                  <div style={{ fontSize: 12.5, color: '#475569', marginTop: 6 }}>
-                    سببُ الإغلاق: {request.dismiss_reason}
+                <div className="najiz-req__body">
+                  {/* الخلاصة أولاً: أسرعُ ما يُقرأ، ومبنيّةٌ على النصّ والأوصاف معاً */}
+                  {request.ai_summary && (
+                    <div className="najiz-req__summary">
+                      <Sparkles size={14} />
+                      <div>{request.ai_summary}</div>
+                    </div>
+                  )}
+
+                  {/* ثمّ ما استند إليه المودِع */}
+                  {points.length > 0 && (
+                    <div className="najiz-req__points">
+                      {points.map((attachment) => (
+                        <div key={attachment.id} className="najiz-req__point">
+                          <FileText size={13} />
+                          <div>
+                            {attachment.reason_text}
+                            {attachment.file_name && (
+                              <span className="najiz-req__point-file">
+                                {attachment.file_name}
+                                {attachment.download_status === 'downloaded' ? '' : ' — لم يُنزَّل بعد'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* مذكّرةٌ بلا نصٍّ ولا أوصاف — نقولها صراحةً بدل أن تبدو فارغة */}
+                  {!hasText && points.length === 0 && !request.ai_summary && (
+                    <div className="najiz-req__muted">
+                      لم يُرفق بهذه المذكّرة نصٌّ ولا وصفُ مرفقات في ناجز.
+                    </div>
+                  )}
+
+                  {context && <div className="najiz-req__context">{context}</div>}
+
+                  <div className="najiz-req__actions">
+                    {hasText && (
+                      <button
+                        type="button"
+                        className="najiz-req__btn najiz-req__btn--primary"
+                        onClick={() => toggle(request.id)}
+                      >
+                        {isOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        {isOpen ? 'إخفاء النص' : 'عرض نص المذكّرة'}
+                      </button>
+                    )}
+
+                    {isOpponent && (hasText || points.length > 0) && (
+                      <button
+                        type="button"
+                        className="najiz-req__btn najiz-req__btn--primary"
+                        disabled={busy}
+                        onClick={() => void handleReplyDraft(request)}
+                        title="مسوّدةٌ أوّلية في مساحة المذكّرات — تحتاج مراجعتك"
+                      >
+                        <Sparkles size={13} />
+                        {busy ? 'جارٍ التوليد…' : 'اكتب مسوّدة ردّ'}
+                      </button>
+                    )}
+
+                    {isOpponent && !request.dismissed_at && (
+                      <button
+                        type="button"
+                        className="najiz-req__btn"
+                        disabled={busy}
+                        onClick={() => void handleDismiss(request)}
+                        title="أخفِها من المتابعة — رُدَّ عليها ورقياً أو لا تخصّنا"
+                      >
+                        <EyeOff size={13} />
+                        إخفاء من المتابعة
+                      </button>
+                    )}
+
+                    {request.dismissed_at && (
+                      <button
+                        type="button"
+                        className="najiz-req__btn"
+                        disabled={busy}
+                        onClick={() => void handleReopen(request)}
+                        title="أعِدها إلى المتابعة"
+                      >
+                        <RotateCcw size={13} />
+                        إعادة للمتابعة
+                      </button>
+                    )}
                   </div>
-                )}
 
-                <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                  {request.memo_text && (
-                    <button
-                      className="case-session-item__join-btn"
-                      style={{ background: 'rgba(37,99,235,0.10)', color: '#2563eb' }}
-                      onClick={() => toggle(request.id)}
-                    >
-                      {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                      {isOpen ? 'إخفاء النص' : 'عرض نص المذكّرة'}
-                    </button>
-                  )}
-
-                  {request.reply_status === 'awaiting_reply' && (
-                    <button
-                      className="case-session-item__join-btn"
-                      style={{ background: 'rgba(21,115,71,0.10)', color: '#157347' }}
-                      disabled={busy}
-                      onClick={() => void handleDismiss(request)}
-                      title="رُدَّ عليها ورقياً، أو قرّرتَ ألّا تردّ"
-                    >
-                      <CheckCircle2 size={14} />
-                      تم الردّ خارج ناجز
-                    </button>
-                  )}
-
-                  {request.reply_status === 'dismissed' && (
-                    <button
-                      className="case-session-item__join-btn"
-                      style={{ background: 'rgba(100,116,139,0.12)', color: '#475569' }}
-                      disabled={busy}
-                      onClick={() => void handleReopen(request)}
-                      title="أعِدها إلى المتابعة الآلية"
-                    >
-                      <RotateCcw size={14} />
-                      إعادة للمتابعة
-                    </button>
-                  )}
+                  {isOpen && hasText && <div className="najiz-req__text">{request.memo_text}</div>}
                 </div>
-
-                {isOpen && request.memo_text && (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      padding: '12px 14px',
-                      background: 'rgba(100,116,139,0.05)',
-                      borderRadius: 6,
-                      fontSize: 13.5,
-                      lineHeight: 2,
-                      whiteSpace: 'pre-wrap',
-                      maxHeight: 420,
-                      overflowY: 'auto',
-                    }}
-                  >
-                    {request.memo_text}
-                  </div>
-                )}
-
-                {isOpen && request.attachments.length > 0 && (
-                  <div style={{ marginTop: 10, fontSize: 12.5, color: '#475569' }}>
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>المرفقات:</div>
-                    {request.attachments.map((attachment) => (
-                      <div key={attachment.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <FileText size={12} />
-                        {attachment.reason_text || attachment.file_name || 'مرفق'}
-                        {attachment.extension ? ` (${attachment.extension})` : ''}
-                        {attachment.download_status !== 'downloaded' && (
-                          <span style={{ color: '#94a3b8' }}>— لم يُنزَّل بعد</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             );
           })}
