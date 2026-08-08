@@ -1,0 +1,305 @@
+/* ============================================================
+   تعميم المكتب — الشاشة التي يكتب منها المدير رسالته لموظّفيه.
+
+   ‏فلات صرف: لا تدرّجات ولا توهّج ولا ظلال ملوّنة. التمييز بحدٍّ ذهبيٍّ
+   ‏رفيع وبخلفيةٍ شفّافة، كبقيّة شاشات الإعدادات.
+
+   ‏والألوان من متغيّرات الهوية حصراً (--law-navy / --law-gold) — لا hex.
+   ============================================================ */
+
+.obc-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 4px;
+  font-size: 13px;
+  color: var(--law-navy);
+  opacity: 0.7;
+}
+
+.obc-spin {
+  animation: obc-rotate 0.9s linear infinite;
+}
+
+@keyframes obc-rotate {
+  to { transform: rotate(360deg); }
+}
+
+/* ‏سطر الحدّ اليومي — يشرح السبب لا القاعدة وحدها */
+.obc-limit {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(168, 131, 74, 0.22);
+  background: rgba(168, 131, 74, 0.06);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--law-navy);
+}
+
+.obc-limit svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--law-gold);
+}
+
+/* ‏لافتتا الحالة — بحدٍّ ملوّن لا بخلفيةٍ صارخة */
+.obc-notice,
+.obc-success,
+.obc-error {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.obc-notice {
+  border: 1px solid rgba(244, 162, 89, 0.35);
+  background: rgba(244, 162, 89, 0.08);
+  color: #8a5a1f;
+}
+
+.obc-success {
+  border: 1px solid rgba(27, 153, 139, 0.35);
+  background: rgba(27, 153, 139, 0.08);
+  color: #10665d;
+}
+
+.obc-error {
+  margin-top: 10px;
+  border: 1px solid rgba(209, 73, 91, 0.35);
+  background: rgba(209, 73, 91, 0.07);
+  color: #9c2f3f;
+}
+
+.obc-notice svg,
+.obc-success svg,
+.obc-error svg {
+  flex: none;
+}
+
+/* الحقول */
+.obc-field {
+  margin-bottom: 14px;
+}
+
+.obc-field__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--law-navy);
+}
+
+/* ‏العدّاد يُقرأ ولا يُزاحم — والحدُّ نفسه مفروضٌ بـmaxLength */
+.obc-counter {
+  font-size: 10.5px;
+  font-weight: 500;
+  opacity: 0.45;
+  font-variant-numeric: tabular-nums;
+}
+
+.obc-input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid rgba(16, 32, 40, 0.16);
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--law-navy);
+  transition: border-color 0.15s ease;
+}
+
+.obc-input:focus {
+  outline: none;
+  border-color: var(--law-gold);
+}
+
+.obc-input:disabled {
+  background: rgba(16, 32, 40, 0.03);
+  color: rgba(16, 32, 40, 0.45);
+  cursor: not-allowed;
+}
+
+.obc-textarea {
+  min-height: 118px;
+  resize: vertical;
+}
+
+/* الزرّ */
+.obc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.obc-btn--primary {
+  background: var(--law-navy);
+  color: #f6f1e6;
+}
+
+.obc-btn--primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.obc-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.obc-hint {
+  margin-top: 9px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--law-navy);
+  opacity: 0.6;
+}
+
+/* سجلّ التعاميم */
+.obc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.obc-item {
+  padding: 10px 12px;
+  border: 1px solid rgba(16, 32, 40, 0.1);
+  border-radius: 8px;
+}
+
+.obc-item__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.obc-item__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--law-navy);
+}
+
+.obc-item__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  font-size: 11px;
+  opacity: 0.55;
+  font-variant-numeric: tabular-nums;
+}
+
+.obc-item__body {
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--law-navy);
+  opacity: 0.85;
+  white-space: pre-wrap;
+}
+
+.obc-item__foot {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.5;
+}
+
+/* ============================================================
+   أوقات إشعارات التطبيق — شبكةُ ساعاتٍ تُنقر، لا قائمةٌ منسدلة.
+
+   ‏لأنّ المطلوب اختيارُ عدّة أوقاتٍ لا واحدٍ، والمنسدلة تُخفي المختار
+   ‏خلف نقرة. والشبكة تُري الحالة كلَّها في نظرة.
+   ============================================================ */
+
+.arh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.arh-slot {
+  padding: 8px 6px;
+  border: 1px solid rgba(16, 32, 40, 0.14);
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--law-navy);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.arh-slot:hover:not(:disabled) {
+  border-color: var(--law-gold);
+}
+
+/* ‏المختار يُقرأ من شيئين: الحدّ الذهبي والخلفية — فمن لا يميّز الألوان
+   ‏يقرأ سماكة الحدّ، ومن ينظر بطرف عينه يقرأ الخلفية. */
+.arh-slot--on {
+  border-color: var(--law-gold);
+  border-width: 1.5px;
+  background: rgba(168, 131, 74, 0.1);
+  font-weight: 700;
+}
+
+.arh-slot:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.arh-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.arh-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  border: 1px solid rgba(16, 32, 40, 0.14);
+  border-radius: 8px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--law-navy);
+  opacity: 0.75;
+  cursor: pointer;
+}
+
+.arh-reset:hover:not(:disabled) {
+  opacity: 1;
+  border-color: var(--law-gold);
+}
+
+.arh-reset:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

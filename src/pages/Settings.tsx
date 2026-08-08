@@ -31,6 +31,7 @@ import {
   ClipboardList,
   Sparkles,
   Smartphone,
+  Megaphone,
 } from 'lucide-react';
 import NotificationSettings from '../components/NotificationSettings';
 import PhoneField from '../components/PhoneField';
@@ -47,6 +48,8 @@ import MicrosoftIntegrationSettings from '../components/settings/MicrosoftIntegr
 import EmailIntegrationSection from '../components/settings/EmailIntegrationSection';
 import WordAddinSettings from '../components/settings/WordAddinSettings';
 import MobileAppSettings from '../components/settings/MobileAppSettings';
+import OfficeBroadcastSettings from '../components/settings/OfficeBroadcastSettings';
+import AppReminderHoursSettings from '../components/settings/AppReminderHoursSettings';
 import CaseNamingSettings from '../components/settings/CaseNamingSettings';
 import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -122,6 +125,9 @@ const Settings: React.FC = () => {
     { id: 'integrations', label: 'التكاملات', icon: Link, scope: 'staff' },
     { id: 'word_addin', label: 'إضافة Word', icon: FileText, scope: 'staff' },
     { id: 'mobile_app', label: 'تطبيق الجوال', icon: Smartphone, scope: 'staff' },
+    // ‏`admin` لا `staff`: الكتابة محروسة بـtenant.settings.manage في الخادم،
+    // ‏فإظهار التبويب لغير المدير يَعِد بما سيُردّ بـ403.
+    { id: 'office_broadcast', label: 'تعميم للموظفين', icon: Megaphone, scope: 'admin' },
     { id: 'email', label: 'البريد الإلكتروني', icon: Mail, scope: 'admin', ownerOnly: true },
     { id: 'subscription', label: 'الاشتراك', icon: CreditCard, scope: 'admin' },
     { id: 'invoices', label: 'الفواتير', icon: Receipt, scope: 'admin' },
@@ -563,7 +569,17 @@ const Settings: React.FC = () => {
         return <WordAddinSettings />;
 
       case 'mobile_app':
-        return <MobileAppSettings />;
+        // ‏أوقات الإشعارات تحت التطبيق لا في تبويبٍ مستقل: هي شأنُه، ومن يفتح
+        // ‏«تطبيق الجوال» يبحث عنها هنا. والتحرير للمدير والقراءة للجميع.
+        return (
+          <>
+            <MobileAppSettings />
+            <AppReminderHoursSettings />
+          </>
+        );
+
+      case 'office_broadcast':
+        return <OfficeBroadcastSettings />;
 
       case 'case_naming':
         return <CaseNamingSettings />;
