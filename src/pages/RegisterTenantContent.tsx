@@ -476,7 +476,7 @@ const RegisterTenantContent: React.FC = () => {
             const response = await apiClient.post<{
                 success: boolean;
                 message: string;
-                data?: { token?: string | null; user?: any; tenant?: any; approval_status?: string; requires_approval?: boolean };
+                data?: { tenant?: any; approval_status?: string; requires_approval?: boolean };
                 errors?: Record<string, string[]>;
             }>('/auth/register-tenant', payload);
 
@@ -484,12 +484,13 @@ const RegisterTenantContent: React.FC = () => {
                 if (response.data.requires_approval) {
                     // غير موثّق → بانتظار موافقة المالك (لا دخول)
                     setPendingApproval(true);
-                } else if (response.data.token) {
-                    // موثّق → دخول مباشر
-                    apiClient.setToken(response.data.token);
-                    setSuccess(true);
-                    setTimeout(() => navigate('/dashboard'), 1600);
                 } else {
+                    // موثّق → معتمَد، لكنّ التسجيل لا يُسجّل الدخول: يُردّ لصفحة الدخول
+                    // فيدخل برقم هويته ورمزه، فتمتلئ حالةُ AuthContext كما ينبغي.
+                    // لا نستهلك توكناً من استجابة التسجيل ولو أعادته نسخةٌ أقدم من
+                    // الباك (الباك والفرونت يُنشران منفصلَين): توكنٌ في localStorage
+                    // بلا مستخدم في الحالة هو عينُ العطب — يقرؤه ProtectedRoute
+                    // عطلَ شبكة فيعرض «خطأ في الاتصال» حتى يُحدَّث المتصفح.
                     setSuccess(true);
                     setTimeout(() => navigate('/login?registered=true'), 2000);
                 }
@@ -635,14 +636,14 @@ const RegisterTenantContent: React.FC = () => {
         );
     }
 
-    // ===== شاشة: نجاح الموثّق (دخول مباشر) =====
+    // ===== شاشة: نجاح الموثّق (ثم ردٌّ إلى صفحة الدخول) =====
     if (success) {
         return (
             <motion.div className="auth-card" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                 <div className="auth-success">
                     <span className="auth-success__icon"><Check size={32} /></span>
                     <h2 className="auth-success__title">تم التسجيل بنجاح!</h2>
-                    <p className="auth-success__desc">مرحباً بك في منصة إدارة المحاماة. جارٍ تجهيز لوحة التحكم...</p>
+                    <p className="auth-success__desc">تم إنشاء مكتبك. جارٍ نقلك لتسجيل الدخول برقم هويتك ورمزك السرّي...</p>
                 </div>
             </motion.div>
         );
