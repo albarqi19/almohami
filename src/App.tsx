@@ -155,7 +155,7 @@ function App() {
               <Route path="/subscription/payment/failed" element={<SubscriptionPaymentResult />} />
               {/* Lawyer Suspended - For lawyers when subscription expired - NO TIMER */}
               <Route path="/lawyer-suspended" element={
-                <ProtectedRoute allowedRoles={['lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute denyClient>
                   <LawyerSuspended />
                 </ProtectedRoute>
               } />
@@ -186,68 +186,68 @@ function App() {
               <Route path="dashboard" element={<Dashboard />} />
               {/* Routes for all users except clients */}
               <Route path="cases" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="cases.view" denyClient>
                   <Cases />
                 </ProtectedRoute>
               } />
               <Route path="cases/:caseId" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="cases.view" denyClient>
                   <CaseDetailPage />
                 </ProtectedRoute>
               } />
               {/* طلبات الإفلاس — صفحة تفاصيل مختلفة تماماً عن القضية (نفس أدوار القضايا) */}
               <Route path="bankruptcy/:caseId" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="cases.view" denyClient>
                   <BankruptcyDetailPage />
                 </ProtectedRoute>
               } />
               {/* طلبات الصلح (تراضي) — صفحة تفاصيل مناسبة للصلح بدل تفاصيل قضية ناجز */}
               <Route path="reconciliation/:caseId" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="cases.view" denyClient>
                   <ReconciliationDetailPage />
                 </ProtectedRoute>
               } />
               {/* ديوان المظالم (معين) — صفحة تفاصيل الدعوى الإدارية */}
               <Route path="grievance/:caseId" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="cases.view" denyClient>
                   <GrievanceDetailPage />
                 </ProtectedRoute>
               } />
               <Route path="sessions" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="sessions.view" denyClient>
                   <UpcomingSessions />
                 </ProtectedRoute>
               } />
               <Route path="sessions/:sessionId/prep" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="sessions.view" denyClient>
                   <SessionPrep />
                 </ProtectedRoute>
               } />
               {/* رفيق الجلسة — مساعد التحضير والتدوين (خلف بوابة tenant: session_copilot_enabled) */}
               <Route path="sessions/:sessionId/copilot" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="sessions.view" denyClient>
                   <SessionCopilot />
                 </ProtectedRoute>
               } />
               {/* المهل النظامية — عدادات تنازلية لمهل الاعتراض والمدد (ملاحظتا عميل #21 و#23) */}
               <Route path="deadlines" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="deadlines.view" denyClient>
                   <LegalDeadlines />
                 </ProtectedRoute>
               } />
               <Route path="wekalat" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="cases.view" denyClient>
                   <Wekalat />
                 </ProtectedRoute>
               } />
               <Route path="execution-requests" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="execution.view" denyClient>
                   <ExecutionRequests />
                 </ProtectedRoute>
               } />
               {/* مركز الملاحظات والاقتراحات — كل المستخدمين الداخليين عدا العميل */}
               <Route path="feedback" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant', 'accountant', 'secretary']}>
+                <ProtectedRoute requiredPermission="feedback.submit" denyClient>
                   <Feedback />
                 </ProtectedRoute>
               } />
@@ -266,17 +266,17 @@ function App() {
 
               {/* Meetings routes */}
               <Route path="meetings/internal" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="meetings.view" denyClient>
                   <InternalMeetings />
                 </ProtectedRoute>
               } />
               <Route path="meetings/client" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="meetings.view" denyClient>
                   <ClientMeetings />
                 </ProtectedRoute>
               } />
               <Route path="meetings/availability" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer']}>
+                <ProtectedRoute requiredPermission="meetings.view" denyClient>
                   <MyAvailability />
                 </ProtectedRoute>
               } />
@@ -310,12 +310,12 @@ function App() {
               } />
 
               <Route path="tasks" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="tasks.view" denyClient>
                   <Tasks />
                 </ProtectedRoute>
               } />
               <Route path="tasks/:taskId" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="tasks.view" denyClient>
                   <TaskDetail />
                 </ProtectedRoute>
               } />
@@ -336,17 +336,17 @@ function App() {
                   كاذبة تبدو كأنها بيانات المكتب لمن يبلغه بالعنوان المباشر.
                   التقارير الحقيقية: /firm-report و /lawyers-report و /my-performance. */}
               <Route path="firm-report" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner']}>
+                <ProtectedRoute anyOfPermissions={['cases.manage-all', 'system.manage']} denyClient>
                   <FirmReport />
                 </ProtectedRoute>
               } />
               <Route path="lawyers-report" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner']}>
+                <ProtectedRoute anyOfPermissions={['cases.manage-all', 'system.manage']} denyClient>
                   <LawyersReport />
                 </ProtectedRoute>
               } />
               <Route path="my-performance" element={
-                <ProtectedRoute allowedRoles={['lawyer', 'senior_lawyer', 'legal_assistant', 'partner', 'admin', 'owner']}>
+                <ProtectedRoute requiredPermission="cases.view" denyClient>
                   <MyPerformance />
                 </ProtectedRoute>
               } />
@@ -356,7 +356,7 @@ function App() {
                   إدارة مستخدميه رغم سماح الباك له. والأدوار المخصّصة مستثناة من هذا
                   الحارس القديم فتُحكَم بالصلاحية (انظر ProtectedRoute.tsx:130-137). */}
               <Route path="users" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'super_admin']}>
+                <ProtectedRoute requiredPermission="users.view" denyClient>
                   <Admin />
                 </ProtectedRoute>
               } />
@@ -378,38 +378,38 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="admin/requests" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="admin_requests.view" denyClient>
                   <AdminRequests />
                 </ProtectedRoute>
               } />
               <Route path="wathq" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'senior_lawyer', 'lawyer']}>
+                <ProtectedRoute requiredPermission="wathq.use" denyClient>
                   <WathqInquiryPage />
                 </ProtectedRoute>
               } />
               <Route path="laws" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'senior_lawyer', 'lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="cases.view" denyClient>
                   <LawsPage />
                 </ProtectedRoute>
               } />
               <Route path="correspondence" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'senior_lawyer', 'lawyer', 'accountant']}>
+                <ProtectedRoute requiredPermission="correspondence.view" denyClient>
                   <CorrespondenceRegisterPage />
                 </ProtectedRoute>
               } />
               {/* صندوق الطلبات الذكي من البريد — خلف بوابة email_intake_enabled (الباك يفرضها أيضاً) */}
               <Route path="intake-requests" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'senior_lawyer', 'lawyer']}>
+                <ProtectedRoute requiredPermission="legal-services.manage" denyClient>
                   <IntakeRequestsPage />
                 </ProtectedRoute>
               } />
               <Route path="memos/approvals" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'senior_lawyer', 'legal_assistant', 'lawyer']}>
+                <ProtectedRoute requiredPermission="memos.approve" denyClient>
                   <MemoApprovals />
                 </ProtectedRoute>
               } />
               <Route path="notebook" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="cases.view" denyClient>
                   <PersonalNotebook />
                 </ProtectedRoute>
               } />
@@ -449,7 +449,7 @@ function App() {
                 } />
                 {/* التحصيل العلوي المستقل: billing.view + قيد دور (يطابق إظهار التبويب في financeModule) */}
                 <Route path="collections" element={
-                  <ProtectedRoute requiredPermission="billing.view" allowedRoles={['admin', 'owner', 'accountant', 'super_admin']}><CollectionsTab /></ProtectedRoute>
+                  <ProtectedRoute requiredPermission="billing.view" denyClient><CollectionsTab /></ProtectedRoute>
                 } />
                 <Route path="reports" element={
                   <ProtectedRoute requiredPermission="billing.reports.view"><ReportsTab /></ProtectedRoute>
@@ -492,31 +492,31 @@ function App() {
 
               {/* ZATCA E-Invoicing — قسم مستقل (الحماية الفعلية في الباك؛ حارس available/enabled داخل ZatcaCenter) */}
               <Route path="zatca" element={
-                <ProtectedRoute allowedRoles={['admin', 'accountant', 'owner']}>
+                <ProtectedRoute requiredPermission="billing.invoices.manage" denyClient>
                   <ZatcaCenter />
                 </ProtectedRoute>
               } />
 
               {/* Legal Services routes */}
               <Route path="legal-services" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="legal-services.view" denyClient>
                   <LegalServices />
                 </ProtectedRoute>
               } />
               {/* الخدمة المبسطة — صفحة عمل مخصّصة (قبل :id كي لا يبتلعها) */}
               <Route path="legal-services/simple/:id" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="legal-services.view" denyClient>
                   <SimpleServicePage />
                 </ProtectedRoute>
               } />
               <Route path="legal-services/:id" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner', 'partner', 'lawyer', 'senior_lawyer', 'legal_assistant']}>
+                <ProtectedRoute requiredPermission="legal-services.view" denyClient>
                   <LegalServiceDetail />
                 </ProtectedRoute>
               } />
               {/* الأرشيف / سلة المحذوفات — للمدير والمالك فقط (الباك إند يفرض الصلاحيات أيضاً) */}
               <Route path="archive" element={
-                <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                <ProtectedRoute requiredPermission="cases.force-delete" denyClient>
                   <Archive />
                 </ProtectedRoute>
               } />
