@@ -35,7 +35,7 @@ export interface SidebarItem {
  */
 export const mainMenuItems: SidebarItem[] = [
   { icon: Home, label: 'لوحة التحكم', path: '/dashboard', permission: null },
-  { icon: TrendingUp, label: 'أداء الشركة', path: '/firm-report', permission: null, roles: ['admin', 'owner', 'partner'] },
+  { icon: TrendingUp, label: 'أداء الشركة', path: '/firm-report', any: ['cases.manage-all', 'system.manage'] },
   { icon: FileText, label: 'القضايا', path: '/cases', permission: 'cases.view' },
   { icon: FileCheck, label: 'الوكالات', path: '/wekalat', permission: 'wekala.manage' },
   { icon: Calendar, label: 'الجلسات', path: '/sessions', permission: 'sessions.view' },
@@ -44,10 +44,10 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: Briefcase, label: 'الخدمات القانونية', path: '/legal-services', permission: 'cases.view' },
   { icon: Users, label: 'الاجتماعات', path: '/meetings/internal', permission: 'meetings.view' },
   { icon: Calendar, label: 'مواعيد العملاء', path: '/meetings/client', permission: 'meetings.view' },
-  { icon: Clock, label: 'إعدادات التوفر', path: '/meetings/availability', permission: 'meetings.view', roles: ['admin', 'lawyer', 'senior_lawyer'] },
+  { icon: Clock, label: 'إعدادات التوفر', path: '/meetings/availability', permission: 'meetings.view' },
   { icon: CheckSquare, label: 'المهام', path: '/tasks', permission: 'tasks.view' },
   { icon: BookOpen, label: 'المفكرة الشخصية', path: '/notebook', permission: null },
-  { icon: BarChart3, label: 'أدائي', path: '/my-performance', permission: null, roles: ['lawyer', 'senior_lawyer', 'legal_assistant'] },
+  { icon: BarChart3, label: 'أدائي', path: '/my-performance', permission: 'cases.view' },
   { icon: FileText, label: 'قضاياي', path: '/my-cases', permission: null, roles: ['client'] },
   // بوابة المنشأة — متابعة العميل لوثائق منشأته وموظفيها (خلف establishment_portal_enabled)
   { icon: Landmark, label: 'منشأتي', path: '/my-establishment', permission: null, roles: ['client'], featureGate: 'establishment_portal', badge: 'جديد' },
@@ -68,20 +68,23 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: FileCheck, label: 'اعتمادات المذكرات', path: '/memos/approvals', permission: 'memos.approve', badge: 'تجريبي' },
   // الموارد البشرية — للمدير فقط (permission: hr.view مبذورة لـ owner/admin حصراً) + خلف بوابة hr_enabled.
   { icon: UserCog, label: 'الموارد البشرية', path: '/hr', permission: 'hr.view', featureGate: 'hr', badge: 'جديد' },
-  { icon: QrCode, label: 'الفوترة الإلكترونية', path: '/zatca', roles: ['admin', 'accountant', 'owner'], featureGate: 'zatca' },
+  { icon: QrCode, label: 'الفوترة الإلكترونية', path: '/zatca', permission: 'billing.invoices.manage', featureGate: 'zatca' },
   { icon: Lightbulb, label: 'الملاحظات', path: '/feedback', permission: 'feedback.submit', badge: 'مؤقتة' },
 ];
 
 /**
  * عناصر قسم الإعدادات.
  */
+// [RBAC] عناصرُ المكتب تُحكم بالصلاحية لا بالاسم — مطابقةً لحرّاس App.tsx
+// والخادم. أمّا عناصرُ بوّابة العميل فتبقى بالاسم بحقٍّ: العميلُ **نوعُ
+// مستخدمٍ لا دور**، وله قائمةٌ بيضاء صارمة في ClickUpSidebar.tsx:197.
 export const settingsMenuItems: SidebarItem[] = [
   // [P4·UX-09] القوالب نادرة الاستخدام → نُقلت من القائمة الرئيسية إلى الإعدادات.
   { icon: FileText, label: 'قوالب العقود', path: '/settings/contract-templates', permission: 'contracts.templates.manage' },
   { icon: BarChart3, label: 'تقرير الأداء', path: '/lawyers-report', permission: 'reports.view' },
   { icon: Users, label: 'المستخدمين', path: '/users', permission: 'users.view' },
   // سلة المحذوفات — للمدير والمالك فقط (استعادة/حذف نهائي للقضايا والوكالات والعملاء).
-  { icon: Trash2, label: 'سلة المحذوفات', path: '/archive', roles: ['admin', 'owner'] },
+  { icon: Trash2, label: 'سلة المحذوفات', path: '/archive', permission: 'cases.force-delete' },
   { icon: Bell, label: 'التنبيهات', path: '/notifications', permission: null },
   { icon: MessageSquare, label: 'الواتساب', path: '/whatsapp-settings', permission: 'whatsapp.send' },
   { icon: Settings, label: 'الإعدادات', path: '/settings', permission: null },

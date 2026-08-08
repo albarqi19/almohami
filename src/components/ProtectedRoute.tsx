@@ -14,6 +14,15 @@ interface ProtectedRouteProps {
   requiredPermission?: string;
   /** يكفي أي صلاحية من القائمة. */
   anyOfPermissions?: string[];
+  /**
+   * سطحٌ داخليّ: يُمنع حسابُ الموكّل ولو حمل الصلاحية.
+   *
+   * لازمٌ عند التحويل من allowedRoles إلى الصلاحيات: العميل يحمل بحقٍّ
+   * cases.view و sessions.view و documents.view (ليرى ملفَّه في بوّابته)،
+   * فالاكتفاءُ بالصلاحية كان سيفتح له صفحاتِ المكتب الداخلية.
+   * العميلُ **نوعُ مستخدمٍ لا دور**، فيُستثنى صراحةً لا بقائمة أسماء.
+   */
+  denyClient?: boolean;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
@@ -21,6 +30,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles,
   requiredPermission,
   anyOfPermissions,
+  denyClient,
 }) => {
   const { user, isLoading } = useAuth();
   const { has, hasAny, isLoading: permsLoading } = usePermissionContext();
@@ -105,6 +115,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         return <Navigate to="/dashboard" replace />;
       }
     }
+  }
+
+  // ─── سطحٌ داخليّ: الموكّل خارجَه دائماً (نوعُ مستخدمٍ لا دور) ───
+  if (denyClient && user && user.role === 'client') {
+    return <Forbidden />;
   }
 
   // ─── Phase 3: Permission-based gate (preferred) ───
