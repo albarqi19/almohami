@@ -104,9 +104,15 @@ const HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
  */
 function applyTenantTheme(tenant: Tenant) {
   if (tenant.favicon_url) {
-    const favicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
-    if (favicon) {
-      favicon.href = tenant.favicon_url;
+    // index.html يعلن خمسةَ روابطِ أيقونة (ico + svg + 32 + 16 + apple-touch)،
+    // وتحديثُ الأول وحده كان يترك المتصفّحَ يختار أدقَّها حجماً — أي أيقونةَ
+    // الرائد — فتظهر في تبويب نطاق المكتب. تُزال كلُّها ويُوضع بديلٌ واحد.
+    document.querySelectorAll('link[rel*="icon"]').forEach((el) => el.remove());
+    for (const rel of ['icon', 'apple-touch-icon']) {
+      const link = document.createElement('link');
+      link.rel = rel;
+      link.href = tenant.favicon_url;
+      document.head.appendChild(link);
     }
   }
 
