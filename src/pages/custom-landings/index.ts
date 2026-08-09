@@ -13,6 +13,7 @@ import { lazyWithRetry } from '../../utils/lazyWithRetry';
 // TenantLandingPage ⇒ يصعد الاستثناء إلى ErrorBoundary العام فتُبتلع صفحة
 // المكتب كلها بشاشة خطأ عامة. الغلاف يعيد تحميل الصفحة مرة واحدة بدل ذلك.
 const AlkhibraLanding = lazyWithRetry(() => import('./AlkhibraLanding'));
+const LegalEditionLanding = lazyWithRetry(() => import('./LegalEditionLanding'));
 
 // يمكنك إضافة المزيد من الصفحات المخصصة هنا:
 // const AnotherCompanyLanding = React.lazy(() => import('./AnotherCompanyLanding'));
@@ -28,6 +29,7 @@ const AlkhibraLanding = lazyWithRetry(() => import('./AlkhibraLanding'));
  */
 export const customLandingPages: Record<string, React.LazyExoticComponent<React.FC>> = {
   'alkhibra': AlkhibraLanding,
+  'legaledition': LegalEditionLanding,
   // أضف المزيد من الشركات هنا
 };
 
