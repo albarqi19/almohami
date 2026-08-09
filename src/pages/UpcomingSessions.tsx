@@ -739,14 +739,28 @@ const UpcomingSessions: React.FC = () => {
 					{sortedSessions.map(session => (
 						<tr
 							key={session.id}
-							className="session-row session-row--clickable"
-							title="انقر لفتح غرفة تحضير الجلسة"
-							onClick={() => navigate(`/sessions/${session.id}/prep`)}
+							className={`session-row${(session as any).case_access_revoked ? '' : ' session-row--clickable'}`}
+							title={(session as any).case_access_revoked
+								? 'انتهت علاقتك بهذه القضية في ناجز — الموعد ظاهر والملف مقفل'
+								: 'انقر لفتح غرفة تحضير الجلسة'}
+							onClick={() => {
+								// القضيةُ المنقطعة: الموعدُ يُرى ولا يُفتح ملفُّها ولا غرفةُ تحضيرها.
+								if ((session as any).case_access_revoked) return;
+								navigate(`/sessions/${session.id}/prep`);
+							}}
 						>
 							<td>
 								<div className="session-info">
 									<span className="session-case-title">
 										{session.case?.title || '-'}
+										{(session as any).case_access_revoked && (
+											<span
+												className="cw-session-badge cw-session-badge--expired"
+												title="انتهت علاقة المكتب بهذه القضية في ناجز — يظهر الموعد فقط"
+											>
+												<AlertCircle size={11} /> انتهت العلاقة
+											</span>
+										)}
 										{(() => {
 											const s = session.wekala_status_at_session;
 											if (s === 'expired_before_session') {
@@ -773,28 +787,38 @@ const UpcomingSessions: React.FC = () => {
 											return null;
 										})()}
 									</span>
-									<span
+									{(() => {
+										// القضيةُ المنقطعة لا تُفتح — فالرقمُ نصٌّ لا رابط.
+										const caseLocked = Boolean((session as any).case_access_revoked);
+										const canOpenCase = Boolean(session.case_id) && !caseLocked;
+
+										return (
+										<span
 											className="session-case-number"
-											role={session.case_id ? 'link' : undefined}
-											tabIndex={session.case_id ? 0 : undefined}
-											title={session.case_id ? 'فتح القضية' : undefined}
+											role={canOpenCase ? 'link' : undefined}
+											tabIndex={canOpenCase ? 0 : undefined}
+											title={canOpenCase
+												? 'فتح القضية'
+												: (caseLocked ? 'الملف مقفل — انتهت العلاقة في ناجز' : undefined)}
 											onClick={(e) => {
-												if (!session.case_id) return;
+												if (!canOpenCase) return;
 												e.stopPropagation();
 												navigate(caseUrlFor(session));
 											}}
 											onKeyDown={(e) => {
-												if (!session.case_id) return;
+												if (!canOpenCase) return;
 												if (e.key === 'Enter' || e.key === ' ') {
 													e.preventDefault();
 													e.stopPropagation();
 													navigate(caseUrlFor(session));
 												}
 											}}
-											style={session.case_id ? { cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px' } : undefined}
+											style={canOpenCase ? { cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px' } : undefined}
 										>
 											#{session.case?.file_number || session.case_id}
 										</span>
+										);
+									})()}
 										{session.session_number != null && (
 											<span
 												className="session-seq-chip"
@@ -1095,10 +1119,20 @@ const UpcomingSessions: React.FC = () => {
 									<div
 										key={s.id}
 										className={`calendar-session ${finished ? 'calendar-session--finished' : ''}`}
-										onClick={(e) => { e.stopPropagation(); s.case_id && navigate(caseUrlFor(s)); }}
-										title={`${s.case?.title || ''} — ${s.session_time || ''}`}
+										onClick={(e) => {
+											e.stopPropagation();
+											// الموعدُ يُرى، والملفُّ المنقطع لا يُفتح.
+											if ((s as any).case_access_revoked) return;
+											s.case_id && navigate(caseUrlFor(s));
+										}}
+										title={(s as any).case_access_revoked
+											? `${s.case?.title || ''} — الملف مقفل (انتهت العلاقة في ناجز)`
+											: `${s.case?.title || ''} — ${s.session_time || ''}`}
 									>
-										<div className="calendar-session__title">{s.case?.title || 'بدون عنوان'}</div>
+										<div className="calendar-session__title">
+											{(s as any).case_access_revoked && '🔒 '}
+											{s.case?.title || 'بدون عنوان'}
+										</div>
 										{s.session_time && <div className="calendar-session__time">{s.session_time}</div>}
 									</div>
 								);
@@ -1142,14 +1176,22 @@ const UpcomingSessions: React.FC = () => {
 										<div
 											key={s.id}
 											className={`calendar-modal__item ${finished ? 'calendar-modal__item--finished' : ''}`}
-											onClick={() => { setDayModalKey(null); s.case_id && navigate(caseUrlFor(s)); }}
+											onClick={() => {
+												if ((s as any).case_access_revoked) return;
+												setDayModalKey(null);
+												s.case_id && navigate(caseUrlFor(s));
+											}}
+											title={(s as any).case_access_revoked ? 'الملف مقفل — انتهت العلاقة في ناجز' : undefined}
 										>
 											<div className="calendar-modal__time">
 												<Clock size={12} />
 												{s.session_time || '—'}
 											</div>
 											<div className="calendar-modal__info">
-												<div className="calendar-modal__case">{s.case?.title || 'بدون عنوان'}</div>
+												<div className="calendar-modal__case">
+													{(s as any).case_access_revoked && '🔒 '}
+													{s.case?.title || 'بدون عنوان'}
+												</div>
 												<div className="calendar-modal__meta">
 													{s.court && <span>{s.court}</span>}
 													{s.case?.client_name && <span>· {s.case.client_name}</span>}

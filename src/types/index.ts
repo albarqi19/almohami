@@ -616,6 +616,13 @@ export interface CaseSession {
   is_video_conference?: boolean;
   source?: string;
   notify_client?: boolean;
+  /**
+   * قضيةُ هذه الجلسة انقطعت علاقةُ المكتب بها في ناجز.
+   *
+   * الموعدُ يظهر (ناجز يعرضه في تقويم المحامي) والملفُّ مقفل: الضبطُ والحكمُ
+   * والملاحظاتُ لا تصل أصلاً من الباك، والقضيةُ وغرفةُ التحضير لا تُفتحان.
+   */
+  case_access_revoked?: boolean;
 }
 
 export const CaseType = {
