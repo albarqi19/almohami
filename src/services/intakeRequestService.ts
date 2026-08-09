@@ -17,6 +17,20 @@ export interface IntakeAttachment {
   storage_path: string | null;
   extraction_status: 'pending' | 'done' | 'failed' | 'skipped';
   extracted_text?: string | null;
+  /** وصف من سطر واحد كتبه الذكاء ضمن نداء الاستخلاص نفسه */
+  ai_description?: string | null;
+  /** يفتحه المتصفح داخل الصفحة (pdf/صورة) — ما عداه يُنزَّل */
+  is_viewable?: boolean;
+  /** روابط موقّعة ٣٠ دقيقة — تصلح لـ<iframe>/<img> لأنها لا تحتاج ترويسة مصادقة */
+  preview_url?: string | null;
+  download_url?: string | null;
+}
+
+/** نصّ الرسالة الأصلي كما ورد في Outlook (يُجلب عند الطلب، لا يُخزَّن) */
+export interface IntakeOriginalMessage {
+  content_type: 'html' | 'text';
+  content: string;
+  subject: string | null;
 }
 
 export interface IntakeRequest {
@@ -69,6 +83,12 @@ export interface ApprovePayload {
   billing_type?: 'flat_fee' | 'hourly' | 'retainer' | 'contingency' | null;
   agreed_amount?: number | null;
   hourly_rate?: number | null;
+  /** التكليف — مهمة تُنشأ مع الخدمة، مسؤولها المحامي المكلَّف ومعتمِدها المدير */
+  create_task?: boolean;
+  /** إلزامي عند create_task — ولا يصحّ أن يساوي assigned_lawyer_id */
+  task_approver_id?: number | null;
+  task_due_days?: number | null;
+  task_title?: string | null;
 }
 
 export interface ApproveResult {
@@ -76,7 +96,12 @@ export interface ApproveResult {
   case_id: number | null;
   /** عدد المرفقات التي انتقلت فعلاً إلى مستندات الكيان الناتج */
   attachments_promoted: number;
+  /** معرّف المهمة المنشأة — null إن لم يُطلب التكليف */
+  task_id: number | null;
 }
+
+/** مهلة التسليم الافتراضية — مطابقة IntakeRequestController::DEFAULT_TASK_DUE_DAYS */
+export const DEFAULT_TASK_DUE_DAYS = 2;
 
 /** أنواع الفوترة — مطابقة تحقّق IntakeRequestController::approve */
 export const BILLING_TYPES: Record<string, string> = {
@@ -124,6 +149,17 @@ class IntakeRequestService {
     return await apiClient.post<{ success: boolean; message: string; data: ApproveResult }>(
       `/intake-requests/${id}/approve`,
       payload,
+    );
+  }
+
+  /**
+   * نصّ الرسالة الأصلي بتنسيقه — يُجلب من Outlook لحظتَها ولا يُخزَّن في القاعدة.
+   * قد يفشل إن حُذفت الرسالة أو انقطع ربط مايكروسوفت، فيسقط النداء والصفحة تعرض
+   * النصّ المجرَّد المخزَّن بدلاً منه.
+   */
+  async original(id: number) {
+    return await apiClient.get<{ success: boolean; data: IntakeOriginalMessage }>(
+      `/intake-requests/${id}/original`,
     );
   }
 

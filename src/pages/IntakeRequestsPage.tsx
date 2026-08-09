@@ -9,11 +9,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Inbox, RefreshCw, X, Paperclip, Download, CheckCircle2, Ban,
   AlertTriangle, Briefcase, MessageSquare, Scale, Zap, ChevronRight, ChevronLeft,
+  Eye, Mail, ClipboardCheck,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
-  intakeRequestService, INTAKE_SERVICE_TYPES, BILLING_TYPES,
+  intakeRequestService, INTAKE_SERVICE_TYPES, BILLING_TYPES, DEFAULT_TASK_DUE_DAYS,
   type IntakeRequest, type IntakeTarget, type IntakeStatus, type ApprovePayload,
+  type IntakeAttachment, type IntakeOriginalMessage,
 } from '../services/intakeRequestService';
 import { UserService, type User } from '../services/UserService';
 import '../styles/intake-requests.css';
@@ -117,6 +119,8 @@ const IntakeRequestsPage: React.FC = () => {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [approveFor, setApproveFor] = useState<IntakeRequest | null>(null);
   const [rejectFor, setRejectFor] = useState<IntakeRequest | null>(null);
+  const [previewFor, setPreviewFor] = useState<IntakeAttachment | null>(null);
+  const [originalFor, setOriginalFor] = useState<IntakeRequest | null>(null);
   const [undo, setUndo] = useState<{ label: string; href: string | null } | null>(null);
   const undoTimer = useRef<number | null>(null);
   const queryClient = useQueryClient();
@@ -151,6 +155,22 @@ const IntakeRequestsPage: React.FC = () => {
   };
   useEffect(() => () => { if (undoTimer.current) window.clearTimeout(undoTimer.current); }, []);
 
+  /**
+   * التنزيل عبر الرابط الموقّع مباشرة — لا حاجة لجلب blob بتوكن كما في المسار
+   * القديم، فالتوقيع نفسه هو التفويض. ويسقط على المسار المُصادَق إن غاب الرابط
+   * (حالة نظرية: صفٌّ بلا ملف).
+   */
+  const downloadAttachment = (a: IntakeAttachment) => {
+    if (a.download_url) {
+      window.open(a.download_url, '_blank', 'noopener');
+      return;
+    }
+    if (!full) return;
+    intakeRequestService
+      .downloadAttachment(full.id, a.id, a.file_name)
+      .catch(() => toast.error('تعذّر تحميل الملف'));
+  };
+
   const approveMut = useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: ApprovePayload }) =>
       intakeRequestService.approve(id, payload),
@@ -158,11 +178,13 @@ const IntakeRequestsPage: React.FC = () => {
       const d = res.data;
       const href = d.case_id ? `/cases/${d.case_id}` : d.service_id ? `/legal-services/${d.service_id}` : null;
       const promoted = d.attachments_promoted > 0 ? ` · نُقل ${d.attachments_promoted} مرفقاً إلى مستندات الملف` : '';
-      toast.success(`${res.message}${promoted}`);
-      showUndo(`${res.message}${promoted}`, href);
+      const tasked = d.task_id ? ' · وأُنشئت مهمة التكليف' : '';
+      toast.success(`${res.message}${promoted}${tasked}`);
+      showUndo(`${res.message}${promoted}${tasked}`, href);
       setApproveFor(null);
       queryClient.invalidateQueries({ queryKey: ['intake-requests'] });
       queryClient.invalidateQueries({ queryKey: ['intake-request', vars.id] });
+      if (d.task_id) queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
     onError: (e: unknown) => toast.error(errorMessage(e, 'تعذّر اعتماد الطلب')),
   });
@@ -373,7 +395,17 @@ const IntakeRequestsPage: React.FC = () => {
               </div>
 
               <div className="rq-section">
-                <h4 className="rq-section__title">الموضوع</h4>
+                <h4 className="rq-section__title">
+                  الموضوع
+                  <button
+                    type="button"
+                    className="rq-linkbtn"
+                    onClick={() => setOriginalFor(full)}
+                    title="الرسالة كما وصلت بتنسيقها — تُجلب من صندوق البريد الآن"
+                  >
+                    <Mail size={11} /> الرسالة الأصلية
+                  </button>
+                </h4>
                 <p className="rq-section__body">
                   {full.extracted_payload?.description || full.raw_body || 'لا نصّ في الرسالة.'}
                 </p>
@@ -384,22 +416,55 @@ const IntakeRequestsPage: React.FC = () => {
                   <h4 className="rq-section__title">
                     المرفقات <span className="rq-section__hint">{full.attachments.length} ملف</span>
                   </h4>
+                  {/* صفٌّ لكل مرفق لا رقاقات متجاورة: الوصف سطرٌ كامل، والمعاينة
+                      والتنزيل فعلان منفصلان — الضغط على الاسم يعرض لا يُنزّل. */}
                   <div className="rq-files">
-                    {full.attachments.map((a) => (
-                      <button
-                        key={a.id}
-                        className="rq-file"
-                        disabled={!a.storage_path}
-                        title={a.storage_path ? 'تنزيل' : 'انتقل إلى مستندات الملف'}
-                        onClick={() => intakeRequestService
-                          .downloadAttachment(full.id, a.id, a.file_name)
-                          .catch(() => toast.error('تعذّر تحميل الملف'))}
-                      >
-                        <Download size={11} />
-                        <span className="rq-file__name">{a.file_name}</span>
-                        <span className="rq-file__size">{fmtSize(a.size)}</span>
-                      </button>
-                    ))}
+                    {full.attachments.map((a) => {
+                      const available = !!a.preview_url || !!a.download_url;
+                      return (
+                        <div className="rq-file" key={a.id}>
+                          <button
+                            type="button"
+                            className="rq-file__main"
+                            disabled={!available}
+                            title={
+                              !available
+                                ? 'الملف غير متوفّر (تجاوز الحدود أو حُذف)'
+                                : a.is_viewable ? 'معاينة' : 'هذا النوع يُنزَّل ولا يُعرض داخل الصفحة'
+                            }
+                            onClick={() => {
+                              if (!available) return;
+                              if (a.is_viewable && a.preview_url) setPreviewFor(a);
+                              else downloadAttachment(a);
+                            }}
+                          >
+                            <span className="rq-file__icon">
+                              {a.is_viewable ? <Eye size={11} /> : <Download size={11} />}
+                            </span>
+                            <span className="rq-file__body">
+                              <span className="rq-file__name">{a.file_name}</span>
+                              {/* الوصف أهمّ ما في الصفّ للصور والملفات الممسوحة — لا نصّ لها أصلاً */}
+                              <span className="rq-file__desc">
+                                {a.ai_description
+                                  || (a.extraction_status === 'skipped' ? 'ملف لم يُستخرج نصّه — افتحه لتراه' : '—')}
+                              </span>
+                            </span>
+                            <span className="rq-file__size">{fmtSize(a.size)}</span>
+                          </button>
+                          {available && (
+                            <button
+                              type="button"
+                              className="rq-file__side"
+                              title="تنزيل"
+                              aria-label={`تنزيل ${a.file_name}`}
+                              onClick={() => downloadAttachment(a)}
+                            >
+                              <Download size={11} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -416,6 +481,18 @@ const IntakeRequestsPage: React.FC = () => {
           <span className="rq-undo__bar"><i /></span>
           <button className="rq-undo__close" onClick={() => setUndo(null)} aria-label="إغلاق"><X size={12} /></button>
         </div>
+      )}
+
+      {previewFor && (
+        <PreviewModal
+          attachment={previewFor}
+          onClose={() => setPreviewFor(null)}
+          onDownload={() => downloadAttachment(previewFor)}
+        />
+      )}
+
+      {originalFor && (
+        <OriginalMessageModal request={originalFor} onClose={() => setOriginalFor(null)} />
       )}
 
       {approveFor && (
@@ -439,6 +516,123 @@ const IntakeRequestsPage: React.FC = () => {
   );
 };
 
+// ─────────────────────── معاينة المرفق ───────────────────────
+// المعاينة قبل الاعتماد لا بعده: المحامي كان يعتمد ملفاً لم يره — وأشدّها الصور
+// وملفات PDF الممسوحة ضوئياً، فلا نصّ يُستخرج منها أصلاً (الـOCR معطّل).
+const PreviewModal: React.FC<{
+  attachment: IntakeAttachment;
+  onClose: () => void;
+  onDownload: () => void;
+}> = ({ attachment, onClose, onDownload }) => {
+  const isImage = /\.(jpe?g|png)$/i.test(attachment.file_name);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="rq-overlay" onClick={onClose}>
+      <div className="rq-modal rq-modal--wide" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <header className="rq-modal__head">
+          <span className="rq-modal__headname">{attachment.file_name}</span>
+          <button className="rq-linkbtn" onClick={onDownload}><Download size={11} /> تنزيل</button>
+          <button className="rq-modal__x" onClick={onClose} aria-label="إغلاق"><X size={14} /></button>
+        </header>
+
+        {attachment.ai_description && (
+          <p className="rq-modal__note">{attachment.ai_description}</p>
+        )}
+
+        <div className="rq-viewer">
+          {attachment.preview_url ? (
+            isImage
+              ? <img className="rq-viewer__img" src={attachment.preview_url} alt={attachment.file_name} />
+              : <iframe className="rq-viewer__frame" src={attachment.preview_url} title={attachment.file_name} />
+          ) : (
+            <p className="rq-viewer__empty">هذا الملف لا يُعرض داخل الصفحة — نزّله لتفتحه.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────── الرسالة الأصلية بتنسيقها ───────────────────
+// لا تُخزَّن في القاعدة: المخزَّن نصٌّ مجرَّد مقصوص، والأصل يبقى في صندوق Outlook
+// ويُجلب لحظتَها — فيعمل للرسائل القديمة كما الجديدة بلا تضخيم القاعدة.
+const OriginalMessageModal: React.FC<{
+  request: IntakeRequest;
+  onClose: () => void;
+}> = ({ request, onClose }) => {
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['intake-original', request.id],
+    queryFn: () => intakeRequestService.original(request.id),
+    retry: false,
+  });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const original: IntakeOriginalMessage | null = data?.data ?? null;
+
+  return (
+    <div className="rq-overlay" onClick={onClose}>
+      <div className="rq-modal rq-modal--wide" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <header className="rq-modal__head">
+          <span className="rq-modal__headname">{request.subject || 'الرسالة الأصلية'}</span>
+          <button className="rq-modal__x" onClick={onClose} aria-label="إغلاق"><X size={14} /></button>
+        </header>
+
+        {original?.content_type === 'html' && (
+          <p className="rq-modal__note">
+            الصور والموارد البعيدة محجوبة — كي لا يعلم المُرسِل بفتحك رسالته.
+          </p>
+        )}
+
+        <div className="rq-viewer">
+          {isLoading && <p className="rq-viewer__empty">جارٍ الجلب من صندوق البريد…</p>}
+
+          {isError && (
+            <div className="rq-viewer__fallback">
+              <p className="rq-viewer__empty">
+                {errorMessage(error, 'تعذّر جلب الرسالة الأصلية')} — هذا النصّ المخزَّن عند الالتقاط:
+              </p>
+              <pre className="rq-viewer__raw">{request.raw_body || 'لا نصّ محفوظ.'}</pre>
+            </div>
+          )}
+
+          {original && (
+            original.content_type === 'html'
+              ? (original.content.trim()
+                  // sandbox="" يمنع السكربتات والنماذج والتنقّل، لكنه **لا يمنع طلبات
+                  // الشبكة**. فبلا CSP كانت صورة تتبّعٍ في رسالة تصيّد تُبلغ مُرسِلها
+                  // بعنوان IP للمكتب ووقت القراءة لحظة يفتحها المراجع ليتحقّق منها —
+                  // وهو ما يحجبه Outlook وGmail افتراضياً. default-src 'none' يقطع كل
+                  // اتصالٍ خارجي، ويبقى التنسيق السطري والصور المضمّنة (data:).
+                  ? <iframe
+                      className="rq-viewer__frame"
+                      sandbox=""
+                      srcDoc={`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:;"><style>body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:13px;line-height:1.7;padding:14px;margin:0;color:#16202a}img{max-width:100%;height:auto}table{max-width:100%}</style></head><body>${original.content}</body></html>`}
+                      title="الرسالة الأصلية"
+                    />
+                  // محتوىً فارغ بردٍّ ناجح: لا نعرض نافذة بيضاء صامتة
+                  : <div className="rq-viewer__fallback">
+                      <p className="rq-viewer__empty">تعذّر عرض الرسالة بتنسيقها — هذا النصّ المخزَّن:</p>
+                      <pre className="rq-viewer__raw">{request.raw_body || 'لا نصّ محفوظ.'}</pre>
+                    </div>)
+              : <pre className="rq-viewer__raw">{original.content || 'لا نصّ في الرسالة.'}</pre>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─────────────────────────── نافذة الاعتماد ───────────────────────────
 const ApproveModal: React.FC<{
   request: IntakeRequest;
@@ -455,6 +649,10 @@ const ApproveModal: React.FC<{
   const [billingType, setBillingType] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [sendConfirmation, setSendConfirmation] = useState(true);
+  // التكليف — مفعّل افتراضياً: الطلب المعتمَد بلا مكلَّف ولا موعد يبقى ساكناً
+  const [createTask, setCreateTask] = useState(true);
+  const [approverId, setApproverId] = useState<number | ''>('');
+  const [dueDays, setDueDays] = useState<string>(String(DEFAULT_TASK_DUE_DAYS));
 
   const { data: clients } = useQuery<User[]>({
     queryKey: ['intake-clients'], queryFn: () => UserService.getClients(),
@@ -463,7 +661,24 @@ const ApproveModal: React.FC<{
     queryKey: ['intake-lawyers'], queryFn: () => UserService.getLawyers(),
   });
 
-  const canSubmit = !!clientId && !!lawyerId && title.trim().length > 0 && !busy;
+  // ⚠️ البوابة تُلغي نفسها لو اعتمد المحامي مهمّة نفسه (سياسة المهام تُجيز
+  // للمنشئ الاعتماد دائماً). فنمنعه هنا ويمنعه الباك أيضاً — لا نتّكل على الواجهة.
+  const selfApproval = createTask && !!approverId && Number(approverId) === Number(lawyerId);
+  const missingApprover = createTask && !approverId;
+
+  // ⚠️ min/max على <input> زينةٌ هنا: لا <form> ولا submit، فقيود المتصفح لا تُطبَّق.
+  // بلا هذا القصر تمرّ «٩٠» إلى الباك فيردّ 422 برسالة عامّة لا تدلّ على الحقل.
+  const DUE_MIN = 1;
+  const DUE_MAX = 60;
+  const dueDaysNum = (() => {
+    const n = Math.trunc(Number(dueDays));
+    if (!Number.isFinite(n) || n < DUE_MIN) return DUE_MIN;
+    return Math.min(n, DUE_MAX);
+  })();
+  const dueOutOfRange = createTask && dueDays.trim() !== '' && Number(dueDays) !== dueDaysNum;
+
+  const canSubmit =
+    !!clientId && !!lawyerId && title.trim().length > 0 && !busy && !selfApproval && !missingApprover;
 
   const submit = () => {
     if (!canSubmit) return;
@@ -477,8 +692,17 @@ const ApproveModal: React.FC<{
       send_confirmation: sendConfirmation,
       billing_type: billingType ? (billingType as ApprovePayload['billing_type']) : null,
       agreed_amount: amount ? Number(amount) : null,
+      create_task: createTask,
+      task_approver_id: createTask ? Number(approverId) : null,
+      task_due_days: createTask ? dueDaysNum : null,
     });
   };
+
+  const dueLabel = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + dueDaysNum);
+    return d.toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long' });
+  })();
 
   return (
     <div className="rq-overlay" onClick={onClose}>
@@ -559,6 +783,52 @@ const ApproveModal: React.FC<{
           <input type="checkbox" checked={sendConfirmation} onChange={(e) => setSendConfirmation(e.target.checked)} />
           <span>أرسل رسالة «استلمنا طلبكم» إلى {request.from_email || 'المُرسِل'}</span>
         </label>
+
+        {/* ── التكليف ── */}
+        <label className="rq-toggle rq-toggle--head">
+          <input type="checkbox" checked={createTask} onChange={(e) => setCreateTask(e.target.checked)} />
+          <span><ClipboardCheck size={12} /> كلّف المحامي بمهمة لا تُغلق إلا باعتماد المدير</span>
+        </label>
+
+        {createTask && (
+          <>
+            <div className="rq-modal__row">
+              <label className="rq-field">
+                <span>يعتمدها * <em>— غير المحامي المكلَّف</em></span>
+                <select
+                  value={approverId}
+                  onChange={(e) => setApproverId(e.target.value ? Number(e.target.value) : '')}
+                >
+                  <option value="">اختر المعتمِد…</option>
+                  {(lawyers ?? [])
+                    .filter((u) => Number(u.id) !== Number(lawyerId))
+                    .map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+              </label>
+              <label className="rq-field">
+                <span>مهلة التسليم <em>— من يوم إلى ٦٠</em></span>
+                <input
+                  type="number" min={DUE_MIN} max={DUE_MAX} inputMode="numeric"
+                  value={dueDays}
+                  onChange={(e) => setDueDays(e.target.value)}
+                  onBlur={() => setDueDays(String(dueDaysNum))}
+                />
+              </label>
+            </div>
+
+            <p className="rq-modal__note">
+              تصل المحامي رسالة فور الاعتماد، وتُسلَّم <b>{dueLabel}</b>
+              {dueOutOfRange && <> — <b>ضُبطت على {dueDaysNum} يوماً</b> (المدى المسموح {DUE_MIN}–{DUE_MAX})</>}.
+              وحين ينهيها تنتقل «بانتظار الاعتماد» ولا تُغلق حتى يعتمدها المعتمِد.
+            </p>
+
+            {selfApproval && (
+              <p className="rq-warn">
+                <AlertTriangle size={13} /> لا يصحّ أن يعتمد المحامي مهمّة نفسه — اختر معتمِداً غيره.
+              </p>
+            )}
+          </>
+        )}
 
         <footer className="rq-modal__foot">
           <span className="rq-modal__hint">

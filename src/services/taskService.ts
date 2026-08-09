@@ -11,6 +11,8 @@ export interface TaskFilters {
   case_id?: string;
   client_id?: string;
   execution_request_id?: string | number;
+  /** مهام خدمة قانونية بعينها — شاشة الخدمة تقرأ بها حالة التكليف */
+  legal_service_id?: string | number;
   search?: string;
   page?: number;
   limit?: number;

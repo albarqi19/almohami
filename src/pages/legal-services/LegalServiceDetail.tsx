@@ -48,11 +48,14 @@ import {
   Lock,
   Compass,
   Pencil,
+  Send,
 } from 'lucide-react';
 
 import { toast } from 'react-toastify';
 
 import { LegalServiceService } from '../../services/legalServiceService';
+import { TaskService } from '../../services/taskService';
+import type { Task } from '../../types';
 import { apiClient, API_BASE_URL } from '../../utils/api';
 import { getApiErrorMessage } from '../../utils/apiError';
 import AddExternalLinkModal from '../../components/AddExternalLinkModal';
@@ -939,6 +942,8 @@ const LegalServiceDetail: React.FC = () => {
   // ── Documents state ──
   const [docLoading, setDocLoading] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
+  // مهام التكليف المرتبطة بهذه الخدمة — مصدر بطاقة «جاهزة للعميل»
+  const [serviceTasks, setServiceTasks] = useState<Task[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -986,6 +991,13 @@ const LegalServiceDetail: React.FC = () => {
           if (summaryRes.success) setTimeSummary(summaryRes.data);
         } catch (err) {
           console.warn('time-summary:', getApiErrorMessage(err));
+        }
+        // مهام التكليف المرتبطة بالخدمة — تُغذّي بطاقة «جاهزة للعميل» بعد الاعتماد
+        try {
+          const tasksRes = await TaskService.getTasks({ legal_service_id: Number(id), per_page: 50 });
+          setServiceTasks(Array.isArray(tasksRes?.data) ? tasksRes.data : []);
+        } catch (err) {
+          console.warn('service-tasks:', getApiErrorMessage(err));
         }
         // Check active timer
         try {
@@ -3131,6 +3143,82 @@ const LegalServiceDetail: React.FC = () => {
     );
   };
 
+  // ── بطاقة حالة التكليف ─────────────────────────────────────────────────
+  // تصل الرحلة القادمة من صندوق البريد إلى آخرها: المهمة أُنجزت واعتمدها المدير
+  // ⇒ الخدمة جاهزة للعميل. ولا نُحرّك الحالة آلياً — إرسال عقدٍ إلى عميل أثقل من
+  // أن يقع كأثر جانبيّ لنقرة اعتماد؛ نعرض الزرّ ويقرّر الإنسان.
+
+  const renderAssignmentCard = () => {
+    if (!service || serviceTasks.length === 0) return null;
+
+    const awaiting = serviceTasks.filter((t) => t.status === 'pending_approval');
+    const approved = serviceTasks.filter((t) => t.status === 'completed' && !!t.approved_at);
+    const open = serviceTasks.filter(
+      (t) => !['completed', 'cancelled', 'archived', 'pending_approval'].includes(String(t.status)),
+    );
+
+    // لا شيء يستحق بطاقة: مهام مفتوحة فقط تظهر في تبويب المهام أصلاً
+    if (awaiting.length === 0 && approved.length === 0) return null;
+
+    const transitions = service.allowed_transitions ?? [];
+    const canSendToClient = transitions.includes('client_review') || transitions.includes('delivered');
+    const sendTarget = transitions.includes('client_review') ? 'client_review' : 'delivered';
+
+    return (
+      <div className="lsd-assign">
+        {awaiting.length > 0 ? (
+          <>
+            <span className="lsd-assign__icon"><Clock size={14} /></span>
+            <div className="lsd-assign__body">
+              <b className="lsd-assign__title">
+                {awaiting.length === 1
+                  ? 'مهمة بانتظار الاعتماد'
+                  : `${awaiting.length} مهام بانتظار الاعتماد`}
+              </b>
+              <span className="lsd-assign__text">
+                أنهاها المكلَّف ولا تُغلق حتى يعتمدها المعتمِد — ولا تُسلَّم الخدمة للعميل قبل ذلك.
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <span className="lsd-assign__icon lsd-assign__icon--done"><CheckCircle size={14} /></span>
+            <div className="lsd-assign__body">
+              <b className="lsd-assign__title">اعتُمد إنجاز المهمة</b>
+              <span className="lsd-assign__text">
+                {open.length > 0
+                  ? `بقيت ${open.length} مهمة قيد التنفيذ على هذه الخدمة.`
+                  : 'اكتمل العمل الداخلي — الخدمة جاهزة لتصل العميل.'}
+              </span>
+            </div>
+            <div className="lsd-assign__actions">
+              <button
+                className="lsd-assign__btn"
+                disabled={!canSendToClient || statusLoading}
+                title={
+                  canSendToClient
+                    ? 'ينقل الخدمة إلى مرحلة مراجعة العميل'
+                    : 'مسار هذه الخدمة لا يسمح بالنقل من حالتها الحالية — غيّرها من «الخطوة التالية»'
+                }
+                onClick={() => handleStatusChange(sendTarget)}
+              >
+                <Send size={13} />
+                {sendTarget === 'client_review' ? 'انقلها إلى مراجعة العميل' : 'سلّمها للعميل'}
+              </button>
+              <button
+                className="lsd-assign__btn lsd-assign__btn--ghost"
+                onClick={() => setActiveTab('documents')}
+              >
+                <Link size={13} />
+                رابط بوابة العميل
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   // ── بطاقة «الخطوة التالية» — أوضح عنصر في الصفحة ──────────────────────────
   // تجيب فوراً: أين نحن الآن؟ ماذا تعني هذه الحالة عملياً؟ وما الخطوات المتاحة؟
 
@@ -3424,6 +3512,9 @@ const LegalServiceDetail: React.FC = () => {
 
       {/* ── Status Pipeline ── */}
       <StatusPipeline steps={statusFlow} currentStatus={service.status} />
+
+      {/* ── حالة التكليف: بانتظار الاعتماد أو جاهزة للعميل ── */}
+      {renderAssignmentCard()}
 
       {/* ── بطاقة «الخطوة التالية» — أعلى المحتوى ── */}
       {renderNextStepCard()}
