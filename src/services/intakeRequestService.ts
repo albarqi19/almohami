@@ -74,7 +74,10 @@ export interface ApprovePayload {
   target: IntakeTarget;
   service_type?: string | null;
   client_id: number;
+  /** المسؤول الأساسي — يبقى مفرداً ويكون ضمن assignee_ids */
   assigned_lawyer_id: number;
+  /** تعدّد المكلّفين — الباك يضمن أن المسؤول الأساسي ضمن القائمة */
+  assignee_ids?: number[];
   title: string;
   description?: string | null;
   send_confirmation: boolean;

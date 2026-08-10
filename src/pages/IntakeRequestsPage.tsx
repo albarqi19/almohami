@@ -18,6 +18,7 @@ import {
   type IntakeAttachment, type IntakeOriginalMessage,
 } from '../services/intakeRequestService';
 import { UserService, type User } from '../services/UserService';
+import MultiSelectDropdown from '../components/MultiSelectDropdown';
 import '../styles/intake-requests.css';
 
 type TabKey = IntakeStatus | 'all';
@@ -643,7 +644,9 @@ const ApproveModal: React.FC<{
   const [target, setTarget] = useState<IntakeTarget>(request.suggested_target ?? 'service');
   const [serviceType, setServiceType] = useState<string>(request.suggested_service_type ?? 'other');
   const [clientId, setClientId] = useState<number | ''>(request.matched_client_id ?? '');
-  const [lawyerId, setLawyerId] = useState<number | ''>('');
+  // تعدّد المكلّفين: القائمة كاملةً + المسؤول الأساسي (أول اختيار، وقابل للترقية)
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
+  const [responsibleId, setResponsibleId] = useState<string>('');
   const [title, setTitle] = useState(request.extracted_payload?.title || request.subject || '');
   const [description, setDescription] = useState(request.extracted_payload?.description || '');
   const [billingType, setBillingType] = useState<string>('');
@@ -661,9 +664,24 @@ const ApproveModal: React.FC<{
     queryKey: ['intake-lawyers'], queryFn: () => UserService.getLawyers(),
   });
 
-  // ⚠️ البوابة تُلغي نفسها لو اعتمد المحامي مهمّة نفسه (سياسة المهام تُجيز
-  // للمنشئ الاعتماد دائماً). فنمنعه هنا ويمنعه الباك أيضاً — لا نتّكل على الواجهة.
-  const selfApproval = createTask && !!approverId && Number(approverId) === Number(lawyerId);
+  // تبديل مكلّف: أول اختيارٍ يصير المسؤول، وإزالتُه تُرقّي التالي (نمط AddTaskModal)
+  const toggleAssignee = (value: string) => {
+    setAssigneeIds((prev) => {
+      if (prev.includes(value)) {
+        const next = prev.filter((v) => v !== value);
+        setResponsibleId((resp) => (resp === value ? (next[0] || '') : resp));
+        return next;
+      }
+      const next = [...prev, value];
+      setResponsibleId((resp) => resp || value);
+      return next;
+    });
+  };
+
+  // ⚠️ البوابة تُلغي نفسها لو اعتمد المحامي مهمّة هو مكلَّفٌ بها (سياسة المهام تُجيز
+  // للمنشئ الاعتماد دائماً). والفحص على **القائمة كلها** لا المسؤول وحده: مع التعدّد
+  // يكفي أن يكون المعتمِد المكلَّف الثاني ليتجاوز الحارس. ويمنعه الباك أيضاً.
+  const selfApproval = createTask && !!approverId && assigneeIds.includes(String(approverId));
   const missingApprover = createTask && !approverId;
 
   // ⚠️ min/max على <input> زينةٌ هنا: لا <form> ولا submit، فقيود المتصفح لا تُطبَّق.
@@ -678,7 +696,8 @@ const ApproveModal: React.FC<{
   const dueOutOfRange = createTask && dueDays.trim() !== '' && Number(dueDays) !== dueDaysNum;
 
   const canSubmit =
-    !!clientId && !!lawyerId && title.trim().length > 0 && !busy && !selfApproval && !missingApprover;
+    !!clientId && assigneeIds.length > 0 && !!responsibleId
+    && title.trim().length > 0 && !busy && !selfApproval && !missingApprover;
 
   const submit = () => {
     if (!canSubmit) return;
@@ -686,7 +705,9 @@ const ApproveModal: React.FC<{
       target,
       service_type: target === 'service' ? serviceType : null,
       client_id: Number(clientId),
-      assigned_lawyer_id: Number(lawyerId),
+      // المسؤول الأساسي يبقى في الحقل المفرد (الباك يعتمده مرجعاً)، والقائمة معه
+      assigned_lawyer_id: Number(responsibleId),
+      assignee_ids: assigneeIds.map(Number),
       title: title.trim(),
       description: description.trim() || null,
       send_confirmation: sendConfirmation,
@@ -737,13 +758,19 @@ const ApproveModal: React.FC<{
               {(clients ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
-          <label className="rq-field">
-            <span>المحامي المكلَّف *</span>
-            <select value={lawyerId} onChange={(e) => setLawyerId(e.target.value ? Number(e.target.value) : '')}>
-              <option value="">اختر المحامي…</option>
-              {(lawyers ?? []).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-          </label>
+          {/* div لا label: المكوّن يُصيّر زرّاً، والزرّ ليس عنصراً قابلاً للربط بـlabel */}
+          <div className="rq-field">
+            <span>المكلَّفون * <em>— النجمة للمسؤول الأساسي</em></span>
+            <MultiSelectDropdown
+              options={(lawyers ?? []).map((u) => ({ value: String(u.id), label: u.name }))}
+              selected={assigneeIds}
+              onToggle={toggleAssignee}
+              responsible={responsibleId || undefined}
+              onPromote={(v) => setResponsibleId(v)}
+              placeholder="اختر المحامين…"
+              emptyText="لا يوجد محامون"
+            />
+          </div>
         </div>
 
         <div className="rq-modal__row rq-modal__row--single">
@@ -801,7 +828,7 @@ const ApproveModal: React.FC<{
                 >
                   <option value="">اختر المعتمِد…</option>
                   {(lawyers ?? [])
-                    .filter((u) => Number(u.id) !== Number(lawyerId))
+                    .filter((u) => !assigneeIds.includes(String(u.id)))
                     .map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               </label>
