@@ -266,6 +266,8 @@ export interface CreateContractData {
   discount?: number;
   discount_percentage?: number;
   vat_rate?: number;
+  /** [CTR-27] النسبة من الحكم — تملأ {{percentage}} في نصّ العقد النسبيّ */
+  percentage?: number;
   contract_date?: string;
   notes?: string;
   /** تجاوزات يدوية لقيم المتغيّرات — يدمجها الباك فوق القيم الأصلية ([CTR-26]) */

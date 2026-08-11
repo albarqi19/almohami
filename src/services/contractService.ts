@@ -250,12 +250,13 @@ export class ContractService {
    */
   static async updateFromJudgment(
     termId: number,
-    judgmentAmount: number,
-    judgmentDate?: string
+    judgmentAmount: number
   ): Promise<{ success: boolean; data: PaymentTerm; message: string }> {
-    return apiClient.put<{ success: boolean; data: PaymentTerm; message: string }>(
+    // [CTR-27] المسار POST لا PUT — كان put فيردّ 405 لو استُدعي (ولم يكن يُستدعى أصلاً).
+    // judgment_date لا يقبله الباك ولا يُخزَّن (لا عمود له) — أُسقط بدل الإيهام بحفظه.
+    return apiClient.post<{ success: boolean; data: PaymentTerm; message: string }>(
       `/payment-terms/${termId}/update-from-judgment`,
-      { judgment_amount: judgmentAmount, judgment_date: judgmentDate }
+      { judgment_amount: judgmentAmount }
     );
   }
 }

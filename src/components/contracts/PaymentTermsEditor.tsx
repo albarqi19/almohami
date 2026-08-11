@@ -31,8 +31,15 @@ const PaymentTermsEditor: React.FC<PaymentTermsEditorProps> = ({
 }) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
+  // [CTR-27] «نسبة من الحكم» أتعابُ نجاحٍ خارج قيمة العقد: مبلغها يُعرف بعد صدور
+  // الحكم فقط، فلا تُفَضّ نسبتُها على قيمة العقد ولا تدخل مجاميعه.
+  const isContingency = (term: CreatePaymentTermData): boolean => term.type === 'percentage';
+
   // حساب مبلغ الشرط
   const calculateTermAmount = (term: CreatePaymentTermData): number => {
+    if (isContingency(term)) {
+      return 0;
+    }
     if (term.amount_type === 'fixed') {
       return term.amount || 0;
     } else {
@@ -51,9 +58,11 @@ const PaymentTermsEditor: React.FC<PaymentTermsEditorProps> = ({
     return calculateTermAmount(term) + calculateTermVat(term);
   };
 
-  // إجمالي جميع الشروط
-  const totalTermsAmount = terms.reduce((sum, term) => sum + calculateTermAmount(term), 0);
-  const totalVat = terms.reduce((sum, term) => sum + calculateTermVat(term), 0);
+  // إجمالي جميع الشروط — [CTR-27] الشروط النسبيّة خارج المجموع (مبلغها من الحكم).
+  const billableTerms = terms.filter((t) => !isContingency(t));
+  const contingencyTerms = terms.filter(isContingency);
+  const totalTermsAmount = billableTerms.reduce((sum, term) => sum + calculateTermAmount(term), 0);
+  const totalVat = billableTerms.reduce((sum, term) => sum + calculateTermVat(term), 0);
   const grandTotal = totalTermsAmount + totalVat;
 
   // إضافة شرط جديد
@@ -70,7 +79,16 @@ const PaymentTermsEditor: React.FC<PaymentTermsEditorProps> = ({
   // تحديث شرط
   const updateTerm = (index: number, updates: Partial<CreatePaymentTermData>) => {
     const newTerms = [...terms];
-    newTerms[index] = { ...newTerms[index], ...updates };
+    const merged = { ...newTerms[index], ...updates };
+
+    // [CTR-27] القائمتان منفصلتان، ومن يختار «نسبة من الحكم» ويترك «مبلغ ثابت»
+    // يصنع شرطاً يرفضه مسارُ إدخال الحكم لاحقاً بلا أن يعرف السبب — نضبطه هنا.
+    if (updates.type === 'percentage' && merged.amount_type !== 'percentage') {
+      merged.amount_type = 'percentage';
+      merged.amount = undefined;
+    }
+
+    newTerms[index] = merged;
     onChange(newTerms);
   };
 
@@ -261,7 +279,9 @@ const PaymentTermsEditor: React.FC<PaymentTermsEditorProps> = ({
                         marginBottom: '4px',
                       }}
                     >
-                      {term.amount_type === 'fixed' ? 'المبلغ (ريال)' : 'النسبة (%)'}
+                      {isContingency(term)
+                        ? 'النسبة من الحكم (%)'
+                        : term.amount_type === 'fixed' ? 'المبلغ (ريال)' : 'النسبة (%)'}
                     </label>
                     <div style={{ position: 'relative' }}>
                       <input
@@ -379,20 +399,32 @@ const PaymentTermsEditor: React.FC<PaymentTermsEditorProps> = ({
                     alignItems: 'center',
                   }}
                 >
-                  <div style={{ display: 'flex', gap: '24px', fontSize: '14px' }}>
-                    <span>
-                      المبلغ:{' '}
-                      <strong>{formatAmount(calculateTermAmount(term))} ر.س</strong>
-                    </span>
-                    <span>
-                      الضريبة ({vatRate}%):{' '}
-                      <strong>{formatAmount(calculateTermVat(term))} ر.س</strong>
-                    </span>
-                    <span style={{ color: '#059669' }}>
-                      الإجمالي:{' '}
-                      <strong>{formatAmount(calculateTermTotal(term))} ر.س</strong>
-                    </span>
-                  </div>
+                  {/* [CTR-27] الشرط النسبيّ لا مبلغ له قبل الحكم — كان يعرض «0.00 ر.س»
+                      فيبدو رقماً محسوباً لا خانةً منتظِرة. */}
+                  {isContingency(term) ? (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '14px', color: '#6b7280' }}>
+                      <Percent size={14} />
+                      <span>
+                        <strong>{term.percentage || 0}%</strong> من المحكوم به — يُحتسب المبلغ عند صدور الحكم
+                        وإدخاله في صفحة العقد.
+                      </span>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '24px', fontSize: '14px' }}>
+                      <span>
+                        المبلغ:{' '}
+                        <strong>{formatAmount(calculateTermAmount(term))} ر.س</strong>
+                      </span>
+                      <span>
+                        الضريبة ({vatRate}%):{' '}
+                        <strong>{formatAmount(calculateTermVat(term))} ر.س</strong>
+                      </span>
+                      <span style={{ color: '#059669' }}>
+                        الإجمالي:{' '}
+                        <strong>{formatAmount(calculateTermTotal(term))} ر.س</strong>
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -444,8 +476,9 @@ const PaymentTermsEditor: React.FC<PaymentTermsEditorProps> = ({
         </button>
       )}
 
-      {/* ملخص إجمالي */}
-      {terms.length > 0 && (
+      {/* ملخص إجمالي — [CTR-27] يُعرض فقط إن وُجدت دفعاتٌ نقدية؛ العقد النسبيّ
+          الخالص لا مجموعَ له قبل الحكم فبطاقةُ أصفارٍ تكذب عليه. */}
+      {billableTerms.length > 0 && (
         <div
           style={{
             marginTop: '20px',
@@ -489,6 +522,36 @@ const PaymentTermsEditor: React.FC<PaymentTermsEditorProps> = ({
           >
             <span>الإجمالي الكلي:</span>
             <span>{formatAmount(grandTotal)} ر.س</span>
+          </div>
+        </div>
+      )}
+
+      {/* [CTR-27] أتعابُ النجاح خارج قيمة العقد — تُذكر صراحةً كي لا يظنّ المستخدم
+          أن الملخّص أعلاه أسقطها سهواً. */}
+      {contingencyTerms.length > 0 && (
+        <div
+          style={{
+            marginTop: '12px',
+            padding: '14px 16px',
+            backgroundColor: '#ecfdf5',
+            border: '1px solid #a7f3d0',
+            borderRadius: '8px',
+            color: '#065f46',
+            fontSize: '14px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, marginBottom: '6px' }}>
+            <Percent size={15} />
+            أتعابُ نجاحٍ من الحكم ({contingencyTerms.length})
+          </div>
+          {contingencyTerms.map((term, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+              <span>{term.name}</span>
+              <span><strong>{term.percentage || 0}%</strong> من المحكوم به</span>
+            </div>
+          ))}
+          <div style={{ marginTop: '8px', fontSize: '13px', color: '#047857' }}>
+            هذه المبالغ خارج قيمة العقد، وتُحتسب عند صدور الحكم بإدخال المحكوم به في صفحة العقد.
           </div>
         </div>
       )}

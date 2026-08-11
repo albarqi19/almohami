@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import {
   ArrowRight, FileSignature, Download, Eye, Send, Trash2, Edit2, Plus, Users, Wallet,
-  Receipt, FileText, CheckCircle,
+  Receipt, FileText, CheckCircle, Gavel,
 } from 'lucide-react';
 import { contractService } from '../../services/contractService';
 import { Modal, StatusBadge } from '../../components/erp';
@@ -53,6 +53,8 @@ const ContractDetailPage: React.FC = () => {
   const [showDelete, setShowDelete] = useState(false);
   const [partyForm, setPartyForm] = useState<Partial<ContractParty> | null>(null);
   const [termForm, setTermForm] = useState<Partial<PaymentTerm> | null>(null);
+  // [CTR-27] شرطُ «نسبة من الحكم» الذي يُدخَل له المحكوم به.
+  const [judgmentTerm, setJudgmentTerm] = useState<PaymentTerm | null>(null);
 
   const contractId = Number(id);
   const { data, isLoading, isError, refetch } = useQuery({
@@ -108,6 +110,13 @@ const ContractDetailPage: React.FC = () => {
     mutationFn: (termId: number) => contractService.deletePaymentTerm(contractId, termId),
     onSuccess: () => { toast.success('تم حذف الشرط'); invalidate(); },
     onError: (e: Error) => toast.error(e.message || 'تعذّر حذف الشرط'),
+  });
+  // [CTR-27] إدخال المحكوم به → الباك يفضّ نسبة الشرط عليه ويفتح الفوترة.
+  const judgmentMutation = useMutation({
+    mutationFn: ({ termId, amount }: { termId: number; amount: number }) =>
+      contractService.updateFromJudgment(termId, amount),
+    onSuccess: () => { toast.success('تم احتساب الأتعاب من مبلغ الحكم'); invalidate(); setJudgmentTerm(null); },
+    onError: (e: Error) => toast.error(e.message || 'تعذّر احتساب الأتعاب'),
   });
 
   // متغيّرات حقيقية للمعاينة (CTR-2-8) — قيم من العقد بدل رموز خام.
@@ -213,17 +222,35 @@ const ContractDetailPage: React.FC = () => {
               {canEdit && <button type="button" className="fin-btn fin-btn--sm" onClick={() => setTermForm({ ...emptyTerm })}><Plus size={13} /> شرط</button>}
             </div>
             <div className="fin-section__body">
-              {contract.payment_terms && contract.payment_terms.length > 0 ? contract.payment_terms.map((term) => (
+              {contract.payment_terms && contract.payment_terms.length > 0 ? contract.payment_terms.map((term) => {
+                // [CTR-27] شرط «نسبة من الحكم» ينتظر المحكوم به: مبلغه صفرٌ معلَّق
+                // لا محسوب، والفوترةُ محجوبةٌ حتى يُدخَل (الباك يرفضها أيضاً).
+                const isContingency = term.type === 'percentage';
+                const awaitingJudgment = isContingency && toNumber(term.calculated_amount) <= 0;
+                return (
                 <div key={term.id} className="fin-line">
                   <div className="fin-line__main">
                     <span className="fin-line__title">{term.name}</span>
-                    <span className="fin-line__sub">{TERM_TYPE_LABELS[term.type] ?? term.type}</span>
+                    <span className="fin-line__sub">
+                      {TERM_TYPE_LABELS[term.type] ?? term.type}
+                      {isContingency && ` · ${formatPercent(term.percentage)} من المحكوم به`}
+                    </span>
                     <StatusBadge kind="paymentTerm" status={term.status} />
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span className="fin-line__amount">{formatSAR(term.calculated_amount ?? term.amount)}</span>
+                    <span className="fin-line__amount">
+                      {awaitingJudgment
+                        ? <span className="fin-cell-muted">بانتظار الحكم</span>
+                        : formatSAR(term.calculated_amount ?? term.amount)}
+                    </span>
+                    {/* [CTR-27] إدخال المحكوم به — المسار كان موجوداً في الباك بلا زرّ يستدعيه. */}
+                    {canEdit && isContingency && term.amount_type === 'percentage' && ['pending', 'overdue'].includes(term.status) && (
+                      <button type="button" className="fin-btn fin-btn--ghost fin-btn--sm" onClick={() => setJudgmentTerm(term)} title="احتساب الأتعاب من مبلغ الحكم">
+                        <Gavel size={13} /> {awaitingJudgment ? 'مبلغ الحكم' : 'تعديل الحكم'}
+                      </button>
+                    )}
                     {/* [CTR-22] الفوترة مشروعة للمعلّق والمتأخر (overdue = متأخر لم يُفوتَر بعد). */}
-                    {canManageInvoices && ['pending', 'overdue'].includes(term.status) && (
+                    {canManageInvoices && !awaitingJudgment && ['pending', 'overdue'].includes(term.status) && (
                       <button type="button" className="fin-btn fin-btn--ghost fin-btn--sm" disabled={genInvoiceMutation.isPending} onClick={() => genInvoiceMutation.mutate(term.id)} title="إنشاء فاتورة">
                         <Receipt size={13} /> فوترة
                       </button>
@@ -237,7 +264,8 @@ const ContractDetailPage: React.FC = () => {
                     )}
                   </div>
                 </div>
-              )) : <div className="fin-cell-muted">لا توجد شروط دفع.</div>}
+                );
+              }) : <div className="fin-cell-muted">لا توجد شروط دفع.</div>}
             </div>
           </div>
         </div>
@@ -359,6 +387,16 @@ const ContractDetailPage: React.FC = () => {
           saving={termMutation.isPending}
         />
       )}
+
+      {/* [CTR-27] مودال احتساب الأتعاب من المحكوم به */}
+      {judgmentTerm && (
+        <JudgmentModal
+          term={judgmentTerm}
+          onClose={() => setJudgmentTerm(null)}
+          onSave={(amount) => judgmentMutation.mutate({ termId: judgmentTerm.id, amount })}
+          saving={judgmentMutation.isPending}
+        />
+      )}
     </div>
   );
 };
@@ -465,11 +503,19 @@ const TermFormModal: React.FC<{
         <div className="fin-field fin-grid__full"><label className="fin-field__label">اسم الشرط<span className="req">*</span></label><input className="fin-input" value={form.name ?? ''} onChange={(e) => set('name', e.target.value)} /></div>
         <div className="fin-field">
           <label className="fin-field__label">النوع</label>
-          <select value={form.type} onChange={(e) => set('type', e.target.value)}>
+          <select
+            value={form.type}
+            onChange={(e) => {
+              const type = e.target.value as PaymentTerm['type'];
+              // [CTR-27] «نسبة من الحكم» تلزمها طريقةُ مبلغٍ نسبية، وإلا رفضها مسارُ
+              // إدخال الحكم لاحقاً — تُضبط هنا بدل تركها فخّاً بين قائمتين.
+              setForm((f) => ({ ...f, type, ...(type === 'percentage' ? { amount_type: 'percentage' as const, amount: undefined } : {}) }));
+            }}
+          >
             <option value="upfront">دفعة مقدمة</option>
             <option value="milestone">مرحلية</option>
             <option value="final">نهائية</option>
-            <option value="percentage">نسبة</option>
+            <option value="percentage">نسبة من الحكم</option>
           </select>
         </div>
         <div className="fin-field">
@@ -486,6 +532,69 @@ const TermFormModal: React.FC<{
         )}
         <div className="fin-field"><label className="fin-field__label">تاريخ الاستحقاق</label><input className="fin-input" type="date" value={form.due_date ?? ''} onChange={(e) => set('due_date', e.target.value)} /></div>
         <div className="fin-field fin-grid__full"><label className="fin-field__label">وصف شرط الاستحقاق</label><input className="fin-input" value={form.due_condition ?? ''} onChange={(e) => set('due_condition', e.target.value)} /></div>
+      </div>
+    </Modal>
+  );
+};
+
+// ── [CTR-27] مودال احتساب أتعاب النجاح من المحكوم به ──
+// المسارُ (POST /payment-terms/{id}/update-from-judgment) كان قائماً في الباك بلا
+// واجهةٍ تستدعيه، فبقي شرطُ «نسبة من الحكم» صفراً أبداً وتعذّرت فوترته.
+const JudgmentModal: React.FC<{
+  term: PaymentTerm;
+  onClose: () => void;
+  onSave: (amount: number) => void;
+  saving: boolean;
+}> = ({ term, onClose, onSave, saving }) => {
+  const pct = toNumber(term.percentage);
+  // القيمة الأوّلية: المحكوم به المستنتَج من مبلغٍ سابق (المبلغ ÷ النسبة × 100).
+  const previous = toNumber(term.calculated_amount);
+  const [amount, setAmount] = useState<string>(
+    previous > 0 && pct > 0 ? String(Math.round((previous * 100) / pct)) : ''
+  );
+
+  const judgment = Number(amount) || 0;
+  const fee = pct > 0 ? Math.round(((judgment * pct) / 100) * 100) / 100 : 0;
+  const valid = judgment > 0 && pct > 0;
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="احتساب الأتعاب من مبلغ الحكم"
+      icon={Gavel}
+      footer={(
+        <>
+          <button type="button" className="fin-btn" onClick={onClose}>إلغاء</button>
+          <button type="button" className="fin-btn fin-btn--primary" disabled={saving || !valid} onClick={() => onSave(judgment)}>
+            {saving ? 'جارٍ الاحتساب...' : 'احتساب'}
+          </button>
+        </>
+      )}
+    >
+      <div className="fin-grid">
+        <div className="fin-field fin-grid__full">
+          <label className="fin-field__label">المبلغ المحكوم به (ر.س)<span className="req">*</span></label>
+          <input
+            className="fin-input"
+            type="number"
+            min={0}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.00"
+            autoFocus
+          />
+        </div>
+        <div className="fin-field fin-grid__full">
+          <div className="fin-deflist">
+            <Def label="الشرط">{term.name}</Def>
+            <Def label="النسبة">{formatPercent(term.percentage)}</Def>
+            <Def label="الأتعاب المستحقّة">{valid ? formatSAR(fee) : '—'}</Def>
+          </div>
+          <div className="fin-cell-muted" style={{ marginTop: 8, fontSize: 13 }}>
+            بعد الاحتساب يصبح الشرط قابلاً للفوترة. الضريبة تُضاف وفق إعداد الشرط ونسبة العقد.
+          </div>
+        </div>
       </div>
     </Modal>
   );

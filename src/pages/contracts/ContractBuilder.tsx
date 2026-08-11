@@ -177,6 +177,14 @@ const ContractBuilder: React.FC = () => {
   const [totalAmount, setTotalAmount] = useState(0);
   const [notes, setNotes] = useState('');
 
+  // [CTR-27] العقد النسبيّ الخالص: كلُّ دفعاته «نسبة من الحكم» فلا قيمة نقدية له
+  // وقتَ التوقيع. الخانةُ الثابتة «المبلغ الإجمالي» كانت تحبس هذا العقد عند
+  // الخطوة الثالثة (البوابة تشترط totalAmount > 0) فيُختلق له رقمٌ وهميّ.
+  const isContingencyOnly =
+    paymentTerms.length > 0 && paymentTerms.every((t) => t.type === 'percentage');
+  // النسبة المعروضة/المُرسَلة = نسبةُ أوّل شرطٍ نسبيّ (هي ما يملأ {{percentage}}).
+  const judgmentPercentage = paymentTerms.find((t) => t.type === 'percentage')?.percentage ?? 0;
+
   // البحث
   const [clientSearch, setClientSearch] = useState('');
   const [caseSearch, setCaseSearch] = useState('');
@@ -353,6 +361,8 @@ const ContractBuilder: React.FC = () => {
     // بيانات مالية
     values.total_amount = totalAmount.toString();
     values.vat_rate = vatRate.toString();
+    // [CTR-27] {{percentage}} كان يبقى بلا قيمة فيطبع الباك «0%» في عقدٍ يوقَّع.
+    values.percentage = `${judgmentPercentage}%`;
     values.scope_type = scopeType === 'plaintiff' ? 'مدعي' :
       scopeType === 'defendant' ? 'مدعى عليه' : 'مدعي/مدعى عليه';
 
@@ -412,6 +422,8 @@ const ContractBuilder: React.FC = () => {
       scope_type: scopeType,
       total_amount: totalAmount,
       vat_rate: vatRate,
+      // [CTR-27] النسبة من الحكم — تملأ {{percentage}} في النصّ (لم تكن تُرسَل قط).
+      ...(judgmentPercentage > 0 ? { percentage: judgmentPercentage } : {}),
       notes,
       // التجاوزات اليدوية لقيم المتغيّرات — الباك يدمجها فوق القيم الأصلية ([CTR-26])
       custom_variables: variableOverrides,
@@ -453,7 +465,10 @@ const ContractBuilder: React.FC = () => {
       case 2:
         return !!selectedTemplate && !!contractContent;
       case 3:
-        return paymentTerms.length > 0 && totalAmount > 0;
+        if (paymentTerms.length === 0) return false;
+        // [CTR-27] العقد النسبيّ الخالص لا قيمة نقدية له — تكفي نسبةٌ محدَّدة.
+        if (isContingencyOnly) return judgmentPercentage > 0;
+        return totalAmount > 0;
       case 4:
         return true;
       default:
@@ -855,9 +870,38 @@ const ContractBuilder: React.FC = () => {
                 </h3>
 
                 <div className="financial-form">
+                  {/* [CTR-27] العقد النسبيّ الخالص: قيمتُه نسبةٌ لا مبلغ — تُعرض
+                      النسبة وتُعطَّل خانةُ المبلغ بدل إجبار المستخدم على رقمٍ وهميّ. */}
+                  {isContingencyOnly && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '12px 14px',
+                        marginBottom: 14,
+                        backgroundColor: '#ecfdf5',
+                        border: '1px solid #a7f3d0',
+                        borderRadius: 8,
+                        color: '#065f46',
+                        fontSize: 14,
+                      }}
+                    >
+                      <Percent size={16} />
+                      <span>
+                        عقدُ أتعابٍ نسبية — الأتعاب <strong>{judgmentPercentage}%</strong> من المحكوم به،
+                        تُحتسب عند صدور الحكم. لا يلزم مبلغٌ إجماليّ الآن؛ النسبة تُضبط من شروط الدفع أدناه.
+                      </span>
+                    </div>
+                  )}
+
                   <div className="form-row">
                     <div className="form-group">
-                      <label>المبلغ الإجمالي (قبل الضريبة)</label>
+                      <label>
+                        {isContingencyOnly
+                          ? 'مبلغٌ مقطوع إضافي (اختياري)'
+                          : 'المبلغ الإجمالي (قبل الضريبة)'}
+                      </label>
                       <input
                         type="number"
                         value={totalAmount || ''}
@@ -888,21 +932,24 @@ const ContractBuilder: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* ملخص مالي */}
-                  <div className="financial-summary">
-                    <div className="summary-row">
-                      <span>المبلغ الأساسي:</span>
-                      <span>{totalAmount.toLocaleString('ar-SA')} ر.س</span>
+                  {/* ملخص مالي — [CTR-27] يُخفى في العقد النسبيّ بلا مبلغ مقطوع
+                      (ثلاثةُ أصفارٍ تُقرأ حساباً لا خانةً منتظِرة). */}
+                  {!(isContingencyOnly && totalAmount === 0) && (
+                    <div className="financial-summary">
+                      <div className="summary-row">
+                        <span>المبلغ الأساسي:</span>
+                        <span>{totalAmount.toLocaleString('ar-SA')} ر.س</span>
+                      </div>
+                      <div className="summary-row">
+                        <span>الضريبة ({vatRate}%):</span>
+                        <span>{(totalAmount * vatRate / 100).toLocaleString('ar-SA')} ر.س</span>
+                      </div>
+                      <div className="summary-row total">
+                        <span>الإجمالي:</span>
+                        <span>{(totalAmount * (1 + vatRate / 100)).toLocaleString('ar-SA')} ر.س</span>
+                      </div>
                     </div>
-                    <div className="summary-row">
-                      <span>الضريبة ({vatRate}%):</span>
-                      <span>{(totalAmount * vatRate / 100).toLocaleString('ar-SA')} ر.س</span>
-                    </div>
-                    <div className="summary-row total">
-                      <span>الإجمالي:</span>
-                      <span>{(totalAmount * (1 + vatRate / 100)).toLocaleString('ar-SA')} ر.س</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -963,18 +1010,29 @@ const ContractBuilder: React.FC = () => {
 
                   <div className="review-section">
                     <h4>المعلومات المالية</h4>
-                    <div className="review-item">
-                      <span className="label">المبلغ الأساسي:</span>
-                      <span className="value">{totalAmount.toLocaleString('ar-SA')} ر.س</span>
-                    </div>
-                    <div className="review-item">
-                      <span className="label">الضريبة:</span>
-                      <span className="value">{(totalAmount * vatRate / 100).toLocaleString('ar-SA')} ر.س</span>
-                    </div>
-                    <div className="review-item total">
-                      <span className="label">الإجمالي:</span>
-                      <span className="value">{(totalAmount * (1 + vatRate / 100)).toLocaleString('ar-SA')} ر.س</span>
-                    </div>
+                    {/* [CTR-27] العقد النسبيّ يُراجَع بنسبته لا بمبلغٍ لم يوجد بعد. */}
+                    {isContingencyOnly && (
+                      <div className="review-item">
+                        <span className="label">الأتعاب:</span>
+                        <span className="value">{judgmentPercentage}% من المحكوم به</span>
+                      </div>
+                    )}
+                    {!(isContingencyOnly && totalAmount === 0) && (
+                      <>
+                        <div className="review-item">
+                          <span className="label">{isContingencyOnly ? 'مبلغ مقطوع:' : 'المبلغ الأساسي:'}</span>
+                          <span className="value">{totalAmount.toLocaleString('ar-SA')} ر.س</span>
+                        </div>
+                        <div className="review-item">
+                          <span className="label">الضريبة:</span>
+                          <span className="value">{(totalAmount * vatRate / 100).toLocaleString('ar-SA')} ر.س</span>
+                        </div>
+                        <div className="review-item total">
+                          <span className="label">الإجمالي:</span>
+                          <span className="value">{(totalAmount * (1 + vatRate / 100)).toLocaleString('ar-SA')} ر.س</span>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="review-section">
@@ -983,9 +1041,12 @@ const ContractBuilder: React.FC = () => {
                       <div key={index} className="payment-term-review">
                         <span className="term-name">{term.name}</span>
                         <span className="term-amount">
-                          {term.amount_type === 'fixed'
-                            ? `${term.amount?.toLocaleString('ar-SA')} ر.س`
-                            : `${term.percentage}%`}
+                          {/* [CTR-27] «نسبة من الحكم» تُميَّز عن قسطٍ نسبيٍّ من قيمة العقد. */}
+                          {term.type === 'percentage'
+                            ? `${term.percentage || 0}% من المحكوم به`
+                            : term.amount_type === 'fixed'
+                              ? `${term.amount?.toLocaleString('ar-SA')} ر.س`
+                              : `${term.percentage}%`}
                         </span>
                       </div>
                     ))}
