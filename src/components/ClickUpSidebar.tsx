@@ -1,33 +1,15 @@
 ﻿import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+// أيقوناتُ البنود تأتي كلُّها من `sidebarConfig` — ولا يستورد هذا الملفّ إلّا أيقوناتِ
+// هيكلِه هو (الشعار · الطيّ · البحث · الإغلاق · الخروج). وقد كان يستورد ٢٣ أيقونةً ميتةً
+// وحزمةَ `framer-motion` بلا استعمال: وزنُ حزمةٍ يُحمَّل على كلّ صفحةٍ بلا سطرٍ يستفيد.
 import {
-    Home,
-    FileText,
-    CheckSquare,
-    Upload,
-    BarChart3,
-    Users,
-    Bell,
-    Settings,
     LogOut,
-    Calendar,
-    MessageSquare,
-    FileCheck,
     ChevronRight,
     ChevronLeft,
     Search,
-    Clock,
     Scale,
     X,
-    ClipboardList,
-    BookOpen,
-    Receipt,
-    CreditCard,
-    TrendingUp,
-    FileSignature,
-    ShieldCheck,
-    Briefcase
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useAuth } from '../contexts/AuthContext';
@@ -72,7 +54,7 @@ const NavItem: React.FC<NavItemProps> = React.memo(({
             onClick={() => isMobileOpen && onMobileClose()}
         >
             <span className="sidebar-link__icon">
-                <Icon size={20} />
+                <Icon size={17} />
             </span>
 
             {!isCollapsed && (
@@ -80,10 +62,7 @@ const NavItem: React.FC<NavItemProps> = React.memo(({
             )}
 
             {!isCollapsed && item.badge && (
-                <span
-                    className="sidebar-link__badge"
-                    style={{ background: 'var(--color-warning)', color: '#231a0f' }}
-                >
+                <span className="sidebar-link__badge sidebar-link__badge--state">
                     {item.badge}
                 </span>
             )}
@@ -188,6 +167,8 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
         // بوّابة الميزة: تُخفي العنصر تماماً عن أي منشأة غير متاحة لها الميزة (حتى super_admin) — لا تعرف بوجوده.
         if (item.featureGate === 'zatca' && !zatcaAvailable) return false;
         if (item.featureGate === 'hr' && !user?.tenant?.hr_enabled) return false;
+        // العلَمُ الثالث: وحدةُ الرواتب مستقلّةٌ عن الموارد البشرية وافتراضُها مطفأة.
+        if (item.featureGate === 'hr_payroll' && !user?.tenant?.hr_payroll_enabled) return false;
         if (item.featureGate === 'email_intake' && !user?.tenant?.email_intake_enabled) return false;
         if (item.featureGate === 'establishment_portal' && !user?.tenant?.establishment_portal_enabled) return false;
 
@@ -212,6 +193,41 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
 
     const visibleMenuItems = mainMenuItems.filter(isItemVisible);
     const visibleSettingsItems = settingsMenuItems.filter(isItemVisible);
+
+    /**
+     * **بندٌ مختارٌ واحدٌ لا اثنان.**
+     *
+     * كان الاختيارُ يُحسب لكلّ بندٍ على حدة بـ`startsWith(path + '/')`، وهي تصدُق على أكثرَ
+     * من بندٍ في وقتٍ واحد: `/hr/leave` تُضيء «الموارد البشرية» (`/hr`) و«الإجازات والغياب»
+     * (`/hr/leave`) معاً، و`/hr/payroll/wages` تُضيء ثلاثةً. وبندان مضيئان ليسا تمييزاً
+     * أقوى — هما إلغاءٌ للتمييز: لا يَعرف الناظرُ أين هو.
+     *
+     * فالأطولُ مطابقةً يفوز (**الأخصُّ يغلب الأعمّ**) — بندٌ واحدٌ يُضيء دائماً.
+     */
+    const matchLen = (path: string): number =>
+        location.pathname === path || location.pathname.startsWith(`${path}/`) ? path.length : -1;
+
+    const activePath = [...visibleMenuItems, ...visibleSettingsItems].reduce<string | null>(
+        (best, item) => (matchLen(item.path) > (best === null ? 0 : best.length) ? item.path : best),
+        null
+    );
+
+    /**
+     * البندُ المفتوح يُجَرّ إلى المرأى.
+     *
+     * القائمةُ أطولُ من الشاشة (٣٨ بنداً على مكتبٍ مكتملِ الميزات)، فمن دخل `/hr/leave`
+     * وجد قائمةً لا يظهر فيها بندٌ مختارٌ أصلاً — لا لأنّ التمييزَ ضعيف بل لأنّ البندَ خارج
+     * المرأى. و`block: 'nearest'` **لا يحرّك شيئاً إن كان ظاهراً**، فلا قفزةَ في الحالة
+     * الشائعة؛ و`behavior: 'auto'` بلا انزلاقٍ يحترم مَن أطفأ الحركة.
+     */
+    const navRef = React.useRef<HTMLElement | null>(null);
+
+    React.useEffect(() => {
+        const active = navRef.current?.querySelector('.sidebar-link--active');
+        if (active instanceof HTMLElement) {
+            active.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+        }
+    }, [activePath, isCollapsed, visibleMenuItems.length]);
 
     const handleLogout = () => {
         logout();
@@ -265,7 +281,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                 )}
 
                 {/* Navigation */}
-                <nav className="sidebar__nav">
+                <nav className="sidebar__nav" ref={navRef}>
                     {/* Main Section */}
                     <div className="sidebar__section">
                         {!isCollapsed && (
@@ -276,7 +292,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                                 key={item.path}
                                 item={item}
                                 isCollapsed={isCollapsed}
-                                isActive={location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)}
+                                isActive={item.path === activePath}
                                 isMobileOpen={isMobileOpen}
                                 onMobileClose={onMobileClose}
                                 count={navCounts[item.path]}
@@ -300,7 +316,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                                 key={item.path}
                                 item={item}
                                 isCollapsed={isCollapsed}
-                                isActive={location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)}
+                                isActive={item.path === activePath}
                                 isMobileOpen={isMobileOpen}
                                 onMobileClose={onMobileClose}
                             />
@@ -483,15 +499,24 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                 }
                 
                 .sidebar__section {
-                    margin-bottom: 16px;
+                    margin-bottom: 10px;
                 }
-                
+
+                /* فصلُ الأقسام خطٌّ لا فجوة — الفجوةُ وحدَها تُقرأ نهايةَ قائمةٍ فيتوقّف
+                   البصرُ عندها ولا يُكمل إلى «الإعدادات». */
+                .sidebar__section + .sidebar__section {
+                    margin-block-start: 2px;
+                    padding-block-start: 6px;
+                    border-block-start: 1px solid color-mix(in srgb, var(--law-gold) 18%, transparent);
+                }
+
+                /* لا text-transform (لا حالةَ حرفٍ في العربية) ولا letter-spacing:
+                   الأخيرةُ تباعد الحروفَ المتّصلةَ فتُرخي الكلمةَ العربية. */
                 .sidebar__section-title {
-                    font-size: 10px;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
+                    font-size: 10.5px;
+                    font-weight: 600;
                     color: rgba(255,255,255,0.4);
-                    padding: 8px 10px 4px;
+                    padding: 6px 10px 3px;
                     display: flex;
                     align-items: center;
                     gap: 6px;
@@ -502,22 +527,25 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                     justify-content: space-between;
                 }
                 
+                /* كثافةٌ تُدخل القائمةَ في الشاشة: قِيست الخطوةُ 44px فلم يظهر من ٣٨ بنداً
+                   إلّا ١٣ على شاشة 900px — و«الإعدادات» كلُّها تحت الطيّ، بل والبندُ المفتوحُ
+                   نفسُه خارج المرأى. الخطوةُ الآن ~33px فيظهر الضعفُ بلا حذفِ بندٍ ولا نقله. */
                 .sidebar-link {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
-                    padding: 10px 12px;
+                    gap: 9px;
+                    padding: 7px 10px;
                     border-radius: 6px;
                     color: rgba(255,255,255,0.7);
-                    font-size: 14px;
+                    font-size: 13px;
                     transition: background 0.15s, color 0.15s;
-                    margin-bottom: 2px;
+                    margin-bottom: 1px;
                     text-decoration: none;
                 }
                 
                 .sidebar--collapsed .sidebar-link {
                     justify-content: center;
-                    padding: 12px;
+                    padding: 9px;
                 }
                 
                 .sidebar-link:hover {
@@ -525,9 +553,17 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                     color: white;
                 }
                 
+                /* البندُ المفتوح: كان يُملأ بـ--law-navy (#1E3A5F) فوق قائمةٍ #1A2332 —
+                   فرقُ درجةٍ لا يُقرأ اختياراً. صار تلوينَ ذهبٍ + وزناً + أيقونةً ذهبية:
+                   ثلاثُ إشاراتٍ لا تُحمَل على لونٍ واحد. ولا شريطَ تمييزٍ جانبيّ. */
                 .sidebar-link--active {
-                    background: var(--law-navy) !important;
-                    color: white !important;
+                    background: color-mix(in srgb, var(--law-gold) 30%, transparent);
+                    color: white;
+                    font-weight: 600;
+                }
+
+                .sidebar-link--active .sidebar-link__icon {
+                    color: var(--law-gold);
                 }
                 
                 .sidebar-link__icon {
@@ -545,17 +581,28 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
                 }
                 
                 .sidebar-link__badge {
-                    padding: 2px 6px;
-                    background: var(--status-red);
-                    border-radius: 10px;
-                    font-size: 10px;
+                    flex: 0 0 auto;
+                    padding: 1px 5px;
+                    border-radius: 3px;
+                    font-size: 9.5px;
                     font-weight: 600;
+                    white-space: nowrap;
                 }
 
+                /* وسمُ الحالة («جديد»/«تجريبي») حبرٌ وحدٌّ لا تعبئةٌ صفراء: ثمانيةُ أوسمةٍ
+                   ممتلئةٍ في قائمةٍ واحدةٍ تتنافس مع البنود نفسِها، فلا يُقرأ أيُّها يعني شيئاً. */
+                .sidebar-link__badge--state {
+                    border: 1px solid color-mix(in srgb, var(--law-gold) 45%, transparent);
+                    background: transparent;
+                    color: var(--law-gold);
+                }
+
+                /* أمّا العدّادُ فرقمٌ حيٌّ يُقصد النظرُ إليه — يبقى ممتلئاً. */
                 .sidebar-link__count {
-                    background: var(--law-gold) !important;
-                    color: #1a1a1a !important;
-                    min-width: 20px;
+                    border: 1px solid transparent;
+                    background: var(--law-gold);
+                    color: var(--law-navy);
+                    min-width: 18px;
                     text-align: center;
                 }
                 

@@ -9,6 +9,7 @@ import { DataTable, FilterBar, Pagination, Modal } from '../../../components/erp
 import type { Column } from '../../../components/erp';
 import { ToneBadge } from '../../../components/erp/StatusBadge';
 import { formatSAR } from '../../../utils/money';
+import { todayLocal, toDayString } from '../../../utils/dayString';
 import { usePermissionContext } from '../../../contexts/PermissionContext';
 import { FINANCE_PERMISSIONS } from '../../../config/financeModule';
 
@@ -42,7 +43,9 @@ const JournalPanel: React.FC = () => {
   const [reverseTarget, setReverseTarget] = useState<JournalEntry | null>(null);
   const [reverseReason, setReverseReason] = useState('');
   const [showManual, setShowManual] = useState(false);
-  const [manualDate, setManualDate] = useState(new Date().toISOString().slice(0, 10));
+  // يومُ الرياض المحلّي لا زولو: toISOString كانت تُرجع **أمس** لمن يفتح الشاشة
+  // بين منتصف الليل والثالثة فجراً، فيُرحَّل قيدُه في يومٍ خاطئ (وربّما مقفل).
+  const [manualDate, setManualDate] = useState(todayLocal());
   const [manualDesc, setManualDesc] = useState('');
   const [manualLines, setManualLines] = useState<ManualLine[]>([emptyLine(), emptyLine()]);
 
@@ -147,7 +150,8 @@ const JournalPanel: React.FC = () => {
       render: (e) => (
         <div>
           <span className="fin-docnum">{e.entry_number}</span>
-          <div className="fin-cell-muted">{e.entry_date?.slice(0, 10)}</div>
+          {/* القصُّ الأعمى كان يطبع اليومَ السابق متى عاد التاريخ بصيغة ISO زولو */}
+          <div className="fin-cell-muted">{toDayString(e.entry_date)}</div>
         </div>
       ),
     },
@@ -231,7 +235,7 @@ const JournalPanel: React.FC = () => {
       <Modal
         open={!!viewTarget}
         onClose={() => setViewTarget(null)}
-        title={<>قيد {viewTarget?.entry_number} <span className="fin-cell-muted" style={{ fontWeight: 400 }}>— {viewTarget?.entry_date?.slice(0, 10)}</span></>}
+        title={<>قيد {viewTarget?.entry_number} <span className="fin-cell-muted" style={{ fontWeight: 400 }}>— {toDayString(viewTarget?.entry_date)}</span></>}
         icon={BookOpenText}
         size="wide"
       >

@@ -35,6 +35,8 @@ export interface User {
     id: number;
     name?: string;
     hr_enabled?: boolean;
+    /** العلَمُ الثالث — وحدةُ الرواتب، مستقلٌّ عن hr_enabled وافتراضُه false. */
+    hr_payroll_enabled?: boolean;
     correspondence_enabled?: boolean;
     session_copilot_enabled?: boolean;
     email_intake_enabled?: boolean;

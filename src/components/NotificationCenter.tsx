@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { NotificationService, isImportantNotificationType, type Notification as ApiNotification } from '../services/notificationService';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { usePermission } from '../hooks/usePermission';
 import { isNotificationSoundEnabled, setNotificationSoundEnabled } from '../utils/notificationSound';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
@@ -93,6 +94,17 @@ const formatTimestamp = (dateStr: string) => {
 // أهمية الإشعار = نفس التعريف المشترك المستخدم لتشغيل نغمة الصوت
 const isImportantType = isImportantNotificationType;
 
+/**
+ * إشعارُ «سُجّلت لك إجازة» يحمل `action_url = /hr/leave/{profileId}` مكتوباً في قاعدة
+ * البيانات (`LeaveRecorder.php`)، والمسارُ محروسٌ بـ`hr.view` في `App.tsx` — فالموظفُ
+ * يُصفع بـ`<Forbidden/>` عن إشعارٍ يخصّه هو.
+ *
+ * والتحويلُ **هنا لا في الخادم**: المتغيّرُ نفسُه يُكتب في إشعار **المعتمِد** بالسطور
+ * المجاورة، فتغييرُه خادمياً يقطع رابطَ المعتمِد. والإصلاحُ الفرونتيُّ يغطّي الصفوفَ
+ * القائمةَ والجديدةَ معاً بلا هجرةِ بيانات: كلٌّ يذهب إلى ما يملكه.
+ */
+const SELF_LEAVE_URL = /^\/hr\/leave\/\d+$/;
+
 // ==================== Main Component ====================
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({
@@ -101,6 +113,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   onNotificationClick
 }) => {
   const navigate = useNavigate();
+  // تُقرأ مرّةً أعلى المكوّن — عرفُ الصلاحيات في المنصّة.
+  const hasHrView = usePermission('hr.view');
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'important'>('all');
   const [isLoading, setIsLoading] = useState(false);
@@ -198,7 +212,12 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     // Navigate to action URL if available
     if (notification.action_url) {
       onClose();
-      navigate(notification.action_url);
+      // مَن لا يملك `hr.view` يذهب إلى بوّابته الذاتية بدل شاشة «غير مصرّح» —
+      // والمعتمِدُ (يملكها) يذهب إلى دفتر الإجازات كما كان، فلا يُكسر رابطُه.
+      const url = SELF_LEAVE_URL.test(notification.action_url) && !hasHrView
+        ? '/my-hr'
+        : notification.action_url;
+      navigate(url);
     }
 
     onNotificationClick?.(notification);

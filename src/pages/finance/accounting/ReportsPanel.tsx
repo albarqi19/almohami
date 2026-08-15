@@ -1,33 +1,44 @@
 // [وحدة المحاسبة #141 — م4] القوائم المالية: ميزان المراجعة، قائمة الدخل،
 // المركز المالي، حركة النقد — والنقر على أي حساب يفتح دفتر أستاذه.
+// وكلُّها تُصدَّر ملفاً (pdf/xlsx) بنفس الفترة المعروضة، فلا يختلف المطبوعُ عن المقروء.
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Scale, TrendingUp, Landmark, Banknote, BookOpen } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { Scale, TrendingUp, Landmark, Banknote, BookOpen, Download, FileSpreadsheet } from 'lucide-react';
 import {
-  accountingService,
+  accountingService, exportReport,
   type TrialBalanceReport, type IncomeStatementReport, type BalanceSheetReport, type CashMovementReport,
+  type AccountingReportKey, type AccountingExportFormat, type AccountingExportParams,
 } from '../../../services/accountingService';
 import { LoadingState, ErrorState, Modal } from '../../../components/erp';
 import { ToneBadge } from '../../../components/erp/StatusBadge';
 import { formatSAR } from '../../../utils/money';
+import { todayLocal, toDayString } from '../../../utils/dayString';
 
 type ReportKind = 'trial' | 'income' | 'balance' | 'cash';
 
-const REPORTS: { key: ReportKind; label: string; icon: typeof Scale }[] = [
-  { key: 'trial', label: 'ميزان المراجعة', icon: Scale },
-  { key: 'income', label: 'قائمة الدخل', icon: TrendingUp },
-  { key: 'balance', label: 'المركز المالي', icon: Landmark },
-  { key: 'cash', label: 'حركة النقد', icon: Banknote },
+// `apiKey` بجوار التبويب لا في خريطةٍ ثانية: قائمتان تُصانان بيدٍ واحدة تفترقان
+// عند أول تقريرٍ يُضاف، فيُصدَّر تقريرٌ غيرُ الذي على الشاشة.
+const REPORTS: { key: ReportKind; label: string; icon: typeof Scale; apiKey: AccountingReportKey }[] = [
+  { key: 'trial', label: 'ميزان المراجعة', icon: Scale, apiKey: 'trial-balance' },
+  { key: 'income', label: 'قائمة الدخل', icon: TrendingUp, apiKey: 'income-statement' },
+  { key: 'balance', label: 'المركز المالي', icon: Landmark, apiKey: 'balance-sheet' },
+  { key: 'cash', label: 'حركة النقد', icon: Banknote, apiKey: 'cash-movement' },
 ];
 
 const startOfYear = () => `${new Date().getFullYear()}-01-01`;
-const today = () => new Date().toISOString().slice(0, 10);
 
 const ReportsPanel: React.FC = () => {
   const [kind, setKind] = useState<ReportKind>('trial');
   const [from, setFrom] = useState(startOfYear());
-  const [to, setTo] = useState(today());
+  // حدُّ التقرير الأعلى بيوم المستخدم المحلّي لا زولو: toISOString كانت تُنهي
+  // الفترة عند **أمس** بين منتصف الليل والثالثة فجراً، فتسقط حركةُ اليوم كلّها
+  // من ميزان المراجعة وقائمة الدخل والمركز المالي بلا أي إنذار.
+  const [to, setTo] = useState(todayLocal());
   const [ledgerAccount, setLedgerAccount] = useState<{ id: number; name: string } | null>(null);
+  // «تقريرٌ:صيغة» للتصدير الجاري — لا مجرّد bool: زرّان في الشريط وزرّان في مودال
+  // الأستاذ، ولو تشاركوا علماً واحداً لكتب أربعتُهم «جارٍ التوليد...» معاً.
+  const [busyExport, setBusyExport] = useState<string | null>(null);
 
   const period = { from, to };
 
@@ -59,6 +70,33 @@ const ReportsPanel: React.FC = () => {
   });
 
   const active = { trial: trialQ, income: incomeQ, balance: balanceQ, cash: cashQ }[kind];
+  const current = REPORTS.find((r) => r.key === kind) ?? REPORTS[0];
+
+  // 🩸 المركز المالي **لحظةٌ لا فترة**: الشاشة تناديه بـ`as_of = to` وحده، وحقلُ «من»
+  // مخفيٌّ فيه لكنّ قيمته باقيةٌ في الحالة. إرسالُها للتصدير يوقظ قاعدة
+  // `after_or_equal:from` في الباك، فيُرفض «مركزٌ حتى 31/12/2025» بـ٤٢٢ لمجرّد أن
+  // حقلاً لا يراه المستخدم بقي على أول السنة الجارية.
+  const exportParams: AccountingExportParams = kind === 'balance' ? { to } : { from, to };
+  // لا يُصدَّر ما لم يُعرض: تقريرٌ فشل جلبُه أو ما زال يُبنى يُنتج ورقةً لا تطابق
+  // الشاشة — والمستخدم يقرؤها ظانّاً أنها ما رآه.
+  const hasData = !!active.data?.data;
+
+  const runExport = async (
+    report: AccountingReportKey,
+    format: AccountingExportFormat,
+    params: AccountingExportParams,
+  ) => {
+    setBusyExport(`${report}:${format}`);
+    try {
+      await exportReport(report, format, params);
+    } catch (e) {
+      // رسالةُ الخادم كما هي — «دفتر الأستاذ يحتاج تحديد الحساب» (٤٢٢) أو «وحدة
+      // المحاسبة غير مفعّلة» (٤٠٣) تُرشد، و«تعذّر التصدير» لا يُرشد إلى شيء.
+      toast.error((e as Error).message || 'تعذّر توليد ملف التقرير');
+    } finally {
+      setBusyExport(null);
+    }
+  };
 
   return (
     <div>
@@ -78,6 +116,13 @@ const ReportsPanel: React.FC = () => {
           </>
         )}
         <input className="fin-input" type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label={kind === 'balance' ? 'حتى تاريخ' : 'إلى'} />
+        <ExportButtons
+          report={current.apiKey}
+          params={exportParams}
+          busy={busyExport}
+          disabled={active.isLoading || !hasData}
+          onExport={runExport}
+        />
       </div>
 
       {active.isLoading && <LoadingState text="جارٍ إعداد التقرير..." />}
@@ -199,7 +244,9 @@ const ReportsPanel: React.FC = () => {
         );
         return (
           <>
-            <BalancedFlag ok={r.balanced} okText={`المركز المالي متوازن حتى ${r.as_of}`} badText="⚠ غير متوازن — راجع القيود" />
+            {/* as_of وperiod.from صدىً لما أرسلناه، لكن نمرّرهما على toDayString
+                كي يبقى العرض صحيحاً لو ردّ الخادم يوماً بصيغة ISO كاملة */}
+            <BalancedFlag ok={r.balanced} okText={`المركز المالي متوازن حتى ${toDayString(r.as_of)}`} badText="⚠ غير متوازن — راجع القيود" />
             <div style={{ overflowX: 'auto' }}>
               <table className="acc-table" style={{ maxWidth: 680 }}>
                 <thead>
@@ -259,6 +306,18 @@ const ReportsPanel: React.FC = () => {
         onClose={() => setLedgerAccount(null)}
         title={<><BookOpen size={16} style={{ verticalAlign: 'middle', marginInlineEnd: 6 }} />دفتر الأستاذ — {ledgerAccount?.name}</>}
         size="wide"
+        footerAlign="end"
+        // الحساب شرطُ التصدير لا زينته: `general-ledger` بلا `account_id` يردّ ٤٢٢،
+        // فلا يُبنى الفوتر أصلاً ما لم يكن ثمّة حسابٌ مفتوح.
+        footer={ledgerAccount ? (
+          <ExportButtons
+            report="general-ledger"
+            params={{ ...period, account_id: ledgerAccount.id }}
+            busy={busyExport}
+            disabled={ledgerQ.isLoading || !ledgerQ.data?.data}
+            onExport={runExport}
+          />
+        ) : undefined}
       >
         {ledgerQ.isLoading && <LoadingState />}
         {ledgerQ.isError && <ErrorState onRetry={ledgerQ.refetch} />}
@@ -270,12 +329,14 @@ const ReportsPanel: React.FC = () => {
               </thead>
               <tbody>
                 <tr className="acc-row--group">
-                  <td colSpan={5}>رصيد افتتاحي ({ledgerQ.data.data.period.from})</td>
+                  <td colSpan={5}>رصيد افتتاحي ({toDayString(ledgerQ.data.data.period.from)})</td>
                   <td className="num">{formatSAR(ledgerQ.data.data.opening_balance)}</td>
                 </tr>
                 {ledgerQ.data.data.movements.map((m, i) => (
                   <tr key={i}>
-                    <td className="num">{m.date}</td>
+                    {/* حركةُ الأستاذ تصل «YYYY-MM-DD» من الخادم اليوم؛ التسامح
+                        يحفظ العمود إن تغيّر صبُّ سطر القيد يوماً إلى ISO */}
+                    <td className="num">{toDayString(m.date)}</td>
                     <td className="num">{m.entry_number}</td>
                     <td>{m.description}</td>
                     <td className="num">{m.debit ? formatSAR(m.debit) : '—'}</td>
@@ -295,6 +356,40 @@ const ReportsPanel: React.FC = () => {
     </div>
   );
 };
+
+const EXPORT_FORMATS: { format: AccountingExportFormat; label: string; icon: typeof Download }[] = [
+  { format: 'pdf', label: 'PDF', icon: Download },
+  { format: 'xlsx', label: 'Excel', icon: FileSpreadsheet },
+];
+
+/**
+ * زرّا التصدير (pdf/xlsx) — مشتركان بين شريط الفترة ومودال دفتر الأستاذ.
+ * `params` تُمرَّر من الشاشة لا تُبنى هنا: المُصدَّر يجب أن يكون صدى المعروض حرفياً.
+ */
+const ExportButtons: React.FC<{
+  report: AccountingReportKey;
+  params: AccountingExportParams;
+  busy: string | null;
+  disabled?: boolean;
+  onExport: (report: AccountingReportKey, format: AccountingExportFormat, params: AccountingExportParams) => void;
+}> = ({ report, params, busy, disabled, onExport }) => (
+  <>
+    {EXPORT_FORMATS.map(({ format, label, icon: Icon }) => (
+      <button
+        key={format}
+        type="button"
+        className="fin-btn fin-btn--sm"
+        // أيُّ تصديرٍ جارٍ يُعطّل إخوتَه لا نفسَه وحده: القائمة تُبنى خادمياً على كامل
+        // القيود، ونقرتان متعجّلتان تُشغّلان بناءين ثقيلين على القاعدة نفسها.
+        disabled={!!busy || disabled}
+        onClick={() => onExport(report, format, params)}
+        title={`تصدير ${label}`}
+      >
+        <Icon size={14} /> {busy === `${report}:${format}` ? 'جارٍ التوليد...' : label}
+      </button>
+    ))}
+  </>
+);
 
 const BalancedFlag: React.FC<{ ok: boolean; okText: string; badText: string }> = ({ ok, okText, badText }) => (
   <div style={{ marginBottom: 8 }}>

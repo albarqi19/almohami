@@ -1,7 +1,8 @@
 // === إجراءات فاتورة ZATCA (سياقية حسب الحالة) ===
 // المصدر الوحيد لمنطق الإجراءات — يُستخدم في صفوف القائمة (variant=row) وصفحة الفاتورة (variant=detail).
 // تمييز جوهري: failed → إعادة محاولة | rejected → لا إعادة، بل عرض السبب + إشعار تصحيح.
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   QrCode, FileCode2, FileText, RefreshCw, Eye, Clock, Loader2,
@@ -10,6 +11,7 @@ import {
 import { toast } from 'react-toastify';
 import { zatcaService } from '../../services/zatcaService';
 import { ZATCA_STATUS_QUERY_KEY } from '../../hooks/useZatcaStatus';
+import { useAnchoredMenu, useOutsideOfBoth } from '../../hooks/useAnchoredMenu';
 import type { CaseInvoice } from '../../types/billing';
 import ZatcaQrModal from './ZatcaQrModal';
 import ZatcaNoteModal from './ZatcaNoteModal';
@@ -33,6 +35,19 @@ const ZatcaInvoiceActions: React.FC<Props> = ({ invoice, variant = 'row', allowS
   const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const [modal, setModal] = useState<null | 'qr' | 'response' | 'credit' | 'debit'>(null);
+
+  // [UX-MENU] تثبيتُ القائمة على زرّها بعد نقلها إلى بوابةٍ على body.
+  const menuWrapRef = useRef<HTMLDivElement>(null);
+  const {
+    triggerRef: menuTriggerRef,
+    menuRef,
+    style: menuStyle,
+  } = useAnchoredMenu(menuOpen);
+
+  // الطبقةُ الشفافة (zatca-menu-backdrop) سقطت مع البوابة: كانت تغطّي الشاشة
+  // لالتقاط النقر خارجاً، وهي تحجب التمرير وتبتلع أوّل نقرةٍ على أيّ زرّ آخر.
+  // الفحصُ المباشر للمرجعين أدقّ وأخفّ.
+  useOutsideOfBoth([menuWrapRef, menuRef], () => setMenuOpen(false), menuOpen);
 
   const status = invoice.zatca_status ?? null;
   const id = invoice.id;
@@ -88,34 +103,46 @@ const ZatcaInvoiceActions: React.FC<Props> = ({ invoice, variant = 'row', allowS
   const busy = submitMutation.isPending || retryMutation.isPending;
 
   // قائمة ⋮ (إشعارات + عرض الاستجابة)
+  //
+  // [UX-MENU] تُرسَم في بوابةٍ على body: النسخة `variant === 'row'` تعيش داخل
+  // خلية جدولٍ فوقها `.fin-table-scroll{overflow-x:auto}` و`.fin-table-wrap
+  // {overflow:hidden}` — وكلتاهما تقصّان رأسياً أيضاً (ضبطُ محورٍ على غير
+  // visible يجعل الآخر auto). فكانت القائمة تُرسم داخل منطقةٍ مقصوصة ولا تُرى.
   const dropdown = (
-    <div className="zatca-menu-wrap">
+    <div className="zatca-menu-wrap" ref={menuWrapRef}>
       <button
         type="button"
+        ref={menuTriggerRef as React.RefObject<HTMLButtonElement>}
         className="zatca-icon-btn"
         onClick={() => setMenuOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
         aria-label="إجراءات إضافية"
         title="إجراءات إضافية"
       >
         <MoreVertical size={15} />
       </button>
-      {menuOpen ? (
-        <>
-          <div className="zatca-menu-backdrop" onClick={() => setMenuOpen(false)} />
-          <div className="zatca-menu">
-            {hasResponse ? (
-              <button className="zatca-menu__item" onClick={() => { setModal('response'); setMenuOpen(false); }}>
-                <Eye size={14} /> عرض الاستجابة
-              </button>
-            ) : null}
-            <button className="zatca-menu__item zatca-menu__item--danger" onClick={() => { setModal('credit'); setMenuOpen(false); }}>
-              <FileMinus size={14} /> إشعار دائن
+      {menuOpen && menuStyle ? createPortal(
+        <div
+          ref={menuRef}
+          className="zatca-menu zatca-menu--floating"
+          role="menu"
+          style={menuStyle}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {hasResponse ? (
+            <button className="zatca-menu__item" onClick={() => { setModal('response'); setMenuOpen(false); }}>
+              <Eye size={14} /> عرض الاستجابة
             </button>
-            <button className="zatca-menu__item" onClick={() => { setModal('debit'); setMenuOpen(false); }}>
-              <FilePlus size={14} /> إشعار مدين
-            </button>
-          </div>
-        </>
+          ) : null}
+          <button className="zatca-menu__item zatca-menu__item--danger" onClick={() => { setModal('credit'); setMenuOpen(false); }}>
+            <FileMinus size={14} /> إشعار دائن
+          </button>
+          <button className="zatca-menu__item" onClick={() => { setModal('debit'); setMenuOpen(false); }}>
+            <FilePlus size={14} /> إشعار مدين
+          </button>
+        </div>,
+        document.body,
       ) : null}
     </div>
   );

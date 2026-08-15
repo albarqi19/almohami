@@ -1,23 +1,35 @@
 // [وحدة المحاسبة #141 — م1] تبويب المصروفات: مصروفات + موردون + تصنيفات.
 // دورة حياة المصروف: مسودة → مدفوع (قيد آلي بالباك) → ملغى (قيد عكسي).
 // المدفوع لا يُعدَّل ولا يُحذف — سلامة الدفاتر (رسائل الباك تشرح ذلك).
-import React, { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+//
+// [EXP-REBILL] مركز التكلفة وإعادة التحصيل: القضية والعميل ومفتاح «قابل لإعادة
+// التحصيل» أعمدةٌ قائمةٌ في القاعدة منذ م1، لكنّ الواجهة لم تكن تكتبها سطراً —
+// فكلُّ نثريةٍ تُصرف باسم عميلٍ كانت تُدفن في مصروفات المكتب العامّة ولا تُحمَّل
+// عليه أبداً. هذا التبويب هو مكانُ كتابتها، ونافذةُ ضمّها للفاتورة في شاشة الفواتير.
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import {
   Wallet, Plus, CheckCircle2, XCircle, Trash2, Pencil, Paperclip, Landmark,
-  Truck, Tags, ReceiptText, FileWarning, Ban,
+  Truck, Tags, ReceiptText, FileWarning, Ban, Briefcase, UserRound, Receipt,
+  Search, X, Loader2,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import {
   accountingService,
   type Expense, type ExpenseCategory, type Vendor, type ExpensePaymentMethod,
 } from '../../../services/accountingService';
+import { CaseService } from '../../../services/caseService';
+import { UserService } from '../../../services/UserService';
 import { DataTable, FilterBar, Pagination, Modal, EmptyState } from '../../../components/erp';
 import type { Column } from '../../../components/erp';
 import StatCard, { StatCardGrid } from '../../../components/erp/StatCard';
 import { ToneBadge } from '../../../components/erp/StatusBadge';
 import { formatSAR } from '../../../utils/money';
+import { todayLocal, toDayString } from '../../../utils/dayString';
+import { useAnchoredMenu, useOutsideOfBoth } from '../../../hooks/useAnchoredMenu';
 import { usePermissionContext } from '../../../contexts/PermissionContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { FINANCE_PERMISSIONS } from '../../../config/financeModule';
@@ -49,13 +61,24 @@ interface ExpenseForm {
   notes: string;
   mark_paid: boolean;
   attachment: File | null;
+  // ── مركز التكلفة (اختياريّ كلُّه) ──
+  case_id: string;
+  client_id: string;
+  // النصُّ المعروض في المنتقي. يُحفظ في الحالة لا يُشتقّ عند العرض: القضيةُ تصل
+  // من بحثٍ خادميّ يتغيّر بكل حرف، والعميلُ لا يصل اسمُه في قائمة المصروفات أصلاً
+  // — فاشتقاقُ الاسم من نتائج اللحظة يُفرغ الحقلَ المختار بأول تغيّرٍ في البحث.
+  case_label: string;
+  client_label: string;
+  is_billable: boolean;
 }
 
 const emptyForm = (): ExpenseForm => ({
   expense_category_id: '',
   vendor_id: '',
   description: '',
-  expense_date: new Date().toISOString().slice(0, 10),
+  // يومُ المستخدم المحلّي لا زولو: toISOString كانت تُرجع **أمس** لمن يسجّل
+  // مصروفاً بين منتصف الليل والثالثة فجراً بتوقيت الرياض.
+  expense_date: todayLocal(),
   amount: '',
   vat_amount: '',
   has_tax_invoice: true,
@@ -64,10 +87,182 @@ const emptyForm = (): ExpenseForm => ({
   notes: '',
   mark_paid: true,
   attachment: null,
+  case_id: '',
+  client_id: '',
+  case_label: '',
+  client_label: '',
+  is_billable: false,
 });
+
+/** نصُّ القضية الموحّد — يُبنى في موضعٍ واحد كي لا تختلف تسميتُها بين البحث والتعديل. */
+const caseLabelOf = (fileNumber?: string | null, title?: string | null): string => {
+  const number = (fileNumber ?? '').trim();
+  const name = (title ?? '').trim();
+  if (name && number) return `${name} (${number})`;
+
+  return name || (number ? `قضية ${number}` : '');
+};
+
+/** خيارٌ في منتقي القضية/العميل. */
+interface PickerOption {
+  id: number;
+  label: string;
+  sub?: string;
+  /** عميلُ القضية — يُقترح بنقرةٍ ولا يُملأ تلقائياً (انظر تعليق المنتقي في النموذج). */
+  clientId?: string | null;
+  clientName?: string | null;
+}
+
+/**
+ * قيمةٌ متأخّرة عن مصدرها — كي لا يذهب نداءُ بحثٍ إلى الخادم بكل ضغطة حرف.
+ * (لا مكانَ مشتركاً لهذا في المشروع اليوم؛ نمطُه مستعارٌ من TaskLinkPicker بلا نسخِ كوده.)
+ */
+function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delay);
+
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debounced;
+}
+
+interface PickerFieldProps {
+  label: React.ReactNode;
+  icon: LucideIcon;
+  placeholder: string;
+  /** '' = بلا اختيار. */
+  selectedId: string;
+  selectedLabel: string;
+  query: string;
+  onQueryChange: (value: string) => void;
+  options: PickerOption[];
+  loading?: boolean;
+  errorText?: string;
+  emptyText?: string;
+  onSelect: (option: PickerOption) => void;
+  onClear: () => void;
+}
+
+/**
+ * منتقي كيانٍ واحدٍ بنمط ERP: شريحةُ المختار أو حقلُ بحثٍ بقائمةٍ منسدلة.
+ *
+ * مُعرَّفٌ خارج المكوّن الأب عمداً — تعريفُه داخله يُعيد إنشاء النوع بكل رسمة،
+ * فيُفكَّك الحقلُ ويُعاد بناؤه ويفقد التركيز بعد كل حرفٍ يُكتب فيه.
+ */
+const PickerField: React.FC<PickerFieldProps> = ({
+  label, icon: Icon, placeholder, selectedId, selectedLabel, query, onQueryChange,
+  options, loading, errorText, emptyText, onSelect, onClear,
+}) => {
+  const [open, setOpen] = useState(false);
+  // مرجعٌ ثابت: useClickOutside يضع handler في مصفوفة الاعتماديات، ودالّةٌ سطريّة
+  // تُعيد تسجيل المستمعين بكل رسمة.
+  const close = useCallback(() => setOpen(false), []);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // [UX-MENU] القائمة تُرسَم في بوابةٍ فتخرج من قصّ جسم النافذة؛ و`matchWidth`
+  // يُبقيها بعرض الحقل نفسه لا بعرض أطول نتيجة.
+  const {
+    triggerRef: anchorRef,
+    menuRef: pickerRef,
+    style: pickerStyle,
+  } = useAnchoredMenu(open, { matchWidth: true });
+
+  // البوابةُ تُخرج القائمة من شجرة `ref` — فيلزم فحصُ الاثنين معاً وإلا أغلقت
+  // نفسَها قبل أن يصل النقرُ إلى عنصرها.
+  useOutsideOfBoth([ref, pickerRef], close, open);
+
+  return (
+    <div className="fin-field" ref={ref} style={{ position: 'relative' }}>
+      <label className="fin-field__label">{label}</label>
+
+      {selectedId ? (
+        <div className="fin-input" style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 35 }}>
+          <Icon size={13} style={{ flexShrink: 0, color: 'var(--color-text-secondary)' }} />
+          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {selectedLabel}
+          </span>
+          <button
+            type="button"
+            className="fin-btn fin-btn--sm fin-btn--ghost fin-btn--icon"
+            onClick={onClear}
+            title="إزالة الاختيار"
+            aria-label="إزالة الاختيار"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      ) : (
+        <>
+          <div
+            ref={anchorRef as React.RefObject<HTMLDivElement>}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
+          >
+            <Search
+              size={13}
+              style={{ position: 'absolute', insetInlineStart: 9, color: 'var(--color-text-secondary)', pointerEvents: 'none' }}
+            />
+            <input
+              className="fin-input"
+              value={query}
+              onChange={(e) => { onQueryChange(e.target.value); setOpen(true); }}
+              onFocus={() => setOpen(true)}
+              placeholder={placeholder}
+              style={{ paddingInlineStart: 28 }}
+            />
+            {loading && (
+              <Loader2
+                size={13}
+                className="animate-spin"
+                style={{ position: 'absolute', insetInlineEnd: 9, color: 'var(--color-text-secondary)' }}
+              />
+            )}
+          </div>
+
+          {/* [UX-MENU] بوابةٌ على body: النموذجُ يعيش داخل `.fin-modal__body`
+              وهي `overflow-y: auto` — فقائمةُ حقلٍ قريبٍ من أسفل النافذة كانت
+              تُقصّ، وهي أوّلُ ما يراه المستخدم عند ربط المصروف بقضية. */}
+          {open && pickerStyle ? createPortal(
+            <div
+              ref={pickerRef}
+              className="fin-menu__dropdown fin-menu__dropdown--floating"
+              style={{ ...pickerStyle, maxHeight: 168, overflowY: 'auto' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {errorText ? (
+                <div className="fin-menu__item" style={{ cursor: 'default', color: 'var(--status-red)' }}>{errorText}</div>
+              ) : options.length === 0 ? (
+                <div className="fin-menu__item fin-cell-muted" style={{ cursor: 'default' }}>
+                  {loading ? 'جارٍ البحث...' : (emptyText ?? 'لا نتائج')}
+                </div>
+              ) : (
+                options.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className="fin-menu__item"
+                    style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}
+                    onClick={() => { onSelect(opt); setOpen(false); }}
+                  >
+                    <span>{opt.label}</span>
+                    {opt.sub && <span className="fin-cell-muted">{opt.sub}</span>}
+                  </button>
+                ))
+              )}
+            </div>,
+            document.body,
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+};
 
 const ExpensesTab: React.FC = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { has } = usePermissionContext();
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -81,10 +276,22 @@ const ExpensesTab: React.FC = () => {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  // [EXP-REBILL] «القابلة لإعادة التحصيل غير المفوترة» — يُترجَم إلى billable_only
+  // في الباك، وهو نفسُه scopeRebillable الذي تقرأ منه نافذةُ الضمّ للفاتورة.
+  const [billableOnly, setBillableOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(searchParams.get('new') === '1');
   const [editTarget, setEditTarget] = useState<Expense | null>(null);
   const [form, setForm] = useState<ExpenseForm>(emptyForm());
+  // بحثُ منتقيَي مركز التكلفة (القضية خادميّ، والعميل محلّيّ فوق قائمةٍ كاملة).
+  const [caseQuery, setCaseQuery] = useState('');
+  const [clientQuery, setClientQuery] = useState('');
+  const debouncedCaseQuery = useDebouncedValue(caseQuery, 300);
+  // عميلُ القضية المختارة — يُعرض اقتراحاً بنقرة لا يُملأ تلقائياً (التعليل عند عرضه).
+  const [caseClientHint, setCaseClientHint] = useState<{ id: string; name: string } | null>(null);
+  // هل عدّل المستخدمُ الضريبةَ يدوياً؟ متى فعل توقّف الحسابُ التلقائي (١٥٪) كي
+  // لا يطمس إدخاله عند تغيير المبلغ بعده.
+  const [vatTouched, setVatTouched] = useState(false);
   const [payTarget, setPayTarget] = useState<Expense | null>(null);
   const [payMethod, setPayMethod] = useState<ExpensePaymentMethod>('bank_transfer');
   const [cancelTarget, setCancelTarget] = useState<Expense | null>(null);
@@ -110,6 +317,7 @@ const ExpensesTab: React.FC = () => {
     search: search || undefined,
     status: status || undefined,
     category_id: categoryId ? Number(categoryId) : undefined,
+    billable_only: billableOnly || undefined,
     page,
     per_page: 15,
   };
@@ -146,6 +354,66 @@ const ExpensesTab: React.FC = () => {
   });
   const vendorOptions = vendorOptionsData?.data?.data ?? [];
 
+  // ── مركز التكلفة: خيارات القضية والعميل ──
+  //
+  // القضايا بحثٌ **خادميّ**: المكتب قد يملك آلافاً و/cases يسقّف الصفحة بـ100،
+  // فقائمةٌ محلّيةٌ تُخفي أكثرَ ممّا تُظهر. والعملاء قائمةٌ كاملةٌ واحدة تُفلتر
+  // محلّياً — وهو نمطُ المشروع القائم (/auth/clients بلا ترقيم، وTaskLinkPicker
+  // وCreateInvoiceModal كلاهما يفعلها).
+  const {
+    data: caseSearchData, isFetching: casesFetching, isError: casesError,
+  } = useQuery({
+    queryKey: ['accounting', 'expenseCaseOptions', debouncedCaseQuery],
+    queryFn: () => CaseService.getCases({ search: debouncedCaseQuery || undefined, limit: 10 }),
+    enabled: accountingEnabled && showForm,
+    staleTime: 60_000,
+  });
+
+  const caseOptions = useMemo<PickerOption[]>(
+    () => (caseSearchData?.data ?? []).map((c) => ({
+      id: Number(c.id),
+      label: caseLabelOf(c.file_number, c.title),
+      sub: [c.client_name, c.court].filter(Boolean).join(' · ') || undefined,
+      clientId: c.client_id ? String(c.client_id) : null,
+      clientName: c.client_name || null,
+    })),
+    [caseSearchData],
+  );
+
+  const {
+    data: clientListData, isFetching: clientsFetching, isError: clientsError,
+  } = useQuery({
+    queryKey: ['accounting', 'expenseClientOptions'],
+    queryFn: () => UserService.getClients(),
+    enabled: accountingEnabled && showForm,
+    staleTime: 5 * 60_000,
+  });
+
+  const clientOptions = useMemo<PickerOption[]>(() => {
+    const term = clientQuery.trim();
+    const all = (clientListData ?? []).map((u) => ({
+      id: Number(u.id),
+      label: u.name,
+      sub: u.phone || undefined,
+    }));
+
+    return (term
+      ? all.filter((o) => o.label?.includes(term) || String(o.sub ?? '').includes(term))
+      : all
+    ).slice(0, 12);
+  }, [clientListData, clientQuery]);
+
+  // اسمُ العميل لا يصل في قائمة المصروفات (`client` تُحمَّل في /expenses/{id} وحده)،
+  // فنستخرجه من قائمة العملاء متى وصلت — وإلا عُرض حقلٌ مختارٌ بلا اسمٍ عند التعديل.
+  useEffect(() => {
+    if (!showForm || !form.client_id || form.client_label) return;
+    const match = (clientListData ?? []).find((u) => String(u.id) === form.client_id);
+    if (!match) return;
+    setForm((f) => (f.client_id === String(match.id) && !f.client_label
+      ? { ...f, client_label: match.name || `عميل #${match.id}` }
+      : f));
+  }, [showForm, form.client_id, form.client_label, clientListData]);
+
   // ─────────────────────────────────────────────────────────
   // Mutations — المصروفات
   // ─────────────────────────────────────────────────────────
@@ -168,6 +436,11 @@ const ExpensesTab: React.FC = () => {
           has_tax_invoice: form.has_tax_invoice,
           vendor_invoice_number: form.vendor_invoice_number || null,
           payment_method: form.payment_method,
+          // `null` صريحةٌ لا حذفُ المفتاح: تحقّقُ الباك يقرأ ما وصل فقط، فالمفتاحُ
+          // الغائب يُبقي القيمةَ القديمة — أي أن «فكّ الربط بالقضية» يصير بلا أثر.
+          case_id: form.case_id ? Number(form.case_id) : null,
+          client_id: form.client_id ? Number(form.client_id) : null,
+          is_billable: form.is_billable,
           notes: form.notes || null,
         });
       }
@@ -182,6 +455,9 @@ const ExpensesTab: React.FC = () => {
       fd.append('has_tax_invoice', form.has_tax_invoice ? '1' : '0');
       if (form.vendor_invoice_number) fd.append('vendor_invoice_number', form.vendor_invoice_number);
       fd.append('payment_method', form.payment_method);
+      if (form.case_id) fd.append('case_id', form.case_id);
+      if (form.client_id) fd.append('client_id', form.client_id);
+      fd.append('is_billable', form.is_billable ? '1' : '0');
       if (form.notes) fd.append('notes', form.notes);
       if (form.mark_paid) fd.append('mark_paid', '1');
       if (form.attachment) fd.append('attachment', form.attachment);
@@ -273,19 +549,44 @@ const ExpensesTab: React.FC = () => {
   // Helpers
   // ─────────────────────────────────────────────────────────
 
+  const resetPickers = () => {
+    setCaseQuery('');
+    setClientQuery('');
+    setCaseClientHint(null);
+  };
+
   const openCreate = () => {
     setEditTarget(null);
     setForm(emptyForm());
+    setVatTouched(false);
+    resetPickers();
     setShowForm(true);
   };
 
   const openEdit = (expense: Expense) => {
+    // [EXP-REBILL] نثريةٌ حُمِّلت على فاتورة لا تُعدَّل من هنا: مبلغُها صار بنداً في
+    // فاتورة العميل، ورابطُها بالقضية/العميل هو ما يمنع تحصيلَها مرّتين — فتعديلُ
+    // أيّهما يفكّ ما ربطته الفاتورة بلا أن يتغيّر فيها شيء. (والباك يردّ ٤٢٢ على أيّ
+    // تعديلٍ لغير المسودّة أصلاً، والمفوترةُ مدفوعةٌ حتماً — فهذا حزامٌ ثانٍ لا بديل.)
+    if (expense.rebilled_invoice_id) {
+      toast.error('هذه النثرية مُحمَّلة على فاتورة — أزِل بندها من الفاتورة قبل تعديلها');
+
+      return;
+    }
+
     setEditTarget(expense);
+    resetPickers();
+    // مصروفٌ قائم: ضريبتُه مُقرَّرةٌ سلفاً (وقد تخالف ١٥٪ عن قصد) — لا يجوز أن
+    // يطمسها الحسابُ التلقائي لو غُيِّر المبلغ، فنعدّها «ملموسة» من البداية.
+    setVatTouched(true);
     setForm({
       expense_category_id: String(expense.expense_category_id),
       vendor_id: expense.vendor_id ? String(expense.vendor_id) : '',
       description: expense.description,
-      expense_date: expense.expense_date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+      // العطلُ التراكمي: التاريخ يُقرأ من الخادم ثم يُعاد إليه في كل تعديل، وكان
+      // القصُّ الأعمى لصيغة ISO الزولوية يحطّ منه يوماً في **كل مرّة** — مسودّةٌ
+      // عُدِّلت ثلاثاً تنزل ثلاثة أيام. toDayString تُثبّت اليوم كما هو.
+      expense_date: toDayString(expense.expense_date) || todayLocal(),
       amount: String(expense.amount),
       vat_amount: String(expense.vat_amount ?? ''),
       has_tax_invoice: expense.has_tax_invoice,
@@ -294,6 +595,15 @@ const ExpensesTab: React.FC = () => {
       notes: expense.notes ?? '',
       mark_paid: false,
       attachment: null,
+      case_id: expense.case_id ? String(expense.case_id) : '',
+      client_id: expense.client_id ? String(expense.client_id) : '',
+      // `caseModel` تصل محمَّلةً في قائمة المصروفات، فاسمُ القضية جاهزٌ بلا نداء.
+      // واسمُ العميل يُستكمل من قائمة العملاء في الأثر أعلاه (لا يصل في القائمة).
+      case_label: expense.case_model
+        ? caseLabelOf(expense.case_model.file_number, expense.case_model.title)
+        : (expense.case_id ? `قضية #${expense.case_id}` : ''),
+      client_label: expense.client?.name ?? '',
+      is_billable: !!expense.is_billable,
     });
     setShowForm(true);
   };
@@ -301,6 +611,7 @@ const ExpensesTab: React.FC = () => {
   const closeForm = () => {
     setShowForm(false);
     setEditTarget(null);
+    resetPickers();
     if (searchParams.get('new')) {
       searchParams.delete('new');
       setSearchParams(searchParams, { replace: true });
@@ -308,6 +619,56 @@ const ExpensesTab: React.FC = () => {
   };
 
   const totalWithVat = (Number(form.amount) || 0) + (Number(form.vat_amount) || 0);
+
+  // ما سيُحمَّل على العميل عند الضمّ للفاتورة — صورةٌ طبق الأصل من
+  // Expense::rebillableAmount في الباك: ذو الفاتورة الضريبية يُعاد **صافياً** (ضريبتُه
+  // خُصمت مدخلاتٍ فلم يتحمّلها المكتب)، وعديمُها يُعاد **إجمالياً** (ضريبتُه كلفةٌ
+  // فعلية). عرضُ الرقم هنا لا حسابُه: القاعدةُ تبقى في الباك، والواجهةُ تُظهرها قبل
+  // الحفظ كي لا يُفاجأ من وسم النثرية بمبلغٍ غير الذي توقّعه.
+  const rebillableAmount = form.has_tax_invoice ? (Number(form.amount) || 0) : totalWithVat;
+
+  // ─────────────────────────────────────────────────────────
+  // حقل الضريبة: حسابٌ تلقائيّ لا خانةٌ حرّة
+  //
+  // كان الحقل مبلغاً حرّاً بعنوان «الضريبة (15%)» والـ١٥٪ مجرّدُ تلميحٍ رماديّ
+  // (placeholder) لا قيمة — فأيُّ رقمٍ يُكتب يُجمع على المبلغ بلا أيّ ربطٍ به.
+  // والأثر ليس تجميلياً: `vat_amount` يدخل خانةَ «ضريبة المدخلات» في الإقرار
+  // الضريبي مباشرةً، فخانةُ خصمٍ نظاميّةٌ كانت قابلةً للاختلاق برقمٍ عشوائي.
+  //
+  // الآن: تُحسب ١٥٪ تلقائياً من المبلغ، وتبقى قابلةً للتعديل اليدوي (فروق
+  // التقريب في فاتورة المورّد، أو مورّدٌ غير مسجَّل ⇒ «معفاة»)، ومتى عدّلها
+  // المستخدم توقّف الحسابُ التلقائي كي لا يطمس إدخاله.
+  // ─────────────────────────────────────────────────────────
+  const VAT_RATE = 0.15;
+  const vatFor = (amount: string): string => {
+    const n = Number(amount);
+
+    return Number.isFinite(n) && n > 0 ? (n * VAT_RATE).toFixed(2) : '';
+  };
+
+  const onAmountChange = (value: string) => {
+    setForm((f) => ({ ...f, amount: value, vat_amount: vatTouched ? f.vat_amount : vatFor(value) }));
+  };
+
+  const onVatChange = (value: string) => {
+    setVatTouched(true);
+    setForm((f) => ({ ...f, vat_amount: value }));
+  };
+
+  // تحذيرٌ لا منع: قد تكون هناك حالاتٌ مشروعة (رسومٌ حكومية بضريبةٍ مختلفة)،
+  // لكنّ ضريبةً تفوق المبلغَ نفسَه خطأُ إدخالٍ دائماً.
+  const vatWarning: string | null = (() => {
+    const amount = Number(form.amount) || 0;
+    const vat = Number(form.vat_amount) || 0;
+    if (amount <= 0 || vat <= 0) return null;
+    if (vat > amount) return 'الضريبة أكبر من المبلغ نفسه — تحقّق من الرقم.';
+    const expected = amount * VAT_RATE;
+    if (Math.abs(vat - expected) > Math.max(0.02, expected * 0.02)) {
+      return `النسبة ${((vat / amount) * 100).toFixed(1)}٪ لا ١٥٪ — تأكّد من فاتورة المورّد.`;
+    }
+
+    return null;
+  })();
 
   // ─────────────────────────────────────────────────────────
   // الأعمدة
@@ -320,7 +681,8 @@ const ExpensesTab: React.FC = () => {
       render: (e) => (
         <div>
           <div className="fin-cell-strong">{e.expense_number}</div>
-          <div className="fin-cell-muted">{e.expense_date?.slice(0, 10)}</div>
+          {/* متسامحٌ مع الصيغتين: نصُّ YYYY-MM-DD أو ISO كامل — لا قصَّ أعمى */}
+          <div className="fin-cell-muted">{toDayString(e.expense_date)}</div>
         </div>
       ),
     },
@@ -333,13 +695,59 @@ const ExpensesTab: React.FC = () => {
             {e.description}
             {e.attachment_path && <Paperclip size={12} style={{ marginInlineStart: 4, opacity: 0.6 }} />}
           </div>
+          {/* القضيةُ نُقلت إلى عمود «مركز التكلفة» — ذكرُها هنا وهناك يُكرّرها في
+              خليّتين متجاورتين ويُضيّق الوصف بلا فائدة. */}
           <div className="fin-cell-muted">
             {e.category?.name}
             {e.vendor ? ` · ${e.vendor.name}` : ''}
-            {e.case_model ? ` · قضية ${e.case_model.file_number}` : ''}
           </div>
         </div>
       ),
+    },
+    {
+      key: 'cost_center',
+      header: 'مركز التكلفة',
+      render: (e) => {
+        const invoiceId = e.rebilled_invoice_id;
+
+        return (
+          <div>
+            <div className="fin-cell-strong" style={{ fontSize: 12 }}>
+              {e.case_model
+                ? `قضية ${e.case_model.file_number}`
+                : (e.client?.name ?? <span className="fin-cell-muted">—</span>)}
+            </div>
+            <div style={{ marginTop: 3 }}>
+              {invoiceId ? (
+                <button
+                  type="button"
+                  className="fin-btn fin-btn--sm fin-btn--ghost"
+                  style={{ padding: '2px 6px', color: 'var(--status-green)' }}
+                  title="فتح الفاتورة التي حُمِّلت عليها هذه النثرية"
+                  onClick={(ev) => { ev.stopPropagation(); navigate(`/finance/invoices/${invoiceId}`); }}
+                >
+                  <Receipt size={12} />
+                  {/* رقمُ الفاتورة لا يصل في قائمة المصروفات (`rebilledInvoice` تُحمَّل
+                      في /expenses/{id} وحده)، فنكتب «مفوترة» ونفتحها بالمعرِّف بدل طبع
+                      معرِّفٍ داخليٍّ يقرؤه المحاسب كأنه رقمُ الفاتورة. */}
+                  {e.rebilled_invoice?.invoice_number ?? 'مفوترة'}
+                </button>
+              ) : !e.is_billable ? (
+                <span className="fin-cell-muted">غير قابلة للتحصيل</span>
+              ) : e.status === 'paid' ? (
+                <ToneBadge tone="warning">لم تُفوتَر بعد</ToneBadge>
+              ) : e.status === 'draft' ? (
+                // شرطُ scopeRebillable الثالث: المسوّدة لم تُصرف ولا قيدَ لها، فتحميلُها
+                // على العميل تحصيلُ مالٍ لم يُنفَق. نقولها هنا كي لا يُسأل: لماذا لا
+                // أجدها في نافذة الضمّ للفاتورة؟
+                <span className="fin-cell-muted">قابلة — بعد الدفع</span>
+              ) : (
+                <span className="fin-cell-muted">—</span>
+              )}
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: 'amount',
@@ -409,7 +817,7 @@ const ExpensesTab: React.FC = () => {
         </div>
       ) : null,
     },
-  ], [canManage, deleteMutation]);
+  ], [canManage, deleteMutation, navigate]);
 
   const vendorColumns = useMemo<Column<Vendor>[]>(() => [
     { key: 'name', header: 'المورد', render: (v) => <span className="fin-cell-strong">{v.name}</span> },
@@ -548,6 +956,23 @@ const ExpensesTab: React.FC = () => {
                 ],
                 ariaLabel: 'فلتر التصنيف',
               },
+              {
+                value: billableOnly ? '1' : '',
+                onChange: (v) => {
+                  const on = v === '1';
+                  setBillableOnly(on);
+                  // الفلترُ الخادميّ (scopeRebillable) يشترط `paid` ضمناً، فترْكُ
+                  // «مسودة» مختارةً معه يُرجع قائمةً فارغةً بلا سببٍ ظاهر. نُظهر
+                  // الشرطَ في فلتر الحالة بدل أن نُخفيه ونترك المستخدم يحزره.
+                  if (on) setStatus('paid');
+                  setPage(1);
+                },
+                options: [
+                  { value: '', label: 'كل النثريات' },
+                  { value: '1', label: 'قابلة للتحصيل — لم تُفوتَر' },
+                ],
+                ariaLabel: 'فلتر إعادة التحصيل',
+              },
             ]}
             actions={canManage && (
               <button type="button" className="fin-btn fin-btn--primary" onClick={openCreate}>
@@ -564,8 +989,10 @@ const ExpensesTab: React.FC = () => {
             isError={isError}
             onRetry={refetch}
             emptyIcon={Wallet}
-            emptyTitle="لا مصروفات بعد"
-            emptyDesc="سجّل أول مصروف — رسوم حكومية، إيجار، اشتراكات..."
+            emptyTitle={billableOnly ? 'لا نثريات بانتظار التحصيل' : 'لا مصروفات بعد'}
+            emptyDesc={billableOnly
+              ? 'الشرط ثلاثيّ: النثرية موسومة «قابلة لإعادة التحصيل»، ومدفوعة فعلاً، ولم تُضَف لفاتورةٍ بعد.'
+              : 'سجّل أول مصروف — رسوم حكومية، إيجار، اشتراكات...'}
             footer={<Pagination page={page} lastPage={lastPage} total={total} onChange={setPage} />}
           />
         </>
@@ -678,13 +1105,40 @@ const ExpensesTab: React.FC = () => {
           <div className="fin-field">
             <label className="fin-field__label">المبلغ (قبل الضريبة)<span className="req">*</span></label>
             <input className="fin-input" type="number" min="0.01" step="0.01" value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+              onChange={(e) => onAmountChange(e.target.value)} />
           </div>
           <div className="fin-field">
-            <label className="fin-field__label">الضريبة (15%)</label>
-            <input className="fin-input" type="number" min="0" step="0.01" value={form.vat_amount}
-              onChange={(e) => setForm({ ...form, vat_amount: e.target.value })}
-              placeholder={form.amount ? (Number(form.amount) * 0.15).toFixed(2) : '0.00'} />
+            <label className="fin-field__label">
+              ضريبة القيمة المضافة
+              {/* `--fin-muted` لا يعرّفه أيُّ ملف ستايل في المستودع — ومتغيّرٌ غير
+                  معرَّفٍ يسقط عند الحساب فيرث لونَ النصّ الأصيل، فيبدو التلميحُ
+                  الرماديُّ جزءاً من عنوان الحقل. `--color-text-secondary` هو الرمز
+                  الذي تستعمله `.fin-cell-muted` نفسُها. */}
+              {!vatTouched && Number(form.amount) > 0 ? (
+                <span style={{ color: 'var(--color-text-secondary)', fontWeight: 400 }}> — تُحسب تلقائياً ١٥٪</span>
+              ) : null}
+            </label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input className="fin-input" type="number" min="0" step="0.01" value={form.vat_amount}
+                onChange={(e) => onVatChange(e.target.value)}
+                placeholder="0.00" style={{ flex: 1 }} />
+              <button type="button" className="fin-btn fin-btn--ghost" style={{ whiteSpace: 'nowrap' }}
+                disabled={!(Number(form.amount) > 0)}
+                onClick={() => { setVatTouched(false); setForm((f) => ({ ...f, vat_amount: vatFor(f.amount) })); }}>
+                ١٥٪
+              </button>
+              <button type="button" className="fin-btn fin-btn--ghost"
+                onClick={() => { setVatTouched(true); setForm((f) => ({ ...f, vat_amount: '0' })); }}>
+                معفاة
+              </button>
+            </div>
+            {/* `--status-orange` معرَّفٌ في الثيمات الثلاثة، بدل `--fin-warning` الذي
+                لا يعرّفه ملفٌ فكان اللونُ يأتي من الاحتياط الستّ عشري وحده. */}
+            {vatWarning ? (
+              <div style={{ color: 'var(--status-orange)', fontSize: 12, marginTop: 4 }}>
+                ⚠ {vatWarning}
+              </div>
+            ) : null}
           </div>
           <div className="fin-field">
             <label className="fin-field__label">رقم فاتورة المورد</label>
@@ -709,6 +1163,111 @@ const ExpensesTab: React.FC = () => {
               مدفوع فعلاً (يولّد القيد المحاسبي فوراً)
             </label>
           )}
+
+          {/* ── مركز التكلفة وإعادة التحصيل ── */}
+          <div
+            className="fin-grid__full"
+            style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginTop: 2 }}
+          >
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--color-heading)', marginBottom: 8 }}>
+              مركز التكلفة وإعادة التحصيل
+            </div>
+
+            <div className="fin-grid fin-grid--2">
+              <PickerField
+                label="القضية"
+                icon={Briefcase}
+                placeholder="ابحث برقم الملف أو عنوان القضية..."
+                selectedId={form.case_id}
+                selectedLabel={form.case_label}
+                query={caseQuery}
+                onQueryChange={setCaseQuery}
+                options={caseOptions}
+                loading={casesFetching}
+                errorText={casesError ? 'تعذّر جلب القضايا — تحقّق من صلاحية عرض القضايا' : undefined}
+                emptyText={caseQuery ? 'لا قضية بهذا البحث' : 'اكتب للبحث في القضايا'}
+                onSelect={(opt) => {
+                  setForm((f) => ({ ...f, case_id: String(opt.id), case_label: opt.label }));
+                  setCaseClientHint(opt.clientId && opt.clientName
+                    ? { id: opt.clientId, name: opt.clientName }
+                    : null);
+                }}
+                onClear={() => {
+                  setForm((f) => ({ ...f, case_id: '', case_label: '' }));
+                  setCaseQuery('');
+                  setCaseClientHint(null);
+                }}
+              />
+
+              <PickerField
+                label="العميل"
+                icon={UserRound}
+                placeholder="ابحث بالاسم أو الجوال..."
+                selectedId={form.client_id}
+                selectedLabel={form.client_label || (form.client_id ? `عميل #${form.client_id}` : '')}
+                query={clientQuery}
+                onQueryChange={setClientQuery}
+                options={clientOptions}
+                loading={clientsFetching}
+                errorText={clientsError ? 'تعذّر جلب العملاء — تحقّق من الصلاحيات' : undefined}
+                emptyText={clientQuery ? 'لا عميل بهذا البحث' : 'لا عملاء'}
+                onSelect={(opt) => setForm((f) => ({ ...f, client_id: String(opt.id), client_label: opt.label }))}
+                onClear={() => { setForm((f) => ({ ...f, client_id: '', client_label: '' })); setClientQuery(''); }}
+              />
+
+              {/*
+                العميل لا يُملأ تلقائياً من القضية بل يُقترح بنقرة: حارسُ إعادة التحصيل
+                في الباك يرفض نثريةً `client_id`ها يخالف عميلَ الفاتورة، والقضيةُ قد
+                تكون متعدّدةَ الموكّلين — فعميلٌ مملوءٌ آلياً بالخطأ **يحجب** التحصيل
+                بينما الفارغُ يمرّ دائماً. الاقتراحُ يُري ما في القضية بلا أن يقرّر عنه.
+              */}
+              {caseClientHint && form.client_id !== caseClientHint.id && (
+                <div
+                  className="fin-grid__full fin-cell-muted"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
+                >
+                  <span>عميل القضية المختارة: <strong>{caseClientHint.name}</strong></span>
+                  <button
+                    type="button"
+                    className="fin-btn fin-btn--sm fin-btn--ghost"
+                    onClick={() => setForm((f) => ({
+                      ...f, client_id: caseClientHint.id, client_label: caseClientHint.name,
+                    }))}
+                  >
+                    اجعله عميل النثرية
+                  </button>
+                </div>
+              )}
+
+              <label
+                className="fin-grid__full"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}
+              >
+                <input className="fin-checkbox" type="checkbox" checked={form.is_billable}
+                  onChange={(e) => setForm({ ...form, is_billable: e.target.checked })} />
+                قابلة لإعادة التحصيل من العميل
+              </label>
+
+              {form.is_billable && (
+                <div className="fin-grid__full fin-cell-muted" style={{ lineHeight: 1.7 }}>
+                  تُضاف إلى فاتورة العميل بمبلغ <strong>{formatSAR(rebillableAmount)}</strong>
+                  {form.has_tax_invoice
+                    ? ' — الصافي قبل الضريبة، لأنّ ضريبة المدخلات تُخصم أمام الهيئة فلم يتحمّلها المكتب.'
+                    : ' — الإجمالي بالضريبة، لأنّه بلا فاتورة ضريبية فالضريبة كلفةٌ فعلية على المكتب.'}
+                  <br />
+                  ولا تظهر في نافذة الضمّ للفاتورة إلا بعد تعليمها مدفوعة.
+                  {!form.case_id && !form.client_id && (
+                    <>
+                      <br />
+                      <span style={{ color: 'var(--status-orange)' }}>
+                        ⚠ بلا قضيةٍ ولا عميل تظهر في نافذة كل الفواتير — حدِّد أحدهما كي تُنسب لصاحبها.
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
           {!editTarget && (
             <div className="fin-field fin-grid__full">
               <label className="fin-field__label">مرفق الفاتورة (صورة/PDF)</label>
@@ -777,6 +1336,15 @@ const ExpensesTab: React.FC = () => {
             ? 'المصروف مدفوع — الإلغاء سيولّد قيداً عكسياً يصحّح الدفاتر (لا حذف).'
             : 'سيُلغى هذا المصروف.'}
         </p>
+        {/* الإلغاء يعكس قيدَ المصروف في الدفاتر ولا يمسّ بندَه في فاتورة العميل —
+            فيبقى العميل مطالَباً بكلفةٍ أُلغيت. لا نمنع (قد يكون التصحيحُ مقصوداً)
+            لكنّ الصمتَ هنا يُنتج فرقاً لا يظهر إلا في مراجعةٍ لاحقة. */}
+        {cancelTarget?.rebilled_invoice_id ? (
+          <p style={{ color: 'var(--status-orange)', marginTop: 10 }}>
+            ⚠ هذه النثرية مُحمَّلة على فاتورةٍ للعميل — الإلغاء لا يحذف بندَها من الفاتورة.
+            راجع الفاتورة بعده وإلا بقي العميل مطالَباً بكلفةٍ عُكس قيدُها.
+          </p>
+        ) : null}
       </Modal>
 
       {/* ── مودال مورد ── */}

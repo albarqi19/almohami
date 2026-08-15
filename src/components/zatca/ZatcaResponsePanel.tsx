@@ -6,6 +6,38 @@ type AnyObj = Record<string, unknown>;
 
 interface Msg { code?: string; message: string; }
 
+/**
+ * يحوّل عنصرَ رسالةٍ من أي شكلٍ ترسله الهيئة إلى Msg.
+ *
+ * 🔴 حاسم: عناصر `warningMessages` من ZATCA **كائنات** لا نصوص، شكلها
+ * `{ code, type, status, message, category }` — يخزّنها الباك كما هي في
+ * `case_invoices.zatca_warnings`. تمريرُ الكائن إلى JSX يرمي
+ * «React error #31: Objects are not valid as a React child» فتسقط صفحةُ
+ * الفاتورة كاملةً إلى ErrorBoundary بعد إرسالٍ **ناجح** — فيبدو النجاحُ فشلاً.
+ */
+function toMsg(item: unknown): Msg | null {
+  if (item == null) return null;
+  if (typeof item === 'string') return item.trim() === '' ? null : { message: item };
+  if (typeof item === 'number' || typeof item === 'boolean') return { message: String(item) };
+  if (typeof item !== 'object') return null;
+
+  const o = item as AnyObj;
+  const raw = o.message ?? o.Message ?? o.text ?? o.error ?? o.description;
+  const message = typeof raw === 'string' && raw.trim() !== '' ? raw : JSON.stringify(o);
+  const codeRaw = o.code ?? o.Code ?? o.category;
+  const code = typeof codeRaw === 'string' && codeRaw.trim() !== '' ? codeRaw : undefined;
+
+  return { code, message: String(message) };
+}
+
+/** يطبّع أي مصفوفةٍ (أو قيمةٍ مفردة) إلى Msg[] — لا يثق بشكلٍ مُعلَن. */
+function toMsgList(value: unknown): Msg[] {
+  if (value == null) return [];
+  const arr = Array.isArray(value) ? value : [value];
+
+  return arr.map(toMsg).filter((m): m is Msg => m !== null);
+}
+
 // يستخرج رسائل الأخطاء/التحذيرات من أشكال استجابة ZATCA الشائعة.
 function extractMessages(response?: AnyObj | null): { errors: Msg[]; warnings: Msg[] } {
   const errors: Msg[] = [];
@@ -13,16 +45,7 @@ function extractMessages(response?: AnyObj | null): { errors: Msg[]; warnings: M
   if (!response || typeof response !== 'object') return { errors, warnings };
 
   const pushFrom = (arr: unknown, target: Msg[]) => {
-    if (!Array.isArray(arr)) return;
-    arr.forEach((item) => {
-      if (typeof item === 'string') target.push({ message: item });
-      else if (item && typeof item === 'object') {
-        const o = item as AnyObj;
-        const message = (o.message ?? o.Message ?? o.text ?? o.error ?? JSON.stringify(o)) as string;
-        const code = (o.code ?? o.Code ?? o.category) as string | undefined;
-        target.push({ code, message: String(message) });
-      }
-    });
+    target.push(...toMsgList(Array.isArray(arr) ? arr : []));
   };
 
   // الأشكال الشائعة
@@ -42,14 +65,17 @@ function extractMessages(response?: AnyObj | null): { errors: Msg[]; warnings: M
 
 interface PanelProps {
   response?: AnyObj | null;
-  warnings?: string[] | null;
+  // النوعُ `unknown` مقصود: العمود `zatca_warnings` يحمل ما ترسله الهيئة حرفياً
+  // (كائنات لا نصوص)، فإعلانه `string[]` كان كذباً يمرّ من TypeScript ويسقط في
+  // المتصفّح. التطبيعُ في `toMsgList` هو الحارس الوحيد الموثوق.
+  warnings?: unknown;
 }
 
 export const ZatcaResponsePanel: React.FC<PanelProps> = ({ response, warnings }) => {
   const [showRaw, setShowRaw] = useState(false);
   const extracted = extractMessages(response);
   const allWarnings: Msg[] = [
-    ...(warnings?.map((w) => ({ message: w })) ?? []),
+    ...toMsgList(warnings),
     ...extracted.warnings,
   ];
   const errors = extracted.errors;

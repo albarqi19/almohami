@@ -118,7 +118,11 @@ export interface ZatcaInvoiceFields {
   zatca_icv?: number | null;
   zatca_qr_code?: string | null;
   zatca_response?: Record<string, unknown> | null;
-  zatca_warnings?: string[] | null;
+  // ⚠️ ليست نصوصاً: العمود يحمل `warningMessages` من الهيئة حرفياً — كائناتٌ
+  // شكلها { code, type, status, message, category }. إعلانها `string[]` كان
+  // يمرّ من TypeScript ثم يسقط في المتصفّح بـ React error #31 عند عرضها.
+  // استعمل `toMsgList` في ZatcaResponsePanel للتطبيع قبل أي عرض.
+  zatca_warnings?: ZatcaMessage[] | string[] | null;
   zatca_submitted_at?: string | null;
   zatca_cleared_at?: string | null;
   zatca_original_invoice_id?: number | null;
