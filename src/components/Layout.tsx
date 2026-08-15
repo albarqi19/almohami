@@ -1,9 +1,10 @@
 ﻿/* ⚠️ يجب أن يبقى أول استيراد: يثبّت ترتيب حقن كل ستايلات التطبيق الداخلي
    قبل أي مكوّن — انظر التوثيق داخل appStyles.ts */
 import '../styles/appStyles';
-import React, { useState, createContext, useContext, Suspense } from 'react';
+import React, { useState, useEffect, createContext, useContext, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import PageLoader from './PageLoader';
+import { prefetchLazyRoutes } from '../utils/lazyWithRetry';
 import { ChevronLeft, X } from 'lucide-react';
 import ClickUpSidebar from './ClickUpSidebar';
 import FloatingTimer from './FloatingTimer';
@@ -45,6 +46,20 @@ export const useSidebar = () => useContext(SidebarContext);
 const Layout: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
+
+  /**
+   * 🔴 **الجلبُ المسبق للشاشات — يبدأ هنا لأنّ `Layout` لا يُصيَّر إلا بعد المصادقة.**
+   *
+   * وضعُه في `App` أو `main` كان سيُنزّل شاشاتِ التطبيق لزائرٍ واقفٍ على صفحة الدخول:
+   * تنزيلٌ لن يُستعمَل، وعلى اتصالٍ خلويٍّ هو حسابُ المستخدم لا حسابُنا.
+   *
+   * والدالّةُ تحرس نفسَها (تعمل مرّةً واحدةً مهما استُدعيت)، فلا حاجةَ لمرجعٍ هنا —
+   * وإعادةُ تصييرِ `Layout` عند كلّ تنقّلٍ لا تُطلق جلباً ثانياً.
+   */
+  useEffect(() => {
+    prefetchLazyRoutes();
+  }, []);
+
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   // إخفاء ودجتات الصف العائم — للجلسة الحالية فقط، تعود بتحديث الصفحة عمداً
