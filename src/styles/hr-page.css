@@ -253,3 +253,71 @@ body.dark .hr-doctype__ic { background: var(--quiet-gray-200); }
    `.hr-stage` على الجوّال، وقد سقط الصنفان معاً في م٥. البديلُ حيٌّ في
    `hr-leave.css` (max-width: 1023px) يخاطب `.hrl-layout`/`.hrl-side`/`.hrl-stage`،
    وعتبتُه أوسعُ (يشمل اللوحيَّ أفقياً) وقياساتُه منطقية. */
+
+/* ────────────────────────────────────────────────────────────────
+   شريطُ التمرير في وحدة الموارد — مربّعٌ كبقيّة الوحدة
+   ────────────────────────────────────────────────────────────────
+   القاعدةُ العامّة في `index.css` تعطي `border-radius: 999px` — حبّةٌ مستديرةٌ
+   تناقض النمطَ الملتصقَ المربّع الذي تلتزمه الوحدةُ كلُّها (لا استدارةَ ولا ظلّ).
+   والطلباتُ الإدارية تتجاوزها لنفسها منذ زمن؛ ووحدةُ الموارد لم تكن تتجاوزها.
+
+   🔴 و`::-webkit-scrollbar { width }` **لا يمسّ الشريطَ الأفقيَّ إطلاقاً** —
+   الأفقيُّ يقرأ `height` وحدَها، وهي غيرُ مضبوطةٍ في القاعدة العامّة. فالأفقيُّ
+   كان بمقاسِ المتصفّح الخام لا بمقاسِنا. ولذلك تُضبط الاثنتان هنا معاً.
+
+   والنطاق: `.hrl-page` جذرُ الإجازات والرواتب والتسوية و«ملفّي» والاعتماد،
+   وحاوياتُ الحضور الثلاث مستقلّةٌ لأنّ جذرَها `.ssp2-page` مشتركٌ مع أربع
+   صفحاتٍ خارج الوحدة — فلا تُمَسّ من هنا.
+
+   وفَيَرفُكس لا يقرأ `::-webkit-`، فله `scrollbar-width`/`scrollbar-color`
+   (ولا استدارةَ فيه أصلاً، فالمطلوب توحيدُ المقاس واللون لا التربيع). */
+
+.hrl-page,
+.hra-scroll,
+.hra-picks,
+.hra-vers {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+}
+
+.hrl-page ::-webkit-scrollbar,
+.hrl-page::-webkit-scrollbar,
+.hra-scroll::-webkit-scrollbar,
+.hra-picks::-webkit-scrollbar,
+.hra-vers::-webkit-scrollbar {
+    /* فيزيائيّتان عمداً: `::-webkit-scrollbar` لا يقرأ المنطقيّتين، والشريطُ
+       ليس صندوقاً يتبع اتجاهَ النصّ — العموديُّ عرضٌ والأفقيُّ ارتفاعٌ دائماً. */
+    width: 10px;
+    height: 10px;
+}
+
+.hrl-page ::-webkit-scrollbar-track,
+.hrl-page::-webkit-scrollbar-track,
+.hra-scroll::-webkit-scrollbar-track,
+.hra-picks::-webkit-scrollbar-track,
+.hra-vers::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+.hrl-page ::-webkit-scrollbar-thumb,
+.hrl-page::-webkit-scrollbar-thumb,
+.hra-scroll::-webkit-scrollbar-thumb,
+.hra-picks::-webkit-scrollbar-thumb,
+.hra-vers::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 0;
+}
+
+.hrl-page ::-webkit-scrollbar-thumb:hover,
+.hrl-page::-webkit-scrollbar-thumb:hover,
+.hra-scroll::-webkit-scrollbar-thumb:hover,
+.hra-picks::-webkit-scrollbar-thumb:hover,
+.hra-vers::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-border-strong);
+}
+
+/* الزاويةُ حيث يلتقي الأفقيُّ بالعموديّ — تُترك شفّافةً كي لا يظهر مربّعٌ رماديٌّ غريب */
+.hrl-page ::-webkit-scrollbar-corner,
+.hrl-page::-webkit-scrollbar-corner {
+    background-color: transparent;
+}
