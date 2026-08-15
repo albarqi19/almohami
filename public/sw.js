@@ -5,7 +5,7 @@
 
 // 🔑 مفتاح الإصدار - يتم تحديثه تلقائياً عند كل build
 // يمكن تغييره يدوياً أو عبر script
-const SW_VERSION = '2026.08.11.2051';
+const SW_VERSION = '2026.08.15.1432';
 const CACHE_NAME = `law-firm-system-${SW_VERSION}`;
 
 // الملفات الأساسية للتخزين المؤقت
@@ -82,11 +82,28 @@ self.addEventListener('fetch', (event) => {
       // Strategy: Network First, fallback to Cache
       fetch(event.request)
         .then((response) => {
-          // تحديث الكاش بالنسخة الجديدة
-          if (response.status === 200) {
+          // تحديث الكاش بالنسخة الجديدة.
+          //
+          // 🔴 ثلاثةُ شروطٍ قبل التخزين — وكان بلا أيٍّ منها فيرمي في الطرفية:
+          //  ① المخطَّط: `chrome-extension://` لا يُخزَّن أصلاً («scheme unsupported»)،
+          //    وإضافةُ ناجز تولّد هذه الطلبات على كلّ صفحة.
+          //  ② الطريقة: `Cache` لا يقبل إلا GET.
+          //  ③ نوعُ الردّ: `opaque`/`error` يرمي «encountered a network error».
+          // وضجيجُ هذه الأخطاء أسوأُ من فقدِ الكاش: يُغرق الطرفيةَ فيُخفي عطلاً حقيقياً.
+          const req = event.request;
+          const cacheable =
+            req.method === 'GET' &&
+            (req.url.startsWith('http:') || req.url.startsWith('https:')) &&
+            response.status === 200 &&
+            response.type !== 'opaque' &&
+            response.type !== 'error';
+
+          if (cacheable) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseClone);
+              cache.put(req, responseClone).catch(() => {
+                /* الكاشُ رفاهيةٌ — فشلُه لا يُفشل الصفحة ولا يُلوّث الطرفية. */
+              });
             });
           }
           return response;

@@ -1,5 +1,11 @@
 // API Configuration and HTTP Client
-export const API_BASE_URL = 'https://api.alraedlaw.com/api/v1';
+//
+// 🔴 العنوانُ يُقرأ من `VITE_API_URL` والإنتاجُ احتياطٌ — لا العكس.
+// كان مثبَّتاً في السطر فيتجاهل المتغيّر: فمن يشغّل الواجهة محلّياً **يضرب خادمَ
+// الإنتاج بلا أن يدري**، ويردّه CORS بحقٍّ فيرى صفحةً بيضاء بلا سببٍ ظاهر.
+// و`import.meta.env` يُستبدَل وقتَ البناء، فالحزمةُ المنشورة تحمل قيمتَها لا الشرط.
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL ?? 'https://api.alraedlaw.com/api/v1';
 
 // HTTP Client with token management
 class ApiClient {
@@ -146,17 +152,36 @@ class ApiClient {
           const error = new Error(errorData.message || 'غير مصرح بهذا الإجراء') as Error & {
             errors?: Record<string, string[]>;
             errorCode?: string;
+            status?: number;
           };
           error.errors = errorData.errors;
           error.errorCode = errorData.error_code;
+          // ‼️ رمزُ الحالة يُلحَق هنا أيضاً — التعليلُ الكامل أسفل الفرع العامّ.
+          error.status = response.status;
           throw error;
         }
 
         const errorData = await response.json().catch(() => ({}));
         console.error('API Error Response:', response.status, JSON.stringify(errorData, null, 2));
         // Create error with full details
-        const error = new Error(errorData.message || `HTTP ${response.status}`) as Error & { errors?: Record<string, string[]> };
+        const error = new Error(errorData.message || `HTTP ${response.status}`) as Error & {
+          errors?: Record<string, string[]>;
+          status?: number;
+        };
         error.errors = errorData.errors;
+        /**
+         * ‼️ **رمزُ الحالة يُلحَق بكائن الخطأ — في هذا الفرع وفي فرع 403 معاً.**
+         *
+         * `apiClient` كان يرمي `new Error(message)` بلا `status` قطّ، فلا سبيلَ لمكوّنٍ
+         * أن يميّز 404 «لا ملفَّ لحسابك» (حالةٌ طبيعيةٌ تُعرض بقفلٍ هادئ) من 403 «الميزةُ
+         * مطفأة» من 500 (عطلٌ حقيقيٌّ يستحقّ مثلثاً أحمر) — فتنهار الثلاثةُ إلى شاشةِ
+         * خطأٍ حمراءَ واحدة، ويفتح موظفٌ بلا ملفٍّ تذكرةَ دعمٍ لحالةٍ ليست عطلاً.
+         * والبديلُ الوحيدُ كان مطابقةَ سلاسلَ عربيةٍ من الخادم — تنكسر بأوّل تعديلِ نصّ.
+         *
+         * إضافيُّ الأثر تماماً: لا رسالةَ تتغيّر، ولا سلوكَ قائمٌ يتبدّل، ولا عقدَ نقطةٍ
+         * في الخادم يُمَسّ.
+         */
+        error.status = response.status;
         throw error;
       }
 
