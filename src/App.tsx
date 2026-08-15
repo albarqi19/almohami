@@ -70,6 +70,20 @@ const LawyerSuspended = lazyWithRetry(() => import('./pages/LawyerSuspended'));
 const Clients = lazyWithRetry(() => import('./pages/Clients'));
 const ClientDetailPage = lazyWithRetry(() => import('./pages/ClientDetailPage'));
 const HrModule = lazyWithRetry(() => import('./pages/hr/HrModule'));
+const LeavePage = lazyWithRetry(() => import('./pages/hr/leave/LeavePage'));
+const LeaveApprovalPage = lazyWithRetry(() => import('./pages/hr/approval/LeaveApprovalPage'));
+const AttendancePage = lazyWithRetry(() => import('./pages/hr/attendance/AttendancePage'));
+const WageRegisterPage = lazyWithRetry(() => import('./pages/hr/payroll/WageRegisterPage'));
+const PayrollRulesPage = lazyWithRetry(() => import('./pages/hr/payroll/RulesPage'));
+const PayrollHomePage = lazyWithRetry(() => import('./pages/hr/payroll/PayrollHomePage'));
+const PayrollRunPage = lazyWithRetry(() => import('./pages/hr/payroll/RunPage'));
+const PayrollBankCycleGuide = lazyWithRetry(() => import('./pages/hr/payroll/BankCycleGuidePage'));
+const PayrollAdvancesPage = lazyWithRetry(() => import('./pages/hr/payroll/AdvancesPage'));
+const PayrollPenaltiesPage = lazyWithRetry(() => import('./pages/hr/payroll/PenaltiesPage'));
+const PayrollPenaltyFundPage = lazyWithRetry(() => import('./pages/hr/payroll/PenaltyFundPage'));
+const SettlementPage = lazyWithRetry(() => import('./pages/hr/settlement/SettlementPage'));
+const SettlementListPage = lazyWithRetry(() => import('./pages/hr/settlement/SettlementListPage'));
+const MyHrPage = lazyWithRetry(() => import('./pages/hr/me/MyHrPage'));
 const AdminRequests = lazyWithRetry(() => import('./pages/AdminRequests'));
 const Feedback = lazyWithRetry(() => import('./pages/Feedback'));
 const WathqInquiryPage = lazyWithRetry(() => import('./pages/WathqInquiry'));
@@ -263,6 +277,115 @@ function App() {
                   <HrModule />
                 </ProtectedRoute>
               } />
+              {/* الإجازات والغياب — القراءة بـ hr.view، والكتابة محروسة داخل الشاشة بـ hr.leave.manage */}
+              <Route path="hr/leave" element={
+                <ProtectedRoute requiredPermission="hr.view">
+                  <LeavePage />
+                </ProtectedRoute>
+              } />
+              {/* اعتمادُ الإجازات — سطحُ المعتمِد: الطابورُ ولوحُ التعارض قبل القرار.
+                  **قبل** `:employeeId` عمداً: الجزءُ الثابتُ يغلب المتغيّر في التوجيه، وترتيبُه
+                  هنا يقول ذلك للقارئ بدل الاتّكال على قاعدةٍ ضمنية. القراءةُ بـ hr.view،
+                  والقرارُ محروسٌ بـ hr.leave.manage في الخادم على approve/reject. */}
+              <Route path="hr/leave/approvals" element={
+                <ProtectedRoute requiredPermission="hr.view">
+                  <LeaveApprovalPage />
+                </ProtectedRoute>
+              } />
+              <Route path="hr/leave/:employeeId" element={
+                <ProtectedRoute requiredPermission="hr.view">
+                  <LeavePage />
+                </ProtectedRoute>
+              } />
+              {/* الحضور والانصراف — القراءة بـ hr.attendance.view (صلاحية مستقلّة عن hr.view:
+                  مَن يرى الحضور ليس بالضرورة مَن يرى ملفّات الموظفين)، والكتابة محروسة داخل
+                  الشاشة بـ hr.attendance.manage. وبوّابة hr_enabled يفرضها الباك (EnsureHrEnabled). */}
+              <Route path="hr/attendance" element={
+                <ProtectedRoute requiredPermission="hr.attendance.view">
+                  <AttendancePage />
+                </ProtectedRoute>
+              } />
+              {/* سجلُّ الأجور — بابُ إدخال الراتب، وهو ما يُشغّل خطابَ تعريف الراتب.
+                  القراءةُ بـ hr.payroll.view (صلاحيةُ وحدة الرواتب)، و**المبالغُ والآيبان**
+                  وحدَهما خلف hr.compensation.view داخل الشاشة: من يدير الجاهزية يرى الحالات
+                  بلا رقم ولا يُحجب عن الشاشة. والكتابةُ hr.compensation.manage. */}
+              <Route path="hr/payroll/wages" element={
+                <ProtectedRoute requiredPermission="hr.payroll.view">
+                  <WageRegisterPage />
+                </ProtectedRoute>
+              } />
+              {/* المرجعُ النظاميّ — نظامُ العمل بياناً مؤرَّخاً، وتأكيدُ نسب التأمينات.
+                  وهو خلف العلَم الثالث hr_payroll_enabled على الخادم (خلافاً لسجلّ الأجور):
+                  الشاشةُ تحمل الفعلَ الذي يرفع حاجزَ الاعتماد، فليست عرضاً. */}
+              <Route path="hr/payroll/rules" element={
+                <ProtectedRoute requiredPermission="hr.payroll.view">
+                  <PayrollRulesPage />
+                </ProtectedRoute>
+              } />
+              {/* الرواتب — الصفحةُ الجامعة: «ما حالُ الرواتب اليوم، وبم أبدأ؟».
+                  🔴 والمكتبُ الفارغ يرى دعوةَ تهيئةٍ تسمّي الناقص وزرَّ فتحٍ **ظاهراً
+                  معطَّلاً وتحته سببُه** — لا جدولَ أصفارٍ ولا زرّاً مخفيّاً. */}
+              <Route path="hr/payroll" element={
+                <ProtectedRoute requiredPermission="hr.payroll.view">
+                  <PayrollHomePage />
+                </ProtectedRoute>
+              } />
+              {/* المسير — صفحةٌ واحدةٌ بمراحل، والمرحلةُ في الرابط (?stage=) فلا يضيع
+                  الموضعُ بالتحديث ولا بخطأٍ عابر. المشحونُ منها في هذه الخطوة: النطاق
+                  والفحصُ القبْليّ، والباقي يظهر معطَّلاً بسببه لا مخفيّاً. */}
+              <Route path="hr/payroll/runs/:id" element={
+                <ProtectedRoute requiredPermission="hr.payroll.view">
+                  <PayrollRunPage />
+                </ProtectedRoute>
+              } />
+              {/* 📘 دورةُ الرواتب والبنك — صفحةُ إرشادٍ تقول ما يفعله النظامُ وما يفعله البنكُ
+                  وما تفعله المنشأةُ بنفسها. 🔴 ووُجدت لأنّ اللبسَ هنا يجرّ مسؤولية: مديرٌ يظنّ
+                  أنّ تنزيلَ الكشف رفعٌ إلى الجهة الحكومية فتنقضي المهلةُ وتُوقَف خدماتُ منشأته
+                  وهو يحسب نفسَه ملتزماً. صفحةٌ ساكنةٌ بلا نداءِ خادم — ولذلك بلا صلاحيةٍ زائدة
+                  على قراءة الرواتب. */}
+              <Route path="hr/payroll/bank-cycle" element={
+                <ProtectedRoute requiredPermission="hr.payroll.view">
+                  <PayrollBankCycleGuide />
+                </ProtectedRoute>
+              } />
+              {/* السلفُ — قراءةً hr.payroll.view (الشاشةُ تعرض دَيناً لا أجراً)، والمنحُ
+                  والإيقافُ خلف hr.advance.approve داخل الشاشة: الزرُّ يظهر معطَّلاً وتحته
+                  سببُه لا مخفيّاً. 🔴 ولا خصمَ من هذه الشاشة: القسطُ يُقترَح ويُبتّ في
+                  طابور قرارات المسير باسم إنسان. */}
+              <Route path="hr/payroll/advances" element={
+                <ProtectedRoute requiredPermission="hr.payroll.view">
+                  <PayrollAdvancesPage />
+                </ProtectedRoute>
+              } />
+              {/* الجزاءاتُ التأديبية (م.٦٦–٧٣) — كلُّها خلف hr.penalty.manage: التوقيعُ
+                  والتبليغُ والإنفاذُ والإبطال فعلٌ واحدٌ متّصلٌ لا يُجزَّأ بصلاحيتين. */}
+              <Route path="hr/payroll/penalties" element={
+                <ProtectedRoute requiredPermission="hr.penalty.manage">
+                  <PayrollPenaltiesPage />
+                </ProtectedRoute>
+              } />
+              {/* 🔑 سجلُّ الغرامات — بـ hr.payroll.view لا hr.penalty.manage: م.٧٣ توجب
+                  سجلّاً يُطّلَع عليه، وحصرُه في يد موقّع الجزاء يفرّغ المادّةَ من معناها. */}
+              <Route path="hr/payroll/penalty-fund" element={
+                <ProtectedRoute requiredPermission="hr.payroll.view">
+                  <PayrollPenaltyFundPage />
+                </ProtectedRoute>
+              } />
+              {/* 🔑 مسيرُ التصفية — «بكم تُصفَّى حقوقُ هذا الموظف، **ولماذا بالضبط**؟».
+                  والرقمُ في الرابط رقمُ **المسير** لا رقمُ صفّ التصفية: مفتاحٌ واحدٌ للمستند
+                  كلِّه، وهو نفسُه الذي تُبنى عليه شاشةُ الصرف.
+                  🔴 وخلف hr.compensation.view كالقسيمة حرفاً: هذه هي الشاشةُ التي تُظهر أجرَ
+                  فردٍ بعينه ومكافأتَه، وحاملُ hr.payroll.view يدير الجاهزيةَ ولا يقرأ رقماً. */}
+              <Route path="hr/payroll/settlements" element={
+                <ProtectedRoute requiredPermission="hr.payroll.view">
+                  <SettlementListPage />
+                </ProtectedRoute>
+              } />
+              <Route path="hr/payroll/settlements/:id" element={
+                <ProtectedRoute requiredPermission="hr.compensation.view">
+                  <SettlementPage />
+                </ProtectedRoute>
+              } />
 
               {/* Meetings routes */}
               <Route path="meetings/internal" element={
@@ -348,6 +471,23 @@ function App() {
               <Route path="my-performance" element={
                 <ProtectedRoute requiredPermission="cases.view" denyClient>
                   <MyPerformance />
+                </ProtectedRoute>
+              } />
+              {/* ملفّي الوظيفيّ — بوّابةُ الموظف عن نفسه.
+                  ‼️ **أوّلُ راوتٍ في المنصّة بلا `requiredPermission`، وذلك مقصود:**
+                  الوصولُ يفرضه الخادمُ **بالجلسة لا بالصلاحية** — `GET /hr/me/leave-summary`
+                  يلتقط الملفَّ بـ`user_id = auth()->id()` وليس في المسار بارامترُ معرّف
+                  (فلا IDOR)، وكلُّ `hr.*` في `$adminOnly` فلا يملكها الموظفُ عن نفسه؛
+                  فأيُّ صلاحيةٍ تُشترط هنا تُغلق الصفحةَ على من بُنيت له. `denyClient`
+                  وحدَه هو الحارس (والعميلُ يُردّ ثانيةً بـ404 في `HrLeaveController` —
+                  حارسان مستقلّان).
+                  ولا يُوضع تحت `path="hr"` لأنّ كلَّ ما تحتها محروسٌ بـ`hr.view`، فحارسٌ
+                  لافٌّ يُضاف غداً يقتل البوّابةَ صامتاً. وموضعُه هنا يتبع عرفَ خمسِ صفحاتٍ
+                  ذاتيّةٍ منشورة (`my-cases` · `my-establishment` · `my-documents-required`
+                  · `my-messages` · `my-performance`). */}
+              <Route path="my-hr" element={
+                <ProtectedRoute denyClient>
+                  <MyHrPage />
                 </ProtectedRoute>
               } />
               {/* المستخدمون — مطابقة الباك: EnsureUserCanManageUsers يسمح لـ

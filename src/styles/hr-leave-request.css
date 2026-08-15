@@ -1,0 +1,272 @@
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ *  طلبُ الإجازة الذاتيّ — بدائيّاتُ `myhrq-*` وحدَها
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * ورقةٌ مستقلّةٌ لا إضافةٌ إلى `hr-leave.css`: تلك ٧٦ ألفَ حرفٍ تخدم شاشةَ الإدارة، وهذه
+ * بدائيّاتُ نموذجِ الموظف وحدَه. **ولا تُعيد تعريفَ صنفٍ واحدٍ من `hrl-*` أو `hr-*` أو
+ * `myhr-*`** — تلبِسها ولا تنافسها، فلا تتعلّق بترتيب الحقن ولا تُنتج تعارضاً في `css:audit`.
+ *
+ * الأعرافُ الملزمة: **مسطّحٌ صرف** (لا ظلَّ ولا تدرّج)، ومتغيّراتُ CSS حصراً (صفرُ hex/rgba)،
+ * وصفرُ `!important`، وخصائصُ منطقية (`inline`/`block` لا `left`/`right`) لأن التطبيق `rtl`.
+ */
+
+/* ══════════ المودال ══════════ */
+
+/* عرضٌ متوسّطٌ بين المودال العاديّ و`--wide`: النموذجُ حقولٌ قليلةٌ ومعاينةٌ تحتها. */
+.myhrq-modal {
+  max-inline-size: 34rem;
+}
+
+/* سطرُ حقائق النوع تحت المنتقي — يقول ما يعنيه الاختيارُ قبل ملء التواريخ. */
+.myhrq-typeline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block: 0.5rem 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.myhrq-typeline__f {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: 0.4rem;
+  padding-block: 0.15rem;
+  border: var(--hairline) solid var(--color-border);
+  border-radius: 0.25rem;
+  background: var(--surface-band);
+  white-space: nowrap;
+}
+
+/* شرحٌ تحت حقلٍ مشروط (تاريخُ الواقعة) — لا نصَّ عائمٌ بلا حقلٍ يملكه. */
+.myhrq-fieldnote {
+  display: block;
+  margin-block-start: 0.3rem;
+  font-size: 0.7rem;
+  color: var(--text-subtle);
+  line-height: 1.6;
+}
+
+/* ══════════ المعاينةُ الحيّة ══════════ */
+
+.myhrq-preview {
+  margin-block-start: 0.9rem;
+  padding: 0.75rem 0.85rem;
+  border: var(--hairline) solid var(--color-border);
+  border-radius: 0.35rem;
+  background: var(--surface-sunken);
+}
+
+.myhrq-preview__t {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* المدى بخطّ الوحدة — يُدفَع إلى طرف السطر فلا ينافس العنوانَ على الصدارة. */
+.myhrq-preview__r {
+  margin-inline-start: auto;
+  font-weight: 400;
+  color: var(--text-subtle);
+}
+
+/* الحالاتُ الثلاثُ غيرُ الجاهزة (مُدخلٌ ناقصٌ · احتسابٌ جارٍ · تعذّرٌ) بسطرٍ واحدٍ محايد. */
+.myhrq-preview__idle {
+  margin-block: 0.5rem 0;
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+  line-height: 1.7;
+}
+
+.myhrq-preview__n {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-block: 0.55rem 0;
+}
+
+.myhrq-preview__v {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-heading);
+  line-height: 1;
+}
+
+.myhrq-preview__u {
+  font-size: 0.78rem;
+  color: var(--color-text);
+}
+
+/* 🔴 الصفرُ يُسمّى ولا يُرسم رقماً: «0.0» يُقرأ نتيجةً، وهذه ليست نتيجةً بل عدمُها.
+   بحجم النصّ لا بحجم الرقم الكبير — لا شيءَ هنا يستحقّ ١٫٥rem. */
+.myhrq-preview__zero {
+  margin-block: 0.55rem 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  line-height: 1.5;
+}
+
+/* ما استُثني **بالاسم** لا بالعدد — «استُبعد: الجمعة والسبت · اليوم الوطني». */
+.myhrq-preview__d {
+  margin-block: 0.4rem 0;
+  font-size: 0.73rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.myhrq-preview__b {
+  margin-block: 0.5rem 0;
+  padding-block-start: 0.5rem;
+  border-block-start: var(--hairline) solid var(--color-border);
+  font-size: 0.76rem;
+  color: var(--color-text);
+}
+
+.myhrq-preview__b--none {
+  color: var(--text-subtle);
+}
+
+.myhrq-preview__bv {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--law-gold);
+}
+
+.myhrq-preview__bd {
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ══════════ الحواجزُ والتحذيرات ══════════ */
+
+.myhrq-flags {
+  margin-block: 0.7rem 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.myhrq-flag {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.45rem 0.55rem;
+  border: var(--hairline) solid var(--color-border);
+  border-radius: 0.3rem;
+  background: var(--color-surface);
+  font-size: 0.73rem;
+  line-height: 1.7;
+  color: var(--color-text);
+}
+
+/* التمييزُ بالحدّ واللون معاً — لا لونَ وحدَه يحمل المعنى، والأيقونةُ تسبقه في الشجرة. */
+.myhrq-flag--block {
+  border-color: var(--status-red);
+  color: var(--status-red);
+}
+
+.myhrq-flag--warn {
+  border-color: var(--status-orange);
+  color: var(--text-muted);
+}
+
+.myhrq-flag svg {
+  flex-shrink: 0;
+  margin-block-start: 0.15rem;
+}
+
+/* ══════════ ملاحظاتٌ نصّية ══════════ */
+
+.myhrq-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin-block: 0.8rem 0;
+  font-size: 0.72rem;
+  line-height: 1.8;
+  color: var(--text-muted);
+}
+
+.myhrq-note svg {
+  flex-shrink: 0;
+  margin-block-start: 0.2rem;
+  color: var(--law-gold);
+}
+
+/* طريقٌ مسدودٌ يُشرح ولا يُترك حقلاً فارغاً يُنقر: نوعٌ يستلزم مرفقاً بلا مستندٍ في الملفّ. */
+.myhrq-note--stop {
+  padding: 0.5rem 0.6rem;
+  border: var(--hairline) solid var(--color-border);
+  border-radius: 0.3rem;
+  background: var(--surface-band);
+  margin-block-start: 0.35rem;
+}
+
+.myhrq-note--stop svg {
+  color: var(--text-muted);
+}
+
+/* ══════════ ذيلُ المودال — الزرُّ وسببُ تعطيله ══════════ */
+
+/* `hr-modal__f` صفٌّ أفقيٌّ بمحاذاةٍ إلى الطرف؛ يُقلَب عموداً هنا ليجلس سببُ التعطيل تحت
+   الزرَّين لا بجوارهما — **ولا يُعاد تعريف الصنف الأصليّ**، بل يُلبَس بصنفٍ ثانٍ. */
+.myhrq-foot {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.myhrq-foot__btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+/* سببُ التعطيل — يُقرأ إرشاداً لا إنذاراً، فبلون النصّ الهادئ لا بالأحمر: الأحمرُ محجوزٌ
+   لحواجز الخادم في `myhrq-flag--block` أعلى اللوح. */
+.myhrq-foot__why {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+  text-align: end;
+}
+
+/* ══════════ عمودُ «ما جرى» في سجلّ الطلبات ══════════ */
+
+.myhrq-why {
+  max-inline-size: 18rem;
+  font-size: 0.73rem;
+  line-height: 1.7;
+}
+
+/* سببُ الرفض — أوّلُ ما يُبحث عنه حين يُرفض طلب، فيُميَّز عن سبب الطلب نفسِه. */
+.myhrq-why__r {
+  color: var(--status-red);
+}
+
+.myhrq-why__m {
+  color: var(--text-muted);
+}
+
+@media (max-width: 700px) {
+  .myhrq-why {
+    max-inline-size: none;
+  }
+
+  .myhrq-preview__v {
+    font-size: 1.3rem;
+  }
+}

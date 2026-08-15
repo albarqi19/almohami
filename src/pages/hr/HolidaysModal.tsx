@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { CalendarDays, X, Plus, Trash2, Check, Sparkles, AlertCircle } from 'lucide-react';
+import { CalendarDays, X, Plus, Trash2, Check, Sparkles, AlertCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { hrService } from '../../services/hrService';
+import EmptyLine from './dossier/EmptyLine';
+import { errorText } from './leave/leaveFormat';
 import { HOLIDAY_TYPE_LABELS } from '../../types/hr';
 import type { HrHoliday } from '../../types/hr';
+
+/** نصٌّ احتياطيٌّ واحدٌ لفرع الخطأ — عرفُ `LeaveTabPanel`. */
+const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
 
 const fmtDate = (v: string): string => {
   const d = new Date(v);
@@ -19,10 +24,11 @@ const HolidaysModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [name, setName] = useState('');
   const [date, setDate] = useState('');
 
-  const { data: holidays, isLoading, isError } = useQuery({
+  const holidaysQuery = useQuery({
     queryKey: ['hr', 'holidays', year],
     queryFn: () => hrService.getHolidays(year),
   });
+  const holidays = holidaysQuery.data;
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['hr', 'holidays'] });
 
@@ -75,29 +81,56 @@ const HolidaysModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <AlertCircle size={14} /> المولّدة آلياً «قيد الاعتماد» ولا تؤثّر على احتساب الإجازات حتى تعتمدها (الأعياد تقريبية).
           </div>
 
-          {isLoading ? (
-            <div className="hr-locked">جارٍ التحميل…</div>
-          ) : isError ? (
-            <div className="hr-locked"><AlertCircle size={16} /> تعذّر جلب التقويم.</div>
+          {/* ثلاثُ حالاتٍ متمايزة: هياكلُ التحميل · مثلثٌ أحمرُ بنصِّ الخادم وزرُّ إعادة ·
+              وسطرٌ فارغٌ يحمل فعلَه. (لا حالةَ «محميّ» هنا: المودالُ نفسُه محروسٌ بـ
+              `hr.manage` في `HrModule` فلا يُفتح أصلاً بدونها.) */}
+          {holidaysQuery.isPending ? (
+            <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل التقويم">
+              {Array.from({ length: 4 }, (_, i) => (
+                <span className="hrl-skel" key={i} />
+              ))}
+            </div>
+          ) : holidaysQuery.isError ? (
+            <div className="hrl-state hrl-state--error">
+              <AlertTriangle size={20} />
+              <p className="hrl-state__t">تعذّر جلب التقويم</p>
+              <p className="hrl-state__d">{errorText(holidaysQuery.error, CONNECTION_FALLBACK)}</p>
+              <button type="button" className="hr-btn hr-btn--sm" onClick={() => void holidaysQuery.refetch()}>
+                <RefreshCw size={13} /> إعادة المحاولة
+              </button>
+            </div>
           ) : !holidays || holidays.length === 0 ? (
-            <div className="hr-locked"><CalendarDays size={16} /> لا توجد إجازات لسنة {year}.</div>
+            <EmptyLine
+              text={`لا إجازاتِ ${year} مسجَّلة`}
+              action={(
+                <button type="button" className="hr-btn hr-btn--sm" onClick={generate} disabled={busy}>
+                  <Sparkles size={13} /> توليد إجازات {year}
+                </button>
+              )}
+            />
           ) : (
-            holidays.map((h) => (
-              <div className="hr-doc" key={h.id}>
-                <div className="hr-doc__ic"><CalendarDays size={16} /></div>
-                <div className="hr-doc__main">
-                  <div className="hr-doc__nm">{h.name}</div>
-                  <div className="hr-doc__m">{fmtDate(h.date_gregorian)} · {HOLIDAY_TYPE_LABELS[h.type]}</div>
+            /* صفوفٌ ملتصقةٌ على بدائيّة `hrl-row` — مات معها آخرُ مستدعٍ لـ`.hr-doc*`.
+               والأزرارُ **ظاهرةٌ دائماً** ولا تدخل `hrl-tools`: الاعتمادُ والحذفُ هما
+               مهمّةُ هذا المودال نفسِها، وإخفاءُ الفعل خلف التحويم في سطحٍ فُتح لأجله
+               إخفاءٌ لا كثافة. */
+            <div className="hrl-list">
+              {holidays.map((h) => (
+                <div className="hrl-row" key={h.id}>
+                  <span className="hrl-dot" aria-hidden="true"><CalendarDays size={12} /></span>
+                  <span className="hrl-row__main">
+                    <span className="hrl-row__name">{h.name}</span>
+                    <span className="hrl-row__meta">{fmtDate(h.date_gregorian)} · {HOLIDAY_TYPE_LABELS[h.type]}</span>
+                  </span>
+                  <span className={`hr-badge ${h.confirmation_status === 'confirmed' ? 'hr-badge--green' : 'hr-badge--gold'}`}>
+                    {h.confirmation_status === 'confirmed' ? 'معتمدة' : 'قيد الاعتماد'}
+                  </span>
+                  {h.confirmation_status === 'pending' && (
+                    <button type="button" className="hr-icon-btn hr-icon-btn--sm" title="اعتماد" onClick={() => confirm(h)}><Check size={15} /></button>
+                  )}
+                  <button type="button" className="hr-icon-btn hr-icon-btn--sm" title="حذف" onClick={() => remove(h)}><Trash2 size={14} /></button>
                 </div>
-                <span className={`hr-badge ${h.confirmation_status === 'confirmed' ? 'hr-badge--green' : 'hr-badge--gold'}`}>
-                  {h.confirmation_status === 'confirmed' ? 'معتمدة' : 'قيد الاعتماد'}
-                </span>
-                {h.confirmation_status === 'pending' && (
-                  <button className="hr-icon-btn hr-icon-btn--sm" title="اعتماد" onClick={() => confirm(h)}><Check size={15} /></button>
-                )}
-                <button className="hr-icon-btn hr-icon-btn--sm" title="حذف" onClick={() => remove(h)}><Trash2 size={14} /></button>
-              </div>
-            ))
+              ))}
+            </div>
           )}
 
           <div className="hr-holiday-add">

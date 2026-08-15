@@ -632,6 +632,15 @@
 /* ===== قائمة الإجراءات المنسدلة (⋮) ===== */
 .zatca-menu-wrap { position: relative; display: inline-flex; }
 .zatca-menu-backdrop { position: fixed; inset: 0; z-index: 90; }
+
+/* [UX-MENU] النسخة العائمة — تُرسَم في بوابةٍ على body فتخرج من قصّ حاويات
+   الجدول، وموضعُها يُحسب في JS من مستطيل الزرّ. لا تُلمس هيئتها هنا. */
+.zatca-menu--floating {
+  position: fixed;
+  top: auto;
+  inset-inline-start: auto;
+  z-index: 1200;
+}
 .zatca-menu {
   position: absolute;
   top: calc(100% + 4px);

@@ -1,0 +1,1746 @@
+/* ═══════════════════════════════════════════════════════════════════
+   HR ATTENDANCE — «الحضور والانصراف» · بدائيّات النمط الملتصق (hra-)
+
+   البنية المشتركة (الصفحة/الترويسة/الأعمدة/الأزرار/المودال/الحقول) من
+   simple-service.css (ssp2-*) ومن hr-page.css (hr-*). هنا **الخاصُّ وحدَه**
+   — تماماً كما فعل availability.css وhr-leave.css.
+
+   القواعد الملزِمة في هذا الملفّ:
+   ١) 🔴 **صفرُ اسمِ صنفٍ لا يبدأ بـ`hra-` في أيّ محدِّد** — حتى في محدّدٍ
+      متداخل. مجرّدُ ذكرِ `.ssp2-chatcol` هنا يجعل `npm run css:audit`
+      يعدّه صنفاً معرَّفاً في ملفّين، فيرتفع عدّادُ التعارض. التعديلُ على
+      عنصرٍ يحمل صنفاً مشتركاً يتمّ بإضافة صنفٍ ثانٍ `hra-*` عليه.
+   ٢) داخل العمود: بلا حدٍّ وبلا استدارة، والفصلُ بـborder-bottom وحدَه،
+      وصفرُ gap بين البلوكات. الالتصاق بنيةٌ لا زينة.
+   ٣) صفرُ رفعِ أولويةٍ قسريّ — التقدّم من ترتيب الحقن (appStyles.ts) لا من
+      القوّة؛ ولا كلمةَ تجاوزٍ واحدة في الملفّ.
+   ٤) صفرُ لونٍ خام: كلّ لونٍ var() أو color-mix فوق var(). لا قيمةَ سداسيةً
+      ولا دالّةَ شفافيةٍ خام.
+   ٥) المنطقيّ حصراً: border-inline-* · padding-inline · inset-inline-* ·
+      margin-inline. لا left/right ولا transform:translate*.
+   ٦) فلات صرف: بلا ظلال، بلا backdrop-filter، بلا توهّج، بلا تدرّجات.
+   ٧) لا شريطَ تمييزٍ جانبيّ على البطاقات.
+
+   ⚠️ فخّان في متغيّرات الثيم لا يُنسخان من ssp2:
+   · `--color-text-primary` **غير معرَّفٍ في المشروع إطلاقاً** رغم استعماله
+     في ١١ ملفاً. البديل هنا: `--color-text` و`--color-heading`.
+   · `--color-text-subtle` غير موجود؛ الموجود `--text-subtle` على body.
+
+   🚫 **ولا لونَ انضباطٍ في هذا الملفّ**: `no_record` واقعةٌ تقنيةٌ لا تهمة،
+   فتأخذ نبرةً محايدة. الأحمرُ محجوزٌ لتعارضٍ يحتاج تدخّلاً (قرارٌ على يومٍ
+   لم يعد ملتبساً)، ولا شيءَ في هذه الشاشة يلوّن إنساناً.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────
+   ١) تعديلاتُ العمود — تُلبَس فوق أعمدة ssp2 بصنفٍ ثانٍ لا بمحدِّدٍ متداخل
+   ───────────────────────────────────────────────────────────── */
+
+/* عمودُ المنسوبين وعمودُ التفاصيل: 300px بدل 320 — كثافةٌ أعلى وثلاثةُ
+   أعمدةٍ تتّسع على 1280. الصنفُ يُضاف بجوار صنف ssp2 على العنصر نفسِه. */
+.hra-side {
+    width: 300px;
+}
+
+/* الجسمُ المتمدّد داخل أيّ عمود: يملأ ما بقي ويُمرَّر داخلياً — لا تمريرَ للصفحة. */
+.hra-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* رأسُ قسمٍ داخل عمود — 12.5px/600 بأيقونةٍ ذهبية، وهو مستوى <h2> دلالياً. */
+.hra-sech {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--surface-band, var(--quiet-gray-50));
+}
+
+.hra-sech__t {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--color-heading);
+}
+
+.hra-sech__t svg {
+    flex: 0 0 auto;
+    color: var(--law-gold);
+}
+
+.hra-secb {
+    padding: 12px 14px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--color-text);
+}
+
+/* أدواتُ الترويسة — منتقي تاريخٍ وزرُّ تحديثٍ بفعل المستخدم لا باستطلاع. */
+.hra-headtools {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.hra-ctrl {
+    padding: 6px 9px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--dashboard-card);
+    font-family: inherit;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+    transition: border-color 0.15s;
+}
+
+.hra-ctrl:focus {
+    outline: none;
+    border-color: var(--law-gold);
+}
+
+/* ── منتقي اليوم — نظامُ ترقيمٍ واحدٌ في الترويسة ──
+   أرقامَ `input[type=date]` يرسمها المتصفّحُ بلغة واجهته، فلا تُملى من المرقوم ولا من `lang`.
+   فالمنتقي يبقى الأداةَ كاملةً ويُخفى **رسمُ نصّه وحدَه** في السكون، ويُرسم فوقه نصُّ الوحدة
+   بأرقامها اللاتينية. وعند التركيز ينقلب الأمر: يظهر المنتقي كي يرى المحرّرُ ما يكتب.
+   🚫 لا `display:none` ولا `visibility:hidden` على الحقل: كلاهما يُخرجه من لوحة المفاتيح. */
+.hra-datefield {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 9px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--dashboard-card);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+    transition: border-color 0.15s;
+}
+
+.hra-datefield:focus-within {
+    border-color: var(--law-gold);
+}
+
+.hra-datefield__i {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 6px 9px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font: inherit;
+    /* شفافيةُ اللون تُخفي النصَّ وتُبقي أيقونةَ التقويم (خلفيةٌ لا currentColor). */
+    color: transparent;
+    cursor: pointer;
+}
+
+.hra-datefield__i:focus {
+    outline: none;
+}
+
+.hra-datefield:focus-within .hra-datefield__i {
+    color: var(--color-text);
+}
+
+/* الحشوُ المنطقيُّ في النهاية يُخلي موضعَ أيقونة التقويم — والنهايةُ يسارٌ في صفحةٍ عربية. */
+.hra-datefield__t {
+    pointer-events: none;
+    white-space: nowrap;
+    padding-inline-end: 20px;
+}
+
+.hra-datefield:focus-within .hra-datefield__t {
+    visibility: hidden;
+}
+
+/* نصٌّ للقارئ الشاشيّ وحدَه — عناوينُ الجداول والقوائم لا تُترك بلا وصف. */
+.hra-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٢) التسلسل الدلاليّ — 17/14/12.5 بأوزان 700/600/600
+   لا عناوينَ من <div>: هذه الأصناف تُلبَس h1/h2/h3 مباشرةً.
+   ───────────────────────────────────────────────────────────── */
+
+.hra-h1 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--color-heading);
+}
+
+.hra-h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-heading);
+}
+
+.hra-sub {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+}
+
+/* أرقامٌ متراصّةٌ لاتينية — تُقرن دائماً بـdir="ltr" في الترميز. */
+.hra-num {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٣) الحالاتُ الأربع المتمايزة — تحميلٌ · خطأٌ · فراغٌ · محتوى
+   لا أيقونةَ واحدةٌ لحالتين، ولا «لا توجد بيانات» تُقال لعطلٍ في الخادم.
+   ───────────────────────────────────────────────────────────── */
+
+.hra-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 34px 20px;
+    text-align: center;
+}
+
+.hra-state svg {
+    color: var(--color-text-secondary);
+}
+
+.hra-state__t {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hra-state__d {
+    margin: 0;
+    max-width: 46ch;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+}
+
+.hra-state--error .hra-state__t {
+    color: var(--status-red);
+}
+
+.hra-state--error svg {
+    color: var(--status-red);
+}
+
+.hra-state--locked svg {
+    color: var(--law-gold);
+}
+
+/* التحميل: هياكلُ صفوفٍ لا سبينر — الحجمُ يُحجَز فلا يقفز المحتوى. */
+.hra-state--loading {
+    align-items: stretch;
+    gap: 6px;
+    padding: 14px;
+}
+
+.hra-skel {
+    display: block;
+    height: 34px;
+    border-radius: 4px;
+    background: var(--quiet-gray-100);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .hra-skel {
+        animation: hra-pulse 1.3s ease-in-out infinite;
+    }
+
+    @keyframes hra-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.55; }
+    }
+}
+
+/* الفراغُ داخل بلوكٍ = سطرٌ لا شاشةُ عدم (قاعدةُ «البلوكُ الفارغُ سطرٌ»). */
+.hra-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--quiet-gray-100);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٤) شاشةُ المكتب الفارغ — **دعوةٌ للتهيئة لا فراغ**
+   ولا بياناتِ ديمو ولا جدولَ فارغٍ برؤوسٍ بلا صفوف.
+   ───────────────────────────────────────────────────────────── */
+
+.hra-setup {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-width: 74ch;
+    margin-inline: auto;
+    padding: 26px 22px 34px;
+}
+
+.hra-setup__t {
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.4;
+    color: var(--color-heading);
+}
+
+.hra-setup__lead {
+    margin: 0 0 18px;
+    font-size: 12.5px;
+    line-height: 1.8;
+    color: var(--color-text-secondary);
+}
+
+.hra-setup__lead strong {
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+/* الخطوات: بلوكاتٌ ملتصقةٌ يفصلها خطٌّ واحد — لا بطاقاتٌ مبطَّقةٌ بفجوات. */
+.hra-steps {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    background: var(--dashboard-card);
+}
+
+.hra-step {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 4px 10px;
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--quiet-gray-100);
+}
+
+.hra-step:last-child {
+    border-bottom: none;
+}
+
+.hra-step__n {
+    grid-row: span 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--law-navy);
+    background: var(--quiet-gray-50);
+}
+
+.hra-step__t {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--color-heading);
+}
+
+.hra-step__d {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.75;
+    color: var(--color-text-secondary);
+}
+
+/* السطرُ الذي يمنع رقمين متعارضين بين وحدتين — يُقرأ ولا يُزيَّن. */
+.hra-step__note {
+    margin: 4px 0 0;
+    padding: 7px 10px;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--color-text);
+    background: var(--quiet-gray-50);
+    border: 1px solid var(--quiet-gray-100);
+}
+
+.hra-setup__foot {
+    margin: 16px 0 0;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--color-text-secondary);
+}
+
+/* رابطٌ نصّيٌّ داخل فقرة — لا زرّ: الفعلُ انتقالٌ لا كتابة. */
+.hra-link {
+    color: var(--law-navy);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.hra-link:hover {
+    color: var(--law-gold);
+}
+
+.hra-link:focus-visible {
+    outline: 2px solid var(--law-gold);
+    outline-offset: 2px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٥) الشريطُ الثابت فوق الطابور — مؤشّرُ إعداداتٍ لا مؤشّرُ انضباط
+   ───────────────────────────────────────────────────────────── */
+
+.hra-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    flex-shrink: 0;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--quiet-gray-50);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--color-text);
+}
+
+.hra-banner svg {
+    flex: 0 0 auto;
+    margin-block-start: 2px;
+    color: var(--law-gold);
+}
+
+.hra-banner__t {
+    margin: 0;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hra-banner__d {
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    color: var(--color-text-secondary);
+}
+
+.hra-banner--warn {
+    background: var(--status-orange-light);
+}
+
+.hra-banner--warn svg {
+    color: var(--status-orange);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٦) شرائحُ العمود الأيمن + قائمةُ المنسوبين
+   الترتيبُ أبجديّ — 🚫 ولا ترتيبَ بالتأخير ولا لوحةَ صدارة ولا شارةَ انضباط.
+   ───────────────────────────────────────────────────────────── */
+
+.hra-chips {
+    display: flex;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.hra-chip {
+    flex: 1;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 8px 6px;
+    border: none;
+    border-inline-end: 1px solid var(--quiet-gray-100);
+    border-radius: 0;
+    background: var(--dashboard-card);
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.hra-chip:last-child {
+    border-inline-end: none;
+}
+
+.hra-chip:hover {
+    background: var(--quiet-gray-50);
+}
+
+.hra-chip[aria-pressed='true'] {
+    color: var(--law-navy);
+    background: var(--quiet-gray-50);
+}
+
+.hra-chip:focus-visible {
+    outline: 2px solid var(--law-gold);
+    outline-offset: -2px;
+}
+
+.hra-chip__n {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.hra-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.hra-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 14px;
+    border: none;
+    border-bottom: 1px solid var(--quiet-gray-100);
+    border-radius: 0;
+    background: var(--dashboard-card);
+    font-family: inherit;
+    font-size: 12.5px;
+    text-align: start;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.hra-row:hover {
+    background: var(--quiet-gray-50);
+}
+
+.hra-row:focus-visible {
+    outline: 2px solid var(--law-gold);
+    outline-offset: -2px;
+}
+
+.hra-row.is-on {
+    background: var(--quiet-gray-50);
+}
+
+.hra-row.is-on .hra-row__n {
+    color: var(--law-navy);
+}
+
+.hra-row__main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.hra-row__n {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-heading);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hra-row__m {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
+.hra-row__end {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-secondary);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٧) الطابور — **مجموعٌ تحت الموظف**: أربعةُ أيامٍ لمحامٍ سطرٌ يُفرد
+   ───────────────────────────────────────────────────────────── */
+
+.hra-group {
+    border-bottom: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+}
+
+.hra-group__h {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 9px 16px;
+    border: none;
+    border-radius: 0;
+    background: var(--dashboard-card);
+    font-family: inherit;
+    text-align: start;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.hra-group__h:hover {
+    background: var(--quiet-gray-50);
+}
+
+.hra-group__h:focus-visible {
+    outline: 2px solid var(--law-gold);
+    outline-offset: -2px;
+}
+
+.hra-group__t {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-heading);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hra-group__n {
+    flex: 0 0 auto;
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-secondary);
+}
+
+.hra-group__b {
+    border-block-start: 1px solid var(--quiet-gray-100);
+}
+
+/* صفُّ يوم: مربّعٌ + تاريخٌ + حالةٌ + اقتراح. */
+.hra-day {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 16px 8px 16px;
+    border-bottom: 1px solid var(--quiet-gray-100);
+}
+
+.hra-day:last-child {
+    border-bottom: none;
+}
+
+.hra-day.is-on {
+    background: var(--quiet-gray-50);
+}
+
+.hra-day__chk {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+    margin-block-start: 2px;
+    accent-color: var(--law-navy);
+    cursor: pointer;
+}
+
+.hra-day__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.hra-day__d {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hra-day__sub {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+}
+
+.hra-day__end {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* ─── صفُّ سجلٍّ في «ملفّي الوظيفيّ»: الفعلُ يجاور محتواه ───
+   🩸 قِيس عند 1440px: الصفُّ ١٢٠٠px، ومحتواه (تاريخٌ وحالةٌ ووقتان) لا يبلغ ٢٠٠ منها،
+   فيُشَدُّ [هذا غير صحيح] إلى الحافة المقابلة و**بينهما ١٠٧٨px فراغٍ ميّت** — يبدو الزرُّ
+   منفصلاً عن اليوم الذي يصحّحه. والعلاجُ ليس شدَّ الزرِّ وحدَه: عمودان مقيسان للمحتوى
+   (تاريخٌ ثمّ وقت) والفعلُ يليهما مباشرةً، فيثبت موضعُه في كلّ صفٍّ ولا يرقص بطول التاريخ.
+   والصفُّ في «قائمة الحضور» لا يُمَسّ: هناك يعيش داخل عمودٍ ضيّقٍ فالحافةُ قريبة. */
+.hra-day--rec {
+    align-items: center;
+}
+
+.hra-day--rec .hra-day__main {
+    flex: 0 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 16rem) minmax(0, 9rem);
+    align-items: center;
+    column-gap: 12px;
+}
+
+/* شريطُ الإجراء العائم — **يظهر مع التحديد وحدَه**، وثلاثةُ أزرارٍ لا أكثر. */
+.hra-bar {
+    position: sticky;
+    inset-block-end: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 9px 16px;
+    border-block-start: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+}
+
+.hra-bar__t {
+    flex: 1;
+    min-width: 160px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hra-bar__hint {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--color-text-secondary);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٨) وسمُ الحالة — نبرةٌ محايدةٌ لكلّ ما ليس تعارضاً
+   ───────────────────────────────────────────────────────────── */
+
+.hra-st {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-text-secondary);
+    background: var(--quiet-gray-100);
+}
+
+.hra-st--present {
+    color: var(--status-green);
+    background: var(--status-green-light);
+}
+
+.hra-st--offsite {
+    color: var(--status-blue);
+    background: var(--status-blue-light);
+}
+
+.hra-st--on_leave,
+.hra-st--holiday {
+    color: var(--law-gold);
+    background: color-mix(in srgb, var(--law-gold) 14%, transparent);
+}
+
+.hra-st--incomplete,
+.hra-st--field_work_suspected {
+    color: var(--status-orange);
+    background: var(--status-orange-light);
+}
+
+/* «بلا سجلّ» واقعةٌ تقنيةٌ لا تهمة — نبرةٌ محايدةٌ عمداً، ولا أحمرَ عليها. */
+.hra-st--no_record {
+    color: var(--color-text);
+    background: var(--quiet-gray-100);
+}
+
+.hra-st--absence_recorded {
+    color: var(--status-red);
+    background: var(--status-red-light);
+}
+
+/* غيرُ متتبَّعٍ ونهايةُ أسبوع: أخفتُ من الأساس عمداً — لا يومَ عملٍ أصلاً فلا شيءَ يُقال. */
+.hra-st--not_tracked,
+.hra-st--weekend {
+    color: var(--text-subtle);
+    background: var(--quiet-gray-50);
+}
+
+/* وسمٌ تفسيريّ (عَلَم) — أصغرُ وأخفت، ويُقرن دائماً بنصٍّ لا بلونٍ وحدَه. */
+.hra-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 7px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-text-secondary);
+    background: var(--dashboard-card);
+}
+
+.hra-flag--danger {
+    color: var(--status-red);
+    border-color: var(--status-red);
+}
+
+.hra-flags {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٩) سردُ «لماذا» وخطُّ البصمات — العمودُ الأيسر
+   ───────────────────────────────────────────────────────────── */
+
+.hra-why {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hra-why__i {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 6px 14px;
+    border-bottom: 1px solid var(--quiet-gray-100);
+    font-size: 11.5px;
+    line-height: 1.65;
+    color: var(--color-text);
+}
+
+.hra-why__i:last-child {
+    border-bottom: none;
+}
+
+.hra-why__m {
+    flex: 0 0 auto;
+    width: 13px;
+    font-weight: 700;
+    color: var(--status-green);
+}
+
+.hra-why__i.is-no .hra-why__m {
+    color: var(--color-text-secondary);
+}
+
+.hra-why__i.is-no {
+    color: var(--color-text-secondary);
+}
+
+/* خطُّ البصمات — صفٌّ لكلّ بصمةٍ بمصدرها وثقتها ووسومها. */
+.hra-tl {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hra-tl__i {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border-bottom: 1px solid var(--quiet-gray-100);
+}
+
+.hra-tl__i:last-child {
+    border-bottom: none;
+}
+
+/* طابعُ البصمة — نطاقان: تاريخٌ باتجاه الصفحة ووقتٌ معزولٌ لاتينياً داخله.
+   🔴 ولا `dir="ltr"` على هذا النطاق الجامع: فيه اسمُ شهرٍ عربيّ، وإلباسُه اتجاهاً لاتينياً
+   ينتزع رقمَ اليوم من شهره ويُلصقه بالساعة (انظر قاعدةَ الاتجاه في `attendanceFormat.ts`). */
+.hra-tl__t {
+    flex: 0 0 auto;
+    font-size: 12.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--color-heading);
+}
+
+.hra-tl__c {
+    font-variant-numeric: tabular-nums;
+}
+
+.hra-tl__m {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
+/* جدولُ مفتاحٍ/قيمة — نفسُ كثافةِ الوحدة، وكلُّ فراغٍ شرطة. */
+.hra-kv {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 5px 12px;
+    margin: 0;
+    font-size: 12px;
+}
+
+.hra-kv dt {
+    color: var(--color-text-secondary);
+}
+
+.hra-kv dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١٠) بوّابةُ الموظف — «إثباتُ حضورك بيدك»
+   زرٌّ واحدٌ كبير، ولا يُرسَم أصلاً لمن ليس ضمن المُتتبَّعين.
+   ───────────────────────────────────────────────────────────── */
+
+.hra-punch {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px;
+}
+
+.hra-punch__b {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 190px;
+    padding: 13px 22px;
+    border: 1px solid var(--law-navy);
+    border-radius: 8px;
+    background: var(--law-navy);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-on-inverse);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.hra-punch__b:hover:not(:disabled) {
+    background: var(--law-navy-dark);
+    border-color: var(--law-navy-dark);
+}
+
+.hra-punch__b:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* الخروج نبرةٌ ثانويةٌ لا حمراء: الانصرافُ ليس فعلاً خطِراً. */
+.hra-punch__b--out {
+    background: var(--dashboard-card);
+    border-color: var(--color-border);
+    color: var(--color-heading);
+}
+
+.hra-punch__b--out:hover:not(:disabled) {
+    background: var(--quiet-gray-50);
+    border-color: var(--law-gold);
+}
+
+.hra-punch__s {
+    flex: 1;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 12px;
+    color: var(--color-text);
+}
+
+.hra-punch__note {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١١) المودالات — الهيكلُ من hr-page.css، وهنا العرضُ والحقولُ الخاصّة
+   ───────────────────────────────────────────────────────────── */
+
+/* عرضٌ أوسعُ من الافتراضيّ 560 — بصنفٍ ثانٍ لا بتعديلٍ inline. */
+.hra-modal {
+    max-width: 680px;
+}
+
+/* منتقي نوعِ الادّعاء: خلايا ملتصقةٌ بلا فجوة، وكلُّ خليةٍ نوعٌ بسطرِ شرطه. */
+.hra-kinds {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0;
+    border: 1px solid var(--color-border);
+}
+
+.hra-kind {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 9px 11px;
+    border: none;
+    border-inline-end: 1px solid var(--quiet-gray-100);
+    border-block-end: 1px solid var(--quiet-gray-100);
+    border-radius: 0;
+    background: var(--dashboard-card);
+    font-family: inherit;
+    text-align: start;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.hra-kind:hover {
+    background: var(--quiet-gray-50);
+}
+
+.hra-kind:focus-visible {
+    outline: 2px solid var(--law-gold);
+    outline-offset: -2px;
+}
+
+.hra-kind[aria-pressed='true'] {
+    background: var(--quiet-gray-50);
+}
+
+.hra-kind[aria-pressed='true'] .hra-kind__n {
+    color: var(--law-navy);
+}
+
+.hra-kind__n {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hra-kind__h {
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+}
+
+/* سطرُ تنبيهٍ داخل المودال — نصٌّ يرشد ولا يلوم. */
+.hra-hint {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+}
+
+/* عدّادُ الحروف تحت السبب — السببُ يُقرأ بعد سنةٍ في نزاع. */
+.hra-count {
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-secondary);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١٢) التهيئةُ — معالجُ الخطوات الثلاث ومودالُ الجدول
+   بدائيّاتٌ ملتصقةٌ بلا فجواتٍ ولا بطاقاتٍ مبطَّقة، والحدُّ يفصل لا المسافة.
+   ───────────────────────────────────────────────────────────── */
+
+/* شريطُ الخطوات: ثلاثُ خلايا ملتصقةٍ تُقرأ يساراً ويميناً بلا سهمٍ ولا خطٍّ مرسوم. */
+.hra-wiz {
+    display: flex;
+    margin: 0 0 14px;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--color-border);
+}
+
+.hra-wiz__s {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 10px;
+    border-inline-end: 1px solid var(--quiet-gray-100);
+    background: var(--dashboard-card);
+}
+
+.hra-wiz__s:last-child {
+    border-inline-end: none;
+}
+
+.hra-wiz__s.is-on {
+    background: var(--quiet-gray-50);
+}
+
+.hra-wiz__n {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-secondary);
+    background: var(--dashboard-card);
+}
+
+.hra-wiz__s.is-on .hra-wiz__n {
+    color: var(--law-navy);
+    border-color: var(--law-navy);
+}
+
+.hra-wiz__s.is-done .hra-wiz__n {
+    color: var(--status-green);
+    border-color: var(--status-green);
+}
+
+.hra-wiz__t {
+    min-width: 0;
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hra-wiz__s.is-on .hra-wiz__t {
+    color: var(--color-heading);
+}
+
+/* أيامُ الأسبوع السبعة: خلايا ملتصقةٌ في صفٍّ واحد — والمفتاحُ الإنجليزيُّ لا يُعرَض أبداً. */
+.hra-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border: 1px solid var(--color-border);
+}
+
+.hra-daytog {
+    padding: 8px 2px;
+    border: none;
+    border-inline-end: 1px solid var(--quiet-gray-100);
+    border-radius: 0;
+    background: var(--dashboard-card);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.hra-daytog:last-child {
+    border-inline-end: none;
+}
+
+.hra-daytog:hover {
+    background: var(--quiet-gray-50);
+}
+
+.hra-daytog[aria-pressed='true'] {
+    color: var(--law-navy);
+    background: var(--law-navy-light);
+}
+
+.hra-daytog:focus-visible {
+    outline: 2px solid var(--law-gold);
+    outline-offset: -2px;
+}
+
+/* نطاقُ التتبّع: خليّتان ملتصقتان — «أختارهم» و«الكلُّ المؤهَّل». */
+.hra-modes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    border: 1px solid var(--color-border);
+}
+
+.hra-mode {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 9px 11px;
+    border: none;
+    border-inline-end: 1px solid var(--quiet-gray-100);
+    border-radius: 0;
+    background: var(--dashboard-card);
+    font-family: inherit;
+    text-align: start;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.hra-mode:last-child {
+    border-inline-end: none;
+}
+
+.hra-mode:hover:not(:disabled) {
+    background: var(--quiet-gray-50);
+}
+
+.hra-mode:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.hra-mode[aria-pressed='true'] {
+    background: var(--quiet-gray-50);
+}
+
+.hra-mode[aria-pressed='true'] .hra-mode__n {
+    color: var(--law-navy);
+}
+
+.hra-mode:focus-visible {
+    outline: 2px solid var(--law-gold);
+    outline-offset: -2px;
+}
+
+.hra-mode__n {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hra-mode__h {
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+}
+
+/* قائمةُ الاختيار: صفوفٌ ملتصقةٌ بارتفاعٍ مسقوفٍ تُمرَّر داخلها. */
+.hra-picks {
+    display: flex;
+    flex-direction: column;
+    max-height: 210px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+}
+
+.hra-pick {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 11px;
+    border-bottom: 1px solid var(--quiet-gray-100);
+    background: var(--dashboard-card);
+    cursor: pointer;
+}
+
+.hra-pick:last-child {
+    border-bottom: none;
+}
+
+.hra-pick:hover {
+    background: var(--quiet-gray-50);
+}
+
+.hra-pick input {
+    flex: 0 0 auto;
+    accent-color: var(--law-navy);
+}
+
+.hra-pick__main {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.hra-pick__n {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.hra-pick__m {
+    font-size: 10.5px;
+    color: var(--color-text-secondary);
+}
+
+/* نسخُ الجدول: صفٌّ لكلّ نسخةٍ ومعه زرُّ تعطيلٍ في طرفه. */
+.hra-vers {
+    display: flex;
+    flex-direction: column;
+    max-height: 190px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+}
+
+.hra-ver {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-inline-end: 8px;
+    border-bottom: 1px solid var(--quiet-gray-100);
+    background: var(--dashboard-card);
+}
+
+.hra-ver:last-child {
+    border-bottom: none;
+}
+
+.hra-ver__pick {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 11px;
+    border: none;
+    border-radius: 0;
+    background: none;
+    font-family: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.hra-ver__pick:hover {
+    background: var(--quiet-gray-50);
+}
+
+.hra-ver__pick:focus-visible {
+    outline: 2px solid var(--law-gold);
+    outline-offset: -2px;
+}
+
+.hra-ver__pick[aria-checked='true'] {
+    background: var(--quiet-gray-50);
+}
+
+.hra-ver__n {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hra-ver__pick[aria-checked='true'] .hra-ver__n {
+    color: var(--law-navy);
+}
+
+.hra-ver__m {
+    font-size: 10.5px;
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+}
+
+/* لوحةُ الأثر: **ما سيقع عند الضغط** — تُقرأ قبل التأكيد لا بعده. */
+.hra-impact {
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    background: var(--quiet-gray-50);
+}
+
+.hra-impact__t {
+    margin: 0 0 5px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+.hra-impact__l {
+    margin: 0;
+    padding-inline-start: 16px;
+    font-size: 11.5px;
+    line-height: 1.8;
+    color: var(--color-text-secondary);
+}
+
+.hra-impact__l strong {
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+/* مرساةُ البدء: القرارُ الوحيدُ الذي لا يُتراجَع عنه — نبرةٌ ذهبيةٌ لا حمراء. */
+.hra-impact--anchor {
+    border-color: var(--law-gold);
+}
+
+/* سطرُ تنبيهٍ بأيقونة — يرشد ولا يلوم. */
+.hra-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    margin: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--quiet-gray-100);
+    background: var(--dashboard-card);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+}
+
+.hra-note svg {
+    flex: 0 0 auto;
+    margin-block-start: 2px;
+    color: var(--law-gold);
+}
+
+.hra-note strong {
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.hra-note--warn {
+    border-color: var(--status-orange);
+    background: var(--status-orange-light);
+    color: var(--color-text);
+}
+
+.hra-note--warn svg {
+    color: var(--status-orange);
+}
+
+/* القاعدةُ الحاكمة في مودال الجدول: «نسخةٌ من تاريخٍ لا تحريرٌ للماضي». */
+.hra-note--rule {
+    border-color: var(--law-navy);
+    background: var(--law-navy-light);
+    color: var(--color-text);
+}
+
+.hra-note--rule svg {
+    color: var(--law-navy);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١٣) حصرُ الأسباب في الشريط — **كلُّ سببٍ فعلٌ قابلٌ للتنفيذ**
+   والنصُّ نصُّ الخادم؛ الواجهةُ تختار الأيقونةَ والترتيبَ لا الكلمات.
+   ───────────────────────────────────────────────────────────── */
+
+.hra-banner__body {
+    flex: 1;
+    min-width: 0;
+}
+
+.hra-reasons {
+    display: flex;
+    flex-direction: column;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--quiet-gray-100);
+}
+
+.hra-reason {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--quiet-gray-100);
+}
+
+.hra-reason:last-child {
+    border-bottom: none;
+}
+
+.hra-reason > svg {
+    flex: 0 0 auto;
+    margin-block-start: 2px;
+    color: var(--law-navy);
+}
+
+.hra-reason__b {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.hra-reason__t {
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--color-text);
+}
+
+.hra-reason__s {
+    font-size: 10.5px;
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+}
+
+/* دعوةُ التهيئة في لوحة المكتب الفارغ — زرٌّ واحدٌ بارزٌ وسطرُ شرطٍ بجانبه. */
+.hra-setup__cta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-block-start: 18px;
+}
+
+.hra-setup__ctah {
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١٣م) البصماتُ غير المحتسَبة — **الواقعةُ الخام فوق الحكم المشتقّ**
+
+   🔴 المفردةُ البصريةُ الحاملةُ للمعنى في هذا القسم واحدة: **المتقطّعُ =
+   لم يُبَتّ**. كلُّ فاصلٍ داخل القسم `dashed` وكلُّ فاصلٍ خارجَه `solid`،
+   فيُقرأ الفرقُ بين «واقعةٍ وقعت» و«حكمٍ صدر» من طرَف العين قبل النصّ.
+   والوسمُ النصّيُّ على كلّ صفٍّ يقولها صراحةً لمن لا يقرأ الحدود.
+
+   🚫 ولا لونَ إنذارٍ هنا ولا نبرةَ نقص: البصمةُ التي تنتظر التشغيلةَ
+   **سلامةٌ لا عطل**، فالنبرةُ محايدةٌ كنبرة `no_record` سواءً.
+   🚫 ولا شريطَ تمييزٍ جانبيّ (عرفُ المنصّة)، ولا حدَّ صندوقٍ داخل العمود:
+   الفصلُ بالحدّ السفليّ وحدَه كما تقول القاعدةُ ٢ في ترويسة الملفّ.
+   ───────────────────────────────────────────────────────────── */
+
+.hra-raw {
+    display: block;
+    border-block-end: 2px dashed var(--color-border);
+}
+
+.hra-raw__h {
+    padding: 10px 14px;
+    border-block-end: 1px dashed var(--color-border);
+    background: var(--surface-band, var(--quiet-gray-50));
+}
+
+.hra-raw__t {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--color-heading);
+}
+
+.hra-raw__t svg {
+    flex: 0 0 auto;
+    color: var(--law-gold);
+}
+
+/* العدّاد — رقمٌ صِرفٌ فيجوز عزلُه لاتينياً، وله وصفٌ مقروءٌ في `aria-label`. */
+.hra-raw__n {
+    padding: 1px 7px;
+    border: 1px dashed var(--color-border);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-secondary);
+    background: var(--dashboard-card);
+}
+
+.hra-raw__d {
+    margin: 3px 0 0;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+}
+
+.hra-raw__l {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hra-raw__i {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    border-block-end: 1px dashed var(--quiet-gray-100);
+}
+
+.hra-raw__i:last-child {
+    border-block-end: none;
+}
+
+/* الوقتُ نطاقٌ لاتينيٌّ صِرف — `tabular-nums` كي تتراصّ الأرقامُ عموداً. */
+.hra-raw__c {
+    flex: 0 0 auto;
+    font-size: 12.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--color-heading);
+}
+
+.hra-raw__m {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+/* الاسمُ يُقصّ بنقاطٍ ولا يمدّ الصفَّ: تمريرٌ أفقيٌّ في عمودٍ ملتصقٍ عطلُ تخطيطٍ لا كثافة. */
+.hra-raw__nm {
+    overflow: hidden;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-heading);
+}
+
+.hra-raw__s {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+}
+
+/* الوسمُ الصريح — نصٌّ لا لون، فيصل لمن لا يميّز الحدودَ المتقطّعة. */
+.hra-raw__tag {
+    flex: 0 0 auto;
+    padding: 1px 7px;
+    border: 1px dashed var(--color-border);
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--text-subtle);
+    background: var(--dashboard-card);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١٤) التكيّف — **شجرةٌ واحدة**: البنيةُ نفسُها تُكدَّس، ولا نسخةَ ثانيةٌ
+   من المحتوى تُقصّ بالـCSS (خطأُ HrModule #1).
+   ───────────────────────────────────────────────────────────── */
+
+/* شاشاتٌ متوسّطة: الأعمدةُ أضيق — نفسُ عتبة ssp2 ونفسُ منطقها.
+   (القاعدةُ مكتوبةٌ هنا لأنّ `.hra-side` يُحقَن بعد `simple-service.css` فيغلب عرضَه؛
+   إغفالُها يُبقي العمودين 300px حتى 1024 فيضيق عمودُ العمل إلى 424px.) */
+@media (max-width: 1200px) {
+    .hra-side {
+        width: 260px;
+    }
+}
+
+/* التكديسُ العموديّ: **نفسُ عتبة ssp2 بالضبط (980px)**.
+   عتبةٌ مختلفةٌ تُنتج نطاقاً بين العتبتين تكون فيه الأعمدةُ ما زالت صفّاً بينما عرضُها
+   100% — فيُسحق عمودُ العمل إلى صفر. الاتّفاقُ على العتبة شرطُ سلامةٍ لا ذوق. */
+@media (max-width: 980px) {
+    .hra-side {
+        width: auto;
+    }
+
+    /* قوائمُ العمودين الجانبيين وحدَها تُسقَّف (420px = سقفُ ssp2 نفسُه في وضع التكديس)؛
+       أمّا عمودُ العمل فيبقى بلا سقفٍ كي لا يصير في الصفحة المتمرّرة صندوقٌ يتمرّر داخله. */
+    .hra-side .hra-scroll {
+        max-height: 420px;
+    }
+}
+
+@media (max-width: 1023px) {
+    .hra-setup {
+        padding: 18px 14px 26px;
+    }
+
+    .hra-step {
+        grid-template-columns: 22px 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .hra-day {
+        padding-inline: 12px;
+    }
+
+    /* القسمُ الخام: نفسُ حشوة الصفوف المجاورة، وصفٌّ يلتفّ بدل أن يُخرِج وسمَه من الشاشة. */
+    .hra-raw__h,
+    .hra-raw__i {
+        padding-inline: 12px;
+    }
+
+    .hra-raw__i {
+        flex-wrap: wrap;
+    }
+
+    /* تحت 640px لا فراغَ ميّتاً أصلاً: العمودان يعودان سطرين والفعلُ يستأنف موضعَه في
+       الحافة — عمودان مقيسان بـ٢٥rem داخل صفٍّ عرضُه ٤٩٦ يزاحمان الزرَّ لا يجاورانه. */
+    .hra-day--rec .hra-day__main {
+        flex: 1;
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 3px;
+    }
+
+    .hra-bar {
+        padding-inline: 12px;
+    }
+
+    .hra-punch__b {
+        min-width: 100%;
+    }
+
+    /* شريطُ الخطوات: الرقمُ وحدَه — سبعُ كلماتٍ في ثلاث خلايا على ٣٦٠px تُقصّ فتصير همساً. */
+    .hra-wiz__t {
+        display: none;
+    }
+
+    .hra-wiz__s {
+        justify-content: center;
+    }
+
+    /* أيامُ الأسبوع تنزل لصفّين بدل سبعِ خلايا بعرض ٤٥px يقطّع أسماءها. */
+    .hra-days {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .hra-daytog {
+        border-block-end: 1px solid var(--quiet-gray-100);
+    }
+}

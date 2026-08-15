@@ -26,6 +26,7 @@ import {
     MessageSquare,
     ChevronRight
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { usePermissionContext } from '../contexts/PermissionContext';
 import { AdminRequestService, RequestTypeService } from '../services/adminRequestService';
 import type { AdminRequest, RequestType, CreateAdminRequestForm, AdminRequestContext, AdminRequestStatistics, AdminRequestSidebar } from '../services/adminRequestService';
@@ -269,6 +270,13 @@ const RequestModal: React.FC<{
                 </div>
                 <form onSubmit={handleSubmit} className="modal-body">
                     {error && <div className="modal-error"><AlertCircle size={14} />{error}</div>}
+                    {/* [D-LGC] **تنبيهٌ لا منع**: كلُّ نوعٍ يبقى مختاراً وزرُّ الإرسال مفعَّل —
+                        والإرشادُ يُقال مرّةً هنا حيث يقف المستخدمُ ليختار. */}
+                    <p className="modal-hint">
+                        <Palmtree size={13} /> الإجازاتُ صارت من «ملفّي الوظيفيّ»: هناك رصيدُك واحتسابُ
+                        أيام العمل قبل الإرسال. <Link to="/my-hr">افتح ملفّي الوظيفيّ</Link> — ويبقى هذا
+                        البابُ مفتوحاً لِما تريد.
+                    </p>
                     <div className="modal-form-group">
                         <label>نوع الطلب *</label>
                         <select value={selectedType?.id || ''} onChange={e => setSelectedType(requestTypes.find(t => t.id === Number(e.target.value)) || null)} required>
@@ -1318,6 +1326,19 @@ const AdminRequests: React.FC = () => {
                     </button>
                 </div>
             </header>
+
+            {/* [D-LGC] **تنبيهٌ لا منع** (قرارُ المالك ٢٠٢٦-٠٨-١٥): الإجازاتُ لها الآن وحدةٌ
+                تحتسب أيامَ العمل وتُظهر الرصيد — فيُقال ذلك ويُترك البابُ مفتوحاً. لا نوعَ
+                يُحجب ولا زرَّ يُعطَّل: موظفٌ يجد نوعَه محجوباً في منتصف يومه يتّهم النظامَ
+                بدل أن يقرأ الإرشاد. وشريطٌ ملتصقٌ تحت الترويسة لا بطاقةٌ عائمة. */}
+            <p className="areq-notice">
+                <Palmtree size={14} />
+                <span>
+                    الإجازاتُ صارت من <Link to="/my-hr">«ملفّي الوظيفيّ»</Link> — هناك رصيدُك، واحتسابُ
+                    أيام العمل قبل الإرسال، وسجلُّ طلباتك. وهذه الصفحةُ تبقى لسائر الطلبات، ولطلباتك
+                    القائمة هنا حتى يُبَتَّ فيها.
+                </span>
+            </p>
 
             {/* التخطيط الثلاثي */}
             <div className="areq-layout">

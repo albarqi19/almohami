@@ -1,0 +1,225 @@
+/* ═══════════════════════════════════════════════════════════════════
+   MY-HR — «ملفّي الوظيفيّ» (`/my-hr`) · شريطُ الأقسام الثلاثة ولوحُها
+
+   هذه الورقةُ خاصّةٌ بصفحة الموظف وحدَها، ولا تُعرّف صنفاً واحداً من
+   `hrl-*`: البدائيّاتُ تبقى في `hr-leave.css` وتُلبَس كما هي، وما هنا
+   **بنيةُ الصفحة** لا مظهرُ البطاقات (فلا تعارضَ في `css:audit`).
+
+   القواعد الستّ نفسُها السارية في وحدة الموارد البشرية:
+   ١) الالتصاق بنيةٌ لا زينة: بلا حدٍّ خارجيّ، بلا استدارة، بلا gap —
+      والفصلُ خطٌّ واحدٌ (`border-*`) لا فجوة.
+   ٢) صفرُ رفعِ أولويةٍ قسريّ — التقدّم من ترتيب الحقن (appStyles.ts).
+   ٣) صفرُ لونٍ خام: كلُّ لونٍ `var()` أو `color-mix` فوق `var()`.
+   ٤) المنطقيّ حصراً: `border-inline-*` · `border-block-*` · `padding-*`
+      المنطقيّة. لا `left/right` ولا `transform:translate*`.
+   ٥) فلات صرف: بلا ظلال، بلا تدرّجات، بلا توهّج، بلا `backdrop-filter`.
+   ٦) لا شريطَ تمييزٍ جانبيّ على أيّ سطح.
+
+   ⚠️ **ولماذا مُمرِّرٌ خاصٌّ (`myhr-panel`) بدل `hrl-wall`؟**
+   `hrl-wall` يفقد تمريرَه عمداً تحت 1400px داخل `hrl-page--wall`
+   (hr-leave.css §١٣-ك) لأن الجدارَ هناك يعيش داخل `hrl-cols`. وصفحةُ
+   الموظف بعد التقسيم ليست جداراً واحداً بل **لوحُ قسمٍ واحدٍ يُمرَّر**،
+   فلو استعارت `hrl-wall` لصار عندها مقاسٌ بلا مُمرِّرٍ إطلاقاً ⇒ قصٌّ
+   صامتٌ يبدو سلامة. المُمرِّرُ هنا مستقلٌّ عن ذلك الملفّ تماماً.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────
+   ١) شريطُ الأقسام — ثلاثةُ أثلاثٍ متساوية، ملتصقةٌ بخطٍّ واحد
+
+   ثلاثيٌّ ثابتُ العرض لا شريطٌ يتمرّر: الأقسامُ ثلاثةٌ إلى الأبد
+   (حضوري · إجازاتي · راتبي ووثائقي)، فالقسمةُ المتساوية تجعل موضعَ
+   كلِّ قسمٍ ثابتاً في ذاكرة العين — وهذا نصفُ «يجيب فوراً».
+   ───────────────────────────────────────────────────────────── */
+
+.myhr-nav {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    border-block-end: 1px solid var(--color-border);
+    background: var(--surface-band);
+}
+
+/* الصفُّ الواحد: أيقونةٌ وعنوانٌ فوق، وسطرُ دلالةٍ تحت — يقول ما في
+   القسم قبل أن يُفتح، فلا يُنقر القسمُ ليُكتشَف. */
+.myhr-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2px;
+    min-inline-size: 0;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 0;
+    border-block-end: 2px solid transparent;
+    border-inline-start: 1px solid var(--hairline);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    text-align: start;
+    cursor: pointer;
+    transition:
+        color var(--transition-fast, 120ms) ease,
+        background-color var(--transition-fast, 120ms) ease,
+        border-color var(--transition-fast, 120ms) ease;
+}
+
+/* أوّلُ ثلثٍ بلا فاصلٍ قبله — الفاصلُ بين الأثلاث لا حولها */
+.myhr-tab:first-child {
+    border-inline-start: none;
+}
+
+/* ٢) الحالاتُ الأربع المتمايزة للسطح الواحد:
+   ساكنٌ (أعلاه) · مُحوَّمٌ عليه · مُختارٌ · مُركَّزٌ بلوحة المفاتيح. */
+
+.myhr-tab:hover {
+    color: var(--color-heading);
+    background: var(--dashboard-card);
+}
+
+.myhr-tab[aria-selected='true'] {
+    color: var(--color-heading);
+    background: var(--dashboard-card);
+    border-block-end-color: var(--law-gold);
+}
+
+.myhr-tab:focus-visible {
+    outline: 2px solid var(--law-gold);
+    outline-offset: -2px;
+}
+
+.myhr-tab__h {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+}
+
+.myhr-tab__h svg {
+    flex: 0 0 auto;
+    color: var(--text-subtle);
+    transition: color var(--transition-fast, 120ms) ease;
+}
+
+.myhr-tab[aria-selected='true'] .myhr-tab__h svg {
+    color: var(--law-gold);
+}
+
+.myhr-tab__t {
+    min-inline-size: 0;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.myhr-tab__d {
+    max-inline-size: 100%;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.45;
+    color: var(--text-subtle);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.myhr-tab[aria-selected='true'] .myhr-tab__d {
+    color: var(--text-muted);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٣) لوحُ القسم — المُمرِّرُ الوحيد في الصفحة
+
+   `.hrl-page` عمودٌ بـ`overflow:hidden`، والرأسُ والشريطُ ثابتان
+   بالبنية (`flex:0 0 auto`)، فيبقى اللوحُ وحدَه هو ما يُمرَّر — وزرُّ
+   البصمة لا يهرب مع التمرير لأنّه أوّلُ ما في القسم الأوّل.
+   ───────────────────────────────────────────────────────────── */
+
+.myhr-panel {
+    flex: 1;
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--dashboard-card);
+}
+
+/* حارسُ التمرير الأفقيّ: الجداولُ `inline-size:100%` فلا تفيض عادةً،
+   وهذا يمنع أن يتحوّل عمودٌ عنيدٌ إلى تمريرٍ أفقيٍّ للصفحة كلِّها. */
+.myhr-tablewrap {
+    overflow-x: auto;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٤) عمودا قسم «إجازاتي» — الرصيدُ رصيفاً، والسجلُّ مسرحاً
+
+   بلا `overflow:hidden` وبلا ارتفاعٍ محدَّد: الشبكةُ تنمو بمحتواها
+   داخل اللوح المُمرِّر أعلاه، فلا يقع القصُّ الصامتُ الذي يبدو سلامة.
+
+   🔴 **والرصيدُ أوّلُ الشجرة لا آخرَها**: هو جوابُ السؤال الذي فُتح
+   القسمُ لأجله، فيسبق السجلَّ في DOM — فيقرؤه المحرِّكُ الصوتيّ أوّلاً،
+   ويقع أوّلَ ما يُرى على عمودٍ واحد. وسطحُ المكتب يعيده رصيفاً بإسنادٍ
+   صريحٍ للمسارَين (`grid-area`) لا بترتيب الشجرة. وهذا **بلا كلفةِ
+   تركيز**: الرصيفُ نصٌّ ساكنٌ بلا عنصرٍ واحدٍ قابلٍ للتركيز.
+   ───────────────────────────────────────────────────────────── */
+
+.myhr-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+}
+
+.myhr-cols__main,
+.myhr-cols__side {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+}
+
+/* عمودٌ واحد: الرصيفُ فوق، وفاصلُه خطٌّ تحته */
+.myhr-cols__side {
+    border-block-end: 1px solid var(--color-border);
+}
+
+/* عمودان حين يتّسع المسرح فعلاً: عرضُ النافذة ليس عرضَ المسرح — شريطُ
+   التطبيق يبتلع ٢٤٠px قبل أن يبدأ، فعند 1280 يبقى ١٠٤٠ تقتسمها
+   ٦٨٠ + ٣٦٠. ودون ذلك عمودٌ واحدٌ يقرأ من أعلى إلى أسفل. */
+@media (min-width: 1280px) {
+    .myhr-cols {
+        grid-template-columns: minmax(0, 1fr) 360px;
+    }
+
+    /* المسارُ الأوّلُ منطقيّ: هو الأيمنُ في RTL — فالمسرحُ حيث تبدأ العين */
+    .myhr-cols__main {
+        grid-area: 1 / 1;
+    }
+
+    .myhr-cols__side {
+        grid-area: 1 / 2;
+        border-block-end: none;
+        border-inline-start: 1px solid var(--color-border);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٥) الكثافة على الشاشات الضيّقة — سطرُ الدلالة يسقط أوّلاً
+   العناوينُ الثلاثة تبقى كاملةً بلا قصّ: هي الملاحةُ نفسُها.
+   ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+    .myhr-tab {
+        padding: 9px 10px;
+    }
+
+    .myhr-tab__d {
+        display: none;
+    }
+
+    .myhr-tab__t {
+        font-size: 12.5px;
+    }
+}

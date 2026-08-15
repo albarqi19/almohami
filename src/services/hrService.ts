@@ -61,6 +61,30 @@ export const hrService = {
     if (!res.success) throw new Error(res.message || 'فشل في حذف الملف');
   },
 
+  /**
+   * تحقّقٌ فوريٌّ من رخصة محامٍ واحد — `POST /hr/employees/{id}/verify-lawyer`
+   * (`routes/api.php:1773`, `permission:hr.manage`, `throttle:10,1`).
+   *
+   * المسارُ كان يعيش **بصفر مستدعٍ في الفرونت**؛ وأوّلُ مستدعٍ له هو بلوكُ الهوية.
+   * والخادمُ يُطلق مهمّةً غيرَ متزامنة (`VerifyLawyerLicenseJob`) فيردّ **برسالةٍ بلا
+   * `data`** — ولذلك تُرجَع رسالتُه نفسُها ليقولها الزرُّ كما وصلت، ولا يُوعَد المستخدمُ
+   * بنتيجةٍ لم تصل بعد.
+   */
+  async verifyLawyer(id: number): Promise<string> {
+    const res = await apiClient.post<ApiResponse>(`${BASE}/${id}/verify-lawyer`, {});
+    if (!res.success) throw new Error(res.message || 'فشل بدء التحقّق من الرخصة');
+    return res.message || 'بدأ التحقق من الرخصة.';
+  },
+
+  /**
+   * ⚠️ **الكاتبُ القديم** — `PUT /hr/employees/{id}/compensation`.
+   *
+   * كاتبُ الأجر المعتمَد صار `hrPayrollService.recordWage` وشاشتُه `/hr/payroll/wages`:
+   * يقبل تاريخَ سريانٍ ماضياً وبين نسختين، ويقصّ **الصفَّ الذي يحتضن التاريخ** لا الذيلَ
+   * المفتوح، ويُعيد اشتقاقَ `is_current` من المدى. وهذه تبقى لأنّ المسارَ القديم حيٌّ في
+   * الخادم — ولا تُستدعى من واجهةٍ جديدة: كاتبان لجدولٍ واحدٍ بدلالتين يُنتجان خطَّي أجرٍ
+   * متعارضين لنفس الموظف.
+   */
   async upsertCompensation(id: number, payload: Partial<EmployeeCompensation>): Promise<EmployeeCompensation> {
     const res = await apiClient.put<ApiResponse<EmployeeCompensation>>(`${BASE}/${id}/compensation`, payload);
     if (res.success && res.data) return res.data;

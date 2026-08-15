@@ -1,0 +1,1207 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   وحدةُ الرواتب — S1: سجلُّ الأجور
+
+   هذا الملفُّ **يمدّ** `hr-leave.css` ولا ينسخه: كلُّ بدائيّات `hrl-*` تُستعمل كما
+   هي (block · table · state--loading|empty|locked|error · num · formula · meter ·
+   typegrid · ledger · chip · flag · kv · skel · emplist · side · stage). ولا
+   يُعرَّف هنا إلا ما **لا نظيرَ له** — ثلاثةُ بدائيّاتٍ لا غير، ولكلٍّ سببُ وجودٍ
+   مكتوبٌ فوقها.
+
+   والقواعدُ الستُّ نفسُها بلا تخفيف:
+     ① صفرُ لونٍ خام — متغيّرات الثيم حصراً (لا hex ولا rgba).
+     ② صفر !important.
+     ③ خصائصُ منطقية (inline/block) لا فيزيائية — الواجهةُ RTL.
+     ④ **فلات صرف**: لا ظلَّ ولا توهّجَ ولا تدرّج.
+     ⑤ لا شريطَ تمييزٍ جانبيّ.
+     ⑥ الفصلُ خطٌّ واحدٌ لا فجوة — النمطُ الملتصق.
+
+   ⚠️ ترتيبُ الحقن: يُستورَد **بعد** `hr-leave.css` في `appStyles.ts` كي تُحسَم أيُّ
+   قاعدةٍ متساويةِ الخصوصية لصالح هذا الملفّ. لا تنقله فوقه.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────
+   ١) لوحُ الأثر قبل الحفظ — `hrp-effect`
+
+   لماذا بدائيّةٌ جديدة ولا يكفي `hrl-flag`؟ لأنّ الأعلامَ تصف **حالةً قائمة**
+   (مانعٌ · تنبيهٌ · معلومة)، وهذا يصف **ما سيقع إن نُقر**: أيُّ نسخةٍ تُغلَق،
+   ومن أيّ يومٍ تسري الجديدة، وأنّ القسائم المصروفة لا تتغيّر.
+
+   وهو الجزءُ الذي تُهمله الأنظمة: من يكتب تاريخَ سريانٍ لا يعرف ماذا يحلّ
+   بالنسخة السابقة ولا بالماضي — فيُقال له **قبل** النقر لا بعده.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-effect {
+    padding: 10px 14px;
+    border-block-start: 1px solid var(--color-border);
+    background: var(--surface-band);
+}
+
+.hrp-effect__t {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+.hrp-effect__t svg {
+    flex: none;
+    color: var(--law-gold);
+}
+
+.hrp-effect__l {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 4px;
+}
+
+.hrp-effect__l li {
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--text-muted);
+}
+
+/* السطرُ الحاكم (تاريخُ السريان) يُقرأ أوّلاً — وزنٌ لا لون، فلا تُحمَل المعلومةُ على اللون وحده */
+.hrp-effect__l li:first-child {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٢) الصفُّ الملغى في خطّ النسخ — `hrp-void`
+
+   نسخةُ أجرٍ أُلغيت **تبقى ظاهرةً**: قد يكون بُني عليها خطابُ تعريفِ راتبٍ
+   صادرٌ لجهةٍ رسمية، فاختفاؤها يجعل المستندَ بلا أصلٍ في السجلّ.
+
+   والوسمُ **ليس لوناً وحدَه**: خطٌّ فوق المبلغ (`line-through`) + شارةٌ نصّيةٌ
+   في العمود الأخير. من يقرأ بالأبيض والأسود يرى الفرق.
+
+   ⚠️ ولا يُذكر اسمُ صنفٍ من `hrl-*` في محدِّدات هذا الملفّ إطلاقاً: تعريفُ الصنف
+   نفسِه في ملفّين يجعل النتيجةَ رهينةَ ترتيب الحقن (ويرصده `css:audit` تعارضاً).
+   فالوسمُ يُحمَل على أصنافٍ `hrp-*` **مستقلّة** تُضاف بجانب صنف الخلية.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-void {
+    color: var(--text-muted);
+}
+
+/* يُضاف بجانب `hrl-ledger__num` على الخلية نفسِها — لا يُعيد تعريفَها */
+.hrp-void__num {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+.hrp-void__tag {
+    margin-inline-start: 6px;
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--status-red);
+    white-space: nowrap;
+}
+
+/* الصفُّ الساري اليوم — تمييزٌ بوزنِ الخطّ لا بخلفيةٍ ملوّنة */
+.hrp-live__num {
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٣) شريطُ الإدخال المتوالي — `hrp-seq`
+
+   «حفظُ الصفّ يقفز إلى التالي بلا إغلاق الدرج، وعدّادٌ ٧ من ١٨».
+
+   لماذا لا يكفي `hrl-drawer__f`؟ ذاك تذييلُ لوحٍ مؤقّتٍ يُغلَق بعد فعلٍ واحد.
+   وهذا شريطٌ **يبقى** طوال جلسة الإدخال ويحمل ثلاثةَ أشياء لا شيئاً واحداً:
+   موضعُك في الطابور، واسمُ التالي، وزرُّ القفز إليه. وهو ما يحوّل عشرين نموذجاً
+   منفصلاً إلى مسارٍ واحدٍ متّصل.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-seq {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 14px;
+    border-block-start: 1px solid var(--color-border);
+    background: var(--surface-band);
+    font-size: 11.5px;
+    color: var(--text-muted);
+}
+
+.hrp-seq__n {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-heading);
+}
+
+.hrp-seq__next {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-inline-size: 0;
+}
+
+.hrp-seq__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-inline-size: 22ch;
+    color: var(--color-text);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٤) لوحُ الجاهزية في رأس الصفحة — `hrp-ready`
+
+   قاعدةٌ واحدةٌ لا مظهرَ جديد: اللوحُ **لا ينكمش**. هو شقيقٌ لـ`hrl-layout`
+   داخل عمودٍ مرن، وبلا `flex: 0 0 auto` يقضمه المسرحُ عند ضيق الارتفاع
+   فيُقصّ شريطُ «جاهزٌ ٧ من ١٨» من منتصفه — والرقمُ الحاكمُ أوّلُ ما يجب أن يُقرأ.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-ready {
+    flex: 0 0 auto;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٥) تكيّفٌ ضيّق — كثافةٌ أقلّ، والبنيةُ كما هي (لا شجرةَ موبايلٍ موازية)
+   ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+    .hrp-effect,
+    .hrp-seq {
+        padding-inline: 12px;
+    }
+
+    .hrp-seq__name {
+        max-inline-size: 14ch;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٤) تفصيلُ القاعدة النظامية — `hrp-rule`
+
+   لماذا بدائيّةٌ جديدة ولا يكفي `hrl-kv`؟ لأنّ الصفَّ المفتوح ليس قائمةَ مفاتيح
+   بل **ثلاثَ طبقاتٍ متمايزة**: مَن يقرأ القاعدة (أو أنّها لا تُقرأ بعد)، ثمّ
+   أرقامُها المُلزِمة، ثمّ مصدرُها. ودمجُها في قائمةٍ واحدةٍ يجعل «القارئ» سطراً
+   بين عشرين سطرَ حمولةٍ فلا يُرى — وهو أهمُّ ما في الصفّ.
+
+   وهو داخلَ خليةِ جدولٍ ⇒ بلا حدٍّ خارجيّ: الفصلُ خطُّ الصفّ نفسُه (النمطُ الملتصق).
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-rule {
+    display: grid;
+    gap: 8px;
+    padding: 10px 4px;
+}
+
+.hrp-rule__who {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 0;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hrp-rule__who svg {
+    flex: none;
+    margin-block-start: 1px;
+    color: var(--law-gold);
+}
+
+/* الحمولةُ مفاتيحُها تقنيةٌ لاتينية: تُعرَض بخطٍّ أحاديّ وحجمٍ أصغر كي تُقرأ
+   جدولاً لا نصّاً، ويبقى العنوانُ العربيُّ فوقها هو ما يُقرأ أولاً.
+   و`nowrap` يُنزَع عن المفتاح: مسارٌ طويل (`schemes.saudi.ee_pension_bp`) يمدّ
+   الخليةَ فيدفع الجدولَ إلى تمريرٍ أفقيّ — والصفحةُ لا تُمرَّر أفقياً. */
+.hrp-rule .hrl-kv dt,
+.hrp-rule .hrl-kv dd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+}
+
+.hrp-rule .hrl-kv dt {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* الصفُّ المفتوح يمتدّ بعرض الجدول كلِّه (خمسةُ أعمدة)، وقائمةُ المفاتيح داخله لو تركت
+   `1fr` لدفعت القيمةَ إلى الحافّة المقابلة — فيقرأ العينُ مفتاحاً هنا وقيمةً على بُعد
+   ألفِ بكسل، ويُنسب الرقمُ إلى غير مفتاحه. الحدُّ يُبقيهما متجاورين. */
+.hrp-rule .hrl-kv {
+    max-inline-size: 760px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٦) شريطُ المراحل السبع — `hrp-stagebar`  [S3]
+
+   لماذا بدائيّةٌ جديدة ولا يكفي `hrl-tabs`؟ لأنّ التبويبَ يعرض **أوجهاً متكافئة**
+   لشيءٍ واحد، وهذا يعرض **تسلسلاً مرتَّباً** له اتجاهٌ وحالةٌ لكلّ خطوة: ماضيةٌ
+   منقورة، وحاليّةٌ، وقادمةٌ معطَّلةٌ **بسببها**. ودمجُهما يجعل المستخدمَ يظنّ أنّ
+   «الاعتماد» تبويبٌ يمكن فتحُه الآن.
+
+   🔴 والمعطَّلةُ تُعرَض ولا تُخفى: إخفاءُ ما لم يُشحن يجعل الوحدةَ تبدو ناقصةً بلا
+   موعد، وإظهارُه معطَّلاً بنصّه يقول متى يصل.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-stagebar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    border-block-end: 1px solid var(--color-border);
+    background: var(--surface-band);
+}
+
+.hrp-stagebar__s {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    border: 0;
+    border-inline-end: 1px solid var(--color-border);
+    background: transparent;
+    font: inherit;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.hrp-stagebar__s:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+/* الحاليّةُ بوزنٍ وخلفيةٍ لا بشريطٍ جانبيّ — والعرفُ عندنا: لا شريطَ تمييزٍ جانبيّ */
+.hrp-stagebar__s--on {
+    background: var(--color-surface);
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+.hrp-stagebar__n {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 18px;
+    padding: 1px 4px;
+    border: 1px solid var(--color-border);
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.hrp-stagebar__s--on .hrp-stagebar__n {
+    border-color: var(--law-gold);
+    color: var(--law-gold);
+}
+
+.hrp-stagebar__t {
+    white-space: nowrap;
+}
+
+.hrp-stagebar__s svg {
+    flex: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٧) المستبعَدون — `hrp-excluded`  [S3]
+
+   🔴 أخطرُ عطلٍ في الرواتب ليس رقماً خاطئاً بل **موظفاً لم يظهر أصلاً** — وهو يبدو
+   سلامة. فهذه القائمةُ ليست تفصيلاً ثانوياً: هي الفرقُ بين نظامٍ يصمت ونظامٍ يقول.
+
+   ولماذا ليست `hrl-table`؟ لأنّ لكلّ سطرٍ **ثلاثَ طبقاتٍ متمايزة**: اسمٌ، وسببٌ،
+   و«ما العمل» منقور. والجدولُ يسوّي بينها في ثلاثة أعمدةٍ متساوية، فيضيع الاسمُ —
+   وهو ما يجب أن يُقرأ أولاً — بين رمزٍ ووصلة.
+
+   🩸 ولماذا ليست شبكةَ ثلاثةِ أعمدةٍ أيضاً — **قِيس على الشاشة لا استُنتج**: هذا
+   اللوحُ يعيش في `hrl-cols__side` (عمودٌ ضيّقٌ ~٣٩٠ بكسل) وفي العمود الرئيس معاً.
+   وثلاثةُ أعمدةٍ داخل الضيّق تسحق عمودَ «ما العمل» إلى ~٤٠ بكسل فتنزل الجملةُ
+   **كلمةً في كلّ سطر**. و`@media` لا يُنقذ: عرضُ النافذة ١٥٠٠ والحاويةُ ٣٩٠،
+   فالاستعلامُ يقرأ الرقمَ الخطأ. والحلُّ الذي لا يعتمد على عرضٍ يخصّه: الاسمُ والسببُ
+   يتجاوران ويلتفّان معاً، و«ما العمل» **يأخذ سطرَه دائماً** (`flex-basis: 100%`) —
+   فلا يُسحَق في ضيقٍ ولا يتيه في سَعة، وهو الفعلُ الذي يجب أن يُقرأ كاملاً.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-excluded {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hrp-excluded__i {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+    padding: 7px 0;
+    border-block-start: 1px solid var(--color-border);
+    font-size: 11.5px;
+}
+
+.hrp-excluded__i:first-child {
+    border-block-start: 0;
+}
+
+.hrp-excluded__n {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hrp-excluded__n svg {
+    flex: none;
+    color: var(--text-muted);
+}
+
+.hrp-excluded__r {
+    color: var(--color-text);
+}
+
+.hrp-excluded__d {
+    color: var(--text-muted);
+}
+
+/* سطرٌ كاملٌ دائماً: «ما العمل» جملةُ فعلٍ تُقرأ كاملةً أو لا تُقرأ */
+.hrp-excluded__a {
+    flex-basis: 100%;
+    color: var(--text-muted);
+    line-height: 1.7;
+}
+
+.hrp-excluded__a svg {
+    vertical-align: middle;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٧ب) الملفّاتُ المبدئية — `hrp-drafts`
+
+   دلوٌ ثالثٌ بين المشمول والمستبعَد: حسابٌ أُنشئ ملفُّه معه ولم يُقَل إنّه وُظِّف.
+   وهو **أخفتُ** من قائمة المستبعَدين عمداً — لا مؤطَّرٌ ولا ملوَّن: المستبعَدُ نقصٌ
+   يُعالَج اليومَ ليُصرف راتبُه، والمبدئيُّ حسابٌ قد لا يكون موظفاً أصلاً. ولو تساويا
+   بصرياً لاستهلك الضجيجُ انتباهَ من جاء يبحث عن سبب توقّف الصرف.
+
+   ولا يُطوى خلف `<details>`: المطويُّ لا يُقرأ، والغرضُ من هذا الدلو أن يُقرأ.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-drafts {
+    margin-block-start: 10px;
+    padding-block-start: 8px;
+    border-block-start: 1px solid var(--color-border);
+}
+
+.hrp-drafts__t {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0 0 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hrp-drafts__t svg {
+    flex: none;
+    color: var(--text-muted);
+}
+
+.hrp-drafts__l {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hrp-drafts__i {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+    padding-block: 4px;
+    font-size: 11.5px;
+}
+
+.hrp-drafts__n {
+    color: var(--color-text);
+}
+
+.hrp-drafts__i svg {
+    vertical-align: middle;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٨) جدولُ الطابور — `hrp-roster`  [S3]
+
+   قاعدةٌ واحدةٌ لا مظهرَ جديد: **عمودُ الاسم لاصق**. جدولٌ بخمسة أعمدةٍ في شاشةٍ
+   ضيّقة يُمرَّر أفقياً فيغيب عمودُ الاسم — فيقرأ المستخدمُ صفّاً بلا صاحب. وهو
+   العطلُ الذي رفضنا لأجله جدولَ العشرين عموداً.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-roster th[scope='row'] {
+    position: sticky;
+    inset-inline-start: 0;
+    background: var(--color-surface);
+}
+
+@media (max-width: 640px) {
+    /* الاسمُ والسببُ يتفرّقان سطرين في الجوّال — والالتفافُ يتكفّل بالباقي بلا شبكة */
+    .hrp-excluded__n {
+        flex-basis: 100%;
+    }
+
+    .hrp-stagebar__s {
+        padding-inline: 10px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   S4 — الاحتسابُ والقسيمةُ والمراجعة
+
+   القواعدُ الستُّ كما هي بلا تخفيف. والبدائيّاتُ المضافةُ هنا خمسٌ لا غير، ولكلٍّ
+   سببُ وجودٍ مكتوبٌ فوقها — وما وجد له نظيرٌ في `hrl-*` لم يُعرَّف ثانيةً:
+   الأرقامُ الكبيرةُ `hrl-num`، والحدودُ الثلاثةُ `hrl-formula`، والفروقُ `hrl-drift`،
+   وسطورُ «لماذا» `hra-why` (من `hr-attendance.css` — تُستعمل كما هي).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────
+   ٩) القسيمة — `hrp-slip`
+
+   الطبقةُ الأولى **رقمٌ واحدٌ كبيرٌ لا يزاحمه شيء**: الموظفُ يفتح القسيمةَ لسؤالٍ
+   واحدٍ («كم أُودع؟») فيُجاب عنه قبل كلّ شيء. والحشوُ هنا أوسعُ من بقيّة اللوح
+   عمداً — الفراغُ حول الرقم هو ما يجعله يُقرأ أوّلاً بلا حدٍّ ولا إطار.
+   ───────────────────────────────────────────────────────────── */
+
+/* 🩸 **اللوحُ لا ينكمش تحت نصّه** — عطلٌ قِيس بـ`getBoundingClientRect` لا بالعين:
+   ٢١ زوجاً متراكباً عند 1440×900، و٥٠ من ٥١ عقدةً عند 520×900 (قسيمةٌ غيرُ مقروءةٍ
+   بتاتاً)، وصفرٌ عند 1440×1300. أي أنّ العطلَ ارتفاعٌ لا عرض.
+
+   والسببُ سلسلةٌ من ثلاث حلقات: `.hrl-cols__side` عمودُ flex، وابنُه الافتراضيُّ
+   `flex-shrink: 1`، و`.hrl-block{min-height:0}` + `.hrl-block__b{min-height:0}`
+   يُلغيان «الحجمَ الأدنى التلقائيّ» الذي يمنع الانكماشَ تحت المحتوى. فالقسيمةُ —
+   وهي أطولُ لوحٍ في التطبيق (٧٢٧ مقابل ٧٠١ متاحة على السطح، و٩٥٠ مقابل ٣٢٨ على
+   الجوّال) — تُضغط أقسامُها فوق بعضها بدل أن يتمرّرَ العمودُ الذي أُعِدّ للتمرير
+   (`overflow-y: auto` عليه أصلاً).
+
+   ولماذا محصورٌ في القسيمة ولا يُرفع إلى `.hrl-block` كلِّها: البلوكُ المتمدّد
+   (`--grow`) والمُمرَّرُ داخلياً (`--scroll`) **يعتمدان الانكماشَ عمداً** — فمنعُه
+   عليهما يُعطّل تمريرَهما في الإجازات والحضور ولوح المكتب. والقسيمةُ وحدَها هي
+   التي تنكسر، فالعلاجُ عندها. */
+.hrp-slip,
+.hrp-slip > * {
+    flex-shrink: 0;
+}
+
+.hrp-slip__hero {
+    padding-block: 16px 12px;
+    background: var(--surface-band);
+    border-block-end: 1px solid var(--color-border);
+}
+
+.hrp-slip__hero .hrl-num {
+    margin-block-end: 4px;
+}
+
+/* ⚠️ رأسُ القسيمة مزدحم — قِيس أيضاً: «ريم بنت ماجد الشمري» ينكسر ثلاثةَ أسطرٍ
+   بجوار ثلاث رقاقاتٍ في عمودٍ عرضُه ٣٧٩ بكسل. والاسمُ أوّلُ ما يُقرأ في مستندٍ
+   مالي، فلا يُسحَق لأجل رقمٍ وشارةٍ وزرّ.
+
+   والحلُّ التفافُ الرأس نفسِه: الاسمُ يأخذ سطرَه كاملاً متى ضاق العرض، وتنزل
+   المجموعةُ (الرقم · الحالة · الطباعة) سطراً تحته — بلا استعلامِ عرضٍ يقرأ عرضَ
+   النافذة بدل عرض العمود (اللوحُ يعيش في ٣٨٠ وفي عرضٍ كامل معاً). */
+.hrp-slip__h {
+    flex-wrap: wrap;
+    row-gap: 6px;
+}
+
+.hrp-slip__who {
+    flex: 1 1 14ch;
+    min-inline-size: 0;
+}
+
+.hrp-slip__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١٠) بنودُ القسيمة — `hrp-item`
+
+   **سردٌ لا جدول**: البندُ سطرٌ باسمه ومبلغه، وتحته تفسيرُه سطراً سطراً — من أين
+   جاء، على أيّ أساس، وأيّ قاعدةٍ نظامية. والجدولُ يجبر التفسيرَ على عمودٍ ضيّقٍ
+   فيُقصّ، أو على تلميحٍ يختفي بالمؤشّر فلا يُقرأ ولا يُطبَع.
+
+   والاتّجاهُ يُحمَل **برمزٍ ولونٍ معاً** (`+`/`−`/`=`): حملُه على اللون وحدَه يُعمي
+   مَن لا يميّزه، وحملُه على الرمز وحدَه يُبطئ المسحَ البصريّ.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-item__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hrp-item {
+    padding-block: 8px;
+    border-block-start: 1px solid var(--color-border);
+}
+
+.hrp-item:first-child {
+    border-block-start: 0;
+}
+
+.hrp-item__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.hrp-item__n {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hrp-item__a {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.hrp-item--earn .hrp-item__a {
+    color: var(--status-green);
+}
+
+.hrp-item--deduct .hrp-item__a {
+    color: var(--status-red);
+}
+
+.hrp-item--cost .hrp-item__a {
+    color: var(--text-muted);
+}
+
+.hrp-item--info .hrp-item__a {
+    color: var(--text-subtle);
+}
+
+/* التفسيرُ سطورٌ مستقلّةٌ تُقرأ كاملةً — لا تُقصّ ولا تُطوى في تلميح. */
+.hrp-item__why {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-block-start: 3px;
+}
+
+.hrp-item__w {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--text-muted);
+}
+
+.hrp-item__w svg {
+    flex-shrink: 0;
+    color: var(--text-subtle);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١١) شارةُ السقف — `hrp-cap`
+
+   سطرُ استقطاعٍ يقلّ عن المطلوب **بلا سببٍ مطبوع** يجعل الموظفَ يظنّ خطأً، ويجعل
+   المحاسبَ يعيد إدخالَه الشهرَ القادمَ مرّةً ثانية. فالشارةُ تحمل المادّةَ والمبلغَ
+   المطلوبَ والمرحَّل — ولونُها لونُ التنبيه لا الخطأ: القصُّ صوابٌ نظاميٌّ لا عطل.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-cap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-block-start: 3px;
+    padding: 4px 8px;
+    background: var(--quiet-gray-50);
+    border-inline-start: 1px solid var(--status-orange);
+    font-size: 11px;
+    color: var(--color-text);
+}
+
+.hrp-cap svg {
+    flex-shrink: 0;
+    color: var(--status-orange);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١٢) لوحُ تكلفة المكتب — `hrp-cost`
+
+   🔴 حصّةُ صاحب العمل **ليست استقطاعاً**: لوحٌ مفصولٌ بخطٍّ وخلفيةٍ هادئةٍ كي لا
+   تُقرأ قطُّ ضمن ما دفعه الموظف. وعرضُها داخل الاستقطاعات هو الالتباسُ الأشيعُ في
+   القسائم الرديئة — يقرأ الموظفُ أنه دفع ١٬١٧٠ وهو لم يدفعها.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-cost {
+    background: var(--quiet-gray-50);
+}
+
+.hrp-cost .hrl-h2 {
+    color: var(--text-muted);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١٣) شرائحُ الأجر — `hrp-seg`
+
+   «كيف قُسِّم الأجر» بثلاثة أعمدةٍ في سطر: المدّة · الكسرُ صريحاً («٢ من ٣٠») ·
+   النصيب. والكسرُ يُطبَع لأن رقماً لا يستطيع إنسانٌ التحقّقَ منه بالقسمة ليس
+   رقماً بل ادّعاء.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-seg {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hrp-seg__i {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+    padding-block: 6px;
+    border-block-start: 1px solid var(--color-border);
+    font-size: 11.5px;
+}
+
+.hrp-seg__i:first-child {
+    border-block-start: 0;
+}
+
+.hrp-seg__d {
+    color: var(--color-text);
+    white-space: nowrap;
+}
+
+.hrp-seg__f {
+    flex: 1 1 160px;
+    color: var(--text-muted);
+}
+
+.hrp-seg__n {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١٤) صفُّ المراجعة — امتدادٌ لـ`hrl-drift` لا بديلٌ عنه
+
+   البدائيّةُ قائمةٌ في `hr-leave.css`؛ المضافُ هنا ثلاثةُ أجزاءٍ لا نظيرَ لها:
+   الهدفُ المنقور (الاسمُ والفرقُ في زرٍّ واحد)، وسطرُ «من كذا إلى كذا»، وسطرُ
+   السبب حين لا يوجد. والفرقُ بلا سببٍ رقمٌ يُقلق ولا يُفيد.
+   ───────────────────────────────────────────────────────────── */
+
+.hrl-drift__i {
+    padding-block: 8px;
+    border-block-start: 1px solid var(--color-border);
+}
+
+.hrl-drift__i:first-child {
+    border-block-start: 0;
+}
+
+.hrp-drift__hit {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    inline-size: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: start;
+    cursor: pointer;
+    font: inherit;
+}
+
+.hrp-drift__from,
+.hrp-drift__why {
+    display: block;
+    margin-block-start: 2px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١٥) جدولُ الاحتساب — الأرقامُ عمودٌ واحدُ العرض
+
+   `hrp-roster` يحمل بالفعل «عمودُ الاسم لاصق»، والمضافُ هنا أنّ خلايا المال
+   **جدوليةُ الأرقام**: أعمدةٌ تختلف عرضاً بين صفٍّ وصفٍّ تُبطئ المقارنة البصرية،
+   وهي جوهرُ ما يفعله المراجعُ في هذه الشاشة.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-roster td[dir='ltr'] {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+
+/* ────────────────────────────────────────────────────────────
+   ١٦) طريقُ الصافي — `hrp-path`
+
+   البدائيّةُ الوحيدةُ التي أضافتها S5، ولا نظيرَ لها في `hrl-*`: «الحدودُ
+   الثلاثة» (`hrl-formula`) معادلةٌ أفقيةٌ تُقرأ دفعةً واحدة، وهذا **تسلسلٌ رأسيٌّ
+   مرقّم** يُقرأ محطّةً محطّة — ولكلّ محطّةٍ سطرُ «من أين» تحتها. ولويُ أحدهما
+   ليؤدّي عملَ الآخر يُفسدهما معاً.
+
+   والرقمُ جدوليُّ الخانات (`tabular-nums`): القارئُ يطرح بعينه من محطّةٍ إلى
+   محطّة، وأرقامٌ تختلف عرضاً تُبطئ ذاك بالضبط.
+   ─────────────────────────────────────────────────────────── */
+
+.hrp-path {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hrp-path__i {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding-block: 7px;
+    border-block-start: 1px solid var(--color-border);
+}
+
+.hrp-path__i:first-child {
+    border-block-start: 0;
+}
+
+/* محطّةُ الوصول — حدٌّ أعلى أغلظُ يقول «هنا ينتهي الطريق» بلا لونٍ يحمل المعنى وحده. */
+.hrp-path__i--sum {
+    border-block-start-width: 2px;
+}
+
+.hrp-path__s {
+    flex-shrink: 0;
+    inline-size: 16px;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+}
+
+.hrp-path__k {
+    flex: 1 1 auto;
+    font-size: 12px;
+    color: var(--color-text);
+}
+
+.hrp-path__w {
+    display: block;
+    margin-block-start: 2px;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--text-muted);
+}
+
+.hrp-path__v {
+    flex-shrink: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-heading);
+}
+
+.hrp-path__i--sum .hrp-path__v {
+    font-size: 14px;
+}
+
+/* ────────────────────────────────────────────────────────────
+   ١٧) عددُ العلَم في الفحص القبْليّ — `hrp-flag__n`
+
+   🩸 عطلٌ قِيس على الشاشة: `hrl-flag__t` كتلةٌ (`display:block`) بلا `gap`، و JSX
+   يبتلع المسافةَ التي يفصلها سطرٌ جديد بين النصّ والنطاق — فطُبع «مستبعَدون من
+   هذا المسير2»، ويُقرأ رقماً ملتصقاً بآخر كلمة. والفصلُ **حاشيةٌ منطقيةٌ** لا
+   مسافةٌ نصّيةٌ تتبخّر بأوّل إعادةِ تنسيق.
+
+   ولماذا صنفٌ جديدٌ لا `hrl-chip__n`: ذاك يعيش داخل `hrl-chip` (وله `gap` من
+   أبيه)، وإعطاؤه حاشيةً هنا يعني تعريفَ صنفٍ قائمٍ في ملفٍّ ثانٍ — وهو بالضبط
+   ما يقيسه `css:audit` تعارضاً.
+   ─────────────────────────────────────────────────────────── */
+
+.hrp-flag__n {
+    margin-inline-start: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-subtle);
+}
+
+/* ────────────────────────────────────────────────────────────
+   ١٨) الاعتماد — `hrp-approve`  [S5]
+
+   🔴 التأكيدُ هنا **ليس «هل أنت متأكّد؟»**: تلك جملةٌ تُنقَر بلا قراءة. وهذا
+   تسلسلٌ مرقّمٌ يسمّي ما سيُجمَّد بالعدد والتاريخ — والفعلُ لا رجعةَ فيه، فثمنُ
+   أربعة أسطرٍ تُقرأ أرخصُ من مسيرٍ يُعتمَد بالخطأ ثمّ يُخلَف بمسيرٍ تصحيحيّ.
+
+   ولماذا ليس `hrp-path`: ذاك تسلسلُ **مبالغَ** لكلٍّ رقمُه في الحافّة المقابلة
+   (طريقُ الصافي)، وهذا تسلسلُ **جملٍ تُقرأ** تلتفّ على أسطر. ولويُ أحدهما
+   ليؤدّي عملَ الآخر يترك جملةً طويلةً تُسحَق في عمودٍ عُرِّض للأرقام.
+   ─────────────────────────────────────────────────────────── */
+
+.hrp-approve {
+    background: var(--surface-band);
+}
+
+.hrp-approve__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hrp-approve__i {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding-block: 7px;
+    border-block-start: 1px solid var(--color-border);
+    font-size: 11.5px;
+    line-height: 1.8;
+    color: var(--color-text);
+}
+
+.hrp-approve__i:first-child {
+    border-block-start: 0;
+}
+
+.hrp-approve__s {
+    flex-shrink: 0;
+    inline-size: 16px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+}
+
+.hrp-approve__k {
+    flex: 1 1 auto;
+}
+
+/* بابُ الإقرار (D31) — مربّعٌ ونصُّه في سطرٍ واحدٍ يُقرأ قبل أن يُنقر */
+.hrp-approve__ack {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 0;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--color-heading);
+    cursor: pointer;
+}
+
+.hrp-approve__ack input {
+    flex: none;
+    margin-block-start: 4px;
+}
+
+.hrp-approve__ackt {
+    font-weight: 600;
+}
+
+.hrp-approve__act {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+/* خطوةٌ منقضية — علامةٌ **ونصٌّ للقارئ الصوتيّ**، فلا تُحمَل الحقيقةُ على أيقونةٍ وحدها */
+.hrp-stagebar__s--done .hrp-stagebar__n {
+    border-color: var(--law-navy);
+    color: var(--law-navy);
+}
+
+.hrp-stagebar__s--done .hrp-stagebar__t {
+    color: var(--color-text);
+}
+
+.hrp-stagebar__s--done.hrp-stagebar__s--on .hrp-stagebar__n {
+    border-color: var(--law-gold);
+    color: var(--law-gold);
+}
+
+@media (max-width: 640px) {
+    .hrp-item__head {
+        flex-wrap: wrap;
+    }
+
+    .hrp-seg__d {
+        flex-basis: 100%;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١٦) لوحُ الدفع — `hrp-pay` (S6 · D17)
+
+   **الفاشلُ كتلةٌ أعلى الشاشة لا صفٌّ في ذيل جدول.** خمسةٌ وصلت لا تحتاج قارئاً،
+   وثلاثةٌ لم تصل تحتاج قراراً اليوم — فالبصرُ يقع عليها أوّلاً، ومعها «لماذا»
+   نصّاً كاملاً و«ما التالي» زرّاً.
+
+   ولا شريطَ تمييزٍ جانبيّ ولا ظلّ: الفصلُ خطٌّ واحدٌ كبقيّة الوحدة، والتمييزُ
+   بموضعِ الكتلة ونصِّها لا بزينةٍ حولها.
+   ───────────────────────────────────────────────────────────── */
+
+.hrp-pay__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hrp-pay__f {
+    padding-block: 9px;
+    border-block-start: 1px solid var(--color-border);
+}
+
+.hrp-pay__f:first-child {
+    border-block-start: 0;
+}
+
+.hrp-pay__f-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.hrp-pay__f-n {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--status-red);
+}
+
+/* سببُ الرفض كما ورد من البنك — سطرٌ كاملٌ لا تلميحٌ يختفي بالمؤشّر ولا نصٌّ مقصوص. */
+.hrp-pay__why {
+    margin-block: 3px 0;
+    font-size: 11.5px;
+    line-height: 1.8;
+    color: var(--text-muted);
+}
+
+.hrp-pay__f-act {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-block-start: 5px;
+}
+
+.hrp-pay__form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.hrp-pay__l {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.hrp-pay__acts {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.hrp-pay__pick {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+    .hrp-pay__f-act,
+    .hrp-pay__form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   S7 — السلفُ والجزاءاتُ وصندوقُ م.٧٣
+
+   🔴 ثلاثُ إضافاتٍ لا أكثر: وسمٌ يقول «امتدّ الجدول»، ووسمٌ يقول «سُدّدت»، وصفٌّ مفتوحٌ
+   يُبرز سلفتَه أثناء قراءة دفترها. وما عداها يعيد استعمالَ لغةِ الوحدة نفسِها (`hrl-table`
+   و`hrp-rule` و`hrp-seg`) — فشاشةٌ جديدةٌ بلغةٍ جديدةٍ تُتعلَّم مرّتين.
+
+   والوسمان يضبطان `--hrl-k` وحدَه لا الألوانَ الثلاثة: الخلفيةُ والحدُّ والنصُّ تُشتقّ منه
+   في `.hrl-badge`، فلا يتباعد لونٌ عن أخويه عند أوّل تعديل.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.hrp-badge--warn {
+    --hrl-k: var(--status-orange);
+    border-radius: 0;
+}
+
+.hrp-badge--ok {
+    --hrl-k: var(--status-green);
+    border-radius: 0;
+}
+
+/* الصفُّ المفتوحُ دفترُه — تمييزٌ بالخلفية لا بشريطٍ جانبيّ (عرفُ الوحدة المكتوب). */
+.hrp-row--on > * {
+    background: var(--law-navy-light);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   كشفُ الرواتب المسلَّم للبنك · وعدّادُ المهلة · ولوحُ دورة الرواتب والبنك
+
+   🔴 والمفرداتُ مسألةُ مسؤوليةٍ لا ذوق: ما يُصدَّر **ملفُّ إدخالٍ للبنك**، وملفُّ حماية
+   الأجور الموقَّع رقمياً يصدره البنكُ بعد التحويل. ولذلك أُفرد لكتلة التنبيه سطحٌ
+   مميَّزٌ **أعلى البلوك** لا سطرُ تلميحٍ في ذيله: نصٌّ يُقرأ بعد الجدول لا يمنع لبساً
+   وقع قبله.
+
+   وأربعُ بدائيّاتٍ لا أكثر، وما عداها يعيد استعمال لغة الوحدة (`hrl-block` · `hrl-table`
+   · `hrl-kv` · `hrl-fact` · `hrl-formula`):
+     ① `hrp-bank__notices` سطحُ التنبيه · ② `hrp-bank__list` قائمةُ جملٍ مقروءة ·
+     ③ `hrp-bank__scroll` تمريرُ جدولٍ ثلاثةَ عشرَ عموداً · ④ `hrp-cycle` خطواتُ الدورة.
+
+   والقواعدُ الستُّ نفسُها بلا تخفيف: صفرُ لونٍ خام · صفر !important · خصائصُ منطقية ·
+   فلات صرف · لا شريطَ تمييزٍ جانبيّ · والفصلُ خطٌّ واحدٌ لا فجوة.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── ① سطحُ التنبيه — أعلى البلوك، بخطٍّ فاصلٍ لا بفجوة ─── */
+
+.hrp-bank__notices {
+    padding: 10px 14px;
+    border-block-start: 1px solid var(--color-border);
+    background: var(--surface-band);
+}
+
+.hrp-bank__name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+.hrp-bank__name svg {
+    flex: none;
+    color: var(--law-gold);
+}
+
+/* ─── ② قائمةُ جملٍ تُقرأ — لا نقاطَ زخرفية، والرقمُ ليس المقصود بل الجملة ─── */
+
+.hrp-bank__list {
+    margin: 0 0 6px;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 5px;
+}
+
+.hrp-bank__list li {
+    position: relative;
+    padding-inline-start: 12px;
+    font-size: 11.5px;
+    line-height: 1.75;
+    color: var(--text-muted);
+}
+
+.hrp-bank__list li::before {
+    content: '·';
+    position: absolute;
+    inset-inline-start: 2px;
+    color: var(--law-gold);
+}
+
+.hrp-bank__list strong {
+    color: var(--color-heading);
+}
+
+/* ─── ③ ثلاثةَ عشرَ عموداً لا تُعرَض في عمودٍ ضيّق — التمريرُ داخل الكتلة لا في الصفحة ─── */
+
+.hrp-bank__scroll {
+    overflow-x: auto;
+}
+
+/* ─── ④ خطواتُ الدورة — مرقَّمةٌ، والفصلُ خطٌّ واحدٌ بين الخطوات ─── */
+
+.hrp-cycle {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hrp-cycle__i {
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px;
+    border-block-start: 1px solid var(--color-border);
+}
+
+.hrp-cycle__i:first-child {
+    border-block-start: 0;
+}
+
+.hrp-cycle__n {
+    flex: none;
+    inline-size: 22px;
+    block-size: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--law-gold);
+}
+
+.hrp-cycle__b {
+    min-inline-size: 0;
+}
+
+.hrp-cycle__t {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+.hrp-cycle__t svg {
+    flex: none;
+    color: var(--law-gold);
+}
+
+/* «يقع لدى البنك» — البُعدُ الذي يمنع اللبسَ كلَّه، فيُميَّز عن الشرح */
+.hrp-cycle__w {
+    margin: 2px 0 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--law-gold);
+}
+
+.hrp-cycle__d {
+    margin: 4px 0 0;
+    font-size: 11.5px;
+    line-height: 1.8;
+    color: var(--text-muted);
+}

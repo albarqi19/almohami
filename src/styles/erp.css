@@ -325,6 +325,18 @@ body.dark .fin-badge--purple { background: color-mix(in srgb, var(--status-purpl
   z-index: 40;
 }
 
+/* [UX-MENU] النسخة العائمة: تُرسَم في بوابةٍ على body فتخرج من قصّ حاويات
+   الجدول (`.fin-table-wrap` و`.fin-table-scroll`). الموضعُ يُحسب في JS من
+   مستطيل الزرّ، فتُلغى هنا قواعدُ الموضع النسبيّ ولا تُلمس هيئتها.
+   ⚠️ الـz-index أعلى من النوافذ المنبثقة الشائعة (الجداول قد تُعرض داخلها)،
+   ودونَ طبقةِ الإشعارات كي لا يحجبها شيء ولا تحجب تنبيهاً. */
+.fin-menu__dropdown--floating {
+  position: fixed;
+  top: auto;
+  inset-inline-end: auto;
+  z-index: 1200;
+}
+
 .fin-menu__item {
   display: flex;
   align-items: center;

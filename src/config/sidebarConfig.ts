@@ -1,8 +1,9 @@
 import {
   Home, FileText, FileCheck, Calendar, Scale, Briefcase, Users, Clock, CheckSquare,
-  BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature, Receipt, CreditCard,
+  BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature,
   TrendingUp, Bell, Settings, ClipboardList, BarChart3, FolderUp, QrCode, Lightbulb,
-  Landmark, AlarmClock, Archive, UserCog, Trash2, Inbox,
+  Landmark, AlarmClock, Archive, UserCog, Trash2, Inbox, CalendarOff, IdCard,
+  Fingerprint, Wallet, FileSpreadsheet, HandCoins,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -25,7 +26,7 @@ export interface SidebarItem {
    * بوّابة ميزة — تُخفي العنصر تماماً حتى تكون الميزة متاحة للمنشأة.
    * 'zatca' يُقرأ من useZatcaFeature() (context)، و'hr'/'email_intake' من user.tenant.*_enabled — داخل ClickUpSidebar (لا hook هنا، هذا ملف بيانات).
    */
-  featureGate?: 'zatca' | 'hr' | 'email_intake' | 'establishment_portal';
+  featureGate?: 'zatca' | 'hr' | 'hr_payroll' | 'email_intake' | 'establishment_portal';
   /** شارة نصية صغيرة بجوار الاسم (مثل "مؤقتة" لميزة تجريبية). */
   badge?: string;
 }
@@ -48,6 +49,13 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: CheckSquare, label: 'المهام', path: '/tasks', permission: 'tasks.view' },
   { icon: BookOpen, label: 'المفكرة الشخصية', path: '/notebook', permission: null },
   { icon: BarChart3, label: 'أدائي', path: '/my-performance', permission: 'cases.view' },
+  // ملفّي الوظيفيّ — بوّابةُ الموظف عن نفسه (رصيدُ إجازاته وحركاتُه).
+  // `permission: null` **مقصود**: الخادمُ يفرض الذاتيةَ بالجلسة لا بالصلاحية، وكلُّ `hr.*`
+  // للمدير — فأيُّ صلاحيةٍ هنا تُخفي البندَ عمّن بُني له. ولا يُسرَّب للعميل: قائمتُه
+  // بيضاءُ صارمةٌ في `ClickUpSidebar` والخادمُ يردّه 404 — حارسان مستقلّان.
+  // و`featureGate` إلزاميّة: بلا الميزة يردّ `EnsureHrEnabled` بـ403، وبندُ قائمةٍ يَعِد
+  // بما يرفضه الخادمُ هو عينُ الفخّ الذي وثّقه تعليقُ بند «الإجازات والغياب» أدناه.
+  { icon: IdCard, label: 'ملفّي الوظيفيّ', path: '/my-hr', permission: null, featureGate: 'hr' },
   { icon: FileText, label: 'قضاياي', path: '/my-cases', permission: null, roles: ['client'] },
   // بوابة المنشأة — متابعة العميل لوثائق منشأته وموظفيها (خلف establishment_portal_enabled)
   { icon: Landmark, label: 'منشأتي', path: '/my-establishment', permission: null, roles: ['client'], featureGate: 'establishment_portal', badge: 'جديد' },
@@ -67,7 +75,36 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: Inbox, label: 'صندوق البريد الذكي', path: '/intake-requests', permission: 'legal-services.manage', featureGate: 'email_intake', badge: 'جديد' },
   { icon: FileCheck, label: 'اعتمادات المذكرات', path: '/memos/approvals', permission: 'memos.approve', badge: 'تجريبي' },
   // الموارد البشرية — للمدير فقط (permission: hr.view مبذورة لـ owner/admin حصراً) + خلف بوابة hr_enabled.
-  { icon: UserCog, label: 'الموارد البشرية', path: '/hr', permission: 'hr.view', featureGate: 'hr', badge: 'جديد' },
+  // 🔴 **سُحب وسمُ «جديد»**: الشاشةُ شُحنت في `2026-06-30` (أوّلُ كومِت لـ`HrModule.tsx`) —
+  // ستّةُ أسابيع. ووسمٌ بلا تاريخِ انتهاءٍ لا يشيخ من نفسه، فيصير أثاثاً يُقرأ ولا يُصدَّق،
+  // ويسحب معه مصداقيةَ الأوسمة الباقية. وما بقي عليه الوسمُ شُحن في هذه الدورة فعلاً
+  // (الحضورُ والأجورُ والمسيراتُ والمرجعُ والسلف — ملفّاتُها لم تُكوَّم بعد؛ و«منشأتي»
+  // و«صندوق البريد» في `2026-08-11`). فالحكمُ بتاريخِ الشحن لا بالظنّ.
+  { icon: UserCog, label: 'الموارد البشرية', path: '/hr', permission: 'hr.view', featureGate: 'hr' },
+  // الإجازات والغياب — نفس بوابة hr_enabled وإلّا ظهر البند لمكاتبَ يردّها الباك بـ403.
+  { icon: CalendarOff, label: 'الإجازات والغياب', path: '/hr/leave', permission: 'hr.view', featureGate: 'hr' },
+  // الحضور والانصراف — الصلاحية `hr.attendance.view` **مستقلّة** عن `hr.view` (مَن يرى
+  // الحضور ليس بالضرورة مَن يرى ملفّات الموظفين ورواتبهم)، ونفس بوابة hr_enabled: بلا
+  // الميزة يردّ EnsureHrEnabled بـ403، وبندُ قائمةٍ يَعِد بما يرفضه الخادمُ هو عينُ الفخّ.
+  { icon: Fingerprint, label: 'الحضور والانصراف', path: '/hr/attendance', permission: 'hr.attendance.view', featureGate: 'hr', badge: 'جديد' },
+  // سجلُّ الأجور — بابُ إدخال الراتب. الصلاحيةُ `hr.payroll.view` **مستقلّة** (وحدةُ الرواتب
+  // لها حرّاسُها)، ونفسُ بوّابة hr_enabled: بلا الميزة يردّ EnsureHrEnabled بـ403، وبندُ
+  // قائمةٍ يَعِد بما يرفضه الخادمُ هو عينُ الفخّ. والمبالغُ داخل الشاشة خلف
+  // `hr.compensation.view` — فمن يدير الجاهزيةَ يدخلها ولا يرى ريالاً.
+  { icon: Wallet, label: 'سجل الأجور', path: '/hr/payroll/wages', permission: 'hr.payroll.view', featureGate: 'hr', badge: 'جديد' },
+  // مسيراتُ الرواتب — بوّابتُها `hr_payroll` لا `hr` (كالمرجع النظاميّ أدناه): الخادمُ
+  // يحرس `/hr/payroll/overview` و`/runs` بالعلَم الثالث، فبندٌ خلف `hr` وحدَها يظهر
+  // لمئتَي مكتبٍ ويردّ كلَّ واحدٍ منها بـ403 — وهو عينُ الفخّ الذي يحذّر منه سطرُ الحضور.
+  { icon: FileSpreadsheet, label: 'مسيرات الرواتب', path: '/hr/payroll', permission: 'hr.payroll.view', featureGate: 'hr_payroll', badge: 'جديد' },
+  // المرجعُ النظاميّ — بوّابتُه `hr_payroll` لا `hr`: الخادمُ يحرسه بالعلَم الثالث
+  // (hr_payroll_enabled) وافتراضُه مطفأ. فبندٌ خلف `hr` وحدَها يظهر لـ٢٢٢ مكتباً ويردّ
+  // كلَّ واحدٍ منها بـ403 — وهو عينُ الفخّ الذي حذّر منه سطرُ الحضور أعلاه.
+  { icon: Scale, label: 'المرجع النظامي', path: '/hr/payroll/rules', permission: 'hr.payroll.view', featureGate: 'hr_payroll', badge: 'جديد' },
+  // السلفُ والجزاءات — بوّابةُ `hr_payroll` نفسُها: مساراتُهما داخل مجموعةٍ يحرسها العلَمُ
+  // الثالث على الخادم. والسلفُ بـ`hr.payroll.view` (الشاشةُ تعرض دَيناً ويُدار المنحُ داخلها
+  // خلف صلاحيته)، والجزاءاتُ بـ`hr.penalty.manage` كلُّها — فبندٌ يَعِد بما يرفضه الخادمُ
+  // هو عينُ الفخّ الذي حذّر منه سطرُ الحضور أعلاه.
+  { icon: HandCoins, label: 'السلف والجزاءات', path: '/hr/payroll/advances', permission: 'hr.payroll.view', featureGate: 'hr_payroll', badge: 'جديد' },
   { icon: QrCode, label: 'الفوترة الإلكترونية', path: '/zatca', permission: 'billing.invoices.manage', featureGate: 'zatca' },
   { icon: Lightbulb, label: 'الملاحظات', path: '/feedback', permission: 'feedback.submit', badge: 'مؤقتة' },
 ];

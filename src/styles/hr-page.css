@@ -6,121 +6,29 @@
    ==================================================== */
 
 /* ---------- الإطار العام ---------- */
-.hr-page {
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 64px);
-  min-height: 0;
-  overflow: hidden;
-  background: var(--dashboard-bg, var(--color-background));
-  color: var(--color-text);
-}
+/* حُذفت `.hr-page` و`.hr-layout`: الجذرُ صار `.hrl-page` + `.hrl-layout`
+   (hr-leave.css §١٢-أ) مع انتقال القائمة إلى بدائيّات `hrl-*`. وبها سرت كتلةُ
+   الجوّال المنطقيةُ (max-width:1023px) التي تُكدّس القائمةَ فوق المسرح. */
 
-/* شريط علوي ثابت */
-.hr-topbar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 11px 18px;
-  background: var(--dashboard-card);
-  border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-.hr-topbar__title {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--color-heading);
-}
-.hr-topbar__title svg { color: var(--law-navy); }
-.hr-topbar__count {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  background: var(--quiet-gray-100);
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-body.dark .hr-topbar__count { background: var(--quiet-gray-200); }
-.hr-topbar__spacer { flex: 1; }
+/* حُذف `.hr-topbar` و`__title` و`__title svg` و`__count` و`body.dark __count`
+   و`__spacer` (م٩ — ٢٩ سطراً): شريطٌ علويٌّ كاملٌ **بلا مستدعٍ واحد** في تاريخ
+   الوحدة كلِّه؛ تحقُّقٌ بالبحث في كامل `src/` ⇒ صفرُ نتيجةٍ خارج هذا الملفّ،
+   والصنفُ **غيرُ مبنيٍّ بقالبٍ نصّيّ** فلا فخَّ فيه (خلافاً لـ`.hr-stat--*`).
+   سابقتُه سابقةُ `.hr-stage__head-actions`: أنماطٌ صُمِّمت لعنصرٍ لم يأتِ قطّ. */
 
 /* ---------- التخطيط الثنائي ---------- */
-.hr-layout {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  position: relative;
-}
+/* حُذفت القائمةُ اليمنى كلُّها (`.hr-roster*` · `.hr-emp*` · `.hr-avatar`) — انتقلت إلى
+   `.hrl-side` + `.hrl-search` + `.hrl-chips` + `.hrl-emplist` (hr-leave.css §١٢-د).
+   ومعها مات **العطبُ الفيزيائيُّ الوحيد** في الملفّ: عدسةٌ بـ`inset-inline-start`
+   منطقيّةٍ فوق حقلٍ حشوُه فيزيائيٌّ ⇒ الأيقونةُ تركب النصَّ في RTL و٣٤px تُهدَر
+   مقابلها. في `.hrl-search` العدسةُ **عنصرٌ شقيقٌ** فتنتفي المشكلةُ بنيوياً. */
 
-/* العمود اليمين: قائمة المنسوبين */
-.hr-roster {
-  width: 300px;
-  flex-shrink: 0;
-  border-inline-end: 1px solid var(--color-border);
-  background: var(--dashboard-card);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.hr-roster__head {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-.hr-roster__overview {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 9px 11px;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
-  transition: border-color .12s, background .12s;
-}
-.hr-roster__overview svg { color: var(--law-navy); }
-.hr-roster__overview:hover { border-color: var(--law-navy); }
-.hr-roster__overview--active {
-  background: var(--law-navy-light);
-  border-color: transparent;
-  color: var(--law-navy);
-}
-.hr-roster__overview--active svg { color: var(--law-navy); }
+/* حُذف `.hr-roster__filter` (م٧): كان آخرُ مستدعيه مبدّلَ «مباشرة/مغادرة» في
+   `OnboardingTab`، وقد لبس شرائحَ `hrl-chip[aria-pressed]` داخل `hrl-block__a`
+   فسقط الغلافُ وسقط معه `style={{ maxWidth: 260 }}`. تحقُّقٌ بالبحث: صفرُ مستدعٍ.
 
-.hr-roster__search { position: relative; }
-.hr-roster__search svg {
-  position: absolute; inset-inline-start: 10px; top: 50%; transform: translateY(-50%);
-  color: var(--color-text-secondary); pointer-events: none;
-}
-.hr-roster__search input {
-  width: 100%;
-  padding: 8px 12px 8px 34px;
-  font-family: inherit; font-size: 13px;
-  background: var(--quiet-gray-50);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  color: var(--color-text);
-  outline: none;
-}
-body.dark .hr-roster__search input { background: var(--quiet-gray-100); }
-.hr-roster__search input:focus { border-color: var(--law-navy); background: var(--dashboard-card); }
-
-.hr-roster__filter {
-  display: flex;
-  gap: 4px;
-}
+   ⏳ دَينٌ معلَنٌ: `.hr-chip` و`--active` **يبقيان** — `LeaveBalancePanel:185`
+   يستعملهما لشرائح أنواع الإجازة. يموتان حين يهاجر ذلك اللوح، لا قبله. */
 .hr-chip {
   flex: 1;
   padding: 5px 4px;
@@ -137,87 +45,18 @@ body.dark .hr-roster__search input { background: var(--quiet-gray-100); }
 .hr-chip--active {
   background: var(--law-navy);
   border-color: var(--law-navy);
-  color: #fff;
-}
-
-.hr-roster__list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-/* عنصر منسوب في القائمة */
-.hr-emp {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 9px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: inherit;
-  text-align: start;
-  transition: background .12s;
-}
-.hr-emp:hover { background: var(--quiet-gray-50); }
-body.dark .hr-emp:hover { background: var(--quiet-gray-100); }
-.hr-emp--active { background: var(--law-navy-light); }
-body.dark .hr-emp--active { background: rgba(14, 83, 120, 0.16); }
-
-.hr-emp__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.hr-emp__nm {
-  font-size: 13px; font-weight: 600; color: var(--color-heading);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.hr-emp--active .hr-emp__nm { color: var(--law-navy); }
-.hr-emp__sub {
-  font-size: 11px; color: var(--color-text-secondary);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.hr-emp__side { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.hr-emp__verify { display: inline-flex; }
-
-/* الصورة الرمزية */
-.hr-avatar {
-  width: 34px; height: 34px; border-radius: 9px; flex: none;
-  display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff;
-  background: var(--law-navy);
+  color: var(--text-on-inverse);
 }
 
 /* ---------- العمود اليسار: المسرح ---------- */
-.hr-stage {
-  flex: 1;
-  min-width: 0;
-  overflow-y: auto;
-  background: var(--dashboard-bg, var(--color-background));
-}
+/* حُذفت `.hr-stage`: المسرحُ صار `.hrl-stage` (hr-leave.css §١٢-أ) — وهو نفسُه عموداً
+   مرناً مغلقاً بلا تمرير، ويحمل الفاصلَ المنطقيَّ الوحيد بينه وبين القائمة. */
 
-/* رأس المسرح */
-.hr-stage__head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--dashboard-card);
-  position: sticky;
-  top: 0;
-  z-index: 5;
-}
-.hr-stage__head-icon {
-  width: 38px; height: 38px; border-radius: 10px; flex: none;
-  display: grid; place-items: center;
-  background: var(--law-navy-light); color: var(--law-navy);
-}
-.hr-stage__head-titles { display: flex; flex-direction: column; min-width: 0; }
-.hr-stage__head-title { font-size: 16px; font-weight: 700; color: var(--color-heading); line-height: 1.25; }
-.hr-stage__head-sub { font-size: 12px; color: var(--color-text-secondary); }
-.hr-stage__head-actions { margin-inline-start: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+/* حُذفت ترويسةُ المسرح `.hr-stage__head*` كاملةً: مربّعٌ كحليٌّ 38px + `<div>` بـ16px/700
+   يقول «لوحة الموارد البشرية» فوق سطرٍ يقول «إحصائيات المكتب…» — عنوانٌ **بلا عنصرٍ
+   دلاليّ** يشغل صفّاً كاملاً ولا يحمل فعلاً. حلّ محلَّه `hrl-head` بـ`<h1>` حقيقيّ يحمل
+   أفعالَ المكتب في الصفّ نفسِه ⇒ صفٌّ كاملٌ يُستردّ. وماتت معه `.hr-stage__head-actions`
+   التي عاشت سطراً معرَّفاً **لا يُرسَم أبداً** — CSS صُمِّم ليحمل أزراراً لم تأتِ قطّ. */
 
 /* ---------- أزرار ---------- */
 .hr-btn {
@@ -229,8 +68,21 @@ body.dark .hr-emp--active { background: rgba(14, 83, 120, 0.16); }
   cursor: pointer; white-space: nowrap; transition: border-color .15s, background .15s;
 }
 .hr-btn:hover { border-color: var(--law-navy); }
-.hr-btn--primary { background: var(--law-navy); color: #fff; border-color: var(--law-navy); }
-.hr-btn--primary:hover { filter: brightness(1.1); }
+.hr-btn--primary { background: var(--law-navy); color: var(--text-on-inverse); border-color: var(--law-navy); }
+/* التمريرُ يغمق بمتغيّرٍ معرَّفٍ في الثيمات الأربعة (dashboard-theme.css:12, :114, :151)
+   بدل مؤثّر الإضاءة — المؤثّراتُ البصريةُ محظورةٌ في هذا النمط. */
+.hr-btn--primary:hover { background: var(--law-navy-dark); border-color: var(--law-navy-dark); }
+
+/* ⚠️ فخُّ الزوج المعكوس: `--text-on-inverse` مصنوعٌ ليقابل `--surface-inverse`
+   (dashboard-theme.css:192-196)، والسطحان أدناه خلفيّتُهما `--law-navy`.
+   في الثيمات الثلاثة الأخرى يتّفق الطرفان (نصٌّ فاتحٌ على حبرٍ داكن)، أمّا في
+   الداكن فينقلب مقياسُ quiet-gray فيصير النصُّ داكناً بينما يفتحّ `--law-navy`
+   إلى أزرقَ متوسّط — فيهبط التباينُ إلى نحو 2.8:1 ويصير الزرُّ غيرَ مقروء.
+   يُقلب الطرفُ النصّيُّ وحدَه هنا فيعود إلى نحو 6:1 كما كان قبل التصحيح.
+   (سقط `.hr-avatar` من القائمة مع سقوط القائمة اليمنى في م٥.) */
+body.dark .hr-chip--active,
+body.dark .hr-btn--primary { color: var(--quiet-gray-900); }
+
 .hr-btn--sm { padding: 6px 10px; font-size: 12px; }
 .hr-btn:disabled { opacity: .55; cursor: not-allowed; }
 
@@ -241,217 +93,53 @@ body.dark .hr-emp--active { background: rgba(14, 83, 120, 0.16); }
 }
 .hr-icon-btn:hover { border-color: var(--law-navy); color: var(--law-navy); }
 
-/* ---------- لوحة الإحصائيات العامة ---------- */
-.hr-ov { padding: 16px; display: flex; flex-direction: column; gap: 16px; max-width: 100%; box-sizing: border-box; }
+/* ---------- لوحة الإحصائيات العامة — حُذفت كلُّها (م٦) ----------
+   سقطت مع `HrOverview`: `.hr-ov` و`__top` و`__grid` و`__col` و`__services` و`__section`
+   · `.hr-panel*` · `.hr-chart-*` (الدونات) · `.hr-legend*` · `.hr-stat-grid` و`.hr-stat*`
+   بمشتقّاتها الأربعة · `.hr-dist*` · `.hr-office__head|__name`.
 
-/* صف علوي: 4 بطاقات كعواميد متساوية */
-.hr-ov__top {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
-@media (max-width: 1024px) { .hr-ov__top { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 480px) { .hr-ov__top { grid-template-columns: 1fr; } }
+   السببُ ليس ذوقاً: ثلاثةٌ من ثمانية صناديقَ كانت تعرض **أربعةَ أعدادٍ نفسَها بثلاث
+   طرائق** (بطاقاتٌ ثمّ دونات ثمّ أشرطةُ توزيع)، وسبعةٌ منها بلا زرّ. حلّ محلَّها
+   `pages/hr/board/` على بدائيّات `hrl-*` — بصفرِ صنفٍ جديد.
 
-/* شبكة محتوى لوحة التحكم ERP */
-.hr-ov__grid {
-  display: grid;
-  grid-template-columns: 280px 1fr 1fr;
-  gap: 16px;
-  align-items: stretch;
-}
-@media (max-width: 1200px) { .hr-ov__grid { grid-template-columns: 260px 1fr 1fr; } }
-@media (max-width: 1024px) { .hr-ov__grid { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 768px) { .hr-ov__grid { grid-template-columns: 1fr; } }
+   🩸 **`.hr-stat--navy|green|gold|orange` كانت تبدو ميتةً للبحث النصّيّ** لأنها تُبنى
+   بقالبٍ نصّيّ `` `hr-stat hr-stat--${cls}` `` — فخُّ الحذف المعروف. حذفُها آمنٌ هنا
+   **فقط لأنّ `StatCard` نفسَه حُذف** في الحركة نفسِها؛ ولو بقي لبقيت.
 
-.hr-ov__col {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  height: 100%;
-}
-
-.hr-panel {
-  background: var(--dashboard-card);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 16px;
-}
-.hr-panel__title {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 12px; font-weight: 700; color: var(--color-text-secondary);
-  text-transform: uppercase; letter-spacing: .03em; margin-bottom: 12px;
-}
-.hr-panel__title svg { color: var(--law-navy); }
-
-/* الرسم الدائري */
-.hr-chart-wrap { position: relative; width: 100%; height: 150px; display: grid; place-items: center; }
-.hr-chart-center {
-  position: absolute; inset: 0; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; pointer-events: none;
-}
-.hr-chart-center__val { font-size: 24px; font-weight: 800; color: var(--color-heading); line-height: 1; }
-.hr-chart-center__lbl { font-size: 11px; color: var(--color-text-secondary); margin-top: 3px; font-weight: 500; }
-
-.hr-legend { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-.hr-legend__row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
-.hr-legend__dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
-.hr-legend__name { color: var(--color-text-secondary); }
-.hr-legend__val { margin-inline-start: auto; font-weight: 700; color: var(--color-text); font-variant-numeric: tabular-nums; }
-
-/* بطاقات الإحصاء */
-.hr-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-.hr-stat {
-  display: flex; align-items: center; gap: 11px;
-  padding: 13px 14px; border-radius: 10px;
-  border: 1px solid var(--color-border);
-}
-.hr-stat__icon { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; flex: none; }
-.hr-stat__info { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
-.hr-stat__num { font-size: 21px; font-weight: 800; line-height: 1.1; color: var(--color-heading); font-variant-numeric: tabular-nums; }
-.hr-stat__label { font-size: 12px; font-weight: 500; color: var(--color-text-secondary); }
-
-.hr-stat--navy { background: var(--law-navy-light); border-color: color-mix(in srgb, var(--law-navy) 12%, transparent); }
-.hr-stat--navy .hr-stat__icon { background: color-mix(in srgb, var(--law-navy) 12%, transparent); color: var(--law-navy); }
-.hr-stat--green { background: var(--status-green-light); border-color: color-mix(in srgb, var(--status-green) 14%, transparent); }
-.hr-stat--green .hr-stat__icon { background: color-mix(in srgb, var(--status-green) 12%, transparent); color: var(--status-green); }
-.hr-stat--gold { background: color-mix(in srgb, var(--law-gold) 12%, transparent); border-color: color-mix(in srgb, var(--law-gold) 22%, transparent); }
-.hr-stat--gold .hr-stat__icon { background: color-mix(in srgb, var(--law-gold) 20%, transparent); color: var(--law-gold); }
-.hr-stat--orange { background: var(--status-orange-light); border-color: color-mix(in srgb, var(--status-orange) 14%, transparent); }
-.hr-stat--orange .hr-stat__icon { background: color-mix(in srgb, var(--status-orange) 12%, transparent); color: var(--status-orange); }
-
-/* قسم الخدمات */
-.hr-ov__services { display: flex; flex-wrap: wrap; gap: 10px; }
-
-/* قسم بيانات/قوائم عامة */
-.hr-ov__section { display: flex; flex-direction: column; gap: 10px; }
+   🩸 **استثناءٌ يُحفظ ولا يُلمس**: `.hr-ov__section-label` أدناه **حيّةٌ** — يستعملها
+   `EditEmployeeModal` ثلاثَ مرّات. يتيمةُ الاسم بعد موت `.hr-ov`، لكنّ حذفَها يكسر
+   مودالاً مشحوناً. تُعاد تسميتُها حين يهاجر المودال، لا قبله. */
 .hr-ov__section-label { font-size: 13px; font-weight: 700; color: var(--color-heading); }
 
-/* صفّ توزيع بسيط */
-.hr-dist { display: flex; flex-direction: column; gap: 6px; }
-.hr-dist__row { display: grid; grid-template-columns: 120px 1fr auto; align-items: center; gap: 10px; font-size: 12.5px; }
-.hr-dist__name { color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hr-dist__bar { height: 7px; border-radius: 4px; background: var(--quiet-gray-100); overflow: hidden; }
-body.dark .hr-dist__bar { background: var(--quiet-gray-200); }
-.hr-dist__fill { height: 100%; border-radius: 4px; background: var(--law-navy); }
-.hr-dist__val { font-weight: 700; color: var(--color-text); font-variant-numeric: tabular-nums; min-width: 28px; text-align: end; }
+/* ---------- بدائيّةُ «الصندوق الطافي» — حُذفت كلُّها (م٧) ----------
+   `.hr-contract*` · `.hr-dbody` و`--single` · `.hr-sec` و`__h` و`__t` و`__b`
+   (و`body.dark .hr-sec__h`) · `.hr-kv` · `.hr-doc*` (صفوفُ المستندات).
 
-/* عقود العمل (A1) */
-.hr-contract { padding: 12px 0; border-bottom: 1px solid var(--color-border); }
-.hr-contract:last-child { border-bottom: none; }
-.hr-contract__top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-.hr-contract__title { font-size: 13px; font-weight: 700; color: var(--color-heading); }
-.hr-contract__actions { margin-inline-start: auto; display: flex; gap: 6px; }
-.hr-contract__actions .hr-icon-btn { width: 30px; height: 30px; }
+   الثلاثةُ المهاجِرون (`ContractsTab` · `DocumentsTab` · `OnboardingTab`) صاروا
+   يُصيّرون `section.hrl-block` مباشرةً برأسٍ `<h2 class="hrl-block__t hrl-h2">`،
+   والسجلاتُ فيها صفوفُ `hrl-row` بأدواتٍ في `hrl-tools` — فسقط الحدُّ والاستدارةُ ١٢
+   وشبكةُ `repeat(auto-fill, minmax(300px,1fr))` بفجوتها ١٤px، وهي بعينها «المربّعات
+   المتفرّقة». وسقطت معها القواعدُ الجسريّةُ الستُّ من `hr-leave.css §١٣`.
 
-/* ---------- ملف الموظف 360 (Dossier) ---------- */
-.hr-dossier { display: flex; flex-direction: column; }
+   وسقط `.hr-kv` وحدَه دون `hrl-kv`: الأخيرةُ أكثفُ (12.5px وفجوةُ 4px/12px) وتعرف
+   `dd.is-empty` فتقرأ الغيابَ غياباً. و`.hr-doc__ic` كان يقرأ لونَه من `style` مبنيّاً
+   على خريطةِ ألوانٍ في JS — سبعُ سلاسل ماتت مع الحقل `color` في `DOC_TYPES`.
 
-.hr-dossier__head {
-  display: flex; align-items: center; gap: 15px;
-  padding: 18px 20px; flex-wrap: wrap;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--dashboard-card);
-}
-.hr-dossier__av { width: 56px; height: 56px; border-radius: 13px; font-size: 21px; }
-.hr-dossier__id { min-width: 0; }
-.hr-dossier__nm { font-size: 18px; font-weight: 800; color: var(--color-heading); line-height: 1.2; }
-.hr-dossier__rl { font-size: 13px; color: var(--color-text-secondary); margin-top: 2px; }
-.hr-dossier__badges { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
-.hr-dossier__actions { margin-inline-start: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+   تحقُّقٌ قبل الحذف: بحثٌ في كامل ملفّات `.ts` و`.tsx` تحت `src` ⇒ **صفرُ مستدعٍ حيّ** لكلٍّ منها
+   (ما بقي مطابقاتٌ داخل تعليقاتٍ توثّق النقل). و`.hr-doctype*` **لا تُمسّ** — اسمُها
+   يشبه `.hr-doc*` وهي حيّةٌ في مودال إضافة مستند.
 
-/* تبويبات داخلية */
-.hr-dtabs {
-  display: flex; gap: 2px; padding: 0 14px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--dashboard-card);
-  overflow-x: auto;
-  position: sticky; top: 0; z-index: 4;
-}
-.hr-dtab {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 12px 13px; font-family: inherit; font-size: 13px; font-weight: 600;
-  color: var(--color-text-secondary); background: none; border: none;
-  border-bottom: 2.5px solid transparent; cursor: pointer; white-space: nowrap;
-}
-.hr-dtab:hover { color: var(--color-text); }
-.hr-dtab--active { color: var(--law-navy); border-bottom-color: var(--law-navy); }
-.hr-dtab svg { color: currentColor; }
+   حُذف قبلها `.hr-strip*`: حلّ محلَّه `hrl-kv` + `hrl-fact` + الرصيف في `IdentityBlock`. */
 
-.hr-dbody {
-  padding: 18px 20px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 14px;
-  align-content: start;
-}
-.hr-dbody--single { grid-template-columns: minmax(0, 640px); }
+/* حُذف `.hr-locked` — **الصنفُ الذي خدم الحالاتِ الأربعَ بأيقونةٍ ذهبيةٍ واحدة**:
+   التحميلَ والفارغَ والخطأَ والمحميّ معاً. صارت لكلِّ حالةٍ صورتُها: هياكلُ
+   `hrl-skel` · سطرُ `EmptyLine` بفعله · قفلُ `hrl-state--locked` يسمّي الصلاحية
+   حرفياً كما في `app/Enums/Permission.php` · ومثلثُ `hrl-state--error` الأحمرُ
+   بنصِّ الخادم وزرِّ إعادة المحاولة. */
 
-/* بطاقة قسم */
-.hr-sec {
-  background: var(--dashboard-card);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-.hr-sec__h {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 11px 14px; border-bottom: 1px solid var(--color-border);
-  background: var(--quiet-gray-50);
-}
-body.dark .hr-sec__h { background: var(--quiet-gray-100); }
-.hr-sec__t { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--color-heading); }
-.hr-sec__t svg { color: var(--law-navy); }
-.hr-sec__b { padding: 14px; }
-
-/* جدول مفتاح/قيمة */
-.hr-kv { display: grid; grid-template-columns: auto 1fr; gap: 9px 16px; font-size: 13px; }
-.hr-kv dt { color: var(--color-text-secondary); font-weight: 500; white-space: nowrap; }
-.hr-kv dd { color: var(--color-text); font-weight: 600; text-align: start; font-variant-numeric: tabular-nums; word-break: break-word; }
-
-/* شريط التوثيق */
-.hr-strip { display: flex; align-items: center; justify-content: space-between; padding: 13px 15px; border-radius: 10px; margin-bottom: 13px; }
-.hr-strip--g { background: var(--status-green-light); }
-.hr-strip--y { background: color-mix(in srgb, var(--law-gold) 15%, transparent); }
-.hr-strip--r { background: var(--status-red-light); }
-.hr-strip__big { font-size: 20px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-.hr-strip--g .hr-strip__big { color: var(--status-green); }
-.hr-strip--y .hr-strip__big { color: var(--law-gold); }
-.hr-strip--r .hr-strip__big { color: var(--status-red); }
-.hr-strip__l { font-size: 11.5px; color: var(--color-text-secondary); font-weight: 600; margin-top: 3px; }
-
-/* محتوى محمي/فارغ */
-.hr-locked { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--color-text-secondary); padding: 22px; justify-content: center; text-align: center; line-height: 1.6; }
-.hr-locked svg { color: var(--law-gold); flex: none; }
-
-/* صفوف المستندات */
-.hr-doc { display: flex; align-items: center; gap: 11px; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
-.hr-doc:last-child { border-bottom: none; }
-.hr-doc__ic { width: 34px; height: 34px; border-radius: 8px; background: var(--quiet-gray-100); display: grid; place-items: center; color: var(--law-navy); flex: none; }
-body.dark .hr-doc__ic { background: var(--quiet-gray-200); }
-.hr-doc__main { flex: 1; min-width: 0; }
-.hr-doc__nm { font-weight: 600; color: var(--color-heading); font-size: 13px; }
-.hr-doc__m { font-size: 11.5px; color: var(--color-text-secondary); }
-
-/* صفوف الإجازات/الطلبات */
-.hr-leave { display: flex; align-items: center; gap: 11px; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
-.hr-leave:last-child { border-bottom: none; }
-.hr-leave__ic { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; flex: none; background: var(--quiet-gray-100); color: var(--color-text-secondary); }
-body.dark .hr-leave__ic { background: var(--quiet-gray-200); }
-.hr-leave__main { flex: 1; min-width: 0; }
-.hr-leave__t { font-size: 13px; font-weight: 600; color: var(--color-heading); }
-.hr-leave__m { font-size: 11.5px; color: var(--color-text-secondary); }
-
-/* بطاقتا رصيد الإجازة */
-.hr-balance { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-.hr-balance__cell { padding: 13px; border-radius: 10px; background: var(--quiet-gray-50); text-align: center; }
-body.dark .hr-balance__cell { background: var(--quiet-gray-100); }
-.hr-balance__num { font-size: 22px; font-weight: 800; color: var(--law-navy); line-height: 1; font-variant-numeric: tabular-nums; }
-.hr-balance__lbl { font-size: 11.5px; color: var(--color-text-secondary); margin-top: 4px; }
+/* حُذفت `.hr-leave*` و`.hr-balance*`: مستدعوهما كانوا كتلتَي الإجازات في HrModule
+   (سجلُّ admin_requests وبطاقتا العمودين المتقاعدين)، وقد حلّ محلَّهما LeaveTabPanel
+   بالنمط الملتصق. لا مستدعيَ لهما اليوم في src/ (تحقُّقٌ بالبحث). */
 
 /* ---------- شارات وحالات مشتركة ---------- */
 .hr-badge {
@@ -466,26 +154,30 @@ body.dark .hr-balance__cell { background: var(--quiet-gray-100); }
 .hr-badge--gray  { background: var(--quiet-gray-100); color: var(--color-text-secondary); }
 body.dark .hr-badge--gray { background: var(--quiet-gray-200); }
 
-.hr-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--color-text-secondary); }
+/* حُذف `.hr-pill` (م٩): بحثٌ نصّيٌّ في كامل `src` ⇒ **مطابقةٌ واحدةٌ وحيدة، وهي تعريفُه
+   هنا**. لا مستدعيَ له في أيّ ملفّ، ولا يُبنى بقالبٍ نصّيّ (اسمٌ مفردٌ بلا لاحقة)،
+   فحذفُه بلا فخّ. حلّ محلَّه في كلّ موضعٍ `hrl-fact` أو `hrl-badge`. */
+
+/* نقطةُ حالةٍ 7px — حيّةٌ في صفوف القائمة اليمنى (`HrModule`)، ولونُها من البيانات. */
 .hr-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 
-/* حالات فارغة / تحميل */
-.hr-state { display: grid; place-items: center; gap: 12px; padding: 60px 20px; text-align: center; color: var(--color-text-secondary); }
-.hr-state svg { width: 42px; height: 42px; color: var(--color-border); }
-.hr-state__title { font-size: 15px; font-weight: 600; color: var(--color-heading); }
-.hr-skeleton { height: 50px; border-radius: 8px; background: var(--quiet-gray-100); animation: hr-pulse 1.5s infinite; }
-body.dark .hr-skeleton { background: var(--quiet-gray-200); }
-@keyframes hr-pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+/* حُذفت `.hr-state*` و`.hr-skeleton` و`@keyframes hr-pulse`: حلّت محلَّها
+   `hrl-state--loading|empty|error` بهياكلَ بارتفاع الصفّ الحقيقيّ. ومنها ماتت
+   `.hr-state svg { color: var(--color-border) }` — سببُ **أيقونةِ الخطأ الرماديةِ
+   بلون الحدود** في كلّ حالات الوحدة. */
 
-/* ترقيم القائمة */
-.hr-roster__pager { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 9px; border-top: 1px solid var(--color-border); flex-shrink: 0; font-size: 12px; color: var(--color-text-secondary); }
+/* ترقيم القائمة — `.hr-roster__pager` حُذف (حلّ محلَّه `.hrl-pager`).
+   ⏳ دَينٌ معلَنٌ: `.hr-pg-btn*` باقٍ لأنّ `LeaveLedgerDrawer:363, :373` يستعمله. */
 .hr-pg-btn { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--color-border); background: var(--dashboard-card); border-radius: 6px; cursor: pointer; color: var(--color-text); }
 .hr-pg-btn:hover:not(:disabled) { border-color: var(--law-navy); color: var(--law-navy); }
 .hr-pg-btn:disabled { opacity: .4; cursor: not-allowed; }
 
-/* ---------- المودال (إضافة منسوب / تعديل) ---------- */
-.hr-modal-overlay { position: fixed; inset: 0; background: rgba(10,25,47,.5); backdrop-filter: blur(4px); display: grid; place-items: center; z-index: 1000; padding: 20px; }
-.hr-modal { background: var(--dashboard-card, var(--color-surface)); border: 1px solid var(--color-border); border-radius: 14px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 42px rgba(10,25,47,.18); }
+/* ---------- المودال (إضافة منسوب / تعديل) ----------
+   فلات صرف: التراكبُ color-mix فوق متغيّر (نفسُ قيمة .hrl-modal-overlay في
+   hr-leave.css:977)، بلا ضبابٍ خلفيٍّ وبلا ظلٍّ وبلا استدارة. التصحيحُ في
+   المصدر لا بالصنف، لأنّ كلَّ مودالات الوحدة تشحن .hr-modal-overlay مباشرةً. */
+.hr-modal-overlay { position: fixed; inset: 0; background: color-mix(in srgb, var(--law-navy) 45%, transparent); display: grid; place-items: center; z-index: 1000; padding: 20px; }
+.hr-modal { background: var(--dashboard-card, var(--color-surface)); border: 1px solid var(--color-border); border-radius: 0; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
 .hr-modal__h { display: flex; align-items: center; justify-content: space-between; padding: 15px 18px; border-bottom: 1px solid var(--color-border); }
 .hr-modal__h h3 { font-size: 16px; font-weight: 700; color: var(--color-heading); }
 .hr-modal__b { padding: 18px; display: grid; gap: 14px; }
@@ -515,34 +207,30 @@ body.dark .hr-skeleton { background: var(--quiet-gray-200); }
 .hr-doctype__ic { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: var(--quiet-gray-100); }
 body.dark .hr-doctype__ic { background: var(--quiet-gray-200); }
 
-/* شريط تقدّم الرفع */
-.hr-upload-progress { height: 6px; border-radius: 3px; background: var(--quiet-gray-100); overflow: hidden; }
-body.dark .hr-upload-progress { background: var(--quiet-gray-200); }
-.hr-upload-progress__bar { height: 100%; background: var(--law-navy); transition: width .2s; }
+/* حُذف `.hr-upload-progress*` و`.hr-onb-progress*` (م٧): مستدعياهما — شريطُ رفع
+   المستند وشريطُ اكتمال المباشرة — صارا `hrl-meter` بخانةٍ واحدة، وهي البدائيّةُ
+   نفسُها التي يستعملها مقياسُ م.١١٧ فلا مقياسان في وحدةٍ واحدة. ومعهما مات
+   `style={{ width, background }}` الذي كان يحقن اللونَ والعرضَ من JSX:
+   الامتلاءُ الآن متغيّرٌ (`--hrl-f`) والإنجازُ صنفٌ (`hrl-meter--done`).
 
-/* المباشرة/المغادرة (A3) */
-.hr-onb-progress { margin-bottom: 14px; }
-.hr-onb-progress__top { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 5px; }
-.hr-check-row { display: flex; align-items: center; gap: 11px; padding: 9px 0; border-bottom: 1px solid var(--color-border); }
-.hr-check-row:last-child { border-bottom: none; }
+   وحُذف `.hr-check-row` (حلّ محلَّه `hrl-row` بارتفاع 44px وحدٍّ داخليّ).
+   ⚠️ `.hr-check-box*` و`.hr-check-label*` **باقيتان وحيّتان** داخل صفوف `hrl-row`. */
 .hr-check-box {
   width: 22px; height: 22px; border-radius: 6px; flex: none;
   border: 1.5px solid var(--color-border); background: transparent; cursor: pointer;
-  display: grid; place-items: center; color: #fff; transition: all .12s;
+  display: grid; place-items: center; color: var(--text-on-inverse); transition: all .12s;
 }
 .hr-check-box:hover:not(:disabled) { border-color: var(--law-navy); }
 .hr-check-box--done { background: var(--status-green); border-color: var(--status-green); }
 .hr-check-box:disabled { cursor: default; }
-.hr-check-label { flex: 1; font-size: 13px; color: var(--color-text); }
+/* 12.5px لا 13px: الوسمُ يعيش الآن داخل صفّ `hrl-row` (12.5px)، ومقاسان في صفٍّ
+   واحدٍ يكسران الإيقاعَ الذي عليه يقوم الجدارُ كلُّه. */
+.hr-check-label { flex: 1; min-width: 0; font-size: 12.5px; color: var(--color-text); }
 .hr-check-label--done { text-decoration: line-through; color: var(--color-text-secondary); }
 .hr-icon-btn--sm { width: 28px; height: 28px; }
-.hr-check-add { display: flex; gap: 8px; margin-top: 12px; }
-.hr-check-add input {
-  flex: 1; padding: 8px 11px; font-family: inherit; font-size: 13px;
-  background: var(--color-background, var(--color-surface));
-  border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text); outline: none;
-}
-.hr-check-add input:focus { border-color: var(--law-navy); }
+
+/* حُذف `.hr-check-add` وحقلُه: حلّ محلَّهما قالبُ الإدخال الملتصق `.hrl-search`
+   (حقلٌ بلا حدٍّ ولا استدارة، وزرٌّ ملتصقٌ به) فوق القائمة لا تحتها. */
 
 /* التقويم الرسمي (B1) */
 .hr-holiday-bar { display: flex; gap: 10px; align-items: center; }
@@ -557,96 +245,11 @@ body.dark .hr-upload-progress { background: var(--quiet-gray-200); }
 .hr-holiday-add { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
 .hr-holiday-add input:first-of-type { flex: 1; }
 
-/* بطاقة المكتب */
-.hr-office__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
-.hr-office__name { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--color-heading); }
-.hr-office__name svg { color: var(--law-navy); }
+/* حُذفت `.hr-office__head|__name`: بطاقةُ المكتب صارت `hrl-block` + `hrl-kv` في رصيف
+   اللوحة (`board/BoardOfficeCard.tsx`) — بطاقةُ تعريفٍ لا لوحةَ قياس. */
 
 /* ---------- استجابة الشاشات ---------- */
-@media (max-width: 860px) {
-  .hr-page { height: auto; min-height: calc(100vh - 64px); overflow: visible; }
-  .hr-layout { flex-direction: column; overflow: visible; }
-  .hr-roster {
-    width: 100%;
-    border-inline-end: none;
-    border-bottom: 1px solid var(--color-border);
-    max-height: 42vh;
-  }
-  .hr-stage { overflow: visible; }
-  .hr-stage__head { position: static; }
-  .hr-dtabs { position: static; }
-}
-
-/* ====================================================
-   تنسيق لوحة الموظف ERP (Employee Dossier Dashboard)
-   عرض كامل البيانات في صفحة واحدة مقسمة على أعمدة للشاشات الكبيرة
-   ==================================================== */
-.hr-dossier {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.hr-dossier__mobile-tabs {
-  flex: 1;
-  overflow-y: auto;
-}
-
-@media (min-width: 1025px) {
-  .hr-dtabs {
-    display: none !important;
-  }
-  .hr-dossier__mobile-tabs {
-    display: none !important;
-  }
-  .hr-dossier__desktop-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    padding: 16px 20px;
-    align-items: start;
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-  }
-  .hr-dossier__desktop-col {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  
-  /* تجاوزات لتداخل التبويبات المدمجة كبطاقات ERP متناسقة */
-  .hr-dossier__desktop-grid .hr-dbody {
-    padding: 0 !important;
-    display: block !important;
-    width: 100% !important;
-  }
-  .hr-dossier__desktop-grid .hr-tab-pane {
-    padding: 0 !important;
-  }
-  .hr-dossier__desktop-grid .hr-sec {
-    box-shadow: none;
-  }
-}
-
-@media (min-width: 1025px) and (max-width: 1399px) {
-  .hr-dossier__desktop-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .hr-dossier__desktop-col:nth-child(3) {
-    grid-column: span 2;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    align-items: start;
-  }
-}
-
-@media (max-width: 1024px) {
-  .hr-dossier__desktop-grid {
-    display: none !important;
-  }
-  .hr-dossier__mobile-tabs {
-    display: block;
-  }
-}
+/* حُذفت كتلةُ `@media (max-width: 860px)` كاملةً: كانت تُكدّس `.hr-roster` فوق
+   `.hr-stage` على الجوّال، وقد سقط الصنفان معاً في م٥. البديلُ حيٌّ في
+   `hr-leave.css` (max-width: 1023px) يخاطب `.hrl-layout`/`.hrl-side`/`.hrl-stage`،
+   وعتبتُه أوسعُ (يشمل اللوحيَّ أفقياً) وقياساتُه منطقية. */

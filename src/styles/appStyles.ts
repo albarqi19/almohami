@@ -122,3 +122,20 @@ import './dual-date-input.css';
 import './meeting-form-modal.css';
 import './meetings-workspace.css';
 import './my-day.css';
+import './hr-leave.css';
+import './hr-attendance.css';
+// وحدةُ الرواتب — تمدّ بدائيّاتِ `hrl-*` ولا تُعيد تعريفَ صنفٍ منها، فلا تتعلّق بترتيب
+// الحقن ولا تُنتج تعارضاً في `css:audit`.
+import './hr-payroll.css';
+// مسيرُ التصفية — بدائيّاتُ `hrs-*` وحدَها فوق `hrl-*` و`hrp-*`، بلا إعادةِ تعريفِ صنفٍ
+// منهما، فلا تتعلّق بترتيب الحقن ولا تُنتج تعارضاً في `css:audit`.
+import './hr-settlement.css';
+// صفحةُ الموظف `/my-hr` — بنيةُ أقسامها الثلاثة (`myhr-*`) وحدَها، بلا إعادةِ تعريفِ
+// صنفٍ من `hrl-*`؛ وتأتي بعد `hr-leave.css` لأنها تُلبِس بدائيّاتِه لا تنافسها.
+import './my-hr.css';
+// طلبُ الإجازة الذاتيّ — بدائيّاتُ `myhrq-*` وحدَها فوق `hrl-*` و`myhr-*`، بلا إعادةِ
+// تعريفِ صنفٍ منهما، فلا تتعلّق بترتيب الحقن ولا تُنتج تعارضاً في `css:audit`.
+import './hr-leave-request.css';
+// سطحُ الاعتماد (لوحُ التعارض والطابور) — بدائيّاتُ `hrla-*` وحدَها فوق `hrl-*`، بلا إعادةِ
+// تعريفِ صنفٍ منها، فلا تتعلّق بترتيب الحقن ولا تُنتج تعارضاً في `css:audit`.
+import './hr-leave-approval.css';

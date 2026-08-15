@@ -1,14 +1,31 @@
 import React, { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { FileSignature, Plus, Pencil, Trash2, FilePlus2, FileDown, X, Calendar, AlertCircle } from 'lucide-react';
+import {
+  FileSignature, Plus, Pencil, Trash2, FilePlus2, FileDown, X,
+  AlertTriangle, Lock, RefreshCw,
+} from 'lucide-react';
 import { hrService } from '../../services/hrService';
 import { API_BASE_URL } from '../../utils/api';
 import { usePermission } from '../../hooks/usePermission';
+import { useDossierInvalidate, useEmployeeContracts } from './dossier/useDossierData';
+import EmptyLine from './dossier/EmptyLine';
+import { errorText, fmtCount } from './leave/leaveFormat';
 import {
   CONTRACT_TYPE_LABELS, CONTRACT_STATUS_LABELS,
 } from '../../types/hr';
 import type { EmploymentContract, EmploymentContractType, EmploymentContractStatus } from '../../types/hr';
+
+/**
+ * **الاقتطاع**: مكتبٌ ناضجٌ يبلغ ستّةَ عقودٍ لمنسوبٍ واحد، والجدارُ يُقرأ بالتمرير —
+ * فتُعرض ثمانيةٌ ثمّ سطرٌ واحدٌ يفتح الباقي. لا ترقيمَ داخل بلوكٍ داخل جدار.
+ */
+const VISIBLE_LIMIT = 8;
+
+/** نصٌّ احتياطيٌّ واحدٌ لفرع الخطأ — عرفُ `LeaveTabPanel`. */
+const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+
+/** التسميةُ **حرفيةٌ** من `app/Enums/Permission.php:388` — لا صياغةَ فرونتيةً للصلاحية. */
+const MANAGE_LABEL = 'إدارة ملفات الموظفين';
 
 const STATUS_BADGE: Record<EmploymentContractStatus, string> = {
   active: 'hr-badge--green',
@@ -22,6 +39,36 @@ const fmtDate = (v?: string | null): string => {
   if (!v) return '—';
   const d = new Date(v);
   return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+/**
+ * **سطرُ تفاصيل العقد** — كلُّ ما كان في `dl.hr-kv` (سبعةُ حدودٍ) مضغوطاً في سطرِ
+ * `hrl-row__meta` واحدٍ بفواصل « · ». لا حقلَ يسقط: ما لا يتّسع للعرض يبقى في `title`.
+ *
+ * السببُ ليس اختصاراً: الجدارُ يُقرأ بالتمرير، وقائمةُ مفتاح/قيمةٍ **داخل** كلِّ صفٍّ من
+ * قائمةٍ تُطيل البلوكَ الواحدَ إلى شاشةٍ كاملةٍ لستّة عقود — وهي عينُ الكثافة التي يقوم
+ * عليها النمط (صفٌّ واحدٌ لكلّ سجلّ).
+ */
+const contractMeta = (c: EmploymentContract, showSalary: boolean): string => {
+  const parts: string[] = [
+    `${fmtDate(c.start_date)} ← ${c.end_date ? fmtDate(c.end_date) : 'غير محدّد'}`,
+  ];
+
+  if (c.probation_end_date) parts.push(`التجربة حتى ${fmtDate(c.probation_end_date)}`);
+  if (c.job_title_snapshot) parts.push(c.job_title_snapshot);
+
+  parts.push(
+    c.renewal_mode === 'auto'
+      ? `تجديد تلقائي${c.auto_renew_notice_days ? ` (${fmtCount(c.auto_renew_notice_days)} يوم)` : ''}`
+      : 'تجديد يدوي'
+  );
+
+  // الراتبُ لا يُعرض إلا بصلاحيته — الشرطُ نفسُه الذي كان على صفّ `dl` (لا يُرخى بالنقل).
+  if (showSalary && c.total_salary_snapshot != null) parts.push(`إجمالي الراتب ${c.total_salary_snapshot}`);
+  if (typeof c.addendums_count === 'number' && c.addendums_count > 0) parts.push(`الملاحق ${fmtCount(c.addendums_count)}`);
+  if (c.notes) parts.push(c.notes);
+
+  return parts.join(' · ');
 };
 
 // ───────────── نموذج عقد (إضافة/تعديل) ─────────────
@@ -336,8 +383,17 @@ const GeneratePdfModal: React.FC<{
 
 // ───────────── التبويب ─────────────
 
-const ContractsTab: React.FC<{ empId: number }> = ({ empId }) => {
-  const qc = useQueryClient();
+/**
+ * **الغلافُ صار `hrl-block`** (الخطوة ٧): سقط `hr-dbody > hr-sec` بحدِّه واستدارته
+ * وشبكتِه، ومعه سقطت القواعدُ الجسريّةُ الستُّ في `hr-leave.css §١٣` التي كانت تفكّ
+ * إطارَه داخل الجدار. ورأسُ القسم `<h2>` **دلاليٌّ حقيقيّ** لا `<div class="hr-sec__t">`
+ * — وبه سقط الدَّينُ المعلَنُ في الخطوة ٢ (رتبةُ العناوين).
+ *
+ * **ولم يُلمَس منطقٌ واحد**: توليدُ PDF بتفاصيله السبع · خياراتُ العقد الأربع · مسارُ
+ * الملاحق · `STATUS_BADGE` المقيَّدةُ بالنوع · `window.confirm` قبل الحذف · الإبطالُ
+ * الدقيقُ `['hr','contracts',empId]`.
+ */
+const ContractsTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) => {
   const canManage = usePermission('hr.manage');
   const canSalaryView = usePermission('hr.compensation.view');
   const canSalaryManage = usePermission('hr.compensation.manage');
@@ -345,13 +401,14 @@ const ContractsTab: React.FC<{ empId: number }> = ({ empId }) => {
   const [editing, setEditing] = useState<EmploymentContract | null>(null);
   const [addendumFor, setAddendumFor] = useState<EmploymentContract | null>(null);
   const [pdfFor, setPdfFor] = useState<EmploymentContract | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
-  const { data: contracts, isLoading, isError } = useQuery({
-    queryKey: ['hr', 'contracts', empId],
-    queryFn: () => hrService.getContracts(empId),
-  });
+  // المسارُ محروسٌ بـ`hr.manage` (`api.php:1776`)، والحارسُ في `useDossierData` يمنع
+  // النداءَ الذي يردّ 403 — فلا تُعرض «تعذّر جلب العقود» لحالةِ صلاحية.
+  const contractsQuery = useEmployeeContracts(empId);
+  const contracts = contractsQuery.data;
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['hr', 'contracts', empId] });
+  const { contracts: invalidate } = useDossierInvalidate(empId);
 
   const remove = async (c: EmploymentContract) => {
     if (!window.confirm('حذف هذا العقد؟')) return;
@@ -367,59 +424,129 @@ const ContractsTab: React.FC<{ empId: number }> = ({ empId }) => {
   const openNew = () => { setEditing(null); setShowForm(true); };
   const openEdit = (c: EmploymentContract) => { setEditing(c); setShowForm(true); };
 
+  // الفرعُ المحميّ — نسخةُ `DocumentsTab` التي هي العرفُ الصحيحُ في الوحدة: الصلاحيةُ
+  // الناقصةُ حالةٌ تُسمّى **بقفل** ويُسمّى فيها المطلوبُ حرفياً، لا خطأٌ يُعرض ولا «لا توجد
+  // عقود» (نفيُ وجودٍ لا دليلَ عليه: الاستعلامُ لم يُطلَق أصلاً).
+  if (!canManage) {
+    return (
+      <section className="hrl-block" id={id}>
+        <div className="hrl-block__h">
+          <h2 className="hrl-block__t hrl-h2"><FileSignature size={14} /> عقود العمل</h2>
+        </div>
+        <div className="hrl-block__b">
+          <div className="hrl-state hrl-state--locked">
+            <Lock size={20} />
+            <p className="hrl-state__t">العقود محميّة</p>
+            <p className="hrl-state__d">عرضُها يتطلّب صلاحية «{MANAGE_LABEL}».</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const rows = contracts ?? [];
+  const shown = expanded ? rows : rows.slice(0, VISIBLE_LIMIT);
+  // الفراغُ **بعد وصول الردّ** وحدَه؛ وفيه ينتقل الفعلُ إلى السطر فلا يتكرّر زرّان بنصٍّ واحد.
+  const isEmpty = !contractsQuery.isPending && !contractsQuery.isError && rows.length === 0;
+
+  /**
+   * **الحالاتُ الأربعُ متمايزةٌ شكلاً ونصّاً** (لا أيقونةَ ذهبيةٌ واحدةٌ للأربع):
+   * تحميلٌ = هياكلُ بارتفاع الصفّ · خطأٌ = مثلثٌ أحمرُ بنصِّ الخادم و«إعادة المحاولة» ·
+   * فارغٌ = **سطرٌ** بفعله (قاعدةُ «البلوكُ الفارغُ سطر») · محميٌّ = قفلٌ أعلاه.
+   */
+  const body = (() => {
+    if (contractsQuery.isPending) {
+      return (
+        <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل العقود">
+          {Array.from({ length: 3 }, (_, i) => (
+            <span className="hrl-skel" key={i} />
+          ))}
+        </div>
+      );
+    }
+
+    if (contractsQuery.isError) {
+      return (
+        <div className="hrl-state hrl-state--error">
+          <AlertTriangle size={20} />
+          <p className="hrl-state__t">تعذّر جلب العقود</p>
+          <p className="hrl-state__d">{errorText(contractsQuery.error, CONNECTION_FALLBACK)}</p>
+          <button type="button" className="hr-btn hr-btn--sm" onClick={() => void contractsQuery.refetch()}>
+            <RefreshCw size={13} /> إعادة المحاولة
+          </button>
+        </div>
+      );
+    }
+
+    if (rows.length === 0) {
+      return (
+        <EmptyLine
+          text="لا عقدَ مسجَّل"
+          action={canManage && (
+            <button type="button" className="hr-btn hr-btn--sm hr-btn--primary" onClick={openNew}>
+              <Plus size={14} /> عقد جديد
+            </button>
+          )}
+        />
+      );
+    }
+
+    return (
+      <>
+        {shown.map((c) => {
+          const meta = contractMeta(c, canSalaryView);
+
+          return (
+            <div className="hrl-row" key={c.id}>
+              <span className="hrl-row__main">
+                <span className="hrl-row__name">
+                  {CONTRACT_TYPE_LABELS[c.contract_type]}
+                  {c.contract_number ? ` · ${c.contract_number}` : ''}
+                </span>
+                <span className="hrl-row__meta" title={meta}>{meta}</span>
+              </span>
+              <span className={`hr-badge ${STATUS_BADGE[c.status]}`}>{CONTRACT_STATUS_LABELS[c.status]}</span>
+              {/* أدواتٌ تُكشَف بالتحويم **وبالتركيز** (§١٣-هـ)، ودائماً على اللمس — فلا
+                  يختفي فعلٌ عن لوحة المفاتيح ولا عن الجوّال. */}
+              {canManage && (
+                <span className="hrl-tools">
+                  <button type="button" className="hr-icon-btn hr-icon-btn--sm" title="توليد PDF" onClick={() => setPdfFor(c)}><FileDown size={14} /></button>
+                  <button type="button" className="hr-icon-btn hr-icon-btn--sm" title="ملحق" onClick={() => setAddendumFor(c)}><FilePlus2 size={14} /></button>
+                  <button type="button" className="hr-icon-btn hr-icon-btn--sm" title="تعديل" onClick={() => openEdit(c)}><Pencil size={14} /></button>
+                  <button type="button" className="hr-icon-btn hr-icon-btn--sm" title="حذف" onClick={() => remove(c)}><Trash2 size={14} /></button>
+                </span>
+              )}
+            </div>
+          );
+        })}
+
+        {!expanded && rows.length > VISIBLE_LIMIT && (
+          <EmptyLine
+            text={`تُعرض ${fmtCount(VISIBLE_LIMIT)} من ${fmtCount(rows.length)}`}
+            action={(
+              <button type="button" className="hr-btn hr-btn--sm" onClick={() => setExpanded(true)}>
+                اعرض الكلّ ({fmtCount(rows.length)})
+              </button>
+            )}
+          />
+        )}
+      </>
+    );
+  })();
+
   return (
-    <div className="hr-dbody hr-dbody--single">
-      <div className="hr-sec">
-        <div className="hr-sec__h">
-          <div className="hr-sec__t"><FileSignature size={15} /> عقود العمل</div>
-          {canManage && (
-            <button className="hr-btn hr-btn--sm hr-btn--primary" onClick={openNew}><Plus size={14} /> عقد جديد</button>
-          )}
-        </div>
-        <div className="hr-sec__b">
-          {isLoading ? (
-            <div className="hr-locked">جارٍ التحميل…</div>
-          ) : isError ? (
-            <div className="hr-locked"><AlertCircle size={16} /> تعذّر جلب العقود.</div>
-          ) : !contracts || contracts.length === 0 ? (
-            <div className="hr-locked"><FileSignature size={16} /> لا توجد عقود مسجّلة لهذا المنسوب.</div>
-          ) : (
-            contracts.map((c) => (
-              <div className="hr-contract" key={c.id}>
-                <div className="hr-contract__top">
-                  <div className="hr-contract__title">
-                    {CONTRACT_TYPE_LABELS[c.contract_type]}
-                    {c.contract_number ? ` · ${c.contract_number}` : ''}
-                  </div>
-                  <span className={`hr-badge ${STATUS_BADGE[c.status]}`}>{CONTRACT_STATUS_LABELS[c.status]}</span>
-                  {canManage && (
-                    <div className="hr-contract__actions">
-                      <button className="hr-icon-btn" title="توليد PDF" onClick={() => setPdfFor(c)}><FileDown size={15} /></button>
-                      <button className="hr-icon-btn" title="ملحق" onClick={() => setAddendumFor(c)}><FilePlus2 size={15} /></button>
-                      <button className="hr-icon-btn" title="تعديل" onClick={() => openEdit(c)}><Pencil size={15} /></button>
-                      <button className="hr-icon-btn" title="حذف" onClick={() => remove(c)}><Trash2 size={15} /></button>
-                    </div>
-                  )}
-                </div>
-                <dl className="hr-kv">
-                  <dt><Calendar size={12} style={{ display: 'inline', verticalAlign: '-1px' }} /> المدة</dt>
-                  <dd>{fmtDate(c.start_date)}{c.end_date ? ` ← ${fmtDate(c.end_date)}` : ' (غير محدّد)'}</dd>
-                  {c.probation_end_date && (<><dt>نهاية التجربة</dt><dd>{fmtDate(c.probation_end_date)}</dd></>)}
-                  {c.job_title_snapshot && (<><dt>المسمى</dt><dd>{c.job_title_snapshot}</dd></>)}
-                  <dt>التجديد</dt><dd>{c.renewal_mode === 'auto' ? `تلقائي${c.auto_renew_notice_days ? ` (${c.auto_renew_notice_days} يوم)` : ''}` : 'يدوي'}</dd>
-                  {canSalaryView && c.total_salary_snapshot != null && (
-                    <><dt>إجمالي الراتب (لقطة)</dt><dd>{c.total_salary_snapshot}</dd></>
-                  )}
-                  {typeof c.addendums_count === 'number' && c.addendums_count > 0 && (
-                    <><dt>الملاحق</dt><dd>{c.addendums_count}</dd></>
-                  )}
-                  {c.notes && (<><dt>ملاحظات</dt><dd>{c.notes}</dd></>)}
-                </dl>
-              </div>
-            ))
-          )}
-        </div>
+    <section className="hrl-block" id={id}>
+      <div className="hrl-block__h">
+        <h2 className="hrl-block__t hrl-h2"><FileSignature size={14} /> عقود العمل</h2>
+        {/* فعلُ الإنشاء يعيش في رأس بلوكه لا في شريط الرأس — القاعدةُ المكتوبةُ في
+            `DossierHead`: شريطُ الرأس لما يخصّ الموظفَ كلَّه، والإنشاءُ حيث السجلّ. */}
+        {canManage && !isEmpty && (
+          <div className="hrl-block__a">
+            <button type="button" className="hr-btn hr-btn--sm hr-btn--primary" onClick={openNew}><Plus size={14} /> عقد جديد</button>
+          </div>
+        )}
       </div>
+      <div className="hrl-block__b hrl-block__b--flush">{body}</div>
 
       {showForm && (
         <ContractForm
@@ -445,7 +572,7 @@ const ContractsTab: React.FC<{ empId: number }> = ({ empId }) => {
           onClose={() => setPdfFor(null)}
         />
       )}
-    </div>
+    </section>
   );
 };
 

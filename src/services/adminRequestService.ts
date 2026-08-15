@@ -326,4 +326,5 @@ export class RequestTypeService {
             throw new Error(response.message || 'فشل في تحديث حالة نوع الطلب');
         }
     }
+
 }

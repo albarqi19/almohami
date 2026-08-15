@@ -1,0 +1,2639 @@
+/* ═══════════════════════════════════════════════════════════════════
+   HR LEAVE — «الإجازات والغياب» · بدائيّات النمط الملتصق (hrl-)
+
+   البنية المشتركة (ترويسة/أعمدة/أزرار/مودال/حقول) من simple-service.css
+   (ssp2-*) ومن hr-page.css. هنا **البدائيّات الخاصّة وحدها**، وهي مرجع
+   إعادة تصميم الوحدة كلِّها لاحقاً — تماماً كما فعل availability.css.
+
+   القواعد الملزِمة في هذا الملفّ:
+   ١) داخل العمود: بلا حدٍّ وبلا استدارة، والفصل بـborder-bottom وحده،
+      وصفرُ gap بين البلوكات. الالتصاق بنيةٌ لا زينة.
+   ٢) صفرُ رفعِ أولويةٍ قسريّ — التقدّم من ترتيب الحقن (appStyles.ts) لا من
+      القوّة؛ ولا كلمةَ تجاوزٍ واحدة في الملفّ.
+   ٣) صفرُ لونٍ خام: كلّ لونٍ var() أو color-mix فوق var(). لا قيمةَ سداسيةً
+      ولا دالّةَ شفافيةٍ خام.
+   ٤) المنطقيّ حصراً: border-inline-* · padding-inline · inset-inline-* ·
+      margin-inline. **لا left/right ولا transform:translate*** — كلاهما
+      فيزيائيّ ينقلب في RTL.
+   ٥) فلات صرف: بلا ظلال، بلا backdrop-filter، بلا توهّج، بلا تدرّجات.
+   ٦) لا شريطَ تمييزٍ جانبيّ على البطاقات.
+
+   ⚠️ فخّان في متغيّرات الثيم لا يُنسخان من ssp2:
+   · `--color-text-primary` **غير معرَّفٍ في المشروع إطلاقاً** رغم استعماله
+     في ١١ ملفاً (يسقط إلى الوراثة فيبدو صحيحاً). البديل هنا: `--color-text`
+     و`--color-heading` — وكلاهما معرَّفٌ في الثيمات الأربعة.
+   · `--color-text-subtle` غير موجود؛ الموجود `--text-subtle` على body
+     (dashboard-theme.css:190) وهو المستعمَل هنا.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────
+   ١) البلوك الملتصق — الوحدة البنائية الوحيدة
+   البطاقة تفقد حدَّها واستدارتَها داخل العمود، ويبقى الفصلُ خطاً واحداً.
+   ───────────────────────────────────────────────────────────── */
+
+.hrl-block {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+}
+
+/* آخرُ بلوكٍ في العمود لا يرسم فاصلاً مزدوجاً مع حدّ العمود نفسِه */
+.hrl-block:last-child {
+    border-bottom: none;
+}
+
+/* البلوك المتمدّد يملأ ما بقي ويُمرَّر داخلياً — لا تمريرَ للصفحة */
+.hrl-block--grow {
+    flex: 1;
+    min-height: 0;
+}
+
+.hrl-block--scroll .hrl-block__b {
+    overflow-y: auto;
+}
+
+/* الترويسة: 12.5px/600 بأيقونة ذهبية — وهي مستوى <h3> في التسلسل الدلاليّ */
+.hrl-block__h {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--surface-band);
+}
+
+.hrl-block__t {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--color-heading);
+}
+
+.hrl-block__t svg {
+    flex: 0 0 auto;
+    color: var(--law-gold);
+}
+
+/* أدوات الترويسة — تعيش في الرأس لا في التذييل (عرف ReviewModal) */
+.hrl-block__a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hrl-block__b {
+    padding: 12px 14px;
+    min-height: 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--color-text);
+}
+
+/* جسمٌ ملتصقٌ بالحواف: القوائم والجداول تلتصق بحدّ البلوك بلا حشو */
+.hrl-block__b--flush {
+    padding: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٢) التسلسل الهرميّ الدلاليّ — 18/14/12.5 بأوزان 700/600/600
+   لا عناوينَ من <div>: هذه الأصناف تُلبَس h1/h2 مباشرةً.
+   ───────────────────────────────────────────────────────────── */
+
+.hrl-h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--color-heading);
+}
+
+.hrl-h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-heading);
+}
+
+/* سطرٌ ثانويّ تحت العنوان (القسم · المسمّى · التاريخ) */
+.hrl-sub {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٣) الكثافة: قائمة مفتاح/قيمة + صفٌّ مضغوط
+   ───────────────────────────────────────────────────────────── */
+
+.hrl-kv {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+    margin: 0;
+    font-size: 12.5px;
+}
+
+.hrl-kv dt {
+    color: var(--text-muted);
+    font-weight: 400;
+    white-space: nowrap;
+}
+
+.hrl-kv dd {
+    margin: 0;
+    color: var(--color-text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+/* قيمةٌ غائبة — تُكتب «—» ولا تُلوَّن كأنها رقم */
+.hrl-kv dd.is-empty {
+    color: var(--text-subtle);
+    font-weight: 400;
+}
+
+/* الصفّ المضغوط: 44px ارتفاعاً فعلياً، والفصل خطٌّ داخليّ لا فجوة */
+.hrl-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 7px 14px;
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid var(--hairline);
+    background: transparent;
+    font-size: 12.5px;
+    color: var(--color-text);
+    text-align: start;
+    transition: background var(--transition-fast, 100ms) ease;
+}
+
+.hrl-row:last-child {
+    border-bottom: none;
+}
+
+.hrl-row:hover {
+    background: var(--quiet-gray-50);
+}
+
+/* المحدَّد: خلفيةٌ ووزن — **بلا شريط تمييزٍ جانبيّ** */
+.hrl-row.is-selected {
+    background: var(--law-navy-light);
+    font-weight: 700;
+}
+
+.hrl-row__main {
+    flex: 1;
+    min-width: 0;
+}
+
+.hrl-row__name {
+    display: block;
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hrl-row__meta {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* رقمٌ صغيرٌ في طرف الصفّ (الرصيد) — أرقامٌ متراصّة تُقرأ عمودياً */
+.hrl-mini {
+    flex: 0 0 auto;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--law-navy);
+}
+
+.hrl-mini.is-neg {
+    color: var(--status-red);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٤) التبويبات — خطٌّ سفليٌّ ذهبيّ للنشط، بلا استدارةٍ وبلا خلفية
+   ───────────────────────────────────────────────────────────── */
+
+.hrl-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+    overflow-x: auto;
+}
+
+.hrl-tab {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    border: none;
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color var(--transition-fast, 100ms) ease, border-color var(--transition-fast, 100ms) ease;
+}
+
+.hrl-tab:hover {
+    color: var(--color-text);
+}
+
+.hrl-tab[aria-selected='true'],
+.hrl-tab.is-active {
+    color: var(--color-heading);
+    border-bottom-color: var(--law-gold);
+}
+
+.hrl-tab:focus-visible {
+    outline: 1px solid var(--law-navy);
+    outline-offset: -2px;
+}
+
+/* عدّادٌ داخل التبويب */
+.hrl-tab__n {
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-subtle);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٥) الحالات الأربع — متمايزةٌ نصّاً وشكلاً، لا أيقونةَ قفلٍ واحدةٌ للأربع
+   ───────────────────────────────────────────────────────────── */
+
+.hrl-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 28px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    line-height: 1.7;
+}
+
+.hrl-state__t {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hrl-state__d {
+    margin: 0;
+    max-inline-size: 44ch;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.hrl-state svg {
+    color: var(--quiet-gray-400);
+}
+
+/* أ) تحميل — هيكلٌ عظميّ بارتفاع الصفّ الحقيقيّ فلا يقفز التخطيط */
+.hrl-state--loading {
+    display: block;
+    padding: 0;
+}
+
+.hrl-skel {
+    display: block;
+    min-height: 44px;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--surface-sunken);
+    opacity: 0.55;
+}
+
+.hrl-skel--line {
+    min-height: 12px;
+    margin: 10px 14px;
+    border-bottom: none;
+    border-radius: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .hrl-skel {
+        animation: hrl-skel-pulse 1.2s ease-in-out infinite;
+    }
+}
+
+@keyframes hrl-skel-pulse {
+    0%,
+    100% {
+        opacity: 0.45;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* ب) فارغ — نصٌّ + زرُّ فعل. **لا صفوفَ وهمية ولا بيانات ديمو** */
+.hrl-state--empty .hrl-state__t {
+    color: var(--color-text);
+}
+
+/* ج) محميّ — قفلٌ ونصُّ صلاحيةٍ صريح يسمّي المطلوب */
+.hrl-state--locked {
+    background: var(--quiet-gray-50);
+}
+
+.hrl-state--locked svg {
+    color: var(--text-subtle);
+}
+
+.hrl-state--locked .hrl-state__d {
+    color: var(--text-subtle);
+}
+
+/* د) خطأ — لونُ خطرٍ + زرُّ إعادة محاولة */
+.hrl-state--error .hrl-state__t {
+    color: var(--status-red);
+}
+
+.hrl-state--error svg {
+    color: var(--status-red);
+}
+
+/* هـ) سلامةٌ مُتحقَّقة — **ليست خامسةَ الحالات الأربع**: تلك تصف ما لم يصل، وهذه تصف
+   ما وصل ومرّ. وأُفرِدت لأنّ الفراغَ والسلامةَ يتشابهان على الشاشة إلى حدِّ الالتباس:
+   عمودٌ بارتفاع الشاشة خالٍ إلّا سطراً أخضرَ يُقرأ «لم يُحمَّل شيء» لا «لا شيءَ ينتظرك».
+   فتأخذ السلامةُ وزنَ الخبر: أيقونةٌ خضراءُ وخلفيةٌ خافتة، وتحتها بنودُ ما فُحص. */
+.hrl-state--clear {
+    background: color-mix(in srgb, var(--status-green) 7%, transparent);
+}
+
+.hrl-state--clear svg {
+    color: var(--status-green);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٦) الشارة الدلالية — سبعةُ مفاتيحِ لونٍ عبر var(--hrl-k)
+   المفتاح يأتي من `color_key` في الخادم، والصنفُ يضبط المتغيّر وحدَه:
+   موضعٌ واحدٌ للّون، ولا hex في JSX ولا خريطةَ ألوانٍ في JS.
+   ───────────────────────────────────────────────────────────── */
+
+.hrl-k--annual {
+    --hrl-k: var(--law-navy);
+}
+
+.hrl-k--sick {
+    --hrl-k: var(--status-blue);
+}
+
+.hrl-k--unpaid {
+    --hrl-k: var(--status-orange);
+}
+
+.hrl-k--absence {
+    --hrl-k: var(--status-red);
+}
+
+.hrl-k--family {
+    --hrl-k: var(--status-purple);
+}
+
+.hrl-k--maternity {
+    --hrl-k: var(--status-green);
+}
+
+.hrl-k--other {
+    --hrl-k: var(--quiet-gray-600);
+}
+
+.hrl-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border: 1px solid color-mix(in srgb, var(--hrl-k, var(--quiet-gray-600)) 38%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--hrl-k, var(--quiet-gray-600)) 12%, transparent);
+    color: var(--hrl-k, var(--quiet-gray-600));
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.6;
+    white-space: nowrap;
+}
+
+/* شارةٌ مربّعةٌ ملتصقة داخل الجداول — بلا استدارة */
+.hrl-badge--flat {
+    border-radius: 0;
+}
+
+/* مربّع أيقونة النوع (20px) — يقرأ نفس المتغيّر فلا يتباعد لونان لنوعٍ واحد */
+.hrl-dot {
+    flex: 0 0 auto;
+    inline-size: 20px;
+    block-size: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid color-mix(in srgb, var(--hrl-k, var(--quiet-gray-600)) 30%, transparent);
+    border-radius: 0;
+    background: color-mix(in srgb, var(--hrl-k, var(--quiet-gray-600)) 14%, transparent);
+    color: var(--hrl-k, var(--quiet-gray-600));
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٧) بانر الاستشهاد النظاميّ — النصّ من الخادم حرفياً (statute_snapshot)
+   ───────────────────────────────────────────────────────────── */
+
+.hrl-legal {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid var(--hairline);
+    background: color-mix(in srgb, var(--law-gold) 8%, transparent);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--color-text);
+}
+
+.hrl-legal svg {
+    flex: 0 0 auto;
+    margin-block-start: 2px;
+    color: var(--law-gold);
+}
+
+/* رقم المادّة — يُقرأ لاتينياً فيلزمه dir="ltr" في JSX */
+.hrl-legal__ref {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-heading);
+}
+
+/* تنويهٌ محايد (نافذةٌ مجهولة · قائمةٌ لا تُحتسب) */
+.hrl-note {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--quiet-gray-50);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--text-muted);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٨) الرقم الكبير — الرصيد المتاح
+   ───────────────────────────────────────────────────────────── */
+
+.hrl-num {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 14px 14px 10px;
+}
+
+.hrl-num__v {
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    color: var(--law-navy);
+}
+
+.hrl-num__v.is-neg {
+    color: var(--status-red);
+}
+
+.hrl-num__u {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+/* وسمُ الرقم بما هو — «الرصيد بعد كلِّ ما سُجّل» من balance_label لا من JSX */
+.hrl-num__label {
+    padding: 0 14px 12px;
+    font-size: 11px;
+    color: var(--text-subtle);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ٩) تحذير الانحراف — يَصِف ولا يحكم، ونصُّه من `warnings` كما وصل
+   ───────────────────────────────────────────────────────────── */
+
+.hrl-drift {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid var(--hairline);
+    background: color-mix(in srgb, var(--status-orange) 10%, transparent);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--color-text);
+}
+
+.hrl-drift svg {
+    flex: 0 0 auto;
+    margin-block-start: 2px;
+    color: var(--status-orange);
+}
+
+.hrl-drift--danger {
+    background: color-mix(in srgb, var(--status-red) 10%, transparent);
+}
+
+.hrl-drift--danger svg {
+    color: var(--status-red);
+}
+
+.hrl-drift__n {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ١٠) التخطيط: عمودان فوق 1400px وعمودٌ واحد دونها — **لا شبكة ثلاثية**
+   صفرُ gap؛ الفصلُ حدٌّ منطقيٌّ واحدٌ على العمود الثاني فينقلب مع الاتجاه.
+   ───────────────────────────────────────────────────────────── */
+
+.hrl-cols {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.hrl-cols__main {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.hrl-cols__side {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    min-height: 0;
+    overflow-y: auto;
+    border-block-start: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+}
+
+@media (min-width: 1400px) {
+    .hrl-cols {
+        grid-template-columns: 1fr 380px;
+    }
+
+    .hrl-cols__side {
+        border-block-start: none;
+        border-inline-start: 1px solid var(--color-border);
+    }
+
+    /* ١٠-أ) بلا منسوبٍ مختار: **عمودٌ واحد** — واللوحُ شريطٌ تحته لا عمودٌ بجانبه.
+
+       عرضُ النافذة ليس عرضَ المسرح: شريطُ التطبيق (٢٤٠) وعمودُ المنسوبين (٣٠٠) يبتلعان
+       ٥٤٠px قبل أن يبدأ، فعند 1440px يبقى ٩٠٠ تقتسمها القاعدةُ أعلاه ٥٢٠ + ٣٨٠. وقِيس عند
+       1440: الجدولُ يريد ٥٦٩ فيفيض ٥٠px، و«خالد بن عبدالرحمن الدوسري» يلتفّ ثلاثةَ أسطر —
+       بجوار لوحٍ لا يحمل إلّا «لا منسوبَ مختار».
+
+       والقسمةُ ليست ذوقاً: عمودُ «المنسوب» يظهر في سجلّ المكتب وحدَه (`.hrl-table--single`
+       يُخفيه متى اختير منسوب)، واللوحُ لا يحمل تحليلاً إلّا متى اختير. فهما لا يزدحمان على
+       العرض أبداً — يأخذه صاحبُ الحاجة كاملاً. */
+    .hrl-cols--solo {
+        grid-template-columns: 1fr;
+        /* صفٌّ أوّلُ يقبل الانكماشَ (فيتمرّر الجدولُ داخله) وثانٍ بمقدار محتواه — بلا هذا
+           يأخذ صفُّ الجدول ارتفاعَ محتواه كاملاً ويُقصّ اللوحُ تحته بلا شريط تمرير. */
+        grid-template-rows: minmax(0, 1fr) auto;
+    }
+
+    .hrl-cols--solo .hrl-cols__side {
+        border-block-start: 1px solid var(--color-border);
+        border-inline-start: none;
+    }
+}
+
+/* الكثافة تحت الشاشات الضيّقة: حشوٌ أقلّ، والمقاسات كما هي (لا style inline) */
+@media (max-width: 640px) {
+    .hrl-block__h,
+    .hrl-row,
+    .hrl-legal,
+    .hrl-note,
+    .hrl-drift {
+        padding-inline: 12px;
+    }
+
+    .hrl-block__b {
+        padding: 12px;
+    }
+
+    .hrl-num,
+    .hrl-num__label {
+        padding-inline: 12px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ١١) بدائيّاتُ المكوّنات — لوحُ الرصيد · لوحُ الحركات · المودالات
+
+   كلُّ ما تحت هذا الخطّ يخدم الملفّات السبعة تحت `pages/hr/leave/`،
+   وهو امتدادُ البدائيّات أعلاه بالقواعد الستّ نفسِها: بلا لونٍ خام،
+   بلا رفعِ أولوية، منطقيٌّ حصراً، فلات صرف، بلا شريطِ تمييزٍ جانبيّ،
+   والفصلُ خطٌّ واحدٌ لا فجوة.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── مساعداتٌ عامّة ─── */
+
+/* عنوانٌ للقارئ الصوتيّ وحدَه (caption الجداول) — لا `display:none` فيسقط من الشجرة */
+.hrl-sr {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.hrl-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* زرٌّ نصّيّ — الفعلُ الثانويّ داخل جملةٍ لا يستحقّ إطارَ زرّ */
+.hrl-link {
+    display: inline;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--law-navy);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+/* 🩸 **سهمُ الوصلة كان ينزل سطراً وحدَه** — قِيس بـ`getBoundingClientRect` لا بالعين:
+   نصُّ الوصلة 236..272 والسهمُ 277..288، أي كتلةٌ مستقلّةٌ تحت الجملة لا حرفٌ في آخرها
+   (`_zoom-readiness.png`). ويقرؤه المستخدمُ رمزاً مبتوراً بلا معنى.
+
+   والسببُ **ليس كسرَ سطر**: تمهيدُ Tailwind يجعل كلَّ `svg` عنصراً كتلياً
+   (`display: block`)، والكتليُّ داخل وصلةٍ `display: inline` **يفرض سطرَه** مهما فُعل
+   بالمسافات. فيُعاد إلى تيّار السطر — والمسافةُ الملتصقةُ في JSX (`NBSP`) تكمّل العلاجَ
+   بمنع الكسر عند المسافة بعد أن صار السهمُ جسماً مُدمَجاً يجوز الكسرُ حوله.
+
+   وهنا موضعُها لا في `hr-payroll.css`: `.hrl-link` معرَّفٌ في هذا الملفّ، وتعريفُه في
+   ملفّين يجعل النتيجةَ رهينةَ ترتيب الحقن (ويرصده `css:audit` تعارضاً). */
+.hrl-link svg {
+    display: inline-block;
+}
+
+.hrl-link:hover {
+    color: var(--law-gold);
+}
+
+.hrl-link:focus-visible {
+    outline: 1px solid var(--law-navy);
+    outline-offset: 2px;
+}
+
+/* سطرُ إرشادٍ تحت حقل — 10.5px، وهو أدنى السلّم */
+.hrl-hint {
+    display: block;
+    margin: 0;
+    font-size: 10.5px;
+    line-height: 1.7;
+    color: var(--text-muted);
+}
+
+/* تنويهٌ محايدٌ بلا لونِ خطر (نسخةُ hrl-drift الهادئة) */
+.hrl-drift--muted {
+    background: var(--quiet-gray-50);
+}
+
+.hrl-drift--muted svg {
+    color: var(--text-subtle);
+}
+
+/* ─── ١١-أ) المعادلة: حدودٌ ملتصقةٌ يفصلها خطٌّ واحد ─── */
+
+.hrl-formula {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0;
+    border-block-end: 1px solid var(--hairline);
+}
+
+.hrl-formula__term {
+    flex: 1 1 auto;
+    min-inline-size: 84px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 0;
+    border-inline-end: 1px solid var(--hairline);
+    background: transparent;
+    font-family: inherit;
+    text-align: start;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background var(--transition-fast, 100ms) ease;
+}
+
+.hrl-formula__term:last-child {
+    border-inline-end: none;
+}
+
+.hrl-formula__term:hover {
+    background: var(--quiet-gray-50);
+}
+
+.hrl-formula__term:focus-visible {
+    outline: 1px solid var(--law-navy);
+    outline-offset: -1px;
+}
+
+/* حدٌّ يُعرض ولا يُطرح — لا يُنقر لأنّ لا صفوفَ دفترٍ خلفه */
+.hrl-formula__term--muted {
+    background: var(--surface-sunken);
+    cursor: default;
+}
+
+.hrl-formula__term--muted .hrl-formula__v {
+    color: var(--text-subtle);
+}
+
+.hrl-formula__k {
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+.hrl-formula__v {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-heading);
+}
+
+.hrl-formula__term--sum .hrl-formula__v {
+    color: var(--law-navy);
+}
+
+/* ─── ١١-ب) مقياسُ الشرائح (م.١١٧): الأوزانُ والامتلاءُ من الخادم ─── */
+
+.hrl-meter {
+    display: flex;
+    gap: 0;
+    block-size: 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    overflow: hidden;
+    background: var(--surface-sunken);
+}
+
+.hrl-meter__seg {
+    /* الوزنُ رقمٌ من `tiers[].days` يمرّره المكوّن متغيّراً — لا قاعدةَ تخطيطٍ في JSX */
+    flex: var(--hrl-w, 1) 1 0;
+    display: block;
+    block-size: 100%;
+    border-inline-end: 1px solid var(--color-border);
+}
+
+.hrl-meter__seg:last-child {
+    border-inline-end: none;
+}
+
+.hrl-meter__fill {
+    display: block;
+    inline-size: var(--hrl-f, 0%);
+    block-size: 100%;
+    background: var(--status-blue);
+}
+
+.hrl-meter__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-block-start: 6px;
+    font-size: 10.5px;
+    color: var(--text-muted);
+}
+
+/* رقمُ العدّاد في ترويسة البلوك (م.١١٦) */
+.hrl-rule__n {
+    font-size: 12.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-heading);
+}
+
+.hrl-rule--warn .hrl-rule__n {
+    color: var(--status-orange);
+}
+
+/* ─── ١١-ج) لوحُ الحركات: تراكبٌ ثابتٌ ولوحٌ على الحافّة المنطقية ─── */
+
+.hrl-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    background: color-mix(in srgb, var(--law-navy) 42%, transparent);
+}
+
+/* عرضٌ يكفي ستّةَ أعمدة: قِيس عند 460px فكان عمودُ «الوصف» **57px** لجملةٍ من ٤٥ حرفاً
+   (تسعةُ أسطرٍ بكلمةٍ في السطر) بينما عمودُ «مَن» يأخذ 141px بـ`nowrap` — والجدولُ يفيض
+   489px على حاويةٍ 459px فيُقصّ الاسمُ عند الحافّة. والسببُ **ليس** `overflow:hidden` على
+   `.hrl-cols` (عطلُ القسيمة): اللوحُ تراكبٌ ثابتٌ خارجَها بالقياس، وإنّما ضيقُ اللوح
+   وتوزيعُ الأعمدة التلقائيّ. فوُسّع اللوحُ وأُعطي الوصفُ الفائضَ (§١١-د). */
+.hrl-drawer {
+    display: flex;
+    flex-direction: column;
+    inline-size: min(780px, 100%);
+    block-size: 100%;
+    min-block-size: 0;
+    border: none;
+    border-radius: 0;
+    border-inline-end: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+}
+
+.hrl-drawer__h {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 14px;
+    border-block-end: 1px solid var(--color-border);
+    background: var(--surface-band);
+}
+
+.hrl-drawer__b {
+    flex: 1;
+    min-block-size: 0;
+    overflow: auto;
+}
+
+.hrl-drawer__f {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 14px;
+    border-block-start: 1px solid var(--color-border);
+    font-size: 11.5px;
+    color: var(--text-muted);
+}
+
+.hrl-drawer__f .hrl-block__a {
+    gap: 8px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ─── ١١-د) الجداول الكثيفة: فصلٌ بـborder-bottom لا بطيّ الحدود ─── */
+
+.hrl-ledger,
+.hrl-inittable {
+    inline-size: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+}
+
+.hrl-ledger th,
+.hrl-ledger td,
+.hrl-inittable th,
+.hrl-inittable td {
+    padding: 7px 10px;
+    border-block-end: 1px solid var(--hairline);
+    text-align: start;
+    vertical-align: top;
+}
+
+.hrl-ledger thead th,
+.hrl-inittable thead th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    background: var(--surface-band);
+    border-block-end: 1px solid var(--color-border);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.hrl-ledger tbody tr:hover,
+.hrl-inittable tbody tr:hover {
+    background: var(--quiet-gray-50);
+}
+
+.hrl-ledger__num {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.hrl-ledger__num.is-pos {
+    color: var(--status-green);
+}
+
+.hrl-ledger__num.is-neg {
+    color: var(--status-red);
+}
+
+.hrl-ledger__num.is-zero {
+    color: var(--law-gold);
+}
+
+/* ═══ توزيعُ العرض: الوصفُ يبتلع الفائض، والأرقامُ تنكمش إلى محتواها ═══
+   في تخطيط الجدول التلقائيّ لا عمودَ «يطلب» الفائضَ ما لم يُصرّح بعرض، فيُقسَّم على
+   الأعمدة بنسبة محتواها — فيربح عمودُ `nowrap` ويخسر عمودُ الجملة. و`inline-size:100%`
+   على خليّةٍ واحدةٍ تحسم القسمة: هي تأخذ ما بقي، والباقي محتواه. */
+.hrl-ledger__desc {
+    inline-size: 100%;
+    /* أرضيّةٌ تمنع عودةَ السحق: دونها ينكسر النصُّ كلمةً كلمة. ومتى ضاق اللوحُ عنها
+       فاض الجدولُ فمُرِّر أفقيّاً داخل `.hrl-drawer__b` — ولا يُمرَّر جسمُ الصفحة. */
+    min-inline-size: 13rem;
+    line-height: 1.6;
+    color: var(--color-text);
+}
+
+/* اسمٌ يلتفّ سطرين خيرٌ من اسمٍ يُقصّ: «عبدالعزيز بن س…» لا يُعرَف صاحبُه. */
+.hrl-ledger__who {
+    min-inline-size: 6.5rem;
+    color: var(--text-muted);
+}
+
+.hrl-inittable {
+    font-size: 12.5px;
+}
+
+/* حقلُ رقمٍ ملتصقٌ داخل خلية — بلا استدارة، ويتراصّ عمودياً */
+.hrl-numinput {
+    inline-size: 88px;
+    padding: 5px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    background: var(--color-background, var(--color-surface));
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.hrl-numinput:focus {
+    outline: none;
+    border-color: var(--law-navy);
+}
+
+/* ─── ١١-هـ) المودال: تحييدُ ما يخالف «فلات صرف» ─── */
+
+/* التراكب: بلا ضبابٍ خلفيّ وبلا لونٍ خام */
+.hrl-modal-overlay {
+    padding: 16px;
+    backdrop-filter: none;
+    background: color-mix(in srgb, var(--law-navy) 45%, transparent);
+}
+
+/* اللوح: بلا ظلٍّ وبلا استدارة، ويُمرَّر جسمُه وحدَه فيثبت الرأسُ والتذييل */
+.hrl-modal {
+    display: flex;
+    flex-direction: column;
+    max-width: 720px;
+    max-height: 92vh;
+    overflow: hidden;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.hrl-modal--wide {
+    max-width: 900px;
+}
+
+.hrl-modal .hr-modal__h {
+    flex: 0 0 auto;
+    padding: 10px 14px;
+    background: var(--surface-band);
+}
+
+/* المستوى الثاني في السلّم الدلاليّ: 14px/600 */
+.hrl-modal .hr-modal__h h3 {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* الجسمُ ملتصق: الفصلُ خطٌّ بين الأقسام لا فجوةٌ بين بطاقات */
+.hrl-modal .hr-modal__b {
+    display: block;
+    flex: 1;
+    min-block-size: 0;
+    padding: 0;
+    overflow-y: auto;
+}
+
+.hrl-modal .hr-modal__f {
+    flex: 0 0 auto;
+    padding: 10px 14px;
+}
+
+/* قسمٌ داخل المودال — المستوى الثالث 12.5px/600 */
+.hrl-fset {
+    display: grid;
+    gap: 8px;
+    padding: 12px 14px;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    border-block-end: 1px solid var(--color-border);
+}
+
+.hrl-fset:last-child {
+    border-block-end: none;
+}
+
+.hrl-fset__t {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--color-heading);
+}
+
+/* سطرُ الهوية حين يأتي الهدفُ معبّأً */
+.hrl-ident {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0;
+    padding: 9px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    background: var(--surface-band);
+    font-size: 12.5px;
+    color: var(--color-text);
+}
+
+/* ─── ١١-و) منتقي المنسوب: بحثٌ ملتصقٌ ومجموعتان ─── */
+
+.hrl-combo {
+    display: grid;
+    gap: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    background: var(--dashboard-card);
+}
+
+.hrl-combo__search {
+    padding: 9px 12px;
+    border: none;
+    border-radius: 0;
+    border-block-end: 1px solid var(--hairline);
+    background: transparent;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--color-text);
+}
+
+.hrl-combo__search:focus {
+    outline: none;
+    background: var(--quiet-gray-50);
+}
+
+.hrl-combo__list {
+    max-block-size: 200px;
+    overflow-y: auto;
+}
+
+.hrl-combo__group {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    margin: 0;
+    padding: 6px 12px;
+    background: var(--surface-sunken);
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.hrl-combo__opt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    inline-size: 100%;
+    padding: 7px 12px;
+    border: none;
+    border-radius: 0;
+    border-block-end: 1px solid var(--hairline);
+    background: transparent;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--color-text);
+    text-align: start;
+    cursor: pointer;
+}
+
+.hrl-combo__opt:hover {
+    background: var(--quiet-gray-50);
+}
+
+.hrl-combo__opt.is-on {
+    background: var(--law-navy-light);
+    font-weight: 700;
+}
+
+/* ─── ١١-ز) شبكةُ الأنواع: ظاهرةٌ دفعةً واحدة لا قائمةً منسدلة ─── */
+
+.hrl-typegrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0;
+    border-block-start: 1px solid var(--hairline);
+    border-inline-start: 1px solid var(--hairline);
+}
+
+/* الوقائعُ التأديبية في شبكةٍ مستقلّة — واقعةٌ لا إجازة */
+.hrl-typegrid--absence {
+    background: color-mix(in srgb, var(--status-red) 6%, transparent);
+}
+
+.hrl-typecell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 0;
+    border-inline-end: 1px solid var(--hairline);
+    border-block-end: 1px solid var(--hairline);
+    background: transparent;
+    font-family: inherit;
+    text-align: start;
+    cursor: pointer;
+    transition: background var(--transition-fast, 100ms) ease;
+}
+
+.hrl-typecell:hover {
+    background: var(--quiet-gray-50);
+}
+
+.hrl-typecell.is-on {
+    background: var(--law-navy-light);
+}
+
+.hrl-typecell:focus-visible {
+    outline: 1px solid var(--law-navy);
+    outline-offset: -1px;
+}
+
+.hrl-typecell__n {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-text);
+}
+
+.hrl-typecell__r {
+    display: block;
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+/* ─── ١١-ح) المدد السريعة: أزرارٌ ملتصقةٌ بحدٍّ واحدٍ بينها ─── */
+
+.hrl-quickspan {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+}
+
+.hrl-span {
+    padding: 6px 11px;
+    border: 1px solid var(--color-border);
+    border-inline-start-width: 0;
+    border-radius: 0;
+    background: var(--dashboard-card);
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: border-color var(--transition-fast, 100ms) ease;
+}
+
+.hrl-span:first-child {
+    border-inline-start-width: 1px;
+}
+
+.hrl-span:hover {
+    border-color: var(--law-gold);
+}
+
+/* ─── ١١-ط) شريطُ الأثر الحيّ: خاناتٌ ملتصقة ─── */
+
+.hrl-impact {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0;
+    margin: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    background: var(--surface-band);
+}
+
+.hrl-impact__c {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+    border-inline-end: 1px solid var(--hairline);
+}
+
+.hrl-impact__c:last-child {
+    border-inline-end: none;
+}
+
+.hrl-impact__k {
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+.hrl-impact__v {
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1.45;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-heading);
+    overflow-wrap: anywhere;
+}
+
+/* أثناء الاحتساب: شفافيةٌ بلا دوّامة — الرقمُ القديم يبقى مقروءاً وموسوماً بأنه قديم */
+.hrl-impact--pending {
+    opacity: 0.55;
+}
+
+/* ─── ١١-ي) الحواجز والتحذيرات: نصُّ الخادم ثمّ سطرُ «ما العمل» ─── */
+
+.hrl-flags {
+    display: block;
+    border-block-start: 1px solid var(--color-border);
+}
+
+.hrl-flag {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    padding: 9px 14px;
+    border: none;
+    border-radius: 0;
+    border-block-end: 1px solid var(--hairline);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--color-text);
+}
+
+.hrl-flag svg {
+    flex: 0 0 auto;
+    margin-block-start: 3px;
+}
+
+.hrl-flag--block {
+    background: color-mix(in srgb, var(--status-red) 9%, transparent);
+}
+
+.hrl-flag--block svg {
+    color: var(--status-red);
+}
+
+.hrl-flag--warn {
+    background: color-mix(in srgb, var(--status-orange) 10%, transparent);
+}
+
+.hrl-flag--warn svg {
+    color: var(--status-orange);
+}
+
+.hrl-flag--info {
+    background: var(--quiet-gray-50);
+}
+
+.hrl-flag--info svg {
+    color: var(--text-subtle);
+}
+
+.hrl-flag__t {
+    display: block;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hrl-flag__hint {
+    display: block;
+    color: var(--text-muted);
+}
+
+/* ─── ١١-ك) التعارض: والسلامةُ تُعلَن صراحةً ─── */
+
+.hrl-conflict {
+    padding: 9px 14px;
+    border: none;
+    border-radius: 0;
+    border-block-end: 1px solid var(--hairline);
+    background: var(--quiet-gray-50);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--color-text);
+}
+
+/* غيابُ التحذير غامض، وإعلانُ السلامة ليس كذلك */
+.hrl-conflict--none {
+    background: color-mix(in srgb, var(--status-green) 9%, transparent);
+}
+
+.hrl-conflict p {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+
+.hrl-conflict p svg {
+    flex: 0 0 auto;
+    color: var(--status-green);
+}
+
+.hrl-conflict summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hrl-conflict ul {
+    margin: 4px 0 8px;
+    padding-inline-start: 18px;
+    color: var(--text-muted);
+}
+
+/* ─── ١١-ل) نتيجةُ التهيئة: ثلاثةُ صفوفٍ لا رسالةٌ واحدةٌ متفائلة ─── */
+
+.hrl-result {
+    display: grid;
+    gap: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+}
+
+.hrl-result__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0;
+    padding: 8px 12px;
+    border-block-end: 1px solid var(--hairline);
+    font-size: 12px;
+    color: var(--color-text);
+}
+
+.hrl-result__row:last-child {
+    border-block-end: none;
+}
+
+.hrl-result__n {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.hrl-result__row.is-ok .hrl-result__n {
+    color: var(--status-green);
+}
+
+.hrl-result__row.is-skip .hrl-result__n {
+    color: var(--law-gold);
+}
+
+.hrl-result__row.is-fail .hrl-result__n {
+    color: var(--status-red);
+}
+
+/* ─── الكثافة تحت الشاشات الضيّقة ─── */
+
+@media (max-width: 640px) {
+    .hrl-fset,
+    .hrl-flag,
+    .hrl-conflict {
+        padding-inline: 12px;
+    }
+
+    .hrl-typegrid {
+        grid-template-columns: 1fr;
+    }
+
+    .hrl-drawer {
+        inline-size: 100%;
+        border-inline-end: none;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ١٢) الصفحة الجامعة — إطارٌ · عمودُ منسوبين · مسرحٌ · جداولُ · تقويم
+
+   امتدادُ القواعد الستّ نفسِها: بلا لونٍ خام، بلا رفعِ أولوية، منطقيٌّ
+   حصراً، فلات صرف، بلا شريطِ تمييزٍ جانبيّ، والفصلُ خطٌّ واحدٌ لا فجوة.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── ١٢-أ) الإطار: block-size:100% لا 100vh — الشريطُ السفليّ والبانرات ─── */
+
+.hrl-page {
+    block-size: 100%;
+    min-block-size: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--dashboard-bg);
+}
+
+.hrl-layout {
+    flex: 1;
+    min-block-size: 0;
+    display: flex;
+    gap: 0;
+    overflow: hidden;
+}
+
+/* عمودُ المنسوبين: عرضٌ ثابتٌ بلا حدٍّ خاصٍّ به — الفاصلُ خطٌّ واحدٌ على المسرح */
+.hrl-side {
+    /* ارتفاعُ صفِّ المنسوب — **ثابتٌ لا مصادفة**: سطرا الصفّ (`__n` و`__m`) كلاهما
+       `nowrap + ellipsis` بالبناء، فلا يلتفّ صفٌّ أبداً ولا يتبدّل ارتفاعُه بمحتواه.
+       وثباتُه هو ما يسمح لسقفِ التمرير على الجوّال أن يكون **مضاعَفاً صحيحاً** من
+       الصفّ بدل كسرٍ يقطع صفّاً من منتصفه. (قِيس بالمتصفّح: 48.09px.) */
+    --hrl-emprow-h: 48px;
+
+    flex: 0 0 300px;
+    inline-size: 300px;
+    min-inline-size: 0;
+    min-block-size: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--dashboard-card);
+}
+
+/* المسرح: يحمل الفاصلَ المنطقيَّ الوحيد بينه وبين العمود (ينقلب مع الاتجاه) */
+.hrl-stage {
+    flex: 1;
+    min-inline-size: 0;
+    min-block-size: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-inline-start: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+}
+
+@media (max-width: 1023px) {
+    .hrl-layout {
+        flex-direction: column;
+    }
+
+    /* 🩸 **الترويسةُ أوّلاً في المقاسين.** كان المسرحُ يهبط تحت القائمة عند التكديس،
+       فيقع القارئُ على قائمةِ أسماءٍ عاريةٍ قبل «الموارد البشرية» وقبل اسم المكتب وقبل
+       أيّ زرّ — بينما سطحُ المكتب يبدأ بالترويسة. الترتيبان صارا واحداً.
+       و**الشجرةُ لا تتبدّل**: القائمةُ تبقى أوّلَ عنصرٍ فيها (هي ملاحةُ الوحدة، ويقرؤها
+       المحرِّكُ الصوتيُّ قبل المسرح كما يقرؤها على سطح المكتب)، ويتبدّل ترتيبُ الرسم
+       وحدَه — والعمودان مرئيّان معاً في الشاشة نفسِها فلا يقع تركيزٌ خارجَ المنظور. */
+    .hrl-stage {
+        order: 1;
+        border-inline-start: none;
+    }
+
+    .hrl-side {
+        order: 2;
+        flex: 0 0 auto;
+        inline-size: 100%;
+        /* الفاصلُ ينقلب إلى أعلى العمود لأنّه صار تحت المسرح لا فوقه */
+        border-block-start: 1px solid var(--color-border);
+    }
+
+    /* 🩸 **القصُّ على حدِّ صفٍّ لا على منتصفه.** كان السقفُ `38vh` على العمود كلِّه،
+       فيقع حدُّه حيث اتّفق: قِيس عند 520×900 ⇒ منطقةُ التمرير ٢٦٧px وارتفاعُ الصفّ
+       ٤٨px ⇒ **٥٫٥ صفّ**، ونصفُ اسمٍ مقصوصٌ يُقرأ بطاقةً مكسورةً لا قائمةً تُمرَّر.
+       فينتقل السقفُ من العمود إلى منطقة التمرير نفسِها، ويصير مضاعَفاً صحيحاً من
+       ارتفاع الصفّ — فالحدُّ الأخيرُ حدُّ صفٍّ كاملٍ دائماً، والباقي يُمرَّر. */
+    .hrl-side > .hrl-emplist,
+    .hrl-side > .hrl-state--loading {
+        max-block-size: calc(var(--hrl-emprow-h) * 5);
+        overflow-y: auto;
+    }
+
+    /* والهيكلُ العظميُّ بارتفاع الصفّ الحقيقيّ (٤٨ لا ٤٤): السقفُ نفسُه يقع عليه، فلو
+       بقي ٤٤ لانقصّ آخرُ هيكلٍ من منتصفه — أي العطلُ عينُه في طور التحميل. */
+    .hrl-side .hrl-skel {
+        min-block-size: var(--hrl-emprow-h);
+    }
+}
+
+/* شاشةٌ قصيرة: ثلاثةُ صفوفٍ كاملة بدل خمسة — القاعدةُ نفسُها (مضاعَفٌ صحيح) بحصّةٍ
+   أقلَّ من الارتفاع، فلا يبتلع عمودُ الأسماءِ نصفَ شاشةِ جوّالٍ عرضيّ. */
+@media (max-width: 1023px) and (max-height: 820px) {
+    .hrl-side > .hrl-emplist,
+    .hrl-side > .hrl-state--loading {
+        max-block-size: calc(var(--hrl-emprow-h) * 3);
+    }
+}
+
+/* ─── ١٢-ب) الرأس: ثابتٌ بالبنية لا بـsticky (خارج منطقة التمرير) ─── */
+
+.hrl-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 9px 14px;
+    border-block-end: 1px solid var(--color-border);
+    background: var(--surface-band);
+}
+
+.hrl-head__id {
+    flex: 1 1 220px;
+    min-inline-size: 0;
+}
+
+.hrl-head__badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* شريطُ الإجراءات — **واحدٌ** في الصفحة كلِّها */
+.hrl-head__actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* حقيقةٌ في الرأس: رقمٌ متراصٌّ ووسمُه — تُقرأ ولا تُنقر */
+.hrl-fact {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 2px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    background: var(--dashboard-card);
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.hrl-fact__n {
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-heading);
+}
+
+.hrl-fact--gold {
+    border-color: color-mix(in srgb, var(--law-gold) 45%, transparent);
+    background: color-mix(in srgb, var(--law-gold) 10%, transparent);
+}
+
+.hrl-fact--gold .hrl-fact__n {
+    color: var(--law-gold);
+}
+
+/* نبرةٌ ثالثةٌ للحقيقة في الرأس — للمهلة المنقضية والوشيكة وحدَهما.
+   وموضعُها هنا لا في `hr-payroll.css`: المُعدِّلُ يعيش مع بدائيّته، وتعريفُ
+   `.hrl-fact__n` في ملفّين يصنع تعارضاً يرصده `css:audit` ويُحسَم بترتيب الحقن — أي
+   بقاعدةٍ لا يراها من يقرأ أحدَ الملفّين وحدَه. */
+.hrl-fact--danger {
+    border-color: color-mix(in srgb, var(--status-red) 45%, transparent);
+    background: color-mix(in srgb, var(--status-red) 10%, transparent);
+}
+
+.hrl-fact--danger .hrl-fact__n {
+    color: var(--status-red);
+}
+
+/* ─── ١٢-ج) أدواتُ الترشيح داخل رأس البلوك ─── */
+
+.hrl-ctrl {
+    padding: 4px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--dashboard-card);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.hrl-ctrl:focus {
+    outline: none;
+    border-color: var(--law-gold);
+}
+
+/* ─── ١٢-د) العمودُ الأيمن: بحثٌ ملتصقٌ · شرائحُ · صفوفٌ · ترقيم ─── */
+
+/* العدسةُ عنصرٌ شقيقٌ لا خلفيةٌ مطلقة — فلا يمرّ النصُّ تحتها في أيّ اتجاه */
+.hrl-search {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    border-block-end: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+}
+
+.hrl-search > svg {
+    flex: 0 0 auto;
+    align-self: center;
+    margin-inline-start: 12px;
+    color: var(--text-subtle);
+}
+
+.hrl-search input {
+    flex: 1;
+    min-inline-size: 0;
+    padding-block: 10px;
+    padding-inline: 8px 12px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--color-text);
+}
+
+.hrl-search input:focus {
+    outline: none;
+    background: var(--quiet-gray-50);
+}
+
+.hrl-search .hrl-searchclear {
+    flex: 0 0 auto;
+    padding-inline: 10px;
+    border: none;
+    border-inline-start: 1px solid var(--hairline);
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.hrl-search .hrl-searchclear:hover {
+    color: var(--status-red);
+}
+
+.hrl-chips {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border-block-end: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+    overflow-x: auto;
+}
+
+.hrl-chip {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 11px;
+    border: none;
+    border-radius: 0;
+    border-inline-end: 1px solid var(--hairline);
+    background: transparent;
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color var(--transition-fast, 100ms) ease, background var(--transition-fast, 100ms) ease;
+}
+
+.hrl-chip:last-child {
+    border-inline-end: none;
+}
+
+.hrl-chip:hover {
+    color: var(--color-text);
+}
+
+.hrl-chip[aria-pressed='true'] {
+    background: var(--law-navy-light);
+    color: var(--law-navy);
+}
+
+.hrl-chip:focus-visible {
+    outline: 1px solid var(--law-navy);
+    outline-offset: -2px;
+}
+
+.hrl-chip__n {
+    font-size: 10.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-subtle);
+}
+
+.hrl-emplist {
+    flex: 1;
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-y: auto;
+}
+
+/* الصفُّ: حاويةٌ لزرَّين (الاختيار والتسجيل السريع) — لا زرَّ داخل زرّ */
+/* الارتفاعُ مصرَّحٌ به لا متروكٌ للمحتوى: كان ٤٨٫٠٩px محسوباً من سطرين أُحاديّين،
+   والكسرُ وحدَه يكفي ليقصّ سقفُ الجوّال صفّاً من منتصفه. وهو فوق ٤٤px القديمة
+   فلا ينقص هدفُ اللمس. (والقصُّ مستحيلٌ هنا: كلا السطرين `nowrap + ellipsis`.) */
+.hrl-emprow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    block-size: var(--hrl-emprow-h);
+    border-block-end: 1px solid var(--hairline);
+}
+
+.hrl-emprow:last-child {
+    border-block-end: none;
+}
+
+.hrl-emprow:hover {
+    background: var(--quiet-gray-50);
+}
+
+/* المحدَّد: خلفيةٌ ووزن — **بلا شريطِ تمييزٍ جانبيّ** */
+.hrl-emprow.is-selected {
+    background: var(--law-navy-light);
+}
+
+.hrl-emprow.is-selected .hrl-emprow__n {
+    font-weight: 700;
+}
+
+.hrl-emprow__hit {
+    flex: 1;
+    min-inline-size: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.hrl-emprow__hit:focus-visible {
+    outline: 1px solid var(--law-navy);
+    outline-offset: -2px;
+}
+
+/* أفاتار بحرفٍ أوّل — **لا لونَ مشتقٌّ من هاش الاسم** */
+.hrl-emprow__av {
+    flex: 0 0 auto;
+    inline-size: 26px;
+    block-size: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    background: var(--quiet-gray-100);
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.hrl-emprow__main {
+    flex: 1;
+    min-inline-size: 0;
+}
+
+.hrl-emprow__n {
+    display: block;
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hrl-emprow__m {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hrl-emprow__end {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* شارةٌ نصّيةٌ لا رقم: «غير مُهيّأ» — لا يُعرض صفرٌ ولا شرطةٌ تُقرأ رقماً */
+.hrl-uninit {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--law-gold);
+    white-space: nowrap;
+}
+
+/* زرُّ التسجيل السريع: يظهر بالتحويم والتركيز، **ودائماً** بلا تحويم */
+.hrl-quick {
+    flex: 0 0 auto;
+    inline-size: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-inline-start: 1px solid var(--hairline);
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition-fast, 100ms) ease, color var(--transition-fast, 100ms) ease;
+}
+
+.hrl-emprow:hover .hrl-quick,
+.hrl-emprow:focus-within .hrl-quick,
+.hrl-quick:focus-visible {
+    opacity: 1;
+}
+
+.hrl-quick:hover {
+    color: var(--law-navy);
+}
+
+@media (hover: none) {
+    .hrl-quick {
+        opacity: 1;
+    }
+}
+
+.hrl-pager {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 10px;
+    border-block-start: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+    font-size: 11px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ─── ١٢-هـ) الجدولُ الكثيف: فصلٌ بـborder-block-end لا بطيّ الحدود ─── */
+
+.hrl-table {
+    inline-size: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12.5px;
+}
+
+.hrl-table th,
+.hrl-table td {
+    padding: 7px 10px;
+    border-block-end: 1px solid var(--hairline);
+    text-align: start;
+    vertical-align: top;
+}
+
+.hrl-table thead th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    background: var(--surface-band);
+    border-block-end: 1px solid var(--color-border);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.hrl-table tbody tr:hover {
+    background: var(--quiet-gray-50);
+}
+
+/* رأسُ الشهر: لاصقٌ تحت ترويسة الجدول مباشرةً */
+.hrl-monthhead th {
+    position: sticky;
+    inset-block-start: 27px;
+    z-index: 1;
+    padding-block: 5px;
+    background: var(--quiet-gray-50);
+    border-block-end: 1px solid var(--color-border);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+/* وضعُ الموظف الواحد: عمودُ الاسم يسقط بالصنف لا بشرطٍ في JSX */
+.hrl-table--single .hrl-c-emp {
+    display: none;
+}
+
+.hrl-cellnum {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.hrl-cellsub {
+    display: block;
+    font-size: 10.5px;
+    line-height: 1.6;
+    color: var(--text-muted);
+}
+
+.hrl-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hrl-type__n {
+    display: block;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+/* زرٌّ يلبس نصَّ الخلية — لا صفَّ قابلٌ للنقر (يسقط من لوحة المفاتيح) */
+.hrl-cellbtn {
+    display: block;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+    text-align: start;
+    cursor: pointer;
+}
+
+.hrl-cellbtn:hover {
+    color: var(--law-navy);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.hrl-cellbtn:focus-visible {
+    outline: 1px solid var(--law-navy);
+    outline-offset: 2px;
+}
+
+/* الأدوات: تظهر بالتحويم والتركيز، ودائماً بلا تحويم */
+.hrl-tools {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity var(--transition-fast, 100ms) ease;
+}
+
+.hrl-table tbody tr:hover .hrl-tools,
+.hrl-table tbody tr:focus-within .hrl-tools {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .hrl-tools {
+        opacity: 1;
+    }
+}
+
+/* الصفُّ الجديد: وميضٌ خفيفٌ يدلّ على موضعِ ما سُجّل */
+@media (prefers-reduced-motion: no-preference) {
+    .hrl-table tbody tr.is-fresh {
+        animation: hrl-fresh 1.2s ease-out 1;
+    }
+}
+
+@keyframes hrl-fresh {
+    from {
+        background: color-mix(in srgb, var(--law-gold) 22%, transparent);
+    }
+
+    to {
+        background: transparent;
+    }
+}
+
+/* ─── ١٢-و) التقويم الشهريّ: عمودٌ لكلّ يومٍ وصفٌّ لكلّ منسوب ─── */
+
+.hrl-calwrap {
+    min-block-size: 0;
+    overflow: auto;
+}
+
+.hrl-cal {
+    --hrl-daycol: 26px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 11px;
+}
+
+.hrl-cal th,
+.hrl-cal td {
+    padding: 0;
+    border-block-end: 1px solid var(--hairline);
+    border-inline-end: 1px solid var(--hairline);
+    text-align: center;
+    vertical-align: middle;
+}
+
+.hrl-cal thead th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    inline-size: var(--hrl-daycol);
+    min-inline-size: var(--hrl-daycol);
+    padding-block: 4px;
+    background: var(--surface-band);
+    border-block-end: 1px solid var(--color-border);
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+/* اسمُ المنسوب: لاصقٌ على الحافّة المنطقية (ينقلب مع الاتجاه) */
+.hrl-cal__name {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    inline-size: 154px;
+    min-inline-size: 154px;
+    padding: 4px 10px;
+    background: var(--dashboard-card);
+    border-inline-end: 1px solid var(--color-border);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-text);
+    text-align: start;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hrl-cal thead .hrl-cal__name {
+    z-index: 3;
+    background: var(--surface-band);
+}
+
+.hrl-cal__d {
+    display: block;
+    font-size: 9.5px;
+    font-weight: 400;
+    color: var(--text-subtle);
+}
+
+.hrl-cal__n {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-heading);
+}
+
+.hrl-cal .is-weekend {
+    background: var(--quiet-gray-50);
+}
+
+/* عطلةٌ معتمَدة: عمودٌ ذهبيّ. وغيرُ المعتمَدة: خطٌّ منقّطٌ وحدَه — لا تُستثنى */
+.hrl-cal .is-holiday {
+    background: color-mix(in srgb, var(--law-gold) 12%, transparent);
+}
+
+.hrl-cal thead th.is-holiday-pending {
+    border-block-end: 2px dotted var(--law-gold);
+}
+
+.hrl-cal .is-today {
+    outline: 1px solid var(--law-navy);
+    outline-offset: -1px;
+}
+
+.hrl-cal tbody tr {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 28px;
+}
+
+.hrl-cell {
+    inline-size: 100%;
+    min-inline-size: var(--hrl-daycol);
+    block-size: 26px;
+    display: flex;
+    flex-direction: column;
+    justify-content: stretch;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.hrl-cell:focus-visible {
+    outline: 1px solid var(--law-navy);
+    outline-offset: -1px;
+}
+
+/* المدّةُ شريطٌ متّصل: ملءٌ بلا فجوةٍ ولا استدارة، وحدٌّ سفليٌّ بلون النوع */
+.hrl-cell__f {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    background: color-mix(in srgb, var(--hrl-k, var(--quiet-gray-600)) 22%, transparent);
+    border-block-end: 2px solid var(--hrl-k, var(--quiet-gray-600));
+}
+
+/* نصفُ اليوم: نصفُ الارتفاع في موضعه — بلا تدرّجٍ قطريّ */
+.hrl-cell--half .hrl-cell__f {
+    block-size: 50%;
+}
+
+.hrl-cell--morning {
+    justify-content: flex-start;
+}
+
+.hrl-cell--evening {
+    justify-content: flex-end;
+}
+
+/* الطلبُ المعلَّق: مُحدَّدٌ بحدٍّ منقّطٍ لا بملءٍ كامل (لم يُخصم بعد) */
+.hrl-cell--pending .hrl-cell__f {
+    background: transparent;
+    border-block-end: 2px dotted var(--hrl-k, var(--quiet-gray-600));
+}
+
+@media (max-width: 980px) {
+    .hrl-cal {
+        --hrl-daycol: 22px;
+    }
+
+    .hrl-cal__name {
+        inline-size: 120px;
+        min-inline-size: 120px;
+    }
+}
+
+/* ─── ١٢-ز) وسيلةُ الإيضاح ─── */
+
+.hrl-legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 7px 14px;
+    border-block-end: 1px solid var(--hairline);
+    background: var(--quiet-gray-50);
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.hrl-legend__i {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.hrl-legend__s {
+    inline-size: 14px;
+    block-size: 10px;
+    border-block-end: 2px solid var(--hrl-k, var(--quiet-gray-600));
+    background: color-mix(in srgb, var(--hrl-k, var(--quiet-gray-600)) 22%, transparent);
+}
+
+/* ─── ١٢-ح) تبويبُ ملفّ الموظف: كثافةٌ واحدةٌ بلا مقاسٍ بديل ─── */
+
+/* حدٌّ معروضٌ حيث لا لوحَ حركات — فلا مؤشّرَ يَعِد بنقرةٍ لا تقع */
+.hrl-formula__term--static {
+    cursor: default;
+}
+
+.hrl-formula__term--static:hover {
+    background: transparent;
+}
+
+.hrl-tabpanel {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    background: var(--dashboard-card);
+    margin-block-end: 14px;
+}
+
+.hrl-tabpanel .hrl-block:last-child {
+    border-block-end: none;
+}
+
+@media (max-width: 640px) {
+    .hrl-head,
+    .hrl-legend {
+        padding-inline: 12px;
+    }
+
+    .hrl-table th,
+    .hrl-table td {
+        padding-inline: 8px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ١٣) الجدار — ملفُّ الموظف واللوحُ المكتبيّ تدفّقاً رأسياً واحداً
+
+   القواعدُ الستّ أعلاه سارية: بلا لونٍ خام · بلا رفعِ أولوية · منطقيٌّ
+   حصراً · فلات صرف · بلا شريطِ تمييزٍ جانبيّ · الفصلُ خطٌّ لا فجوة.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── ١٣-أ) المُمرِّرُ الوحيد في المسرح ─── */
+/* بعد أن فقد .hr-stage تمريرَه (hr-page.css) يصير هذا مالكَ التمرير */
+.hrl-wall {
+    flex: 1;
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* لا مُمرِّرَ داخل مُمرِّر: البلوكُ المهاجِر يفقد نموَّه وتمريرَه الداخليّ،
+   وإلّا علقت عجلةُ الفأرة داخل قائمةٍ بدل أن تُكمل الجدار. */
+.hrl-wall .hrl-block--grow {
+    flex: none;
+}
+
+.hrl-wall .hrl-block--scroll .hrl-block__b {
+    overflow: visible;
+}
+
+/* لوحُ الإجازات داخل الجدار يفقد إطارَه الخارجيّ فيلتصق ببلوكات الجدار */
+.hrl-wall .hrl-tabpanel {
+    border: none;
+    border-block-end: 1px solid var(--color-border);
+    margin-block-end: 0;
+}
+
+/* ─── ١٣-ب) شريطُ القفز — يلبس .hrl-tabs/.hrl-tab بلا مظهرٍ جديد ─── */
+/* ثابتٌ بالبنية (شقيقٌ لـ.hrl-cols خارج المُمرِّر): صفرُ sticky، صفرُ z-index،
+   صفرُ scroll-margin. و.hrl-tabs يتمرّر أفقياً ولا يلتفّ ⇒ سطرٌ واحدٌ أبداً. */
+a.hrl-tab {
+    text-decoration: none;
+}
+
+a.hrl-tab[aria-current='true'] {
+    color: var(--color-heading);
+    border-block-end-color: var(--law-gold);
+}
+
+/* ─── ١٣-ج) الصفُّ الساكن — «البلوكُ الفارغُ سطرٌ» ─── */
+.hrl-row--static {
+    justify-content: space-between;
+}
+
+.hrl-row--static:hover {
+    background: transparent;
+}
+
+/* بندٌ فُحص فمرّ: العلامةُ **حالةٌ لا زخرفة** — بها وحدَها يفترق «فُحص ولم يظهر شيء»
+   عن «لم يُفحص أصلاً»، وهما ما كان يخلطهما العمودُ الفارغ. */
+.hrl-row--ok > svg {
+    flex: 0 0 auto;
+    color: var(--status-green);
+}
+
+/* ─── ١٣-د) شدّةُ بندِ «ما يستحقّ الفعل» — البنيةُ من .hrl-chips/.hrl-chip ─── */
+.hrl-chip--warn {
+    color: var(--law-gold);
+}
+
+.hrl-chip--danger {
+    color: var(--status-red);
+}
+
+/* بندٌ يقود **خارج** الجدار يبقى رابطاً (يُنسَخ ويُفتح في تبويب)، لكنّ a:hover
+   العامّ (index.css) يخطّ تحته فيبدو نوعاً ثانياً من البنود. الشريطُ نوعٌ واحد. */
+a.hrl-chip,
+a.hrl-chip:hover {
+    text-decoration: none;
+}
+
+/* ─── ١٣-هـ) أدواتُ الصفّ تعمل في القوائم كما تعمل في الجداول ─── */
+/* .hrl-tools اليوم تُكشَف بـ .hrl-table tbody tr:hover حصراً،
+   والجدارُ يعرض العقودَ والمستنداتِ في .hrl-row لا في جدول. */
+.hrl-row:hover .hrl-tools,
+.hrl-row:focus-within .hrl-tools {
+    opacity: 1;
+}
+
+/* ─── ١٣-و) مقياسُ اكتمالٍ منجَز ─── */
+.hrl-meter--done .hrl-meter__fill {
+    background: var(--status-green);
+}
+
+/* ─── ١٣-ز) فعلٌ نصّيٌّ هادم — خارج شريط الإجراءات عمداً ─── */
+.hrl-link--danger,
+.hrl-link--danger:hover {
+    color: var(--status-red);
+}
+
+/* ─── ١٣-ح) حُذفت: `button.hrl-fact` (حقيقةٌ قابلةٌ للنقر تُرشِّح القائمة) ───
+   كُتبت تحسّباً لبطاقاتٍ قابلةٍ للنقر في لوح المكتب، ورفضها تصميمُ اللوحة: استعمالُها
+   يعني إعادةَ رسمِ شريحتَي «الكل» و«على رأس العمل» الموجودتين حرفياً في القائمة اليمنى
+   — ورقمٌ واحدٌ بصورتين على شاشةٍ واحدةٍ هو عينُ الداء المُعالَج. حُذفت بالبرهان: بحثٌ
+   في كامل `src/` عن `hrl-fact` داخل `<button>` = صفرُ نتيجة، والصنفُ **غيرُ مبنيٍّ
+   بقالبٍ نصّيّ** فلا فخَّ فيه. وتركُها يكرّر سابقةَ `.hr-stage__head-actions`: CSS
+   صُمِّم ليحمل أزراراً لم تأتِ قطّ. */
+
+/* ─── ١٣-ط) عمودان داخل جسم البلوك — بصفرِ gap وفاصلٍ منطقيّ ─── */
+.hrl-split {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+}
+
+@media (min-width: 900px) {
+    .hrl-split {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .hrl-split > :nth-child(1) {
+        padding-inline-end: 14px;
+    }
+
+    .hrl-split > :nth-child(2) {
+        padding-inline-start: 14px;
+        border-inline-start: 1px solid var(--hairline);
+    }
+
+    /* في العمودين يتولّى الفصلَ الحدُّ المنطقيُّ وحدَه؛ وخطُّ .hrl-fset السفليُّ
+       يبقى للعمود الواحد حيث يقع القسمان فوق بعضهما. */
+    .hrl-split > .hrl-fset {
+        border-block-end: none;
+    }
+}
+
+/* أيقونةُ وسمِ المفتاح (جوال · بريد) تجلس على الخطّ — بدل خمس نسخٍ من
+   style={{ display:'inline', verticalAlign:'-1px' }} في JSX. */
+.hrl-wall .hrl-kv dt svg {
+    vertical-align: -2px;
+}
+
+/* ─── ١٣-ي) البلوكُ المطويّ (الأجر) — المؤشّرُ أيقونةٌ في JSX ─── */
+/* `.hrl-block` أساسُه `display:flex`، و`<details>` بعرضٍ غيرِ كتليٍّ لا يُعوَّل على
+   طيّه في كلّ المحرّكات — وبلوكٌ يظنّ نفسَه مطويّاً وهو يعرض آيباناً أسوأُ من بلوكٍ
+   مفتوحٍ صراحةً. الكتليُّ هنا لا يخسر شيئاً: لا نموَّ ولا تمريرَ داخليّاً في هذا البلوك. */
+details.hrl-block {
+    display: block;
+}
+
+.hrl-block > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.hrl-block > summary::-webkit-details-marker {
+    display: none;
+}
+
+.hrl-block > summary::marker {
+    content: '';
+}
+
+/* ─── ١٣-ك) الجدار: صفٌّ محدودٌ فوق 1400px، ومُمرِّرٌ واحدٌ دونها ─── */
+/* .hrl-cols شبكةٌ بـoverflow:hidden وصفوفٍ ضمنيةٍ auto داخل حاويةٍ محدَّدة
+   الارتفاع: حين يهبط الرصيفُ صفّاً ثانياً يتمدّد بمحتواه ويُقصّ **بلا شريط
+   تمرير** — العطلُ يبدو سلامة. التقييدُ بالمُعدِّل يمنع لمسَ /hr/leave. */
+@media (min-width: 1400px) {
+    .hrl-page--wall .hrl-cols {
+        grid-template-rows: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 1399px) {
+    .hrl-page--wall .hrl-cols {
+        overflow-y: auto;
+    }
+
+    .hrl-page--wall .hrl-cols__main,
+    .hrl-page--wall .hrl-cols__side,
+    .hrl-page--wall .hrl-wall {
+        overflow: visible;
+    }
+
+    /* 🩸 تكملةُ الحماية — بلا هذين السطرين تبقى القاعدةُ أعلاه **عاجزة**:
+       `min-block-size: 0` على العمودين (:591، :599) يُصفّر «الحجمَ الأدنى التلقائيّ»
+       لعنصرَي الشبكة، فيصير أساسُ كلِّ صفٍّ ضمنيٍّ صفراً؛ وحين تكون الشبكةُ محدَّدةَ
+       الارتفاع تُوزَّع خطوةُ «تكبير المسارات» ارتفاعَ الحاوية وحدَه — فيُضغط صفُّ العمود
+       الرئيس ويفيض محتواه **مرئياً**، ويُرسَم الرصيفُ فوقه بخلفيةٍ مصمتة فيغطّيه.
+       قِيس بالمتصفّح عند 1374px: العمود 190..623 ومحتواه 190..946 والرصيف 623..805 —
+       ٣٢٣px من قائمة العمل تحت بطاقةِ تعريف. وباستعادة `auto` يصير العمود 190..946
+       والرصيفُ تحته 946..1128، وشريطُ التمرير يبلغهما معاً. */
+    .hrl-page--wall .hrl-cols__main,
+    .hrl-page--wall .hrl-cols__side {
+        min-block-size: auto;
+    }
+
+    .hrl-page--wall .hrl-wall {
+        flex: none;
+    }
+}
+
+/* ─── ١٣-ل) شريطُ «اليوم في المكتب» — يعبر العمودين فوق .hrl-cols ─── */
+/* `.hrl-stage` عمودُ flex بـoverflow:hidden، والابنُ الافتراضيُّ `flex:0 1 auto`
+   يقبل الانكماشَ فيقصّ نصَّه. نفسُ سببِ `flex:0 0 auto` على `.hrl-head` (:1496).
+   والفاصلُ يُرفع من `--hairline` إلى `--color-border` لأنّ ما تحته منطقةٌ لا صفّ. */
+.hrl-stage > .hrl-conflict {
+    flex: 0 0 auto;
+    border-block-end-color: var(--color-border);
+}
+
+/* ═══ حُذفت القواعدُ الجسريّةُ الستُّ (الخطوة ٧) ═══
+   كانت `.hrl-wall .hr-dbody|.hr-sec|__h|__t|__t svg|__b` تفكّ إطارَ الأغلفة
+   القديمة داخل الجدار (حدٌّ + استدارةٌ ١٢ + شبكةُ `auto-fill`) ريثما تهاجر.
+   وقد هاجرت: `ContractsTab` و`DocumentsTab` و`OnboardingTab` تُصيّر
+   `section.hrl-block` مباشرةً برأسٍ `<h2 class="hrl-block__t hrl-h2">` —
+   فسقط معها الدَّينُ المعلَنُ في الخطوة ٢ (المقاسُ كان يُوحَّد بجسرٍ بينما
+   الدلالةُ تبقى `<div>`)، وسقطت `.hr-sec*` و`.hr-dbody*` من hr-page.css. */
+
+/* ─────────────────────────────────────────────────────────────
+   ١٤) تحويلُ الطلبات الإدارية (D-LGC) — «الرقمُ قبل الفعل»
+   ───────────────────────────────────────────────────────────── */
+
+/* جملةُ الأثر: «سيُخصم ٥ أيامٍ من رصيد منصور (١٦ ⇐ ١١)».
+   تُرفع رتبتُها بصرياً فوق بقيّة الحقول لأنها **الشيءُ الوحيد** الذي يُقرأ قبل
+   الضغط على زرٍّ يكتب في دفترٍ لا يُعدَّل. ولا `dir="ltr"` على الحاوية: النصُّ
+   عربيٌّ يحوي أرقاماً، وقلبُ الاتجاه يمزّقه (الأرقامُ تُعزَل بـ`bdi` عند الحاجة). */
+.hrl-effect {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 10px 0 0;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--law-gold) 35%, transparent);
+    background: color-mix(in srgb, var(--law-gold) 8%, transparent);
+    font-size: 12.5px;
+    line-height: 1.75;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hrl-effect svg {
+    flex: 0 0 auto;
+    margin-block-start: 3px;
+    color: var(--law-gold);
+}
+
+/* رصيدٌ سالبٌ بعد التحويل — واقعةٌ حقيقيةٌ تُعلَن، لا خطأ يُخفى */
+.hrl-effect.is-neg {
+    border-color: color-mix(in srgb, var(--status-red) 40%, transparent);
+    background: color-mix(in srgb, var(--status-red) 8%, transparent);
+}
+
+.hrl-effect.is-neg svg {
+    color: var(--status-red);
+}
+
+/* إقرارُ السالب — صندوقٌ ظاهرٌ بحدٍّ، لا خانةٌ تمرّ مع بقيّة الحقول */
+.hrl-ack {
+    margin: 10px 14px 0;
+    padding: 9px 12px;
+    border: 1px solid color-mix(in srgb, var(--status-red) 35%, transparent);
+    background: color-mix(in srgb, var(--status-red) 6%, transparent);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--color-heading);
+}
+
+/* عمودُ «التحويل» في جدول الطلبات الإدارية — الحالةُ فوق الزرّ لا بدلاً منه */
+.hrl-convert {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.hrl-convert__why {
+    font-size: 10.5px;
+    line-height: 1.6;
+    color: var(--text-muted);
+}
+
+/* اختيارُ معنى الرصيد الافتتاحيّ — `fieldset` بلا مظهرِ متصفّحٍ افتراضيّ.
+   الخياران يُعرضان **بأثرهما مكتوباً تحت كلٍّ منهما**: قرارٌ يحكم كلَّ تحويلٍ لاحقٍ
+   لا يُتَّخذ من عنوانٍ من كلمتين. */
+.hrl-basis {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    background: var(--quiet-gray-50);
+}
+
+.hrl-basis > legend {
+    padding: 0 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.hrl-basis__opt {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-block-end: 8px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--color-text);
+}
+
+.hrl-basis__opt:last-of-type {
+    margin-block-end: 0;
+}
+
+.hrl-basis__opt input[type='radio'] {
+    flex: 0 0 auto;
+    inline-size: 16px;
+    block-size: 16px;
+    margin-block-start: 4px;
+    accent-color: var(--law-navy);
+}
+
+.hrl-basis__opt strong {
+    color: var(--color-heading);
+}
+
+.hrl-basis .hrl-hint {
+    display: block;
+    margin-block-start: 2px;
+}

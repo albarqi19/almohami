@@ -1,0 +1,447 @@
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ *  سطحُ الاعتماد — بدائيّاتُ `hrla-*` وحدَها
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * ورقةٌ مستقلّةٌ لا إضافةٌ إلى `hr-leave.css`: تلك ٧٦ ألفَ حرفٍ تخدم شاشةَ الإدارة وهي تحت
+ * يد وكيلٍ آخر، وهذه بدائيّاتُ ما يراه المعتمِدُ قبل قراره. **ولا تُعيد تعريفَ صنفٍ واحدٍ من
+ * `hrl-*` أو `hr-*` أو `myhr-*`** — تلبِسها ولا تنافسها، فلا تتعلّق بترتيب الحقن ولا تزيد
+ * عدَّ التعارض في `css:audit`.
+ *
+ * الأعرافُ الملزمة: **مسطّحٌ صرف** (لا ظلَّ ولا تدرّج)، ومتغيّراتُ CSS حصراً (صفرُ hex/rgba)،
+ * وصفرُ `!important`، وخصائصُ منطقية (`inline`/`block` لا `left`/`right`) لأن التطبيق `rtl`.
+ */
+
+/* ══════════ المودال ══════════ */
+
+/* أعرضُ من العاديّ: لوحُ التعارض صفوفٌ ثلاثيةُ الأعمدة تحتاج مدىً تُقرأ فيه بلا التفاف. */
+.hrla-modal {
+  max-width: 40rem;
+}
+
+/* ترويسةُ الطلب — أربعُ حقائقَ قبل اللوح: مَن وماذا وكم ولماذا. */
+.hrla-head {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  border: var(--hairline, 1px) solid var(--color-border);
+  background: var(--surface-sunken, var(--color-surface));
+}
+
+.hrla-head__i {
+  display: grid;
+  grid-template-columns: 5rem 1fr;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.hrla-head__i dt {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.hrla-head__i dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text);
+}
+
+/* ══════════ لوحُ التعارض ══════════ */
+
+.hrla-panel {
+  padding: 0.75rem 0.85rem;
+  border: var(--hairline, 1px) solid var(--color-border);
+  background: var(--surface-sunken, var(--color-surface));
+}
+
+.hrla-panel__t {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.55rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+/* السلامةُ تُنطَق — سطرٌ أخضرُ صريحٌ لا غيابُ بانر. */
+.hrla-clear {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  border-inline-start: 2px solid var(--status-green);
+  background: color-mix(in srgb, var(--status-green) 9%, transparent);
+  font-size: 0.74rem;
+  line-height: 1.75;
+  color: var(--color-text);
+}
+
+.hrla-clear svg {
+  flex: 0 0 auto;
+  margin-block-start: 0.15rem;
+  color: var(--status-green);
+}
+
+/* ── مجموعةٌ واحدة (جلسات · مهامّ · غيابات) ── */
+
+.hrla-group {
+  margin-block-start: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border: var(--hairline, 1px) solid var(--color-border);
+  background: var(--color-surface);
+}
+
+/* الجلساتُ أخطرُها — تُميَّز بحافةٍ حمراءَ لا بلونِ خلفيةٍ يبتلع النصّ. */
+.hrla-group--grave {
+  border-inline-start: 2px solid var(--status-red);
+}
+
+.hrla-group__t {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.hrla-group__n {
+  min-inline-size: 1.1rem;
+  padding-inline: 0.3rem;
+  border: var(--hairline, 1px) solid var(--color-border);
+  background: var(--surface-band, var(--color-surface));
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* لماذا يهمّ — جملةٌ واحدةٌ تشرح الخطر ولا تأمر بقرار. */
+.hrla-group__why {
+  margin: 0.3rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.7;
+  color: var(--status-red);
+}
+
+.hrla-list {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ثلاثةُ أعمدة: تاريخٌ ثابتُ العرض · ما يميّز الصفّ · وسومٌ تفصيلية. */
+.hrla-row {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding-block: 0.3rem;
+  border-block-start: var(--hairline, 1px) solid var(--color-border);
+  font-size: 0.74rem;
+  line-height: 1.7;
+}
+
+.hrla-row:first-child {
+  border-block-start: none;
+}
+
+.hrla-row__d {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-heading);
+  font-weight: 600;
+}
+
+.hrla-row__m {
+  color: var(--color-text);
+}
+
+/* عبارةٌ لا تُكسَر — «رقم ٤٥٧١٢٣٤٥٦٧» وحدةٌ واحدةٌ تُنسَخ وتُبحَث بها. */
+.hrla-nb {
+  white-space: nowrap;
+}
+
+.hrla-row__f {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+/* وسمٌ صغير — يُستعمل في الصفوف والترويسة معاً. */
+.hrla-chip {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: 0.35rem;
+  padding-block: 0.1rem;
+  border: var(--hairline, 1px) solid var(--color-border);
+  background: var(--surface-band, var(--color-surface));
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* سابقُ إجازاته — سياقٌ لا تهمة، فبنبرةٍ محايدةٍ وبلا لون. */
+.hrla-prev {
+  margin: 0.6rem 0 0;
+  padding-block-start: 0.5rem;
+  border-block-start: var(--hairline, 1px) solid var(--color-border);
+  font-size: 0.71rem;
+  line-height: 1.75;
+  color: var(--text-muted);
+}
+
+/* الرصيدُ قبل وبعد — رقمٌ يُقرأ، ويحمرُّ حين يصير سالباً. */
+.hrla-impact {
+  margin: 0.45rem 0 0;
+  padding: 0.4rem 0.55rem;
+  border-inline-start: 2px solid var(--law-gold);
+  background: var(--surface-band, var(--color-surface));
+  font-size: 0.74rem;
+  line-height: 1.75;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.hrla-impact--negative {
+  border-inline-start-color: var(--status-red);
+  color: var(--status-red);
+}
+
+/* ══════════ الإقرارُ بالرصيد السالب ══════════ */
+
+.hrla-ack {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.5rem 0.6rem;
+  border: var(--hairline, 1px) solid var(--status-red);
+  background: color-mix(in srgb, var(--status-red) 7%, transparent);
+  font-size: 0.74rem;
+  line-height: 1.75;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.hrla-ack input {
+  flex: 0 0 auto;
+  margin-block-start: 0.25rem;
+}
+
+/* ══════════ الحالاتُ الأربع ══════════ */
+
+.hrla-state {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border: var(--hairline, 1px) solid var(--color-border);
+  background: var(--surface-sunken, var(--color-surface));
+  font-size: 0.75rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.hrla-state--error {
+  display: grid;
+  justify-items: start;
+  gap: 0.45rem;
+  border-color: var(--status-red);
+  color: var(--status-red);
+}
+
+.hrla-state--error p {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.hrla-state--empty {
+  color: var(--text-subtle);
+}
+
+/* قرارٌ وقع سلفاً، أو طلبُ الناظر نفسِه — خبرٌ لا خطأ. */
+.hrla-state--settled {
+  border-inline-start: 2px solid var(--status-orange);
+  color: var(--color-text);
+}
+
+.hrla-spin {
+  animation: hrla-rotate 0.9s linear infinite;
+}
+
+@keyframes hrla-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hrla-spin {
+    animation: none;
+  }
+}
+
+/* ══════════ زرُّ الرفض ══════════ */
+
+/* يُميَّز بالحدّ لا بالتعبئة: زرٌّ أحمرُ مملوءٌ يجذب النقرَ، والرفضُ لا يُستعجَل. */
+.hrla-btn--reject {
+  border-color: var(--status-red);
+  color: var(--status-red);
+}
+
+/* ══════════ الطابور ══════════ */
+
+.hrla-q {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.hrla-q__t {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.hrla-q__n {
+  min-inline-size: 1.25rem;
+  padding-inline: 0.35rem;
+  border: var(--hairline, 1px) solid var(--color-border);
+  background: var(--surface-band, var(--color-surface));
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.hrla-q__list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: var(--hairline, 1px) solid var(--color-border);
+}
+
+.hrla-q__row + .hrla-q__row {
+  border-block-start: var(--hairline, 1px) solid var(--color-border);
+}
+
+/* الصفُّ كلُّه زرٌّ واحد — هدفُ نقرٍ واحدٌ لا رابطٌ داخل صفٍّ قابلٍ للنقر.
+   والفائضُ يقع **في آخر الصفّ** لا بعد الاسم: حين كان عمودُ الاسم `1fr` انفتحت فجوةٌ
+   تقارب ٦٠٠px بين الاسم ونوعِه داخل تبويب شاشة الإجازات العريض، فبدا الصفُّ مقطوعاً
+   نصفين. والاسمُ الآن يأخذ ما يحتاج (٩–٢٠rem) ثمّ تتلاصق حقائقُه. */
+.hrla-q__open {
+  display: grid;
+  grid-template-columns: minmax(9rem, 20rem) auto minmax(9rem, auto) auto 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  inline-size: 100%;
+  padding: 0.5rem 0.65rem;
+  border: none;
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 0.75rem;
+  text-align: start;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.hrla-q__open:hover {
+  background: var(--surface-band, var(--color-surface));
+}
+
+.hrla-q__open:focus-visible {
+  outline: 2px solid var(--law-gold);
+  outline-offset: -2px;
+}
+
+.hrla-q__who {
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.hrla-q__when {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.hrla-q__days {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+/* ── الشارة: عددٌ يدفع إلى الفتح، لا تفصيلٌ يُقرأ قراراً ── */
+
+.hrla-q__badge {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  gap: 0.3rem;
+  padding-inline: 0.35rem;
+  padding-block: 0.12rem;
+  border: var(--hairline, 1px) solid var(--color-border);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.hrla-q__badge--clear {
+  border-color: var(--status-green);
+  color: var(--status-green);
+}
+
+.hrla-q__badge--hit {
+  border-color: var(--status-red);
+  color: var(--status-red);
+}
+
+/* «لم يُفحص» ثالثةٌ متمايزةٌ عن «لا تعارض» — رماديّةٌ لا خضراء، فلا تُقرأ سلامة. */
+.hrla-q__badge--unknown {
+  border-style: dashed;
+  color: var(--text-subtle);
+}
+
+.hrla-q__hit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hrla-q__note {
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.7;
+  color: var(--text-subtle);
+}
+
+/* ══════════ الضيّق ══════════ */
+
+@media (max-width: 640px) {
+  .hrla-row,
+  .hrla-head__i {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
+  .hrla-q__open {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}

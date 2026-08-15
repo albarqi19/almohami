@@ -1,0 +1,448 @@
+/*
+ * وحدةُ **التصفية** (`hrs-*`) — تمدّ بدائيّاتِ `hrl-*` و`hrp-*` ولا تُعيد تعريفَ صنفٍ منها،
+ * فلا تتعلّق بترتيب الحقن ولا تُنتج تعارضاً في `css:audit`.
+ *
+ * ══════ لماذا صفحةٌ بلا شبكةٍ متعدّدة الأعمدة ══════
+ * لأنّ هذه الشاشةَ **تُقرأ من أعلى إلى أسفل مرّةً واحدةً بترتيبٍ مُلزِم**: السببُ ثمّ الكتلُ
+ * ثمّ الوعاءُ ثمّ المهلةُ ثمّ البنودُ ثمّ الاعتماد. وعمودٌ جانبيٌّ يجعل القارئَ يبدأ من حيث
+ * وقعت عينُه، وهذا مستندٌ يُدافَع به أمام محكمة.
+ *
+ * ══════ 🚫 لا شريطَ تمييزٍ جانبيّ ولا توهّج ══════
+ * فلاتٌ صرف: الحدُّ رفيعٌ واللونُ خافت، والتمييزُ بالخلفية لا بشريطٍ على الحافة.
+ *
+ * ══════ 🔴 `dir="ltr"` على الرقم وحدَه ══════
+ * العطلُ المسجَّل: `dir="ltr"` جامعٌ على نطاقٍ يخلط عربيةً برقمٍ يمزّق الترتيب. فالعملةُ
+ * **خارج** نطاق الرقم في JSX، ولا قاعدةَ اتجاهٍ هنا على حاوية.
+ */
+
+.hrs-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ───────── الرأس ───────── */
+.hrs-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.hrs-head__t {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--law-navy, #14213d);
+}
+
+.hrs-head__s {
+  margin: 3px 0 0;
+  font-size: 0.76rem;
+  color: var(--text-secondary, #6b7280);
+}
+
+.hrs-head__meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.hrs-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--bg-subtle, #f3f4f6);
+  color: var(--text-secondary, #6b7280);
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.hrs-stage--approved,
+.hrs-stage--paid,
+.hrs-stage--published {
+  background: color-mix(in srgb, var(--status-green, #16a34a) 10%, transparent);
+  color: var(--status-green, #16a34a);
+  border-color: color-mix(in srgb, var(--status-green, #16a34a) 30%, transparent);
+}
+
+.hrs-stage--frozen {
+  background: color-mix(in srgb, var(--law-navy, #14213d) 8%, transparent);
+  color: var(--law-navy, #14213d);
+}
+
+/* ───────── البطاقة ───────── */
+.hrs-card {
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.hrs-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.hrs-card__t {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--law-navy, #14213d);
+}
+
+.hrs-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  background: var(--bg-subtle, #f3f4f6);
+  color: var(--text-secondary, #6b7280);
+}
+
+.hrs-tag--ok {
+  background: color-mix(in srgb, var(--status-green, #16a34a) 10%, transparent);
+  color: var(--status-green, #16a34a);
+}
+
+.hrs-tag--need {
+  background: color-mix(in srgb, var(--law-gold, #b8860b) 14%, transparent);
+  color: var(--law-gold, #b8860b);
+  font-weight: 600;
+}
+
+/* ───────── سببُ الإنهاء — أوّلُ ما يُطلَب ───────── */
+.hrs-basis--missing {
+  background: color-mix(in srgb, var(--law-gold, #b8860b) 5%, var(--bg-card, #fff));
+  border-color: color-mix(in srgb, var(--law-gold, #b8860b) 34%, transparent);
+}
+
+.hrs-ask {
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--law-gold, #b8860b) 9%, transparent);
+  font-size: 0.78rem;
+  line-height: 1.75;
+  color: var(--law-navy, #14213d);
+}
+
+.hrs-who {
+  margin: 0 0 10px;
+  font-size: 0.74rem;
+  line-height: 1.7;
+  color: var(--text-secondary, #6b7280);
+}
+
+.hrs-basis__form {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.hrs-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hrs-field__l {
+  font-size: 0.72rem;
+  color: var(--text-secondary, #6b7280);
+  line-height: 1.6;
+}
+
+.hrs-field__c {
+  padding: 7px 9px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  background: var(--bg-card, #fff);
+  color: var(--text-primary, #111827);
+}
+
+.hrs-field__c:focus {
+  outline: none;
+  border-color: var(--law-navy, #14213d);
+}
+
+.hrs-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 0.74rem;
+  line-height: 1.7;
+  color: var(--text-secondary, #6b7280);
+}
+
+.hrs-check input {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.hrs-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--bg-subtle, #f3f4f6);
+  font-size: 0.73rem;
+  line-height: 1.75;
+  color: var(--text-secondary, #6b7280);
+}
+
+.hrs-hint svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.hrs-acts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.hrs-why-off {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: var(--text-secondary, #6b7280);
+  line-height: 1.7;
+}
+
+.hrs-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--status-red, #dc2626) 8%, transparent);
+  color: var(--status-red, #dc2626);
+  font-size: 0.77rem;
+}
+
+/* ───────── الكتلُ الأربع ───────── */
+.hrs-blocks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.hrs-block {
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hrs-block--ask {
+  background: color-mix(in srgb, var(--law-gold, #b8860b) 5%, var(--bg-card, #fff));
+  border-color: color-mix(in srgb, var(--law-gold, #b8860b) 30%, transparent);
+}
+
+.hrs-block--idle {
+  opacity: 0.75;
+}
+
+.hrs-block__t {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--law-navy, #14213d);
+}
+
+.hrs-block__a {
+  margin-inline-start: auto;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-secondary, #6b7280);
+}
+
+.hrs-block__n {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--law-navy, #14213d);
+  font-variant-numeric: tabular-nums;
+}
+
+.hrs-block__ask {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--law-gold, #b8860b);
+  line-height: 1.7;
+}
+
+.hrs-block__w,
+.hrs-block__d {
+  margin: 0;
+  font-size: 0.71rem;
+  line-height: 1.8;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* ───────── مفتاح/قيمة ───────── */
+.hrs-kv {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.hrs-kv__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--border-color, #e5e7eb);
+}
+
+.hrs-kv__row:last-child {
+  border-bottom: 0;
+}
+
+.hrs-kv__row dt {
+  font-size: 0.74rem;
+  color: var(--text-secondary, #6b7280);
+}
+
+.hrs-kv__row dd {
+  margin: 0;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary, #111827);
+}
+
+.hrs-kv__row--strong dt,
+.hrs-kv__row--strong dd {
+  font-weight: 700;
+  color: var(--law-navy, #14213d);
+}
+
+.hrs-kv--totals {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.hrs-note {
+  margin: 8px 0 0;
+  font-size: 0.71rem;
+  line-height: 1.85;
+  color: var(--text-secondary, #6b7280);
+}
+
+.hrs-empty {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* ───────── المهلةُ والقوائم ───────── */
+.hrs-deadline__d {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-primary, #111827);
+}
+
+.hrs-list {
+  margin: 0;
+  padding-inline-start: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.75rem;
+  line-height: 1.85;
+  color: var(--text-secondary, #6b7280);
+}
+
+.hrs-card--block {
+  background: color-mix(in srgb, var(--status-red, #dc2626) 4%, var(--bg-card, #fff));
+  border-color: color-mix(in srgb, var(--status-red, #dc2626) 26%, transparent);
+}
+
+.hrs-card--opinion {
+  background: color-mix(in srgb, var(--law-gold, #b8860b) 4%, var(--bg-card, #fff));
+  border-color: color-mix(in srgb, var(--law-gold, #b8860b) 26%, transparent);
+}
+
+.hrs-op {
+  color: var(--law-gold, #b8860b);
+}
+
+.hrs-final {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ───────── صفُّ القائمة ───────── */
+.hrs-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 10px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+  background: var(--bg-card, #fff);
+}
+
+.hrs-row:hover {
+  background: var(--bg-subtle, #f3f4f6);
+}
+
+.hrs-row__n {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--law-navy, #14213d);
+}
+
+.hrs-row__d {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.71rem;
+  color: var(--text-secondary, #6b7280);
+}
+
+.hrs-row__a {
+  margin-inline-start: auto;
+  font-size: 0.84rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--law-navy, #14213d);
+}
