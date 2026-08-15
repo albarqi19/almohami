@@ -1,20 +1,19 @@
-import React, { useMemo } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'react-toastify';
+import React, { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   AlertTriangle,
   CalendarX,
-  Check,
   ChevronLeft,
   ChevronRight,
   Copy,
+  Gavel,
   RefreshCw,
   Scissors,
   Undo2,
-  X,
 } from 'lucide-react';
 
 import { hrLeaveService } from '../../../services/hrLeaveService';
+import { DecideLeaveModal } from '../approval/DecideLeaveModal';
 import ArticleRef from './ArticleRef';
 import {
   EMPTY_MARK,
@@ -90,8 +89,6 @@ export const LeaveRecordTable: React.FC<Props> = ({
   onCorrect,
   onRepeat,
 }) => {
-  const queryClient = useQueryClient();
-
   const params = useMemo(
     () => ({ ...filters, page, per_page: perPage }),
     [filters, page, perPage]
@@ -107,22 +104,20 @@ export const LeaveRecordTable: React.FC<Props> = ({
   });
 
   /**
-   * الاعتمادُ فعلٌ بلا حقولٍ إضافية، فلا يستحقّ مودالاً — لكنّه **لا يُحدَّث تفاؤلياً**:
-   * الرصيدُ يُقرأ من ردّ الخادم ثم تُبطَل المفاتيح.
+   * 🔴 **بابٌ واحدٌ للقرار — لا اعتمادَ بنقرةٍ من الجدول.**
+   *
+   * كان زرُّ الاعتماد هنا يُطلق الطلبَ فوراً، وتعليلُه المكتوب أنّ «الاعتماد فعلٌ بلا حقولٍ
+   * إضافية فلا يستحقّ مودالاً». والتعليلُ خطأ: النافذةُ ليست لجمع حقول، بل **لعرض ما
+   * سيُحدثه المعتمِد** — لوحُ التعارض (جلسةٌ أو مهمّةٌ تقع في مدّة الإجازة) والأثرُ في الرصيد
+   * من الخادم.
+   *
+   * والأخطرُ أنّ `DecideLeaveModal` تشترط **إقراراً صريحاً** حين يصير الرصيدُ سالباً
+   * (`will_go_negative`)، وهذا البابُ كان يتجاوز الشرطَ كلَّه: رصيدٌ سالبٌ يقع بنقرةٍ لم
+   * تقصده، بينما طابورُ الاعتماد يمنعه. حارسٌ واحدٌ لفعلٍ واحدٍ ببابين وأحدُهما مفتوح.
+   *
+   * فصار القرارُ — قبولاً ورفضاً — يمرّ على الشاشة نفسِها التي يمرّ عليها في الطابور.
    */
-  const approveMutation = useMutation({
-    mutationFn: (leave: HrLeave) => hrLeaveService.approve(leave.employee_profile_id, leave.id),
-    onSuccess: (result) => {
-      const after = result.balance?.after;
-      toast.success(
-        after === null || after === undefined
-          ? 'اعتُمدت الواقعة'
-          : `اعتُمدت الواقعة — الرصيد ${fmtDays(after)}`
-      );
-      void queryClient.invalidateQueries({ queryKey: ['hr', 'leave'] });
-    },
-    onError: (error: unknown) => toast.error(errorText(error, 'فشل اعتماد الإجازة')),
-  });
+  const [decideLeaveId, setDecideLeaveId] = useState<number | null>(null);
 
   const rows = useMemo(() => recordsQuery.data?.data ?? [], [recordsQuery.data]);
   const lastPage = recordsQuery.data?.last_page ?? 1;
@@ -216,8 +211,24 @@ export const LeaveRecordTable: React.FC<Props> = ({
                     ? fmtDays(leave.duration_days)
                     : EMPTY_MARK;
 
+              /**
+               * الصفُّ المعلَّقُ كلُّه يفتح شاشةَ القرار — تيسيرٌ للفأرة **فوق** الزرّ لا بدلاً منه:
+               * `<tr onClick>` لا يبلغه لوحُ المفاتيح، فيبقى الزرُّ في عمود الأدوات هو البابَ
+               * الموثَّق. وكلُّ عنصرٍ تفاعليٍّ داخل الصفّ يوقف الانتشار كي لا يفتح النافذةَ
+               * من يقصد زرّاً آخر.
+               */
+              const rowDecidable = canManage && leave.status === 'pending';
+
               return (
-                <tr key={leave.id} className={leave.id === freshLeaveId ? 'is-fresh' : undefined}>
+                <tr
+                  key={leave.id}
+                  className={
+                    [leave.id === freshLeaveId ? 'is-fresh' : '', rowDecidable ? 'is-decidable' : '']
+                      .filter(Boolean)
+                      .join(' ') || undefined
+                  }
+                  onClick={rowDecidable ? () => setDecideLeaveId(leave.id) : undefined}
+                >
                   <td className="hrl-c-emp">
                     <span className="hrl-type__n">{leave.employee_profile?.user?.name || EMPTY_MARK}</span>
                     <span className="hrl-cellsub">{leave.employee_profile?.department || ''}</span>
@@ -238,7 +249,14 @@ export const LeaveRecordTable: React.FC<Props> = ({
                   </td>
 
                   <td>
-                    <button type="button" className="hrl-cellbtn" onClick={() => onOpenRecord(leave)}>
+                    <button
+                      type="button"
+                      className="hrl-cellbtn"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpenRecord(leave);
+                      }}
+                    >
                       {fmtLeaveRange(leave.start_date, leave.end_date)}
                     </button>
                     {leave.half_day && <span className="hrl-cellsub">نصف يوم</span>}
@@ -265,29 +283,18 @@ export const LeaveRecordTable: React.FC<Props> = ({
 
                   <td>
                     {canManage && (
-                      <span className="hrl-tools">
+                      <span className="hrl-tools" onClick={(event) => event.stopPropagation()}>
+                        {/* زرٌّ واحدٌ يفتح شاشةَ القرار — لا ✓ و✗ يقعان من الجدول */}
                         {leave.status === 'pending' && (
-                          <>
-                            <button
-                              type="button"
-                              className="hr-icon-btn hr-icon-btn--sm"
-                              title="اعتماد"
-                              aria-label={`اعتماد واقعة ${fmtLeaveRange(leave.start_date, leave.end_date)}`}
-                              disabled={approveMutation.isPending}
-                              onClick={() => approveMutation.mutate(leave)}
-                            >
-                              <Check size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              className="hr-icon-btn hr-icon-btn--sm"
-                              title="رفض"
-                              aria-label="رفض الطلب"
-                              onClick={() => onCorrect('reject', leave)}
-                            >
-                              <X size={13} />
-                            </button>
-                          </>
+                          <button
+                            type="button"
+                            className="hr-icon-btn hr-icon-btn--sm"
+                            title="البتّ في الطلب — قبولاً أو رفضاً"
+                            aria-label={`البتّ في واقعة ${fmtLeaveRange(leave.start_date, leave.end_date)}`}
+                            onClick={() => setDecideLeaveId(leave.id)}
+                          >
+                            <Gavel size={13} />
+                          </button>
                         )}
 
                         {(leave.status === 'pending' || leave.status === 'approved') && (
@@ -356,6 +363,12 @@ export const LeaveRecordTable: React.FC<Props> = ({
           <ChevronLeft size={14} />
         </button>
       </div>
+
+      {/* شاشةُ القرار — هي نفسُها المستعملةُ في طابور الاعتماد، بلا نسخةٍ ثانيةٍ تفترق عنها.
+          وهي تُبطل مفاتيح `hr.leave` بنفسها بعد القرار، فلا إبطالَ مكرَّرٌ هنا. */}
+      {decideLeaveId !== null && (
+        <DecideLeaveModal leaveId={decideLeaveId} onClose={() => setDecideLeaveId(null)} />
+      )}
     </>
   );
 };

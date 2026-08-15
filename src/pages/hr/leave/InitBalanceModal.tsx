@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { AlertTriangle, ArrowLeftRight, Lock, RefreshCw, X } from 'lucide-react';
+import { AlertTriangle, ArrowDownToLine, ArrowLeftRight, Lock, RefreshCw, X } from 'lucide-react';
 import { hrLeaveService } from '../../../services/hrLeaveService';
 import { usePermission } from '../../../hooks/usePermission';
 import type { LeaveBulkOpeningResult, OpeningBasis, OpeningPreviewRow } from '../../../types/hr';
@@ -77,6 +77,23 @@ function firstOfCurrentMonthISO(): string {
   return `${now.getFullYear()}-${m}-01`;
 }
 
+/** عتبةُ م.١٠٩: مَن بلغها استحقاقُه النظاميُّ أعلى — تُعلَّم ولا يُكتب رقمُها هنا. */
+const SENIORITY_YEARS = 5;
+
+/**
+ * سنواتُ الخدمة من تاريخ المباشرة — **للتعليم لا للاحتساب**.
+ *
+ * 🔴 ولا يُشتقّ منها رقمٌ يُكتب في الحقل: الاستحقاقُ النظاميُّ بياناتٌ مؤرَّخةٌ في الباك
+ * (`hr_leave_rules` بـ`effective_from`)، وتثبيتُ «٢١/٣٠» هنا يخلق مصدرَ حقيقةٍ ثانياً
+ * يتعفّن يومَ يتغيّر النظامُ أو يخصّص المكتبُ استحقاقَه — والشاشةُ حينها تكذب بثقة.
+ */
+function yearsOfService(hireDate?: string | null): number | null {
+  if (!hireDate) return null;
+  const start = new Date(hireDate);
+  if (Number.isNaN(start.getTime())) return null;
+  return (Date.now() - start.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+}
+
 export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canManage, onClose, onDone }) => {
   const queryClient = useQueryClient();
   const fallbackManage = usePermission('hr.leave.manage');
@@ -89,6 +106,7 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
   const [anchor, setAnchor] = useState(monthStart);
   const [description, setDescription] = useState('');
   const [drafts, setDrafts] = useState<Record<number, RowDraft>>({});
+  const [bulkDays, setBulkDays] = useState('');
   const [result, setResult] = useState<LeaveBulkOpeningResult | null>(null);
   /**
    * `full_entitlement` هو **المرشَّح** بأمر المالك: الدفترُ يصير تاريخاً كاملاً (استحقاقٌ
@@ -146,6 +164,34 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
     setDrafts((prev) => ({ ...prev, [id]: { ...draftOf(id), ...patch } }));
 
   const selected = rows.filter((row) => draftOf(row.id).include);
+
+  /**
+   * **التعبئةُ الجماعية** — رقمٌ واحدٌ يُكتب في كلّ صفٍّ محدَّد.
+   *
+   * مكتبٌ بأربعين منسوباً كان يعني أربعين حقلاً يُكتب فيها الرقمُ نفسُه، والمللُ في شاشةِ
+   * أرصدةٍ خطر: يُسرِع المديرُ فيخطئ في صفٍّ لا يُلاحَظ.
+   *
+   * 🔴 وهي تكتب في الحقول ولا تتجاوزها: القيمةُ تصير مسوَّدةً عاديةً تُعدَّل صفّاً صفّاً بعدها،
+   * وتمرّ على المعاينة الحيّة كأنّها كُتبت باليد. فالتعبئةُ اختصارُ كتابةٍ لا مسارٌ ثانٍ للحفظ —
+   * ومسارٌ ثانٍ يعني قاعدتَي تحقّقٍ تفترقان يوماً.
+   */
+  const applyToSelected = () => {
+    const value = bulkDays.trim();
+    if (value === '' || selected.length === 0) return;
+    setDrafts((prev) => {
+      const next = { ...prev };
+      selected.forEach((row) => {
+        next[row.id] = { ...draftOf(row.id), days: value };
+      });
+      return next;
+    });
+  };
+
+  /** المحدَّدون ممّن بلغوا عتبةَ الأقدميّة — عددٌ يُعلَن قبل التعبئة لا بعدها. */
+  const seniorSelected = selected.filter((row) => {
+    const years = yearsOfService(row.hire_date);
+    return years !== null && years >= SENIORITY_YEARS;
+  }).length;
 
   const nameOf = (profileId: number): string =>
     rows.find((row) => row.id === profileId)?.user?.name ?? `ملف #${profileId}`;
@@ -416,6 +462,47 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                   </p>
                 )}
 
+                {/* 🔴 التعبئةُ الجماعية — تظهر حين يكون التكرارُ حقيقياً (صفّان فأكثر).
+                    ولصفٍّ واحدٍ لا معنى لها: زرٌّ يفعل ما يفعله الحقلُ المجاور تشويشٌ لا اختصار. */}
+                {rows.length > 1 && (
+                  <div className="hrl-fill">
+                    <label className="hrl-fill__lbl" htmlFor="hrl-fill-days">
+                      املأ المحدَّدين برقمٍ واحد
+                    </label>
+                    <input
+                      id="hrl-fill-days"
+                      className="hrl-numinput"
+                      type="number"
+                      step={0.5}
+                      min={-999}
+                      max={9999}
+                      value={bulkDays}
+                      onChange={(event) => setBulkDays(event.target.value)}
+                      placeholder="21"
+                      dir="ltr"
+                    />
+                    <button
+                      type="button"
+                      className="hr-btn hr-btn--sm"
+                      onClick={applyToSelected}
+                      disabled={bulkDays.trim() === '' || selected.length === 0}
+                    >
+                      <ArrowDownToLine size={13} /> طبّق على {fmtCount(selected.length)}
+                    </button>
+                    <span className="hrl-hint hrl-fill__note">
+                      {seniorSelected > 0 ? (
+                        <>
+                          يكتب الرقمَ في الحقول فتُعدّلها بعده صفّاً صفّاً. و
+                          <strong>{fmtCount(seniorSelected)}</strong> من المحدَّدين أمضى خمسَ سنواتٍ
+                          فأكثر — استحقاقُهم النظاميُّ أعلى، وهم معلَّمون في العمود.
+                        </>
+                      ) : (
+                        'يكتب الرقمَ في الحقول فتُعدّلها بعده صفّاً صفّاً — اختصارُ كتابةٍ لا حفظٌ مباشر.'
+                      )}
+                    </span>
+                  </div>
+                )}
+
                 {rows.length > 0 && (
                   <table className="hrl-inittable">
                     <thead>
@@ -447,6 +534,8 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                         const initialized = row.leave_balance?.is_initialized === true;
                         const rowAnchor = row.leave_balance?.accrual_anchor ?? null;
                         const rowPreview = previewByProfile.get(row.id);
+                        const years = yearsOfService(row.hire_date);
+                        const isSenior = years !== null && years >= SENIORITY_YEARS;
 
                         return (
                           <React.Fragment key={row.id}>
@@ -487,6 +576,11 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                                 aria-label={`رصيد ${row.user?.name ?? row.id}`}
                                 dir="ltr"
                               />
+                              {/* علامةُ أقدميّة — تنبيهٌ لا رقم. تظهر بعد التعبئة الجماعية فتقول
+                                  للمدير أيَّ الصفوفِ يراجع، ولا تكتب في الحقل شيئاً. */}
+                              {isSenior && (
+                                <span className="hrl-senior">٥ سنواتٍ فأكثر — راجِع استحقاقه</span>
+                              )}
                             </td>
                           </tr>
 

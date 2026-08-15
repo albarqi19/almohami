@@ -971,6 +971,14 @@
     background: var(--quiet-gray-50);
 }
 
+/* الصفُّ المعلَّق: يُنقر كلُّه فيفتح شاشةَ القرار.
+   المؤشِّرُ وحدَه هو الإشارة — لا لونَ ولا حدَّ إضافيّ: شارةُ «معلَّق» في العمود
+   تقول الحالةَ سلفاً، وتكرارُها بلونِ صفٍّ ضجيجٌ في جدولٍ كثيف. */
+.hrl-rectable tbody tr.is-decidable,
+tr.is-decidable {
+    cursor: pointer;
+}
+
 .hrl-ledger__num {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -1029,6 +1037,43 @@
 .hrl-numinput:focus {
     outline: none;
     border-color: var(--law-navy);
+}
+
+/* ─── التعبئةُ الجماعية: شريطٌ ملتصقٌ فوق الجدول ───
+   شبكةٌ من ثلاثةِ أعمدةٍ والملاحظةُ تعبر السطرَ كاملاً، فلا ينكسر الصفُّ على الضيّق
+   ولا تُزاحم الجملةُ الطويلةُ الزرَّ. وبلا `gap` بين الشريط والجدول: النمطُ الملتصق. */
+.hrl-fill {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 4px;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-block-end: none;
+    background: var(--surface-band);
+}
+
+.hrl-fill__lbl {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/* الملاحظةُ تحت الثلاثةِ لا بجانبها — سطرٌ كاملٌ يُقرأ جملةً */
+.hrl-fill__note {
+    grid-column: 1 / -1;
+}
+
+/* علامةُ الأقدميّة: نصٌّ خافتٌ تحت الحقل، بلا لونٍ خام ولا شارةٍ صارخة */
+.hrl-senior {
+    display: block;
+    margin-block-start: 3px;
+    max-inline-size: 88px;
+    font-size: 10.5px;
+    line-height: 1.35;
+    color: var(--text-muted);
 }
 
 /* ─── ١١-هـ) المودال: تحييدُ ما يخالف «فلات صرف» ─── */
