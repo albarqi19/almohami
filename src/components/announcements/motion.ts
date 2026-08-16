@@ -74,5 +74,18 @@ export function resolveMotion(a: Announcement, reduce: boolean): ResolvedMotion 
     ? { repeat: Infinity, duration: dur, repeatDelay: type === 'shake' ? 0.4 : 0.8, ease: 'easeInOut' }
     : null;
 
-  return { iconAnimate, iconTransition, glow, glowDuration, shimmer };
+  /**
+   * 🔴 **الهالةُ والمسحُ مُطفآن دائماً — «فلات صرف» قاعدةُ المنصّة لا تفضيلَ شاشة.**
+   *
+   * `glow` كان ظلّاً داخلياً نابضاً (`inset 0 0 16px`) و`shimmer` تدرّجاً خطّياً
+   * يمسح الشريط — وكلاهما يناقض النمطَ الذي تلتزمه الواجهةُ كلُّها: بلا تدرّجٍ
+   * ولا توهّجٍ ولا ظلّ.
+   *
+   * والإطفاءُ **هنا لا في المكوّن**: `glow` يُشتقّ من `severity === 'promo'`
+   * تلقائياً، فمنعُه في موضع الرسم وحدَه يترك البابَ مفتوحاً ليعود من إعدادِ
+   * إعلانٍ يكتبه مسؤول. أمّا هنا فيُحسم لكلّ مستدعٍ.
+   *
+   * وبقيّةُ الحركة تبقى: نبضةُ الأيقونة واهتزازُها حركةُ عنصرٍ لا زخرفةَ سطح.
+   */
+  return { iconAnimate, iconTransition, glow: false, glowDuration: 0, shimmer: false };
 }

@@ -1,0 +1,136 @@
+/* ====================================================
+   الإعلانات — تصييرُ الماركداون داخل نافذة التفاصيل
+   ====================================================
+   مكوّناتُ الإعلانات مكتوبةٌ بستايلٍ داخليّ (inline)، وهو يكفي لصناديقها.
+   لكنّ `react-markdown` يبني عقداً حقيقيةً (h2/h3/ul/blockquote/hr/table)
+   لا يمكن تنسيقُها من `style` على الأب — فتحتاج قواعدَ حقيقيةً هنا.
+
+   وكلُّها **فلات مربّع**: بلا استدارةٍ ولا ظلٍّ ولا تدرّج، وبمتغيّرات الثيم
+   وحدَها كي تتبع الوضعَ الفاتحَ والداكن. والخصائصُ منطقيّةٌ (block/inline)
+   لأنّ المحتوى عربيٌّ يمينيُّ الاتجاه.
+   ==================================================== */
+
+.ann-md > :first-child {
+    margin-block-start: 0;
+}
+
+.ann-md > :last-child {
+    margin-block-end: 0;
+}
+
+/* العناوين: تدرّجٌ في الحجم لا في اللون، وفاصلٌ للأعلى وحدَه */
+.ann-md h1,
+.ann-md h2 {
+    margin-block: 18px 8px;
+    padding-block-end: 6px;
+    border-block-end: 1px solid var(--color-border);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.5;
+    color: var(--color-text);
+}
+
+.ann-md h3,
+.ann-md h4 {
+    margin-block: 14px 6px;
+    font-size: 13.5px;
+    font-weight: 700;
+    line-height: 1.5;
+    color: var(--color-text);
+}
+
+.ann-md p {
+    margin-block: 0 10px;
+}
+
+.ann-md strong {
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.ann-md em {
+    font-style: italic;
+    color: var(--color-text-secondary);
+}
+
+/* القوائم: مسافةُ بادئةٍ منطقيّة كي لا تنقلب على اليسار في RTL */
+.ann-md ul,
+.ann-md ol {
+    margin-block: 0 10px;
+    padding-inline-start: 20px;
+}
+
+.ann-md li {
+    margin-block-end: 5px;
+}
+
+.ann-md li::marker {
+    color: var(--color-text-muted, var(--color-text-secondary));
+}
+
+/* الاقتباس: خطٌّ على حافة البداية — بلا خلفيةٍ ولا استدارة */
+.ann-md blockquote {
+    margin-block: 0 10px;
+    margin-inline: 0;
+    padding-inline-start: 12px;
+    border-inline-start: 2px solid var(--color-border);
+    color: var(--color-text-secondary);
+}
+
+.ann-md hr {
+    margin-block: 16px;
+    border: none;
+    border-block-start: 1px solid var(--color-border);
+}
+
+.ann-md a {
+    color: var(--law-navy);
+    text-decoration: underline;
+}
+
+.ann-md code {
+    padding: 1px 4px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+    font-family: inherit;
+    font-size: 0.92em;
+}
+
+.ann-md pre {
+    margin-block: 0 10px;
+    padding: 10px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+    overflow-x: auto;
+}
+
+.ann-md pre code {
+    padding: 0;
+    border: none;
+    background: none;
+}
+
+/* الجداول (remark-gfm): تمرِّر أفقياً داخل نفسها فلا يفيض عرضُ النافذة */
+.ann-md table {
+    inline-size: 100%;
+    margin-block: 0 10px;
+    border-collapse: collapse;
+    font-size: 12.5px;
+}
+
+.ann-md th,
+.ann-md td {
+    padding: 5px 8px;
+    border: 1px solid var(--color-border);
+    text-align: start;
+}
+
+.ann-md th {
+    background: var(--color-surface-subtle);
+    font-weight: 600;
+}
+
+.ann-md img {
+    max-inline-size: 100%;
+    block-size: auto;
+}

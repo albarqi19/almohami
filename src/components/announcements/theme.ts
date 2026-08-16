@@ -78,31 +78,34 @@ export function openCta(a: Announcement) {
   }
 }
 
-/**
- * Tiny markdown-to-HTML renderer for announcement bodies.
- * Supports: bold, italic, links, line breaks, simple lists.
+/*
+ * حُذف `renderMarkdown` و`escapeHtml` (٢٤ سطراً): مُصيِّرٌ يدويٌّ لا يعرف إلا العريضَ
+ * والمائلَ والروابطَ وفواصلَ الأسطر، فكان كلُّ `##` و`-` و`>` و`---` يظهر خامّاً
+ * للقارئ. وحلَّ محلَّه في نافذة التفاصيل `react-markdown` + `remark-gfm` (مثبَّتان
+ * ومستعمَلان في ورشة المذكّرات)، وفي الشريط `markdownExcerpt` أدناه.
+ *
+ * ومعهما سقط آخرُ `dangerouslySetInnerHTML` في وحدة الإعلانات — و`react-markdown`
+ * يبني عقداً حقيقيةً لا نصَّ HTML، فيُغلَق بابُ الحقن من نصٍّ يكتبه مسؤول.
  */
-export function renderMarkdown(md: string | null | undefined): string {
-  if (!md) return '';
-  let html = escapeHtml(md);
-  // bold
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  // italic
-  html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
-  // links [text](url)
-  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, text, url) => {
-    return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="text-decoration:underline;">${text}</a>`;
-  });
-  // line breaks
-  html = html.replace(/\n/g, '<br/>');
-  return html;
-}
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+export function markdownExcerpt(md: string | null | undefined, max = 200): string {
+  if (!md) return '';
+
+  const text = md
+    .replace(/```[\s\S]*?```/g, ' ')                   // كتلُ الشيفرة
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')             // الصور
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')           // الروابط ← نصُّها
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')                // العناوين
+    .replace(/^\s{0,3}>\s?/gm, '')                     // الاقتباسات
+    .replace(/^\s{0,3}([-*+]|\d+\.)\s+/gm, '')         // القوائم
+    .replace(/^\s{0,3}([-*_]\s*){3,}$/gm, ' ')         // الفواصل ---
+    .replace(/(\*\*|__|\*|_|`)/g, '')                  // التوكيد والشيفرةُ السطرية
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // القصُّ عند حدّ كلمةٍ لا في منتصفها.
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…';
 }

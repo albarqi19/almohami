@@ -1,7 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ExternalLink, AlertTriangle, Info, CheckCircle2, AlertOctagon, Gift, Megaphone } from 'lucide-react';
-import { resolveTheme, openCta, renderMarkdown } from './theme';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { resolveTheme, openCta } from './theme';
 import type { Announcement } from '../../services/announcementService';
 
 interface Props {
@@ -34,7 +36,6 @@ const AnnouncementModalView: React.FC<Props> = ({ announcement, onClose, onDismi
         style={{
           position: 'fixed', inset: 0,
           backgroundColor: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(4px)',
           zIndex: 100,
           display: 'flex',
           alignItems: 'center',
@@ -52,13 +53,25 @@ const AnnouncementModalView: React.FC<Props> = ({ announcement, onClose, onDismi
           style={{
             width: '100%', maxWidth: 520,
             background: 'var(--color-surface)',
-            borderRadius: 14,
+            borderRadius: 0,
             border: '1px solid var(--color-border)',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
+            /**
+             * 🔴 كان `overflow:'hidden'` بلا `maxHeight` — وهما معاً عطلٌ لا احتياط.
+             * فمع محتوىً طويلٍ تنمو النافذةُ خارج الشاشة، والتراكبُ يوسّطها رأسياً
+             * (`alignItems:'center'`) فيخرج **الرأسُ بزرِّ الإغلاق** من فوق والتذييلُ
+             * من تحت، ويُقَصُّ ما بينهما بلا تمرير: نافذةٌ لا تُقرأ ولا تُغلَق.
+             *
+             * فصارت عموداً مرناً بسقفٍ من ارتفاع النافذة: الرأسُ والتذييلُ ثابتان،
+             * والجسمُ وحدَه يمرّر (أدناه). و`overflow:'hidden'` يبقى ليقصّ الزوايا
+             * المستديرة لا المحتوى.
+             */
+            maxHeight: 'min(90dvh, 90vh)',
+            display: 'flex',
+            flexDirection: 'column',
             overflow: 'hidden',
           }}
         >
-          {/* Header strip */}
+          {/* Header strip — ثابتٌ لا ينكمش، فزرُّ الإغلاق مرئيٌّ مهما طال المحتوى */}
           <div style={{
             background: theme.bg,
             color: theme.fg,
@@ -67,11 +80,12 @@ const AnnouncementModalView: React.FC<Props> = ({ announcement, onClose, onDismi
             alignItems: 'flex-start',
             gap: 14,
             borderBottom: `1px solid ${theme.border}`,
+            flexShrink: 0,
           }}>
             <div style={{
               flexShrink: 0,
               width: 38, height: 38,
-              borderRadius: 10,
+              borderRadius: 0,
               background: 'rgba(255,255,255,0.55)',
               display: 'flex',
               alignItems: 'center',
@@ -93,36 +107,50 @@ const AnnouncementModalView: React.FC<Props> = ({ announcement, onClose, onDismi
             <button onClick={onClose} type="button" style={{
               background: 'transparent', border: 'none', padding: 4,
               color: theme.fg, opacity: 0.6, cursor: 'pointer',
-              borderRadius: 4,
+              borderRadius: 0,
             }}>
               <X size={18} />
             </button>
           </div>
 
-          {/* Body */}
+          {/* Body — هو وحدَه ما يمرّر: `minHeight:0` شرطُ عمل التمرير داخل flex */}
           {(announcement.image_url || announcement.body_markdown) && (
-            <div style={{ padding: '18px 22px' }}>
+            <div style={{ padding: '18px 22px', overflowY: 'auto', flex: '1 1 auto', minHeight: 0 }}>
               {announcement.image_url && (
                 <img
                   src={announcement.image_url}
                   alt=""
                   style={{
                     width: '100%',
-                    borderRadius: 8,
+                    borderRadius: 0,
                     marginBottom: 14,
                     border: '1px solid var(--color-border)',
                   }}
                 />
               )}
+              {/**
+                * 🔴 كان يُصيَّر بـ`renderMarkdown` اليدويّ في `theme.ts` — وهو يدعم
+                * **أربعةَ أشياءَ فقط**: العريض والمائل والروابط وفواصلَ الأسطر. فكلُّ
+                * `##` و`###` و`-` و`>` و`---` كانت تظهر **خامّةً للقارئ**، بل إنّ `>`
+                * تُهرَّب إلى `&gt;` فتزداد قبحاً.
+                *
+                * و`react-markdown` مثبَّتٌ في المشروع ومستعمَلٌ في ورشة المذكّرات — فلا
+                * عذرَ لمُصيِّرٍ ناقصٍ بجانبه. وهو **لا يستعمل `dangerouslySetInnerHTML`**
+                * أصلاً: يبني عقداً حقيقيةً فيسقط معه بابُ حقن HTML من نصٍّ يكتبه مسؤول.
+                */}
               {announcement.body_markdown && (
                 <div
+                  className="ann-md"
                   style={{
                     fontSize: 14,
                     lineHeight: 1.7,
                     color: 'var(--color-text)',
                   }}
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(announcement.body_markdown) }}
-                />
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {announcement.body_markdown}
+                  </ReactMarkdown>
+                </div>
               )}
             </div>
           )}
@@ -145,7 +173,7 @@ const AnnouncementModalView: React.FC<Props> = ({ announcement, onClose, onDismi
                   padding: '8px 14px',
                   background: 'transparent',
                   border: '1px solid var(--color-border)',
-                  borderRadius: 6,
+                  borderRadius: 0,
                   fontSize: 13,
                   color: 'var(--color-text-secondary)',
                   cursor: 'pointer',
@@ -161,7 +189,7 @@ const AnnouncementModalView: React.FC<Props> = ({ announcement, onClose, onDismi
                 padding: '8px 14px',
                 background: 'transparent',
                 border: '1px solid var(--color-border)',
-                borderRadius: 6,
+                borderRadius: 0,
                 fontSize: 13,
                 color: 'var(--color-text)',
                 cursor: 'pointer',
@@ -177,7 +205,7 @@ const AnnouncementModalView: React.FC<Props> = ({ announcement, onClose, onDismi
                   padding: '8px 16px',
                   background: theme.iconColor,
                   border: 'none',
-                  borderRadius: 6,
+                  borderRadius: 0,
                   fontSize: 13,
                   fontWeight: 600,
                   color: '#fff',

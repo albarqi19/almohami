@@ -71,7 +71,7 @@ export const BannerCountdown: React.FC<CountdownProps> = ({ target, accent }) =>
         alignItems: 'center',
         gap: 5,
         padding: '2px 9px',
-        borderRadius: 999,
+        borderRadius: 0,
         background: `${color}14`,
         border: `1px solid ${color}33`,
         color,

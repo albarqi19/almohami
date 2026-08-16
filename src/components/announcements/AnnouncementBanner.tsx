@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { X, ExternalLink, AlertTriangle, Info, CheckCircle2, AlertOctagon, Gift, Megaphone } from 'lucide-react';
 import { useAnnouncements } from '../../contexts/AnnouncementContext';
-import { resolveTheme, openCta, renderMarkdown } from './theme';
+import { resolveTheme, openCta, markdownExcerpt } from './theme';
 import AnnouncementModalView from './AnnouncementModalView';
 import { BannerCountdown, BannerProgress } from './BannerCountdown';
 import { resolveMotion } from './motion';
@@ -53,38 +53,10 @@ const AnnouncementBanner: React.FC = () => {
                   position: 'relative',
                 }}
               >
-                {/* Pulsing glow halo (animates opacity of a static shadow → GPU-only) */}
-                {fx.glow && (
-                  <motion.div
-                    aria-hidden
-                    initial={{ opacity: 0.3 }}
-                    animate={{ opacity: [0.3, 0.85, 0.3] }}
-                    transition={{ repeat: Infinity, duration: fx.glowDuration, ease: 'easeInOut' }}
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      boxShadow: `inset 0 0 0 1.5px ${theme.iconColor}, inset 0 0 16px ${theme.iconColor}55`,
-                      pointerEvents: 'none',
-                    }}
-                  />
-                )}
-                {/* Light sweep across the banner */}
-                {fx.shimmer && (
-                  <motion.div
-                    aria-hidden
-                    initial={{ x: '-120%' }}
-                    animate={{ x: '120%' }}
-                    transition={{ repeat: Infinity, duration: 3.2, ease: 'linear', repeatDelay: 1.4 }}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      bottom: 0,
-                      width: '40%',
-                      background: `linear-gradient(90deg, transparent, ${theme.iconColor}1f, transparent)`,
-                      pointerEvents: 'none',
-                    }}
-                  />
-                )}
+                {/* حُذفت كتلتا «الهالة النابضة» و«المسح الضوئيّ»: ظلٌّ داخليٌّ متوهّج
+                    (`inset 0 0 16px`) وتدرّجٌ خطّيٌّ يعبر الشريط — وكلاهما يناقض «فلات
+                    صرف». و`resolveMotion` صار يُرجع `glow:false` و`shimmer:false`
+                    دائماً، فالكتلتان ميّتتان على أيّ حال. */}
                 <div style={{
                   padding: '8px 16px',
                   display: 'flex',
@@ -104,10 +76,7 @@ const AnnouncementBanner: React.FC = () => {
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 600 }}>{a.title}</span>
                     {a.body_markdown && (
-                      <span
-                        style={{ opacity: 0.85 }}
-                        dangerouslySetInnerHTML={{ __html: renderMarkdown(a.body_markdown.slice(0, 200)) }}
-                      />
+                      <span style={{ opacity: 0.85 }}>{markdownExcerpt(a.body_markdown)}</span>
                     )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -123,7 +92,7 @@ const AnnouncementBanner: React.FC = () => {
                           background: theme.iconColor,
                           color: '#fff',
                           border: 'none',
-                          borderRadius: 4,
+                          borderRadius: 0,
                           fontSize: 12,
                           fontWeight: 600,
                           cursor: 'pointer',
@@ -145,7 +114,7 @@ const AnnouncementBanner: React.FC = () => {
                           background: 'transparent',
                           color: 'inherit',
                           border: `1px solid ${theme.border}`,
-                          borderRadius: 4,
+                          borderRadius: 0,
                           fontSize: 11.5,
                           cursor: 'pointer',
                         }}
@@ -165,7 +134,7 @@ const AnnouncementBanner: React.FC = () => {
                           padding: 4,
                           opacity: 0.7,
                           cursor: 'pointer',
-                          borderRadius: 4,
+                          borderRadius: 0,
                         }}
                       >
                         <X size={14} />

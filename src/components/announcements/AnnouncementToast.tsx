@@ -60,9 +60,8 @@ const AnnouncementToast: React.FC = () => {
                 background: 'var(--color-surface)',
                 border: `1px solid ${theme.border}`,
                 borderRight: `4px solid ${theme.iconColor}`,
-                borderRadius: 8,
+                borderRadius: 0,
                 padding: '12px 14px',
-                boxShadow: '0 6px 20px rgba(0,0,0,0.10)',
                 display: 'flex',
                 gap: 10,
                 alignItems: 'flex-start',
@@ -70,7 +69,7 @@ const AnnouncementToast: React.FC = () => {
             >
               <div style={{
                 flexShrink: 0, width: 28, height: 28,
-                borderRadius: 6,
+                borderRadius: 0,
                 background: theme.bg,
                 color: theme.iconColor,
                 display: 'flex',
@@ -99,7 +98,7 @@ const AnnouncementToast: React.FC = () => {
                       background: theme.iconColor,
                       color: '#fff',
                       border: 'none',
-                      borderRadius: 4,
+                      borderRadius: 0,
                       fontSize: 11,
                       fontWeight: 600,
                       cursor: 'pointer',
