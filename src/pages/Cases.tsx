@@ -26,11 +26,14 @@ import {
 	Folder,
 	Download,
 	Archive,
-	ArchiveRestore
+	ArchiveRestore,
+	Loader2
 } from 'lucide-react';
 import type { ArchivedFilter, Case, CaseStatus, CaseType, Priority } from '../types';
 import { CaseService } from '../services';
 import { Can } from '../components/Can';
+import { usePermission } from '../hooks/usePermission';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { UserService, type User as UserType } from '../services/UserService';
 import AddCaseModal from '../components/AddCaseModal';
 import CasesExportModal from '../components/CasesExportModal';
@@ -104,6 +107,22 @@ const clearCasesCache = (): void => {
 
 // المعيار الوحيد للأرشفة: archived_at (is_archived يحسبه الباك في /cases). لا علاقة لها بسلة المحذوفات.
 const isCaseArchived = (c: Case): boolean => !!(c.archived_at || c.is_archived);
+
+// ── التحديد المتعدّد ──
+// عدد القضايا بصيغة عربية سليمة (مفرد/مثنى/جمع قلّة/جمع كثرة)
+const caseCountLabel = (n: number): string =>
+	n === 1 ? 'قضية واحدة' : n === 2 ? 'قضيتين' : n <= 10 ? `${n} قضايا` : `${n} قضية`;
+
+// القضية ذات أصل مستورد من ناجز؟ نفس شرط CaseController::destroy الذي يسجّل
+// الاستبعاد في najiz_sync_exclusions — فالتحذير لا يُقال إلا لمن يعنيه.
+const isNajizSourced = (c: Case): boolean =>
+	!!(c as any).najiz_id || ['najiz', 'linked', 'moeen'].includes((c as any).source);
+
+// عدد الطلبات المتوازية في العملية الجماعية. لا توجد نقطة نهاية جماعية في الباك،
+// فكل قضية طلبٌ مستقل — وهذا يُبقي التفويض والسياسات تُطبَّق على كل قضية على حدة.
+const BULK_CONCURRENCY = 4;
+
+type BulkAction = 'delete' | 'archive' | 'unarchive';
 
 // خيار المستخدم: عدد القضايا المعروضة في الصفحة الواحدة (يُحفظ ويُطبَّق على الترقيم).
 const PAGE_SIZE_KEY = 'cases_page_size';
@@ -222,6 +241,77 @@ const Cases: React.FC = () => {
 		return { currentPage: 1, totalPages: 1, total: 0 };
 	});
 
+	// ── التحديد المتعدّد ──
+	// الصلاحيات تُقرأ هنا لا في <Can> وحدها: عمود الصناديق نفسه لا يُعرض لمن لا يملك
+	// أرشفةً ولا حذفاً، فلا نُغري بتحديدٍ لا إجراء بعده.
+	const canArchiveCases = usePermission('cases.archive');
+	const canDeleteCases = usePermission('cases.delete');
+	const canBulk = canArchiveCases || canDeleteCases;
+
+	const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+	const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
+	const [bulkRunning, setBulkRunning] = useState(false);
+	const [bulkResult, setBulkResult] = useState<{ tone: 'ok' | 'warn'; text: string } | null>(null);
+	// آخر صفّ نُقر عليه — لتحديد نطاق كامل بـShift
+	const lastPickedIndexRef = useRef<number | null>(null);
+
+	// تقليم التحديد إلى ما هو معروض فعلاً: التحديث التلقائي (كل دقيقتين وعند العودة
+	// للصفحة) لا يُفقد التحديد ما دامت القضايا نفسها معروضة، بينما تبديل الصفحة أو
+	// الفلتر أو وضع الأرشيف يُسقطه لأن صفوفه لم تعد على الشاشة.
+	useEffect(() => {
+		setSelectedIds(prev => {
+			if (prev.size === 0) return prev;
+			const visible = new Set(cases.map(c => String(c.id)));
+			const next = new Set(Array.from(prev).filter(id => visible.has(id)));
+			return next.size === prev.size ? prev : next;
+		});
+	}, [cases]);
+
+	const clearSelection = () => {
+		setSelectedIds(new Set());
+		lastPickedIndexRef.current = null;
+	};
+
+	// نقرة عادية تقلب صفّاً واحداً، ونقرة بـShift تسحب النطاق من آخر صفّ نُقر عليه.
+	const handleRowSelect = (rowIndex: number, checked: boolean, withShift: boolean) => {
+		setSelectedIds(prev => {
+			const next = new Set(prev);
+			const anchor = lastPickedIndexRef.current;
+			const from = withShift && anchor !== null ? Math.min(anchor, rowIndex) : rowIndex;
+			const to = withShift && anchor !== null ? Math.max(anchor, rowIndex) : rowIndex;
+			for (let i = from; i <= to; i++) {
+				const id = cases[i] && String(cases[i].id);
+				if (!id) continue;
+				if (checked) next.add(id); else next.delete(id);
+			}
+			return next;
+		});
+		lastPickedIndexRef.current = rowIndex;
+	};
+
+	const allVisibleSelected = cases.length > 0 && cases.every(c => selectedIds.has(String(c.id)));
+	const someVisibleSelected = selectedIds.size > 0 && !allVisibleSelected;
+
+	const handleSelectAllVisible = (checked: boolean) => {
+		setSelectedIds(checked ? new Set(cases.map(c => String(c.id))) : new Set());
+		lastPickedIndexRef.current = null;
+	};
+
+	// صندوق «تحديد الكل» يحمل حالة ثالثة (بعضٌ محدَّد) لا يعبّر عنها إلا عبر الـDOM
+	const selectAllRef = useRef<HTMLInputElement>(null);
+	useEffect(() => {
+		if (selectAllRef.current) selectAllRef.current.indeterminate = someVisibleSelected;
+	}, [someVisibleSelected]);
+
+	const selectedCases = useMemo(
+		() => cases.filter(c => selectedIds.has(String(c.id))),
+		[cases, selectedIds]
+	);
+	const selectedNajizCount = useMemo(
+		() => selectedCases.filter(isNajizSourced).length,
+		[selectedCases]
+	);
+
 	// Open add modal from query param (header quick-add)
 	useEffect(() => {
 		if (searchParams.get('action') === 'add') {
@@ -311,12 +401,31 @@ const Cases: React.FC = () => {
 			setArchivedCount(archivedTotal);
 
 			// Save to cache (only for first page without filters — أي وضع الأرشيف الافتراضي)
+			//
+			// 🔴 `try` خاصٌّ به — وهذا ليس احتياطاً بل إصلاحُ عطلٍ حيّ.
+			//
+			// كان الاستدعاء عارياً داخل الـ`try` الكبير، فيلتقطه `catch` الخارجيُّ
+			// ويعرض **«خطأ في جلب القضايا»** — وهي رسالةٌ كاذبة: الجلبُ نجح
+			// والقضايا عُرضت سلفاً (`setCases` قبله بأسطر)، والفاشلُ هو التخزينُ
+			// المؤقّت وحده. فيرى المستخدمُ خطأ خادمٍ بينما العلّةُ في حصّة متصفّحه.
+			//
+			// ويقع فعلاً: `localStorage` سعتُه 5–10 ميجا للنطاق، وصفحةُ قضايا
+			// كبيرةٌ تتجاوزها ⇒ `QuotaExceededError` (رُصد على مستخدمٍ 2026-08-17).
+			//
+			// وحذفُ المفتاح عند الفشل مقصود: بلا ذلك تبقى نسخةٌ قديمةٌ محفوظةً
+			// تُقرأ عند كلّ فتحٍ ولا تُحدَّث أبداً (لأنّ الكتابة تفشل دائماً) —
+			// فيرى المستخدم بياناتٍ متقادمةً بلا أن يدري. والكاشُ رفاهيةٌ: غيابُه
+			// أصدقُ من قِدَمه.
 			if (page === 1 && !hasFilters) {
-				localStorage.setItem(cacheKey, JSON.stringify({
-					data: { cases: data, pagination: paginationData, archivedCount: archivedTotal },
-					timestamp: Date.now(),
-					pageSize: limit
-				}));
+				try {
+					localStorage.setItem(cacheKey, JSON.stringify({
+						data: { cases: data, pagination: paginationData, archivedCount: archivedTotal },
+						timestamp: Date.now(),
+						pageSize: limit
+					}));
+				} catch {
+					try { localStorage.removeItem(cacheKey); } catch { /* لا شيء يُفعَل */ }
+				}
 			}
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'خطأ في جلب القضايا');
@@ -540,6 +649,75 @@ const Cases: React.FC = () => {
 		}
 	};
 
+	// ── تنفيذ العملية الجماعية ──
+	// لا نقطة نهاية جماعية في الباك، فالتنفيذ طلبٌ لكل قضية على دفعات متوازية محدودة.
+	// النتائج تُجمع بالكامل: نجاحٌ جزئي يُعلَن صراحةً بأسبابه، وتبقى القضايا الفاشلة
+	// وحدها محدَّدة كي تُعاد المحاولة عليها دون إعادة التحديد من الصفر.
+	const runBulkAction = async (action: BulkAction) => {
+		const targets = selectedCases;
+		if (targets.length === 0 || bulkRunning) return;
+
+		setBulkRunning(true);
+		setBulkResult(null);
+
+		const failed: { id: string; title: string; reason: string }[] = [];
+		const queue = [...targets];
+
+		const worker = async () => {
+			for (;;) {
+				const c = queue.shift();
+				if (!c) return;
+				try {
+					if (action === 'delete') await CaseService.deleteCase(String(c.id));
+					else if (action === 'archive') await CaseService.archive(c.id);
+					else await CaseService.unarchive(c.id);
+				} catch (err) {
+					failed.push({
+						id: String(c.id),
+						title: c.title,
+						reason: err instanceof Error ? err.message : 'خطأ غير معروف',
+					});
+				}
+			}
+		};
+
+		await Promise.all(
+			Array.from({ length: Math.min(BULK_CONCURRENCY, queue.length) }, () => worker())
+		);
+
+		const succeeded = targets.length - failed.length;
+		const verb = action === 'delete' ? 'حذف' : action === 'archive' ? 'نقل' : 'إعادة';
+		const tail = action === 'delete' ? '' : action === 'archive' ? ' إلى الأرشيف' : ' من الأرشيف';
+
+		if (failed.length === 0) {
+			setBulkResult({ tone: 'ok', text: `تم ${verb} ${caseCountLabel(succeeded)}${tail}.` });
+		} else {
+			// سببٌ واحد ممثِّل يكفي: تكرار السبب نفسه لعشر قضايا يملأ الشريط بلا فائدة
+			const reason = failed[0].reason;
+			const sameReason = failed.every(f => f.reason === reason);
+			const detail = sameReason
+				? reason
+				: `${reason} (وأسباب أخرى)`;
+			setBulkResult({
+				tone: 'warn',
+				text: succeeded > 0
+					? `تم ${verb} ${caseCountLabel(succeeded)} من ${targets.length}، وتعذّر الباقي: ${detail}`
+					: `تعذّر ${verb} ${caseCountLabel(failed.length)}: ${detail}`,
+			});
+		}
+
+		// الخدمة تُبطل مفتاح cases_data وحده؛ نمسح بقية أوضاع الأرشيف كذلك.
+		clearCasesCache();
+		setSelectedIds(new Set(failed.map(f => f.id)));
+		lastPickedIndexRef.current = null;
+		setBulkAction(null);
+		setBulkRunning(false);
+
+		// آخر صفحة أُفرغت بالكامل؟ ارجع خطوةً بدل عرض صفحة فارغة.
+		const emptiedPage = succeeded >= cases.length && pagination.currentPage > 1;
+		await fetchCases(emptiedPage ? pagination.currentPage - 1 : pagination.currentPage, true);
+	};
+
 	const advFilterCount = (advFilters.lawyer_id ? 1 : 0) + (advFilters.responsible_lawyer_id ? 1 : 0) + (advFilters.client_id ? 1 : 0) + (advFilters.najiz_status ? 1 : 0);
 	// وضع الأرشيف فلترٌ كامل الأهلية هنا أيضاً — تجاهله يجعل «لا فلاتر» كذباً داخل الأرشيف.
 	const hasFilters = !!(searchTerm.trim() || statusFilter !== 'all' || typeFilter !== 'all' || advFilterCount || archivedFilter !== DEFAULT_ARCHIVED);
@@ -599,9 +777,22 @@ const Cases: React.FC = () => {
 	// Render Table View
 	const renderTable = () => (
 		<div className="cases-table-wrapper">
-			<table className="cases-table" ref={tableRef}>
+			<table className={`cases-table${selectedIds.size > 0 ? ' cases-table--has-selection' : ''}`} ref={tableRef}>
 				<thead>
 					<tr>
+						{canBulk && (
+							<th className="cases-col-select">
+								<input
+									ref={selectAllRef}
+									type="checkbox"
+									className="case-select-box"
+									checked={allVisibleSelected}
+									onChange={(e) => handleSelectAllVisible(e.target.checked)}
+									title="تحديد كل قضايا هذه الصفحة"
+									aria-label="تحديد كل قضايا هذه الصفحة"
+								/>
+							</th>
+						)}
 						{columns.map((col, i) => (
 							<th key={col.key} style={{ width: `${colWidths[i]}%`, position: 'relative' }}>
 								{col.label}
@@ -611,22 +802,47 @@ const Cases: React.FC = () => {
 					</tr>
 				</thead>
 				<tbody>
-					{cases.map(c => {
+					{cases.map((c, rowIndex) => {
 						const statusConfig = STATUS_CONFIG[c.status] || STATUS_CONFIG.pending;
 						const typeLabel = (c as any).case_type_arabic || CASE_TYPE_LABELS[c.case_type] || c.case_type;
 						const archived = isCaseArchived(c);
+						const selected = selectedIds.has(String(c.id));
+						const rowClasses = [
+							c.is_bankruptcy ? 'is-bankruptcy' : ((c as any).is_grievance ? 'is-grievance' : ''),
+							selected ? 'is-selected' : '',
+						].filter(Boolean).join(' ');
 
 						return (
 							<tr
 								key={c.id}
-								className={c.is_bankruptcy ? 'is-bankruptcy' : ((c as any).is_grievance ? 'is-grievance' : undefined)}
+								className={rowClasses || undefined}
 								onClick={(e) => {
 									// النقر داخل خلية الإجراءات لا يفتح القضية — حارسٌ على مستوى الصف
 									// لا يتّكل على stopPropagation وحده (نقرةٌ على حافة الأيقونة تفلت منه).
 									if ((e.target as HTMLElement).closest('.case-id-cell__actions')) return;
+									// ومثلها خلية التحديد: النقر فيها تحديدٌ لا فتح.
+									if ((e.target as HTMLElement).closest('.cases-col-select')) return;
 									guardOpen(c as never, () => navigate(caseDetailUrl(c)));
 								}}
 							>
+								{/* عمود التحديد — Shift+نقرة تسحب النطاق من آخر صفّ نُقر عليه */}
+								{canBulk && (
+									<td className="cases-col-select">
+										<input
+											type="checkbox"
+											className="case-select-box"
+											checked={selected}
+											onClick={(e) => e.stopPropagation()}
+											onChange={(e) => {
+												const native = e.nativeEvent as MouseEvent;
+												handleRowSelect(rowIndex, e.target.checked, !!native.shiftKey);
+											}}
+											title={`تحديد ${c.title}`}
+											aria-label={`تحديد ${c.title}`}
+										/>
+									</td>
+								)}
+
 								{/* العمود 1: القضية (عنوان + رقم + نوع) */}
 								<td>
 									<div className="erp-cell">
@@ -1002,22 +1218,24 @@ const Cases: React.FC = () => {
 
 				{/* Left: View Switcher + Add Button */}
 				<div className="cases-header-bar__end">
+					{/* تبديل العرض يُسقط التحديد: الصناديق في عرض الجدول وحده، فتحديدٌ
+					    باقٍ في عرضٍ لا يُظهره تحديدٌ أعمى. */}
 					<div className="view-tabs" data-tour="cases-view-tabs">
 						<button
 							className={`view-tab ${viewMode === 'table' ? 'view-tab--active' : ''}`}
-							onClick={() => setViewMode('table')}
+							onClick={() => { setViewMode('table'); clearSelection(); }}
 						>
 							<List size={16} />
 						</button>
 						<button
 							className={`view-tab ${viewMode === 'grid' ? 'view-tab--active' : ''}`}
-							onClick={() => setViewMode('grid')}
+							onClick={() => { setViewMode('grid'); clearSelection(); }}
 						>
 							<LayoutGrid size={16} />
 						</button>
 						<button
 							className={`view-tab ${viewMode === 'kanban' ? 'view-tab--active' : ''}`}
-							onClick={() => setViewMode('kanban')}
+							onClick={() => { setViewMode('kanban'); clearSelection(); }}
 						>
 							<Kanban size={16} />
 						</button>
@@ -1120,6 +1338,61 @@ const Cases: React.FC = () => {
 
 			{/* تُعلن صراحةً أننا داخل الأرشيف كي لا يظنّ المستخدم أن سجلّاته اختفت */}
 			{listCountLabel && <div className="cases-list-caption">{listCountLabel}</div>}
+
+			{/* شريط إجراءات المحدَّد — لا يظهر إلا بعد أوّل تحديد، فلا يأخذ حيّزاً في الوضع العادي */}
+			{canBulk && viewMode === 'table' && selectedIds.size > 0 && (
+				<div className="cases-bulk-bar">
+					<span className="cases-bulk-bar__count">{caseCountLabel(selectedIds.size)} محدَّدة</span>
+
+					<Can permission="cases.archive">
+						<button
+							type="button"
+							className="cases-bulk-btn"
+							onClick={() => setBulkAction(archiveMode ? 'unarchive' : 'archive')}
+							disabled={bulkRunning}
+						>
+							{bulkRunning ? <Loader2 size={13} className="spin-slow" /> : (archiveMode ? <ArchiveRestore size={13} /> : <Archive size={13} />)}
+							{archiveMode ? 'إعادة المحدد من الأرشيف' : 'أرشفة المحدد'}
+						</button>
+					</Can>
+
+					<Can permission="cases.delete">
+						<button
+							type="button"
+							className="cases-bulk-btn cases-bulk-btn--danger"
+							onClick={() => setBulkAction('delete')}
+							disabled={bulkRunning}
+						>
+							{bulkRunning ? <Loader2 size={13} className="spin-slow" /> : <Trash2 size={13} />}
+							حذف المحدد
+						</button>
+					</Can>
+
+					<button
+						type="button"
+						className="cases-bulk-bar__clear"
+						onClick={clearSelection}
+						disabled={bulkRunning}
+					>
+						إلغاء التحديد
+					</button>
+				</div>
+			)}
+
+			{/* حصيلة آخر عملية جماعية */}
+			{bulkResult && (
+				<div className={`cases-bulk-result${bulkResult.tone === 'warn' ? ' cases-bulk-result--warn' : ''}`}>
+					<span>{bulkResult.text}</span>
+					<button
+						type="button"
+						className="cases-bulk-result__close"
+						onClick={() => setBulkResult(null)}
+						aria-label="إخفاء"
+					>
+						<X size={14} />
+					</button>
+				</div>
+			)}
 
 			{/* Content */}
 			{
@@ -1266,6 +1539,78 @@ const Cases: React.FC = () => {
 				lawyers={lawyers}
 				clients={clients}
 				najizStatuses={najizStatuses}
+			/>
+
+			{/* تأكيد الحذف الجماعي — التحذير عن ناجز لا يُقال إلا إن كان بين المحدَّد
+			    قضايا مستوردة، لأن الاستبعاد لا يُسجَّل لغيرها أصلاً. */}
+			<ConfirmDialog
+				isOpen={bulkAction === 'delete'}
+				variant="danger"
+				loading={bulkRunning}
+				title={`حذف ${caseCountLabel(selectedIds.size)}`}
+				confirmLabel="حذف نهائي من القائمة"
+				onClose={() => !bulkRunning && setBulkAction(null)}
+				onConfirm={() => runBulkAction('delete')}
+				message={
+					<>
+						<div>سيتم نقل القضايا التالية إلى سلة المحذوفات:</div>
+						<ul className="bulk-confirm-list">
+							{selectedCases.map(c => (
+								<li key={c.id}>
+									{c.title}
+									{(c as any).file_number ? ` — ${(c as any).file_number}` : ''}
+								</li>
+							))}
+						</ul>
+						{selectedNajizCount > 0 && (
+							<div style={{
+								marginTop: 10, padding: '8px 10px', borderRadius: 6,
+								background: 'rgba(220,38,38,0.07)',
+								color: 'var(--status-red, #dc2626)',
+								fontWeight: 600, lineHeight: 1.7,
+							}}>
+								{selectedNajizCount === selectedCases.length
+									? 'هذه القضايا مستوردة من ناجز.'
+									: `${caseCountLabel(selectedNajizCount)} من بينها مستوردة من ناجز.`}
+								{' '}بعد الحذف لن تعود مرة أخرى: المزامنة التلقائية تتخطّاها، والاستيراد اليدوي يرفضها.
+							</div>
+						)}
+					</>
+				}
+				note="الاستعادة من سلة المحذوفات ممكنة، لكنها لا تُعيد ربط القضية بمزامنة ناجز."
+			/>
+
+			{/* تأكيد الأرشفة/الإعادة الجماعية */}
+			<ConfirmDialog
+				isOpen={bulkAction === 'archive' || bulkAction === 'unarchive'}
+				variant="primary"
+				loading={bulkRunning}
+				title={bulkAction === 'unarchive'
+					? `إعادة ${caseCountLabel(selectedIds.size)} من الأرشيف`
+					: `أرشفة ${caseCountLabel(selectedIds.size)}`}
+				confirmLabel={bulkAction === 'unarchive' ? 'نعم، أعِدها' : 'نعم، أرشِفها'}
+				onClose={() => !bulkRunning && setBulkAction(null)}
+				onConfirm={() => runBulkAction(bulkAction === 'unarchive' ? 'unarchive' : 'archive')}
+				message={
+					<>
+						<div>
+							{bulkAction === 'unarchive'
+								? 'هل أنت متأكد من إعادة القضايا التالية إلى القائمة الحيّة؟'
+								: 'هل أنت متأكد من نقل القضايا التالية إلى الأرشيف؟'}
+						</div>
+						<ul className="bulk-confirm-list">
+							{selectedCases.map(c => (
+								<li key={c.id}>
+									{c.title}
+									{(c as any).file_number ? ` — ${(c as any).file_number}` : ''}
+								</li>
+							))}
+						</ul>
+					</>
+				}
+				note={bulkAction === 'unarchive'
+					? 'ستظهر القضايا في القائمة الحيّة من جديد.'
+					: 'الأرشفة لا تحذف شيئاً: القضية تبقى كاملة بجلساتها ومهامها ومستنداتها، وتُخفى عن القائمة الحيّة فقط، ويمكن إعادتها من زرّ الأرشيف في أي وقت.'}
 			/>
 
 			{accessModal}

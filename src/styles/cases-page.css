@@ -1207,3 +1207,178 @@ body.dark .kanban-column {
         display: none;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   التحديد المتعدّد (عمود الصناديق + شريط إجراءات المحدَّد)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* عمود ضيّق ثابت العرض: لا يزاحم الأعمدة الخمسة ولا يدخل في تغيير العرض بالسحب */
+.cases-table th.cases-col-select,
+.cases-table td.cases-col-select {
+    width: 34px;
+    padding-inline: 0;
+    text-align: center;
+    overflow: visible;
+}
+
+.case-select-box {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    vertical-align: middle;
+    accent-color: var(--law-navy, #1E3A5F);
+    cursor: pointer;
+}
+
+/* صندوق الصفّ هادئ حتى يُطلب: يتوارى ما لم يمرّ عليه الماوس أو يكن محدَّداً،
+   فلا يضيف ضجيجاً بصريّاً إلى جدول مكتظّ أصلاً. يبقى قابلاً للنقر وهو متوارٍ
+   (بعكس أزرار الصفّ) لأن ظهوره مرتبط بمرور الماوس على الصفّ نفسه.
+   الأساس — شاشات اللمس ومَن لا hover لديه — ظاهرٌ دائماً. */
+@media (hover: hover) {
+    .cases-table tbody .case-select-box {
+        opacity: 0.28;
+        transition: opacity 0.12s linear;
+    }
+
+    .cases-table tbody tr:hover .case-select-box,
+    .cases-table tbody tr:focus-within .case-select-box,
+    .cases-table tbody .case-select-box:checked,
+    .cases-table--has-selection tbody .case-select-box {
+        opacity: 1;
+    }
+}
+
+/* الصفّ المحدَّد — خلفية أوضح من خلفية المرور، بعدها في الملف ليغلب تلوين
+   الإفلاس وديوان المظالم (نفس الوزن التخصيصي، والترتيب هو الحاكم). */
+.cases-table tbody tr.is-selected,
+.cases-table tbody tr.is-selected:hover {
+    background: rgba(30, 58, 95, 0.09);
+}
+
+body.dark .cases-table tbody tr.is-selected,
+body.dark .cases-table tbody tr.is-selected:hover {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+/* شريط الإجراءات — لا يظهر إلا عند وجود تحديد، وملتصق بين شريط الأدوات والجدول
+   على نمط الصفحة نفسه (بلا هوامش ولا حواف مستديرة). */
+.cases-bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 7px 20px;
+    background: var(--law-navy-light, rgba(30, 58, 95, 0.08));
+    border-bottom: 1px solid var(--color-border);
+    font-size: 13px;
+    color: var(--law-navy, #1E3A5F);
+}
+
+body.dark .cases-bulk-bar {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-heading);
+}
+
+.cases-bulk-bar__count {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.cases-bulk-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+    color: var(--color-text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color 0.12s linear, color 0.12s linear;
+}
+
+.cases-bulk-btn:hover:not(:disabled) {
+    border-color: var(--law-navy);
+    color: var(--law-navy);
+}
+
+.cases-bulk-btn--danger:hover:not(:disabled) {
+    border-color: var(--status-red, #dc2626);
+    color: var(--status-red, #dc2626);
+}
+
+.cases-bulk-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* «إلغاء التحديد» يُدفع إلى آخر الشريط — إجراء تراجعٍ لا إجراء تنفيذ */
+.cases-bulk-bar__clear {
+    margin-inline-start: auto;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+}
+
+.cases-bulk-bar__clear:hover {
+    color: var(--law-navy);
+    text-decoration: underline;
+}
+
+/* حصيلة العملية — سطر عابر يُغلق بالنقر، ولا يحلّ محلّ الجدول كما تفعل شاشة الخطأ */
+.cases-bulk-result {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 20px;
+    font-size: 12.5px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--dashboard-card);
+    color: var(--color-text-secondary);
+}
+
+.cases-bulk-result--warn {
+    background: rgba(220, 38, 38, 0.06);
+    color: var(--status-red, #dc2626);
+}
+
+.cases-bulk-result__close {
+    margin-inline-start: auto;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    padding: 2px;
+    display: inline-flex;
+}
+
+/* قائمة القضايا داخل نافذة التأكيد */
+.bulk-confirm-list {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+    max-height: 148px;
+    overflow-y: auto;
+    list-style: none;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.015);
+    font-size: 12px;
+    color: var(--color-text-secondary, #64748b);
+}
+
+.bulk-confirm-list li {
+    padding: 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
