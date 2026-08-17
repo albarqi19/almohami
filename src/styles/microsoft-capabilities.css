@@ -1,0 +1,84 @@
+/* ====================================================
+   حالةُ خدمات مايكروسوفت — أيُّ خدمةٍ تعمل فعلاً
+   ====================================================
+   حلَّت محلَّ قائمةٍ نصّيةٍ خافتة كانت تسرد النطاقاتِ الممنوحة، فمن ينقصه
+   نطاقٌ لا يرى أنّ خدمتَه متوقّفة — يرى قائمةً أقصرَ لا أكثر.
+
+   وكلُّها بمتغيّرات الثيم، فلات مربّع بلا استدارةٍ ولا ظلّ، وبخصائصَ منطقيةٍ
+   لأنّ المحتوى عربيٌّ يمينيُّ الاتجاه.
+   ==================================================== */
+
+.msi-caps {
+    margin-block-start: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+}
+
+.msi-caps__t {
+    margin-block-end: 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.msi-caps__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.msi-caps__list li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+/* العلامةُ وحدَها تحمل اللون — والنصُّ يبقى مقروءاً في الحالتين.
+   ولا تُستعمل الحمرةُ للمتوقّف: هو حالةٌ تحتاج إجراءً لا خطأٌ وقع. */
+.msi-caps__list li.is-on > span:first-child {
+    color: var(--color-success, var(--law-navy));
+    font-weight: 700;
+}
+
+.msi-caps__list li.is-off {
+    color: var(--color-text-secondary);
+}
+
+.msi-caps__list li.is-off > span:first-child {
+    color: var(--color-text-secondary);
+    font-weight: 700;
+}
+
+/* «ربط منفصل» — تمييزُ التخزين (توكن OneDrive) عن اتصال Graph */
+.msi-caps__note {
+    padding: 1px 5px;
+    border: 1px solid var(--color-border);
+    font-size: 10.5px;
+    color: var(--text-muted);
+}
+
+.msi-caps__fix {
+    margin-block: 8px 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--color-text);
+}
+
+/* نصٌّ للقارئ الصوتيّ وحده: «تعمل / لا تعمل» — فالعلامةُ ✓✕ لا تُنطق. */
+.msi-sr {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}

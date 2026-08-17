@@ -20,6 +20,16 @@ export interface MicrosoftStatus {
     calendar_sync_enabled?: boolean;
     todo_sync_enabled?: boolean;
     granted_scopes?: string[];
+    /**
+     * حالةُ كلّ خدمةٍ على حدة — **يبنيها الخادم ولا يفسّرها الفرونت**.
+     *
+     * قائمةُ النطاقات المطلوبة تعيش في `MicrosoftGraphClient::SCOPES`، فتفسيرُها
+     * هنا يخلق مصدرَ حقيقةٍ ثانياً يتعفّن يومَ تُضاف صلاحيةٌ جديدة — وهو عينُ
+     * العطل الذي عالجناه (توسيعُ النطاقات 2026-07-13 أعدم 18 اتصالاً).
+     */
+    capabilities?: Record<string, { label: string; granted: boolean; separate_connection?: boolean }>;
+    /** ما ينقص التوكنَ الحاليَّ من نطاقات — إن امتلأت فالعلاجُ إعادةُ ربط. */
+    missing_scopes?: string[];
 }
 
 export interface MicrosoftPreferences {

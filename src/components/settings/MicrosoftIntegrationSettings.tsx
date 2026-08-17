@@ -415,13 +415,41 @@ const ConnectionCard: React.FC<{
                 </div>
             </div>
 
-            {status.granted_scopes && status.granted_scopes.length > 0 && (
-                <div style={{ marginTop: '10px', fontSize: '12px', opacity: 0.7 }}>
-                    الصلاحيات الممنوحة:{' '}
-                    {status.granted_scopes
-                        .filter((s) => s !== 'offline_access' && s !== 'User.Read')
-                        .map((s) => translateScope(s))
-                        .join('، ')}
+            {/**
+              * 🔴 كان يعرض **قائمةً نصّيةً خافتة** بالنطاقات الممنوحة: «التقويم،
+              * المهام، قراءة البريد». فمن ينقصه `Calendars.ReadWrite` لا يرى أنّ
+              * التقويم متوقّف — يرى قائمةً أقصرَ لا أكثر، **فيكتشف العطلَ يومَ لا
+              * تُزامَن جلستُه** لا يومَ يفتح الإعدادات.
+              *
+              * وصار الآن حالةَ خدمةٍ صريحة: ما يعمل وما لا يعمل، بحكمٍ يبنيه
+              * الخادم من `SCOPES` نفسِها.
+              *
+              * ⚠️ و«تخزين المستندات» مدرَجٌ رغم أنّه **اتصالٌ منفصلٌ بتوكنٍ آخر**
+              * (OneDrive): الربطُ في المنصّة من ثلاثة أماكن بواجهةٍ واحدة، ومن
+              * ربط من صفحة الوثائق يقرأ «مايكروسوفت متّصل» وليس له تقويمٌ ولا
+              * بريد. فيُعلَّم بـ«ربطٌ منفصل» كي لا يُظنّ جزءاً من هذا الاتصال.
+              */}
+            {status.capabilities && Object.keys(status.capabilities).length > 0 && (
+                <div className="msi-caps">
+                    <div className="msi-caps__t">حالة الخدمات</div>
+                    <ul className="msi-caps__list">
+                        {Object.entries(status.capabilities).map(([key, cap]) => (
+                            <li key={key} className={cap.granted ? 'is-on' : 'is-off'}>
+                                <span aria-hidden="true">{cap.granted ? '✓' : '✕'}</span>
+                                <span>{cap.label}</span>
+                                {cap.separate_connection && (
+                                    <span className="msi-caps__note">ربط منفصل</span>
+                                )}
+                                <span className="msi-sr">{cap.granted ? 'تعمل' : 'لا تعمل'}</span>
+                            </li>
+                        ))}
+                    </ul>
+
+                    {status.missing_scopes && status.missing_scopes.length > 0 && (
+                        <p className="msi-caps__fix">
+                            بعضُ الخدمات تحتاج موافقةً جديدة — <strong>افصل الحساب ثمّ أعد ربطه</strong> لتُمنح كاملةً.
+                        </p>
+                    )}
                 </div>
             )}
 
@@ -830,18 +858,8 @@ function translateDirection(dir: MicrosoftSyncLogEntry['direction']): string {
     )[dir];
 }
 
-function translateScope(scope: string): string {
-    const short = scope.includes('/') ? scope.split('/').pop()! : scope;
-    return (
-        {
-            'Calendars.ReadWrite': 'التقويم',
-            'Tasks.ReadWrite': 'المهام',
-            'Mail.Send': 'إرسال البريد',
-            'Mail.Read': 'قراءة البريد (صندوق الطلبات)',
-            'Files.ReadWrite': 'الملفات',
-            'Files.Read': 'قراءة الملفات',
-        } as Record<string, string>
-    )[short] || short;
-}
+/* حُذفت `translateScope`: كانت تترجم أسماء النطاقات لعرضها قائمةً نصّية،
+   وحلَّت محلَّها خريطةُ القدرات التي يبنيها الخادم بتسمياتها العربية —
+   فلا تُترجَم النطاقاتُ في مكانين. */
 
 export default MicrosoftIntegrationSettings;
