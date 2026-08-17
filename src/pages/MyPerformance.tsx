@@ -50,10 +50,30 @@ const MyPerformance: React.FC = () => {
         {isLoading && !data ? (
           <div className="loading-state">جاري التحميل...</div>
         ) : (
+          /**
+           * 🔴 كان `presence={undefined}` ثابتاً مكتوباً باليد — فيعرض المكوّن
+           * «غير متّصل» **دائماً**، بينما تقريرُ الأداء يعرض الحقيقة. نفسُ
+           * المستخدم بحالتين متناقضتين في شاشتين.
+           *
+           * والبياناتُ كانت تُجلَب في هذه الصفحة نفسِها كلَّ 30 ثانية
+           * (`refetchInterval`) **ثمّ تُرمى**: `data` لا تُستعمَل إلا في شرط
+           * التحميل. والتعليقُ فوق الاستعلام يقول الغرضَ الذي لم يُنفَّذ —
+           * «prefetch just to get presence_status for the hero».
+           *
+           * وأُضيف الحقلُ في الباك (`LawyerReportController::show`) لأنّه لم يكن
+           * في الردّ أصلاً — فالإصلاحُ طرفان لا طرف.
+           */
           <LawyerDetailContent
             lawyerId={Number(user.id)}
             dateFilter={{}}
-            presence={undefined}
+            presence={
+              data?.lawyer
+                ? {
+                    status: data.lawyer.presence_status ?? 'offline',
+                    lastActivityAgo: data.lawyer.last_activity_ago ?? null,
+                  }
+                : undefined
+            }
           />
         )}
       </div>

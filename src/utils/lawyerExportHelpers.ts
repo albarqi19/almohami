@@ -61,7 +61,21 @@ export interface PerformanceBreakdown {
 }
 
 export interface LawyerReportData {
-  lawyer: { id: number; name: string; email: string | null; avatar: string | null; role: string };
+  lawyer: {
+    id: number;
+    name: string;
+    email: string | null;
+    avatar: string | null;
+    role: string;
+    /**
+     * حالةُ التواجد — أُضيفت في الردّ (`LawyerReportController::show`) لأنّ صفحة
+     * «أدائي» كانت تعرض «غير متّصل» دائماً بينما تقريرُ الأداء يعرض الحقيقة:
+     * المكوّنُ يستقبل التواجدَ خاصّيةً من أبيه، وهذه الصفحة لم تكن تملكها.
+     */
+    presence_status?: string | null;
+    last_activity_at?: string | null;
+    last_activity_ago?: string | null;
+  };
   cases: LawyerCase[];
   active_cases: LawyerCase[];
   responsible_cases: LawyerCase[];
