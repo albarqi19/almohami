@@ -142,7 +142,9 @@ class CacheManager {
 
         // Increment global version
         globalCacheVersion = Date.now();
-        localStorage.setItem('cache_global_version', globalCacheVersion.toString());
+        // الحصّة قد تكون ممتلئةً بكاشٍ كبير، ورقمُ الإصدار صغيرٌ لكنّه يفشل معها.
+        // وفشلُه غيرُ محميٍّ كان يُبطل الإبطال نفسَه: تُحذَف المفاتيحُ ولا يُرفَع الإصدار.
+        try { localStorage.setItem('cache_global_version', globalCacheVersion.toString()); } catch { /* الإصدار في الذاكرة كافٍ لهذه الجلسة */ }
     }
 
     /**
@@ -151,7 +153,9 @@ class CacheManager {
     invalidateAll(): void {
         Object.values(CACHE_KEYS).forEach(key => this.remove(key));
         globalCacheVersion = Date.now();
-        localStorage.setItem('cache_global_version', globalCacheVersion.toString());
+        // الحصّة قد تكون ممتلئةً بكاشٍ كبير، ورقمُ الإصدار صغيرٌ لكنّه يفشل معها.
+        // وفشلُه غيرُ محميٍّ كان يُبطل الإبطال نفسَه: تُحذَف المفاتيحُ ولا يُرفَع الإصدار.
+        try { localStorage.setItem('cache_global_version', globalCacheVersion.toString()); } catch { /* الإصدار في الذاكرة كافٍ لهذه الجلسة */ }
     }
 
     /**

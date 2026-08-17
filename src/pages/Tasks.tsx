@@ -67,6 +67,7 @@ import { TaskFoldersPanel, TaskFolderModal } from '../components/tasks/TaskFolde
 import VoiceTaskWidget from '../components/voice/VoiceTaskWidget';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { TasksCache, UsersCache } from '../utils/tasksCache';
+import { safeSetItem } from '../utils/safeStorage';
 
 // --- Constants & Types ---
 const TASK_STATUSES: { key: TaskStatus; label: string; color: string }[] = [
@@ -562,16 +563,16 @@ const Tasks: React.FC = () => {
 
   const startTimer = (taskId: string) => {
     const prevTaskId = localStorage.getItem('tasks_timer_task_id');
-    localStorage.setItem('tasks_timer_task_id', taskId);
-    localStorage.setItem('tasks_timer_start_time', Date.now().toString());
+    safeSetItem('tasks_timer_task_id', taskId);
+    safeSetItem('tasks_timer_start_time', Date.now().toString());
     
     if (prevTaskId !== taskId) {
-      localStorage.setItem('tasks_timer_offset', '0');
+      safeSetItem('tasks_timer_offset', '0');
     }
 
     setActiveTimerTaskId(taskId);
     setTimerRunning(true);
-    localStorage.setItem('tasks_timer_running', 'true');
+    safeSetItem('tasks_timer_running', 'true');
   };
 
   const pauseTimer = () => {
@@ -586,10 +587,10 @@ const Tasks: React.FC = () => {
       newOffset += Math.floor((Date.now() - startTime) / 1000);
     }
 
-    localStorage.setItem('tasks_timer_offset', newOffset.toString());
+    safeSetItem('tasks_timer_offset', newOffset.toString());
     localStorage.removeItem('tasks_timer_start_time');
     setTimerRunning(false);
-    localStorage.setItem('tasks_timer_running', 'false');
+    safeSetItem('tasks_timer_running', 'false');
     setTimerSeconds(newOffset);
   };
 
@@ -616,7 +617,7 @@ const Tasks: React.FC = () => {
     localStorage.removeItem('tasks_timer_task_id');
     localStorage.removeItem('tasks_timer_start_time');
     localStorage.removeItem('tasks_timer_offset');
-    localStorage.setItem('tasks_timer_running', 'false');
+    safeSetItem('tasks_timer_running', 'false');
     setActiveTimerTaskId(null);
     setTimerRunning(false);
     setTimerSeconds(0);

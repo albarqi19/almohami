@@ -45,6 +45,7 @@ import { CaseService } from '../services/caseService';
 import { TaskService } from '../services/taskService';
 import { fromDateInputValue, toDateInputValue } from '../utils/dateAr';
 import { Can } from '../components/Can';
+import { safeSetItem } from '../utils/safeStorage';
 import type {
   ArchivedFilter,
   ExecutionRequest,
@@ -232,7 +233,7 @@ const PaymentsModal: React.FC<PaymentsModalProps> = ({ isOpen, onClose, clientId
     if (!isOpen || !data?.data?.length) return;
     const maxId = Math.max(...data.data.map(l => l.id));
     const prev = Number(localStorage.getItem(LAST_SEEN_PAYMENT_KEY) || 0);
-    if (maxId > prev) localStorage.setItem(LAST_SEEN_PAYMENT_KEY, String(maxId));
+    if (maxId > prev) safeSetItem(LAST_SEEN_PAYMENT_KEY, String(maxId));
   }, [isOpen, data]);
 
   if (!isOpen) return null;
@@ -1034,7 +1035,7 @@ const ExecutionRequests: React.FC = () => {
   useEffect(() => {
     if (!queryData) return;
     try {
-      localStorage.setItem(
+      safeSetItem(
         buildCacheKey(currentPage, debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly, archivedFilter),
         JSON.stringify({ data: queryData, timestamp: Date.now() })
       );

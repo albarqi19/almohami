@@ -53,6 +53,7 @@ import { CaseService } from '../services/caseService';
 import { CloudStorageService } from '../services/cloudStorageService';
 import type { CloudStorageStatus, CloudStorageFile } from '../services/cloudStorageService';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { safeSetItem } from '../utils/safeStorage';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const CACHE_KEY = 'documents_data';
@@ -232,7 +233,7 @@ const Documents: React.FC = () => {
             setDocuments(docsData);
             setCases(casesData);
             // Save to cache
-            localStorage.setItem(CACHE_KEY, JSON.stringify({
+            safeSetItem(CACHE_KEY, JSON.stringify({
                 data: { documents: docsData, cases: casesData },
                 timestamp: Date.now()
             }));

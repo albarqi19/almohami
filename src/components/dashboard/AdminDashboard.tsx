@@ -27,6 +27,7 @@ import { DashboardService } from '../../services/dashboardService';
 import type { DashboardStats, UpcomingSession, RecentActivity } from '../../services/dashboardService';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { apiClient } from '../../utils/api';
+import { safeSetItem } from '../../utils/safeStorage';
 
 // Cache keys
 const CACHE_KEYS = {
@@ -95,8 +96,8 @@ const AdminDashboard: React.FC = () => {
             setDashboardData(newData);
 
             // Save to cache
-            localStorage.setItem(CACHE_KEYS.DASHBOARD_DATA, JSON.stringify(newData));
-            localStorage.setItem(CACHE_KEYS.DASHBOARD_TIMESTAMP, Date.now().toString());
+            safeSetItem(CACHE_KEYS.DASHBOARD_DATA, JSON.stringify(newData));
+            safeSetItem(CACHE_KEYS.DASHBOARD_TIMESTAMP, Date.now().toString());
 
         } catch (err) {
             console.error('Failed to load dashboard data:', err);
@@ -134,7 +135,7 @@ const AdminDashboard: React.FC = () => {
 
         if (user?.id) {
             // Save locally first for immediate effect
-            localStorage.setItem(`welcome_modal_shown_${user.id}`, 'true');
+            safeSetItem(`welcome_modal_shown_${user.id}`, 'true');
 
             // Then save to API
             try {
