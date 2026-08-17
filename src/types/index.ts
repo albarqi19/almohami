@@ -606,6 +606,13 @@ export interface CaseSession {
   session_time?: string;
   session_text?: string;
   session_judgement?: string;
+  /**
+   * إفادةُ المكتب عن الجلسة — ما كتبه المحامي بقلمه، منفصلاً عن `session_text`.
+   * الضبطُ محضرُ المحكمة ومصدرُه ناجز وحده؛ فلا يمحو أحدُهما الآخر، والضبطُ أولى
+   * متى وصل. وجودُ `office_statement_at` وحده يكفي لرسم الشارة في القوائم.
+   */
+  office_statement?: string | null;
+  office_statement_at?: string | null;
   status: string;
   court?: string;
   department?: string;

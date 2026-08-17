@@ -35,12 +35,18 @@ interface ItemResponse {
   data: SessionReportTemplate;
 }
 
+/**
+ * مصدر سرد التقرير: ضبطُ المحكمة الرسمي (ناجز) أم إفادةُ المكتب بقلم المحامي.
+ * null = لا هذا ولا ذاك، فلا مضمون يُرسَل بعد.
+ */
+export type SessionNarrativeSource = 'dabt' | 'office' | null;
+
 /** نتيجة توليد/حفظ الملخص الرسمي للجلسة. */
 export interface SessionReportSummary {
   summary: string | null;
   judgement: string | null;
   next_action: string | null;
-  source: 'ai' | 'edited' | 'existing' | 'no_dabt';
+  source: 'ai' | 'edited' | 'existing' | 'no_dabt' | 'office_statement';
   edited: boolean;
   generated_at: string | null;
   /** كود لغة العميل إن كانت غير العربية ومدعومة (تُضاف صفحة ثانية مترجمة)، أو null. */
@@ -52,6 +58,38 @@ interface SummaryResponse {
   success: boolean;
   message?: string;
   data: SessionReportSummary;
+}
+
+/** حالة سرد الجلسة: الضبط الرسمي (إن وصل) وإفادة المكتب (إن كُتبت). */
+export interface SessionNarrative {
+  id: number;
+  session_text: string | null;
+  session_text_summary: string | null;
+  office_statement: string | null;
+  office_statement_by_name: string | null;
+  office_statement_at: string | null;
+  narrative_source: SessionNarrativeSource;
+  dabt_sent_to_client: boolean;
+  session_date: string | null;
+  court: string | null;
+  case_title: string | null;
+  case_number: string | null;
+}
+
+interface NarrativeResponse {
+  success: boolean;
+  data: SessionNarrative;
+}
+
+interface OfficeStatementResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    office_statement: string | null;
+    office_statement_by_name: string | null;
+    office_statement_at: string | null;
+    narrative_source: SessionNarrativeSource;
+  };
 }
 
 export const SESSION_REPORT_FIELD_LABELS: Record<string, string> = {
@@ -117,6 +155,22 @@ export const sessionReportService = {
     sessionId: number,
     payload: { summary: string; judgement?: string | null; next_action?: string | null },
   ) => apiClient.post<SummaryResponse>(`/sessions/${sessionId}/save-report-summary`, payload),
+
+  // ===== سرد الجلسة: الضبط الرسمي / إفادة المكتب =====
+
+  /** حالة سرد الجلسة (هل وصل الضبط؟ هل هناك إفادة مكتب؟). */
+  getNarrative: (sessionId: number) =>
+    apiClient.get<NarrativeResponse>(`/sessions/${sessionId}/dabt`),
+
+  /**
+   * حفظ «إفادة المكتب عن الجلسة» — ما كتبه المحامي بقلمه.
+   * ليست ضبطاً: الضبطُ محضرُ المحكمة ومصدرُه ناجز وحده، ويُخزَّن منفصلاً فلا
+   * يمحو أحدُهما الآخر. نصٌّ فارغ يحذف الإفادة.
+   */
+  saveOfficeStatement: (sessionId: number, text: string) =>
+    apiClient.put<OfficeStatementResponse>(`/sessions/${sessionId}/office-statement`, {
+      office_statement: text,
+    }),
 };
 
 /** يجلب PDF كـ blob (مع التوكن) ويفتحه في تبويب جديد. */

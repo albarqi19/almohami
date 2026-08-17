@@ -33,6 +33,7 @@ import {
   ClipboardList,
   Gavel,
   Send,
+  PenLine,
   X as XIcon
 } from 'lucide-react';
 import Timeline from '../components/Timeline';
@@ -1065,17 +1066,34 @@ const CaseDetailPage: React.FC = () => {
                                 ضبط الجلسة
                               </button>
                             )}
-                            {/* زر إرسال تقرير الجلسة (PDF) للعميل - للجلسات المنتهية مع ضبط */}
-                            {!isUpcoming && session.session_text && (
+                            {/* زر إرسال تقرير الجلسة (PDF) — لكل جلسة منتهية، وصل ضبطُها أم لم يصل.
+                                بلا ضبط يفتح المودالُ على كتابة إفادة المكتب بدل رسالة خطأ:
+                                المحامي حضر الجلسة ويعرف ما جرى، وناجز قد يتأخر أياماً. */}
+                            {!isUpcoming && (
                               <button
                                 className="case-session-item__join-btn"
                                 style={{ background: 'rgba(31, 58, 95, 0.10)', color: '#1f3a5f' }}
                                 onClick={(e) => { e.stopPropagation(); setReportModalSession(session.id); }}
-                                title="إرسال تقرير الجلسة للعميل كملف PDF عبر واتساب"
+                                title={
+                                  session.session_text
+                                    ? 'إرسال تقرير الجلسة للعميل كملف PDF عبر واتساب'
+                                    : 'لم يصل ضبط الجلسة بعد — اكتب إفادة المكتب لإرسال التقرير'
+                                }
                               >
                                 <Send size={14} />
                                 إرسال تقرير الجلسة
                               </button>
+                            )}
+                            {/* شارة «إفادة مكتب» — الجلسة مغطّاة بقلم المحامي قبل وصول الضبط */}
+                            {!isUpcoming && !session.session_text && session.office_statement_at && (
+                              <span
+                                className="case-session-item__join-btn"
+                                style={{ background: 'rgba(180, 140, 60, 0.12)', color: '#8a6620', cursor: 'default' }}
+                                title="لم يصل ضبط المحكمة بعد — الجلسة مغطّاة بإفادة المكتب"
+                              >
+                                <PenLine size={14} />
+                                إفادة مكتب
+                              </span>
                             )}
                             {/* زر منطوق الحكم - للجلسات التي صدر فيها حكم */}
                             {session.session_judgement && (
@@ -1815,6 +1833,17 @@ const CaseDetailPage: React.FC = () => {
                   s.id === reportModalSession
                     ? { ...s, dabt_sent_to_client: true, report_status: 'sent' }
                     : s
+                ),
+              });
+            }
+          }}
+          onStatementSaved={(at) => {
+            if (caseData) {
+              setCaseData({
+                ...caseData,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                sessions: caseData.sessions?.map((s: any) =>
+                  s.id === reportModalSession ? { ...s, office_statement_at: at } : s
                 ),
               });
             }
