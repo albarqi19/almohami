@@ -613,6 +613,18 @@ export interface CaseSession {
    */
   office_statement?: string | null;
   office_statement_at?: string | null;
+  /**
+   * انتهاءُ الجلسة **يحسبه الخادم** ويرسله جاهزاً — لا تحسبه الواجهةُ من التاريخ:
+   * `session_date_gregorian` مصبوبٌ `date` فيُسلسَل بتوقيت زولو (يومُ 17 يخرج
+   * `...16T21:00:00Z`)، فأيُّ مقارنةٍ هنا تُزيح يوماً كاملاً.
+   *
+   * `has_ended`: انقضت (بضغطةٍ، أو بحالةٍ صريحة من ناجز، أو بانقضاء يومها).
+   * `can_mark_ended`: جلسةُ اليوم ولم تُعلَّم بعدُ ⇒ يظهر زرُّ «انتهت الجلسة».
+   */
+  has_ended?: boolean;
+  can_mark_ended?: boolean;
+  ended_marked_at?: string | null;
+  ended_by?: { id: number; name: string } | null;
   status: string;
   court?: string;
   department?: string;

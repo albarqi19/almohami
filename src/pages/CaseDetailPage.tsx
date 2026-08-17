@@ -34,6 +34,7 @@ import {
   Gavel,
   Send,
   PenLine,
+  CheckCircle2,
   X as XIcon
 } from 'lucide-react';
 import Timeline from '../components/Timeline';
@@ -56,6 +57,8 @@ import CaseWekalatPanel from '../components/CaseWekalatPanel';
 import { AddSessionModal } from '../components/AddSessionModal';
 import { SendDabtPreferencesModal, type NotifyMode } from '../components/SendDabtPreferencesModal';
 import { SendSessionReportModal } from '../components/SendSessionReportModal';
+import { sessionReportService } from '../services/sessionReportService';
+import { toast } from 'react-toastify';
 import OutcomeBadge from '../components/OutcomeBadge';
 import WinCelebrationModal from '../components/WinCelebrationModal';
 import ReplayCelebrationButton from '../components/ReplayCelebrationButton';
@@ -115,6 +118,7 @@ const CaseDetailPage: React.FC = () => {
   const [revokedInfo, setRevokedInfo] = useState<{ title?: string; file_number?: string } | null>(null);
   const [notifyModalSession, setNotifyModalSession] = useState<{ id: number; mode: NotifyMode | null; enabled: boolean } | null>(null);
   const [reportModalSession, setReportModalSession] = useState<number | null>(null);
+  const [markingEndedId, setMarkingEndedId] = useState<number | null>(null);
   const [selectedDabtSession, setSelectedDabtSession] = useState<any>(null);
   const [selectedJudgementSession, setSelectedJudgementSession] = useState<any>(null);
   const [judgementActiveTab, setJudgementActiveTab] = useState<string>('text');
@@ -339,6 +343,45 @@ const CaseDetailPage: React.FC = () => {
       setTimelineEvents(prev => prev.map(e =>
         e.id === eventId ? { ...e, hidden_from_client: visible } : e
       ));
+    }
+  };
+
+  /**
+   * «انتهت الجلسة» — يعلّمها المحامي فور خروجه من القاعة.
+   *
+   * لا تحديثَ متفائلاً: نبدّل الأزرارَ **بعد** أن يؤكّد الخادمُ الحفظ. الشاشةُ
+   * التي تعلن نجاحاً لم يقع تكذب على صاحبها، وهنا تُطلق وعداً بأن التقرير صار
+   * ممكناً بينما الحفظُ لم يصل. الردُّ يحمل الحالةَ المحسوبة فتُطبَّق كما هي.
+   */
+  const handleMarkEnded = async (sessionId: number) => {
+    if (markingEndedId !== null) return;
+    setMarkingEndedId(sessionId);
+    try {
+      const res = await sessionReportService.markEnded(sessionId);
+      const d = res.data;
+      setCaseData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          sessions: prev.sessions?.map((s: any) =>
+            s.id === sessionId
+              ? {
+                  ...s,
+                  has_ended: d.has_ended,
+                  can_mark_ended: d.can_mark_ended,
+                  ended_marked_at: d.ended_marked_at,
+                  ended_by: d.ended_marked_by_name ? { id: 0, name: d.ended_marked_by_name } : s.ended_by,
+                }
+              : s
+          ),
+        };
+      });
+      toast.success(res.message || 'تم إنهاء الجلسة');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'تعذّر إنهاء الجلسة');
+    } finally {
+      setMarkingEndedId(null);
     }
   };
 
@@ -944,7 +987,13 @@ const CaseDetailPage: React.FC = () => {
               <div className="case-card__content">
                 <div className="case-sessions-list">
                   {caseData.sessions.slice(0, 3).map((session: any, idx: number) => {
-                    const isUpcoming = session.status === 'جديدة' || session.status === 'scheduled';
+                    // الانتهاءُ يحسبه الخادمُ ويرسله جاهزاً (`has_ended`): حقلُ `status`
+                    // لقطةٌ وقتَ آخرِ مزامنةِ ناجز، فجلسةُ أمسَ تبقى فيه `scheduled` أبداً
+                    // إن لم تُزامَن بعدها — والجلسةُ اليدوية لا تُزامَن أصلاً.
+                    // النمطُ القديم يبقى احتياطاً لردٍّ قديمٍ لا يحمل الحقل.
+                    const isUpcoming = session.has_ended !== undefined
+                      ? !session.has_ended
+                      : (session.status === 'جديدة' || session.status === 'scheduled');
                     const { day, month } = parseSessionDate(session.session_date);
 
                     return (
@@ -966,8 +1015,21 @@ const CaseDetailPage: React.FC = () => {
                             <span className="case-session-item__title">
                               {session.session_type || 'جلسة'}
                             </span>
-                            <span className={`case-session-item__status ${isUpcoming ? 'case-session-item__status--upcoming' : 'case-session-item__status--completed'}`}>
-                              {isUpcoming ? 'قادمة' : session.status}
+                            <span
+                              className={`case-session-item__status ${isUpcoming ? 'case-session-item__status--upcoming' : 'case-session-item__status--completed'}`}
+                              title={
+                                session.ended_marked_at && session.ended_by?.name
+                                  ? `أنهاها ${session.ended_by.name}`
+                                  : undefined
+                              }
+                            >
+                              {/* لا نعرض `status` خاماً: قد يكون `scheduled`/`completed`
+                                  لجلسةٍ انقضت، فتظهر إنجليزيةً أمام المستخدم. */}
+                              {isUpcoming
+                                ? 'قادمة'
+                                : (session.status === 'scheduled' || session.status === 'جديدة' || !session.status)
+                                  ? 'منتهية'
+                                  : session.status}
                             </span>
                             {session.source === 'manual' && (
                               <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', fontWeight: 500 }}>يدوية</span>
@@ -1054,6 +1116,21 @@ const CaseDetailPage: React.FC = () => {
                                       ? 'إفادة (خام) ✓'
                                       : 'سيتم ارسال الافادة ✓'
                                   : 'ارسال الافادة'}
+                              </button>
+                            )}
+                            {/* «انتهت الجلسة» — لجلسة اليوم وحدها. ما مضى منتهٍ بالحساب
+                                بلا ضغطة، وما لم يبدأ لا معنى لإنهائه. الضغطةُ تفتح بابَ
+                                التقرير فوراً بدل انتظار منتصف الليل أو مزامنةِ ناجز. */}
+                            {session.can_mark_ended && (
+                              <button
+                                className="case-session-item__join-btn"
+                                style={{ background: 'rgba(22, 128, 84, 0.12)', color: '#166b45' }}
+                                disabled={markingEndedId === session.id}
+                                onClick={(e) => { e.stopPropagation(); handleMarkEnded(session.id); }}
+                                title="تسجيل انتهاء الجلسة الآن — يفتح إرسال تقرير الجلسة"
+                              >
+                                <CheckCircle2 size={14} />
+                                {markingEndedId === session.id ? 'جارٍ الإنهاء…' : 'انتهت الجلسة'}
                               </button>
                             )}
                             {/* زر ضبط الجلسة - للجلسات المنتهية مع ضبط */}

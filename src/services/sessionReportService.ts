@@ -81,6 +81,19 @@ interface NarrativeResponse {
   data: SessionNarrative;
 }
 
+/** نتيجة تعليم الجلسة منتهية. */
+interface MarkEndedResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    id: number;
+    ended_marked_at: string | null;
+    ended_marked_by_name: string | null;
+    has_ended: boolean;
+    can_mark_ended: boolean;
+  };
+}
+
 interface OfficeStatementResponse {
   success: boolean;
   message?: string;
@@ -171,6 +184,13 @@ export const sessionReportService = {
     apiClient.put<OfficeStatementResponse>(`/sessions/${sessionId}/office-statement`, {
       office_statement: text,
     }),
+
+  /**
+   * «انتهت الجلسة» — لجلسة اليوم وحدها (`can_mark_ended` من الخادم).
+   * الجلسةُ التي انقضى يومُها منتهيةٌ بالحساب بلا ضغطة.
+   */
+  markEnded: (sessionId: number) =>
+    apiClient.post<MarkEndedResponse>(`/sessions/${sessionId}/mark-ended`),
 };
 
 /** يجلب PDF كـ blob (مع التوكن) ويفتحه في تبويب جديد. */
