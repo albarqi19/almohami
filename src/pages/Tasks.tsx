@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useIsCoarsePointer } from '../hooks/useIsCoarsePointer';
 import {
   Plus,
   Search,
@@ -141,7 +142,7 @@ const SortableTaskCard = ({
     transform,
     transition,
     isDragging
-  } = useSortable({ id: task.id, data: { ...task } });
+  } = useSortable({ id: task.id, data: { ...task }, disabled: useIsCoarsePointer() });
 
   const [expanded, setExpanded] = useState(false);
 
@@ -382,7 +383,7 @@ const SortableTaskCard = ({
 
 // --- Droppable Column Component ---
 const DroppableColumn = ({ id, title, count, color, children }: { id: string, title: string, count: number, color: string, children: React.ReactNode }) => {
-  const { setNodeRef } = useSortable({ id });
+  const { setNodeRef } = useSortable({ id, disabled: useIsCoarsePointer() });
 
   return (
     <div ref={setNodeRef} className="board-column">
@@ -409,7 +410,15 @@ const DraggableTaskRow: React.FC<{
   onClick: () => void;
   children: React.ReactNode;
 }> = ({ task, onClick, children }) => {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id, data: { ...task } });
+  // على الأجهزة اللمسية يُعطَّل السحب: PointerSensor يستقبل اللمس أيضاً، فتمريرُ
+  // إصبعٍ فوق صفٍّ كان يبدأ سحباً بدل تمرير القائمة. disabled تُفرّغ listeners
+  // فيعود التمرير طبيعياً تماماً.
+  const isTouch = useIsCoarsePointer();
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: task.id,
+    data: { ...task },
+    disabled: isTouch,
+  });
   return (
     <tr
       ref={setNodeRef}
@@ -447,10 +456,17 @@ const Tasks: React.FC = () => {
   const [users, setUsers] = useState<{ [key: string]: { name: string; avatar?: string | null } }>(() => UsersCache.get());
 
   // Drag & Drop Sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  //
+  // على الأجهزة اللمسية لا مستشعر إطلاقاً: السحب والإفلات لا يليق بالإصبع هنا —
+  // PointerSensor يستقبل أحداث اللمس، فمسافةُ تفعيلٍ من خمسة بكسلات تجعل كلَّ
+  // تمريرٍ فوق مهمّةٍ سحباً بدل تمرير الشاشة. تفريغُ المستشعرات يمنع بدء السحب
+  // من أصله، ويكمّله disabled في البطاقة والصفّ فلا تُربط listeners أصلاً.
+  const isCoarsePointer = useIsCoarsePointer();
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } });
+  const keyboardSensor = useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates });
+  const desktopSensors = useSensors(pointerSensor, keyboardSensor);
+  const noSensors = useSensors();
+  const sensors = isCoarsePointer ? noSensors : desktopSensors;
   const [activeDragItem, setActiveDragItem] = useState<Task | null>(null);
 
   // Filters
