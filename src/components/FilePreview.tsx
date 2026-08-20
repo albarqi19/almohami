@@ -31,15 +31,16 @@ const docName = (doc: PreviewableDoc): string => doc.file_name || doc.fileName |
 const docMime = (doc: PreviewableDoc): string => doc.mime_type || doc.mimeType || '';
 
 /**
- * Hook موحّد لحلّ رابط المعاينة — مسارٌ واحد للحالتين: `/documents/{id}/preview`.
+ * Hook حلّ رابط المعاينة — مساران بحسب موضع الملف:
+ * - وثيقةٌ على OneDrive ⇒ `cloud-storage/onedrive/preview-url` فيردّ رابطاً مباشراً.
+ * - وثيقةٌ محلية ⇒ `/documents/{id}/preview` فيردّ البايتات، فنصنع blob: URL.
  *
- * السيرفر هو من يقرّر بحسب حالة الصفّ، لا الواجهة:
- * - وثيقةٌ على OneDrive ⇒ يردّ JSON فيه رابطُ مايكروسوفت المباشر، فنعرضه كما هو.
- * - وثيقةٌ محلية ⇒ يردّ البايتات، فنصنع blob: URL.
+ * جُرّب توحيدُهما على مسار الوثيقة (ليقرّر الخادم) فانكسر: ذاك يمرّ بـDocumentPolicy،
+ * وcanViewCaseOf ينفّذ `$document->case` فيجلب صفّ القضية كاملاً ومعه عمود najiz_data
+ * الضخم ⇒ نفادُ الذاكرة وانهيارُ العامل و502. والعلّةُ في تحميل العمود لا في المعاينة.
  *
- * كان الفرع السحابي ينادي `cloud-storage/onedrive/preview-url` وهو محروسٌ بـ
- * `internal.user` عمداً (لئلّا يتصفّح العميلُ درايف المكتب) ⇒ 403 لكلّ عميل.
- * ومسارُ الوثيقة يفرض DocumentPolicy على الصفّ نفسه، فهو أدقُّ تفويضاً ويعمل للطرفين.
+ * ويبقى معلوماً أن مسار OneDrive محروسٌ بـ`internal.user`، فالعميلُ لا يصله —
+ * وذاك عطلٌ قائمٌ في بوّابته يُعالَج بمسارٍ خاصٍّ به لا بتوحيدٍ يكسر الجميع.
  */
 export function useFilePreviewUrl(doc: PreviewableDoc | null, enabled: boolean = true) {
   const [url, setUrl] = useState<string | null>(null);
@@ -48,6 +49,7 @@ export function useFilePreviewUrl(doc: PreviewableDoc | null, enabled: boolean =
 
   const isCloud = !!doc?.cloud_file_id;
   const docId = doc?.id;
+  const cloudId = doc?.cloud_file_id;
 
   useEffect(() => {
     if (!doc || !enabled) return;
@@ -61,13 +63,34 @@ export function useFilePreviewUrl(doc: PreviewableDoc | null, enabled: boolean =
       setUrl(null);
 
       try {
+        // الوثيقة السحابية تمرّ بمسار OneDrive المباشر لا بمسار الوثيقة.
+        //
+        // جُرّب توحيدُهما على /documents/{id}/preview فانكسر: ذاك المسار يمرّ
+        // بـDocumentPolicy، وcanViewCaseOf ينفّذ $document->case فيجلب صفّ القضية
+        // كاملاً ومعه عمود najiz_data (يبلغ عندنا 42 ميجابايت لصفٍّ واحد) —
+        // فينفد memory_limit وينهار العامل، فيردّ nginx بـ502 بلا ترويسات CORS.
+        // العلّة في تحميل العمود الضخم لا في المعاينة، وتُعالَج على حدة.
+        if (cloudId) {
+          const res = await fetch(`${API_URL}/cloud-storage/onedrive/preview-url/${cloudId}`, {
+            headers: authHeaders(),
+          });
+          const data = await res.json().catch(() => null);
+
+          if (!res.ok || !data?.success) {
+            throw new Error(data?.message || `تعذّر تحميل المعاينة (${res.status})`);
+          }
+
+          const href = data?.download_url || doc.cloud_web_url;
+          if (!href) throw new Error(data?.message || 'لا يتوفّر رابط معاينة لهذا الملف');
+          if (!cancelled) setUrl(href);
+          return;
+        }
+
+        // الوثيقة المحلية: بايتاتٌ من سيرفرنا ثم blob: URL
         const res = await fetch(`${API_URL}/documents/${docId}/preview`, {
           headers: authHeaders(),
         });
 
-        // رسالةُ الخادم أولى من رسالتنا العامّة: هو وحده يعرف الفرق بين ملفٍّ
-        // غير موجودٍ على الدرايف، وربطٍ منقطع، وصلاحيةٍ ناقصة. وبلا هذا القراءة
-        // يرى المحامي «فشل تحميل المعاينة» في الحالات الثلاث فلا يدري ما يفعل.
         if (!res.ok) {
           let serverMessage = '';
           try {
@@ -77,16 +100,6 @@ export function useFilePreviewUrl(doc: PreviewableDoc | null, enabled: boolean =
             serverMessage = '';
           }
           throw new Error(serverMessage || `تعذّر تحميل المعاينة (${res.status})`);
-        }
-
-        // JSON ⇒ وثيقةٌ سحابية: رابطٌ مباشر إلى مايكروسوفت يُمرَّر للعارض كما هو،
-        // ولا تُجلب بايتاته بـfetch (مضيفه بلا CORS).
-        if (res.headers.get('content-type')?.includes('application/json')) {
-          const data = await res.json();
-          const href = data?.url || data?.download_url || doc.cloud_web_url;
-          if (!href) throw new Error(data?.message || 'no-preview-url');
-          if (!cancelled) setUrl(href);
-          return;
         }
 
         const blob = await res.blob();
@@ -115,7 +128,7 @@ export function useFilePreviewUrl(doc: PreviewableDoc | null, enabled: boolean =
       cancelled = true;
       if (createdBlobUrl) URL.revokeObjectURL(createdBlobUrl);
     };
-  }, [docId, enabled]);
+  }, [docId, cloudId, enabled]);
 
   return { url, loading, error, isCloud };
 }
@@ -126,20 +139,31 @@ export function useFilePreviewUrl(doc: PreviewableDoc | null, enabled: boolean =
 export async function downloadDocument(doc: PreviewableDoc): Promise<void> {
   const name = docName(doc);
   try {
+    // كالمعاينة: السحابيّ عبر مسار OneDrive المباشر لا مسار الوثيقة —
+    // ذاك يمرّ بـDocumentPolicy التي تجلب القضية بعمود najiz_data الضخم.
+    if (doc.cloud_file_id) {
+      const res = await fetch(`${API_URL}/cloud-storage/onedrive/preview-url/${doc.cloud_file_id}`, {
+        headers: authHeaders(),
+      });
+      const data = await res.json().catch(() => null);
+      const href = (data?.success && data?.download_url) || doc.cloud_web_url;
+      if (!href) throw new Error(data?.message || 'no-download-url');
+
+      const a = document.createElement('a');
+      a.href = href;
+      a.download = name;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
     const res = await fetch(`${API_URL}/documents/${doc.id}/download`, {
       headers: authHeaders(),
     });
     if (!res.ok) throw new Error(`download HTTP ${res.status}`);
-
-    // JSON ⇒ وثيقةٌ على OneDrive: نفتح رابطها المباشر في لسانة. ولا يُجلب بـfetch
-    // ليُحفظ blob باسمها العربي، لأن مضيف مايكروسوفت يرفض الجلب عبر النطاقات.
-    if (res.headers.get('content-type')?.includes('application/json')) {
-      const data = await res.json();
-      const href = data?.url || data?.download_url || doc.cloud_web_url;
-      if (!href) throw new Error(data?.message || 'no-download-url');
-      window.open(href, '_blank', 'noopener,noreferrer');
-      return;
-    }
 
     const blob = await res.blob();
     const objectUrl = URL.createObjectURL(blob);
