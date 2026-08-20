@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, AlertTriangle, Download, FileText, Image as ImageIcon, File as FileIcon } from 'lucide-react';
+import { Loader2, AlertTriangle, Download, FileText, Image as ImageIcon, File as FileIcon, ExternalLink } from 'lucide-react';
 import SecurePdfViewer from './SecurePdfViewer';
 import SecureWordViewer from './SecureWordViewer';
 
@@ -27,23 +27,39 @@ const authHeaders = (): Record<string, string> => {
   };
 };
 
+/**
+ * عَلَمٌ يرفعه فتحُ نافذة التحرير ويستهلكه الـhook عند عودة اللسانة.
+ * مرجعٌ على مستوى الوحدة لا حالةُ مكوّن: الفاتحُ والمنتظِرُ قد لا يكونان في شجرةٍ واحدة.
+ */
+const editOpenedRef = { current: false };
+
 const docName = (doc: PreviewableDoc): string => doc.file_name || doc.fileName || 'ملف';
 const docMime = (doc: PreviewableDoc): string => doc.mime_type || doc.mimeType || '';
 
 /**
- * Hook موحّد لحلّ رابط المعاينة.
- * - ملف OneDrive: يجلب رابط CDN مباشراً (presigned) عبر preview-url — لا يمرّ عبر بروكسي الخادم.
- * - ملف محلي: يجلب البايتات بالمصادقة ويُنشئ blob: URL.
- * في الحالتين يُرجع رابطاً جاهزاً للعرض دون مصادقة إضافية (آمن للتمرير لـ <img>/PDF/Word).
+ * Hook موحّد لحلّ رابط المعاينة — مسارٌ واحد للحالتين: `/documents/{id}/preview`.
+ *
+ * السيرفر هو من يقرّر بحسب حالة الصفّ، لا الواجهة:
+ * - وثيقةٌ على OneDrive ⇒ يردّ JSON فيه رابطُ مايكروسوفت المباشر، فنعرضه كما هو.
+ * - وثيقةٌ محلية ⇒ يردّ البايتات، فنصنع blob: URL.
+ *
+ * كان الفرع السحابي ينادي `cloud-storage/onedrive/preview-url` وهو محروسٌ بـ
+ * `internal.user` عمداً (لئلّا يتصفّح العميلُ درايف المكتب) ⇒ 403 لكلّ عميل.
+ * ومسارُ الوثيقة يفرض DocumentPolicy على الصفّ نفسه، فهو أدقُّ تفويضاً ويعمل للطرفين.
  */
 export function useFilePreviewUrl(doc: PreviewableDoc | null, enabled: boolean = true) {
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** الرابط صفحةُ عارضٍ تُؤطَّر في iframe، لا ملفٌّ خام */
+  const [embed, setEmbed] = useState(false);
+  /** للمستخدم صلاحية تحرير هذا المستند (يقرّرها الخادم بـDocumentPolicy) */
+  const [canEdit, setCanEdit] = useState(false);
+  /** يزيد فيُعيد جلب المعاينة — يُستعمل بعد العودة من نافذة التحرير */
+  const [reloadKey, setReloadKey] = useState(0);
 
   const isCloud = !!doc?.cloud_file_id;
   const docId = doc?.id;
-  const cloudId = doc?.cloud_file_id;
 
   useEffect(() => {
     if (!doc || !enabled) return;
@@ -55,30 +71,35 @@ export function useFilePreviewUrl(doc: PreviewableDoc | null, enabled: boolean =
       setLoading(true);
       setError(null);
       setUrl(null);
+      setEmbed(false);
+      setCanEdit(false);
 
       try {
-        if (cloudId) {
-          // ملف OneDrive — رابط مباشر من مايكروسوفت (لا بروكسي خادم)
-          const res = await fetch(`${API_URL}/cloud-storage/onedrive/preview-url/${cloudId}`, {
-            headers: authHeaders(),
-          });
-          if (!res.ok) throw new Error(`preview-url HTTP ${res.status}`);
+        const res = await fetch(`${API_URL}/documents/${docId}/preview`, {
+          headers: authHeaders(),
+        });
+        if (!res.ok) throw new Error(`preview HTTP ${res.status}`);
+
+        // JSON ⇒ وثيقةٌ سحابية. لا تُجلب بايتاتها بـfetch إطلاقاً (مضيف مايكروسوفت
+        // بلا CORS) بل يُمرَّر الرابط كما هو. و`embed` يفصل بين حالتين:
+        //  true  ⇒ رابط عارض مايكروسوفت: صفحةٌ مصمَّمة للتأطير في iframe، تعرض
+        //          Office وPDF وتفكّ HEIC/TIFF خادمياً.
+        //  false ⇒ رابط الملف المباشر: لا يصلح إلا لوسم <img>.
+        if (res.headers.get('content-type')?.includes('application/json')) {
           const data = await res.json();
-          if (data?.success && data?.download_url) {
-            if (!cancelled) setUrl(data.download_url);
-          } else {
-            throw new Error(data?.message || 'no-download-url');
+          const href = data?.url || data?.download_url || doc.cloud_web_url;
+          if (!href) throw new Error(data?.message || 'no-preview-url');
+          if (!cancelled) {
+            setUrl(href);
+            setEmbed(Boolean(data?.embed));
+            setCanEdit(Boolean(data?.can_edit));
           }
-        } else {
-          // ملف محلي — جلب البايتات بالمصادقة ثم blob: URL
-          const res = await fetch(`${API_URL}/documents/${docId}/preview`, {
-            headers: authHeaders(),
-          });
-          if (!res.ok) throw new Error(`preview HTTP ${res.status}`);
-          const blob = await res.blob();
-          createdBlobUrl = URL.createObjectURL(blob);
-          if (!cancelled) setUrl(createdBlobUrl);
+          return;
         }
+
+        const blob = await res.blob();
+        createdBlobUrl = URL.createObjectURL(blob);
+        if (!cancelled) setUrl(createdBlobUrl);
       } catch (err) {
         console.error('useFilePreviewUrl error:', err);
         if (!cancelled) setError('فشل تحميل المعاينة');
@@ -93,48 +114,148 @@ export function useFilePreviewUrl(doc: PreviewableDoc | null, enabled: boolean =
       cancelled = true;
       if (createdBlobUrl) URL.revokeObjectURL(createdBlobUrl);
     };
-  }, [docId, cloudId, enabled]);
+  }, [docId, enabled, reloadKey]);
 
-  return { url, loading, error, isCloud };
+  /**
+   * يُعيد جلب المعاينة حين يعود المستخدم إلى اللسانة.
+   *
+   * التحرير يقع في نافذة Office خارج نظامنا، فلا حدث يخبرنا أنه انتهى. لكنّ
+   * عودته إلينا إشارةٌ كافية: نُحدّث الصورة فيرى تعديله فوراً بدل نسخةٍ قديمة
+   * تجعله يظنّ أن الحفظ لم يقع. ورابط المعاينة قصير العمر على كل حال، فإعادة
+   * طلبه عند العودة تُجدّده أيضاً.
+   *
+   * ولا نُحدّث إلا إن كان قد فتح تحريراً فعلاً، كي لا نُثقل كلَّ تنقّلٍ بين اللسانات.
+   */
+  useEffect(() => {
+    if (!doc || !enabled) return;
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && editOpenedRef.current) {
+        editOpenedRef.current = false;
+        setReloadKey((k) => k + 1);
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [doc, enabled]);
+
+  return { url, loading, error, isCloud, embed, canEdit, refresh: () => setReloadKey((k) => k + 1) };
 }
 
 /**
- * تحميل موحّد لأي وثيقة (محلية أو OneDrive).
+ * يفتح المستند في Office للويب للتحرير — في تبويبٍ جديد لا في إطارٍ مضمَّن.
+ *
+ * التأطير هنا مرفوضٌ عند المصدر لا عندنا: مضيف التحرير يرسل
+ * X-Frame-Options: SAMEORIGIN ومعه frame-ancestors محصورةٍ بنطاقات مايكروسوفت.
+ * والتبويب أصدق أثراً على كل حال: يفتح بجلسة المستخدم نفسه فيُنسب التعديل إليه.
+ *
+ * ونفتح النافذة قبل انتظار الشبكة، لأن المتصفّح يحجب window.open الذي يقع بعد
+ * await — فهو عندئذٍ لا ينتمي إلى نقرةِ المستخدم.
+ */
+export async function openDocumentForEdit(doc: PreviewableDoc): Promise<void> {
+  // نافذةٌ مملوكة بمقاسٍ نختاره: أقربُ ما يمكن بصرياً إلى «داخل النظام».
+  //
+  // ولا نمرّر noopener ولا noreferrer هنا: كلاهما يُلزم المتصفّح — بنصّ مواصفة
+  // HTML — بإرجاع null من window.open. تمريرُهما يعني أن المرجع يضيع دائماً،
+  // فيسقط الاستدعاء إلى تغيير عنوان التبويب الحالي، أي يخرج المحامي من النظام
+  // ويفقد مساره ونافذته وموضع تمريره. نستعيض عنهما بقطع opener يدوياً بعد
+  // الفتح وقبل التنقّل، فنحتفظ بالتحكّم ونمنع الصفحة من بلوغ نافذتنا.
+  editOpenedRef.current = true;
+
+  const width = Math.min(1440, Math.max(900, window.screen.availWidth - 120));
+  const height = Math.min(960, Math.max(600, window.screen.availHeight - 120));
+  const left = Math.max(0, Math.round((window.screen.availWidth - width) / 2));
+  const top = Math.max(0, Math.round((window.screen.availHeight - height) / 2));
+
+  // اسمٌ ثابت لكل مستند: ضغطتان لا تفتحان نافذتين بل تُقدّمان الأولى
+  const win = window.open(
+    '',
+    `office_edit_${doc.id}`,
+    `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+  );
+
+  if (win) {
+    try {
+      win.opener = null; // قطعُ الوصول إلينا مع بقاء مرجعنا إليها
+    } catch {
+      // بعض المتصفّحات تمنع الكتابة — لا يمنع ذلك المتابعة
+    }
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/onedrive-direct/documents/${doc.id}/edit-url`, {
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data?.success || !data?.edit_url) {
+      win?.close();
+      alert(data?.message || 'تعذّر فتح المستند للتحرير');
+      return;
+    }
+
+    // الطبقة الثالثة — عند الاستعمال: لا نمرّر إلى location.replace إلا رابطاً
+    // مخطّطه https. حارسا الخادم يسبقانه، وهذا آخرُ سدٍّ قبل التنفيذ — و`javascript:`
+    // هنا يعني سكربتاً يعمل في سياق نطاقنا لا في سياق مايكروسوفت.
+    let safe: URL | null = null;
+    try {
+      safe = new URL(String(data.edit_url));
+    } catch {
+      safe = null;
+    }
+
+    if (!safe || safe.protocol !== 'https:') {
+      win?.close();
+      alert('رابط التحرير غير صالح');
+      return;
+    }
+
+    if (win) {
+      win.location.replace(safe.href);
+      win.focus();
+    } else {
+      // حاجب النوافذ منع الفتح. لا نغيّر عنوان التبويب الحالي — ذاك يُخرج
+      // المستخدم من النظام. نفتح تبويباً جديداً بدلاً منه.
+      window.open(safe.href, '_blank', 'noopener,noreferrer');
+    }
+  } catch (err) {
+    console.error('openDocumentForEdit error:', err);
+    win?.close();
+    alert('تعذّر فتح المستند للتحرير');
+  }
+}
+
+/**
+ * تحميل موحّد لأي وثيقة — مسارٌ واحد، والسيرفر يقرّر (انظر useFilePreviewUrl).
  */
 export async function downloadDocument(doc: PreviewableDoc): Promise<void> {
   const name = docName(doc);
   try {
-    if (doc.cloud_file_id) {
-      // OneDrive — احصل على رابط مباشر وافتحه
-      const res = await fetch(`${API_URL}/cloud-storage/onedrive/preview-url/${doc.cloud_file_id}`, {
-        headers: authHeaders(),
-      });
+    const res = await fetch(`${API_URL}/documents/${doc.id}/download`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) throw new Error(`download HTTP ${res.status}`);
+
+    // JSON ⇒ وثيقةٌ على OneDrive: نفتح رابطها المباشر في لسانة. ولا يُجلب بـfetch
+    // ليُحفظ blob باسمها العربي، لأن مضيف مايكروسوفت يرفض الجلب عبر النطاقات.
+    if (res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();
-      const href = (data?.success && data?.download_url) || doc.cloud_web_url;
-      if (!href) throw new Error('no-download-url');
-      const a = document.createElement('a');
-      a.href = href;
-      a.download = name;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } else {
-      const res = await fetch(`${API_URL}/documents/${doc.id}/download`, {
-        headers: authHeaders(),
-      });
-      if (!res.ok) throw new Error(`download HTTP ${res.status}`);
-      const blob = await res.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = objectUrl;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(objectUrl);
+      const href = data?.url || data?.download_url || doc.cloud_web_url;
+      if (!href) throw new Error(data?.message || 'no-download-url');
+      window.open(href, '_blank', 'noopener,noreferrer');
+      return;
     }
+
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(objectUrl);
   } catch (err) {
     console.error('downloadDocument error:', err);
     alert('تعذّر تحميل الملف');
@@ -164,7 +285,7 @@ interface FilePreviewProps {
  * ويتعامل مع الملفات المحلية و OneDrive بالطريقة الصحيحة لكلٍّ منها.
  */
 const FilePreview: React.FC<FilePreviewProps> = ({ doc, showDownloadFallback = true }) => {
-  const { url, loading, error } = useFilePreviewUrl(doc);
+  const { url, loading, error, embed, canEdit } = useFilePreviewUrl(doc);
 
   const name = docName(doc);
   const mime = docMime(doc);
@@ -214,6 +335,51 @@ const FilePreview: React.FC<FilePreviewProps> = ({ doc, showDownloadFallback = t
             <Download size={16} /> تحميل الملف
           </button>
         )}
+      </div>
+    );
+  }
+
+  // عارض مايكروسوفت أولاً: صفحةٌ مصمَّمة للتأطير تعرض Word وExcel وPowerPoint
+  // وPDF، وتفكّ HEIC وTIFF خادمياً — وهي أنواعٌ يعجز عنها المتصفّح أو عارضاتنا.
+  // ويسبق كلَّ فرعٍ آخر لأن عارضَينا المحلّيَّين (pdf.js وmammoth) يجلبان البايتات
+  // بـfetch، ومضيف مايكروسوفت لا يسمح بذلك عبر النطاقات فيفشلان حتماً.
+  if (embed) {
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {canEdit && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 8, padding: '6px 10px', borderBottom: '1px solid var(--color-border)',
+            background: 'var(--color-surface)',
+          }}>
+            <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+              معاينة من مايكروسوفت
+            </span>
+            <button
+              onClick={() => openDocumentForEdit(doc)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', fontSize: 12, fontWeight: 600,
+                color: 'var(--color-primary)', background: 'transparent',
+                border: '1px solid var(--color-primary)', borderRadius: 5, cursor: 'pointer',
+              }}
+            >
+              <ExternalLink size={13} /> تحرير في Office
+            </button>
+          </div>
+        )}
+
+        <iframe
+          src={url}
+          title={`معاينة ${name}`}
+          style={{ flex: 1, width: '100%', border: 'none' }}
+          // الرابط يعمل بهوية الحساب المربوط (توثّقه مايكروسوفت صراحةً)، فنحصر
+          // ما تقدر عليه الصفحة: تنفيذُ سكربتاتها ونماذجُها لازمٌ للعارض، وما
+          // عداه ممنوع — ولا نمنحها allow-same-origin فلا تبلغ تخزيننا ولا كوكيزنا.
+          sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+          referrerPolicy="no-referrer"
+          loading="lazy"
+        />
       </div>
     );
   }

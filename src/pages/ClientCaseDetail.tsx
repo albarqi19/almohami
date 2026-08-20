@@ -23,6 +23,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { CaseService } from '../services/caseService';
 import ClientCaseMemos from '../components/ClientCaseMemos';
 import { DocumentService } from '../services/documentService';
+import { downloadDocument as downloadDocumentUnified } from '../components/FilePreview';
 import { MessageService } from '../services/messageService';
 import { ActivityService } from '../services/activityService';
 import type { TimelineItem } from '../services/activityService';
@@ -173,25 +174,30 @@ const ClientCaseDetail: React.FC = () => {
 
   const handleDocumentPreview = (doc: Document) => {
     if (openExternalDoc(doc)) return;
-    const previewUrl = `https://api.alraedlaw.com/api/v1/documents/${doc.id}/preview`;
-    window.open(previewUrl, '_blank', 'noopener,noreferrer');
+    // كان window.open على مسار المعاينة مباشرةً — والمسار خلف المصادقة، و`window.open`
+    // لا يحمل توكناً إطلاقاً، فتُفتح لسانةٌ فارغة بردّ 401. الموحّدة تجلب بالمصادقة
+    // ثم تفتح ما يعود (رابط OneDrive المباشر للسحابي، أو الملف نفسه للمحلي).
+    void downloadDocumentUnified({
+      id: doc.id,
+      file_name: doc.file_name || doc.fileName || 'document',
+      mime_type: doc.mime_type || doc.mimeType,
+      cloud_file_id: doc.cloud_file_id,
+      cloud_web_url: doc.cloud_web_url,
+    });
   };
 
   const handleDocumentDownload = async (doc: Document) => {
     if (openExternalDoc(doc)) return;
-    try {
-      const blob = await DocumentService.downloadDocument(doc.id);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = doc.file_name || doc.fileName || 'document';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error('Error downloading document:', error);
-    }
+    // كان ينادي DocumentService.downloadDocument مباشرةً بلا تفريعٍ على السحابة، فكانت
+    // كلُّ وثيقةٍ على OneDrive تسقط في نداءٍ يرفضه المتصفّح (لا CORS على مضيف مايكروسوفت)
+    // بلا رسالةٍ ولا ملف — زرٌّ ميّتٌ صامتٌ في وجه العميل. الموحّدة تتفرّع على cloud_file_id.
+    await downloadDocumentUnified({
+      id: doc.id,
+      file_name: doc.file_name || doc.fileName || 'document',
+      mime_type: doc.mime_type || doc.mimeType,
+      cloud_file_id: doc.cloud_file_id,
+      cloud_web_url: doc.cloud_web_url,
+    });
   };
 
   const formatDate = (date: Date | string | undefined | null) => {

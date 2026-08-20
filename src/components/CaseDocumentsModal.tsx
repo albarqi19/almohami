@@ -37,6 +37,8 @@ import { MEMO_APPROVAL_STATE_LABELS } from '../services/memoWorkflowService';
 import CloudFilePickerModal from './CloudFilePickerModal';
 import DocumentRequestsPanel from './DocumentRequests/DocumentRequestsPanel';
 import AddExternalLinkModal from './AddExternalLinkModal';
+import { downloadDocument as downloadDocumentUnified } from './FilePreview';
+import { uploadManager, MAX_UPLOAD_MB } from '../upload/uploadManager';
 
 import { DocumentService } from '../services/documentService';
 import { CloudStorageService } from '../services/cloudStorageService';
@@ -119,8 +121,6 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   const canDeleteMemo = usePermission('memos.delete');
   const canSendMemo = usePermission('memos.send');
   // الرفع المباشر إلى OneDrive + السحب والإفلات
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [oneDriveConnected, setOneDriveConnected] = useState<boolean | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -169,6 +169,27 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
       loadComments(selectedDocument.id);
     }
   }, [selectedDocument]);
+
+  /**
+   * تحديث القائمة حين تهبط وثيقةٌ جديدة في هذه القضية.
+   *
+   * الرفع صار يجري خارج هذه النافذة، فلا شيء هنا ينتظر انتهاءه. نستمع لإشعار
+   * الاكتمال بدل مراقبة اللقطة العامة — تلك تتغيّر مع كل نبضة تقدّم فتُغرق
+   * الشاشة بنداءات تحميل. ونرشّح على معرّف القضية كي لا تُحدَّث القائمة لرفعةٍ
+   * تخصّ قضيةً أخرى فتحها المستخدم في لسانةٍ ثانية.
+   */
+  useEffect(() => {
+    return uploadManager.onCompleted((item) => {
+      if (
+        item.status === 'done' &&
+        item.context.kind === 'case' &&
+        item.context.id === Number(caseId)
+      ) {
+        void loadDocuments();
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId]);
 
   const loadDocuments = async () => {
     try {
@@ -473,42 +494,44 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
   };
 
   // رفع مباشر إلى OneDrive لملف أو أكثر (رابط رفع → رفع مباشر → تسجيل في النظام)
-  const handleDirectUpload = async (files: FileList | File[]) => {
+  /**
+   * يسلّم الملفات إلى مدير الرفع العالمي وينصرف.
+   *
+   * كانت الحلقة هنا ترفع تسلسلياً وتحبس التتبّع داخل هذه النافذة: إغلاقُها أو
+   * التنقّل إلى صفحةٍ أخرى يقطع الرفع ويُضيّع أثره. المدير يعيش خارج شجرة
+   * الصفحات، فيتابع الرفع ويعرضه في الشريط السفلي مهما فعل المستخدم — ويرفع
+   * ثلاثة ملفات معاً بدل واحد. وهذه الدالّة لم تعد تنتظر شيئاً.
+   */
+  const handleDirectUpload = (files: FileList | File[]) => {
     const list = Array.from(files);
     if (list.length === 0) return;
 
-    // يجب الاتصال بـ OneDrive أولاً
     if (oneDriveConnected === false) {
-      alert('يجب الاتصال بـ OneDrive أولاً قبل رفع الملفات. افتح إعدادات التخزين السحابي للربط.');
+      toast.error('اربط OneDrive أولاً من إعدادات التخزين السحابي، ثم أعد الرفع');
       return;
     }
 
-    setUploading(true);
-    setUploadProgress({ done: 0, total: list.length });
-    let failed = 0;
+    const { rejected } = uploadManager.enqueue(list, {
+      kind: 'case',
+      id: Number(caseId),
+      label: caseTitle ? `قضية: ${caseTitle}` : `القضية رقم ${caseId}`,
+    });
 
-    for (let i = 0; i < list.length; i++) {
-      const file = list[i];
-      try {
-        const result = await CloudStorageService.uploadFileToCase(Number(caseId), file);
-        if (!result.success) {
-          console.error('OneDrive upload failed for', file.name, result.error);
-          failed++;
-        }
-      } catch (err) {
-        console.error('OneDrive upload failed for', file.name, err);
-        failed++;
-      } finally {
-        setUploadProgress({ done: i + 1, total: list.length });
-      }
+    if (rejected.length > 0) {
+      const names = rejected.map((r) => r.name).join('، ');
+      toast.error(
+        `تجاوز الحدّ المسموح (${MAX_UPLOAD_MB} ميجابايت): ${names}`,
+        { autoClose: 6000 }
+      );
     }
 
-    setUploading(false);
-    setUploadProgress(null);
-    await loadDocuments();
-
-    if (failed > 0) {
-      alert(`تعذّر رفع ${failed} من ${list.length} ملف إلى OneDrive`);
+    const accepted = list.length - rejected.length;
+    if (accepted > 0) {
+      toast.success(
+        accepted === 1
+          ? 'بدأ رفع الملف — تابعه من الشريط في الأسفل'
+          : `بدأ رفع ${accepted} ملفات — تابعها من الشريط في الأسفل`
+      );
     }
   };
 
@@ -605,21 +628,16 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
       return;
     }
 
-    const docId = doc.id;
-    const fileName = doc.file_name || doc.fileName || 'document';
-    try {
-      const blob = await DocumentService.downloadDocument(docId);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      console.error('Error downloading document:', err);
-    }
+    // كان ينادي DocumentService.downloadDocument التي تمرّ بالسيرفر دائماً — فتُحمَّل
+    // وثيقةُ OneDrive على السيرفر ثم تُرسَل، وهو مسارٌ لا يلزم أصلاً. الدالّة الموحّدة
+    // تفتح رابط OneDrive المباشر للملف السحابي، ولا تمرّ بالسيرفر إلا للملف المحلي.
+    await downloadDocumentUnified({
+      id: doc.id,
+      file_name: doc.file_name || doc.fileName || 'document',
+      mime_type: doc.mime_type || doc.mimeType,
+      cloud_file_id: doc.cloud_file_id,
+      cloud_web_url: doc.cloud_web_url,
+    });
   };
 
   const getFileIcon = (doc: DocumentType) => {
@@ -770,19 +788,18 @@ const CaseDocumentsModal: React.FC<CaseDocumentsModalProps> = ({
                 title="رفع ملفات إلى OneDrive"
                 onClick={() => {
                   if (oneDriveConnected === false) {
-                    alert('يجب الاتصال بـ OneDrive أولاً قبل رفع الملفات. افتح إعدادات التخزين السحابي للربط.');
+                    toast.error('اربط OneDrive أولاً من إعدادات التخزين السحابي، ثم أعد الرفع');
                     return;
                   }
                   fileInputRef.current?.click();
                 }}
-                disabled={uploading}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'transparent', color: 'var(--color-primary)', border: '1px solid var(--color-primary)', borderRadius: '4px', fontSize: '14px', cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.6 : 1 }}
-                onMouseEnter={(e) => { if (!uploading) { e.currentTarget.style.backgroundColor = 'var(--color-primary)'; e.currentTarget.style.color = 'white'; } }}
+                /* لا تعطيل أثناء الرفع بعد اليوم: الرفع يجري في الشريط السفلي،
+                   فللمستخدم أن يضيف دفعةً ثانية بلا انتظار الأولى */
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'transparent', color: 'var(--color-primary)', border: '1px solid var(--color-primary)', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-primary)'; e.currentTarget.style.color = 'white'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-primary)'; }}>
-                {uploading
-                  ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                  : <FilePlus size={14} />}
-                {uploading && uploadProgress ? `جارٍ الرفع ${uploadProgress.done}/${uploadProgress.total}` : 'رفع'}
+                <FilePlus size={14} />
+                رفع
               </button>
               {/* إضافة رابط خارجي — عمداً غير مشروطٍ بـoneDriveConnected ولا معطّلٍ بـuploading:
                   لا يرفع ملفاً ولا يمسّ OneDrive، فحجبُه بشرط الرفع حجبٌ بلا سبب */}

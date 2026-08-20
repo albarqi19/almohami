@@ -138,8 +138,16 @@ export class DocumentService {
     }
   }
 
+  /**
+   * تنزيل وثيقة محلية (مخزَّنة على السيرفر) كـBlob.
+   *
+   * الوثيقة السحابية لا تمرّ من هنا: السيرفر يردّ عليها بـJSON فيه رابط OneDrive
+   * المباشر، لأن مضيف مايكروسوفت لا يسمح بجلب البايتات من نطاقنا (لا CORS).
+   * استعمل downloadDocument الموحّدة في components/FilePreview لأي وثيقة قد تكون
+   * سحابية — وهي تتفرّع على cloud_file_id. الفحص أدناه شبكةُ أمان: بلا هذا الحارس
+   * تُحفظ حمولةُ JSON نفسها ملفاً باسم الوثيقة، فيصل المحامي ملفٌّ فاسدٌ لا رسالةُ عطل.
+   */
   static async downloadDocument(id: string): Promise<Blob> {
-    // This endpoint should return the file directly
     const response = await fetch(`https://api.alraedlaw.com/api/v1/documents/${id}/download`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -148,6 +156,10 @@ export class DocumentService {
 
     if (!response.ok) {
       throw new Error('فشل في تحميل الوثيقة');
+    }
+
+    if (response.headers.get('content-type')?.includes('application/json')) {
+      throw new Error('هذه وثيقة على OneDrive — استعمل التنزيل الموحّد');
     }
 
     return response.blob();

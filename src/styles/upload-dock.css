@@ -1,0 +1,285 @@
+/* ====================================================
+   شريط تتبّع رفع الملفات — الحافة السفلية بجوار الدردشة
+   ====================================================
+   الدردشة عند left:24px بعرضٍ متغيّر، فنبدأ من left:210px لنقف بجانبها بلا
+   تصادم ودون أن نلمس ملفها. z-index 900 نفسه، فيبقيان في طبقةٍ واحدة تحت
+   النوافذ المنبثقة. تصميمٌ فلات صرف بلا توهّج — بلغة الدردشة البصرية نفسها.
+   ==================================================== */
+
+.upload-dock {
+    position: fixed;
+    bottom: 0;
+    left: 210px;
+    z-index: 900;
+    direction: rtl;
+    font-family: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+/* === الشريط المطوي === */
+.upload-dock__fab {
+    position: relative;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--quiet-gray-200, #EBECF0);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    background: var(--law-navy, #1E3A5F);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    box-shadow: 0 -2px 10px rgba(30, 58, 95, 0.18);
+    transition: background 0.18s ease;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.upload-dock__fab:hover {
+    background: var(--law-navy-dark, #152A45);
+}
+
+.upload-dock__headline {
+    font-variant-numeric: tabular-nums;
+}
+
+/* خيط التقدّم على حافة الشريط المطوي — يُقرأ بطرف العين بلا فتح اللوحة */
+.upload-dock__fab-bar {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.upload-dock__fab-bar-fill {
+    display: block;
+    height: 100%;
+    background: var(--law-gold, #C9A227);
+    transition: width 0.25s ease;
+}
+
+/* === اللوحة المفرودة === */
+.upload-dock__panel {
+    position: absolute;
+    bottom: 32px;
+    inset-inline-start: 0;
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    background: #fff;
+    border: 1px solid var(--quiet-gray-200, #EBECF0);
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 -4px 18px rgba(30, 58, 95, 0.14);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.upload-dock__panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--quiet-gray-100, #F4F5F7);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--law-navy, #1E3A5F);
+    background: var(--quiet-gray-50, #FAFBFC);
+}
+
+.upload-dock__panel-acts {
+    display: flex;
+    gap: 6px;
+}
+
+.upload-dock__panel-acts button {
+    border: 1px solid var(--quiet-gray-200, #EBECF0);
+    background: #fff;
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--law-navy, #1E3A5F);
+    cursor: pointer;
+}
+
+.upload-dock__panel-acts button:hover {
+    background: var(--quiet-gray-50, #FAFBFC);
+}
+
+.upload-dock__list {
+    max-height: 320px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* === التجميع بالسياق (قضية/مهمة) === */
+.upload-dock__group-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 6px 12px;
+    background: var(--quiet-gray-50, #FAFBFC);
+    border-bottom: 1px solid var(--quiet-gray-100, #F4F5F7);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--quiet-gray-600, #6B7280);
+}
+
+/* === صفّ الملف === */
+.upload-dock__row {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--quiet-gray-100, #F4F5F7);
+}
+
+.upload-dock__row:last-child {
+    border-bottom: none;
+}
+
+.upload-dock__row-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.upload-dock__name {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--law-navy, #1E3A5F);
+    /* اسم الملف عربيٌّ وامتداده لاتيني: العزل يمنع انقلاب الامتداد بصرياً */
+    unicode-bidi: plaintext;
+    text-align: start;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.upload-dock__meta {
+    font-size: 11px;
+    color: var(--quiet-gray-600, #6B7280);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.upload-dock__act {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    color: var(--quiet-gray-600, #6B7280);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.upload-dock__act:hover {
+    background: var(--quiet-gray-100, #F4F5F7);
+    color: var(--law-navy, #1E3A5F);
+}
+
+/* === شريط التقدّم لكل ملف — يمتلئ من اليمين لأن الواجهة RTL === */
+.upload-dock__bar {
+    margin-top: 6px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--quiet-gray-100, #F4F5F7);
+    overflow: hidden;
+}
+
+.upload-dock__bar-fill {
+    height: 100%;
+    background: var(--law-gold, #C9A227);
+    transition: width 0.25s ease;
+}
+
+.upload-dock__sub {
+    margin-top: 4px;
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: var(--quiet-gray-600, #6B7280);
+    font-variant-numeric: tabular-nums;
+}
+
+.upload-dock__err {
+    color: #B42318;
+}
+
+.upload-dock__note {
+    padding: 7px 12px;
+    border-top: 1px solid var(--quiet-gray-100, #F4F5F7);
+    background: #FFF8E6;
+    color: #8A6100;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+/* === الأيقونات === */
+.upload-dock__icon {
+    flex-shrink: 0;
+}
+
+.upload-dock__icon--done {
+    color: #12805C;
+}
+
+.upload-dock__icon--failed {
+    color: #B42318;
+}
+
+.upload-dock__icon--muted {
+    color: var(--quiet-gray-400, #9AA1AC);
+}
+
+.upload-dock__icon--spin {
+    animation: upload-dock-spin 1s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes upload-dock-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .upload-dock__icon--spin {
+        animation: none;
+    }
+
+    .upload-dock__bar-fill,
+    .upload-dock__fab-bar-fill {
+        transition: none;
+    }
+}
+
+/* === الجوال: اللوحة بعرض الشاشة والشريط عند الحافة === */
+@media (max-width: 640px) {
+    .upload-dock {
+        left: 8px;
+        right: 8px;
+    }
+
+    .upload-dock__panel {
+        width: auto;
+        inset-inline: 0;
+    }
+
+    .upload-dock__list {
+        max-height: 50vh;
+    }
+}

@@ -12,6 +12,7 @@ import NotebookFloatingWidget from './NotebookFloatingWidget';
 import LawSearchFab from './LawSearchFab';
 import CaseLawNotesWidget from './CaseLawNotesWidget';
 import TeamChatWidget from './chat/TeamChatWidget';
+import UploadDock from './upload/UploadDock';
 // 🧪📌 الودجتس المثبتة من مختبر اللوحة — حارس خفيف لا يجلب أي كود إضافي ما لم يثبّت المستخدم شيئاً
 import PinnedWidgetsGate from './dashboard/lab/PinnedWidgetsGate';
 import ClickUpHeader from './ClickUpHeader';
@@ -232,6 +233,11 @@ const Layout: React.FC = () => {
           {/* 💬 دردشة الفريق — شريط ملتصق بالحافة السفلية يميناً، مستقل عن
               مجموعة الودجتات (يسار) وعن BottomActionBar (يبدأ من 36px صعوداً) */}
           {user && user.role !== 'client' && <TeamChatWidget />}
+
+          {/* 📤 شريط رفع الملفات — بجوار الدردشة على الحافة نفسها. مركَّبٌ هنا لا
+              داخل الصفحات، فيبقى حيّاً عبر التنقّل والرفع مستمرّ. يظهر لكل
+              الأدوار (العميل يرفع مستنداته أيضاً) ويختفي تلقائياً بلا رفعات. */}
+          {user && <UploadDock />}
 
           {/* 📌 الودجتس المثبتة من مختبر اللوحة — تطفو فوق كل الصفحات الداخلية */}
           {user && user.role !== 'client' && <PinnedWidgetsGate />}
