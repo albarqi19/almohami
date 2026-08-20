@@ -64,7 +64,20 @@ export function useFilePreviewUrl(doc: PreviewableDoc | null, enabled: boolean =
         const res = await fetch(`${API_URL}/documents/${docId}/preview`, {
           headers: authHeaders(),
         });
-        if (!res.ok) throw new Error(`preview HTTP ${res.status}`);
+
+        // رسالةُ الخادم أولى من رسالتنا العامّة: هو وحده يعرف الفرق بين ملفٍّ
+        // غير موجودٍ على الدرايف، وربطٍ منقطع، وصلاحيةٍ ناقصة. وبلا هذا القراءة
+        // يرى المحامي «فشل تحميل المعاينة» في الحالات الثلاث فلا يدري ما يفعل.
+        if (!res.ok) {
+          let serverMessage = '';
+          try {
+            const body = await res.json();
+            serverMessage = body?.message || '';
+          } catch {
+            serverMessage = '';
+          }
+          throw new Error(serverMessage || `تعذّر تحميل المعاينة (${res.status})`);
+        }
 
         // JSON ⇒ وثيقةٌ سحابية: رابطٌ مباشر إلى مايكروسوفت يُمرَّر للعارض كما هو،
         // ولا تُجلب بايتاته بـfetch (مضيفه بلا CORS).
@@ -81,7 +94,16 @@ export function useFilePreviewUrl(doc: PreviewableDoc | null, enabled: boolean =
         if (!cancelled) setUrl(createdBlobUrl);
       } catch (err) {
         console.error('useFilePreviewUrl error:', err);
-        if (!cancelled) setError('فشل تحميل المعاينة');
+        // TypeError: Failed to fetch تعني انقطاعَ شبكةٍ أو ردّاً بلا ترويسات CORS
+        // (وذاك يقع حين يعترض الوسيط ردّاً من فئة 5xx) — لا عطلاً في الملف نفسه
+        const isNetwork = err instanceof TypeError;
+        if (!cancelled) {
+          setError(
+            isNetwork
+              ? 'تعذّر الوصول إلى الخادم. تحقّق من الاتصال ثم أعد المحاولة.'
+              : (err instanceof Error && err.message) || 'فشل تحميل المعاينة'
+          );
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
