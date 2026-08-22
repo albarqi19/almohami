@@ -716,6 +716,10 @@ export interface Task {
   status: TaskStatus;
   priority: Priority;
   dueDate?: Date;
+  /** بدايةُ المهمّة — اختيارية */
+  startDate?: Date;
+  /** حُوِّلت أو ستُحوَّل إلى «قيد التنفيذ» تلقائياً عند حلول البداية */
+  autoStart?: boolean;
   completedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -1114,6 +1118,10 @@ export interface CreateTaskForm {
   assigneeIds?: (string | number)[];
   priority: Priority;
   dueDate?: Date;
+  /** بدايةُ المهمّة — اختيارية، ولا تتجاوز `dueDate` */
+  startDate?: Date;
+  /** تحويلُها إلى «قيد التنفيذ» تلقائياً عند حلول `startDate` (يتطلّبها) */
+  autoStart?: boolean;
   estimatedHours?: number;
   requiresApproval?: boolean;
   requiresAttachment?: boolean;

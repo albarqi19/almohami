@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   Paperclip,
   Loader2,
-  Pencil
+  Pencil,
+  PlayCircle
 } from 'lucide-react';
 import { UserService, type User as ServiceUser } from '../services/UserService';
 import { TaskService } from '../services/taskService';
@@ -55,6 +56,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     type: 'other',
     priority: 'medium',
     due_date: '',
+    // بدايةُ المهمّة + التحويل التلقائي — نظيرُ ما في نافذة الإضافة
+    start_date: '',
+    auto_start: false,
     estimated_hours: '',
     actual_hours: '',
     assigned_to: '',
@@ -98,6 +102,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         type: task.type || 'other',
         priority: task.priority || 'medium',
         due_date: toDatetimeInputValue(task.dueDate),
+        start_date: task.startDate ? toDatetimeInputValue(task.startDate) : '',
+        auto_start: !!task.autoStart,
         estimated_hours: task.estimatedHours?.toString() || '',
         actual_hours: task.actualHours?.toString() || '',
         assigned_to: task.assignedTo || '',
@@ -160,6 +166,11 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
       setError('عنوان المهمة مطلوب');
       return;
     }
+    // تُفحَص هنا أيضاً لا في الباك وحده: 422 بعد ملء النموذج كلِّه ردٌّ متأخّر
+    if (formData.start_date && formData.due_date && formData.start_date > formData.due_date) {
+      setError('تاريخ البداية يجب ألا يتجاوز الموعد النهائي');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -172,6 +183,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         type: formData.type,
         priority: formData.priority as any,
         due_date: formData.due_date,
+        // `null` صراحةً لا `undefined`: مسحُ البداية يجب أن يصل الخادمَ فيمحوها
+        start_date: formData.start_date || null,
+        auto_start: Boolean(formData.start_date) && formData.auto_start,
         estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : undefined,
         actual_hours: formData.actual_hours ? parseFloat(formData.actual_hours) : undefined,
         assigned_to: responsibleId || formData.assigned_to,
@@ -292,6 +306,38 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 </div>
               </div>
 
+              {/* بداية المهمة + التحويل التلقائي */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <PlayCircle size={14} />
+                  <span>بداية المهمة</span>
+                </div>
+                <div className="notion-property-value">
+                  <input
+                    type="datetime-local"
+                    value={formData.start_date}
+                    max={formData.due_date || undefined}
+                    onChange={(e) => updateField('start_date', e.target.value)}
+                  />
+                  {/* لا يظهر الخيارُ بلا بداية — والباك يفرض القاعدةَ نفسها */}
+                  {formData.start_date && (
+                    <label
+                      className={`task-req-chip${formData.auto_start ? ' is-on' : ''}`}
+                      style={{ marginTop: 6 }}
+                      title="تتحوّل المهمة من «لم تبدأ» إلى «قيد التنفيذ» عند حلول هذا الوقت. لا تُلمَس إن كنتَ قد بدأتَها أو أوقفتَها بنفسك."
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.auto_start}
+                        onChange={(e) => updateField('auto_start', e.target.checked)}
+                      />
+                      <PlayCircle size={12} />
+                      حوّلها إلى «قيد التنفيذ» عند حلول وقتها
+                    </label>
+                  )}
+                </div>
+              </div>
+
               {/* الموعد النهائي */}
               <div className="notion-property">
                 <div className="notion-property-label">
@@ -302,6 +348,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                   <input
                     type="datetime-local"
                     value={formData.due_date}
+                    min={formData.start_date || undefined}
                     onChange={(e) => updateField('due_date', e.target.value)}
                   />
                 </div>

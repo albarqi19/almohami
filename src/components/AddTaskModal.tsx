@@ -14,7 +14,8 @@ import {
   CheckCircle2,
   Tag,
   ShieldCheck,
-  Paperclip
+  Paperclip,
+  PlayCircle
 } from 'lucide-react';
 import { UserService, type User as ServiceUser } from '../services/UserService';
 import { TaskService } from '../services/taskService';
@@ -50,6 +51,10 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
     type: 'other',
     priority: 'medium',
     due_date: '',
+    // بدايةُ المهمّة — اختيارية. لم تكن في الجدول أصلاً قبل 2026-08-20.
+    start_date: '',
+    // تحويلُها إلى «قيد التنفيذ» تلقائياً عند حلول البداية (يعمل كلَّ ربع ساعة)
+    auto_start: false,
     estimated_hours: '',
     assigned_to: '',
     requires_approval: false,
@@ -130,6 +135,11 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
       setError('عنوان المهمة مطلوب');
       return;
     }
+    // تُفحَص هنا أيضاً لا في الباك وحده: 422 بعد ملء النموذج كلِّه ردٌّ متأخّر
+    if (formData.start_date && formData.due_date && formData.start_date > formData.due_date) {
+      setError('تاريخ البداية يجب ألا يتجاوز الموعد النهائي');
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -151,6 +161,8 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
         assigneeIds: assigneeIds.length ? assigneeIds : undefined,
         priority: formData.priority as any,
         dueDate: new Date(formData.due_date),
+        startDate: formData.start_date ? new Date(formData.start_date) : undefined,
+        autoStart: Boolean(formData.start_date) && formData.auto_start,
         estimatedHours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : undefined,
         requiresApproval: formData.requires_approval,
         requiresAttachment: formData.requires_attachment,
@@ -236,6 +248,39 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                 </div>
               </div>
 
+              {/* Start Date + auto-start */}
+              <div className="notion-property">
+                <div className="notion-property-label">
+                  <PlayCircle size={14} />
+                  <span>بداية المهمة</span>
+                </div>
+                <div className="notion-property-value">
+                  <input
+                    type="datetime-local"
+                    value={formData.start_date}
+                    max={formData.due_date || undefined}
+                    onChange={(e) => updateField('start_date', e.target.value)}
+                  />
+                  {/* الخيارُ لا يظهر بلا بداية: وعدٌ بلا موعدٍ لا يتحقّق،
+                      والباك يفرض القاعدةَ نفسها فلا يُخزَّن `auto_start` بلا `start_date`. */}
+                  {formData.start_date && (
+                    <label
+                      className={`task-req-chip${formData.auto_start ? ' is-on' : ''}`}
+                      style={{ marginTop: 6 }}
+                      title="تتحوّل المهمة من «لم تبدأ» إلى «قيد التنفيذ» عند حلول هذا الوقت. لا تُلمَس إن كنتَ قد بدأتَها أو أوقفتَها بنفسك."
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.auto_start}
+                        onChange={(e) => updateField('auto_start', e.target.checked)}
+                      />
+                      <PlayCircle size={12} />
+                      حوّلها إلى «قيد التنفيذ» عند حلول وقتها
+                    </label>
+                  )}
+                </div>
+              </div>
+
               {/* Due Date */}
               <div className="notion-property">
                 <div className="notion-property-label">
@@ -246,6 +291,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                   <input
                     type="datetime-local"
                     value={formData.due_date}
+                    min={formData.start_date || undefined}
                     onChange={(e) => updateField('due_date', e.target.value)}
                   />
                 </div>

@@ -503,14 +503,45 @@ const Tasks: React.FC = () => {
   // الحيّ والمؤرشف، فلا يُكتب إلا حين تكون الصفحة المعروضة حيّة صرفاً — وإلا سرّبت
   // الصفوف المؤرشفة نفسها إلى القائمة الحيّة عند إعادة فتح الصفحة.
   const cacheIsLiveRef = useRef(true);
+
+  /**
+   * هل ما يُعرض الآن هو القائمةُ العامّة بلا فلترة؟
+   *
+   * 🔴 شرطُ الكتابة في الكاش. كان الكاشُ يُكتب أياً كانت الفلترة، فيُخزَّن ناتجُ
+   *    «مهامّ فلان» ثم يُعرض في الدخول التالي بوصفه القائمةَ كاملة — فيبدو أن
+   *    مهامَّ الآخرين اختفت. والكاشُ الكاذبُ أسوأ من ألّا يكون.
+   */
+  const isUnfilteredView = () => {
+    const f = filtersRef.current;
+    return !f.search.trim()
+      && f.status === 'all'
+      && f.assignee === 'all'
+      && f.priority === 'all'
+      && f.special === null
+      && f.folderId === null
+      && f.archived === '0';
+  };
+
   const commitTasks = (next: Task[]) => {
     setTasks(next);
-    if (cacheIsLiveRef.current) TasksCache.set(next);
+    if (cacheIsLiveRef.current && isUnfilteredView()) TasksCache.set(next);
   };
 
   // إحصائيات وقوائم ودجات حقيقية من الخادم (كل المهام لا الصفحة المحمّلة فقط)
   const [stats, setStats] = useState<TaskStats | null>(null);
   const [widgets, setWidgets] = useState<TaskWidgets | null>(null);
+
+  /**
+   * عدّادُ كلِّ حالةٍ كما حسبَه الخادمُ على الاستعلام المفلتَر **قبل** الترقيم.
+   *
+   * 🔴 هذا مصدرُ الحقيقة الوحيد لعدّادات الحالات في هذه الشاشة. لا تعُد إلى
+   *    `‎.length` لمصفوفةٍ محمَّلة: ذاك كان يعدّ «كم وقع منها داخل الصفحة» لا
+   *    «كم يوجد»، فيقول «لم تبدأ 5» ثم يقفز إلى 10 بعد «تحميل المزيد» (#223).
+   *
+   * ويفوق `stats` لأنه **يتّبع الفلاتر**: `/tasks/statistics` عالميٌّ لا يعرف
+   * المكلَّفَ ولا المجلدَ ولا البحث، فكان يعطي رقماً لا يطابق ما تحت العين.
+   */
+  const [statusCounts, setStatusCounts] = useState<Record<string, number> | null>(null);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -674,7 +705,9 @@ const Tasks: React.FC = () => {
     try {
       if (tasks.length === 0) setLoading(true);
       const { search, status, assignee, priority, special, folderId, archived } = filtersRef.current;
-      const filters: TaskFilters = { per_page: loadedCountRef.current };
+      // `open_first`: الخادمُ يقدّم المفتوحةَ ويوسّع الصفحةَ لتسعها كلَّها، ثم
+      // يُضيف `per_page` من المنتهية — فـ«تحميل المزيد» صار يخصّ المنتهية وحدها.
+      const filters: TaskFilters = { per_page: loadedCountRef.current, open_first: 1 };
       // «الفلترة تُخفي والبحث يُظهر»: في الوضع الحيّ مع بحثٍ نصّي نُسقِط المفتاح عمداً
       // ليطبّق الباك قاعدته (archived_mode = 'all') فلا تضيع مهمة مؤرشفة على الباحث عنها.
       if (archived !== '0' || !search.trim()) filters.archived = archived;
@@ -696,7 +729,11 @@ const Tasks: React.FC = () => {
       cacheIsLiveRef.current = mode === '0';
       setTasks(tasksData);
       setTotalCount((response as any).total ?? tasksData.length);
-      if (cacheIsLiveRef.current) TasksCache.set(tasksData);
+      setStatusCounts(response.status_counts ?? null);
+      // 🔴 لا يُكتب الكاشُ إلا للقائمة **غير المفلترة**: كان يخزّن ناتجَ آخر فلترة
+      //    ثم يُعرض عند الدخول التالي كأنه القائمة كاملة، فيرى المستخدم بعضَ
+      //    مهامّه ويظنّ الباقي ضائعاً. (شقٌّ ثانٍ من #223)
+      if (cacheIsLiveRef.current && isUnfilteredView()) TasksCache.set(tasksData);
     } catch (error) {
       console.error('Error loading tasks:', error);
     } finally {
@@ -846,10 +883,23 @@ const Tasks: React.FC = () => {
 
   const getFilteredTasks = () => {
     const filtered = tasks.filter(task => {
-      const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase());
+      // 🩸 قاعدتا الخادم والعميل يجب أن تتطابقا، وإلا سقطت صفوفٌ أرجعها الخادمُ
+      //    وحسبها في `total` فبقي زرُّ «تحميل المزيد» يَعِد بما لا يظهر.
+      //    الخادم يطابق العنوان **والوصف** (TaskController::index) — فكذلك هنا.
+      const term = searchTerm.toLowerCase();
+      const matchesSearch = !term
+        || task.title.toLowerCase().includes(term)
+        || (task.description ?? '').toLowerCase().includes(term);
       const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
+      // 🔴 المكلَّفُ ليس العمودَ المفرد وحدَه: الخادم يطابق `assigned_to` **أو**
+      //    صفّاً في `task_assignees` (Task::scopeAssignedToUser). ومطابقةُ
+      //    `assignedTo` وحدَها كانت تُخفي مهمّةَ المكلَّف الثانوي (المشارك) عنه
+      //    رغم أن الخادم أرجعها — وهذا نصّ شكوى «عدم ظهور بعض المهام للمكلّف».
       const matchesAssignee = assigneeFilter === 'all'
-        || (assigneeFilter === 'unassigned' ? !task.assignedTo : task.assignedTo === assigneeFilter);
+        || (assigneeFilter === 'unassigned'
+          ? (!task.assignedTo && !(task.assignees && task.assignees.length > 0))
+          : (task.assignedTo === assigneeFilter
+            || !!task.assignees?.some(a => String(a.id) === assigneeFilter)));
       const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter;
       return matchesSearch && matchesStatus && matchesAssignee && matchesPriority;
     });
@@ -1140,6 +1190,15 @@ const Tasks: React.FC = () => {
     }
   };
 
+  /**
+   * عدّادُ حالةٍ للعرض: رقمُ الخادم أوّلاً، وطولُ المصفوفة احتياطاً ريثما يصل.
+   *
+   * 🔴 لا تستبدل هذا بـ`‎.length`. العدُّ على المصفوفة المحمَّلة هو عينُ العطل
+   *    الذي شكا منه العميل (#223): «لم تبدأ 5» تصير 10 بمجرّد «تحميل المزيد».
+   */
+  const statusTotal = (key: string, loadedLength: number) =>
+    statusCounts?.[key] ?? loadedLength;
+
   /** حالات العرض = القياسية + «مؤرشفة» متى ظهرت صفوف مؤرشفة فعلاً (لئلا تختفي بلا مجموعة) */
   const displayStatuses = (list: Task[]) =>
     list.some(t => t.status === 'archived') ? [...TASK_STATUSES, ARCHIVED_STATUS] : TASK_STATUSES;
@@ -1194,7 +1253,7 @@ const Tasks: React.FC = () => {
                         <ChevronDown size={14} style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.15s ease' }} />
                         <span style={{ color: group.color }}>{group.label}</span>
                         <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', background: 'rgba(0,0,0,0.05)', padding: '2px 6px', borderRadius: '4px' }}>
-                          {group.tasks.length}
+                          {groupBy === 'status' ? statusTotal(group.id, group.tasks.length) : group.tasks.length}
                         </span>
                       </div>
                     </td>
@@ -1312,7 +1371,7 @@ const Tasks: React.FC = () => {
               key={statusGroup.key}
               id={statusGroup.key}
               title={statusGroup.label}
-              count={groupTasks.length}
+              count={statusTotal(statusGroup.key, groupTasks.length)}
               color={statusGroup.color}
             >
               <SortableContext items={groupTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
@@ -1468,7 +1527,12 @@ const Tasks: React.FC = () => {
                 <span className="filter-count">{stats?.total ?? totalCount}</span>
               </button>
               {TASK_STATUSES.map(s => {
-                const count = (stats?.[s.key as keyof TaskStats] as number | undefined) ?? liveTasks.filter(t => t.status === s.key).length;
+                // 🔴 `statusCounts` أوّلاً لأنه **يتّبع الفلاتر**، ثم `stats` العالميّ
+                //    احتياطاً. وكان الترتيبُ معكوساً فظهر رقمُ المكتب كلِّه بجوار
+                //    قائمةٍ مفلترة — «تغيّر عدد المهام باختلاف كل اختيار» (#223).
+                const count = statusCounts?.[s.key]
+                  ?? (stats?.[s.key as keyof TaskStats] as number | undefined)
+                  ?? liveTasks.filter(t => t.status === s.key).length;
                 return (
                   <button
                     key={s.key}
@@ -1684,7 +1748,8 @@ const Tasks: React.FC = () => {
             {!loading && tasks.length < totalCount && (
               <div className="load-more-container">
                 <button onClick={loadMore} disabled={loadingMore} className="load-more-btn">
-                  {loadingMore ? 'جاري التحميل…' : `تحميل المزيد (${totalCount - tasks.length} متبقية)`}
+                  {/* المفتوحةُ كلُّها محمَّلةٌ أصلاً (open_first)، فالمتبقّي منتهٍ لا غير */}
+                  {loadingMore ? 'جاري التحميل…' : `تحميل المزيد من المنتهية (${totalCount - tasks.length})`}
                 </button>
               </div>
             )}

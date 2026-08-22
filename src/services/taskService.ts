@@ -25,6 +25,13 @@ export interface TaskFilters {
   folder_id?: number;
   exclude_foldered?: number;
   /**
+   * المفتوحةُ أولاً ثم المنتهية، والصفحةُ تتّسع للمفتوحة كلِّها (بسقف 500) ثم
+   * تُضيف `per_page` من المنتهية. فـ«تحميل المزيد» يخصّ المنتهية وحدها.
+   * قِيس على الإنتاج: مكتبٌ من 285 مهمة، 253 منها مكتملة — فالصفحةُ الأولى
+   * بترتيب `created_at` كانت تبتلع المفتوحةَ الاثنتين والثلاثين.
+   */
+  open_first?: number;
+  /**
    * الفلترة تُخفي والبحث يُظهر: '0' المؤرشفة مخفيّة (افتراضي) | '1' المؤرشفة وحدها | 'all' الكل.
    * إن أُرسل `search` بلا `archived` تحوّل الباك تلقائياً إلى 'all'؛ وإن أُرسل صراحةً فهو يفوز.
    */
@@ -52,6 +59,12 @@ export type TasksPage = PaginatedResponse<Task> & {
   archived_count: number;
   /** الوضع الذي طبّقه الباك فعلياً (قد يصير 'all' تلقائياً مع البحث) */
   archived_mode: ArchivedFilter;
+  /**
+   * عدّادُ كلِّ حالةٍ محسوبٌ على الاستعلام المفلتَر **قبل** الترقيم.
+   * 🔴 اقرأ منه عدّاداتِ الترويسات والأعمدة — لا من طول المصفوفة المحمَّلة:
+   *    ذاك كان يقول «لم تبدأ 5» ثم يقفز إلى 10 بعد «تحميل المزيد» (#223).
+   */
+  status_counts: Record<string, number>;
 };
 
 export interface TaskWidgets {
@@ -95,7 +108,11 @@ export class TaskService {
     const endpoint = queryString ? `/tasks?${queryString}` : '/tasks';
 
     const response = await apiClient.get<
-      ApiResponse<PaginatedResponse<any>> & { archived_count?: number; archived_mode?: ArchivedFilter }
+      ApiResponse<PaginatedResponse<any>> & {
+        archived_count?: number;
+        archived_mode?: ArchivedFilter;
+        status_counts?: Record<string, number | string>;
+      }
     >(endpoint);
 
     if (response.success && response.data) {
@@ -103,6 +120,8 @@ export class TaskService {
       const convertedTasks = response.data.data.map((task: any) => ({
         ...task,
         dueDate: task.due_date ? new Date(task.due_date) : undefined,
+        startDate: task.start_date ? new Date(task.start_date) : undefined,
+        autoStart: Boolean(task.auto_start),
         createdAt: task.created_at ? new Date(task.created_at) : new Date(),
         updatedAt: task.updated_at ? new Date(task.updated_at) : new Date(),
         completedAt: task.completed_at ? new Date(task.completed_at) : undefined,
@@ -114,12 +133,19 @@ export class TaskService {
         assignees: Array.isArray(task.assignees) ? task.assignees : undefined
       }));
       
-      // archived_count و archived_mode يصلان في جذر الردّ لا داخل الـpaginator
+      // archived_count و archived_mode و status_counts تصل في جذر الردّ لا داخل الـpaginator
+      // ⚠️ MySQL يُرجع COUNT كنصّ، فالتحويل إلى رقم هنا لا عند الاستعمال
+      const statusCounts: Record<string, number> = {};
+      Object.entries(response.status_counts ?? {}).forEach(([k, v]) => {
+        statusCounts[k] = Number(v) || 0;
+      });
+
       return {
         ...response.data,
         data: convertedTasks,
         archived_count: response.archived_count ?? 0,
         archived_mode: response.archived_mode ?? '0',
+        status_counts: statusCounts,
       } as TasksPage;
     } else {
       throw new Error(response.message || 'فشل في جلب المهام');
@@ -134,6 +160,8 @@ export class TaskService {
       const task = {
         ...response.data,
         dueDate: response.data.due_date ? new Date(response.data.due_date) : undefined,
+        startDate: response.data.start_date ? new Date(response.data.start_date) : undefined,
+        autoStart: Boolean(response.data.auto_start),
         createdAt: response.data.created_at ? new Date(response.data.created_at) : new Date(),
         updatedAt: response.data.updated_at ? new Date(response.data.updated_at) : new Date(),
         completedAt: response.data.completed_at ? new Date(response.data.completed_at) : undefined,
@@ -168,6 +196,9 @@ export class TaskService {
       priority: taskData.priority,
       // ساعةُ حائط لا لحظةٌ كونية — toISOString كان يُزيح الاستحقاق ثلاث ساعات
       due_date: toApiDatetime(taskData.dueDate),
+      start_date: taskData.startDate ? toApiDatetime(taskData.startDate) : undefined,
+      // بلا بدايةٍ لا معنى للتحويل التلقائي — والباك يفرض القاعدةَ نفسها
+      auto_start: taskData.startDate ? (taskData.autoStart ?? false) : false,
       estimated_hours: taskData.estimatedHours,
       requires_approval: taskData.requiresApproval ?? false,
       requires_attachment: taskData.requiresAttachment ?? false,
