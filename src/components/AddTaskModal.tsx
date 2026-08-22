@@ -254,7 +254,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                   <PlayCircle size={14} />
                   <span>بداية المهمة</span>
                 </div>
-                <div className="notion-property-value">
+                <div className="notion-property-value task-autostart-cell">
                   <input
                     type="datetime-local"
                     value={formData.start_date}
@@ -262,11 +262,12 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                     onChange={(e) => updateField('start_date', e.target.value)}
                   />
                   {/* الخيارُ لا يظهر بلا بداية: وعدٌ بلا موعدٍ لا يتحقّق،
-                      والباك يفرض القاعدةَ نفسها فلا يُخزَّن `auto_start` بلا `start_date`. */}
+                      والباك يفرض القاعدةَ نفسها فلا يُخزَّن `auto_start` بلا `start_date`.
+                      🩸 والنصُّ قصيرٌ عمداً: الخليّةُ ~226 بكسل، وأيُّ عبارةٍ أطول
+                      تنكسر داخل الحبّة إلى أسطر. الشرحُ في الـtooltip. */}
                   {formData.start_date && (
                     <label
-                      className={`task-req-chip${formData.auto_start ? ' is-on' : ''}`}
-                      style={{ marginTop: 6 }}
+                      className={`task-req-chip task-autostart-chip${formData.auto_start ? ' is-on' : ''}`}
                       title="تتحوّل المهمة من «لم تبدأ» إلى «قيد التنفيذ» عند حلول هذا الوقت. لا تُلمَس إن كنتَ قد بدأتَها أو أوقفتَها بنفسك."
                     >
                       <input
@@ -275,7 +276,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                         onChange={(e) => updateField('auto_start', e.target.checked)}
                       />
                       <PlayCircle size={12} />
-                      حوّلها إلى «قيد التنفيذ» عند حلول وقتها
+                      بدء تلقائي
                     </label>
                   )}
                 </div>

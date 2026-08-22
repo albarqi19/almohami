@@ -530,3 +530,34 @@ body.dark .modal-error {
 body.dark .task-req-chip {
     background: rgba(255, 255, 255, 0.04);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   خليّةُ «بداية المهمة»: حقلُ تاريخٍ وتحته شريحةُ البدء التلقائي.
+
+   🔴 بلا هذا تنكسر الشريحة. `.notion-property-value` صفٌّ مرن، والحقلُ داخله
+      `width: 100%`؛ فحين وُضعت الشريحةُ بجواره تنافسا على ~226 بكسل فانضغطا
+      معاً، فانكسر نصُّ الشريحة إلى خمسة أسطر داخل حبّةٍ داكنةٍ طويلة.
+
+   العلاج: الحقلُ يملأ سطرَه (`flex: 1 1 100%`) فتُدفَع الشريحةُ إلى السطر
+   الذي يليه بعرضها الطبيعي، مع منعِ الالتفاف عليها.
+   ───────────────────────────────────────────────────────────────────────── */
+.notion-property:has(> .task-autostart-cell) {
+    align-items: flex-start;
+}
+
+.task-autostart-cell {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding-top: 3px;
+    padding-bottom: 4px;
+}
+
+.task-autostart-cell>input {
+    flex: 1 1 100%;
+}
+
+.task-autostart-chip {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    margin-top: 2px;
+}
