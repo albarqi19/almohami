@@ -40,6 +40,7 @@ import LawyerExportModal from './LawyerExportModal';
 import {
   quickExportActiveCases,
   filterTasksByScope,
+  isTaskOverdue,
   type LawyerReportData,
   type LawyerCase,
   type LawyerTask,
@@ -193,11 +194,15 @@ const LawyerDetailContent: React.FC<LawyerDetailContentProps> = ({ lawyerId, dat
 
   const taskCounts = useMemo(() => {
     if (!data) return { overdue: 0, inProgress: 0, completed: 0, paused: 0 };
+    // 🔴 عدّادان كانا صفراً أبداً لأنهما يسألان عن قيمتين لا يكتبهما أحد:
+    //    «المتأخرة» ليست حالةً بل شرطٌ من `due_date` (انظر `isTaskOverdue`)،
+    //    و«الموقوفة» اسمُها في الجدول `on_hold` لا `paused` — لا وجود لـ`paused`
+    //    في أيّ صفٍّ ولا في `TASK_STATUSES` بصفحة المهام.
     return {
-      overdue: data.tasks.filter(t => t.status === 'overdue').length,
+      overdue: data.tasks.filter(isTaskOverdue).length,
       inProgress: data.tasks.filter(t => t.status === 'in_progress' || t.status === 'pending').length,
       completed: data.tasks.filter(t => t.status === 'completed').length,
-      paused: data.tasks.filter(t => t.status === 'paused').length,
+      paused: data.tasks.filter(t => t.status === 'on_hold').length,
     };
   }, [data]);
 

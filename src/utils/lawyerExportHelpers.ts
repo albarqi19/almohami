@@ -373,9 +373,27 @@ function renderPresenceSection(presence: PresenceLogData): string {
 
 // --- Helpers ------------------------------------------------------------
 
+/**
+ * هل المهمّة متأخّرة؟
+ *
+ * 🔴 «متأخّرة» **ليست حالةً مخزَّنة** بل شرطٌ يُشتقّ من `due_date`. وكان الترشيح
+ *    هنا `t.status === 'overdue'`، ولا شيء في المنصّة يكتب تلك القيمة على مهمّة
+ *    — فكان تبويبُ «المتأخرة» يفتح فارغاً دائماً برسالة «لا توجد مهام متأخرة 🎉»
+ *    مهما بلغ عددُ المتأخرات. (شكوى العميل #237 و#239)
+ *
+ * والشرطُ نسخةٌ من `TaskController::getTaskStatistics` كي لا تتناقض شاشتان؛
+ * وتبقى مطابقةُ `status === 'overdue'` احتياطاً لصفوفٍ إرثيّةٍ تحمل القيمة.
+ */
+export function isTaskOverdue(t: LawyerTask): boolean {
+  if (t.status === 'overdue') return true;
+  if (!t.due_date) return false;
+  if (['completed', 'cancelled', 'on_hold', 'archived'].includes(t.status)) return false;
+  return new Date(t.due_date) < new Date();
+}
+
 export function filterTasksByScope(tasks: LawyerTask[], scope: TasksScope): LawyerTask[] {
   if (scope === 'all') return tasks;
-  if (scope === 'overdue') return tasks.filter(t => t.status === 'overdue');
+  if (scope === 'overdue') return tasks.filter(isTaskOverdue);
   if (scope === 'completed') return tasks.filter(t => t.status === 'completed');
   // unfinished = anything except completed
   return tasks.filter(t => t.status !== 'completed');
