@@ -16,6 +16,7 @@ import { UserService } from '../../services/UserService';
 import { CaseService } from '../../services/caseService';
 import { apiClient } from '../../utils/api';
 import type { User as UserType, Case } from '../../types';
+import { toDateInputValue } from '../../utils/dateAr';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface LineItemRow {
@@ -59,7 +60,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
     client_id: '',
     case_id: '',
     due_date: '',
-    invoice_date: new Date().toISOString().split('T')[0],
+    invoice_date: toDateInputValue(new Date()),
     subtotal: '',
     discount_percentage: '',
     vat_rate: '15',
@@ -195,7 +196,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
       // reset
       setFormData({
         title: '', client_id: '', case_id: '', due_date: '',
-        invoice_date: new Date().toISOString().split('T')[0],
+        invoice_date: toDateInputValue(new Date()),
         subtotal: '', discount_percentage: '',
         vat_rate: isVatRegistered ? defaultVatRate : '0',
         notes: '', status: 'draft',

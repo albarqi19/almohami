@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, CreditCard, Building, Banknote, Smartphone, FileText } from 'lucide-react';
 import type { CaseInvoice, PaymentMethod, CreatePaymentData } from '../../types/billing';
+import { toDateInputValue } from '../../utils/dateAr';
 
 export interface PaymentModalProps {
   isOpen?: boolean;
@@ -35,7 +36,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     case_invoice_id: invoice.id,
     amount: invoice.remaining_amount,
     payment_method: 'bank_transfer',
-    payment_date: new Date().toISOString().split('T')[0],
+    // 🔴 `new Date().toISOString()` يُحوّل إلى UTC، والرياضُ +3 — فبين
+    //    منتصف الليل والثالثة فجراً يُعطي **يومَ أمس**. و`toDateInputValue`
+    //    تقرأ اليومَ محلياً.
+    payment_date: toDateInputValue(new Date()),
     status: 'pending',
   });
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -61,7 +65,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
     if (!formData.payment_date) {
       newErrors.payment_date = 'تاريخ الدفع مطلوب';
-    } else if (formData.payment_date > new Date().toISOString().split('T')[0]) {
+    } else if (formData.payment_date > toDateInputValue(new Date())) {
       // [BILL-06] لا تاريخ دفع مستقبلي.
       newErrors.payment_date = 'لا يمكن أن يكون تاريخ الدفع في المستقبل';
     }
@@ -443,7 +447,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             <input
               type="date"
               value={formData.payment_date}
-              max={new Date().toISOString().split('T')[0]}
+              max={toDateInputValue(new Date())}
               onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
               style={{
                 width: '100%',

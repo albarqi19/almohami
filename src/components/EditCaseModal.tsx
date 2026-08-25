@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import type { Case } from '../types';
 import { apiClient } from '../utils/api';
+import { toDateInputValue } from '../utils/dateAr';
 import { UserService } from '../services/UserService';
 import { usePermission } from '../hooks/usePermission';
 import PhoneField from './PhoneField';
@@ -59,8 +60,13 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
     status: caseData.status || 'active',
     priority: caseData.priority || 'medium',
     contract_value: caseData.contract_value || '',
-    due_date: caseData.due_date ? new Date(caseData.due_date).toISOString().split('T')[0] : '',
-    filing_date: caseData.filing_date ? new Date(caseData.filing_date).toISOString().split('T')[0] : '',
+    // 🔴 كان هنا `new Date(x).toISOString().split('T')[0]` — وهو يُحوّل إلى UTC
+    //    **قبل** القصّ. والخادم يُسلسل صبَّ `date` بلاحقة Z: تاريخُ قيدٍ
+    //    2026-08-25 يصل «2026-08-24T21:00:00.000000Z»، فيقصّه التعبيرُ إلى
+    //    «2026-08-24» — يوماً كاملاً إلى الخلف، ويُعرض كذلك في الحقل.
+    //    و`toDateInputValue` تقرأ اليومَ **محلياً** (getFullYear/Month/Date).
+    due_date: toDateInputValue(caseData.due_date),
+    filing_date: toDateInputValue(caseData.filing_date),
     // الأطراف
     client_name: caseData.client_name || '',
     client_phone: caseData.client_phone || '',
@@ -69,7 +75,7 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
     defendant_name: caseData.defendant_name || '',
     opponent_lawyer: (caseData as any).opponent_lawyer || '',
     // الجلسات
-    next_hearing: caseData.next_hearing ? new Date(caseData.next_hearing).toISOString().split('T')[0] : '',
+    next_hearing: toDateInputValue(caseData.next_hearing),
     next_hearing_time: caseData.next_hearing_time || '',
     next_hearing_type: caseData.next_hearing_type || '',
     hearing_method: caseData.hearing_method || '',
@@ -188,13 +194,17 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
           mode: 'parallel',
         };
       }
-      // تحويل التواريخ
-      if (updatedData.due_date) updatedData.due_date = new Date(updatedData.due_date);
-      else delete updatedData.due_date;
-      if (updatedData.filing_date) updatedData.filing_date = new Date(updatedData.filing_date);
-      else delete updatedData.filing_date;
-      if (updatedData.next_hearing) updatedData.next_hearing = new Date(updatedData.next_hearing);
-      else delete updatedData.next_hearing;
+      // التواريخ تُرسَل نصّاً ساذجاً «YYYY-MM-DD» كما هي.
+      //
+      // 🔴 كانت تُلفّ بـ`new Date(...)`، والمحرّك يقرأ النصَّ الساذج **منتصفَ
+      //    ليل UTC**، فيصل الخادمَ «...T00:00:00.000Z» ويُخزَّن يوماً إلى الخلف.
+      //    فاجتمع خطأُ القراءة أعلاه وخطأُ الكتابة هنا في اتجاهٍ واحد: كلُّ
+      //    فتحٍ للنافذة وحفظٍ — ولو لتصحيح عنوانٍ فقط — يُزحزح تاريخَ القيد
+      //    والاستحقاق يوماً، ويتراكم مع كل حفظ.
+      //    ولارافيل يقبل «YYYY-MM-DD» ويقرؤه بمنطقة التطبيق (الرياض).
+      if (!updatedData.due_date) delete updatedData.due_date;
+      if (!updatedData.filing_date) delete updatedData.filing_date;
+      if (!updatedData.next_hearing) delete updatedData.next_hearing;
       if (updatedData.contract_value) updatedData.contract_value = Number(updatedData.contract_value);
       else delete updatedData.contract_value;
 
