@@ -57,6 +57,7 @@ import CaseWekalatPanel from '../components/CaseWekalatPanel';
 import { AddSessionModal } from '../components/AddSessionModal';
 import { SendDabtPreferencesModal, type NotifyMode } from '../components/SendDabtPreferencesModal';
 import { SendSessionReportModal } from '../components/SendSessionReportModal';
+import { CaseReportModal } from '../components/CaseReportModal';
 import { sessionReportService } from '../services/sessionReportService';
 import { toast } from 'react-toastify';
 import OutcomeBadge from '../components/OutcomeBadge';
@@ -118,6 +119,8 @@ const CaseDetailPage: React.FC = () => {
   const [revokedInfo, setRevokedInfo] = useState<{ title?: string; file_number?: string } | null>(null);
   const [notifyModalSession, setNotifyModalSession] = useState<{ id: number; mode: NotifyMode | null; enabled: boolean } | null>(null);
   const [reportModalSession, setReportModalSession] = useState<number | null>(null);
+  // «تقرير القضية» — مستقلٌّ عن تقرير الجلسة: يغطّي القضية كلَّها لا جلسةً واحدة.
+  const [showCaseReport, setShowCaseReport] = useState(false);
   const [markingEndedId, setMarkingEndedId] = useState<number | null>(null);
   const [selectedDabtSession, setSelectedDabtSession] = useState<any>(null);
   const [selectedJudgementSession, setSelectedJudgementSession] = useState<any>(null);
@@ -533,10 +536,14 @@ const CaseDetailPage: React.FC = () => {
 
   // Calculate fees from billing data (from contracts and invoices)
   const billing = caseData.billing;
-  const totalFees = billing?.total_contract_value || caseData.contract_value || 0;
-  const paidFees = billing?.total_paid || 0;
-  const remainingFees = billing?.total_remaining || (totalFees - paidFees);
-  const paymentProgress = billing?.collection_percentage || (totalFees > 0 ? (paidFees / totalFees) * 100 : 0);
+  // 🩸 `??` لا `||`: الصفرُ قيمةٌ صحيحة هنا، و`||` تبتلعه فتسقط في الاحتياط
+  //    وتخلط مصدرين في بطاقةٍ واحدة — «متبقٍّ» من الخادم و«نسبةٌ» محسوبةٌ من
+  //    عمودٍ آخر. وقد كان المتبقّي يصل سالباً فيمرّ (‏السالبُ truthy) بينما
+  //    تسقط النسبةُ الصفرية إلى مصدرٍ ثانٍ، فتناقضت البطاقةُ مع نفسها.
+  const totalFees = billing?.total_contract_value ?? caseData.contract_value ?? 0;
+  const paidFees = billing?.total_paid ?? 0;
+  const remainingFees = billing?.total_remaining ?? (totalFees - paidFees);
+  const paymentProgress = billing?.collection_percentage ?? (totalFees > 0 ? (paidFees / totalFees) * 100 : 0);
   const hasOverdue = billing && billing.overdue_invoices_count > 0;
 
   // مطبخ التجهيز — يظهر بدلاً من الصفحة الكاملة للقضايا في مرحلة الإعداد
@@ -682,6 +689,18 @@ const CaseDetailPage: React.FC = () => {
                 <Gavel size={14} />
               </span>
               السوابق القضائية
+            </button>
+            {/* تقرير القضية — مستندٌ للعميل يجيب «أين وصلت». الحارسُ في الخادم
+                (صلاحية cases.report.send + بوابة الميزة)؛ هنا نفتح الشاشةَ فقط. */}
+            <button
+              className="case-header-tab"
+              onClick={() => setShowCaseReport(true)}
+              title="إعداد تقرير عن سير القضية وإرساله للعميل أو طباعته"
+            >
+              <span className="case-header-tab__icon case-header-tab__icon--gold">
+                <FileText size={14} />
+              </span>
+              تقرير القضية
             </button>
             {/* المذكّرات المودَعة — يظهر متى وُجدت مذكّرات، وينقل إلى قسمها في الصفحة.
                 عدّادُه ما لم نُودع بعده شيئاً إن وُجد، وإلا الإجمالي.
@@ -1893,6 +1912,15 @@ const CaseDetailPage: React.FC = () => {
               });
             }
           }}
+        />
+      )}
+
+      {/* مودال «تقرير القضية» */}
+      {showCaseReport && caseData && (
+        <CaseReportModal
+          open={showCaseReport}
+          onClose={() => setShowCaseReport(false)}
+          caseId={Number(caseData.id)}
         />
       )}
 
