@@ -90,6 +90,7 @@ import {
   CONVERTIBLE_SERVICE_TYPES,
 } from '../../types/legalServices';
 import { WorkspaceRegistry } from '../../components/legal-services/workspaces';
+import { usePermission } from '../../hooks/usePermission';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -904,6 +905,8 @@ const LegalServiceDetail: React.FC = () => {
   /** نافذة «تعديل بيانات الخدمة» — متاحة في كل الحالات، انظر تعليق الزر في الترويسة. */
   const [showEditModal, setShowEditModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  // صلاحيةُ الكتابة على الخدمات — يعكسها الزرُّ الخطر بدل أن يُردّ 403 صامتاً
+  const canManageService = usePermission('legal-services.manage');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   /** غير null ⇒ الباك ردّ 409 CONFIRM_REQUIRED، فالنافذة تنتقل لمرحلة التحذير المالي. */
   const [deleteImpact, setDeleteImpact] = useState<ServiceDeletionImpact | null>(null);
@@ -3497,15 +3500,21 @@ const LegalServiceDetail: React.FC = () => {
               (legal-services.manage)، ولا توجد صلاحية legal-services.delete في المشروع.
               حصرُه سابقاً بحالتَي new/cancelled كان قيداً واجهياً بلا سندٍ في الباك.
             */}
-            <button
-              className="lsd-header-btn lsd-header-btn--danger"
-              onClick={handleDelete}
-              disabled={deleteLoading}
-              title="حذف الخدمة"
-            >
-              <Trash2 size={15} />
-              <span>{deleteLoading ? 'جارٍ الحذف...' : 'حذف'}</span>
-            </button>
+            {/* 🔴 كان الزرُّ يُعرض للجميع بلا أيّ ترشيحٍ بالصلاحية، فمن لا يملك
+                `legal-services.manage` يضغطه فيُردّ **403 صامتاً** — وهذا بعينه
+                ما وصفه العميل بأن الزرَّ «معطّل» (#159). الحارسُ في الباك سليم؛
+                الناقصُ كان أن تعكسه الواجهة. */}
+            {canManageService && (
+              <button
+                className="lsd-header-btn lsd-header-btn--danger"
+                onClick={handleDelete}
+                disabled={deleteLoading}
+                title="حذف الخدمة"
+              >
+                <Trash2 size={15} />
+                <span>{deleteLoading ? 'جارٍ الحذف...' : 'حذف'}</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
