@@ -1857,12 +1857,21 @@ const LegalServiceDetail: React.FC = () => {
               </div>
             )}
 
-            {detail.client_question && (
-              <div className="lsd-notes-section" style={{ marginTop: 12 }}>
-                <div className="lsd-notes-section__label">سؤال العميل</div>
+            {/* 🔴 كان الشرطُ `detail.client_question &&` فيختفي القسمُ كلُّه حين
+                يكون فارغاً — فلا يرى المستخدمُ أن ثمّة حقلاً ناقصاً أصلاً، ثم
+                يضغط «توليد المسودة» فيُردّ بـ«لا يمكن التوليد بدون سؤال العميل».
+                والحقلُ اختياريٌّ في نافذة الإنشاء (‏لا تحقّق على الخطوة الثالثة)،
+                فـ**31 استشارةً من 49 على الإنتاج بلا سؤال**. الغيابُ يُعرَض الآن. */}
+            <div className="lsd-notes-section" style={{ marginTop: 12 }}>
+              <div className="lsd-notes-section__label">سؤال العميل</div>
+              {detail.client_question ? (
                 <p className="lsd-description-text">{detail.client_question}</p>
-              </div>
-            )}
+              ) : (
+                <p className="lsd-description-text lsd-description-text--empty">
+                  لم يُسجَّل سؤال العميل — أضِفه من «تعديل الخدمة»، وعليه تُبنى مسودةُ الرأي.
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1889,11 +1898,15 @@ const LegalServiceDetail: React.FC = () => {
               <Sparkles size={15} />
               اقتراح مسودة الرأي بالذكاء
             </div>
+            {/* الزرُّ يعرف شرطَه قبل الضغط: كان مفعَّلاً دائماً ثم يردّ 422 عن حقلٍ
+                لم يُعرَض للمستخدم أصلاً. والتعطيلُ مع سببٍ أصدقُ من فشلٍ بعد النقر. */}
             <button
               className="lsd-card__action"
               onClick={handleAiDraft}
-              disabled={aiDraftLoading}
-              title="يولّد مسودة أولية للرأي القانوني اعتماداً على سؤال العميل ونطاق الاستشارة"
+              disabled={aiDraftLoading || !detail.client_question}
+              title={!detail.client_question
+                ? 'أضف سؤال العميل في تفاصيل الاستشارة أولاً — المسودة تُبنى عليه'
+                : 'يولّد مسودة أولية للرأي القانوني اعتماداً على سؤال العميل ونطاق الاستشارة'}
             >
               {aiDraftLoading ? (
                 <>

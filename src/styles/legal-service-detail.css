@@ -2658,3 +2658,11 @@ body.dark .lsd-nextstep-btn__label {
     font-size: 13px;
     line-height: 1.7;
 }
+
+/* حالةُ الفراغ في نصوص التفاصيل — حقلٌ ناقصٌ يُعرَض ولا يختفي.
+   الاختفاءُ كان يُنتج زرَّ توليدٍ يفشل عن حقلٍ لم يره المستخدم قطّ. */
+.lsd-description-text--empty {
+  color: var(--color-text-secondary, #6b7280);
+  font-style: italic;
+  opacity: 0.85;
+}
