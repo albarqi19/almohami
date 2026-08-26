@@ -129,6 +129,15 @@ const formatTimeAgo = (dateString: string) => {
 
 // ==================== Main Component ====================
 
+/**
+ * أنواعُ إشعارات المهامّ التي يجمعها تبويبُ «المهام».
+ *
+ * 🔴 كانت مسرودةً حرفياً في موضعين (الترشيح والعدّاد)، فكلُّ نوعٍ يُضاف في
+ *    الباك يسقط خارج التبويبات كلِّها ويظهر في «الكل» وحده. و`mention`
+ *    كانت يتيمةً بالفعل قبل أن يُضاف `task_comment` (#22).
+ */
+const TASK_NOTIFICATION_TYPES = ['task_assigned', 'task_due', 'task_completed', 'task_comment', 'mention'];
+
 const Notifications: React.FC = () => {
   const navigate = useNavigate();
   const [rawNotifications, setRawNotifications] = useState<Notification[]>([]);
@@ -286,7 +295,7 @@ const Notifications: React.FC = () => {
     if (activeCategory === 'unread') {
       result = result.filter(n => !n.is_read);
     } else if (activeCategory === 'tasks') {
-      result = result.filter(n => ['task_assigned', 'task_due', 'task_completed'].includes(n.type));
+      result = result.filter(n => TASK_NOTIFICATION_TYPES.includes(n.type));
     } else if (activeCategory === 'hearings') {
       result = result.filter(n => n.type === 'hearing_reminder');
     } else if (activeCategory === 'documents') {
@@ -319,7 +328,7 @@ const Notifications: React.FC = () => {
     return {
       all: rawNotifications.length,
       unread: rawNotifications.filter(n => !n.is_read).length,
-      tasks: rawNotifications.filter(n => ['task_assigned', 'task_due', 'task_completed'].includes(n.type)).length,
+      tasks: rawNotifications.filter(n => TASK_NOTIFICATION_TYPES.includes(n.type)).length,
       hearings: rawNotifications.filter(n => n.type === 'hearing_reminder').length,
       documents: rawNotifications.filter(n => ['document_shared', 'document_uploaded'].includes(n.type)).length,
       cases: rawNotifications.filter(n => ['case_update', 'case_created'].includes(n.type)).length,
