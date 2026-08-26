@@ -42,6 +42,7 @@ import LetterheadManager from '../components/settings/LetterheadManager';
 import TwoFactorSettings from '../components/settings/TwoFactorSettings';
 import SessionDefaultsSettings from '../components/settings/SessionDefaultsSettings';
 import SessionReportTemplatesSettings from '../components/settings/SessionReportTemplatesSettings';
+import CaseReportTemplatesSettings from '../components/settings/CaseReportTemplatesSettings';
 import FeeProposalTemplatesSettings from '../components/settings/FeeProposalTemplatesSettings';
 import CorrespondenceTemplatesSettings from '../components/settings/CorrespondenceTemplatesSettings';
 import SessionWorkflowSettingsComponent from '../components/settings/SessionWorkflowSettings';
@@ -120,6 +121,7 @@ const Settings: React.FC = () => {
     { id: 'letterheads', label: 'الكليشات', icon: FileText, scope: 'admin' },
     { id: 'session_defaults', label: 'قوالب الجلسات', icon: ClipboardList, scope: 'admin' },
     { id: 'session_report_templates', label: 'قوالب تقرير الجلسة', icon: FileText, scope: 'admin' },
+    { id: 'case_report_templates', label: 'قوالب تقرير القضية', icon: FileText, scope: 'admin' },
     { id: 'fee_proposal_templates', label: 'قوالب عروض الأتعاب', icon: FileText, scope: 'admin' },
     { id: 'correspondence_templates', label: 'قوالب الصادر', icon: FileText, scope: 'admin' },
     { id: 'session_workflow', label: 'سير عمل الجلسات', icon: Bell, scope: 'admin' },
@@ -2348,6 +2350,8 @@ const Settings: React.FC = () => {
 
       case 'session_report_templates':
         return <SessionReportTemplatesSettings />;
+      case 'case_report_templates':
+        return <CaseReportTemplatesSettings />;
 
       case 'fee_proposal_templates':
         return <FeeProposalTemplatesSettings />;
