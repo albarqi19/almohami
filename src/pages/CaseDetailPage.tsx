@@ -752,6 +752,9 @@ const CaseDetailPage: React.FC = () => {
                 <FileText size={14} />
               </span>
               تقرير القضية
+              {/* ميزةٌ نُشرت 2026-08-26 — الوسمُ يُخبر المستخدمَ أن يتوقّع تغيّراً
+                  ويشجّعه على الإبلاغ، ويُرفع حين تستقرّ. */}
+              <span className="case-header-tab__beta">تجريبي</span>
             </button>
             <ActionMenu
               items={moreMenuItems}

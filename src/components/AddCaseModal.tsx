@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Search,
   Check,
@@ -32,6 +32,143 @@ interface User {
   email: string;
   phone?: string;
 }
+
+/**
+ * طيُّ الحروف العربية للبحث المحليّ.
+ *
+ * ⚠️ **لا يُقتبس `ArabicSearch::normalize` من الباك حرفياً**: تلك تكتفي بحذف
+ *    التشكيل والتطويل وتحويل الأرقام، لأنّ ترتيبَ MySQL (`utf8mb4_unicode_ci`)
+ *    يطوي الهمزةَ والتاءَ المربوطة والألفَ المقصورة بنفسه. وهنا لا ترتيبَ ولا
+ *    قاعدة — فلو لم نطوِها بأيدينا لما وجد «احمد» **أحمد**، و«فاطمه» **فاطمة**،
+ *    و«ليلى» **ليلي**. وهذا أكثرُ ما يُكتب خطأً في أسماء الموكّلين.
+ */
+const foldArabic = (input: string): string =>
+  (input || '')
+    .replace(/[\u064B-\u0652\u0670\u0640]/g, '')
+    .replace(/[\u0623\u0625\u0622\u0671]/g, '\u0627')
+    .replace(/\u0649/g, '\u064A')
+    .replace(/\u0629/g, '\u0647')
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+interface ClientOption {
+  id: number | string;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+}
+
+/**
+ * منتقي عميلٍ ببحث — بديلُ `<select>` الذي كان يسرد كلَّ العملاء بلا ترشيح.
+ *
+ * 🔴 مكتبٌ بمئتي عميلٍ كان عليه أن يتصفّح قائمةً منسدلةً طويلةً بعينه.
+ *    والبحثُ هنا **محليٌّ آمن**: `/auth/clients` تُرجع العملاء كاملين بلا ترقيم،
+ *    فما يُبحث فيه هو ما يوجد لا ما حُمِّل.
+ *
+ * ويُطابق **كلَّ كلمةٍ على حدة بـAND** لا العبارةَ كتلةً: فـ«احمد علي» يجد
+ * «علي بن أحمد» — وهو ترتيبُ الأسماء الغالبُ في الوثائق الرسمية.
+ */
+const ClientPicker: React.FC<{
+  clients: ClientOption[];
+  value: string;
+  onChange: (id: string) => void;
+  invalid?: boolean;
+}> = ({ clients, value, onChange, invalid }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const selected = clients.find((c) => String(c.id) === String(value)) || null;
+
+  // الإغلاق بالنقر خارجَه وبـEscape — القائمةُ داخل نافذةٍ مودالٍ فلا بوابةَ تلزم.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const matches = useMemo(() => {
+    const words = foldArabic(query).split(' ').filter(Boolean);
+    if (words.length === 0) return clients;
+    return clients.filter((c) => {
+      const hay = foldArabic(`${c.name} ${c.phone || ''} ${c.email || ''}`);
+      return words.every((w) => hay.includes(w));
+    });
+  }, [clients, query]);
+
+  return (
+    <div className="erpc-picker" ref={wrapRef}>
+      <button
+        type="button"
+        className={`erpc-picker-trigger ${invalid ? 'erpc-invalid' : ''}`}
+        onClick={() => { setOpen((v) => !v); setQuery(''); }}
+      >
+        <span className={selected ? 'erpc-picker-value' : 'erpc-picker-placeholder'}>
+          {selected
+            ? `${selected.name}${selected.phone ? ` — ${selected.phone}` : ''}`
+            : 'اختر عميلاً...'}
+        </span>
+        <ChevronDown size={14} />
+      </button>
+
+      {open && (
+        <div className="erpc-picker-panel">
+          <div className="erpc-picker-search">
+            <Search size={14} />
+            <input
+              type="text"
+              autoFocus
+              className="erpc-picker-input"
+              placeholder="ابحث بالاسم أو الجوال أو البريد"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            {query && (
+              <button type="button" className="erpc-picker-clear" onClick={() => setQuery('')}>
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          <div className="erpc-picker-list">
+            {matches.length === 0 ? (
+              <div className="erpc-picker-empty">
+                لا عميلَ يطابق «{query}»
+                <span>أنشئه من تبويب «جديد»</span>
+              </div>
+            ) : (
+              matches.map((c) => (
+                <button
+                  type="button"
+                  key={c.id}
+                  className={`erpc-picker-item ${String(c.id) === String(value) ? 'active' : ''}`}
+                  onClick={() => { onChange(String(c.id)); setOpen(false); }}
+                >
+                  <span className="erpc-picker-name">{c.name}</span>
+                  {c.phone && <span className="erpc-picker-meta">{c.phone}</span>}
+                </button>
+              ))
+            )}
+          </div>
+
+          {/* العددُ من القائمة كاملةً لا من المعروض — فلا يُوهم أنّ ما ظهر هو الكلّ. */}
+          <div className="erpc-picker-foot">{matches.length} من {clients.length}</div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface ExtraClient {
   mode: 'existing' | 'new';
@@ -238,7 +375,6 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     if (!formData.caseNumber.trim()) newErrors.caseNumber = 'عنوان القضية مطلوب';
     if (formData.isNewClient) {
       if (!formData.clientName.trim()) newErrors.clientName = 'اسم العميل مطلوب';
-      if (!formData.clientPhone.trim()) newErrors.clientPhone = 'رقم هاتف العميل مطلوب';
     } else {
       if (!formData.clientId) newErrors.clientId = 'يرجى اختيار العميل';
     }
@@ -538,7 +674,13 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                           </div>
                         </div>
                         <div className="erpc-field">
-                          <span className="erpc-field-label"><Phone />الهاتف<span className="erpc-req">*</span></span>
+                          {/* 🔓 اختياريّ — كان إلزامياً في الواجهة والخادم معاً.
+                              المكتبُ يفتح القضيةَ ساعةَ يصله الملفّ وقد لا يكون
+                              معه رقمُ موكّله بعد؛ فالإلزامُ كان يدفع إلى رقمٍ
+                              مختلَقٍ يبقى في القاعدة. ⚠️ وبلا رقمٍ لا تصل رسالةُ
+                              الترحيب ولا رمزُ بوابة العميل — يُضاف لاحقاً من
+                              صفحته فتعمل القناة. */}
+                          <span className="erpc-field-label"><Phone />الهاتف<span className="erpc-hint-inline">اختياري</span></span>
                           <div className="erpc-control">
                             <PhoneField
                               value={formData.clientPhone}
@@ -575,19 +717,12 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                     ) : (
                       <div className="erpc-field erpc-field-stack">
                         <span className="erpc-field-label"><Search />اختر العميل<span className="erpc-req">*</span></span>
-                        <div className="erpc-control">
-                          <select
-                            className={`erpc-select ${errors.clientId ? 'erpc-invalid' : ''}`}
-                            value={formData.clientId}
-                            onChange={(e) => handleInputChange('clientId', e.target.value)}
-                          >
-                            <option value="">اختر عميلاً...</option>
-                            {clientsFromProps.map(c => (
-                              <option key={c.id} value={c.id.toString()}>{c.name}{c.phone ? ` — ${c.phone}` : ''}</option>
-                            ))}
-                          </select>
-                          <ChevronDown size={14} className="erpc-select-arrow" />
-                        </div>
+                        <ClientPicker
+                          clients={clientsFromProps as any}
+                          value={formData.clientId}
+                          onChange={(id) => handleInputChange('clientId', id)}
+                          invalid={!!errors.clientId}
+                        />
                       </div>
                     )}
                     {/* صفة العميل — عند تحديدها تُنشأ أطراف الدعوى تلقائياً
@@ -705,13 +840,11 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                         </div>
 
                         {ec.mode === 'existing' ? (
-                          <div className="erpc-control">
-                            <select className="erpc-select" value={ec.clientId} onChange={(e) => updateExtraClient(idx, 'clientId', e.target.value)}>
-                              <option value="">اختر عميلاً موجوداً...</option>
-                              {clientsFromProps.map(c => <option key={c.id} value={c.id.toString()}>{c.name}{c.phone ? ` — ${c.phone}` : ''}</option>)}
-                            </select>
-                            <ChevronDown size={14} className="erpc-select-arrow" />
-                          </div>
+                          <ClientPicker
+                            clients={clientsFromProps as any}
+                            value={ec.clientId}
+                            onChange={(id) => updateExtraClient(idx, 'clientId', id)}
+                          />
                         ) : (
                           <div className="erpc-extra-grid">
                             <input type="text" className="erpc-input" placeholder="اسم العميل" value={ec.name} onChange={(e) => updateExtraClient(idx, 'name', e.target.value)} />

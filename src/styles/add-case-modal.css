@@ -1161,3 +1161,170 @@
         gap: 4px;
     }
 }
+/* === منتقي العميل البحثيّ === */
+
+/*
+ * بديلُ `<select>` الذي كان يسرد كلَّ العملاء بلا ترشيح — مكتبٌ بمئتي عميلٍ
+ * كان يتصفّح القائمةَ بعينه. القائمةُ داخل نافذةٍ مودالٍ ثابتةِ الموضع، فلا
+ * بوابةَ على `body` تلزم كما في `ActionMenu`.
+ */
+.erpc-picker {
+    position: relative;
+    width: 100%;
+}
+
+.erpc-picker-trigger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: var(--notion-text);
+    background: var(--notion-bg);
+    border: 1px solid var(--notion-border);
+    border-radius: 6px;
+    padding: 6px 9px;
+    cursor: pointer;
+    text-align: start;
+    transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.erpc-picker-trigger.erpc-invalid {
+    border-color: var(--notion-red);
+    box-shadow: 0 0 0 2px var(--notion-red-bg);
+}
+
+.erpc-picker-value {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.erpc-picker-placeholder {
+    flex: 1 1 auto;
+    opacity: 0.45;
+}
+
+.erpc-picker-panel {
+    position: absolute;
+    z-index: 30;
+    inset-inline: 0;
+    top: calc(100% + 4px);
+    background: var(--notion-bg);
+    border: 1px solid var(--notion-border);
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+    overflow: hidden;
+}
+
+.erpc-picker-search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 9px;
+    border-bottom: 1px solid var(--notion-border);
+}
+
+.erpc-picker-search > svg {
+    opacity: 0.4;
+    flex: 0 0 auto;
+}
+
+.erpc-picker-input {
+    flex: 1 1 auto;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: var(--notion-text);
+    background: transparent;
+    border: none;
+    outline: none;
+}
+
+.erpc-picker-clear {
+    flex: 0 0 auto;
+    display: flex;
+    padding: 2px;
+    color: var(--notion-text);
+    opacity: 0.5;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+/* سقفٌ بالارتفاع لا بالعدد: القائمةُ كلُّها موجودةٌ وتُمرَّر — فلا يُقصّ أحدٌ صامتاً. */
+.erpc-picker-list {
+    max-height: 230px;
+    overflow-y: auto;
+}
+
+.erpc-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 10px;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: var(--notion-text);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: start;
+}
+
+.erpc-picker-item:hover,
+.erpc-picker-item.active {
+    background: var(--notion-blue-bg);
+}
+
+.erpc-picker-name {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.erpc-picker-meta {
+    flex: 0 0 auto;
+    font-size: 11px;
+    /* ⚠️ لا `--notion-gray`: هو لونُ **سطحٍ** (‏#F7F7F5) لا نصّ — يُخرج الرقمَ
+       شبهَ غائب. والنمطُ المعتمد هنا خفوتٌ بالشفافية (انظر `.erpc-hint`). */
+    color: var(--notion-text);
+    opacity: 0.6;
+    direction: ltr;
+}
+
+.erpc-picker-empty {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px 10px;
+    font-size: 12px;
+    color: var(--notion-text);
+    opacity: 0.65;
+    text-align: center;
+}
+
+.erpc-picker-empty span {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.erpc-picker-foot {
+    padding: 5px 10px;
+    font-size: 10.5px;
+    color: var(--notion-text);
+    opacity: 0.5;
+    border-top: 1px solid var(--notion-border);
+    text-align: start;
+}
+
+/* وسمُ «اختياري» بجانب اسم الحقل — نظيرُ `erpc-req` النجميّ. */
+.erpc-field-label .erpc-hint-inline {
+    font-size: 10.5px;
+    font-weight: 400;
+    color: var(--notion-text);
+    opacity: 0.5;
+}
