@@ -1853,3 +1853,28 @@ body.dark .case-no-billing {
         white-space: nowrap;
     }
 }
+/* === زرّ «المزيد» في ترويسة القضية === */
+
+/* الزرُّ يتلبّس زيَّ التبويبات ويبقى منطقُه في `ActionMenu` — انظر تعليق
+   `moreMenuItems` في CaseDetailPage. */
+.case-header-tab--more {
+    gap: 5px;
+}
+
+/**
+ * تمييزٌ لحظيٌّ لقسم المذكّرات بعد الانتقال إليه من المنسدلة.
+ *
+ * ⚠️ ليس زينة: المنسدلةُ تُغلق عند الاختيار، فالتمريرُ وحدَه يبدو كأنّ الضغطةَ
+ *    لم تفعل شيئاً — خصوصاً حين يكون القسمُ قريباً فلا تكاد الصفحةُ تتحرّك.
+ *
+ * وخلفيّةٌ تخبو لا هالةٌ ولا شريطٌ جانبيّ — الزيُّ فلاتٌ صرف.
+ */
+@keyframes case-section-flash {
+    from { background-color: var(--law-navy-light); }
+    to   { background-color: transparent; }
+}
+
+.case-section--flash {
+    animation: case-section-flash 1.4s ease-out;
+    border-radius: 8px;
+}

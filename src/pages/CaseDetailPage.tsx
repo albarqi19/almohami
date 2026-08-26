@@ -21,6 +21,7 @@ import {
   ExternalLink,
   ChevronLeft,
   MoreHorizontal,
+  ChevronDown,
   Briefcase,
   Hash,
   Scale,
@@ -58,6 +59,7 @@ import { AddSessionModal } from '../components/AddSessionModal';
 import { SendDabtPreferencesModal, type NotifyMode } from '../components/SendDabtPreferencesModal';
 import { SendSessionReportModal } from '../components/SendSessionReportModal';
 import { CaseReportModal } from '../components/CaseReportModal';
+import { ActionMenu, type ActionMenuItem } from '../components/erp';
 import { sessionReportService } from '../services/sessionReportService';
 import { toast } from 'react-toastify';
 import OutcomeBadge from '../components/OutcomeBadge';
@@ -579,6 +581,79 @@ const CaseDetailPage: React.FC = () => {
     );
   }
 
+  /**
+   * عناصرُ «المزيد» — أربعةٌ طُويت من الشريط الظاهر.
+   *
+   * 🔴 الترويسةُ بلغت **13 زرّاً** (تسعةُ تبويباتٍ وأربعةُ إجراءات) فصارت جداراً
+   *    لا شريطَ أدوات: الزرُّ الذي يُضغط يومياً يُزاحمه ستّةٌ تُفتح شهرياً.
+   *    فبقي في الظاهر ما يُستعمل كلَّ يوم، وطُوي الباقي هنا.
+   *
+   * و«تقرير القضية» **باقٍ ظاهراً** رغم قلّة استعماله: ميزةٌ نُشرت اليوم، وطيُّها
+   * يوم ولادتها يعني ألّا يجدها أحد. تُنقل إلى هنا حين تألفها الأيدي.
+   *
+   * ⚠️ ولا يُبنى منسدلةٌ جديدةٌ هنا: `ActionMenu` تحلّ الرسمَ في بوابةٍ على
+   *    `body` والمرساةَ وإغلاقَ النقر الخارجي — وبناءُ ثانيةٍ يعني تكرارَ فخّ
+   *    القصّ داخل الحاويات الذي عولج هناك مرّةً واحدة.
+   */
+  const wekalatCount = (() => {
+    const w = (caseData as any)?.wekalat_summary;
+    return w ? (w.matched_count ?? 0) : 0;
+  })();
+  const unreadMessages = Number((caseData as any)?.unread_messages_count ?? 0);
+  const memosPending = najizRequestsSummary?.awaiting_reply ?? 0;
+  const memosTotal = najizRequestsSummary?.total ?? 0;
+
+  /**
+   * شارةُ الزرّ = **ما ينتظرك** لا ما تملكه.
+   *
+   * رسالةٌ لم تُقرأ + مذكّرةُ خصمٍ لم نُودع بعدها شيئاً. ولو جُمع الإجماليُّ
+   * بدلاً منهما لصار رقماً **لا ينقص أبداً**، فيتعوّده الناسُ بعد أسبوعٍ ويكفّون
+   * عن رؤيته — وذلك أسوأُ من غياب الشارة، لأنّه يُعطّلها يوم تحمل خبراً حقيقياً.
+   */
+  const moreBadge = unreadMessages + memosPending;
+
+  const moreMenuItems: ActionMenuItem[] = [
+    {
+      label: 'الرسائل',
+      icon: MessageSquare,
+      iconClassName: 'case-header-tab__icon case-header-tab__icon--purple',
+      count: unreadMessages,
+      onClick: () => setShowMessagesModal(true),
+    },
+    {
+      label: 'الوكالات',
+      icon: Scroll,
+      iconClassName: 'case-header-tab__icon case-header-tab__icon--blue',
+      count: wekalatCount,
+      onClick: () => setShowWekalatModal(true),
+    },
+    {
+      // يظهر متى وُجدت مذكّرات، وينقل إلى قسمها في الصفحة.
+      // عدّادُه ما لم نُودع بعده شيئاً إن وُجد، وإلا الإجمالي.
+      // ⚠️ لا يُقال «بلا ردّ»: ناجز لا يربط مذكّرةً بمذكّرة، فهذا خبرٌ لا حكم.
+      label: 'المذكّرات المودَعة',
+      icon: Scale,
+      iconClassName: 'case-header-tab__icon case-header-tab__icon--teal',
+      count: memosPending > 0 ? memosPending : memosTotal,
+      hidden: memosTotal === 0,
+      onClick: () => {
+        const el = document.getElementById('najiz-requests');
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // ⚠️ التمييزُ اللحظيّ ليس زينة: داخل منسدلةٍ تُغلق عند الاختيار، يبدو
+        //    التمريرُ وحدَه كأنّ الضغطةَ لم تفعل شيئاً — فالقسمُ يُعلن نفسَه.
+        el.classList.add('case-section--flash');
+        window.setTimeout(() => el.classList.remove('case-section--flash'), 1400);
+      },
+    },
+    {
+      label: 'السوابق القضائية',
+      icon: Gavel,
+      iconClassName: 'case-header-tab__icon case-header-tab__icon--gold',
+      onClick: () => setShowPrecedents(true),
+    },
+  ];
+
   return (
     <div className="case-detail-page">
       {/* Sticky Header */}
@@ -666,30 +741,6 @@ const CaseDetailPage: React.FC = () => {
               الجلسات
               <span className="case-header-tab__count">{caseData.sessions?.length || 0}</span>
             </button>
-            <button className="case-header-tab" onClick={() => setShowMessagesModal(true)}>
-              <span className="case-header-tab__icon case-header-tab__icon--purple">
-                <MessageSquare size={14} />
-              </span>
-              الرسائل
-            </button>
-            <button className="case-header-tab" onClick={() => setShowWekalatModal(true)}>
-              <span className="case-header-tab__icon case-header-tab__icon--blue">
-                <Scroll size={14} />
-              </span>
-              الوكالات
-              {(() => {
-                const s = (caseData as any)?.wekalat_summary;
-                const total = s ? (s.matched_count ?? 0) : 0;
-                if (total > 0) return <span className="case-header-tab__count">{total}</span>;
-                return null;
-              })()}
-            </button>
-            <button className="case-header-tab" onClick={() => setShowPrecedents(true)} data-tour="case-precedents-btn">
-              <span className="case-header-tab__icon case-header-tab__icon--gold">
-                <Gavel size={14} />
-              </span>
-              السوابق القضائية
-            </button>
             {/* تقرير القضية — مستندٌ للعميل يجيب «أين وصلت». الحارسُ في الخادم
                 (صلاحية cases.report.send + بوابة الميزة)؛ هنا نفتح الشاشةَ فقط. */}
             <button
@@ -702,30 +753,15 @@ const CaseDetailPage: React.FC = () => {
               </span>
               تقرير القضية
             </button>
-            {/* المذكّرات المودَعة — يظهر متى وُجدت مذكّرات، وينقل إلى قسمها في الصفحة.
-                عدّادُه ما لم نُودع بعده شيئاً إن وُجد، وإلا الإجمالي.
-                ⚠️ لا يُقال «بلا ردّ»: ناجز لا يربط مذكّرةً بمذكّرة، فهذا خبرٌ لا حكم. */}
-            {najizRequestsSummary && najizRequestsSummary.total > 0 && (
-              <button
-                className="case-header-tab"
-                onClick={() => document.getElementById('najiz-requests')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                title={
-                  najizRequestsSummary.awaiting_reply > 0
-                    ? `${najizRequestsSummary.awaiting_reply} مذكّرة من الخصم لم نُودع بعدها شيئاً`
-                    : 'المذكّرات المودَعة في المحكمة'
-                }
-              >
-                <span className="case-header-tab__icon case-header-tab__icon--teal">
-                  <Scale size={14} />
-                </span>
-                المذكّرات المودَعة
-                <span className="case-header-tab__count">
-                  {najizRequestsSummary.awaiting_reply > 0
-                    ? najizRequestsSummary.awaiting_reply
-                    : najizRequestsSummary.total}
-                </span>
-              </button>
-            )}
+            <ActionMenu
+              items={moreMenuItems}
+              trigger={MoreHorizontal}
+              triggerAfter={ChevronDown}
+              triggerLabel="المزيد"
+              triggerClassName="case-header-tab case-header-tab--more"
+              label="الرسائل والوكالات والمذكّرات والسوابق"
+              badge={moreBadge}
+            />
           </div>
 
           {/* Actions */}

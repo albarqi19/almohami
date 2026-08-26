@@ -18,6 +18,10 @@ export interface ActionMenuItem {
   divider?: boolean;
   /** إخفاء العنصر تماماً (مثلاً غير مسموح بالحالة الحالية). */
   hidden?: boolean;
+  /** عدّادٌ يُعرض في آخر السطر — لا يُعرض إن كان صفراً أو غيرَ معرَّف. */
+  count?: number;
+  /** صنفُ لونٍ للأيقونة (مثل `case-header-tab__icon--purple`). */
+  iconClassName?: string;
 }
 
 interface ActionMenuProps {
@@ -26,9 +30,32 @@ interface ActionMenuProps {
   trigger?: LucideIcon;
   label?: string;
   onOpenChange?: (open: boolean) => void;
+  /**
+   * صنفُ زرِّ الفتح — لتلبيسه بزيّ الصفحة المضيفة.
+   *
+   * أُضيف ليُستعمل في ترويسة القضية بصنف `case-header-tab` بدل بناء منسدلةٍ
+   * ثانيةٍ هناك: منطقُ البوابة والمرساة وإغلاقِ النقر الخارجي محلولٌ هنا مرّةً
+   * (انظر رأس الملفّ و`useAnchoredMenu`)، وتكرارُه يعني تكرارَ فخّ القصّ.
+   */
+  triggerClassName?: string;
+  /** نصٌّ بجانب الأيقونة في زرّ الفتح — بلا نصٍّ يبقى الزرُّ أيقونةً كما كان. */
+  triggerLabel?: string;
+  /** عدّادٌ على زرّ الفتح — لا يُعرض إن كان صفراً أو غيرَ معرَّف. */
+  badge?: number;
+  /** أيقونةٌ تُلحق بآخر الزرّ (سهمُ منسدلةٍ مثلاً). */
+  triggerAfter?: LucideIcon;
 }
 
-const ActionMenu: React.FC<ActionMenuProps> = ({ items, trigger: Trigger = MoreVertical, label, onOpenChange }) => {
+const ActionMenu: React.FC<ActionMenuProps> = ({
+  items,
+  trigger: Trigger = MoreVertical,
+  label,
+  onOpenChange,
+  triggerClassName = 'fin-menu__trigger',
+  triggerLabel,
+  badge,
+  triggerAfter: TriggerAfter,
+}) => {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const { triggerRef, menuRef, style } = useAnchoredMenu(open);
@@ -70,8 +97,15 @@ const ActionMenu: React.FC<ActionMenuProps> = ({ items, trigger: Trigger = MoreV
               }}
               role="menuitem"
             >
-              {Icon && <Icon size={15} />}
-              {item.label}
+              {Icon && (
+                item.iconClassName
+                  ? <span className={item.iconClassName}><Icon size={15} /></span>
+                  : <Icon size={15} />
+              )}
+              <span className="fin-menu__item-label">{item.label}</span>
+              {typeof item.count === 'number' && item.count > 0 && (
+                <span className="fin-menu__item-count">{item.count}</span>
+              )}
             </button>
           </React.Fragment>
         );
@@ -85,7 +119,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({ items, trigger: Trigger = MoreV
       <button
         type="button"
         ref={triggerRef as React.RefObject<HTMLButtonElement>}
-        className="fin-menu__trigger"
+        className={triggerClassName}
         onClick={() => {
           setOpen((v) => {
             const next = !v;
@@ -98,6 +132,11 @@ const ActionMenu: React.FC<ActionMenuProps> = ({ items, trigger: Trigger = MoreV
         title={label}
       >
         <Trigger size={16} />
+        {triggerLabel && <span>{triggerLabel}</span>}
+        {typeof badge === 'number' && badge > 0 && (
+          <span className="fin-menu__badge">{badge}</span>
+        )}
+        {TriggerAfter && <TriggerAfter size={13} />}
       </button>
       {dropdown}
     </div>
