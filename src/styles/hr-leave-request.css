@@ -270,3 +270,52 @@
     font-size: 1.3rem;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   رفعُ الموظّف مستنداً بنفسه — بديلُ رسالةِ «سلّمه لإدارة المكتب».
+
+   الحقلُ الأصليّ مخفيٌّ بصرياً لا بـ`display:none`: يبقى في ترتيب التنقّل
+   بلوحة المفاتيح، و`<label>` الملتفّةُ حوله تفتحه بالنقر وبمسطرة المسافة.
+   ───────────────────────────────────────────────────────────────────────── */
+.myhrq-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-block-start: 0.5rem;
+  padding: 0.38rem 0.7rem;
+  border: 1px dashed var(--color-border, #d1d5db);
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #6b7280);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.myhrq-upload:hover {
+  border-color: var(--law-navy, #0f172a);
+  color: var(--law-navy, #0f172a);
+}
+
+.myhrq-upload:focus-within {
+  outline: 2px solid var(--law-navy, #0f172a);
+  outline-offset: 2px;
+}
+
+.myhrq-upload input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.myhrq-upload svg {
+  flex-shrink: 0;
+}
+
+/* أثناء الرفع: المؤشّرُ ينتظر ولا يقبل ملفاً ثانياً */
+.myhrq-upload:has(input:disabled) {
+  cursor: progress;
+  opacity: 0.65;
+}

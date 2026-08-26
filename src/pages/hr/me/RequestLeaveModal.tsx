@@ -7,6 +7,7 @@ import type {
   MyLeavePreviewPayload,
   MyLeaveTypeOption,
 } from '../../../services/hrMeLeaveService';
+import { hrMeLeaveService } from '../../../services/hrMeLeaveService';
 import {
   errorText,
   excludedLabel,
@@ -92,6 +93,27 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
   const [end, setEnd] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [documentId, setDocumentId] = useState<number | null>(null);
+  // المستنداتُ المرفوعةُ في هذه الجلسة تُضاف إلى القائمة فوراً — فلا يُغلق النموذجُ
+  // ويُعاد فتحُه لتظهر. والخادمُ هو مصدرُ الحقيقة عند إعادة التحميل.
+  const [uploaded, setUploaded] = useState<MyLeaveDocumentOption[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const allDocuments = useMemo(() => [...uploaded, ...documents], [uploaded, documents]);
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const doc = await hrMeLeaveService.uploadDocument(file);
+      setUploaded((prev) => [doc, ...prev]);
+      setDocumentId(doc.id); // يُختار فوراً — الرفعُ نيّةُ الإرفاق
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'تعذّر رفع المستند');
+    } finally {
+      setUploading(false);
+    }
+  };
   const [reason, setReason] = useState('');
 
   // مفتاحٌ واحدٌ لكلّ فتحةِ نموذج — لا يُجدَّد عند إعادة المحاولة (وإلّا طلبٌ ثانٍ).
@@ -259,27 +281,45 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
           {needsDocument && (
             <div className="hr-field">
               <label htmlFor="myhrq-doc">المستندُ المرفق *</label>
-              {noDocuments ? (
-                <p className="myhrq-note myhrq-note--stop">
-                  <Paperclip size={13} aria-hidden="true" />
-                  <span>
-                    لا مستنداتٍ في ملفّك بعد. هذا النوع يستلزم مستنداً — سلّمه لإدارة المكتب
-                    ليُضاف إلى ملفّك، ثمّ قدّم الطلب.
-                  </span>
-                </p>
-              ) : (
+              {/* 🔴 كان هنا نصٌّ يقول «سلّمه لإدارة المكتب» — لأن الرفعَ كان محصوراً
+                  في OneDrive ومحروساً بصلاحيةٍ لا يملكها الموظف، فكان نوعٌ يستلزم
+                  مرفقاً بابًا مقفلاً. الآن يرفعه بنفسه ويُخزَّن على خادمنا. */}
+              {allDocuments.length > 0 && (
                 <select
                   id="myhrq-doc"
                   value={documentId ?? ''}
                   onChange={(e) => setDocumentId(e.target.value === '' ? null : Number(e.target.value))}
                 >
                   <option value="">اختر مستنداً من ملفّك…</option>
-                  {documents.map((doc) => (
+                  {allDocuments.map((doc) => (
                     <option key={doc.id} value={doc.id}>
                       {docLabel(doc)}
                     </option>
                   ))}
                 </select>
+              )}
+
+              <label className="myhrq-upload">
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = ''; // كي يقبل الملفَّ نفسَه ثانيةً بعد فشل
+                    if (f) void handleUpload(f);
+                  }}
+                />
+                <Paperclip size={13} aria-hidden="true" />
+                <span>{uploading ? 'جارٍ الرفع…' : 'ارفع مستنداً جديداً'}</span>
+              </label>
+
+              {uploadError && <p className="myhrq-note myhrq-note--stop">{uploadError}</p>}
+
+              {allDocuments.length === 0 && !uploading && (
+                <p className="myhrq-note">
+                  هذا النوع يستلزم مستنداً — ارفع صورةَ التقرير أو ملفَّ PDF (حتى ١٠ ميجابايت).
+                </p>
               )}
             </div>
           )}

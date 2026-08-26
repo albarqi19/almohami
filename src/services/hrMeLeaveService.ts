@@ -35,6 +35,7 @@ const R = {
   list: '/hr/me/leaves', // GET  HrMeLeaveController@index
   preview: '/hr/me/leaves/preview', // POST HrMeLeaveController@preview
   store: '/hr/me/leaves', // POST HrMeLeaveController@store
+  uploadDocument: '/hr/me/documents', // POST HrMeLeaveController@storeDocument
 } as const;
 
 // ══════════ عقدُ الخادم ══════════
@@ -182,6 +183,24 @@ export const hrMeLeaveService = {
     const res = await apiClient.post<ApiResponse<MyLeaveRequestResult>>(R.store, payload);
     if (res.success && res.data) return res.data;
     throw new Error(res.message || 'فشل في إرسال طلب الإجازة');
+  },
+
+  /**
+   * رفعُ مرفقٍ إلى ملفّي — تقريرٌ طبيّ غالباً.
+   *
+   * 🔴 قبل هذا لم يكن للموظّف مسارُ رفعٍ إطلاقاً: الرفعُ الوحيد كان يمرّ بـOneDrive
+   *    ومحروساً بـ`hr.documents.manage` لا يملكها. فكان نوعٌ يستلزم مرفقاً =
+   *    بابٌ مقفل، والنافذةُ تكتب «سلّمه لإدارة المكتب».
+   *    والخادمُ يخزّنه على قرصنا، والإدارةُ تستعرضه من ملفّ الموظف كأيّ مستند.
+   */
+  async uploadDocument(file: File, title?: string): Promise<MyLeaveDocumentOption> {
+    const form = new FormData();
+    form.append('file', file);
+    if (title) form.append('title', title);
+
+    const res = await apiClient.postFormData<ApiResponse<MyLeaveDocumentOption>>(R.uploadDocument, form);
+    if (res.success && res.data) return res.data;
+    throw new Error(res.message || 'تعذّر رفع المستند');
   },
 };
 
