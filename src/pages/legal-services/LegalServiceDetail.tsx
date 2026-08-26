@@ -23,6 +23,7 @@ import {
   Square,
   Plus,
   Trash2,
+  Eye,
   Upload,
   ExternalLink,
   BookOpen,
@@ -905,6 +906,42 @@ const LegalServiceDetail: React.FC = () => {
   /** نافذة «تعديل بيانات الخدمة» — متاحة في كل الحالات، انظر تعليق الزر في الترويسة. */
   const [showEditModal, setShowEditModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [openingDocId, setOpeningDocId] = useState<number | null>(null);
+
+  /**
+   * فتحُ مستندٍ مرفوعٍ على الخدمة.
+   *
+   * يمرّ بـ`GET /documents/{id}/preview` — وهو يعالج الحالات الثلاث: رابطٌ خارجيّ،
+   * وملفٌّ على OneDrive (‏يردّ رابطاً مباشراً)، وملفٌّ على قرصنا (‏يبثّ البايتات).
+   * ومستنداتُ «صندوق البريد الذكي» من النوع الثالث: `IntakeAttachmentPromoter`
+   * ينقلها إلى قرص `public` ولا يضع لها مزوّداً سحابياً.
+   */
+  const handleOpenDocument = async (documentId: number) => {
+    setOpeningDocId(documentId);
+    try {
+      const res = await apiClient.get<{
+        success: boolean;
+        external?: boolean;
+        cloud?: boolean;
+        url?: string;
+        message?: string;
+      }>(`/documents/${documentId}/preview`);
+
+      if (res.success && res.url) {
+        window.open(res.url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
+      // بلا رابطٍ في الردّ: الخادمُ يبثّ الملفَّ نفسَه — يُفتح بمساره المحروس مباشرةً.
+      window.open(`${API_BASE_URL}/documents/${documentId}/preview`, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      // 🔴 رسالةُ الخادم تصل المستخدم كما هي: «لم يُربط OneDrive» و«الملف غير
+      //    موجود» سببان مختلفان تماماً، وطمسُهما في نصٍّ واحد يُضيّع التشخيص.
+      toast.error(err instanceof Error ? err.message : 'تعذّر فتح المستند');
+    } finally {
+      setOpeningDocId(null);
+    }
+  };
   // صلاحيةُ الكتابة على الخدمات — يعكسها الزرُّ الخطر بدل أن يُردّ 403 صامتاً
   const canManageService = usePermission('legal-services.manage');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -2628,6 +2665,23 @@ const LegalServiceDetail: React.FC = () => {
                           >
                             <ExternalLink size={13} />
                           </a>
+                        )}
+                        {/* المستندُ المرفوع: زرُّ فتحٍ يمرّ بمسار المعاينة المحروس.
+                            كان غائباً عمداً لأن `DocumentPolicy::view` كانت ترفض مستندَ
+                            الخدمة لكلّ من ليس رافعه (‏لأنه بلا `case_id`) — فصار للسياسة
+                            فرعٌ يعرف الخدمة، وصار للزرّ معنى. */}
+                        {!linkUrl && (
+                          <button
+                            className="lsd-doc-action-btn"
+                            title="فتح المستند"
+                            disabled={openingDocId === doc.document_id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleOpenDocument(doc.document_id);
+                            }}
+                          >
+                            <Eye size={13} />
+                          </button>
                         )}
                         <button
                           className="lsd-doc-action-btn"
