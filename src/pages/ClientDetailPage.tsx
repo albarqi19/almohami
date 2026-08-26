@@ -36,6 +36,22 @@ import { toast } from 'react-toastify';
 
 type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'legal_services' | 'fee_proposals' | 'letters' | 'communications' | 'activities' | 'establishment';
 
+/**
+ * حالاتُ القضية **المنتهية** — وما عداها مفتوح.
+ *
+ * 🔴 كانت الرقاقتان تُعدّدان الحالاتِ شمولاً: «نشطة» = active|pending و«مغلقة» =
+ *    closed|settled|dismissed. وحالاتُ الجدول **تسع** لا خمس، فالأربعُ الباقية
+ *    (`appealed` · `filed` · `preparation` · `draft`) تسقط من الرقاقتين معاً:
+ *    لا تُعدّ ولا تُعرض تحت أيٍّ منهما.
+ *
+ *    قِيس على الإنتاج 2026-08-26: **831 قضيةً مستأنَفة** (وهي أحياءُ العمل)
+ *    و986 قضيةً إجمالاً في الحالات الأربع، تخصّ **663 عميلاً**.
+ *
+ * والتعريفُ بالنفي لا بالشمول عمداً: حالةٌ تُضاف غداً تقع في «مفتوحة» تلقائياً
+ * بدل أن تختفي بصمت — وهو الدرسُ نفسُه الذي طُبّق على أدوار تقرير المحامين.
+ */
+const CLOSED_CASE_STATUSES = ['closed', 'settled', 'dismissed'];
+
 const ClientDetailPage: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
@@ -217,8 +233,8 @@ const ClientDetailPage: React.FC = () => {
 
   const visibleCases = useMemo(() => {
     if (casesScope === 'all') return cases;
-    if (casesScope === 'active') return cases.filter((c: any) => c.status === 'active' || c.status === 'pending');
-    return cases.filter((c: any) => c.status === 'closed' || c.status === 'settled' || c.status === 'dismissed');
+    if (casesScope === 'active') return cases.filter((c: any) => !CLOSED_CASE_STATUSES.includes(c.status));
+    return cases.filter((c: any) => CLOSED_CASE_STATUSES.includes(c.status));
   }, [cases, casesScope]);
 
   const visibleTasks = useMemo(() => {
@@ -711,10 +727,11 @@ const CasesTab: React.FC<{
   setScope: (s: CaseScope) => void;
   onCaseClick: (id: number) => void;
 }> = ({ cases, allCases, scope, setScope, onCaseClick }) => {
+  // العدّادُ والقائمةُ من تعريفٍ واحد — وإلا قالت الرقاقةُ رقماً وفتحت قائمةً بغيره.
   const counts = {
     all: allCases.length,
-    active: allCases.filter(c => c.status === 'active' || c.status === 'pending').length,
-    closed: allCases.filter(c => c.status === 'closed' || c.status === 'settled' || c.status === 'dismissed').length,
+    active: allCases.filter(c => !CLOSED_CASE_STATUSES.includes(c.status)).length,
+    closed: allCases.filter(c => CLOSED_CASE_STATUSES.includes(c.status)).length,
   };
   return (
     <div>
