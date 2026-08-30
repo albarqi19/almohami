@@ -5,7 +5,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  useDeleteLawConversation, useLawConversation, useLawConversations, useSendLawChat,
+  useDeleteLawConversation, useLawConversation, useLawConversations,
+  useLawCorpusSize, useSendLawChat,
 } from '../../hooks/useLaws';
 import type { CitedArticle, LawChatMessage } from '../../services/lawsService';
 
@@ -114,6 +115,7 @@ const LawChat: React.FC<Props> = ({ onOpenArticle }) => {
   const { data: conversation, isFetching: convFetching } = useLawConversation(conversationId);
   const send = useSendLawChat();
   const remove = useDeleteLawConversation();
+  const corpus = useLawCorpusSize();
 
   /**
    * الرسائل المعروضة = رسائل الخادم + التوفيق مع الإرسال الجاري:
@@ -232,7 +234,12 @@ const LawChat: React.FC<Props> = ({ onOpenArticle }) => {
             <div className="laws-empty laws-empty--chat">
               <div className="law-chat__hero-icon"><Scale size={30} /></div>
               <h3>اسأل عن الأنظمة السعودية</h3>
-              <p>إجابات مُسنَدة بالمواد النظامية من 75 نظاماً ولائحة — وكل محادثة تُحفظ لك</p>
+              {/* العددُ مشتقٌّ من الفهرس لا مكتوبٌ رقماً — انظر useLawCorpusSize */}
+              <p>
+                {corpus.statutes
+                  ? `إجابات مُسنَدة بالمواد النظامية من ${corpus.statutes} نظاماً ولائحة — وكل محادثة تُحفظ لك`
+                  : 'إجابات مُسنَدة بالمواد النظامية — وكل محادثة تُحفظ لك'}
+              </p>
               <div className="law-search__chips">
                 {SUGGESTIONS.map((s) => (
                   <button key={s} className="law-search__chip" onClick={() => submit(s)}>{s}</button>

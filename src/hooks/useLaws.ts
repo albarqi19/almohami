@@ -12,6 +12,29 @@ export function useLawStatutes() {
   });
 }
 
+/**
+ * حجمُ الذخيرة كما هو الآن — يُشتقّ من فهرس الأنظمة المُحمَّل، لا يُكتب رقماً.
+ *
+ * 🩸 كان العددُ مثبَّتاً نصّاً في ثلاثة مواضع («من 75 نظاماً ولائحة»)، فبقي 75
+ * بينما صارت الذخيرةُ 602 نظاماً و22,840 مادة — أي أن الواجهةَ كانت تَعِد المحامي
+ * بأقلَّ من ثُمنِ ما تملك، وتكذب عليه من حيث أرادت طمأنته. والفهرسُ محمَّلٌ أصلاً
+ * ومخزَّنٌ ساعةً في TanStack Query، فالاشتقاقُ بلا نداءٍ إضافيّ.
+ *
+ * ويُرجع null ما دام الفهرسُ لم يصل — فلا يُعرض رقمٌ صفريٌّ لحظةَ التحميل.
+ */
+export function useLawCorpusSize() {
+  const { data: statutes } = useLawStatutes();
+
+  if (!statutes || statutes.length === 0) {
+    return { statutes: null, articles: null };
+  }
+
+  return {
+    statutes: statutes.length,
+    articles: statutes.reduce((sum, s) => sum + (s.articles_count || 0), 0),
+  };
+}
+
 export function useLawStatute(serial: string | null) {
   return useQuery({
     queryKey: ['laws', 'statute', serial],

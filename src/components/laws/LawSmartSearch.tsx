@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, BookMarked, Search, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLawSmartSearch } from '../../hooks/useLaws';
+import { useLawCorpusSize, useLawSmartSearch } from '../../hooks/useLaws';
 
 interface Props {
   onOpenArticle: (serial: string, articleId: number | null) => void;
@@ -18,6 +18,7 @@ const LawSmartSearch: React.FC<Props> = ({ onOpenArticle }) => {
   const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const search = useLawSmartSearch();
+  const corpus = useLawCorpusSize();
 
   const submit = (q?: string) => {
     const value = (q ?? query).trim();
@@ -57,8 +58,10 @@ const LawSmartSearch: React.FC<Props> = ({ onOpenArticle }) => {
             بحث ذكي
           </button>
         </div>
+        {/* العددُ مشتقٌّ من الفهرس لا مكتوبٌ رقماً — انظر useLawCorpusSize */}
         <p className="law-search__hint">
-          بحث دلالي بالمعنى لا بالكلمات — يفهم وصفك ويعيد أقرب المواد النظامية من 75 نظاماً
+          بحث دلالي بالمعنى لا بالكلمات — يفهم وصفك ويعيد أقرب المواد النظامية
+          {corpus.statutes ? ` من ${corpus.statutes} نظاماً ولائحة` : ''}
         </p>
       </div>
 
