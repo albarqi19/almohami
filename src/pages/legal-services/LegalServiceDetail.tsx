@@ -50,6 +50,9 @@ import {
   Compass,
   Pencil,
   Send,
+  Download,
+  Mail,
+  Paperclip,
 } from 'lucide-react';
 
 import { toast } from 'react-toastify';
@@ -58,6 +61,7 @@ import { LegalServiceService } from '../../services/legalServiceService';
 import { TaskService } from '../../services/taskService';
 import type { Task } from '../../types';
 import { apiClient, API_BASE_URL } from '../../utils/api';
+import { LOCKED_STATUSES, isServiceContentLocked } from '../../utils/serviceContentLock';
 import { getApiErrorMessage } from '../../utils/apiError';
 import AddExternalLinkModal from '../../components/AddExternalLinkModal';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -300,21 +304,6 @@ const BILLING_TRIGGER_STATUSES: Record<string, string[]> = {
   training: ['completed'],
 };
 
-// حالات يُقفل عندها محتوى الخدمة ضد التعديل (lockedStatuses) — عدا النهائية العامة
-const LOCKED_STATUSES: Record<string, string[]> = {
-  consultation: ['delivered'],
-  contract_drafting: ['approved', 'signed', 'archived'],
-  company_formation: ['completed'],
-  licenses: ['active', 'renewed'],
-  arbitration: ['award_issued', 'enforcement', 'settlement_reached'],
-  compliance: ['compliant', 'monitoring'],
-  labor: ['resolution', 'documentation', 'escalated_to_case'],
-  real_estate: ['registration'],
-  due_diligence: ['report_delivered'],
-  ip: ['registration', 'active'],
-  legal_notices: ['sent', 'delivered', 'escalated_to_case'],
-  training: ['certificates_issued'],
-};
 
 /** تلميح مختصر بأثر الانتقال إلى حالة معيّنة (فاتورة تلقائية/قفل/إشعار عميل) */
 function getTransitionHint(serviceType: string, target: string): string | null {
@@ -907,6 +896,17 @@ const LegalServiceDetail: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [openingDocId, setOpeningDocId] = useState<number | null>(null);
+  const [downloadingDocId, setDownloadingDocId] = useState<number | null>(null);
+  /**
+   * سؤال العميل — تحريرٌ في المكان من تبويب «المعلومات».
+   *
+   * 🔴 لم يكن للحقل مسارُ تحريرٍ في المنصّة كلّها: نافذةُ التعديل لا تحمله والباك
+   *    لا يقبله، بينما تبويبُ الاستشارة يقول «أضِفه من تعديل الخدمة» — أي يدلّ على
+   *    بابٍ مغلق. فكلُّ استشارةٍ وُلدت بلا سؤالٍ بقيت بلا سؤالٍ إلى الأبد.
+   */
+  const [editingQuestion, setEditingQuestion] = useState(false);
+  const [questionDraft, setQuestionDraft] = useState('');
+  const [savingQuestion, setSavingQuestion] = useState(false);
 
   /**
    * فتحُ مستندٍ مرفوعٍ على الخدمة.
@@ -942,8 +942,59 @@ const LegalServiceDetail: React.FC = () => {
       setOpeningDocId(null);
     }
   };
+
+  /**
+   * تنزيلُ مستندٍ مرفوعٍ على الخدمة.
+   *
+   * `fetch` بالتوكن ثم blob: — لا `window.open` على مسارٍ محروسٍ بترويسة Authorization
+   * (نمط `intakeRequestService.downloadAttachment`). ومسارُ `/download` يردّ رابطاً
+   * للسحابيّ والخارجيّ وبايتاتٍ للمحليّ، فنفرّق بحسب نوع المحتوى.
+   */
+  const handleDownloadDocument = async (documentId: number, fileName?: string | null) => {
+    setDownloadingDocId(documentId);
+    try {
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`${API_BASE_URL}/documents/${documentId}/download`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!res.ok) {
+        let serverMessage = '';
+        try {
+          serverMessage = (await res.json())?.message || '';
+        } catch {
+          serverMessage = '';
+        }
+        throw new Error(serverMessage || `تعذّر تنزيل المستند (${res.status})`);
+      }
+
+      // السحابيّ/الخارجيّ: JSON فيه رابطٌ مباشر بدل البايتات
+      if ((res.headers.get('content-type') || '').includes('application/json')) {
+        const body = await res.json();
+        const href = body?.url || body?.download_url;
+        if (!href) throw new Error(body?.message || 'لا يتوفّر رابط تنزيل لهذا الملف');
+        window.open(href, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || 'document';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'تعذّر تنزيل المستند');
+    } finally {
+      setDownloadingDocId(null);
+    }
+  };
   // صلاحيةُ الكتابة على الخدمات — يعكسها الزرُّ الخطر بدل أن يُردّ 403 صامتاً
   const canManageService = usePermission('legal-services.manage');
+  // `DocumentPolicy::download` تشترطها فوق الرؤية، والأدوارُ المخصّصة قد لا تحملها —
+  // فإخفاءُ الزرّ أصدقُ من 403 صامتٍ عند النقر.
+  const canDownloadDocuments = usePermission('documents.download');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   /** غير null ⇒ الباك ردّ 409 CONFIRM_REQUIRED، فالنافذة تنتقل لمرحلة التحذير المالي. */
   const [deleteImpact, setDeleteImpact] = useState<ServiceDeletionImpact | null>(null);
@@ -1298,6 +1349,24 @@ const LegalServiceDetail: React.FC = () => {
     });
     if (!res?.success) throw new Error('تعذّر حفظ الرأي القانوني');
     await fetchService();
+  };
+
+  /** حفظ سؤال العميل من تبويب «المعلومات» — يُنشئ صفَّ التفاصيل إن لم يكن. */
+  const handleSaveClientQuestion = async () => {
+    if (!service) return;
+    setSavingQuestion(true);
+    try {
+      await LegalServiceService.updateConsultationDetails(service.id, {
+        client_question: questionDraft.trim() || null,
+      });
+      setEditingQuestion(false);
+      toast.success('حُفظ سؤال العميل');
+      await fetchService();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر حفظ سؤال العميل'));
+    } finally {
+      setSavingQuestion(false);
+    }
   };
 
   const handleAddReference = async (ref: LegalReference) => {
@@ -1687,6 +1756,84 @@ const LegalServiceDetail: React.FC = () => {
           </div>
         </div>
 
+        {/* Card 2.5: سؤال العميل — للاستشارات وحدها، وهو **مكانُ إضافته** لا عرضِه فقط.
+            🔴 كان الحقلُ بلا مسارِ تحريرٍ في المنصّة كلّها: نافذةُ التعديل لا تحمله
+               والباك لا يقبله، وتبويبُ الاستشارة يقول «أضِفه من تعديل الخدمة» —
+               بابٌ مغلق. فما وُلد بلا سؤالٍ بقي بلا سؤالٍ أبداً، وعليه وحده تُبنى
+               مسودةُ الرأي بالذكاء. */}
+        {service.service_type === 'consultation' && (() => {
+          const question = service.consultation_detail?.client_question ?? '';
+          // القفلُ مرآةُ حارس الباك (`isContentLocked`): استشارةٌ سُلّمت أو أُغلقت لا تُحرَّر
+          const isLocked = isServiceContentLocked(service);
+          const canEdit = canManageService && !isLocked;
+
+          return (
+            <div className="lsd-card lsd-card--full">
+              <div className="lsd-card__header">
+                <div className="lsd-card__title">
+                  <MessageSquareText size={15} />
+                  سؤال العميل
+                </div>
+                {canEdit && !editingQuestion && (
+                  <button
+                    className="lsd-card__action"
+                    onClick={() => {
+                      setQuestionDraft(question);
+                      setEditingQuestion(true);
+                    }}
+                  >
+                    <Pencil size={13} />
+                    {question ? 'تعديل' : 'إضافة'}
+                  </button>
+                )}
+              </div>
+              <div className="lsd-card__content">
+                {editingQuestion ? (
+                  <>
+                    <textarea
+                      className="lsd-form-input"
+                      rows={4}
+                      autoFocus
+                      value={questionDraft}
+                      onChange={(e) => setQuestionDraft(e.target.value)}
+                      maxLength={10000}
+                      placeholder="ما الذي يسأل عنه العميل تحديداً؟ عليه تُبنى مسودة الرأي."
+                    />
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <button
+                        className="lsd-card__action"
+                        onClick={() => void handleSaveClientQuestion()}
+                        disabled={savingQuestion}
+                      >
+                        <Check size={13} />
+                        {savingQuestion ? 'جارٍ الحفظ…' : 'حفظ'}
+                      </button>
+                      <button
+                        className="lsd-card__action"
+                        onClick={() => setEditingQuestion(false)}
+                        disabled={savingQuestion}
+                      >
+                        <X size={13} />
+                        إلغاء
+                      </button>
+                    </div>
+                  </>
+                ) : question ? (
+                  <p className="lsd-description-text">{question}</p>
+                ) : (
+                  <p className="lsd-description-text lsd-description-text--empty">
+                    {canEdit
+                      ? 'لم يُسجَّل سؤال العميل — أضِفه من هنا، وعليه تُبنى مسودة الرأي.'
+                      : isLocked
+                        ? 'لم يُسجَّل سؤال العميل، والاستشارة مقفلة عن التعديل في حالتها الحالية.'
+                        : 'لم يُسجَّل سؤال العميل.'}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Card 3: الوصف */}
         {service.description && (
           <div className="lsd-card lsd-card--full">
@@ -1701,6 +1848,78 @@ const LegalServiceDetail: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Card 3.5: منشأُ الطلب — يظهر للخدمات القادمة من «صندوق البريد الذكي» وحدها.
+            🔴 كان المحامي يفتح استشارةً لا يعرف أنها من بريدٍ ولا ممّن ولا متى، والأثرُ
+               محبوسٌ في `metadata` لا يقرؤه أحد. ومعه المرفقاتُ التي وصلت ولم تُحفَظ —
+               «وصل ولم نستطع حفظه» خبرٌ يتصرّف عليه، وصمتُه كان يُقرأ «لم يُرسِل شيئاً». */}
+        {service.intake_request && (() => {
+          const origin = service.intake_request;
+          const unsaved = (origin.attachments ?? []).filter((a) => !a.document_id && a.skip_reason);
+
+          return (
+            <div className="lsd-card lsd-card--full">
+              <div className="lsd-card__header">
+                <div className="lsd-card__title">
+                  <Mail size={15} />
+                  واردٌ من صندوق البريد الذكي
+                </div>
+              </div>
+              <div className="lsd-card__content">
+                <div className="lsd-info-grid">
+                  <div className="lsd-info-item">
+                    <div className="lsd-info-item__label">المُرسِل</div>
+                    <div className="lsd-info-item__value" style={{ direction: 'ltr', unicodeBidi: 'isolate', textAlign: 'right' }}>
+                      {origin.from_name ? `${origin.from_name} — ` : ''}{origin.from_email || '—'}
+                    </div>
+                  </div>
+                  <div className="lsd-info-item">
+                    <div className="lsd-info-item__label">تاريخ الاستلام</div>
+                    <div className="lsd-info-item__value">{formatDateTime(origin.received_at)}</div>
+                  </div>
+                  <div className="lsd-info-item">
+                    <div className="lsd-info-item__label">اعتمده</div>
+                    <div className="lsd-info-item__value">
+                      {origin.reviewer?.name || '—'}
+                      {origin.reviewed_at ? ` · ${formatDate(origin.reviewed_at)}` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                {origin.subject && (
+                  <div className="lsd-notes-section" style={{ marginTop: 12 }}>
+                    <div className="lsd-notes-section__label">موضوع الرسالة</div>
+                    <p className="lsd-description-text">{origin.subject}</p>
+                  </div>
+                )}
+
+                {origin.review_note && (
+                  <div className="lsd-notes-section" style={{ marginTop: 12 }}>
+                    <div className="lsd-notes-section__label">ملاحظة المراجع</div>
+                    <p className="lsd-description-text">{origin.review_note}</p>
+                  </div>
+                )}
+
+                {unsaved.length > 0 && (
+                  <div className="lsd-onedrive-warning" style={{ marginTop: 12 }}>
+                    <Paperclip size={18} />
+                    <div>
+                      <strong>وصلت مرفقاتٌ لم تُحفَظ ({unsaved.length}).</strong> اطلبها من المُرسِل بصيغةٍ مدعومة:
+                      <ul style={{ margin: '6px 0 0', paddingInlineStart: 18 }}>
+                        {unsaved.map((a) => (
+                          <li key={a.id}>
+                            {a.file_name} — {a.skip_reason}
+                            {a.size ? ` (${formatFileSize(a.size)})` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Card 4: الملاحظات */}
         {(service.notes || service.internal_notes) && (
@@ -1861,14 +2080,18 @@ const LegalServiceDetail: React.FC = () => {
                 يكون فارغاً — فلا يرى المستخدمُ أن ثمّة حقلاً ناقصاً أصلاً، ثم
                 يضغط «توليد المسودة» فيُردّ بـ«لا يمكن التوليد بدون سؤال العميل».
                 والحقلُ اختياريٌّ في نافذة الإنشاء (‏لا تحقّق على الخطوة الثالثة)،
-                فـ**31 استشارةً من 49 على الإنتاج بلا سؤال**. الغيابُ يُعرَض الآن. */}
+                فـ**31 استشارةً من 49 على الإنتاج بلا سؤال**. الغيابُ يُعرَض الآن.
+
+                🔴 والرسالةُ كانت تدلّ على بابٍ مغلق: «أضِفه من تعديل الخدمة» —
+                   ونافذةُ التعديل لا تحمل الحقل، والباك لا يقبله. صار للسؤال
+                   مكانٌ حقيقيٌّ يُضاف منه: بطاقتُه في تبويب «المعلومات». */}
             <div className="lsd-notes-section" style={{ marginTop: 12 }}>
               <div className="lsd-notes-section__label">سؤال العميل</div>
               {detail.client_question ? (
                 <p className="lsd-description-text">{detail.client_question}</p>
               ) : (
                 <p className="lsd-description-text lsd-description-text--empty">
-                  لم يُسجَّل سؤال العميل — أضِفه من «تعديل الخدمة»، وعليه تُبنى مسودةُ الرأي.
+                  لم يُسجَّل سؤال العميل — أضِفه من تبويب «المعلومات»، وعليه تُبنى مسودةُ الرأي.
                 </p>
               )}
             </div>
@@ -1905,7 +2128,7 @@ const LegalServiceDetail: React.FC = () => {
               onClick={handleAiDraft}
               disabled={aiDraftLoading || !detail.client_question}
               title={!detail.client_question
-                ? 'أضف سؤال العميل في تفاصيل الاستشارة أولاً — المسودة تُبنى عليه'
+                ? 'أضف سؤال العميل من تبويب «المعلومات» أولاً — المسودة تُبنى عليه'
                 : 'يولّد مسودة أولية للرأي القانوني اعتماداً على سؤال العميل ونطاق الاستشارة'}
             >
               {aiDraftLoading ? (
@@ -2694,6 +2917,22 @@ const LegalServiceDetail: React.FC = () => {
                             }}
                           >
                             <Eye size={13} />
+                          </button>
+                        )}
+                        {/* التنزيل ليس تكراراً للفتح: مسارُ المعاينة يبثّ الملفَّ ليعرضه
+                            المتصفّح، وما لا يعرفه المتصفّح (docx/xlsx) يبقى بلا سبيلٍ
+                            إلى القرص من هذه الشاشة — وأكثرُ مرفقات البريد من ذلك النوع. */}
+                        {!linkUrl && canDownloadDocuments && (
+                          <button
+                            className="lsd-doc-action-btn"
+                            title="تنزيل المستند"
+                            disabled={downloadingDocId === doc.document_id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleDownloadDocument(doc.document_id, docData.file_name || docData.title);
+                            }}
+                          >
+                            <Download size={13} />
                           </button>
                         )}
                         <button

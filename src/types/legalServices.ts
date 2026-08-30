@@ -267,6 +267,8 @@ export interface LegalService {
   invoices?: CaseInvoiceItem[];
   deliverables?: ServiceDeliverableItem[];
   case_model?: { id: number; case_number: string; title: string };
+  /** حاضرٌ متى وُلدت الخدمة من «صندوق البريد الذكي» — وإلا فغائب */
+  intake_request?: ServiceIntakeOrigin | null;
 
   // Computed
   total_billed?: number;
@@ -277,6 +279,33 @@ export interface LegalService {
   priority_arabic?: string;
   billing_type_arabic?: string;
   onedrive_connected?: boolean;
+}
+
+/**
+ * منشأُ الخدمة حين تأتي من «صندوق البريد الذكي».
+ *
+ * كان أثرُ المنشأ محصوراً في `metadata` الذي لا يقرؤه أحد، والعلاقةُ في الباك
+ * معرَّفةً ولا تُحمَّل — فيفتح المحامي استشارةً لا يعرف من أرسلها ولا متى.
+ */
+export interface ServiceIntakeOrigin {
+  id: number;
+  from_email: string | null;
+  from_name: string | null;
+  subject: string | null;
+  received_at: string | null;
+  reviewed_at: string | null;
+  review_note: string | null;
+  reviewer?: { id: number; name: string } | null;
+  attachments?: Array<{
+    id: number;
+    file_name: string;
+    size: number | null;
+    extraction_status: 'pending' | 'done' | 'failed' | 'skipped';
+    /** سببُ عدم الحفظ — حاضرٌ فقط للمرفقات التي وصلت ولم تُحفَظ */
+    skip_reason: string | null;
+    /** غير null ⇒ رُقّي إلى مستندٍ حقيقيّ في تبويب المستندات */
+    document_id: number | null;
+  }>;
 }
 
 /** مخرَج رسمي مُولّد لخدمة (PDF/Word) */

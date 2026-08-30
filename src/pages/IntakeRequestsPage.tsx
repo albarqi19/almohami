@@ -430,7 +430,7 @@ const IntakeRequestsPage: React.FC = () => {
                             disabled={!available}
                             title={
                               !available
-                                ? 'الملف غير متوفّر (تجاوز الحدود أو حُذف)'
+                                ? (a.skip_reason || 'الملف غير متوفّر (تجاوز الحدود أو حُذف)')
                                 : a.is_viewable ? 'معاينة' : 'هذا النوع يُنزَّل ولا يُعرض داخل الصفحة'
                             }
                             onClick={() => {
@@ -444,9 +444,13 @@ const IntakeRequestsPage: React.FC = () => {
                             </span>
                             <span className="rq-file__body">
                               <span className="rq-file__name">{a.file_name}</span>
-                              {/* الوصف أهمّ ما في الصفّ للصور والملفات الممسوحة — لا نصّ لها أصلاً */}
+                              {/* الوصف أهمّ ما في الصفّ للصور والملفات الممسوحة — لا نصّ لها أصلاً.
+                                  والسببُ يتقدّم كلَّ شيء حين لا ملفَّ أصلاً: «وصل ولم يُحفَظ»
+                                  خبرٌ يتصرّف عليه المحامي (يطلبه من المُرسِل)، وصمتُه كان يُقرأ
+                                  «لم يُرسِل مرفقاً». */}
                               <span className="rq-file__desc">
-                                {a.ai_description
+                                {(!available && a.skip_reason)
+                                  || a.ai_description
                                   || (a.extraction_status === 'skipped' ? 'ملف لم يُستخرج نصّه — افتحه لتراه' : '—')}
                               </span>
                             </span>
@@ -649,6 +653,14 @@ const ApproveModal: React.FC<{
   const [responsibleId, setResponsibleId] = useState<string>('');
   const [title, setTitle] = useState(request.extracted_payload?.title || request.subject || '');
   const [description, setDescription] = useState(request.extracted_payload?.description || '');
+  /**
+   * سؤال العميل — يُهيَّأ من نصّ الطلب لأن جوهر الرسالة هو السؤال عادةً.
+   * 🔴 كان الحقل لا يُرسَل إطلاقاً، فتُولد كلُّ استشارةٍ من البريد بسؤالٍ فارغ
+   *    وزرُّ «اقتراح مسودة الرأي» معطَّلاً أبداً — وهو مبنيٌّ عليه وحده.
+   */
+  const [clientQuestion, setClientQuestion] = useState(
+    (request.extracted_payload?.description || request.raw_body || '').slice(0, 10000),
+  );
   const [billingType, setBillingType] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [sendConfirmation, setSendConfirmation] = useState(true);
@@ -710,6 +722,8 @@ const ApproveModal: React.FC<{
       assignee_ids: assigneeIds.map(Number),
       title: title.trim(),
       description: description.trim() || null,
+      // للاستشارة وحدها — الباك يتجاهله لغيرها، وتركُه فارغاً يُسقطه على الوصف
+      client_question: target === 'consultation' ? (clientQuestion.trim() || null) : null,
       send_confirmation: sendConfirmation,
       billing_type: billingType ? (billingType as ApprovePayload['billing_type']) : null,
       agreed_amount: amount ? Number(amount) : null,
@@ -786,6 +800,22 @@ const ApproveModal: React.FC<{
             <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={10000} />
           </label>
         </div>
+
+        {/* سؤال العميل — يُكتب في تفاصيل الاستشارة، وعليه يعتمد «اقتراح مسودة الرأي» */}
+        {target === 'consultation' && (
+          <div className="rq-modal__row rq-modal__row--single">
+            <label className="rq-field">
+              <span>سؤال العميل <em>— تُبنى عليه مسودة الرأي</em></span>
+              <textarea
+                rows={3}
+                value={clientQuestion}
+                onChange={(e) => setClientQuestion(e.target.value)}
+                maxLength={10000}
+                placeholder="ما الذي يسأل عنه العميل تحديداً؟ إن تركته فارغاً يُنسخ الوصف."
+              />
+            </label>
+          </div>
+        )}
 
         {target !== 'case' && (
           <div className="rq-modal__row">

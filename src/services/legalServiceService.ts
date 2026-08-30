@@ -101,6 +101,20 @@ export class LegalServiceService {
 
   // ── الاستشارات ──
 
+  /**
+   * تفاصيل الاستشارة — سؤال العميل ونطاقها.
+   *
+   * 🔴 لم يكن لهذين الحقلين مسارُ تحريرٍ في المنصّة كلّها: نافذةُ التعديل لا تحملهما،
+   *    و`PUT /legal-services/{id}` لا يقبلهما — فالسؤالُ الذي تُبنى عليه مسودةُ الرأي
+   *    يُكتب لحظةَ الإنشاء أو لا يُكتب أبداً.
+   */
+  static async updateConsultationDetails(
+    id: number,
+    data: { client_question?: string | null; scope_definition?: string | null },
+  ): Promise<{ success: boolean; data: ConsultationDetail }> {
+    return apiClient.put(`/legal-services/${id}/consultation/details`, data);
+  }
+
   static async updateOpinion(id: number, data: { legal_opinion?: string; finalize?: boolean }): Promise<{ success: boolean; data: ConsultationDetail }> {
     return apiClient.put(`/legal-services/${id}/consultation/opinion`, data);
   }

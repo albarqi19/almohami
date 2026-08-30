@@ -16,6 +16,12 @@ export interface IntakeAttachment {
   size: number;
   storage_path: string | null;
   extraction_status: 'pending' | 'done' | 'failed' | 'skipped';
+  /**
+   * سببُ عدم حفظ الملف — نوعٌ غير مدعوم، أو حجمٌ فوق الحدّ، أو تجاوزُ عدد المرفقات.
+   * حاضرٌ حين `storage_path === null` ولا مستندَ مُرقّى: المرفقُ وصل ولم يُحفَظ،
+   * وهو غير «لم يُرسِل شيئاً».
+   */
+  skip_reason?: string | null;
   extracted_text?: string | null;
   /** وصف من سطر واحد كتبه الذكاء ضمن نداء الاستخلاص نفسه */
   ai_description?: string | null;
@@ -80,6 +86,11 @@ export interface ApprovePayload {
   assignee_ids?: number[];
   title: string;
   description?: string | null;
+  /**
+   * سؤال العميل — للاستشارة وحدها، وعليه تُبنى مسودةُ الرأي بالذكاء.
+   * تركُه فارغاً يجعل الباك يسقط على الوصف ثم على نصّ الرسالة الخام.
+   */
+  client_question?: string | null;
   send_confirmation: boolean;
   review_note?: string | null;
   /** الأتعاب — اختيارية؛ تمريرها يشغّل الفوترة التلقائية على الخدمة الناتجة */

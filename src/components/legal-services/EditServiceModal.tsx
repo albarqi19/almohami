@@ -12,6 +12,7 @@ import type {
 import { LegalServiceService } from '../../services/legalServiceService';
 import { apiClient } from '../../utils/api';
 import { getApiErrorMessage } from '../../utils/apiError';
+import { isServiceContentLocked } from '../../utils/serviceContentLock';
 
 interface EditServiceModalProps {
   isOpen: boolean;
@@ -79,6 +80,12 @@ interface EditFormState {
   internal_notes: string;
   assigned_lawyer_id: number | null;
   assignee_ids: number[];
+  /**
+   * سؤال العميل — للاستشارات وحدها، ويُحفَظ بنداءٍ مستقلّ.
+   * 🔴 `PUT /legal-services/{id}` لا يقبله ولا يمسّ `consultation_details`، وهذه
+   *    النافذةُ لم تكن تحمله أصلاً — فما وُلد بلا سؤالٍ بقي بلا سؤالٍ أبداً.
+   */
+  client_question: string;
 }
 
 const MAX_TITLE_LENGTH = 255;
@@ -144,6 +151,7 @@ const buildInitialState = (service: LegalService): EditFormState => {
     internal_notes: service.internal_notes ?? '',
     assigned_lawyer_id: primary,
     assignee_ids: initialAssignees,
+    client_question: service.consultation_detail?.client_question ?? '',
   };
 };
 
@@ -424,7 +432,18 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({ isOpen, onClose, se
     }
 
     const payload = buildPayload();
-    if (Object.keys(payload).length === 0) {
+
+    /**
+     * سؤال العميل مسارُه مستقلّ: `PUT /legal-services/{id}` لا يقبله ولا يمسّ
+     * `consultation_details`. فيُقارَن بحاله ويُرسَل وحده عند تغيّره — ولا يُحسب
+     * ضمن `payload` وإلا ردّ الباك 422 عن حقلٍ لا يعرفه.
+     */
+    const questionChanged =
+      service.service_type === 'consultation'
+      && !isServiceContentLocked(service)
+      && form.client_question.trim() !== initialRef.current.client_question.trim();
+
+    if (Object.keys(payload).length === 0 && !questionChanged) {
       // لا نُرسل نداءً فارغاً: الباك يسجّل نشاط «تم تحديث بيانات الخدمة» في كل نداء،
       // فحفظٌ بلا تغيير يترك أثراً كاذباً في سجلّ الخدمة.
       setHint('لم تُعدّل أي حقل بعد.');
@@ -435,6 +454,31 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({ isOpen, onClose, se
     setHint(null);
     setSubmitting(true);
     try {
+      // السؤالُ أولاً: لو سقط هذا النداءُ بعد نجاح تحديث الخدمة لأُغلقت النافذةُ
+      // على تغييرٍ نصفِ محفوظ، ولظنّ المستخدمُ أن السؤالَ حُفظ وهو لم يُحفظ.
+      if (questionChanged) {
+        const qRes = await LegalServiceService.updateConsultationDetails(service.id, {
+          client_question: form.client_question.trim() || null,
+        });
+        if (!qRes?.success) {
+          setError('تعذّر حفظ سؤال العميل');
+          return;
+        }
+      }
+
+      if (Object.keys(payload).length === 0) {
+        // السؤالُ وحده تغيّر — لا نداءَ ثانياً ولا نشاطَ «تم تحديث بيانات الخدمة»
+        onSaved({
+          ...service,
+          consultation_detail: {
+            ...(service.consultation_detail ?? ({} as NonNullable<LegalService['consultation_detail']>)),
+            client_question: form.client_question.trim() || null,
+          },
+        });
+        onClose();
+        return;
+      }
+
       const res = await LegalServiceService.updateService(
         service.id,
         // الباك يقبل `null` في هذه الحقول (`sometimes|nullable`)، ونوع الإنشاء لا يعرف
@@ -449,6 +493,14 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({ isOpen, onClose, se
 
       // دمجٌ لا استبدال — انظر تعليق `onSaved` أعلى الملف
       const merged: LegalService = { ...service, ...res.data };
+      // ردُّ تحديث الخدمة لا يحمل تفاصيل الاستشارة، فنُثبّت السؤالَ المحفوظ بأنفسنا
+      // وإلا عادت البطاقةُ تعرض القيمةَ القديمة حتى إعادة التحميل.
+      if (questionChanged) {
+        merged.consultation_detail = {
+          ...(res.data.consultation_detail ?? service.consultation_detail ?? ({} as NonNullable<LegalService['consultation_detail']>)),
+          client_question: form.client_question.trim() || null,
+        };
+      }
       if (payload.assigned_lawyer_id !== undefined) {
         merged.assigned_lawyer = form.assigned_lawyer_id ? userById(form.assigned_lawyer_id) : undefined;
       }
@@ -676,6 +728,30 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({ isOpen, onClose, se
               ? 'الفوترة اشتراك — المعتمَد هو المبلغ المتفق عليه لكل دورة.'
               : 'المعتمَد هو المبلغ المتفق عليه.'}
         </span>
+
+        {/* ── سؤال العميل — للاستشارة غير المقفلة وحدها ──
+            يُحفظ بنداءٍ مستقلّ (`consultation/details`) لأن مسارَ تحديث الخدمة لا
+            يقبله ولا يمسّ `consultation_details`. ويُخفى عند القفل بدل أن يُردّ
+            422 بعد النقر — الزرُّ يعرف شرطَه قبل الضغط. */}
+        {service.service_type === 'consultation' && !isServiceContentLocked(service) && (
+          <>
+            <div style={sectionTitleStyle}>الاستشارة</div>
+            <div style={groupStyle}>
+              <label style={labelStyle} htmlFor="edit-service-client-question">
+                سؤال العميل
+              </label>
+              <textarea
+                id="edit-service-client-question"
+                rows={3}
+                value={form.client_question}
+                onChange={(e) => setField('client_question', e.target.value)}
+                maxLength={10000}
+                placeholder="ما الذي يسأل عنه العميل تحديداً؟ عليه تُبنى مسودة الرأي."
+                style={{ ...inputStyle, resize: 'vertical' }}
+              />
+            </div>
+          </>
+        )}
 
         {/* ── الوصف والملاحظات ── */}
         <div style={sectionTitleStyle}>الوصف والملاحظات</div>
