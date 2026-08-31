@@ -982,3 +982,131 @@
 
   .law-msg__bubble { max-width: 92%; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   البثّ الحيّ وأدوات الرسالة — أُضيفت مع تحويل الشات إلى SSE
+   ═══════════════════════════════════════════════════════════ */
+
+/* وسمُ حالة المادة على رأس البطاقة: «معدَّلة» تحذيرٌ لا زينة —
+   النافذُ في الحاشية لا في المتن، والمحامي يحتاج أن يعرف قبل أن يقرأ. */
+.law-cited__flag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  line-height: 1.7;
+}
+.law-cited__flag--warn {
+  background: color-mix(in srgb, var(--color-warning, #b45309) 14%, transparent);
+  color: var(--color-warning, #b45309);
+}
+.law-cited__flag--danger {
+  background: color-mix(in srgb, var(--color-danger, #b91c1c) 14%, transparent);
+  color: var(--color-danger, #b91c1c);
+}
+
+.law-cited__amend {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-warning, #b45309) 7%, transparent);
+  border-inline-start: 3px solid var(--color-warning, #b45309);
+}
+.law-cited__amend-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-warning, #b45309);
+  margin-bottom: 5px;
+}
+.law-cited__amend p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.85;
+  white-space: pre-wrap;
+}
+
+.law-cited__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* أدواتُ الرسالة — تظهر بهدوءٍ عند المرور ولا تزاحم النصّ */
+.law-msg__tools {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.law-msg:hover .law-msg__tools,
+.law-msg__tools:focus-within { opacity: 1; }
+
+.law-msg__tools button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  font-size: 11.5px;
+  font-family: inherit;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.law-msg__tools button:hover:not(:disabled) {
+  background: var(--color-surface-2, rgba(0,0,0,0.03));
+  color: var(--color-text);
+}
+.law-msg__tools button:disabled { opacity: 0.45; cursor: default; }
+
+/* اقتراحاتُ المتابعة — مشتقّةٌ من المواد المسترجَعة، لا عبارات عامة */
+.law-chat__followups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 4px;
+  padding-inline-start: 40px;
+}
+.law-chat__followups-label {
+  font-size: 11.5px;
+  color: var(--color-text-tertiary, var(--color-text-secondary));
+  font-weight: 600;
+}
+
+.law-chat__stopped {
+  margin: 10px 0 0 0;
+  padding-inline-start: 40px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+/* تفصيلُ المرحلة: أسماءُ الأنظمة التي تُفحص فعلاً */
+.law-thinking__detail {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--color-text-tertiary, var(--color-text-secondary));
+  margin-top: 2px;
+}
+
+/* زرُّ الإيقاف مكانَ الإرسال أثناء البثّ */
+.law-chat__send--stop {
+  background: var(--color-danger, #b91c1c) !important;
+}
+.law-chat__send--stop:hover {
+  filter: brightness(1.08);
+}
+
+/* مؤشّرُ الكتابة: خطٌّ ينبض في آخر النصّ المبثوث */
+.law-msg--assistant .law-msg__content::after {
+  content: '';
+}

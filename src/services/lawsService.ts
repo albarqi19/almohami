@@ -8,7 +8,7 @@
 // GET    /api/v1/laws/chats/{id}          رسائل محادثة
 // DELETE /api/v1/laws/chats/{id}          حذف محادثة
 
-import { apiClient } from '../utils/api';
+import { apiClient, API_BASE_URL } from '../utils/api';
 import type { ApiResponse } from '../utils/api';
 
 // ═══════════════════════════════════════════════════════
@@ -57,6 +57,17 @@ export interface CitedArticle {
   chapter: string | null;
   article_number: string | null;
   text: string;
+  /** حالةُ المادّة النظامية (أصلية · معدلة · ملغاة · مضافة) */
+  legal_status?: string | null;
+  /**
+   * 🔴 نصُّ التعديل — والنافذُ فيه لا في المتن.
+   * عُرفُ هيئة الخبراء أن يبقى المتنُ نصَّ المرسوم الأصليّ وتُثبَت التعديلاتُ
+   * في حاشية: المادة 53 من نظام العمل تقول في متنها «تسعين يوماً» وفي حاشيتها
+   * «(مائة وثمانين) يوماً» بالمرسوم م/44 لعام 1446هـ.
+   */
+  amendment_note?: string | null;
+  /** حالةُ النظام نفسِه (ساري · لاغي · …) */
+  statute_status?: string | null;
 }
 
 export interface LawChatMessage {
@@ -84,6 +95,8 @@ export interface LawChatAnswer {
     content: string;
     cited_articles: CitedArticle[];
     no_match: boolean;
+    /** أسئلةُ متابعةٍ مشتقّةٌ من المواد المسترجَعة نفسِها — لا عبارات عامة */
+    suggestions?: string[];
     created_at: string;
   };
 }
@@ -136,4 +149,110 @@ export class LawsService {
     const res = await apiClient.delete<ApiResponse>(`/laws/chats/${id}`);
     if (!res.success) throw new Error(res.message || 'فشل حذف المحادثة');
   }
+}
+
+// ═══════════════════════════════════════════════════════
+//  البثّ الحيّ (SSE)
+// ═══════════════════════════════════════════════════════
+
+/** حدثُ مرحلةٍ يصل قبل الحروف — بأسماء الأنظمة التي تُفحص فعلاً */
+export interface LawChatStage {
+  stage: string;
+  label: string;
+  detail: string | null;
+}
+
+export interface LawChatStreamHandlers {
+  onStage?: (s: LawChatStage) => void;
+  onToken?: (t: string) => void;
+  onDone?: (answer: LawChatAnswer) => void;
+  onError?: (message: string) => void;
+}
+
+/**
+ * سؤالٌ ببثٍّ حيّ — الحروفُ تصل أوّلاً بأوّل بدل سقوط الإجابة دفعةً.
+ *
+ * 🔑 `fetch` لا `EventSource`: الأخيرةُ لا تُرسل إلا GET ولا تحمل ترويسةَ
+ * `Authorization`، ومسارُنا POST مُصادَق. فالقراءةُ يدويّةٌ من الجسم.
+ *
+ * 🩸 والحدثُ قد يصل **مقطوعاً في أيّ موضع** — حتى في منتصف حرفٍ عربيٍّ متعدّدِ
+ * البايتات. لذلك `TextDecoder({stream:true})` الذي يحتفظ بالبايتات الناقصة،
+ * ومخزنٌ نصّيٌّ لا يُقطَع إلا عند فاصل الأحداث `\n\n`.
+ *
+ * @returns دالّةُ إيقافٍ تقطع البثّ (زرّ «إيقاف»)
+ */
+export function streamLawChat(
+  question: string,
+  conversationId: number | null | undefined,
+  handlers: LawChatStreamHandlers,
+): () => void {
+  const controller = new AbortController();
+  const token = localStorage.getItem('authToken');
+
+  (async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/laws/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ question, conversation_id: conversationId ?? undefined }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok || !res.body) {
+        // 🩸 الفشلُ قبل بدء البثّ يأتي رمزَ حالةٍ وجسمَ JSON عاديّ
+        let message = 'تعذّر إرسال السؤال';
+        try {
+          const body: { message?: string; errors?: Record<string, string[]> } = await res.json();
+          const firstFieldError = body?.errors ? Object.values(body.errors)[0]?.[0] : undefined;
+          message = body?.message || firstFieldError || message;
+        } catch { /* جسمٌ غير JSON — تُبقى الرسالةُ العامة */ }
+        handlers.onError?.(message);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        let sep: number;
+        while ((sep = buffer.indexOf('\n\n')) !== -1) {
+          const block = buffer.slice(0, sep);
+          buffer = buffer.slice(sep + 2);
+
+          let event = 'message';
+          let data = '';
+          for (const line of block.split('\n')) {
+            if (line.startsWith('event:')) event = line.slice(6).trim();
+            else if (line.startsWith('data:')) data += line.slice(5).trim();
+          }
+          if (!data) continue;
+
+          let payload: any;
+          try { payload = JSON.parse(data); } catch { continue; }
+
+          if (event === 'stage') handlers.onStage?.(payload as LawChatStage);
+          else if (event === 'token') handlers.onToken?.(String(payload.t ?? ''));
+          else if (event === 'done') handlers.onDone?.(payload as LawChatAnswer);
+          else if (event === 'error') handlers.onError?.(String(payload.message ?? 'تعذّر توليد الإجابة'));
+        }
+      }
+    } catch (e: any) {
+      // الإيقافُ المتعمَّد ليس خطأً يُعرض
+      if (e?.name !== 'AbortError') {
+        handlers.onError?.(e?.message || 'انقطع الاتصال أثناء التوليد');
+      }
+    }
+  })();
+
+  return () => controller.abort();
 }
