@@ -3,7 +3,7 @@ import {
   BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature,
   TrendingUp, Bell, Settings, ClipboardList, BarChart3, FolderUp, QrCode, Lightbulb,
   Landmark, AlarmClock, Archive, UserCog, Trash2, Inbox, CalendarOff, IdCard,
-  Fingerprint, Wallet, FileSpreadsheet, HandCoins,
+  Fingerprint, Wallet, FileSpreadsheet, HandCoins, PenLine,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -26,7 +26,7 @@ export interface SidebarItem {
    * بوّابة ميزة — تُخفي العنصر تماماً حتى تكون الميزة متاحة للمنشأة.
    * 'zatca' يُقرأ من useZatcaFeature() (context)، و'hr'/'email_intake' من user.tenant.*_enabled — داخل ClickUpSidebar (لا hook هنا، هذا ملف بيانات).
    */
-  featureGate?: 'zatca' | 'hr' | 'hr_payroll' | 'email_intake' | 'establishment_portal';
+  featureGate?: 'zatca' | 'hr' | 'hr_payroll' | 'email_intake' | 'establishment_portal' | 'draft_room';
   /** شارة نصية صغيرة بجوار الاسم (مثل "مؤقتة" لميزة تجريبية). */
   badge?: string;
 }
@@ -67,6 +67,9 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: ClipboardList, label: 'الطلبات الإدارية', path: '/admin/requests', permission: 'cases.view' },
   { icon: ShieldCheck, label: 'الاستعلام والتحقق', path: '/wathq', any: ['cases.view'] },
   { icon: Landmark, label: 'الأنظمة', path: '/laws', any: ['cases.view'] },
+  // «غرفة الصياغة» — بوّابتان: علَمُ المكتب (مطفأٌ افتراضياً) وصلاحيةٌ مستقلّة.
+  // كلتاهما إلزاميّة: بندُ قائمةٍ يَعِد بما يردّه الخادمُ 403 هو عينُ الفخّ.
+  { icon: PenLine, label: 'غرفة الصياغة', path: '/draft-room', permission: 'memos.workspace.use', featureGate: 'draft_room', badge: 'جديد' },
   // [P4·UX-01] وحدة موحّدة بدل خمسة عناصر (العقود/قوالب العقود/الفواتير/المدفوعات/التحصيل).
   // any: يمنح المحامي وصول تبويب العقود حتى لو لم تكن له billing.view (التبويبات تُحرَس داخلياً — UX-07).
   { icon: FileSignature, label: 'العقود والمالية', path: '/finance', any: ['billing.view', 'contracts.view'] },

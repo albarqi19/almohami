@@ -171,6 +171,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
         if (item.featureGate === 'hr_payroll' && !user?.tenant?.hr_payroll_enabled) return false;
         if (item.featureGate === 'email_intake' && !user?.tenant?.email_intake_enabled) return false;
         if (item.featureGate === 'establishment_portal' && !user?.tenant?.establishment_portal_enabled) return false;
+        if (item.featureGate === 'draft_room' && !user?.tenant?.draft_room_enabled) return false;
 
         if (isSuperAdmin) return true;
 

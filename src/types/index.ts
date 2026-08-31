@@ -41,6 +41,10 @@ export interface User {
     session_copilot_enabled?: boolean;
     email_intake_enabled?: boolean;
     establishment_portal_enabled?: boolean;
+    /** «غرفة الصياغة» — إطلاقٌ تدريجيّ، افتراضُه مطفأ. */
+    draft_room_enabled?: boolean;
+    /** علَمٌ ثانٍ منفصل: قراءةُ الصور بنموذج رؤية — قرارُ خصوصيّةٍ لا يُشتقّ من الأول. */
+    draft_room_vision_enabled?: boolean;
     [key: string]: any;
   };
 }

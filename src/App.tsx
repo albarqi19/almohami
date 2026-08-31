@@ -88,6 +88,8 @@ const AdminRequests = lazyWithRetry(() => import('./pages/AdminRequests'));
 const Feedback = lazyWithRetry(() => import('./pages/Feedback'));
 const WathqInquiryPage = lazyWithRetry(() => import('./pages/WathqInquiry'));
 const LawsPage = lazyWithRetry(() => import('./pages/laws/LawsPage'));
+const DraftRoomIndexPage = lazyWithRetry(() => import('./pages/draftroom/DraftRoomIndexPage'));
+const DraftRoomPage = lazyWithRetry(() => import('./pages/draftroom/DraftRoomPage'));
 const CorrespondenceRegisterPage = lazyWithRetry(() => import('./pages/CorrespondenceRegisterPage'));
 const IntakeRequestsPage = lazyWithRetry(() => import('./pages/IntakeRequestsPage'));
 const MemoApprovals = lazyWithRetry(() => import('./pages/MemoApprovals'));
@@ -530,6 +532,17 @@ function App() {
               <Route path="laws" element={
                 <ProtectedRoute requiredPermission="cases.view" denyClient>
                   <LawsPage />
+                </ProtectedRoute>
+              } />
+              {/* «غرفة الصياغة» — خلف draft_room_enabled (الباك يفرضه أيضاً بـEnsureDraftRoomEnabled) */}
+              <Route path="draft-room" element={
+                <ProtectedRoute requiredPermission="memos.workspace.use" denyClient>
+                  <DraftRoomIndexPage />
+                </ProtectedRoute>
+              } />
+              <Route path="draft-room/:id" element={
+                <ProtectedRoute requiredPermission="memos.workspace.use" denyClient>
+                  <DraftRoomPage />
                 </ProtectedRoute>
               } />
               <Route path="correspondence" element={

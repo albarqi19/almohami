@@ -30,6 +30,7 @@ import './letterhead-settings.css';
 import './notebook-widget.css';
 import './law-search-modal.css';
 import './precedent-modal.css';
+import './draft-room.css';
 import './memo-engine-result.css';
 import './lawyer-tool-result.css';
 import './case-law-notes-widget.css';
