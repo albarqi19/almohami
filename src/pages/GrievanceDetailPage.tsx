@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useState, useEffect, useMemo, Fragment } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   FileText,
@@ -37,6 +37,21 @@ import { DocumentService } from '../services/documentService';
 import { TaskService } from '../services/taskService';
 import type { Case, GrievanceDetail, GrievanceParty, GrievanceSession, GrievanceMinute, GrievanceMemo } from '../types';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (case-detail-page.css + bankruptcy-detail.css)
+
+// نتيجة الحكم كما يستخلصها تحليل الذكاء (cases.outcome)
+const OUTCOME_LABELS: Record<string, string> = {
+  won: 'كسب',
+  lost: 'خسارة',
+  settled: 'صلح',
+  dismissed: 'رفض الدعوى',
+  appealed: 'مستأنَف',
+};
+
+const CONFIDENCE_LABELS: Record<string, string> = {
+  high: 'عالية',
+  medium: 'متوسطة',
+  low: 'منخفضة',
+};
 
 const partyRoleLabel: Record<string, string> = {
   plaintiff: 'مدعٍ',
@@ -95,6 +110,7 @@ const isSessionUpcoming = (s: GrievanceSession): boolean => {
 
 export default function GrievanceDetailPage() {
   const { caseId } = useParams<{ caseId: string }>();
+  const navigate = useNavigate();
 
   const [anchorCase, setAnchorCase] = useState<Case | null>(null);
   const [data, setData] = useState<GrievanceDetail | null>(null);
@@ -174,7 +190,7 @@ export default function GrievanceDetailPage() {
     );
   }
 
-  const { case: anchor, request } = data;
+  const { case: anchor, request, degrees } = data;
   const caseIdNum = Number(anchor.id);
   const title = anchorCase?.title || anchor.title || 'دعوى إدارية';
   const clientName = anchor.client_name || anchorCase?.client_name || '';
@@ -192,6 +208,9 @@ export default function GrievanceDetailPage() {
     { label: 'رقم قيد الدعوى', value: request.register_no },
     { label: 'تاريخ قيد الدعوى', value: request.register_date_hijri },
     { label: 'نوع الدعوى', value: request.case_type },
+    // معين استحدثت الرقم الموحّد بديلاً معلناً عن رقم الدعوى — نعرضهما معاً
+    // لأن المكاتب تبحث بالقديم والمحاكم تخاطبها بالموحّد.
+    { label: 'رقم الدعوى الموحّد', value: request.unified_case_no },
     { label: 'رقم الدعوى', value: request.case_no },
     { label: 'تاريخ الدعوى', value: request.case_date_hijri },
     { label: 'اسم المحكمة', value: request.court },
@@ -315,6 +334,68 @@ export default function GrievanceDetailPage() {
                 <ExternalLink size={14} />
                 فتح في معين
               </a>
+            </div>
+          )}
+
+          {/* سلسلة درجات التقاضي — معين توحّد الدرجات تحت رقمٍ موحّد، والرائد
+              يخزّن كلَّ درجةٍ ملفّاً؛ فنجمعها هنا في العرض. تظهر عند درجتين فأكثر. */}
+          {degrees && degrees.length > 1 && (
+            <div className="degree-chain">
+              <div className="degree-chain__head">
+                <div className="degree-chain__title">
+                  <Scale size={15} />
+                  درجات التقاضي ({degrees.length})
+                </div>
+                {request.unified_case_no && (
+                  <div className="degree-chain__unified">
+                    الرقم الموحّد {request.unified_case_no}
+                  </div>
+                )}
+              </div>
+              <div className="degree-chain__track">
+                {degrees.map((d, i) => (
+                  <Fragment key={d.id}>
+                    {i > 0 && <div className="degree-chain__link" aria-hidden="true" />}
+                    <button
+                      type="button"
+                      className={`degree-node${d.is_current ? ' degree-node--current' : ''}`}
+                      onClick={() => { if (!d.is_current) navigate(`/grievance/${d.case_id}`); }}
+                      aria-current={d.is_current ? 'true' : undefined}
+                      title={d.is_current ? 'الدرجة المعروضة' : 'انتقل إلى هذه الدرجة'}
+                    >
+                      <div className="degree-node__top">
+                        <span className="degree-node__name">{d.degree || 'درجة'}</span>
+                        {d.is_primary && <span className="degree-node__primary">الأساسية</span>}
+                      </div>
+                      {d.court && <div className="degree-node__court">{d.court}</div>}
+
+                      <div className="degree-node__meta">
+                        {d.case_status && (
+                          <span className={`degree-node__status${/مفصول/.test(d.case_status) ? ' degree-node__status--decided' : ' degree-node__status--pending'}`}>
+                            {d.case_status}
+                          </span>
+                        )}
+                        {/* صفة العميل في هذه الدرجة — تنقلب حين يستأنف الخصم */}
+                        {d.client_role && partyRoleLabel[d.client_role] && (
+                          <span className="degree-node__role">{partyRoleLabel[d.client_role]}</span>
+                        )}
+                      </div>
+
+                      {d.outcome && OUTCOME_LABELS[d.outcome] && (
+                        <div className={`degree-node__outcome degree-node__outcome--${d.outcome}`}>
+                          {OUTCOME_LABELS[d.outcome]}
+                        </div>
+                      )}
+
+                      <div className="degree-node__counts">
+                        <span><b>{d.counts.sessions}</b> جلسة</span>
+                        <span><b>{d.counts.rulings}</b> حكم</span>
+                        <span><b>{d.counts.memos}</b> مذكّرة</span>
+                      </div>
+                    </button>
+                  </Fragment>
+                ))}
+              </div>
             </div>
           )}
 
@@ -676,6 +757,64 @@ export default function GrievanceDetailPage() {
             </div>
           </div>
 
+          {/* نتيجة القضية — تحليل الحكم بالذكاء. يظهر فقط بعد صدور حكم وتحليله. */}
+          {anchor.outcome && (
+            <div className="case-card">
+              <div className="case-card__header">
+                <div className="case-card__title">
+                  <Gavel size={16} />
+                  نتيجة القضية
+                </div>
+              </div>
+              <div className="case-card__content case-card__content--compact">
+                <div className="case-info-row">
+                  <div className="case-info-row__icon"><Scale size={14} /></div>
+                  <div className="case-info-row__content">
+                    <div className="case-info-row__label">
+                      الحكم{anchor.outcome.source === 'manual' ? ' (محدَّد يدوياً)' : ''}
+                    </div>
+                    <div className="case-info-row__value">
+                      {OUTCOME_LABELS[anchor.outcome.value] || anchor.outcome.value}
+                      {anchor.outcome.is_partial ? ' — جزئي' : ''}
+                      {anchor.outcome.is_appealed ? ' · مستأنَف' : ''}
+                    </div>
+                  </div>
+                </div>
+                {anchor.outcome.confidence && anchor.outcome.source === 'ai' && (
+                  <div className="case-info-row">
+                    <div className="case-info-row__icon"><AlertCircle size={14} /></div>
+                    <div className="case-info-row__content">
+                      <div className="case-info-row__label">درجة الثقة</div>
+                      <div className="case-info-row__value">
+                        {CONFIDENCE_LABELS[anchor.outcome.confidence] || anchor.outcome.confidence}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {anchor.outcome.summary && (
+                  <div className="case-info-row">
+                    <div className="case-info-row__icon"><ScrollText size={14} /></div>
+                    <div className="case-info-row__content">
+                      <div className="case-info-row__label">الخلاصة</div>
+                      <div className="case-info-row__value">{anchor.outcome.summary}</div>
+                    </div>
+                  </div>
+                )}
+                {anchor.outcome.role_conflict && (
+                  <div className="case-info-row">
+                    <div className="case-info-row__icon"><AlertCircle size={14} /></div>
+                    <div className="case-info-row__content">
+                      <div className="case-info-row__label">تنبيه</div>
+                      <div className="case-info-row__value">
+                        صفة العميل في الحكم لا تطابق المسجَّلة — راجِعها قبل الاعتماد على النتيجة.
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* العميل والخصم */}
           {(clientName || anchor.opponent_name) && (
             <div className="case-card">
@@ -757,6 +896,18 @@ export default function GrievanceDetailPage() {
                   <div className="case-info-row__value">{anchor.file_number}</div>
                 </div>
               </div>
+              {request.unified_case_no && (
+                <div className="case-info-row">
+                  <div className="case-info-row__icon"><Hash size={14} /></div>
+                  <div className="case-info-row__content">
+                    <div className="case-info-row__label">رقم الدعوى الموحّد</div>
+                    <div className="case-info-row__value">
+                      {request.unified_case_no}
+                      {request.case_degree ? ` · ${request.case_degree}` : ''}
+                    </div>
+                  </div>
+                </div>
+              )}
               {request.case_no && (
                 <div className="case-info-row">
                   <div className="case-info-row__icon"><Hash size={14} /></div>

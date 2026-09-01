@@ -550,6 +550,12 @@ export interface GrievanceRequest {
   object_key: string;
   vals_token?: string;
   case_no?: string;
+  // معرّفات معين الجديدة (2026-08): الرقم الموحّد يتبع القضية عبر الدرجات
+  unified_case_no?: string;
+  old_case_no?: string;
+  moeen_case_id?: string;
+  case_degree?: string;
+  division_id?: string;
   case_year?: string;
   case_date_hijri?: string;
   register_no?: string;
@@ -594,8 +600,44 @@ export interface GrievanceDetail {
     opponent_name?: string | null;
     is_grievance: boolean;
     lawyers?: { id: number; name: string }[];
+    // نتيجة القضية من تحليل الحكم بالذكاء — null إن لم يُحلَّل بعد
+    outcome?: {
+      value: 'won' | 'lost' | 'settled' | 'dismissed' | 'appealed';
+      confidence?: 'low' | 'medium' | 'high' | null;
+      source?: 'ai' | 'manual' | null;
+      is_partial: boolean;
+      is_appealed: boolean;
+      detected_at?: string | null;
+      summary?: string | null;
+      reasoning?: string | null;
+      client_position?: string | null;
+      role_conflict: boolean;
+    } | null;
   };
   request: GrievanceRequest;
+  /**
+   * سلسلة درجات النزاع تحت الرقم الموحّد — null إن لم يُزامَن بعد أو كانت درجةً واحدة.
+   * المعتمَدة مشتقّةٌ من أدنى درجة، والصفة تنقلب بين الدرجات.
+   */
+  degrees?: {
+    id: number;
+    case_id: number;
+    degree?: string | null;
+    degree_order?: number | null;
+    court?: string | null;
+    circuit?: string | null;
+    case_no?: string | null;
+    case_status?: string | null;
+    next_session_date_hijri?: string | null;
+    ruling_date_text?: string | null;
+    synced_at?: string | null;
+    is_current: boolean;
+    is_primary: boolean;
+    outcome?: 'won' | 'lost' | 'settled' | 'dismissed' | 'appealed' | null;
+    outcome_confidence?: 'low' | 'medium' | 'high' | null;
+    client_role?: string | null;
+    counts: { sessions: number; rulings: number; memos: number };
+  }[] | null;
 }
 
 // Case Session - جلسة القضية

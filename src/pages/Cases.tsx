@@ -1114,7 +1114,7 @@ const Cases: React.FC = () => {
 						<Search size={16} />
 						<input
 							type="text"
-							placeholder="بحث بالرقم أو اسم القضية أو العميل..."
+							placeholder="بحث بالرقم أو الرقم الموحّد أو اسم القضية أو العميل..."
 							value={searchTerm}
 							onChange={(e) => setSearchTerm(e.target.value)}
 						/>

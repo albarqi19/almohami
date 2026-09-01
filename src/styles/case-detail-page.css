@@ -1890,3 +1890,197 @@ body.dark .case-no-billing {
     background: color-mix(in srgb, var(--law-gold, #B8860B) 14%, transparent);
     border: 1px solid color-mix(in srgb, var(--law-gold, #B8860B) 30%, transparent);
 }
+
+/* ====================================================
+   سلسلة درجات التقاضي — ديوان المظالم
+   نزاعٌ واحدٌ تحت رقمٍ موحّد، ودرجاتُه محطّاتٌ عليه.
+   مسطّح: بلا ظلال ولا توهّج، والتمييز باللون والوزن لا بالبروز.
+   ==================================================== */
+
+.degree-chain {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--dashboard-card);
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.degree-chain__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--quiet-gray-50);
+}
+
+.degree-chain__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--law-navy);
+}
+
+/* الرقم الموحّد — هو هوية النزاع، فيُعرض بأرقام مصطفّة */
+.degree-chain__unified {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--quiet-gray-600);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+}
+
+.degree-chain__track {
+    display: flex;
+    gap: 0;
+    padding: 14px 16px;
+    overflow-x: auto;
+}
+
+/* الوصلة بين المحطّات — خطٌّ رفيع لا سهمٌ صاخب */
+.degree-chain__link {
+    flex: 0 0 22px;
+    align-self: center;
+    height: 1px;
+    background: var(--quiet-gray-300);
+    margin-top: 2px;
+}
+
+.degree-node {
+    flex: 0 0 auto;
+    min-width: 168px;
+    max-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--dashboard-card);
+    cursor: pointer;
+    text-align: right;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.degree-node:hover {
+    border-color: var(--law-navy);
+    background: var(--law-navy-light);
+}
+
+.degree-node:focus-visible {
+    outline: 2px solid var(--law-navy);
+    outline-offset: 2px;
+}
+
+/* الدرجة المفتوحة — تُملأ لا تُبرَز */
+.degree-node--current {
+    border-color: var(--law-navy);
+    background: var(--law-navy-light);
+}
+
+.degree-node--current:hover {
+    background: var(--law-navy-hover);
+}
+
+.degree-node__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.degree-node__name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--quiet-gray-900);
+}
+
+.degree-node--current .degree-node__name {
+    color: var(--law-navy);
+}
+
+/* المرساة المعتمَدة — وسمٌ ذهبيٌّ صغير، وهي التي يُعلَّق عليها العقد والفاتورة */
+.degree-node__primary {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: var(--law-gold);
+    background: var(--law-gold-light);
+    white-space: nowrap;
+}
+
+.degree-node__court {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--quiet-gray-600);
+}
+
+.degree-node__status {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--quiet-gray-700);
+}
+
+.degree-node__status--decided { color: var(--status-green); }
+.degree-node__status--pending { color: var(--status-blue); }
+
+.degree-node__counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--quiet-gray-200);
+    font-size: 11px;
+    color: var(--quiet-gray-600);
+    font-variant-numeric: tabular-nums;
+}
+
+.degree-node__counts span { white-space: nowrap; }
+
+.degree-node__counts b {
+    font-weight: 700;
+    color: var(--quiet-gray-800);
+}
+
+@media (max-width: 640px) {
+    .degree-node { min-width: 148px; }
+    .degree-chain__head { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
+
+/* صفّ الحالة والصفة داخل عقدة الدرجة */
+.degree-node__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* صفةُ العميل في هذه الدرجة — تنقلب حين يستأنف الخصم، فتُعرض في كلِّ محطّة */
+.degree-node__role {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: var(--quiet-gray-700);
+    background: var(--quiet-gray-100);
+    white-space: nowrap;
+}
+
+/* نتيجةُ الدرجة — أبرزُ ما يمسحه المحامي بعينه، فتأخذ لوناً دلالياً لا زخرفياً */
+.degree-node__outcome {
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+
+.degree-node__outcome--won       { color: var(--status-green);  background: var(--status-green-light); }
+.degree-node__outcome--lost      { color: var(--status-red);    background: var(--status-red-light); }
+.degree-node__outcome--settled   { color: var(--status-blue);   background: var(--status-blue-light); }
+.degree-node__outcome--dismissed { color: var(--status-orange); background: var(--status-orange-light); }
+.degree-node__outcome--appealed  { color: var(--status-purple); background: var(--status-purple-light); }
