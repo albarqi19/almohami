@@ -31,15 +31,112 @@ const THINKING_STEPS = [
   'أصوغ الإجابة المُسنَدة...',
 ];
 
-/** تنسيق نص الإجابة: تهريب HTML ثم **عريض** وأسطر — بلا مكتبة markdown كاملة */
+/** تهريبُ HTML — يسبق كلَّ شيء، فلا يصل وسمٌ من النموذج إلى الصفحة */
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** تنسيقٌ داخل السطر: **عريض** */
+function inline(text: string): string {
+  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+/** خلايا صفٍّ — مع إسقاط الفراغين الطرفيين الناتجين عن `|` أوّلاً وآخراً */
+function splitRow(line: string): string[] {
+  const t = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+
+  return t.split('|').map((c) => c.trim());
+}
+
+/**
+ * هل هذا سطرُ فاصلِ جدول؟ «| --- | ---: | :---: |»
+ *
+ * وهو العلامةُ الوحيدةُ التي تميّز جدولاً عن سطرٍ فيه شُرَطٌ عمودية.
+ */
+function isTableDivider(line: string): boolean {
+  const cells = splitRow(line);
+
+  return cells.length > 0 && cells.every((c) => /^:?-{2,}:?$/.test(c.trim()));
+}
+
+/**
+ * تحويلُ جداول Markdown إلى `<table>` حقيقيّ.
+ *
+ * 🔴 عيبٌ مرئيٌّ رصده تدقيقٌ خارجيٌّ وسمّاه «الأولوية 1»: بعد أن صار النموذجُ
+ *    يستجيب لطلب الجدول ويُنتجه بصيغةٍ سليمة، كان المُعرِضُ يعرضه **أنابيبَ
+ *    خاماً** على الشاشة:
+ *
+ *        | وجه المقارنة | المادة السابعة والسبعون | المادة الثامنون |
+ *        | ---: | ---: | ---: |
+ *
+ *    وحكمُ المدقّق دقيق: **«أسوأ من عدم إنتاج جدول أصلاً لأنه يبدو عطلاً»** —
+ *    فالعجزُ الصامت يُقرأ نقصاً في القدرة، وهذا يُقرأ كسراً في المنتج. وأسئلةُ
+ *    المقارنة من أكثر ما يسأله المحامي.
+ *
+ * 🔑 ولم تُضَف مكتبةُ markdown كاملة: المطلوبُ جداولُ GFM وحدَها، والتهريبُ يقع
+ *    **قبل** التحويل فيبقى الأمانُ كما هو، ولا تكبر الحزمةُ بمئة كيلوبايت
+ *    لأجل ميزةٍ واحدة.
+ */
+function renderTable(rows: string[]): string {
+  const head = splitRow(rows[0]);
+  const aligns = splitRow(rows[1]).map((c) => {
+    const t = c.trim();
+    if (t.startsWith(':') && t.endsWith(':')) return 'center';
+
+    // 🔑 «اليسار» في Markdown هو **بداية** السطر — وفي RTL بدايتُه يمين
+    return t.endsWith(':') && !t.startsWith(':') ? 'end' : 'start';
+  });
+
+  const cell = (c: string, i: number, tag: 'th' | 'td') =>
+    `<${tag} style="text-align:${aligns[i] ?? 'start'}">${inline(c)}</${tag}>`;
+
+  const body = rows.slice(2)
+    .map((r) => `<tr>${splitRow(r).map((c, i) => cell(c, i, 'td')).join('')}</tr>`)
+    .join('');
+
+  return '<div class="law-md-tablewrap"><table class="law-md-table">'
+    + `<thead><tr>${head.map((c, i) => cell(c, i, 'th')).join('')}</tr></thead>`
+    + `<tbody>${body}</tbody></table></div>`;
+}
+
+/** تنسيق نص الإجابة: تهريبٌ ثمّ جداولُ GFM ثمّ **عريض** وأسطر */
 function renderAnswer(text: string): string {
-  const escaped = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-  return escaped
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br/>');
+  const lines = escapeHtml(text).split('\n');
+  const out: string[] = [];
+  let buffer: string[] = [];
+
+  const flushText = () => {
+    if (buffer.length) {
+      out.push(inline(buffer.join('\n')).replace(/\n/g, '<br/>'));
+      buffer = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const startsTable = lines[i].includes('|')
+      && i + 1 < lines.length
+      && isTableDivider(lines[i + 1]);
+
+    if (!startsTable) {
+      buffer.push(lines[i]);
+      continue;
+    }
+
+    // جدولٌ يبدأ هنا — يُلتقط حتى أوّل سطرٍ لا يحمل `|`
+    flushText();
+    const rows = [lines[i], lines[i + 1]];
+    let j = i + 2;
+    while (j < lines.length && lines[j].includes('|') && lines[j].trim() !== '') {
+      rows.push(lines[j]);
+      j++;
+    }
+    out.push(renderTable(rows));
+    i = j - 1;
+  }
+
+  flushText();
+
+  return out.join('');
 }
 
 /**
@@ -69,6 +166,25 @@ function useCopy(): [boolean, (text: string) => void] {
 }
 
 /**
+ * متنُ الإجابة — محفوظُ النتيجة.
+ *
+ * 🔴 كان `renderAnswer(m.content)` يُنادى **داخل `.map()` مباشرةً**، و`displayed`
+ *    يُبنى من جديد مع كلِّ رمزٍ يصل. فكلُّ حدثِ بثٍّ كان يُعيد تحويلَ Markdown
+ *    لكامل الإجابة **ولكلِّ رسالةٍ سابقةٍ في المحادثة**، ثمّ يستبدل `innerHTML`
+ *    للكتلة كلّها — فيسقط تحديدُ النصّ ويقفز التمرير.
+ *
+ * 🔑 وهذا هو الشرطُ العمليُّ لتنعيم البثّ: تقطيعُ الدفقة إلى أجزاءٍ أصغر يضاعف
+ *    عددَ الأحداث، فبلا حفظِ النتيجة نستبدل «القفزات» بتلعثمٍ في الرسم. والحفظُ
+ *    على `content` وحدَه — فرسالةٌ لم يتغيّر نصُّها لا تُحوَّل مرّةً ثانية.
+ */
+const AnswerBody = React.memo<{ content: string }>(({ content }) => {
+  const html = useMemo(() => renderAnswer(content), [content]);
+
+  return <div className="law-msg__content" dangerouslySetInnerHTML={{ __html: html }} />;
+});
+AnswerBody.displayName = 'AnswerBody';
+
+/**
  * بطاقة مادة مُستشهَد بها — قابلة للفتح.
  *
  * 🔴 والحاشيةُ تُعرض هنا لأنّ **النافذَ فيها لا في المتن**: عُرفُ هيئة الخبراء أن
@@ -77,16 +193,59 @@ function useCopy(): [boolean, (text: string) => void] {
  * بالمرسوم م/44 لعام 1446هـ — ومحامٍ يقرأ المتنَ وحدَه يُفتي بمنسوخ.
  */
 const CitedCard: React.FC<{ cited: CitedArticle; onOpen: Props['onOpenArticle'] }> = ({ cited, onOpen }) => {
-  const [open, setOpen] = useState(false);
   const [copied, copy] = useCopy();
 
-  const amended = !!cited.amendment_note;
   const status = (cited.legal_status || '').trim();
   const repealed = status.includes('ملغا') || status.includes('منسوخ');
+
+  /*
+   * 🩸 شارةُ «معدَّلة» كانت مبنيّةً على **وجود الحاشية** لا على حالة المادة.
+   *    وقياسٌ على القاعدة: من 1,424 مادّةً حالتُها «معدلة» هناك **707 بلا
+   *    حاشيةٍ إطلاقاً** — فتخرج بطاقاتُها عاريةً من أيّ وسم، ويقرؤها المحامي
+   *    أصليّةً وهي منسوخةُ المتن. فالحالةُ تُقرأ من مصدرها.
+   */
+  const amendedStatus = status.includes('معدل') || status.includes('معدّل');
+
   // 🩸 حالةُ النظام نفسِه كانت تصل من الخادم ولا تُعرض في أي مكان:
   //    استشهادٌ من نظامٍ «لاغي» يظهر بلا تنبيهٍ إطلاقاً.
   const statuteStatus = (cited.statute_status || '').trim();
   const statuteRepealed = statuteStatus.includes('لاغ') || statuteStatus.includes('ملغ');
+
+  /*
+   * 🔴 وحالةٌ ثالثةٌ كانت تسقط صامتة: نظامٌ لا هو «ساري» ولا «لاغي» — سبعةُ
+   *    أنظمةٍ «جاري العمل عليها» وواحدٌ «ساري بعد مدة 180 يوم من تاريخ النشر»
+   *    وهو **نظام التنفيذ**، أكثرُ الأنظمة طَرْقاً. تُعرض حالتُها كما هي.
+   */
+  const statuteOdd = !statuteRepealed && statuteStatus !== '' && statuteStatus !== 'ساري';
+
+  /*
+   * 🔴 البطاقةُ كانت تعرض «نصُّ التعديل — وهو النافذ» ثمّ **أقدمَ** التعديلات
+   *    أوّلاً، والفاصلُ `||` ظاهرٌ حرفياً. فيقرأ المحامي في الجواب «مائة
+   *    وثمانون يوماً» ثمّ يفتح البطاقة ليتحقّق فيجد «تسعين» — والبطاقةُ هي
+   *    موضعُ التحقّق، فتناقضُها للجواب أسوأُ من غيابها.
+   *
+   * 🔑 والخادمُ يُرسل التعديلاتِ مفصولةً محسوبةَ الحال. وحارسُ التراجع يقسّم
+   *    بنفسه إن جاءت من خادمٍ أقدم — فلا يُطبع الخامُّ أبداً.
+   */
+  const amendments = cited.amendments?.length
+    ? cited.amendments
+    : (cited.amendment_note || '')
+      .split('||')
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .map((text, i, arr) => ({ text, state: null, on: null, latest: i === arr.length - 1 }));
+
+  const amended = amendments.length > 0;
+
+  // الأحدثُ أوّلاً، وما قبله تاريخٌ يُطوى
+  const current = amendments.find((a) => a.latest) ?? amendments[amendments.length - 1];
+  const earlier = amendments.filter((a) => a !== current);
+
+  /*
+   * 🩸 وكانت مطويّةً دائماً — حتى لمادّةٍ متنُها منسوخ. فالمحامي المستعجل يقرأ
+   *    اسمَ المادة ويمضي، والنافذُ خلف نقرةٍ لا يعلم أنّها هناك.
+   */
+  const [open, setOpen] = useState(repealed || amended);
 
   /** الاستشهادُ بصيغةٍ تُلصَق في مذكّرة مباشرةً */
   const citationText = `${cited.article_number || ''} من ${cited.statute_name}`.trim();
@@ -99,22 +258,38 @@ const CitedCard: React.FC<{ cited: CitedArticle; onOpen: Props['onOpenArticle'] 
         {cited.article_number && <span className="law-cited__number">{cited.article_number}</span>}
         {repealed && <span className="law-cited__flag law-cited__flag--danger">ملغاة</span>}
         {!repealed && statuteRepealed && <span className="law-cited__flag law-cited__flag--danger">نظام ملغى</span>}
-        {!repealed && !statuteRepealed && amended && <span className="law-cited__flag law-cited__flag--warn">معدَّلة</span>}
+        {!repealed && statuteOdd && <span className="law-cited__flag law-cited__flag--warn">{statuteStatus}</span>}
+        {!repealed && !statuteRepealed && (amended || amendedStatus) && (
+          <span className="law-cited__flag law-cited__flag--warn">معدَّلة</span>
+        )}
         <ChevronDown size={14} className="law-cited__chev" />
       </button>
       {open && (
         <div className="law-cited__body">
           {cited.chapter && <div className="law-cited__chapter">{cited.chapter}</div>}
-          <p>{cited.text}</p>
           {amended && (
             <div className="law-cited__amend">
               <div className="law-cited__amend-label">
                 <TriangleAlert size={12} />
-                نصُّ التعديل — وهو النافذ
+                {current.state === 'نافذ' && current.on
+                  ? `النصُّ النافذ — منذ ${current.on}`
+                  : current.state && current.on
+                    ? `${current.state} — ${current.on}`
+                    : 'نصُّ التعديل — وهو الأحدث'}
               </div>
-              <p>{cited.amendment_note}</p>
+              <p>{current.text}</p>
             </div>
           )}
+          {earlier.length > 0 && (
+            <details className="law-cited__earlier">
+              <summary>{`تعديلاتٌ سابقة (${earlier.length})`}</summary>
+              {earlier.map((a, i) => (
+                <p key={i}>{a.text}</p>
+              ))}
+            </details>
+          )}
+          <div className="law-cited__amend-label law-cited__amend-label--plain">المتنُ الأصليّ</div>
+          <p>{cited.text}</p>
           <div className="law-cited__actions">
             <button
               className="laws-link-btn laws-link-btn--primary"
@@ -184,6 +359,16 @@ const LawChat: React.FC<Props> = ({ onOpenArticle }) => {
   const [input, setInput] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
+  /**
+   * إجبارُ التمرير مرّةً واحدة — يُستهلك في أوّل تمريرٍ بعده.
+   *
+   * 🔴 تأكيدٌ خامسٌ من التدقيق: «أرسلت سؤالاً والصفحة في الأعلى؛ بقيت في
+   *    الأعلى طوال البثّ حتى اكتماله». والسببُ أنّ الحارسَ `nearBottom`
+   *    يحكم لحظةَ الإرسال أيضاً — وهو صوابٌ أثناء البثّ (فلا تُخطَف الشاشةُ
+   *    من قارئٍ صعد يراجع مادّة) وخطأٌ عند الإرسال: الإرسالُ فعلٌ متعمَّد،
+   *    والمحامي يريد أن يرى سؤالَه وجوابَه لا أن يبحث عنهما.
+   */
+  const forceScrollRef = useRef(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: conversations = [], isLoading: convsLoading } = useLawConversations();
@@ -232,14 +417,16 @@ const LawChat: React.FC<Props> = ({ onOpenArticle }) => {
     const el = threadRef.current;
     if (!el) return;
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 140;
-    if (nearBottom || displayed.length <= 2) {
+    if (forceScrollRef.current || nearBottom || displayed.length <= 2) {
+      forceScrollRef.current = false;
       el.scrollTo({ top: el.scrollHeight, behavior: chat.isStreaming ? 'auto' : 'smooth' });
     }
-  }, [displayed.length, chat.text, chat.isStreaming]);
+  }, [displayed.length, chat.text, chat.isStreaming, chat.question]);
 
   const submit = (text?: string) => {
     const question = (text ?? input).trim();
     if (question.length < 3 || chat.isStreaming) return;
+    forceScrollRef.current = true;
     setInput('');
     chat.send(question, conversationId, (answer) => {
       setConversationId(answer.conversation_id);
@@ -376,10 +563,7 @@ const LawChat: React.FC<Props> = ({ onOpenArticle }) => {
                 </div>
                 <div className="law-msg__bubble">
                   {m.role === 'assistant' ? (
-                    <div
-                      className="law-msg__content"
-                      dangerouslySetInnerHTML={{ __html: renderAnswer(m.content) }}
-                    />
+                    <AnswerBody content={m.content} />
                   ) : (
                     <div className="law-msg__content">{m.content}</div>
                   )}

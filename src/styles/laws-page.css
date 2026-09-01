@@ -1110,3 +1110,78 @@
 .law-msg--assistant .law-msg__content::after {
   content: '';
 }
+
+/* ═══════════════ جداولُ الإجابة ═══════════════
+ *
+ * 🔴 كان النموذجُ يُنتج جدولاً بصيغة Markdown سليمة والمُعرِضُ يعرضه أنابيبَ
+ *    `|` خاماً على الشاشة — «أسوأ من عدم إنتاج جدول أصلاً لأنه يبدو عطلاً».
+ *
+ * 🔑 والتمريرُ الأفقيُّ داخل الغلاف لا على الصفحة: جدولُ مقارنةٍ بثلاثة أعمدة
+ *    عريضةٍ كان سيمدّ الرسالةَ فيدفع المحادثةَ كلَّها أفقياً.
+ */
+.law-md-tablewrap {
+  overflow-x: auto;
+  margin: 12px 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.law-md-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 320px;
+  font-size: 0.92em;
+  line-height: 1.75;
+  background: var(--color-surface);
+}
+
+.law-md-table th,
+.law-md-table td {
+  padding: 9px 13px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+/* الفاصلُ الرأسيُّ بين الأعمدة — يبدأ من العمود الثاني في اتجاه القراءة */
+.law-md-table th + th,
+.law-md-table td + td { border-inline-start: 1px solid var(--color-border); }
+
+.law-md-table thead th {
+  background: var(--color-surface-subtle);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.law-md-table tbody tr:last-child td { border-bottom: 0; }
+.law-md-table tbody tr:hover { background: var(--color-surface-subtle); }
+
+/* التعديلاتُ السابقة — تاريخٌ يُطوى، لا قاعدةٌ يُفتى بها */
+.law-cited__earlier {
+  margin: 8px 0 4px;
+  font-size: 0.88em;
+  color: var(--color-text-secondary);
+}
+
+.law-cited__earlier summary {
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+  font-weight: 500;
+}
+
+.law-cited__earlier summary:hover { color: var(--color-text); }
+
+.law-cited__earlier p {
+  margin: 6px 0 0;
+  padding-inline-start: 10px;
+  border-inline-start: 2px solid var(--color-border);
+  white-space: pre-wrap;
+  opacity: 0.85;
+}
+
+/* لافتةٌ محايدةٌ للمتن الأصليّ — تميّزه عن الحاشية النافذة فوقه */
+.law-cited__amend-label--plain {
+  color: var(--color-text-secondary);
+  margin-top: 10px;
+}

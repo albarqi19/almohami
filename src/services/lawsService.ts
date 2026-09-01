@@ -68,6 +68,18 @@ export interface CitedArticle {
   amendment_note?: string | null;
   /** حالةُ النظام نفسِه (ساري · لاغي · …) */
   statute_status?: string | null;
+  /**
+   * تعديلاتُ المادّة مفصولةً ومحسوبةَ الحال في الخادم.
+   *
+   * 🔑 الحسابُ هناك لا هنا: الخادمُ وحدَه يملك تاريخَ اليوم ومنطقَ التقويم
+   *    الهجريّ. والواجهةُ تعرض ما حُكم به ولا تستنتج.
+   */
+  amendments?: Array<{
+    text: string;
+    state: string | null;
+    on: string | null;
+    latest: boolean;
+  }>;
 }
 
 export interface LawChatMessage {
