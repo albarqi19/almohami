@@ -1382,3 +1382,15 @@ body.dark .cases-bulk-bar {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+/* عدّاد النزاعات الإدارية بجوار عدّاد القضايا — معين توحّد الدرجات تحت رقمٍ موحّد،
+   فثلاثُ درجاتٍ نزاعٌ واحد. يظهر فقط حين يختلف الرقمان. */
+.cases-header-bar__disputes {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--quiet-gray-600);
+    background: var(--quiet-gray-100);
+    border-radius: 4px;
+    padding: 2px 8px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}

@@ -23,7 +23,7 @@ export interface CaseFilters {
 }
 
 /** paginator القضايا ومعه عدّاد المؤرشفة من جذر الردّ — للعرض «١٢٤ قضية · ٣١ مؤرشفة» */
-export type CasesPage = PaginatedResponse<Case> & { archived_count: number };
+export type CasesPage = PaginatedResponse<Case> & { archived_count: number; grievance_rows?: number; grievance_disputes?: number };
 
 export class CaseService {
   static async getCases(filters: CaseFilters = {}): Promise<CasesPage> {
@@ -38,11 +38,11 @@ export class CaseService {
     const queryString = params.toString();
     const endpoint = queryString ? `/cases?${queryString}` : '/cases';
 
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<Case>> & { archived_count?: number }>(endpoint);
+    const response = await apiClient.get<ApiResponse<PaginatedResponse<Case>> & { archived_count?: number; grievance_rows?: number; grievance_disputes?: number }>(endpoint);
 
     if (response.success && response.data) {
       // archived_count يصل في جذر الردّ لا داخل الـpaginator
-      return { ...response.data, archived_count: response.archived_count ?? 0 };
+      return { ...response.data, archived_count: response.archived_count ?? 0, grievance_rows: response.grievance_rows ?? 0, grievance_disputes: response.grievance_disputes ?? 0 };
     } else {
       throw new Error(response.message || 'فشل في جلب القضايا');
     }

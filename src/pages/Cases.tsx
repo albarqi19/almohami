@@ -205,6 +205,9 @@ const Cases: React.FC = () => {
 		return true;
 	});
 	// عدّاد المؤرشفة يأتي من الباك مع كل قائمة — لا يُحسب عميلياً من الصفحة المعروضة.
+	// درجاتُ التقاضي مقابل النزاعات في دعاوى المظالم — معين توحّد الدرجات تحت رقمٍ
+	// موحّد، والقائمة تعرض صفّاً لكلِّ درجة. نُظهر الرقمين ولا نُخفي صفّاً.
+	const [grievanceCounts, setGrievanceCounts] = useState<{ rows: number; disputes: number }>({ rows: 0, disputes: 0 });
 	const [archivedCount, setArchivedCount] = useState<number>(() => {
 		try {
 			const cached = localStorage.getItem(cacheKeyFor(DEFAULT_ARCHIVED));
@@ -395,6 +398,7 @@ const Cases: React.FC = () => {
 				total: response.total ?? data.length
 			};
 			const archivedTotal = response.archived_count ?? 0;
+			setGrievanceCounts({ rows: response.grievance_rows ?? 0, disputes: response.grievance_disputes ?? 0 });
 
 			setCases(data);
 			setPagination(paginationData);
@@ -1091,6 +1095,16 @@ const Cases: React.FC = () => {
 						<Scale size={20} />
 						<span>القضايا</span>
 						<span className="cases-header-bar__count">{stats.total}</span>
+						{/* النزاعات الإدارية: معين توحّد الدرجات تحت رقمٍ موحّد، فثلاثُ درجاتٍ
+						    نزاعٌ واحد. نُظهر الرقمين معاً — الإخفاء يُقرأ فقداناً للبيانات. */}
+						{grievanceCounts.disputes > 0 && grievanceCounts.disputes < grievanceCounts.rows && (
+							<span
+								className="cases-header-bar__disputes"
+								title={`${grievanceCounts.rows} درجة تقاضٍ في دعاوى ديوان المظالم تعود إلى ${grievanceCounts.disputes} نزاعاً`}
+							>
+								منها {grievanceCounts.rows} درجة لـ{grievanceCounts.disputes} نزاعاً
+							</span>
+						)}
 					</div>
 					<div className="cases-header-bar__stats" data-tour="cases-stats">
 						<span className="stat-pill stat-pill--active">
