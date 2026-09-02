@@ -963,9 +963,8 @@ const CaseStationPage: React.FC<Props> = ({ prefs, onPrefsChange, onSwitchToClas
         {nextSession && <span><Video />الجلسة القادمة {station?.clock?.days_label}{nextSession.method ? ` · ${nextSession.method}` : ''}</span>}
         {station?.stage.source === 'ai' && <span><Sparkles />مسار القضية محلّل بالذكاء</span>}
         <span className="cst-status__end">
-          <button type="button" onClick={() => openFeedback('rate')}><Star size={12} style={{ verticalAlign: 'middle', marginInlineEnd: 3 }} />رأيك في التصميم</button>
-          <span style={{ margin: '0 8px', color: 'var(--cst-line)' }}>|</span>
-          <button type="button" onClick={() => openFeedback('leaving')}><ArrowLeftRight size={12} style={{ verticalAlign: 'middle', marginInlineEnd: 3 }} />التصميم السابق</button>
+          <button type="button" className="cst-status__pill cst-status__pill--gold" onClick={() => openFeedback('rate')} title="قيّم التصميم الجديد أو اكتب ملاحظتك"><Star size={12} />رأيك في التصميم</button>
+          <button type="button" className="cst-status__pill" onClick={() => openFeedback('leaving')} title="الرجوع إلى التصميم السابق لصفحة القضية"><ArrowLeftRight size={12} />التصميم السابق</button>
         </span>
       </footer>
 

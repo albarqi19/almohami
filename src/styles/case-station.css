@@ -8,7 +8,8 @@
    light/dark) عبر طبقة وسيطة --cst-* تُعرَّف هنا فقط.
    ====================================================== */
 
-.cst {
+.cst,
+.cst-modal-overlay {
     /* أسطح */
     --cst-ground: var(--dashboard-bg);
     --cst-surface: var(--dashboard-card);
@@ -40,7 +41,9 @@
     --cst-red-soft: var(--status-red-light);
     --cst-purple: var(--status-purple);
     --cst-purple-soft: var(--status-purple-light);
+}
 
+.cst {
     height: 100%;
     min-height: 0;
     display: flex;
@@ -54,7 +57,8 @@
 }
 
 /* الوضع الداكن: الكحلي كنصٍّ يحتاج درجةً أفتح، والذهب أوضح قليلاً */
-body.dark .cst {
+body.dark .cst,
+body.dark .cst-modal-overlay {
     --cst-navy-ink: #8FB0E0;
     --cst-navy-soft: rgba(143, 176, 224, 0.12);
     --cst-gold: #D1A02B;
@@ -660,7 +664,7 @@ body.dark .cst {
 .cst-status span { display: inline-flex; align-items: center; gap: 5px; }
 .cst-status svg { width: 12px; height: 12px; }
 .cst-status .is-ok { color: var(--cst-green); }
-.cst-status__end { margin-inline-start: auto; }
+.cst-status__end { margin-inline-start: auto; display: inline-flex; gap: 6px; }
 .cst-status button, .cst-status a {
     border: none;
     background: none;
@@ -672,6 +676,26 @@ body.dark .cst {
     text-decoration: none;
 }
 .cst-status button:hover, .cst-status a:hover { text-decoration: underline; }
+/* زرّا التقييم والرجوع: رقاقتان صغيرتان متناسقتان — الذهب للرأي، والحد الرمادي للرجوع */
+/* بصنفَين عمداً: قاعدة `.cst-status button` (صنف + عنصر) أعلى تخصيصاً من صنفٍ واحد وكانت تصفّر الحد والحشوة */
+.cst-status .cst-status__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 9px;
+    border: 1px solid var(--cst-line);
+    border-radius: 999px;
+    background: var(--cst-surface);
+    color: var(--cst-muted);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.cst-status .cst-status__pill:hover { border-color: var(--cst-navy-ink); color: var(--cst-navy-ink); text-decoration: none; }
+.cst-status .cst-status__pill--gold { border-color: var(--cst-gold); color: var(--cst-gold); }
+.cst-status .cst-status__pill--gold:hover { background: var(--cst-gold-soft); border-color: var(--cst-gold); color: var(--cst-gold); }
+.cst-status__pill svg { width: 12px; height: 12px; }
 
 /* ── زر التقييم العائم ── */
 .cst-fab {
@@ -734,12 +758,13 @@ body.dark .cst {
     background: var(--dashboard-bg);
 }
 .cst-modal__foot { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px 18px; }
-.cst-modal__foot .cst-btn { height: 36px; padding: 0 14px; font-size: 13px; }
+.cst-modal__foot .cst-btn { height: 36px; padding: 0 14px; font-size: 13px; font-weight: 600; }
 .cst-modal__foot .cst-spacer { flex: 1; }
-.cst-modal__foot .cst-btn--primary { background: var(--law-navy); border-color: var(--law-navy); color: #fff; }
-.cst-modal__foot .cst-btn { border-color: var(--color-border); background: var(--dashboard-card); color: var(--text-body); }
-.cst-modal__foot .cst-btn--primary { color: #fff; }
-.cst-modal__foot .cst-btn--quiet { border-color: transparent; color: var(--text-muted); }
+/* الزر الأساسي بلون الهوية في الثيمات الأربعة — التخصيص بصنفَين كي لا تغلبه قاعدة .cst-btn العامة */
+.cst-modal__foot .cst-btn.cst-btn--primary { background: var(--cst-navy); border-color: var(--cst-navy); color: var(--cst-on-navy); }
+.cst-modal__foot .cst-btn.cst-btn--primary:hover { background: var(--cst-navy-2); border-color: var(--cst-navy-2); }
+.cst-modal__foot .cst-btn.cst-btn--quiet { border-color: transparent; background: transparent; color: var(--cst-muted); }
+.cst-modal__foot .cst-btn.cst-btn--quiet:hover { background: var(--cst-band); color: var(--cst-ink); }
 
 .cst-stars { display: flex; gap: 6px; margin: 4px 0 10px; direction: ltr; justify-content: flex-end; }
 .cst-star-btn { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--dashboard-card); color: var(--quiet-gray-300); cursor: pointer; }
