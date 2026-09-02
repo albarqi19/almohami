@@ -39,7 +39,8 @@ import TenantLandingPage from './pages/TenantLandingPage';
 const Layout = lazyWithRetry(() => import('./components/Layout'));
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
 const Cases = lazyWithRetry(() => import('./pages/Cases'));
-const CaseDetailPage = lazyWithRetry(() => import('./pages/CaseDetailPage'));
+// مبدّل تصميم صفحة القضية: الكلاسيكي أو «محطة القضية» حسب تفضيل المستخدم
+const CaseDetailSwitch = lazyWithRetry(() => import('./pages/CaseDetailSwitch'));
 const BankruptcyDetailPage = lazyWithRetry(() => import('./pages/BankruptcyDetailPage'));
 const ReconciliationDetailPage = lazyWithRetry(() => import('./pages/ReconciliationDetailPage'));
 const GrievanceDetailPage = lazyWithRetry(() => import('./pages/GrievanceDetailPage'));
@@ -208,7 +209,7 @@ function App() {
               } />
               <Route path="cases/:caseId" element={
                 <ProtectedRoute requiredPermission="cases.view" denyClient>
-                  <CaseDetailPage />
+                  <CaseDetailSwitch />
                 </ProtectedRoute>
               } />
               {/* طلبات الإفلاس — صفحة تفاصيل مختلفة تماماً عن القضية (نفس أدوار القضايا) */}

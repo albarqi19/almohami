@@ -106,7 +106,12 @@ const objectionDaysLabel = (days: number | null): string => {
   return `متبقي ${days} ${days <= 10 ? 'أيام' : 'يوماً'} للاعتراض`;
 };
 
-const CaseDetailPage: React.FC = () => {
+interface CaseDetailPageProps {
+  /** يظهر زر «التصميم الجديد» في الترويسة حين يمرّره مبدّل التصميم (CaseDetailSwitch) */
+  onTryNewDesign?: () => void;
+}
+
+const CaseDetailPage: React.FC<CaseDetailPageProps> = ({ onTryNewDesign }) => {
   const { caseId } = useParams<{ caseId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -769,6 +774,18 @@ const CaseDetailPage: React.FC = () => {
 
           {/* Actions */}
           <div className="case-detail-header__actions" data-tour="case-actions">
+            {onTryNewDesign && (
+              <button
+                type="button"
+                onClick={onTryNewDesign}
+                className="case-header-btn"
+                title="الانتقال إلى التصميم الجديد لصفحة القضية (قيد التجربة)"
+                style={{ borderColor: 'var(--law-gold)', color: 'var(--law-gold)' }}
+              >
+                <Sparkles size={15} />
+                <span>التصميم الجديد</span>
+              </button>
+            )}
             <button onClick={() => setShowEditModal(true)} className="case-header-btn case-header-btn--primary">
               <Edit size={16} />
               <span>تعديل</span>

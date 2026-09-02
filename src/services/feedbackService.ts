@@ -56,6 +56,10 @@ export interface CreateFeedbackPayload {
     title?: string | null;
     body: string;
     attachments?: File[];
+    /** تقييم 1–5 (تقييمات التصاميم الجديدة) — يُخزَّن في metadata */
+    rating?: number;
+    /** سياق المصدر، مثل case_station — يُخزَّن في metadata */
+    context?: string;
 }
 
 // ─── Service ─────────────────────────────────────────────
@@ -88,6 +92,8 @@ export class FeedbackService {
         form.append('body', payload.body);
         if (payload.category) form.append('category', payload.category);
         if (payload.title) form.append('title', payload.title);
+        if (payload.rating) form.append('rating', String(payload.rating));
+        if (payload.context) form.append('context', payload.context);
         (payload.attachments ?? []).forEach((file) => form.append('attachments[]', file));
 
         const res = await apiClient.post<ApiResponse<FeedbackItem>>('/feedback', form);
