@@ -26,7 +26,15 @@ export interface AnchoredMenuPosition {
   position: 'fixed';
   top?: number;
   bottom?: number;
-  right: number;
+  /** المحاذاة الافتراضية: حافةُ القائمة اليمنى على حافة الزرّ اليمنى (RTL). */
+  right?: number;
+  /**
+   * تُملأ بدل `right` حين يقع الزرّ قرب حافة النافذة اليسرى فلا يتّسع للقائمة
+   * ممتدةً يساراً — تُقلَب لتمتدّ يميناً من حافة الزرّ اليسرى.
+   * (زرّ «المزيد» في ترويسة محطة القضية آخرُ عنصرٍ في أقصى اليسار، وكانت القائمة
+   * تخرج من الشاشة ولا يظهر منها إلا شريطٌ رفيع.)
+   */
+  left?: number;
   /** يُملأ في وضع matchWidth وحده — قائمةٌ بعرض حقلها لا بعرض محتواها. */
   width?: number;
 }
@@ -42,6 +50,8 @@ export interface AnchoredMenuOptions {
 
 /** ارتفاعٌ تقديريٌّ للقائمة يُستعمل لتقرير القلب إلى أعلى قبل رسمها. */
 const ESTIMATED_MENU_HEIGHT = 200;
+/** عرضٌ تقديريٌّ قبل الرسم لتقرير القلب الأفقيّ؛ يُستبدل بالعرض الحقيقيّ في الحساب الثاني. */
+const ESTIMATED_MENU_WIDTH = 220;
 const GAP = 4;
 
 export function useAnchoredMenu(open: boolean, options: AnchoredMenuOptions = {}) {
@@ -55,19 +65,26 @@ export function useAnchoredMenu(open: boolean, options: AnchoredMenuOptions = {}
     if (!el) return;
 
     const rect = el.getBoundingClientRect();
-    // الحافةُ الخارجية في RTL هي اليمنى؛ نقيسها من يمين النافذة.
-    const right = Math.max(GAP, window.innerWidth - rect.right);
     const spaceBelow = window.innerHeight - rect.bottom;
     const height = menuRef.current?.offsetHeight ?? ESTIMATED_MENU_HEIGHT;
+    const width = matchWidth ? rect.width : undefined;
+    const menuWidth = width ?? menuRef.current?.offsetWidth ?? ESTIMATED_MENU_WIDTH;
+
+    // الحافةُ الخارجية في RTL هي اليمنى؛ نقيسها من يمين النافذة، والقائمةُ تمتدّ يساراً.
+    // فإن لم يتّسع اليسارُ لها (زرٌّ في أقصى يسار الشاشة) قُلبت لتمتدّ يميناً من
+    // حافة الزرّ اليسرى — مع ضمّها داخل النافذة إن ضاق اليمينُ أيضاً.
+    const overflowsLeft = rect.right - menuWidth < GAP;
+    const horizontal: Pick<AnchoredMenuPosition, 'left' | 'right'> = overflowsLeft
+      ? { left: Math.max(GAP, Math.min(rect.left, window.innerWidth - menuWidth - GAP)) }
+      : { right: Math.max(GAP, window.innerWidth - rect.right) };
 
     // القلبُ إلى أعلى حين لا يتّسع الأسفل — وشرطُ أن يتّسع الأعلى فعلاً، وإلا
     // بقيت أسفلَ وظهر ما يظهر منها بدل أن تُدفع خارج الشاشة كلّياً.
     const flipUp = spaceBelow < height + GAP && rect.top > spaceBelow;
-    const width = matchWidth ? rect.width : undefined;
 
     setStyle(flipUp
-      ? { position: 'fixed', bottom: Math.max(GAP, window.innerHeight - rect.top + GAP), right, width }
-      : { position: 'fixed', top: rect.bottom + GAP, right, width });
+      ? { position: 'fixed', bottom: Math.max(GAP, window.innerHeight - rect.top + GAP), ...horizontal, width }
+      : { position: 'fixed', top: rect.bottom + GAP, ...horizontal, width });
   }, [matchWidth]);
 
   // قبل الرسم لا بعده: useEffect كان يُظهر القائمة في الزاوية ثم يقفز بها.
