@@ -51,7 +51,17 @@ import { caseRequestService, type CaseRequestItem, type CaseRequestsSummary } fr
 import { LegalMemoService, type LegalMemo } from '../services/legalMemoService';
 import { DocumentRequestService } from '../services/documentRequestService';
 import { MessageService, type Message } from '../services/messageService';
-import { SessionPrepService, type SessionMotion, type SessionPreparation } from '../services/sessionPrepService';
+import type { AiBriefResponse, SessionMotion, SessionPreparation } from '../services/sessionPrepService';
+import {
+  useGenerateAiBrief,
+  useReviewAiBrief,
+  useSessionAiBrief,
+  useSessionMotions,
+  useSessionPreparations,
+  useTogglePreparation,
+} from '../hooks/useSessionPrep';
+import { ActionQueuePanel } from '../components/session-prep/ActionQueuePanel';
+import { AIBriefSlideOver } from '../components/session-prep/AIBriefSlideOver';
 import { sessionReportService } from '../services/sessionReportService';
 import { caseStationService, type CaseStation, type StationNode, type StationNodeRef } from '../services/caseStationService';
 import { UiPreferencesService, type UiPrefs } from '../services/uiPreferencesService';
@@ -544,6 +554,16 @@ const CaseStationPage: React.FC<Props> = ({ prefs, onPrefsChange, onSwitchToClas
   const primaryLawyer = (caseData.lawyers || []).find((l: any) => (primaryLawyerId != null ? l.id === primaryLawyerId : !!l.pivot?.is_primary)) as any;
   const nextSession = station?.clock?.kind === 'next_session' && station.clock.session_id ? sessionsById.get(String(station.clock.session_id)) : null;
 
+  // آخر جلسة منتهية بقرارها — تُعرض في تبويب «التحضير» للجلسة القادمة حتى قبل أن يجهز الكشف الذكي
+  const lastPastSession = (() => {
+    const ended = (caseData.sessions || []).filter((s: any) => (s.has_ended !== undefined ? !!s.has_ended : !(s.status === 'جديدة' || s.status === 'scheduled')));
+    const sorted = [...ended].sort((a: any, b: any) => (parseDate(a.session_date_gregorian || a.session_date)?.getTime() ?? 0) - (parseDate(b.session_date_gregorian || b.session_date)?.getTime() ?? 0));
+    const last: any = sorted[sorted.length - 1];
+    if (!last) return null;
+    const decision = station?.session_decisions[String(last.id)]?.text || last.result || null;
+    return { id: Number(last.id), type: last.session_type || 'جلسة', date: last.session_date_gregorian || last.session_date, text: decision, summary: last.session_report_json?.what_happened || last.session_text_summary || null };
+  })();
+
   const moreItems: ActionMenuItem[] = [
     { label: 'الرسائل', icon: MessageSquare, count: unreadMessages, onClick: () => setShowMessages(true) },
     { label: 'الوكالات', icon: Scroll, count: wekala?.matched_count ?? 0, onClick: () => setShowWekalat(true) },
@@ -630,6 +650,8 @@ const CaseStationPage: React.FC<Props> = ({ prefs, onPrefsChange, onSwitchToClas
               session={sessionsById.get(String(sel.ref.id))}
               node={station?.nodes.find((n) => n.key === sel.key) || null}
               decision={station?.session_decisions[String(sel.ref.id)] || null}
+              lastSession={lastPastSession}
+              onSelectSession={selectSession}
               onOpenDabt={(s) => setDabtSession(s)}
               onOpenJudgement={(s) => setJudgementModal({ ...s, text: s.session_judgement })}
               onSendReport={(id) => setReportSession(id)}
@@ -1193,10 +1215,20 @@ const StageSummary: React.FC<{ station: CaseStation }> = ({ station }) => (
   </>
 );
 
+interface LastSessionSummary {
+  id: number;
+  type: string;
+  date: unknown;
+  text: string | null;
+  summary: string | null;
+}
+
 interface SessionReaderProps {
   session: any;
   node: StationNode | null;
   decision: { text: string; source: string; at: string | null } | null;
+  lastSession?: LastSessionSummary | null;
+  onSelectSession?: (id: number) => void;
   onOpenDabt: (s: any) => void;
   onOpenJudgement: (s: any) => void;
   onSendReport: (id: number) => void;
@@ -1205,12 +1237,26 @@ interface SessionReaderProps {
   markingEndedId: number | null;
 }
 
-const SessionReader: React.FC<SessionReaderProps> = ({ session, node, decision, onOpenDabt, onOpenJudgement, onSendReport, onNotifySettings, onMarkEnded, markingEndedId }) => {
+const SessionReader: React.FC<SessionReaderProps> = ({ session, node, decision, lastSession, onSelectSession, onOpenDabt, onOpenJudgement, onSendReport, onNotifySettings, onMarkEnded, markingEndedId }) => {
+  // الخطّافات قبل أي خروج مبكر (قواعد React)؛ الكشف الذكي يُطلب للجلسة القادمة فقط
+  const ended: boolean = session ? (session.has_ended !== undefined ? !!session.has_ended : !(session.status === 'جديدة' || session.status === 'scheduled')) : true;
+  const sid = session ? Number(session.id) : 0;
+  const briefQuery = useSessionAiBrief(ended ? 0 : sid);
+  const generateBrief = useGenerateAiBrief(sid);
+  const reviewBrief = useReviewAiBrief(sid);
+  const [briefOpen, setBriefOpen] = useState(false);
+  const aiBrief: AiBriefResponse | null | undefined = ended ? null : briefQuery.data;
+  // الكشف القديم (stale) يبقى معروضاً بوسم «قديم» — أفضل من إخفائه حتى يُعاد التوليد
+  const brief = aiBrief && (aiBrief.status === 'ready' || aiBrief.status === 'stale') ? aiBrief.brief : null;
+  const recCount = brief
+    ? (brief.suggested_preparations?.length ?? 0) + (brief.suggested_motions?.length ?? 0) + (brief.risk_flags?.length ?? 0)
+      + (brief.documents_to_review?.length ?? 0) + (brief.predicted_judge_questions?.length ?? 0)
+      + (brief.pending_court_orders?.filter((o) => !o.fulfilled).length ?? 0) + (brief.critical_deadlines?.length ?? 0)
+    : 0;
+
   if (!session) {
     return <div className="cst-reader__body"><div className="cst-empty"><Calendar />لم تُحمَّل بيانات هذه الجلسة — حدّث الصفحة</div></div>;
   }
-  const ended: boolean = session.has_ended !== undefined ? !!session.has_ended : !(session.status === 'جديدة' || session.status === 'scheduled');
-  const sid = Number(session.id);
   const date = session.session_date_gregorian || session.session_date;
   const report = session.session_report_json || null;
   const dabt: string | null = session.session_text || null;
@@ -1226,16 +1272,33 @@ const SessionReader: React.FC<SessionReaderProps> = ({ session, node, decision, 
       ]
     : [
         { id: 'prep', label: 'التحضير' },
+        { id: 'recs', label: 'التوصيات الذكية', n: recCount > 0 ? recCount : undefined },
         { id: 'motions', label: 'الطلبات' },
         { id: 'attend', label: 'الحضور والإفادة' },
       ];
-  const cleanTabs = tabs.filter(Boolean) as { id: string; label: string }[];
+  const cleanTabs = tabs.filter(Boolean) as { id: string; label: string; n?: number }[];
   const [tab, setTab] = useState(cleanTabs[0].id);
+
+  // فتحُ تبويب التوصيات يُعدّ مراجعةً للكشف (يُسجَّل مرة واحدة)
+  useEffect(() => {
+    if (tab === 'recs' && aiBrief?.status === 'ready' && !aiBrief.reviewed_at && !reviewBrief.isPending) {
+      reviewBrief.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, aiBrief?.status, aiBrief?.reviewed_at]);
+
+  const briefChip = !ended && aiBrief
+    ? (aiBrief.status === 'ready' || aiBrief.status === 'stale')
+      ? <span className={`cst-chip ${aiBrief.is_stale || aiBrief.status === 'stale' ? 'cst-chip--orange' : 'cst-chip--gold'}`}><Sparkles size={11} />{aiBrief.is_stale || aiBrief.status === 'stale' ? 'كشف ذكي قديم' : 'كشف ذكي جاهز'}</span>
+      : aiBrief.status === 'generating'
+        ? <span className="cst-chip cst-chip--gray"><Sparkles size={11} />يُحضَّر الكشف الذكي…</span>
+        : null
+    : null;
 
   return (
     <>
       <ReaderHead
-        eyebrow={<>{number ? `الجلسة ${number} · ` : ''}{kindLabel}{session.method ? ` · ${session.method}` : ''} {ended ? <span className="cst-chip cst-chip--gray">منتهية</span> : <span className="cst-chip cst-chip--blue">قادمة</span>}{session.source === 'manual' && <span className="cst-chip cst-chip--gold">يدوية</span>}</>}
+        eyebrow={<>{number ? `الجلسة ${number} · ` : ''}{kindLabel}{session.method ? ` · ${session.method}` : ''} {ended ? <span className="cst-chip cst-chip--gray">منتهية</span> : <span className="cst-chip cst-chip--blue">قادمة</span>}{session.source === 'manual' && <span className="cst-chip cst-chip--gold">يدوية</span>}{briefChip}</>}
         title={ended ? (decision?.text ? kindLabel : kindLabel) : `الجلسة القادمة: ${kindLabel}`}
         meta={[
           <><Calendar size={13} />{gDate(date, { weekday: true })}{toHijri(date) && <> · {toHijri(date)}</>}</>,
@@ -1285,7 +1348,52 @@ const SessionReader: React.FC<SessionReaderProps> = ({ session, node, decision, 
           )
         )}
         {tab === 'judgement' && session.session_judgement && <div className="cst-doc"><h4>منطوق الحكم كما نُطق به في الجلسة</h4><p>{session.session_judgement}</p></div>}
-        {!ended && tab === 'prep' && <PrepList sessionId={sid} />}
+        {!ended && tab === 'prep' && (
+          <>
+            {(brief?.last_session_summary || lastSession?.text || lastSession?.summary) && (
+              <div className="cst-note cst-note--gold cst-lastsession">
+                <Gavel size={15} />
+                <div>
+                  <b>ملخص آخر جلسة{lastSession ? ` (${lastSession.type}${lastSession.date ? ` · ${gDate(lastSession.date, { year: false })}` : ''})` : ''}:</b>{' '}
+                  {brief?.last_session_summary || lastSession?.summary || lastSession?.text}
+                  {brief?.expected_session_purpose && <><br /><b>الغرض المتوقع من هذه الجلسة:</b> {brief.expected_session_purpose}</>}
+                  <span className="cst-result__src">
+                    {brief?.last_session_summary ? 'من الكشف الذكي للجلسة' : lastSession?.summary ? 'من إفادة الجلسة السابقة' : 'قرار الجلسة السابقة'}
+                    {lastSession && onSelectSession && <> · <button type="button" className="cst-linkbtn" onClick={() => onSelectSession(lastSession.id)}>فتح الجلسة السابقة</button></>}
+                  </span>
+                </div>
+              </div>
+            )}
+            {!brief && aiBrief?.status !== 'generating' && (
+              <div className="cst-note">
+                <Sparkles size={15} />
+                <div>لم يُولَّد كشف ذكي لهذه الجلسة بعد. <button type="button" className="cst-linkbtn" disabled={generateBrief.isPending} onClick={() => generateBrief.mutate(undefined, { onError: () => toast.error('تعذّر بدء التوليد') })}>{generateBrief.isPending ? 'جارٍ البدء…' : 'توليد الكشف الذكي الآن'}</button></div>
+              </div>
+            )}
+            {aiBrief?.status === 'generating' && <div className="cst-note"><Sparkles size={15} /><div>يُحضَّر الكشف الذكي من الجلسات السابقة والقضية، نحو نصف دقيقة.</div></div>}
+            <PrepList sessionId={sid} />
+          </>
+        )}
+        {!ended && tab === 'recs' && (
+          <div className="cst-recs">
+            <ActionQueuePanel
+              sessionId={sid}
+              aiBrief={aiBrief}
+              isLoading={briefQuery.isLoading}
+              onOpenFullBrief={() => setBriefOpen(true)}
+              onGenerateBrief={() => generateBrief.mutate(undefined, { onError: () => toast.error('تعذّر بدء التوليد') })}
+            />
+            {(aiBrief?.status === 'ready' || aiBrief?.status === 'stale') && (
+              <div className="cst-hint" style={{ marginTop: 10 }}>
+                مقترحات آلية من الجلسات السابقة وبيانات القضية، تحتاج مراجعة المحامي قبل الاعتماد
+                {aiBrief.context_quality ? ` · جودة السياق: ${aiBrief.context_quality === 'high' ? 'مرتفعة' : aiBrief.context_quality === 'medium' ? 'متوسطة' : 'منخفضة'}` : ''}
+                {aiBrief.generated_at ? ` · ${gDate(aiBrief.generated_at)}` : ''}
+                {' · '}<button type="button" className="cst-linkbtn" onClick={() => setBriefOpen(true)}>الكشف الكامل</button>
+              </div>
+            )}
+            <AIBriefSlideOver sessionId={sid} aiBrief={aiBrief} open={briefOpen} onClose={() => setBriefOpen(false)} />
+          </div>
+        )}
         {!ended && tab === 'motions' && <MotionsList sessionId={sid} />}
         {!ended && tab === 'attend' && (
           <>
@@ -1305,27 +1413,17 @@ const SessionReader: React.FC<SessionReaderProps> = ({ session, node, decision, 
 };
 
 const PrepList: React.FC<{ sessionId: number }> = ({ sessionId }) => {
-  const [items, setItems] = useState<SessionPreparation[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<number | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    SessionPrepService.getPreparations(sessionId).then((r) => { if (!cancelled) setItems(r.items || []); }).catch((e) => { if (!cancelled) { setError(e?.message || 'تعذّر تحميل بنود التحضير'); setItems([]); } });
-    return () => { cancelled = true; };
-  }, [sessionId]);
-  const toggle = async (p: SessionPreparation) => {
-    setBusy(p.id);
-    try {
-      const r = await SessionPrepService.togglePreparation(sessionId, p.id);
-      setItems((prev) => (prev || []).map((x) => (x.id === p.id ? r.item : x)));
-    } catch (e: any) {
-      toast.error(e?.message || 'تعذّر تحديث البند');
-    } finally {
-      setBusy(null);
-    }
+  // react-query كي تتحدّث القائمة تلقائياً بعد اعتماد توصية من مركز التوصيات
+  const query = useSessionPreparations(sessionId);
+  const toggleMut = useTogglePreparation(sessionId);
+  const items: SessionPreparation[] | null = query.data ? (query.data.items || []) : null;
+  const error = query.error ? ((query.error as Error).message || 'تعذّر تحميل بنود التحضير') : null;
+  const busy = toggleMut.isPending ? (toggleMut.variables as number) : null;
+  const toggle = (p: SessionPreparation) => {
+    toggleMut.mutate(p.id, { onError: (e: any) => toast.error(e?.message || 'تعذّر تحديث البند') });
   };
-  if (items === null) return <><div className="cst-skeleton cst-skeleton--w80" /><div className="cst-skeleton cst-skeleton--w60" /></>;
   if (error) return <div className="cst-note"><Info size={15} /><div>{error}</div></div>;
+  if (items === null) return <><div className="cst-skeleton cst-skeleton--w80" /><div className="cst-skeleton cst-skeleton--w60" /></>;
   if (items.length === 0) return <div className="cst-empty"><ClipboardList />لا بنود تحضير بعد<div style={{ marginTop: 10 }}><Link to={`/sessions/${sessionId}/prep`} className="cst-btn cst-btn--sm">فتح غرفة التحضير</Link></div></div>;
   const done = items.filter((i) => i.is_completed).length;
   return (
@@ -1350,12 +1448,8 @@ const MOTION_STATUS: Record<string, { label: string; cls: string }> = {
 };
 
 const MotionsList: React.FC<{ sessionId: number }> = ({ sessionId }) => {
-  const [items, setItems] = useState<SessionMotion[] | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    SessionPrepService.getMotions(sessionId).then((r) => { if (!cancelled) setItems(r.items || []); }).catch(() => { if (!cancelled) setItems([]); });
-    return () => { cancelled = true; };
-  }, [sessionId]);
+  const query = useSessionMotions(sessionId);
+  const items: SessionMotion[] | null = query.data ? (query.data.items || []) : query.error ? [] : null;
   if (items === null) return <><div className="cst-skeleton cst-skeleton--w80" /><div className="cst-skeleton cst-skeleton--w60" /></>;
   if (items.length === 0) return <div className="cst-empty"><FileText />لا طلبات مسجّلة لهذه الجلسة<div style={{ marginTop: 10 }}><Link to={`/sessions/${sessionId}/prep`} className="cst-btn cst-btn--sm">إضافة طلب من غرفة التحضير</Link></div></div>;
   return (

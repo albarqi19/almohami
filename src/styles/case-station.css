@@ -606,7 +606,8 @@ body.dark .cst-modal-overlay {
 .cst-log__t small { display: block; font-size: 11px; color: var(--cst-muted); }
 
 /* فواصل الفهرس على الحافة */
-.cst-index { display: flex; flex-direction: column; gap: 3px; padding: 10px 8px 10px 0; background: var(--cst-ground); overflow-y: auto; scrollbar-width: none; }
+/* الحشوة على الجهة البعيدة (اليسار في RTL) فقط؛ الجهة المجاورة للوح صفر كي يلتصق الفاصل المختار به */
+.cst-index { display: flex; flex-direction: column; gap: 3px; padding: 10px 0 10px 8px; background: var(--cst-ground); overflow-y: auto; scrollbar-width: none; }
 .cst-index::-webkit-scrollbar { display: none; }
 .cst-itab {
     position: relative;
@@ -862,3 +863,13 @@ body.dark .cst-modal-overlay {
 @media (prefers-reduced-motion: reduce) {
     .cst *, .cst *::before, .cst *::after { transition: none !important; }
 }
+
+/* ── التوصيات الذكية داخل لوح القراءة — مركز التوصيات القائم (session-prep.css) بلا سقف ارتفاع داخلي ── */
+.cst-recs { max-width: 78ch; }
+.cst-recs .sp-panel { border-radius: 8px; }
+.cst-recs .sp-panel__body { max-height: none; overflow: visible; }
+.cst-lastsession { align-items: flex-start; }
+.cst-lastsession .cst-result__src { display: block; margin-top: 4px; font-size: 11px; color: var(--cst-muted); }
+.cst-linkbtn { border: none; background: none; padding: 0; font: inherit; font-size: inherit; font-weight: 600; color: var(--cst-navy-ink); cursor: pointer; }
+.cst-linkbtn:hover { text-decoration: underline; }
+.cst-linkbtn:disabled { opacity: 0.6; cursor: default; }
