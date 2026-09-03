@@ -60,7 +60,7 @@ import {
   useSessionPreparations,
   useTogglePreparation,
 } from '../hooks/useSessionPrep';
-import { ActionQueuePanel } from '../components/session-prep/ActionQueuePanel';
+import { StationRecs } from '../components/case-station/StationRecs';
 import { AIBriefSlideOver } from '../components/session-prep/AIBriefSlideOver';
 import { sessionReportService } from '../services/sessionReportService';
 import { caseStationService, type CaseStation, type StationNode, type StationNodeRef } from '../services/caseStationService';
@@ -1375,24 +1375,19 @@ const SessionReader: React.FC<SessionReaderProps> = ({ session, node, decision, 
           </>
         )}
         {!ended && tab === 'recs' && (
-          <div className="cst-recs">
-            <ActionQueuePanel
+          <>
+            <StationRecs
+              key={sid}
               sessionId={sid}
               aiBrief={aiBrief}
               isLoading={briefQuery.isLoading}
+              isGenerating={generateBrief.isPending}
+              generatedAtLabel={aiBrief?.generated_at ? gDate(aiBrief.generated_at) : undefined}
               onOpenFullBrief={() => setBriefOpen(true)}
               onGenerateBrief={() => generateBrief.mutate(undefined, { onError: () => toast.error('تعذّر بدء التوليد') })}
             />
-            {(aiBrief?.status === 'ready' || aiBrief?.status === 'stale') && (
-              <div className="cst-hint" style={{ marginTop: 10 }}>
-                مقترحات آلية من الجلسات السابقة وبيانات القضية، تحتاج مراجعة المحامي قبل الاعتماد
-                {aiBrief.context_quality ? ` · جودة السياق: ${aiBrief.context_quality === 'high' ? 'مرتفعة' : aiBrief.context_quality === 'medium' ? 'متوسطة' : 'منخفضة'}` : ''}
-                {aiBrief.generated_at ? ` · ${gDate(aiBrief.generated_at)}` : ''}
-                {' · '}<button type="button" className="cst-linkbtn" onClick={() => setBriefOpen(true)}>الكشف الكامل</button>
-              </div>
-            )}
             <AIBriefSlideOver sessionId={sid} aiBrief={aiBrief} open={briefOpen} onClose={() => setBriefOpen(false)} />
-          </div>
+          </>
         )}
         {!ended && tab === 'motions' && <MotionsList sessionId={sid} />}
         {!ended && tab === 'attend' && (

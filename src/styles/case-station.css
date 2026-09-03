@@ -864,10 +864,35 @@ body.dark .cst-modal-overlay {
     .cst *, .cst *::before, .cst *::after { transition: none !important; }
 }
 
-/* ── التوصيات الذكية داخل لوح القراءة — مركز التوصيات القائم (session-prep.css) بلا سقف ارتفاع داخلي ── */
+/* ── التوصيات الذكية داخل لوح القراءة — صفوفٌ بمفردات المحطة لا بطاقة مستقلة ── */
 .cst-recs { max-width: 78ch; }
-.cst-recs .sp-panel { border-radius: 8px; }
-.cst-recs .sp-panel__body { max-height: none; overflow: visible; }
+.cst-recs__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 5px; margin-bottom: 2px; font-size: 11.5px; color: var(--cst-muted); }
+.cst-recs__bar > svg { width: 13px; height: 13px; margin-inline-end: 2px; color: var(--cst-gold); flex: none; }
+.cst-recs__bar b { font-weight: 600; color: var(--cst-ink); }
+.cst-recs .cst-group { margin-top: 14px; }
+.cst-recs .cst-group svg { width: 12px; height: 12px; flex: none; }
+.cst-recs__bar + .cst-group { margin-top: 10px; }
+.cst-rrow { align-items: flex-start; }
+.cst-rrow .cst-row__t > span { display: block; line-height: 1.55; }
+.cst-rrow .cst-row__t small { margin-top: 2px; line-height: 1.5; }
+.cst-rrow .cst-tag, .cst-rrow .cst-tick { margin-top: 2px; }
+.cst-rrow.is-done .cst-row__t > span { text-decoration: none; }
+.cst-rrow__mark { flex: none; display: grid; place-items: center; width: 16px; height: 18px; margin-top: 1px; color: var(--cst-muted); }
+.cst-rrow__mark svg { width: 14px; height: 14px; }
+.cst-rrow--red .cst-rrow__mark { color: var(--cst-red); }
+.cst-rrow--orange .cst-rrow__mark { color: var(--cst-orange); }
+.cst-rrow--navy .cst-rrow__mark { color: var(--cst-navy-ink); }
+.cst-rrow--green .cst-rrow__mark { color: var(--cst-green); }
+.cst-rrow--blue .cst-rrow__mark { color: var(--cst-blue); }
+.cst-rrow--purple .cst-rrow__mark { color: var(--cst-purple); }
+.cst-rrow__acts { flex: none; display: flex; align-items: center; gap: 2px; margin-inline-start: 4px; }
+.cst-rrow__acts .cst-btn--sm { height: 24px; padding: 0 7px; font-size: 11px; white-space: nowrap; }
+.cst-recs__foot { margin-top: 14px; }
+@media (max-width: 640px) {
+    .cst-rrow { flex-wrap: wrap; row-gap: 4px; }
+    .cst-rrow .cst-row__t { flex: 1 1 62%; }
+    .cst-rrow__acts { flex: 1 1 100%; justify-content: flex-end; margin: 0; }
+}
 .cst-lastsession { align-items: flex-start; }
 .cst-lastsession .cst-result__src { display: block; margin-top: 4px; font-size: 11px; color: var(--cst-muted); }
 .cst-linkbtn { border: none; background: none; padding: 0; font: inherit; font-size: inherit; font-weight: 600; color: var(--cst-navy-ink); cursor: pointer; }
