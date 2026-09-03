@@ -187,6 +187,8 @@ const EVENT_LABELS: Record<string, string> = {
   case_procedure: 'إجراء قضية',
   hearing_reminder: 'تذكير جلسة',
   welcome_message: 'ترحيب',
+  session_report_message: 'تقرير الجلسة',
+  case_report_message: 'تقرير القضية',
   login_notification: 'تسجيل دخول',
   task_assigned: 'مهمة جديدة',
   daily_report: 'تقرير يومي',
@@ -203,6 +205,8 @@ const NOTIFICATION_TITLES: Record<string, string> = {
   lawyer_assigned: 'تعيين محامي',
   new_document_uploaded: 'رفع وثيقة جديدة',
   login_notification: 'إشعار تسجيل الدخول',
+  session_report_message: 'رسالة تقرير الجلسة (مع ملف PDF)',
+  case_report_message: 'رسالة تقرير القضية (مع ملف PDF)',
   task_assigned: 'مهمة جديدة',
   task_due_reminder: 'تذكير بمهمة',
   task_overdue: 'مهمة متأخرة',
@@ -244,7 +248,9 @@ const formatPhone = (p: string) => {
 };
 
 const TEMPLATE_VARIABLES: Record<string, string[]> = {
-  welcome_message: ['{client_name}'],
+  welcome_message: ['{client_name}', '{national_id}', '{pin}', '{company_name}', '{portal_section}'],
+  session_report_message: ['{client_first_name}', '{client_name}', '{session_date}', '{session_type}', '{case_title}', '{case_number}', '{court}', '{company_name}'],
+  case_report_message: ['{client_first_name}', '{client_name}', '{case_title}', '{case_number}', '{report_number}', '{company_name}'],
   case_created: ['{client_name}', '{case_number}', '{case_title}'],
   case_updated: ['{client_name}', '{case_number}', '{case_title}'],
   case_procedure: ['{client_name}', '{case_number}', '{case_title}', '{procedure_title}'],
@@ -263,6 +269,12 @@ const replaceTemplatePlaceholders = (text: string) => {
   if (!text) return '';
   return text
     .replace(/{client_name}/g, 'أحمد العتيبي')
+    .replace(/{client_first_name}/g, 'أحمد')
+    .replace(/{session_date}/g, '2026-09-03')
+    .replace(/{session_type}/g, 'جلسة مرافعة')
+    .replace(/{court}/g, 'المحكمة التجارية بالرياض')
+    .replace(/{report_number}/g, 'CR-2026-0012')
+    .replace(/{company_name}/g, 'مكتبكم')
     .replace(/{case_title}/g, 'طلب التعويض عن الأضرار العقدية')
     .replace(/{case_number}/g, '431205697')
     .replace(/{hearing_date}/g, '2026-06-15')

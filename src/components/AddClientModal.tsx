@@ -68,6 +68,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
     national_id: '',
     email: '',
     phone: '',
+    send_credentials: true,
     lead_source: '',
     lead_source_detail: '',
     commercial_registration: '',
@@ -114,6 +115,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
     }
     if (form.email) payload.email = form.email.trim();
     if (form.phone) payload.phone = form.phone.trim();
+    if (!isProspect) payload.send_credentials = form.send_credentials;
     if (form.classification) payload.classification = form.classification;
     payload.preferred_language = form.preferred_language || 'ar';
 
@@ -398,6 +400,12 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onCrea
                 <div>
                   <label style={fieldLabelStyle}>رقم الهاتف (واتساب)</label>
                   <PhoneField value={form.phone} onChange={(v) => set('phone', v)} placeholder="5X XXX XXXX" />
+                  {!isProspect && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 12, color: 'var(--color-text-secondary)', cursor: 'pointer' }} title="يمكن إيقاف هذه الرسالة لكل المكتب من إعدادات الواتساب › الرسائل الآلية">
+                      <input type="checkbox" checked={form.send_credentials} onChange={(e) => set('send_credentials', e.target.checked)} />
+                      <span>إرسال بيانات الدخول للعميل عبر واتساب</span>
+                    </label>
+                  )}
                 </div>
                 <div>
                   <label style={fieldLabelStyle}>البريد الإلكتروني</label>

@@ -592,7 +592,8 @@ const Cases: React.FC = () => {
 					name: caseData.clientName,
 					phone: caseData.clientPhone,
 					email: caseData.clientEmail || null,
-					national_id: caseData.clientNationalId || null
+					national_id: caseData.clientNationalId || null,
+					send_credentials: caseData.sendCredentials !== false
 				};
 			} else {
 				// عميل موجود

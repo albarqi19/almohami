@@ -186,6 +186,8 @@ interface CaseFormData {
   clientPhone: string;
   clientEmail: string;
   clientNationalId: string;
+  /** إرسال بيانات الدخول للعميل الجديد عبر واتساب (الافتراض نعم) */
+  sendCredentials: boolean;
   isNewClient: boolean;
   clientRole: '' | 'plaintiff' | 'defendant';
   opponentName: string;
@@ -241,6 +243,7 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     clientPhone: '',
     clientEmail: '',
     clientNationalId: '',
+    sendCredentials: true,
     isNewClient: true,
     clientRole: '',
     opponentName: '',
@@ -419,6 +422,7 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
       clientPhone: '',
       clientEmail: '',
       clientNationalId: '',
+    sendCredentials: true,
       isNewClient: true,
       clientRole: '',
       opponentName: '',
@@ -687,6 +691,15 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
                               onChange={(v) => handleInputChange('clientPhone', v)}
                               placeholder="5X XXX XXXX"
                             />
+                          </div>
+                        </div>
+                        <div className="erpc-field">
+                          <span className="erpc-field-label"><Phone />بيانات الدخول</span>
+                          <div className="erpc-control">
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }} title="يمكن إيقاف هذه الرسالة لكل المكتب من إعدادات الواتساب › الرسائل الآلية">
+                              <input type="checkbox" checked={formData.sendCredentials !== false} onChange={(e) => setFormData((prev) => ({ ...prev, sendCredentials: e.target.checked }))} />
+                              <span>إرسال بيانات الدخول للعميل عبر واتساب عند إنشاء القضية</span>
+                            </label>
                           </div>
                         </div>
                         <div className="erpc-field">

@@ -266,7 +266,7 @@ export class ClientManagementService {
      */
     static async convertToClient(
         clientId: number | string,
-        payload: { national_id?: string; phone?: string } = {}
+        payload: { national_id?: string; phone?: string; send_credentials?: boolean } = {}
     ): Promise<{ client: Client; credentials_sent: boolean }> {
         const response = await apiClient.put<any>(`/client-management/${clientId}/convert`, payload);
         return response.data;
@@ -301,6 +301,8 @@ export class ClientManagementService {
         national_id?: string;
         email?: string;
         phone?: string;
+        /** إرسال بيانات الدخول عبر واتساب عند الإنشاء (الافتراض نعم) */
+        send_credentials?: boolean;
         preferred_language?: string;
         entity_type?: 'individual' | 'company' | 'organization';
         client_status?: 'prospect' | 'client';

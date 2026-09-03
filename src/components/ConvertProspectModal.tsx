@@ -7,7 +7,7 @@ interface Props {
   client: Client | null; // null = مغلق
   submitting?: boolean;
   errorMessage?: string | null;
-  onSubmit: (payload: { national_id?: string; phone?: string }) => void;
+  onSubmit: (payload: { national_id?: string; phone?: string; send_credentials?: boolean }) => void;
   onClose: () => void;
 }
 
@@ -26,6 +26,7 @@ const inputStyle: React.CSSProperties = {
 const ConvertProspectModal: React.FC<Props> = ({ client, submitting = false, errorMessage, onSubmit, onClose }) => {
   const [nationalId, setNationalId] = useState(client?.national_id || '');
   const [phone, setPhone] = useState(client?.phone || '');
+  const [sendCredentials, setSendCredentials] = useState(true);
 
   if (!client) return null;
 
@@ -36,7 +37,7 @@ const ConvertProspectModal: React.FC<Props> = ({ client, submitting = false, err
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    onSubmit({ national_id: nationalId.trim(), phone: phone.trim() });
+    onSubmit({ national_id: nationalId.trim(), phone: phone.trim(), send_credentials: sendCredentials });
   };
 
   return (
@@ -77,7 +78,10 @@ const ConvertProspectModal: React.FC<Props> = ({ client, submitting = false, err
           <div>
             <label style={labelStyle}>رقم الجوال (واتساب) <span style={{ color: 'var(--status-red, #dc2626)' }}>*</span></label>
             <PhoneField value={phone} onChange={setPhone} placeholder="5X XXX XXXX" />
-            <span style={{ fontSize: 11, color: 'var(--color-text-secondary, #64748b)' }}>تُرسَل بيانات الدخول عبر واتساب على هذا الرقم.</span>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 12, color: 'var(--color-text-secondary, #64748b)', cursor: 'pointer' }} title="يمكن إيقاف هذه الرسالة لكل المكتب من إعدادات الواتساب › الرسائل الآلية">
+              <input type="checkbox" checked={sendCredentials} onChange={(e) => setSendCredentials(e.target.checked)} />
+              <span>إرسال بيانات الدخول عبر واتساب على هذا الرقم</span>
+            </label>
           </div>
         </div>
 
