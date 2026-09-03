@@ -21,7 +21,6 @@ import {
   FileText,
   Folder,
   Gavel,
-  Hash,
   Info,
   Landmark,
   Link2,
@@ -548,6 +547,10 @@ const CaseStationPage: React.FC<Props> = ({ prefs, onPrefsChange, onSwitchToClas
 
   const c: any = caseData;
   const title = splitTitle(caseData.title || '');
+  // صفة الموكل في شريط الحقائق (بدل معرّف ناجز الداخلي الذي لا يقرؤه أحد؛ رابط ناجز في الشريط السفلي)
+  const clientRole: string | undefined = ({ plaintiff: 'مدعٍ', defendant: 'مدعى عليه', third_party: 'طرف ثالث' } as Record<string, string>)[c.client_role || ''];
+  // مستنتجة من نصّ حكم بالذكاء ولم يعتمدها المكتب ⇒ تُوسم «مقترحة»
+  const clientRoleSuggested = !!clientRole && !c.client_role_locked_at && c.client_role_source === 'ai_judgement';
   const billing = caseData.billing;
   const wekala = c.wekalat_summary;
   const primaryLawyerId = c.primary_lawyer?.[0]?.id ?? null;
@@ -611,7 +614,7 @@ const CaseStationPage: React.FC<Props> = ({ prefs, onPrefsChange, onSwitchToClas
         {(caseData.department || c.sub_circle) && <><span className="cst-sep" /><span className="cst-fact">{[caseData.department, c.sub_circle].filter(Boolean).join(' · ')}</span></>}
         <span className="cst-sep" />
         <span className="cst-fact"><Calendar size={14} />قيد الدعوى <b>{gDate(caseData.filing_date || caseData.created_at)}</b>{toHijri(caseData.filing_date || caseData.created_at) && <> · {toHijri(caseData.filing_date || caseData.created_at)}</>}</span>
-        {caseData.najiz_id && <><span className="cst-sep" /><span className="cst-fact"><Hash size={14} />ناجز <b>{caseData.najiz_id}</b></span></>}
+        {clientRole && <><span className="cst-sep" /><span className="cst-fact"><Users size={14} />صفة الموكل <b>{clientRole}</b>{clientRoleSuggested && <span className="cst-tag cst-tag--gold" title="مستنتجة آلياً ولم يعتمدها المكتب بعد">مقترحة</span>}</span></>}
         {(c.ai_classification?.claim_amount || caseData.contract_value) ? (
           <><span className="cst-sep" /><span className="cst-fact"><DollarSign size={14} />{c.ai_classification?.claim_amount ? <>المطالبة <b>{money(c.ai_classification.claim_amount)} ر.س</b></> : <>قيمة العقد <b>{money(caseData.contract_value)} ر.س</b></>}</span></>
         ) : null}
