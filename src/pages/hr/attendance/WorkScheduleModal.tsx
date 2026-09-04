@@ -188,21 +188,21 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
 
   /** الرسالةُ المانعة — واحدةٌ لكلّ الأسباب، تُقرأ في الزرّ المعطَّل وفي `toast` معاً. */
   const blocker = useMemo((): string | null => {
-    if (selected === null) return 'اختر نسخةَ جدولٍ أوّلاً.';
-    if (workingDays.length === 0) return 'اختر يومَ دوامٍ واحداً على الأقلّ — سبعةُ أيام عطلةٍ ليست جدولاً.';
-    if (dailyMinutes === null || dailyMinutes <= 0) return 'وقتُ الانصراف يجب أن يكون بعد وقت الحضور.';
+    if (selected === null) return 'اختر نسخة جدول أولاً.';
+    if (workingDays.length === 0) return 'اختر يوم دوام واحداً على الأقل.';
+    if (dailyMinutes === null || dailyMinutes <= 0) return 'وقت الانصراف يجب أن يكون بعد وقت الحضور.';
 
     if (mode === 'edit') return null;
 
     if (!selected.is_active) {
-      return 'هذه النسخةُ معطَّلةٌ فلا تُسنَد — أعِد تفعيلَها أو اختر نسخةً أخرى.';
+      return 'هذه النسخة معطلة ولا يمكن إسنادها. أعد تفعيلها أو اختر نسخة أخرى.';
     }
     if (!canListEmployees) {
-      return 'الإسنادُ يحتاج سجلَّ المنسوبين (صلاحية hr.view) — راجِع مديرَ المكتب.';
+      return 'الإسناد يحتاج سجل الموظفين (صلاحية hr.view). تواصل مع مدير المكتب.';
     }
-    if (picked.length === 0) return 'حدّد مَن يُسنَد إليه الجدول.';
+    if (picked.length === 0) return 'اختر من يسند إليه الجدول.';
     if (retro && reason.trim().length < SCHEDULE_RETRO_MIN_REASON) {
-      return `الإسنادُ بأثرٍ رجعيٍّ يلزمه سببٌ (${SCHEDULE_RETRO_MIN_REASON} أحرفٍ فأكثر) — يُقرأ بعد سنةٍ في نزاع.`;
+      return `الإسناد بأثر رجعي يلزمه سبب (${SCHEDULE_RETRO_MIN_REASON} أحرف فأكثر) ويحفظ في السجل للرجوع إليه.`;
     }
     return null;
   }, [
@@ -235,14 +235,14 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
       if (mode === 'edit') {
         const done = await updateSchedule.mutateAsync({ scheduleId: selected.id, payload });
         setOutcome({ kind: 'edited', warnings: done.warnings });
-        toast.success('حُدِّثت النسخةُ — ولم تكن مستعمَلةً بعد.');
+        toast.success('تم تحديث النسخة. لم تكن مستعملة بعد.');
         return;
       }
 
       if (mode === 'assign') {
         const done = await assign.mutateAsync({ scheduleId: selected.id, payload: assignPayload });
         setOutcome({ kind: 'assigned', data: done });
-        toast.success(`أُسنِد الجدولُ إلى ${peopleWord(done.assigned)} من ${fmtDate(done.effective_from)}`);
+        toast.success(`تم إسناد الجدول إلى ${peopleWord(done.assigned)} من ${fmtDate(done.effective_from)}`);
         return;
       }
 
@@ -257,7 +257,7 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
         data: { ...done, warnings: [...created.warnings, ...done.warnings] },
       });
       toast.success(
-        `نسخةٌ جديدة (${created.schedule.version}) أُسنِدت إلى ${peopleWord(done.assigned)} من ${fmtDate(done.effective_from)}`
+        `تم إنشاء نسخة جديدة (${created.schedule.version}) وإسنادها إلى ${peopleWord(done.assigned)} من ${fmtDate(done.effective_from)}`
       );
     } catch (e) {
       toast.error(errorText(e, 'فشل في حفظ الجدول'));
@@ -270,8 +270,8 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
 
     const confirmed = window.confirm(
       next
-        ? `إعادةُ تفعيل «${schedule.name}»؟`
-        : `تعطيلُ «${schedule.name}»؟ لا تُحذف ولا تظهر في الاختيار، والأيامُ المحتسَبةُ بها تبقى كما هي.`
+        ? `إعادة تفعيل «${schedule.name}»؟`
+        : `تعطيل «${schedule.name}»؟ تبقى محفوظة ولا تظهر في الاختيار، والأيام المحتسبة بها تبقى كما هي.`
     );
 
     if (!confirmed) return;
@@ -280,25 +280,25 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
     try {
       await hrAttendanceService.setScheduleActive(schedule.id, next);
       await list.refetch();
-      toast.success(next ? 'أُعيد تفعيلُ النسخة' : 'عُطِّلت النسخة');
+      toast.success(next ? 'تم إعادة تفعيل النسخة' : 'تم تعطيل النسخة');
     } catch (e) {
-      toast.error(errorText(e, 'تعذّر تغييرُ حالة النسخة'));
+      toast.error(errorText(e, 'تعذر تغيير حالة النسخة'));
     } finally {
       setToggling(false);
     }
   };
 
   const ACTION_LABEL: Record<ScheduleMode, string> = {
-    assign: 'أسنِد هذه النسخة',
-    edit: 'احفظ التعديل',
-    version: 'أنشئ نسخةً جديدة وأسندها',
+    assign: 'إسناد هذه النسخة',
+    edit: 'حفظ التعديل',
+    version: 'إنشاء نسخة جديدة وإسنادها',
   };
 
   return (
     <div className="hr-modal-overlay" onClick={onClose}>
       <div className="hr-modal hra-modal" onClick={(e) => e.stopPropagation()}>
         <div className="hr-modal__h">
-          <h3>جدولُ الدوام</h3>
+          <h3>جدول الدوام</h3>
           <button type="button" className="hr-icon-btn" onClick={onClose} aria-label="إغلاق">
             <X size={18} />
           </button>
@@ -313,9 +313,9 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
               <p className="hra-note hra-note--rule">
                 <History size={13} aria-hidden="true" />
                 <span>
-                  <strong>التعديلُ هنا نسخةٌ جديدةٌ تسري من تاريخ — لا تحريرٌ للماضي.</strong>{' '}
-                  كلُّ يومٍ قبل تاريخ السريان يبقى محسوباً بالتعريف القديم، ولا يتغيّر تقريرُ
-                  شهرٍ مضى بحرف. والنسخةُ القديمةُ تبقى كما هي لأنها مرجعُ ما حُسب بها.
+                  <strong>التعديل هنا ينشئ نسخة جديدة تسري من تاريخ محدد.</strong>{' '}
+                  كل يوم قبل تاريخ السريان يبقى محسوباً بالتعريف القديم، ولا تتغير تقارير
+                  الشهور السابقة. والنسخة القديمة تبقى كما هي لأنها مرجع الأيام المحسوبة بها.
                 </span>
               </p>
 
@@ -324,11 +324,11 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                   {Array.from({ length: 3 }, (_, i) => <span className="hra-skel" key={i} />)}
                 </div>
               ) : list.isError ? (
-                <p className="hra-line">{errorText(list.error, 'تعذّر جلبُ جداول الدوام')}</p>
+                <p className="hra-line">{errorText(list.error, 'تعذر تحميل جداول الدوام')}</p>
               ) : schedules.length === 0 ? (
-                <p className="hra-line">لا نسخةَ جدولٍ في هذا المكتب — ابدأ بمعالج التهيئة.</p>
+                <p className="hra-line">لا توجد نسخة جدول في هذا المكتب. ابدأ بمعالج التهيئة.</p>
               ) : (
-                <div className="hra-vers" role="radiogroup" aria-label="نسخُ الجدول">
+                <div className="hra-vers" role="radiogroup" aria-label="نسخ الجدول">
                   {schedules.map((schedule) => (
                     <div className="hra-ver" key={schedule.id}>
                       <button
@@ -345,13 +345,13 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                           عطلة: {daysText(schedule.off_days)}
                           {' · '}
                           {schedule.usage.employees > 0
-                            ? `تحكم ${peopleWord(schedule.usage.employees)}`
-                            : 'لا تحكم أحداً'}
-                          {schedule.editable ? ' · لم تُستعمل بعد' : ''}
+                            ? `مسندة إلى ${peopleWord(schedule.usage.employees)}`
+                            : 'غير مسندة لأحد'}
+                          {schedule.editable ? ' · لم تستعمل بعد' : ''}
                         </span>
                         <span className="hra-flags">
                           {schedule.is_default && <span className="hra-flag">الافتراضية</span>}
-                          {!schedule.is_active && <span className="hra-flag">معطَّلة</span>}
+                          {!schedule.is_active && <span className="hra-flag">معطلة</span>}
                         </span>
                       </button>
 
@@ -375,14 +375,14 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                     <p className="hra-note hra-note--warn">
                       <AlertTriangle size={13} aria-hidden="true" />
                       <span>
-                        ساعاتُ أيام هذه النسخة غيرُ موحَّدة، وهذه الشاشةُ تكتب ساعةً واحدةً لكلّ
-                        أيام الدوام — فحفظُ تعريفٍ جديدٍ منها يوحّدها.
+                        ساعات أيام هذه النسخة غير موحدة، وهذه الشاشة تدعم وقتاً واحداً لكل
+                        أيام الدوام. وحفظ تعريف جديد منها يوحدها.
                       </span>
                     </p>
                   )}
 
                   <div className="hr-field">
-                    <label id="hra-sch-days-l">أيامُ الدوام *</label>
+                    <label id="hra-sch-days-l">أيام الدوام *</label>
                     <div className="hra-days" role="group" aria-labelledby="hra-sch-days-l">
                       {WEEK_DAY_KEYS.map((day) => (
                         <button
@@ -401,7 +401,7 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
 
                   <div className="hr-field hr-field--row">
                     <div className="hr-field">
-                      <label htmlFor="hra-sch-start">بدايةُ الدوام *</label>
+                      <label htmlFor="hra-sch-start">بداية الدوام *</label>
                       <input
                         id="hra-sch-start"
                         type="time"
@@ -411,7 +411,7 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                     </div>
 
                     <div className="hr-field">
-                      <label htmlFor="hra-sch-end">نهايتُه *</label>
+                      <label htmlFor="hra-sch-end">نهايته *</label>
                       <input
                         id="hra-sch-end"
                         type="time"
@@ -435,7 +435,7 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                     </div>
 
                     <div className="hr-field">
-                      <label htmlFor="hra-sch-grace">مهلةُ التأخّر (دقيقة)</label>
+                      <label htmlFor="hra-sch-grace">مهلة التأخر (دقيقة)</label>
                       <input
                         id="hra-sch-grace"
                         type="number"
@@ -464,13 +464,13 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
 
                       {retro && (
                         <div className="hr-field">
-                          <label htmlFor="hra-sch-reason">سببُ السريان الرجعيّ *</label>
+                          <label htmlFor="hra-sch-reason">سبب السريان الرجعي *</label>
                           <textarea
                             id="hra-sch-reason"
                             rows={2}
                             maxLength={255}
                             value={reason}
-                            placeholder="مثال: قرارُ المكتب بنقل العطلة اعتباراً من أوّل الشهر"
+                            placeholder="مثال: قرار المكتب بنقل العطلة اعتباراً من أول الشهر"
                             onChange={(e) => setReason(e.target.value)}
                           />
                           <span className="hra-count" dir="ltr">
@@ -482,15 +482,15 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                       {canListEmployees ? (
                         <div className="hr-field">
                           <label id="hra-sch-emps-l">
-                            مَن يُسنَد إليه ({fmtCount(picked.length)})
+                            من يسند إليه ({fmtCount(picked.length)})
                           </label>
 
                           {employees.isPending ? (
-                            <div className="hra-state hra-state--loading" aria-busy="true" aria-label="جارٍ تحميل الملفّات">
+                            <div className="hra-state hra-state--loading" aria-busy="true" aria-label="جارٍ تحميل الملفات">
                               {Array.from({ length: 3 }, (_, i) => <span className="hra-skel" key={i} />)}
                             </div>
                           ) : employeeRows.length === 0 ? (
-                            <p className="hra-line">لا ملفَّ نشطاً في سجلّ المنسوبين.</p>
+                            <p className="hra-line">لا يوجد ملف نشط في سجل الموظفين.</p>
                           ) : (
                             <div className="hra-picks" role="group" aria-labelledby="hra-sch-emps-l">
                               {employeeRows.map((row) => (
@@ -507,7 +507,7 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                                   <span className="hra-pick__main">
                                     <span className="hra-pick__n">{row.name}</span>
                                     <span className="hra-pick__m">
-                                      {row.tracked ? 'يبصم اليوم' : 'خارجَ التتبّع'}
+                                      {row.tracked ? 'يسجل الحضور اليوم' : 'خارج التتبع'}
                                     </span>
                                   </span>
                                 </label>
@@ -519,43 +519,43 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                         <p className="hra-note hra-note--warn">
                           <AlertTriangle size={13} aria-hidden="true" />
                           <span>
-                            الإسنادُ يحتاج سجلَّ المنسوبين (صلاحية hr.view). ونسخةٌ جديدةٌ بلا
-                            إسنادٍ لا تحكم أحداً وتبدو مُهيَّأة — فالفعلُ محجوبٌ هنا لا نصفَ منفَّذ.
+                            الإسناد يحتاج سجل الموظفين (صلاحية hr.view). والنسخة الجديدة بلا
+                            إسناد لا تنطبق على أحد وتبدو جاهزة، فالإجراء محجوب هنا.
                           </span>
                         </p>
                       )}
                     </>
                   ) : (
                     <p className="hra-hint">
-                      هذه النسخةُ <strong>لم تُستعمل بعد</strong> (لا إسنادَ ولا يومَ محتسَبٌ
-                      يُشير إليها) — فتُحرَّر في المكان بلا نسخةٍ جديدة، ولا يومَ يُعاد النظرُ فيه.
+                      هذه النسخة <strong>لم تستعمل بعد</strong> (لا إسناد ولا يوم محتسب
+                      يشير إليها)، فيمكن تعديلها مباشرة بلا نسخة جديدة، ولا يعاد احتساب أي يوم.
                     </p>
                   )}
 
                   <div className="hra-impact">
-                    <p className="hra-impact__t">ما سيقع عند الحفظ</p>
+                    <p className="hra-impact__t">ما سيحدث عند الحفظ</p>
                     <ul className="hra-impact__l">
                       <li>
                         {workingDays.length === 0
-                          ? 'لا يومَ دوامٍ مختار.'
-                          : `${fmtCount(workingDays.length)} أيامَ دوامٍ · عطلة: ${daysText(offDays)} · ${
+                          ? 'لم تختر أي يوم دوام.'
+                          : `${fmtCount(workingDays.length)} أيام دوام · عطلة: ${daysText(offDays)} · ${
                             dailyMinutes !== null && dailyMinutes > 0 ? fmtMinutes(dailyMinutes) : '—'
                           } في اليوم`}
                       </li>
 
                       <li>
-                        {mode === 'edit' && 'تُحرَّر النسخةُ نفسُها — ولا يومَ محتسَبٌ يتأثّر.'}
+                        {mode === 'edit' && 'يتم تعديل النسخة نفسها ولا يتأثر أي يوم محتسب.'}
                         {mode === 'assign'
-                          && `لم يتغيّر التعريف: تُسنَد هذه النسخةُ إلى ${peopleWord(picked.length)} من ${fmtDate(effectiveFrom)} — بلا نسخةٍ جديدة.`}
+                          && `لم يتغير التعريف: تسند هذه النسخة إلى ${peopleWord(picked.length)} من ${fmtDate(effectiveFrom)} بلا نسخة جديدة.`}
                         {mode === 'version'
-                          && `تغيّر التعريف: تُنشأ نسخةٌ أعلى وتُسنَد إلى ${peopleWord(picked.length)} من ${fmtDate(effectiveFrom)}، والقديمةُ تبقى كما هي.`}
+                          && `تغير التعريف: يتم إنشاء نسخة جديدة وإسنادها إلى ${peopleWord(picked.length)} من ${fmtDate(effectiveFrom)}، والقديمة تبقى كما هي.`}
                       </li>
 
                       {needsAssignment && (
                         <li>
                           {retro
-                            ? 'السريانُ رجعيّ: تُوسَم الأيامُ من تاريخ السريان إلى أمس، ويكتب المحرّكُ ما تغيّر وحدَه ليلاً.'
-                            : 'السريانُ من اليوم فما بعد: صفرُ وسمٍ وصفرُ صفٍّ يتغيّر — والماضي لا يُمسّ بحرف.'}
+                            ? 'السريان رجعي: يتم تحديد الأيام من تاريخ السريان إلى أمس، ويعيد المحرك ليلاً حساب ما تغير فقط.'
+                            : 'السريان من اليوم فما بعد: لا يتم تحديد أي يوم ولا تتغير الأيام السابقة.'}
                         </li>
                       )}
                     </ul>
@@ -565,9 +565,9 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                     <p className="hra-note hra-note--warn">
                       <AlertTriangle size={13} aria-hidden="true" />
                       <span>
-                        عطلةُ هذا الجدول ({daysText(offDays)}) تخالف عطلةَ المكتب المسجَّلة (
-                        {daysText(weekendSetting)}) — الحضورُ يقرأ الجدولَ والإجازاتُ تقرأ الإعدادَ
-                        لمن لا إسنادَ له، فيخرج رقمان لمدىً واحد.
+                        عطلة هذا الجدول ({daysText(offDays)}) تخالف عطلة المكتب المسجلة (
+                        {daysText(weekendSetting)}). الحضور يعتمد الجدول والإجازات تعتمد الإعداد
+                        لمن لا إسناد له، فيخرج رقمان لمدى واحد.
                       </span>
                     </p>
                   )}
@@ -606,7 +606,7 @@ const OutcomePanel: React.FC<{ value: ScheduleOutcome }> = ({ value }) => {
     return (
       <>
         <p className="hra-hint">
-          حُدِّثت النسخةُ في المكان — لم تكن مستعمَلةً، فلا يومَ محتسَبٌ تغيّر معناه.
+          تم تحديث النسخة نفسها. لم تكن مستعملة، فلا يوجد يوم محتسب تغير معناه.
         </p>
         <WarningList list={value.warnings} />
       </>
@@ -618,7 +618,7 @@ const OutcomePanel: React.FC<{ value: ScheduleOutcome }> = ({ value }) => {
   return (
     <>
       <p className="hra-hint">
-        تمّ الإسناد. <strong>وكلُّ يومٍ قبل تاريخ السريان يبقى محسوباً بتعريفه القديم</strong>.
+        تم الإسناد. <strong>وكل يوم قبل تاريخ السريان يبقى محسوباً بتعريفه القديم</strong>.
       </p>
 
       <dl className="hra-kv">
@@ -630,21 +630,21 @@ const OutcomePanel: React.FC<{ value: ScheduleOutcome }> = ({ value }) => {
         <dt>تسري من</dt>
         <dd>
           {fmtDate(data.effective_from)}
-          {data.retroactive ? ' (بأثرٍ رجعيّ)' : ''}
+          {data.retroactive ? ' (بأثر رجعي)' : ''}
         </dd>
 
         <dt>الإسناد</dt>
         <dd>
           {fmtCount(data.assigned)} جديداً
           {data.assignments_existing > 0 ? ` · ${fmtCount(data.assignments_existing)} قائماً` : ''}
-          {data.closed > 0 ? ` · أُغلق ${fmtCount(data.closed)} إسناداً سابقاً` : ''}
+          {data.closed > 0 ? ` · تم إغلاق ${fmtCount(data.closed)} إسناداً سابقاً` : ''}
         </dd>
 
-        <dt>أيامٌ يُعاد النظرُ فيها</dt>
+        <dt>أيام يعاد احتسابها</dt>
         <dd>
           {data.days_affected === 0
-            ? 'لا شيء — السريانُ لا يمسّ يوماً محتسَباً'
-            : `${daysWord(data.days_affected)} · وُسم منها ${fmtCount(data.dirty_marked)}`}
+            ? 'لا شيء. السريان لا يغير أي يوم محتسب'
+            : `${daysWord(data.days_affected)} · تم تحديد ${fmtCount(data.dirty_marked)} منها`}
         </dd>
       </dl>
 
@@ -658,7 +658,7 @@ const WarningList: React.FC<{ list: AttendanceSetupWarning[] }> = ({ list }) => 
 
   return (
     <div className="hra-secb">
-      <p className="hra-hint">تنبيهاتٌ لا تمنع شيئاً — وتستحقّ القراءة:</p>
+      <p className="hra-hint">تنبيهات لا تمنع شيئاً وتستحق القراءة:</p>
       <ul className="hra-why">
         {list.map((warning) => (
           <li className="hra-why__i is-no" key={warning.code + warning.message}>

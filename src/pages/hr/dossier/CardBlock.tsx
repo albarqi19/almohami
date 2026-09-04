@@ -71,7 +71,7 @@ export const CardBlock: React.FC<Props> = ({ id, emp }) => {
             <dt>الرقم الوظيفي</dt>
             <KvValue value={emp.employee_number} />
 
-            <dt>المسمّى الوظيفي</dt>
+            <dt>المسمى الوظيفي</dt>
             <KvValue value={emp.job_title} />
 
             <dt>القسم</dt>

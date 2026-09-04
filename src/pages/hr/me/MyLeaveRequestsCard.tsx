@@ -84,23 +84,23 @@ export const MyLeaveRequestsCard: React.FC = () => {
         ) : query.isError || data === undefined ? (
           <div className="hrl-state hrl-state--error">
             <AlertTriangle size={22} />
-            <p className="hrl-state__t">تعذّر جلبُ طلباتك</p>
-            <p className="hrl-state__d">{errorText(query.error, 'انقطعَ الاتصال بالخادم.')}</p>
+            <p className="hrl-state__t">تعذر تحميل طلباتك</p>
+            <p className="hrl-state__d">{errorText(query.error, 'انقطع الاتصال بالخادم.')}</p>
             <button type="button" className="hr-btn hr-btn--sm" onClick={() => void query.refetch()}>
               <RefreshCw size={13} /> إعادة المحاولة
             </button>
           </div>
         ) : data.requests.length === 0 ? (
           <>
-            <EmptyLine text="لم تقدّم طلبَ إجازةٍ بعد" />
+            <EmptyLine text="لم تقدم طلب إجازة بعد" />
             {!canRequest && (
-              <p className="hrl-note">لا أنواعَ إجازةٍ مفعّلةٌ في مكتبك — راجع إدارةَ المكتب.</p>
+              <p className="hrl-note">لا توجد أنواع إجازة مفعلة في مكتبك. تواصل مع إدارة المكتب.</p>
             )}
           </>
         ) : (
           <div className="hrl-block__b hrl-block__b--flush myhr-tablewrap">
             <table className="hrl-table hrl-table--single">
-              <caption className="hrl-sr">طلباتُ إجازتي مرتَّبةً من الأحدث</caption>
+              <caption className="hrl-sr">طلبات إجازتي مرتبة من الأحدث</caption>
               <thead>
                 <tr>
                   <th scope="col">النوع</th>

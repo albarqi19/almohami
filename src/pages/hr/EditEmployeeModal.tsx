@@ -82,7 +82,7 @@ export const EditEmployeeModal: React.FC<Props> = ({ emp, onClose, onSaved }) =>
           <div className="hr-field--row">
             <div className="hr-field">
               <label>المسمى الوظيفي</label>
-              <input value={form.job_title} onChange={(e) => set('job_title', e.target.value)} placeholder="مثال: محامٍ أول" />
+              <input value={form.job_title} onChange={(e) => set('job_title', e.target.value)} placeholder="مثال: محام أول" />
             </div>
             <div className="hr-field">
               <label>القسم</label>

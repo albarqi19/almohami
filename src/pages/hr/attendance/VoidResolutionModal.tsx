@@ -38,17 +38,17 @@ export const VoidResolutionModal: React.FC<Props> = ({ resolutionId, onClose, on
     const clean = reason.trim();
 
     if (clean.length < MIN_REASON) {
-      toast.error(`اكتب سببَ النقض — لا يقلّ عن ${MIN_REASON} أحرف.`);
+      toast.error(`اكتب سبب الإلغاء بما لا يقل عن ${MIN_REASON} أحرف.`);
       return;
     }
 
     try {
       await voidIt.mutateAsync(clean);
-      toast.success('نُقض القرارُ وبقي الأوّلُ مقروءاً في السجلّ');
+      toast.success('تم إلغاء القرار، ويبقى القرار السابق ظاهرا في السجل');
       onDone();
       onClose();
     } catch (e) {
-      toast.error(errorText(e, 'فشل في نقض القرار'));
+      toast.error(errorText(e, 'تعذر إلغاء القرار'));
     }
   };
 
@@ -56,7 +56,7 @@ export const VoidResolutionModal: React.FC<Props> = ({ resolutionId, onClose, on
     <div className="hr-modal-overlay" onClick={onClose}>
       <div className="hr-modal hra-modal" onClick={(e) => e.stopPropagation()}>
         <div className="hr-modal__h">
-          <h3>نقضُ قرار</h3>
+          <h3>إلغاء قرار</h3>
           <button type="button" className="hr-icon-btn" onClick={onClose} aria-label="إغلاق">
             <X size={18} />
           </button>
@@ -64,32 +64,32 @@ export const VoidResolutionModal: React.FC<Props> = ({ resolutionId, onClose, on
 
         <div className="hr-modal__b">
           <p className="hra-hint">
-            لا يُمحى القرارُ السابق — يُلحَق به نقضٌ يشير إليه، فيبقى مقروءاً بفاعله وتاريخه
-            وسببِ نقضه. وبعد النقض يعود اليومُ إلى الطابور إن بقي ملتبساً.
+            يبقى القرار السابق ظاهرا في السجل باسم من اتخذه وتاريخه، ويضاف إليه قرار إلغاء
+            يوضح السبب. وبعد الإلغاء يعود اليوم إلى قائمة القرارات المعلقة إن بقي ملتبسا.
           </p>
 
           <div className="hr-field">
-            <label htmlFor="hra-void-reason">سببُ النقض *</label>
+            <label htmlFor="hra-void-reason">سبب الإلغاء *</label>
             <textarea
               id="hra-void-reason"
               rows={3}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="مثال: تبيّن أنّ اليوم كان إجازةً معتمَدةً في النظام السابق"
+              placeholder="مثال: تبين أن اليوم كان إجازة معتمَدة في النظام السابق"
             />
             <span className="hra-count" dir="ltr">{reason.trim().length} / {MIN_REASON}</span>
           </div>
         </div>
 
         <div className="hr-modal__f">
-          <button type="button" className="hr-btn" onClick={onClose}>إلغاء</button>
+          <button type="button" className="hr-btn" onClick={onClose}>إغلاق</button>
           <button
             type="button"
             className="hr-btn hr-btn--primary"
             onClick={() => { void submit(); }}
             disabled={voidIt.isPending}
           >
-            {voidIt.isPending ? 'جارٍ الحفظ…' : 'انقض القرار'}
+            {voidIt.isPending ? 'جارٍ الحفظ…' : 'تأكيد إلغاء القرار'}
           </button>
         </div>
       </div>

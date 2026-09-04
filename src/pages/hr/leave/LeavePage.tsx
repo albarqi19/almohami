@@ -43,10 +43,10 @@ const LEGACY_PER_PAGE = 20;
 type TabKey = 'records' | 'calendar' | 'legacy' | 'approvals';
 
 const TABS: Array<{ key: TabKey; label: string; icon: typeof ListChecks }> = [
-  { key: 'records', label: 'السجلّ', icon: ListChecks },
-  { key: 'calendar', label: 'التقويم الشهريّ', icon: LayoutGrid },
+  { key: 'records', label: 'السجل', icon: ListChecks },
+  { key: 'calendar', label: 'التقويم الشهري', icon: LayoutGrid },
   { key: 'legacy', label: 'الطلبات الإدارية', icon: ClipboardList },
-  { key: 'approvals', label: 'اعتمادُ الإجازات', icon: Stamp },
+  { key: 'approvals', label: 'اعتماد الإجازات', icon: Stamp },
 ];
 
 /**
@@ -213,7 +213,7 @@ export const LeavePage: React.FC = () => {
 
       <div className="hrl-layout">
         {/* ═══ عمودُ المنسوبين — ملتصقٌ بلا فجوةٍ ولا استدارة ═══ */}
-        <nav className="hrl-side" aria-label="المنسوبون">
+        <nav className="hrl-side" aria-label="الموظفون">
           <LeaveRoster
             selectedId={employeeId}
             onSelect={selectEmployee}
@@ -232,9 +232,9 @@ export const LeavePage: React.FC = () => {
               <h1 className="hrl-h1">{employeeName ?? 'الإجازات والغياب'}</h1>
               <p className="hrl-sub">
                 {employeeId === null
-                  ? 'سجلُّ المكتب — اختر منسوباً لعرض رصيده وتحليله النظاميّ'
+                  ? 'سجل المكتب. اختر موظفا لعرض رصيده وتحليله النظامي'
                   : [employee?.job_title, employee?.department].filter(Boolean).join(' · ') ||
-                    'ملفُّ منسوبٍ بلا مسمّىً ولا قسم'}
+                    'ملف موظف بلا مسمى ولا قسم'}
               </p>
             </div>
 
@@ -242,20 +242,20 @@ export const LeavePage: React.FC = () => {
               {stats && (
                 <>
                   <span className="hrl-fact">
-                    غائبٌ اليوم <span className="hrl-fact__n">{fmtCount(stats.on_leave_today)}</span>
+                    غائب اليوم <span className="hrl-fact__n">{fmtCount(stats.on_leave_today)}</span>
                   </span>
                   <span className="hrl-fact">
                     قيد الاعتماد <span className="hrl-fact__n">{fmtCount(stats.pending_count)}</span>
                   </span>
                   <span className="hrl-fact">
-                    بلا رصيدٍ مُهيَّأ <span className="hrl-fact__n">{fmtCount(stats.uninitialized_balances)}</span>
+                    بلا رصيد جاهز <span className="hrl-fact__n">{fmtCount(stats.uninitialized_balances)}</span>
                   </span>
                   {stats.unconfirmed_holidays > 0 && (
                     <span
                       className="hrl-fact hrl-fact--gold"
-                      title="عطلٌ غيرُ معتمَدةٍ لا تُستثنى من الاحتساب"
+                      title="عطل غير معتمَدة لا تستثنى من الاحتساب"
                     >
-                      عطلٌ لم تُعتمد <span className="hrl-fact__n">{fmtCount(stats.unconfirmed_holidays)}</span>
+                      عطل غير معتمَدة <span className="hrl-fact__n">{fmtCount(stats.unconfirmed_holidays)}</span>
                     </span>
                   )}
                 </>
@@ -289,7 +289,7 @@ export const LeavePage: React.FC = () => {
               )}
               {canManageHr && (
                 <button type="button" className="hr-btn hr-btn--sm" onClick={() => setShowHolidays(true)}>
-                  <CalendarDays size={13} /> التقويم الرسميّ
+                  <CalendarDays size={13} /> التقويم الرسمي
                 </button>
               )}
               {employeeId !== null && (
@@ -298,7 +298,7 @@ export const LeavePage: React.FC = () => {
                   className="hr-btn hr-btn--sm"
                   onClick={() => navigate({ pathname: '/hr/leave', search: searchParams.toString() })}
                 >
-                  سجلُّ المكتب
+                  سجل المكتب
                 </button>
               )}
             </div>
@@ -359,7 +359,7 @@ export const LeavePage: React.FC = () => {
                         onChange={(e) => setParam({ status: e.target.value })}
                         aria-label="تصفية بالحالة"
                       >
-                        <option value="">كلُّ الحالات</option>
+                        <option value="">كل الحالات</option>
                         {(tab === 'legacy' ? LEGACY_STATUSES : RECORD_STATUSES).map((key) => (
                           <option key={key} value={key}>
                             {tab === 'legacy'
@@ -428,7 +428,7 @@ export const LeavePage: React.FC = () => {
               </section>
             </div>
 
-            <aside className="hrl-cols__side" aria-label="الرصيد والتحليل النظاميّ">
+            <aside className="hrl-cols__side" aria-label="الرصيد والتحليل النظامي">
               <LeaveBalancePanel
                 employeeId={employeeId}
                 employeeName={employeeName}

@@ -47,7 +47,7 @@ export const SettlementListPage: React.FC = () => {
       setOpenError(null);
       navigate(`/hr/payroll/settlements/${statement.run_id}`);
     },
-    onError: (error) => setOpenError(errorText(error, 'تعذّر فتحُ مسير التصفية.')),
+    onError: (error) => setOpenError(errorText(error, 'تعذر فتح مسير التصفية.')),
   });
 
   const listError = list.error;
@@ -59,7 +59,7 @@ export const SettlementListPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--locked">
           <Lock size={22} />
-          <p className="hrl-state__t">التصفياتُ غيرُ متاحةٍ لك</p>
+          <p className="hrl-state__t">التصفيات غير متاحة لك</p>
           <p className="hrl-state__d">{errorText(listError, '')}</p>
         </div>
       </div>
@@ -73,9 +73,9 @@ export const SettlementListPage: React.FC = () => {
     <div className="hrl-page hrs-page">
       <header className="hrs-head">
         <div className="hrs-head__id">
-          <h1 className="hrs-head__t">تصفيةُ نهاية الخدمة</h1>
+          <h1 className="hrs-head__t">تصفية نهاية الخدمة</h1>
           <p className="hrs-head__s">
-            المكافأةُ + رصيدُ الإجازة + أجرُ آخر مدّة + ما له وما عليه — بمهلة م.٨٨ لكلِّ حالة.
+            المكافأة + رصيد الإجازة + أجر آخر مدة + ما له وما عليه، بمهلة م.٨٨ لكل حالة.
           </p>
         </div>
         <button type="button" className="hr-btn hr-btn--sm" onClick={() => void list.refetch()}>
@@ -87,13 +87,13 @@ export const SettlementListPage: React.FC = () => {
       <section className="hrs-card">
         <div className="hrs-card__head">
           <h2 className="hrs-card__t">
-            <Plus size={15} /> افتح تصفيةً
+            <Plus size={15} /> افتح تصفية
           </h2>
         </div>
 
         <div className="hrs-basis__form">
           <label className="hrs-field">
-            <span className="hrs-field__l">رقمُ الملفّ الوظيفيّ للموظف</span>
+            <span className="hrs-field__l">رقم الملف الوظيفي للموظف</span>
             <input
               className="hrs-field__c"
               type="number"
@@ -105,7 +105,7 @@ export const SettlementListPage: React.FC = () => {
 
           <label className="hrs-field">
             <span className="hrs-field__l">
-              آخرُ يومِ خدمةٍ (شامل) — يُترك فارغاً ليُقرأ من الملفّ الوظيفيّ
+              آخر يوم خدمة (شامل). إن تركته فارغاً يؤخذ من الملف الوظيفي
             </span>
             <input
               className="hrs-field__c"
@@ -120,8 +120,8 @@ export const SettlementListPage: React.FC = () => {
               <ShieldAlert size={13} />
               <span>
                 {readiness.data.facts.employee_name ?? EMPTY_MARK} · التحق{' '}
-                {fmtDateHuman(readiness.data.facts.hire_date ?? null)} · الأجرُ الفعليّ{' '}
-                {money(readiness.data.facts.wage_actual ?? null) ?? EMPTY_MARK} · رصيدُ الإجازة{' '}
+                {fmtDateHuman(readiness.data.facts.hire_date ?? null)} · الأجر الفعلي{' '}
+                {money(readiness.data.facts.wage_actual ?? null) ?? EMPTY_MARK} · رصيد الإجازة{' '}
                 {readiness.data.facts.leave_balance_days ?? EMPTY_MARK} يوماً.
                 {readiness.data.blockers.length > 0 && (
                   <> ما يمنع الفتح: {readiness.data.blockers.join(' · ')}</>
@@ -138,10 +138,10 @@ export const SettlementListPage: React.FC = () => {
               disabled={!canOpen || openMutation.isPending}
               onClick={() => openMutation.mutate()}
             >
-              {openMutation.isPending ? 'يُفتح…' : 'افتح مسيرَ التصفية'}
+              {openMutation.isPending ? 'جارٍ الفتح…' : 'افتح مسير التصفية'}
             </button>
             {profileId !== '' && !canOpen && (
-              <span className="hrs-why-off">الزرُّ معطَّلٌ حتى تكتمل الجاهزيةُ أعلاه.</span>
+              <span className="hrs-why-off">الزر معطل حتى تكتمل الجاهزية أعلاه.</span>
             )}
           </div>
 
@@ -157,7 +157,7 @@ export const SettlementListPage: React.FC = () => {
       <section className="hrs-card">
         <div className="hrs-card__head">
           <h2 className="hrs-card__t">
-            <FileText size={15} /> التصفياتُ المفتوحة والمعتمَدة
+            <FileText size={15} /> التصفيات المفتوحة والمعتمدة
           </h2>
         </div>
 
@@ -166,7 +166,7 @@ export const SettlementListPage: React.FC = () => {
             <span className="hrl-skel hrl-skel--line" />
           </div>
         ) : rows.length === 0 ? (
-          <p className="hrs-empty">لا تصفياتٍ بعد.</p>
+          <p className="hrs-empty">لا توجد تصفيات بعد.</p>
         ) : (
           <ul className="hrs-list" style={{ listStyle: 'none', paddingInlineStart: 0 }}>
             {rows.map((row) => (
@@ -174,18 +174,18 @@ export const SettlementListPage: React.FC = () => {
                 <Link className="hrs-row" to={`/hr/payroll/settlements/${row.run_id}`}>
                   <span className="hrs-row__n">{row.employee_name}</span>
                   <span className="hrs-row__d">
-                    آخرُ يومِ خدمة {fmtDateHuman(row.last_working_day)} ·{' '}
+                    آخر يوم خدمة {fmtDateHuman(row.last_working_day)} ·{' '}
                     {RUN_STAGE_LABELS[row.stage as RunStage] ?? row.stage}
                     {row.settlement_deadline === null ? null : (
                       <>
                         {' '}
-                        · <CalendarClock size={11} /> مهلةُ م.٨٨ {fmtDateHuman(row.settlement_deadline)}
+                        · <CalendarClock size={11} /> مهلة م.٨٨ {fmtDateHuman(row.settlement_deadline)}
                       </>
                     )}
                   </span>
                   {/* 🔴 عمودٌ لا شارة: مجموعٌ بلا سببٍ مكيَّفٍ ناقصٌ بمقدارِ مكافأةِ سنوات. */}
                   <span className={`hrs-tag ${row.basis_missing ? 'hrs-tag--need' : 'hrs-tag--ok'}`}>
-                    {row.basis_missing ? 'سببُ الإنهاء ناقص' : (row.basis_label ?? '—')}
+                    {row.basis_missing ? 'سبب الإنهاء ناقص' : (row.basis_label ?? '—')}
                   </span>
                   <span className="hrs-row__a" dir="ltr">
                     {money(row.net_amount ?? null) ?? EMPTY_MARK}

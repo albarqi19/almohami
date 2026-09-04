@@ -55,7 +55,7 @@ export const TimelineAside: React.FC<Props> = ({ empId, emp, canManage }) => {
     dateRow('nid', 'انتهاء الهوية', emp.national_id_expiry_gregorian),
     ...(canManage
       ? [
-          dateRow('contract', 'نهاية العقد الحاليّ', contract?.end_date),
+          dateRow('contract', 'نهاية العقد الحالي', contract?.end_date),
           dateRow('probation', 'نهاية فترة التجربة', contract?.probation_end_date),
           {
             key: 'onboarding',
@@ -66,7 +66,7 @@ export const TimelineAside: React.FC<Props> = ({ empId, emp, canManage }) => {
       : []),
     {
       key: 'service',
-      label: 'مدّة الخدمة',
+      label: 'مدة الخدمة',
       value: emp.hire_date ? `منذ ${fmtLeaveDate(emp.hire_date)}` : null,
     },
   ];
@@ -77,7 +77,7 @@ export const TimelineAside: React.FC<Props> = ({ empId, emp, canManage }) => {
     <div className="hrl-block">
       <div className="hrl-block__h">
         <h2 className="hrl-block__t hrl-h2">
-          <CalendarClock size={14} /> المواقيت
+          <CalendarClock size={14} /> المواعيد
         </h2>
       </div>
 
@@ -101,9 +101,9 @@ export const TimelineAside: React.FC<Props> = ({ empId, emp, canManage }) => {
       ) : (
         <div className="hrl-state hrl-state--empty">
           <CalendarClock size={20} />
-          <p className="hrl-state__t">لا مواقيتَ بعد</p>
+          <p className="hrl-state__t">لا توجد مواعيد بعد</p>
           <p className="hrl-state__d">
-            تظهر هنا انتهاءُ الرخصة والهوية والعقد وفترةُ التجربة حين تُسجَّل.
+            تظهر هنا تواريخ انتهاء الرخصة والهوية والعقد وفترة التجربة عند تسجيلها.
           </p>
         </div>
       )}

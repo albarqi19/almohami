@@ -34,8 +34,8 @@ const ConflictBadge: React.FC<{ row: ApprovalQueueRow }> = ({ row }) => {
 
   if (summary === null) {
     return (
-      <span className="hrla-q__badge hrla-q__badge--unknown" title="لم يُفحص تعارضُ هذا الصفّ">
-        لم يُفحص
+      <span className="hrla-q__badge hrla-q__badge--unknown" title="لم يتم فحص التعارض في هذا الطلب">
+        غير مفحوص
       </span>
     );
   }
@@ -79,7 +79,7 @@ export const LeaveApprovalQueue: React.FC<Props> = ({ limit = 25 }) => {
   return (
     <section className="hrla-q" aria-label="طلبات الإجازة المنتظرة">
       <h3 className="hrla-q__t">
-        طلباتٌ تنتظر قرارَك
+        طلبات تنتظر قرارك
         {data !== undefined && data.count > 0 && (
           <span className="hrla-q__n" dir="ltr">{data.count}</span>
         )}
@@ -89,7 +89,7 @@ export const LeaveApprovalQueue: React.FC<Props> = ({ limit = 25 }) => {
       {queue.isLoading && (
         <p className="hrla-state">
           <Loader2 size={14} aria-hidden="true" className="hrla-spin" />
-          تُجلَب الطلبات…
+          جارٍ تحميل الطلبات…
         </p>
       )}
 
@@ -98,10 +98,10 @@ export const LeaveApprovalQueue: React.FC<Props> = ({ limit = 25 }) => {
         <div className="hrla-state hrla-state--error">
           <p>
             <AlertTriangle size={14} aria-hidden="true" />
-            {errorText(queue.error, 'تعذّر جلب طلبات الاعتماد')}
+            {errorText(queue.error, 'تعذر تحميل طلبات الاعتماد')}
           </p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void queue.refetch()}>
-            أعِد المحاولة
+            أعد المحاولة
           </button>
         </div>
       )}
@@ -110,7 +110,7 @@ export const LeaveApprovalQueue: React.FC<Props> = ({ limit = 25 }) => {
       {!queue.isLoading && !queue.isError && rows.length === 0 && (
         <p className="hrla-state hrla-state--empty">
           <Inbox size={14} aria-hidden="true" />
-          لا طلباتِ إجازةٍ تنتظر قرارَك الآن.
+          لا توجد طلبات إجازة تنتظر قرارك الآن.
         </p>
       )}
 
@@ -123,7 +123,7 @@ export const LeaveApprovalQueue: React.FC<Props> = ({ limit = 25 }) => {
                 type="button"
                 className="hrla-q__open"
                 onClick={() => setOpenId(row.id)}
-                aria-label={`افتح قرارَ إجازة ${row.employee_name ?? ''}`}
+                aria-label={`افتح قرار إجازة ${row.employee_name ?? ''}`}
               >
                 <span className="hrla-q__who">{row.employee_name || EMPTY_MARK}</span>
                 <span className={`hrl-type ${colorClass(row.color_key)}`}>
@@ -146,8 +146,8 @@ export const LeaveApprovalQueue: React.FC<Props> = ({ limit = 25 }) => {
       {/* الصمتُ لا يُترك يُقرأ سلامةً — يُقال كم صفّاً لم يُفحص */}
       {unscanned > 0 && (
         <p className="hrla-q__note">
-          تعارضُ <span dir="ltr">{unscanned}</span> من الصفوف لم يُفحص (سقفُ الفحص{' '}
-          <span dir="ltr">{data?.conflict_scan_limit}</span>) — افتح الصفَّ ليُفحص وحدَه.
+          لم يتم فحص التعارض في <span dir="ltr">{unscanned}</span> من الطلبات (سقف الفحص{' '}
+          <span dir="ltr">{data?.conflict_scan_limit}</span>). افتح الطلب حتى يتم فحصه.
         </p>
       )}
 

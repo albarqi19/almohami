@@ -33,11 +33,11 @@ export const RunReviewStage: React.FC<Props> = ({ data, meta, selectedLineId, on
       <section className="hrl-block" aria-labelledby="review-locked-h">
         <header className="hrl-block__h">
           <h2 className="hrl-block__t" id="review-locked-h">
-            <Lock size={14} /> فروقُ الأفراد محجوبة
+            <Lock size={14} /> فروق الأفراد محجوبة
           </h2>
         </header>
         <div className="hrl-block__b">
-          <p className="hrl-hint">مقارنةُ الأجور تكشف مبالغَ الأفراد — وهي خلف صلاحيةٍ مستقلّة.</p>
+          <p className="hrl-hint">مقارنة الأجور تكشف مبالغ الأفراد، وهي خلف صلاحية مستقلة.</p>
         </div>
       </section>
     );
@@ -48,7 +48,7 @@ export const RunReviewStage: React.FC<Props> = ({ data, meta, selectedLineId, on
       <section className="hrl-block" aria-labelledby="review-h">
         <header className="hrl-block__h">
           <h2 className="hrl-block__t" id="review-h">
-            <GitCompare size={14} /> ما تغيّر عن المسير السابق
+            <GitCompare size={14} /> ما تغير عن المسير السابق
           </h2>
           {data.previous_run !== null && (
             <span className="hrl-badge hrl-badge--flat">
@@ -60,15 +60,15 @@ export const RunReviewStage: React.FC<Props> = ({ data, meta, selectedLineId, on
         <div className="hrl-block__b">
           {data.previous_run === null ? (
             <p className="hrl-hint">
-              لا مسيرَ سابقٌ لهذا المكتب — فلا فرقَ يُقارَن. وأوّلُ مسيرٍ يُراجَع بأرقامه لا بفروقه.
+              لا يوجد مسير سابق لهذا المكتب، فلا فرق للمقارنة. ويراجع أول مسير بأرقامه لا بفروقه.
             </p>
           ) : data.rows.length === 0 ? (
             <p className="hrl-hint">
-              لا فرقَ في أيِّ سطر: {data.compared} سطراً بصافٍ مطابقٍ للمسير السابق حرفياً.
+              لا فرق في أي سطر: {data.compared} سطراً صافيها مطابق للمسير السابق تماماً.
             </p>
           ) : (
             <p className="hrl-hint">
-              تغيّر {data.changed} من {data.compared} سطراً — مرتَّبةً بالمقدار المطلق، ولكلٍّ سببُه.
+              تغير {data.changed} من {data.compared} سطراً، مرتبة بالمقدار المطلق، ولكل سطر سببه.
             </p>
           )}
         </div>
@@ -94,7 +94,7 @@ export const RunReviewStage: React.FC<Props> = ({ data, meta, selectedLineId, on
         <section className="hrl-block" aria-labelledby="review-moves-h">
           <header className="hrl-block__h">
             <h2 className="hrl-block__t" id="review-moves-h">
-              مَن دخل ومَن خرج
+              من دخل ومن خرج
             </h2>
           </header>
 
@@ -107,7 +107,7 @@ export const RunReviewStage: React.FC<Props> = ({ data, meta, selectedLineId, on
                       <UserPlus size={12} /> {row.name}
                     </span>
                     <span className="hrp-excluded__r">
-                      دخل المسيرَ لأوّل مرّة · صافيه <span dir="ltr">{money(row.net_amount) ?? EMPTY_MARK}</span>
+                      دخل المسير لأول مرة · صافيه <span dir="ltr">{money(row.net_amount) ?? EMPTY_MARK}</span>
                     </span>
                   </li>
                 ))}
@@ -122,11 +122,11 @@ export const RunReviewStage: React.FC<Props> = ({ data, meta, selectedLineId, on
                       <UserMinus size={12} /> {row.name}
                     </span>
                     <span className="hrp-excluded__r">
-                      كان في المسير السابق بصافٍ{' '}
+                      كان في المسير السابق وصافيه{' '}
                       <span dir="ltr">{money(row.previous_net_amount) ?? EMPTY_MARK}</span> وليس في هذا
                     </span>
                     <span className="hrp-excluded__a">
-                      راجع أسبابَ الاستبعاد في مرحلة النطاق — الغيابُ لا يصرخ من تلقاء نفسه.
+                      راجع أسباب الاستبعاد في مرحلة المشمولين. الغياب لا يظهر تلقائياً.
                     </span>
                   </li>
                 ))}
@@ -162,7 +162,7 @@ const DriftRow: React.FC<{ row: PayrollDriftRow; selected: boolean; onSelect: ()
       </span>
 
       {reasons.length === 0 ? (
-        <span className="hrp-drift__why">فرقٌ بلا سببٍ مسجَّل — افتح القسيمةَ لتفصيل بنودها.</span>
+        <span className="hrp-drift__why">فرق بلا سبب مسجل. افتح القسيمة لتفصيل بنودها.</span>
       ) : (
         <ul className="hra-why">
           {reasons.map((reason, index) => (

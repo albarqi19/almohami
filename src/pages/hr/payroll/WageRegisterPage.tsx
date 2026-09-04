@@ -130,7 +130,7 @@ export const WageRegisterPage: React.FC = () => {
         setParam({ employee: String(position.next.profile_id) }, false);
       }
     },
-    onError: (error) => setFormError(errorText(error, 'تعذّر حفظ نسخة الأجر.')),
+    onError: (error) => setFormError(errorText(error, 'تعذر حفظ نسخة الأجر.')),
   });
 
   const fileMutation = useMutation({
@@ -142,14 +142,14 @@ export const WageRegisterPage: React.FC = () => {
       setFileError(null);
       invalidate(selectedId as number);
     },
-    onError: (error) => setFileError(errorText(error, 'تعذّر حفظ سياسة الأجر.')),
+    onError: (error) => setFileError(errorText(error, 'تعذر حفظ سياسة الأجر.')),
   });
 
   const voidMutation = useMutation({
     mutationFn: (input: { recordId: number; reason: string }) =>
       hrPayrollService.voidRecord(selectedId as number, input.recordId, input.reason),
     onSuccess: () => invalidate(selectedId as number),
-    onError: (error) => setFormError(errorText(error, 'تعذّر إلغاء النسخة.')),
+    onError: (error) => setFormError(errorText(error, 'تعذر إلغاء النسخة.')),
   });
 
   // ─────────── الحالةُ المقفلة: الوحدةُ مطفأةٌ أو الصلاحيةُ ناقصة ───────────
@@ -165,7 +165,7 @@ export const WageRegisterPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--locked">
           <Lock size={22} />
-          <p className="hrl-state__t">سجلُّ الأجور غيرُ متاحٍ لك</p>
+          <p className="hrl-state__t">سجل الأجور غير متاح لك</p>
           <p className="hrl-state__d">{lockedMessage}</p>
         </div>
       </div>
@@ -180,29 +180,29 @@ export const WageRegisterPage: React.FC = () => {
       <header className="hrl-head">
         <div className="hrl-head__id">
           <h1 className="hrl-h1">
-            <Wallet size={16} /> سجلُّ الأجور
+            <Wallet size={16} /> سجل الأجور
           </h1>
           <p className="hrl-sub">
-            الراتبُ نسخةٌ مؤرَّخةٌ لا خانةٌ تُحرَّر — التغييرُ نسخةٌ جديدةٌ من تاريخ، والماضي لا
-            يُعاد كتابتُه.
+            يسجل الراتب كنسخة لها تاريخ سريان. والتغيير نسخة جديدة من تاريخ محدد، ولا تتغير
+            النسخ السابقة.
           </p>
         </div>
 
         <div className="hrl-head__badges">
           <span className="hrl-fact hrl-fact--gold">
-            جاهزٌ للمسير
+            جاهز للمسير
             <span className="hrl-fact__n" dir="ltr">
               {counts ? `${ready} / ${all}` : EMPTY_MARK}
             </span>
           </span>
           <span className="hrl-fact">
-            بلا أجرٍ مسجَّل
+            بلا أجر مسجل
             <span className="hrl-fact__n" dir="ltr">
               {counts ? counts.missing_wage : EMPTY_MARK}
             </span>
           </span>
           <span className="hrl-fact">
-            بلا آيبانٍ صالح
+            بلا آيبان صالح
             <span className="hrl-fact__n" dir="ltr">
               {counts ? counts.missing_iban : EMPTY_MARK}
             </span>
@@ -216,7 +216,7 @@ export const WageRegisterPage: React.FC = () => {
             <div
               className="hrl-meter"
               role="img"
-              aria-label={`جاهزٌ للمسير ${ready} من ${all} منسوباً`}
+              aria-label={`جاهز للمسير ${ready} من ${all} موظفاً`}
             >
               <span className="hrl-meter__seg" style={meterVars(1, all === 0 ? 0 : ready / all)}>
                 <span className="hrl-meter__fill" />
@@ -256,17 +256,17 @@ export const WageRegisterPage: React.FC = () => {
           {selectedId === null && (
             <div className="hrl-state hrl-state--empty">
               <UserSquare2 size={22} />
-              <p className="hrl-state__t">اختر منسوباً لتبدأ</p>
+              <p className="hrl-state__t">اختر موظفاً لتبدأ</p>
               <p className="hrl-state__d">
                 {counts && counts.missing_wage > 0
-                  ? `${counts.missing_wage} منسوباً بلا أجرٍ مسجَّل. ابدأ بشريحة «بلا أجر» في العمود المجاور — وحفظُ كلِّ نسخةٍ يقفز بك إلى التالي.`
-                  : 'العمودُ المجاور يعرض منسوبي المكتب وحالةَ أجر كلٍّ منهم.'}
+                  ? `${counts.missing_wage} موظفاً بلا أجر مسجل. ابدأ بتصنيف «بلا أجر» في العمود المجاور، وحفظ كل نسخة ينقلك إلى التالي.`
+                  : 'العمود المجاور يعرض موظفي المكتب وحالة أجر كل منهم.'}
               </p>
             </div>
           )}
 
           {selectedId !== null && profileQuery.isPending && (
-            <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل ملفّ الأجر">
+            <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل ملف الأجر">
               <span className="hrl-skel" />
               <span className="hrl-skel" />
               <span className="hrl-skel" />
@@ -277,8 +277,8 @@ export const WageRegisterPage: React.FC = () => {
           {selectedId !== null && profileQuery.isError && (
             <div className="hrl-state hrl-state--error">
               <AlertTriangle size={22} />
-              <p className="hrl-state__t">تعذّر جلب ملفّ الأجر</p>
-              <p className="hrl-state__d">{errorText(profileQuery.error, 'انقطعَ الاتصال بالخادم.')}</p>
+              <p className="hrl-state__t">تعذر تحميل ملف الأجر</p>
+              <p className="hrl-state__d">{errorText(profileQuery.error, 'انقطع الاتصال بالخادم.')}</p>
               <button type="button" className="hr-btn hr-btn--sm" onClick={() => void profileQuery.refetch()}>
                 <RefreshCw size={13} /> إعادة المحاولة
               </button>
@@ -300,7 +300,7 @@ export const WageRegisterPage: React.FC = () => {
                 </div>
                 {detail.wage_file?.status === 'held' && (
                   <span className="hrl-badge hrl-badge--flat">
-                    ملفُّ الأجر معلَّق{detail.wage_file.hold_reason ? ` — ${detail.wage_file.hold_reason}` : ''}
+                    ملف الأجر معلق{detail.wage_file.hold_reason ? `: ${detail.wage_file.hold_reason}` : ''}
                   </span>
                 )}
               </header>
@@ -344,8 +344,8 @@ export const WageRegisterPage: React.FC = () => {
               {position && (
                 <div className="hrp-seq">
                   <span>
-                    المنسوبُ <span className="hrp-seq__n">{position.index + 1}</span> من{' '}
-                    <span className="hrp-seq__n">{position.total}</span> في هذه الشريحة
+                    الموظف <span className="hrp-seq__n">{position.index + 1}</span> من{' '}
+                    <span className="hrp-seq__n">{position.total}</span> في هذا التصنيف
                   </span>
 
                   {position.next ? (
@@ -361,7 +361,7 @@ export const WageRegisterPage: React.FC = () => {
                       </button>
                     </span>
                   ) : (
-                    <span>آخرُ منسوبٍ في هذه الشريحة.</span>
+                    <span>آخر موظف في هذا التصنيف.</span>
                   )}
                 </div>
               )}

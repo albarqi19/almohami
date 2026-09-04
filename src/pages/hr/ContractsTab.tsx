@@ -22,7 +22,7 @@ import type { EmploymentContract, EmploymentContractType, EmploymentContractStat
 const VISIBLE_LIMIT = 8;
 
 /** نصٌّ احتياطيٌّ واحدٌ لفرع الخطأ — عرفُ `LeaveTabPanel`. */
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 /** التسميةُ **حرفيةٌ** من `app/Enums/Permission.php:388` — لا صياغةَ فرونتيةً للصلاحية. */
 const MANAGE_LABEL = 'إدارة ملفات الموظفين';
@@ -51,7 +51,7 @@ const fmtDate = (v?: string | null): string => {
  */
 const contractMeta = (c: EmploymentContract, showSalary: boolean): string => {
   const parts: string[] = [
-    `${fmtDate(c.start_date)} ← ${c.end_date ? fmtDate(c.end_date) : 'غير محدّد'}`,
+    `${fmtDate(c.start_date)} ← ${c.end_date ? fmtDate(c.end_date) : 'غير محدد'}`,
   ];
 
   if (c.probation_end_date) parts.push(`التجربة حتى ${fmtDate(c.probation_end_date)}`);
@@ -187,11 +187,11 @@ const ContractForm: React.FC<{
           {canSalary && (
             <div className="hr-field--row">
               <div className="hr-field">
-                <label>الراتب الأساسي (لقطة)</label>
+                <label>الراتب الأساسي وقت التوقيع</label>
                 <input type="number" min={0} value={form.basic_salary_snapshot} onChange={(e) => set('basic_salary_snapshot', e.target.value)} />
               </div>
               <div className="hr-field">
-                <label>إجمالي الراتب (لقطة)</label>
+                <label>إجمالي الراتب وقت التوقيع</label>
                 <input type="number" min={0} value={form.total_salary_snapshot} onChange={(e) => set('total_salary_snapshot', e.target.value)} />
               </div>
             </div>
@@ -260,7 +260,7 @@ const AddendumForm: React.FC<{
             <input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="مثال: تعديل الراتب" />
           </div>
           <div className="hr-field">
-            <label>ملخّص التغيير</label>
+            <label>ملخص التغيير</label>
             <input value={form.change_summary} onChange={(e) => set('change_summary', e.target.value)} />
           </div>
           <div className="hr-field">
@@ -316,7 +316,7 @@ const GeneratePdfModal: React.FC<{
         }),
       });
       if (!res.ok) {
-        let msg = 'تعذّر توليد العقد';
+        let msg = 'تعذر توليد العقد';
         try { const b = await res.clone().json(); if (b?.message) msg = b.message; } catch { /* الرد ليس JSON */ }
         throw new Error(msg);
       }
@@ -358,12 +358,12 @@ const GeneratePdfModal: React.FC<{
             </select>
           </div>
           <div className="hr-field">
-            <label>ممثّل المكتب (الطرف الأول)</label>
-            <input value={representative} onChange={(e) => setRepresentative(e.target.value)} placeholder="افتراضياً: مُنشئ العقد" />
+            <label>ممثل المكتب (الطرف الأول)</label>
+            <input value={representative} onChange={(e) => setRepresentative(e.target.value)} placeholder="افتراضياً: منشئ العقد" />
           </div>
           <div className="hr-field">
             <label>بنود إضافية (تظهر كبند مستقل)</label>
-            <textarea rows={3} value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="نصّ يُضاف قبل التوليد…" />
+            <textarea rows={3} value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="نص يضاف قبل التوليد…" />
           </div>
           <label className="hr-check">
             <input type="checkbox" checked={draft} onChange={(e) => setDraft(e.target.checked)} />
@@ -436,8 +436,8 @@ const ContractsTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) =>
         <div className="hrl-block__b">
           <div className="hrl-state hrl-state--locked">
             <Lock size={20} />
-            <p className="hrl-state__t">العقود محميّة</p>
-            <p className="hrl-state__d">عرضُها يتطلّب صلاحية «{MANAGE_LABEL}».</p>
+            <p className="hrl-state__t">العقود محمية</p>
+            <p className="hrl-state__d">عرضها يتطلب صلاحية «{MANAGE_LABEL}».</p>
           </div>
         </div>
       </section>
@@ -469,7 +469,7 @@ const ContractsTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) =>
       return (
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={20} />
-          <p className="hrl-state__t">تعذّر جلب العقود</p>
+          <p className="hrl-state__t">تعذر تحميل العقود</p>
           <p className="hrl-state__d">{errorText(contractsQuery.error, CONNECTION_FALLBACK)}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void contractsQuery.refetch()}>
             <RefreshCw size={13} /> إعادة المحاولة
@@ -481,7 +481,7 @@ const ContractsTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) =>
     if (rows.length === 0) {
       return (
         <EmptyLine
-          text="لا عقدَ مسجَّل"
+          text="لا يوجد عقد مسجل"
           action={canManage && (
             <button type="button" className="hr-btn hr-btn--sm hr-btn--primary" onClick={openNew}>
               <Plus size={14} /> عقد جديد
@@ -522,10 +522,10 @@ const ContractsTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) =>
 
         {!expanded && rows.length > VISIBLE_LIMIT && (
           <EmptyLine
-            text={`تُعرض ${fmtCount(VISIBLE_LIMIT)} من ${fmtCount(rows.length)}`}
+            text={`تعرض ${fmtCount(VISIBLE_LIMIT)} من ${fmtCount(rows.length)}`}
             action={(
               <button type="button" className="hr-btn hr-btn--sm" onClick={() => setExpanded(true)}>
-                اعرض الكلّ ({fmtCount(rows.length)})
+                اعرض الكل ({fmtCount(rows.length)})
               </button>
             )}
           />

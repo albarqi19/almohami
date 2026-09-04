@@ -32,7 +32,7 @@ interface Props {
 }
 
 export const RunStageBar: React.FC<Props> = ({ current, done, onSelect }) => (
-  <nav className="hrp-stagebar" aria-label="مراحلُ المسير">
+  <nav className="hrp-stagebar" aria-label="مراحل المسير">
     {STAGES.map((stage) => {
       const isCurrent = stage.key === current;
       const isDone = stage.n <= done;

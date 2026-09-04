@@ -62,7 +62,7 @@ function reasonsFor(emp: EmployeeProfile): Reason[] {
 
   // ١) تاريخُ المباشرة — يُصفّر الاستحقاقَ إلى الأبد **صامتاً**، فهو أشدُّ ما في القائمة.
   if (!emp.hire_date) {
-    out.push({ rank: 1, text: 'تاريخُ المباشرة غير مسجَّل', days: null, anchored: false });
+    out.push({ rank: 1, text: 'تاريخ المباشرة غير مسجل', days: null, anchored: false });
   }
 
   const lawyer = isLawyer(emp);
@@ -87,7 +87,7 @@ function reasonsFor(emp: EmployeeProfile): Reason[] {
 
   // ٥) محامٍ لم تُقرأ رخصتُه من الهيئة بعد — فعلُه زرُّ [تحقّق من الهيئة] في «الهوية والتوثيق».
   if (lawyer && !VERIFIED_SBA.includes(emp.sba_verification_status)) {
-    out.push({ rank: 5, text: 'محامٍ لم يُتحقَّق من الهيئة', days: null, anchored: true });
+    out.push({ rank: 5, text: 'محام غير موثق لدى الهيئة', days: null, anchored: true });
   }
 
   return out;
@@ -157,7 +157,7 @@ export function buildDecisions(stats: LeaveStats): DecisionItem[] {
   if (stats.unconfirmed_holidays > 0) {
     items.push({
       key: 'holidays',
-      label: 'عطلٌ رسميّةٌ لم تُعتمد — لا تُستثنى من احتساب الإجازات',
+      label: 'عطل رسمية غير معتمدة. لا تستثنى من احتساب الإجازات',
       count: stats.unconfirmed_holidays,
     });
   }
@@ -165,7 +165,7 @@ export function buildDecisions(stats: LeaveStats): DecisionItem[] {
   if (stats.uninitialized_balances > 0) {
     items.push({
       key: 'uninitialized',
-      label: 'منسوبون بلا رصيدٍ افتتاحيّ — لا يُحتسب لهم استحقاق',
+      label: 'موظفون بلا رصيد افتتاحي. لا يحتسب لهم استحقاق',
       count: stats.uninitialized_balances,
       negative: true,
     });
@@ -174,7 +174,7 @@ export function buildDecisions(stats: LeaveStats): DecisionItem[] {
   if (stats.pending_count > 0) {
     items.push({
       key: 'pending',
-      label: 'إجازاتٌ قيد الاعتماد',
+      label: 'إجازات قيد الاعتماد',
       count: stats.pending_count,
     });
   }
@@ -191,10 +191,10 @@ export function buildDecisions(stats: LeaveStats): DecisionItem[] {
  * حقيقةُ الرأس الوحيدة) وسقطت من البطاقة — **ورقمُ الترخيص هاجر معها** فلم يضِع.
  */
 export function officeVerificationLabel(office: HrOfficeInfo): string {
-  if (!office.verified) return 'منشأة غير موثّقة';
+  if (!office.verified) return 'منشأة غير موثقة';
   return office.sba_license_number
-    ? `منشأة موثّقة · ترخيص ${office.sba_license_number}`
-    : 'منشأة موثّقة';
+    ? `منشأة موثقة · ترخيص ${office.sba_license_number}`
+    : 'منشأة موثقة';
 }
 
 /** بندٌ فُحص فلم يُخرج عملاً — نصُّه نفيُ سببٍ من أسباب `reasonsFor`/`buildDecisions`. */
@@ -224,21 +224,21 @@ export function buildClearScan(employees: EmployeeProfile[], stats: LeaveStats):
   const lawyers = scanned.filter(isLawyer).length;
 
   const checks: ClearCheck[] = [
-    { key: 'hire', text: 'تاريخُ المباشرة مسجَّلٌ في كلّ ملفّ' },
-    { key: 'nid', text: `لا هويّةَ منتهيةً ولا تنتهي خلال ${fmtCount(URGENT_DAYS)} يوماً` },
+    { key: 'hire', text: 'تاريخ المباشرة مسجل في كل ملف' },
+    { key: 'nid', text: `لا هوية منتهية ولا تنتهي خلال ${fmtCount(URGENT_DAYS)} يوماً` },
   ];
 
   if (lawyers > 0) {
     checks.push({
       key: 'license',
-      text: `لا رخصةَ محاماةٍ منتهيةً ولا تنتهي خلال ${fmtCount(URGENT_DAYS)} يوماً`,
+      text: `لا رخصة محاماة منتهية ولا تنتهي خلال ${fmtCount(URGENT_DAYS)} يوماً`,
     });
-    checks.push({ key: 'sba', text: 'كلُّ محامٍ متحقَّقٌ من الهيئة' });
+    checks.push({ key: 'sba', text: 'كل محام موثق لدى الهيئة' });
   }
 
-  checks.push({ key: 'holidays', text: `العطلُ الرسميّةُ معتمَدةٌ في تقويم ${stats.year}` });
-  checks.push({ key: 'balances', text: 'كلُّ منسوبٍ له رصيدٌ افتتاحيّ' });
-  checks.push({ key: 'pending', text: 'لا إجازةَ تنتظر اعتماداً' });
+  checks.push({ key: 'holidays', text: `العطل الرسمية معتمدة في تقويم ${stats.year}` });
+  checks.push({ key: 'balances', text: 'كل موظف له رصيد افتتاحي' });
+  checks.push({ key: 'pending', text: 'لا إجازة تنتظر اعتماداً' });
 
   return { checked: scanned.length, checks };
 }

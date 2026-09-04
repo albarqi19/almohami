@@ -30,12 +30,12 @@ import type { EmployeeProfile, HrLetter } from '../../../types/hr';
  */
 
 /** نصٌّ احتياطيٌّ واحدٌ لفرع الخطأ — عرفُ `LeaveTabPanel`. */
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 /** التسميةُ **حرفيةٌ** من `app/Enums/Permission.php:393` — لا صياغةَ فرونتيةً للصلاحية. */
 const ISSUE_LABEL = 'إصدار خطابات الموارد البشرية';
 
-const SALARY_GUARD_HINT = 'فتحُ تعريف الراتب يتطلّب صلاحيةَ عرض الرواتب';
+const SALARY_GUARD_HINT = 'فتح تعريف الراتب يتطلب صلاحية عرض الرواتب';
 
 interface Props {
   /** مرساةُ القسم — من `SEC` في وحدة القفز، فلا يفترق عنوانٌ عن مرساته. */
@@ -64,7 +64,7 @@ export const LettersBlock: React.FC<Props> = ({ id, empId, emp, canIssue }) => {
         `hr-letter-${letter.letter_number}.pdf`
       );
     } catch (error) {
-      toast.error(errorText(error, 'تعذّر فتحُ الخطاب'));
+      toast.error(errorText(error, 'تعذر فتح الخطاب'));
     } finally {
       setBusyId(null);
     }
@@ -89,7 +89,7 @@ export const LettersBlock: React.FC<Props> = ({ id, empId, emp, canIssue }) => {
       return (
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={20} />
-          <p className="hrl-state__t">تعذّر جلب الخطابات</p>
+          <p className="hrl-state__t">تعذر تحميل الخطابات</p>
           <p className="hrl-state__d">{errorText(lettersQuery.error, CONNECTION_FALLBACK)}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void lettersQuery.refetch()}>
             <RefreshCw size={13} /> إعادة المحاولة
@@ -104,22 +104,22 @@ export const LettersBlock: React.FC<Props> = ({ id, empId, emp, canIssue }) => {
       return (
         <div className="hrl-state hrl-state--empty">
           <FileBadge size={20} />
-          <p className="hrl-state__t">لم يصدر خطابٌ لهذا المنسوب بعد</p>
-          <p className="hrl-state__d">تظهر هنا الخطاباتُ المرقَّمة الصادرة باسمه.</p>
+          <p className="hrl-state__t">لم يصدر خطاب لهذا الموظف بعد</p>
+          <p className="hrl-state__d">تظهر هنا الخطابات المرقمة الصادرة باسمه.</p>
         </div>
       );
     }
 
     return (
       <table className="hrl-table hrl-table--single">
-        <caption className="hrl-sr">الخطاباتُ الصادرةُ باسم المنسوب مرتَّبةً من الأحدث</caption>
+        <caption className="hrl-sr">الخطابات الصادرة باسم الموظف مرتبة من الأحدث</caption>
         <thead>
           <tr>
             <th scope="col">النوع</th>
             <th scope="col">الرقم</th>
             <th scope="col">التاريخ</th>
             <th scope="col">الجهة</th>
-            <th scope="col">مَن أصدره</th>
+            <th scope="col">من أصدره</th>
             <th scope="col"><span className="hrl-sr">أدوات</span></th>
           </tr>
         </thead>
@@ -133,7 +133,7 @@ export const LettersBlock: React.FC<Props> = ({ id, empId, emp, canIssue }) => {
                   <span className="hrl-type__n">{HR_LETTER_TYPE_LABELS[letter.letter_type]}</span>
                   {letter.issued_by_self && (
                     <span className="hrl-cellsub">
-                      <span className="hr-badge hr-badge--gold">أصدره صاحبُه</span>
+                      <span className="hr-badge hr-badge--gold">إصدار ذاتي</span>
                     </span>
                   )}
                 </td>
@@ -188,15 +188,15 @@ export const LettersBlock: React.FC<Props> = ({ id, empId, emp, canIssue }) => {
           حيث كان الزرُّ ليكون، لا في الذيل حيث يُقرأ خبراً عن غيره. ولا زرَّ يُنتج 403. */}
       {!canIssue && (
         <div className="hrl-block__b">
-          <p className="hrl-hint">إصدارُ الخطابات محروسٌ بصلاحية «{ISSUE_LABEL}».</p>
+          <p className="hrl-hint">إصدار الخطابات يتطلب صلاحية «{ISSUE_LABEL}».</p>
         </div>
       )}
 
       <div className="hrl-block__b hrl-block__b--flush">{body}</div>
 
       <p className="hrl-note">
-        الخطابُ الصادرُ لا يُعدَّل ولا يُلغى — التصحيحُ إصدارٌ جديدٌ برقمٍ جديد. وقراءةُ تعريف
-        الراتب مُدقَّقة.
+        الخطاب الصادر لا يعدل ولا يلغى، والتصحيح يكون بإصدار خطاب جديد برقم جديد. وقراءة
+        تعريف الراتب مسجلة في سجل التدقيق.
       </p>
 
       {showIssue && (

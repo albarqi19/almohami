@@ -35,16 +35,16 @@ interface Props {
 }
 
 const CHIPS: Array<{ key: AttendanceView; label: string }> = [
-  { key: 'queue', label: 'يحتاج قراراً' },
+  { key: 'queue', label: 'يحتاج قرارا' },
   { key: 'today', label: 'اليوم' },
-  { key: 'claims', label: 'الادّعاءات' },
+  { key: 'claims', label: 'طلبات التصحيح' },
 ];
 
 /** نصُّ الفراغ لكلّ نطاق — الفراغُ يُعلَن بكلمةٍ تخصّه لا بـ«لا توجد بيانات». */
 const EMPTY_TEXT: Record<AttendanceView, string> = {
-  queue: 'لا أحدَ ينتظر قراراً',
-  today: 'لا صفَّ محتسَبٌ في هذا اليوم',
-  claims: 'لا ادّعاءاتٍ في هذا النطاق',
+  queue: 'لا أحد ينتظر قرارا',
+  today: 'لا يوجد سجل محتسب في هذا اليوم',
+  claims: 'لا طلبات تصحيح في هذا العرض',
 };
 
 export const AttendanceRoster: React.FC<Props> = ({
@@ -59,16 +59,16 @@ export const AttendanceRoster: React.FC<Props> = ({
   <>
     <div className="hra-sech">
       <h2 className="hra-sech__t">
-        <Users size={14} aria-hidden="true" /> المنسوبون
+        <Users size={14} aria-hidden="true" /> الموظفون
       </h2>
       {selectedId !== null && (
         <button type="button" className="ssp2-btn" onClick={() => onSelect(null)}>
-          الكلّ
+          الكل
         </button>
       )}
     </div>
 
-    <div className="hra-chips" role="group" aria-label="نطاقُ العرض">
+    <div className="hra-chips" role="group" aria-label="نطاق العرض">
       {CHIPS.map((chip) => (
         <button
           key={chip.key}
@@ -87,7 +87,7 @@ export const AttendanceRoster: React.FC<Props> = ({
 
     <div className="hra-scroll">
       {loading ? (
-        <div className="hra-state hra-state--loading" aria-busy="true" aria-label="جارٍ تحميل المنسوبين">
+        <div className="hra-state hra-state--loading" aria-busy="true" aria-label="جارٍ تحميل الموظفين">
           {Array.from({ length: 5 }, (_, i) => <span className="hra-skel" key={i} />)}
         </div>
       ) : rows.length === 0 ? (
@@ -103,7 +103,7 @@ export const AttendanceRoster: React.FC<Props> = ({
               onClick={() => onSelect(selectedId === row.id ? null : row.id)}
             >
               <span className="hra-row__main">
-                <span className="hra-row__n">{row.name ?? 'منسوبٌ بلا اسم'}</span>
+                <span className="hra-row__n">{row.name ?? 'موظف بلا اسم'}</span>
                 <span className="hra-row__m">{row.meta}</span>
               </span>
               {row.end !== null && (

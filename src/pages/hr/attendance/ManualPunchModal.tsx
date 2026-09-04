@@ -70,7 +70,7 @@ export const ManualPunchModal: React.FC<Props> = ({
           });
           done += 1;
         } catch (e) {
-          errors.push(`${fmtDayLine(date)} — ${errorText(e, 'تعذّر')}`);
+          errors.push(`${fmtDayLine(date)} — ${errorText(e, 'تعذر')}`);
         }
       }
 
@@ -85,19 +85,19 @@ export const ManualPunchModal: React.FC<Props> = ({
     const clean = reason.trim();
 
     if (clean.length < MIN_REASON) {
-      toast.error(`اكتب سبباً لا يقلّ عن ${MIN_REASON} أحرف — البصمةُ اليدوية تُدقَّق.`);
+      toast.error(`اكتب سببا لا يقل عن ${MIN_REASON} أحرف. البصمة اليدوية تخضع للتدقيق.`);
       return;
     }
 
     if (!/^\d{2}:\d{2}$/.test(time)) {
-      toast.error('اكتب وقتاً صحيحاً بصيغة ساعة:دقيقة.');
+      toast.error('اكتب وقتا صحيحا بصيغة ساعة:دقيقة.');
       return;
     }
 
     const result = await punch.mutateAsync({ reason: clean });
 
     if (result.done > 0) {
-      toast.success(`أُضيفت بصمةُ ${PUNCH_DIRECTION_LABELS[direction]} على ${daysWord(result.done)}`);
+      toast.success(`تمت إضافة بصمة ${PUNCH_DIRECTION_LABELS[direction]} على ${daysWord(result.done)}`);
     }
 
     // نجاحٌ جزئيّ: يبقى المودالُ مفتوحاً بقائمة ما لم يُسجَّل — والإغلاقُ الصامت يجعل
@@ -116,7 +116,7 @@ export const ManualPunchModal: React.FC<Props> = ({
     <div className="hr-modal-overlay" onClick={onClose}>
       <div className="hr-modal hra-modal" onClick={(e) => e.stopPropagation()}>
         <div className="hr-modal__h">
-          <h3>بصمةٌ يدوية — {employee.name ?? 'منسوب'}</h3>
+          <h3>بصمة يدوية — {employee.name ?? 'موظف'}</h3>
           <button type="button" className="hr-icon-btn" onClick={onClose} aria-label="إغلاق">
             <X size={18} />
           </button>
@@ -124,8 +124,8 @@ export const ManualPunchModal: React.FC<Props> = ({
 
         <div className="hr-modal__b">
           <p className="hra-hint">
-            تُضاف بصمةٌ <strong>جديدة</strong> بمصدر «إدخالٌ يدويّ» وباسمك — ولا يُعدَّل ما سُجّل
-            ولا يُحذف. وتظهر في سجلّ الموظف كما يراها هو.
+            تضاف بصمة <strong>جديدة</strong> بمصدر «إدخال يدوي» وباسمك. وتبقى البصمات السابقة
+            كما هي، وتظهر البصمة الجديدة في سجل الموظف كما يراها هو.
           </p>
 
           <div className="hra-secb">
@@ -176,7 +176,7 @@ export const ManualPunchModal: React.FC<Props> = ({
 
           {failed.length > 0 && (
             <div className="hra-secb">
-              <p className="hra-hint">أيامٌ لم تُسجَّل:</p>
+              <p className="hra-hint">أيام لم يتم تسجيلها:</p>
               <ul className="hra-why">
                 {failed.map((line) => (
                   <li className="hra-why__i is-no" key={line}>
@@ -199,7 +199,7 @@ export const ManualPunchModal: React.FC<Props> = ({
             onClick={() => { void submit(); }}
             disabled={punch.isPending}
           >
-            {punch.isPending ? 'جارٍ الحفظ…' : 'أضِف البصمة'}
+            {punch.isPending ? 'جارٍ الحفظ…' : 'أضف البصمة'}
           </button>
         </div>
       </div>

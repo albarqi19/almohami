@@ -53,10 +53,10 @@ interface Props {
  * الترتيبُ مقصود: العامُّ قبل الخاصّ، فيُقرأ سببٌ واحدٌ لا قائمةُ أسباب.
  */
 function blockReason(type: HrLetterType, emp: EmployeeProfile): string | null {
-  if (!emp.hire_date) return 'لم يُسجَّل تاريخُ المباشرة';
-  if (!emp.job_title) return 'لم يُسجَّل المسمّى الوظيفيّ';
-  if (TERMINAL_TYPES.includes(type) && !emp.termination_date) return 'يُصدَر بعد انتهاء الخدمة';
-  if (type === 'employment_certificate' && emp.status !== 'active') return 'الملفُّ ليس على رأس العمل';
+  if (!emp.hire_date) return 'تاريخ المباشرة غير مسجل';
+  if (!emp.job_title) return 'المسمى الوظيفي غير مسجل';
+  if (TERMINAL_TYPES.includes(type) && !emp.termination_date) return 'يصدر بعد انتهاء الخدمة';
+  if (type === 'employment_certificate' && emp.status !== 'active') return 'الموظف ليس على رأس العمل';
   return null;
 }
 
@@ -110,7 +110,7 @@ export const IssueLetterModal: React.FC<Props> = ({ empId, emp, onClose, onIssue
       return;
     }
     if (type === 'clearance' && !duesConfirmed) {
-      toast.error('إخلاءُ الطرف يلزمه إقرارُك بإخلاء العهدة');
+      toast.error('أكد إخلاء العهدة قبل إصدار إخلاء الطرف');
       return;
     }
 
@@ -125,7 +125,7 @@ export const IssueLetterModal: React.FC<Props> = ({ empId, emp, onClose, onIssue
     setSaving(true);
     try {
       const letter = await hrLetterService.issue(empId, payload);
-      toast.success('صدر الخطاب برقم ' + letter.letter_number);
+      toast.success('تم إصدار الخطاب برقم ' + letter.letter_number);
 
       // الإبطالُ **قبل** فتح الـPDF: الخطابُ صدر وحُجز رقمُه، فسقوطُ الفتح لا يجوز أن
       // يترك السجلَّ بلا صفٍّ للورقة التي بيد صاحبها.
@@ -138,10 +138,10 @@ export const IssueLetterModal: React.FC<Props> = ({ empId, emp, onClose, onIssue
           `hr-letter-${letter.letter_number}.pdf`
         );
       } catch (pdfError) {
-        toast.error(errorText(pdfError, 'تعذّر فتحُ الخطاب'));
+        toast.error(errorText(pdfError, 'تعذر فتح الخطاب'));
       }
     } catch (error) {
-      toast.error(errorText(error, 'تعذّر إصدار الخطاب'));
+      toast.error(errorText(error, 'تعذر إصدار الخطاب'));
     } finally {
       setSaving(false);
     }
@@ -200,11 +200,11 @@ export const IssueLetterModal: React.FC<Props> = ({ empId, emp, onClose, onIssue
                 maxLength={255}
                 onChange={(event) => setRecipient(event.target.value)}
               />
-              {recipient.trim() === '' && <span className="hrl-hint">يُطبع «لمن يهمّه الأمر»</span>}
+              {recipient.trim() === '' && <span className="hrl-hint">تطبع عبارة «لمن يهمه الأمر»</span>}
             </div>
 
             <div className="hr-field">
-              <label htmlFor={purposeId}>الغرض (اختياريّ)</label>
+              <label htmlFor={purposeId}>الغرض (اختياري)</label>
               <input
                 id={purposeId}
                 value={purpose}
@@ -219,7 +219,7 @@ export const IssueLetterModal: React.FC<Props> = ({ empId, emp, onClose, onIssue
             <h4 className="hrl-fset__t">فقرة إضافية</h4>
 
             <div className="hr-field">
-              <label htmlFor={extraId}>نصٌّ يُطبع قبل الخاتمة (اختياريّ)</label>
+              <label htmlFor={extraId}>نص يطبع قبل الخاتمة (اختياري)</label>
               <textarea
                 id={extraId}
                 rows={3}
@@ -228,7 +228,7 @@ export const IssueLetterModal: React.FC<Props> = ({ empId, emp, onClose, onIssue
                 onChange={(event) => setExtra(event.target.value)}
               />
               <span className="hrl-hint">
-                تُطبع كما هي قبل الخاتمة. اكتب الثناءَ بنفسك — النظامُ لا يولّده.
+                تطبع كما هي قبل الخاتمة. اكتب عبارة الشكر بنفسك، والنظام لا يولدها.
               </span>
             </div>
           </section>
@@ -245,13 +245,13 @@ export const IssueLetterModal: React.FC<Props> = ({ empId, emp, onClose, onIssue
                   onChange={(event) => setDuesConfirmed(event.target.checked)}
                 />
                 <span>
-                  أُقرّ بأنّ المنسوب أخلى طرفَه وسلّم ما بعهدته، ولا مطالبةَ عليه في سجلّات المكتب.
+                  أقر بأن الموظف أخلى طرفه وسلم ما بعهدته، ولا مطالبة عليه في سجلات المكتب.
                 </span>
               </label>
 
               <p className="hrl-note">
-                المكافأةُ ومستحقّاتُ نهاية الخدمة <strong>غير محسوبةٍ في النظام</strong> — هذا إقرارُك
-                أنت، ونصُّ الخطاب لا يُعدّ مخالصةً مالية.
+                المكافأة ومستحقات نهاية الخدمة <strong>غير محسوبة في النظام</strong>. هذا
+                إقرارك، ونص الخطاب لا يعد مخالصة مالية.
               </p>
             </section>
           )}
@@ -262,8 +262,8 @@ export const IssueLetterModal: React.FC<Props> = ({ empId, emp, onClose, onIssue
               <p className="hrl-flag hrl-flag--block">
                 <ShieldAlert size={13} />
                 <span>
-                  <span className="hrl-flag__t">اختر نوعَ الخطاب</span>
-                  <span className="hrl-flag__hint">لكلِّ نوعٍ شرطُه، ويظهر تحت اسمه في الشبكة أعلاه.</span>
+                  <span className="hrl-flag__t">اختر نوع الخطاب</span>
+                  <span className="hrl-flag__hint">لكل نوع شرطه، ويظهر تحت اسمه أعلاه.</span>
                 </span>
               </p>
             )}
@@ -273,7 +273,7 @@ export const IssueLetterModal: React.FC<Props> = ({ empId, emp, onClose, onIssue
                 <ShieldAlert size={13} />
                 <span>
                   <span className="hrl-flag__t">{reason}</span>
-                  <span className="hrl-flag__hint">أكمِل الحقلَ في ملفّ المنسوب ثم أعِد الإصدار.</span>
+                  <span className="hrl-flag__hint">أكمل الحقل في ملف الموظف ثم أعد الإصدار.</span>
                 </span>
               </p>
             )}
@@ -283,10 +283,10 @@ export const IssueLetterModal: React.FC<Props> = ({ empId, emp, onClose, onIssue
                 <AlertTriangle size={13} />
                 <span>
                   <span className="hrl-flag__t">
-                    قائمةُ المغادرة فيها <span dir="ltr">{fmtCount(pendingOffboarding)}</span> بنداً لم يُنجَز
+                    قائمة المغادرة فيها <span dir="ltr">{fmtCount(pendingOffboarding)}</span> بنداً غير منجز
                   </span>
                   <span className="hrl-flag__hint">
-                    تحذيرٌ لا يمنع الإصدار — راجعها من «المباشرة» إن كان الإخلاء معلّقاً عليها.
+                    تحذير لا يمنع الإصدار. راجعها من «المباشرة» إن كان الإخلاء معلقاً عليها.
                   </span>
                 </span>
               </p>
@@ -296,9 +296,9 @@ export const IssueLetterModal: React.FC<Props> = ({ empId, emp, onClose, onIssue
               <p className="hrl-flag hrl-flag--info">
                 <Info size={13} />
                 <span>
-                  <span className="hrl-flag__t">لا كليشةَ افتراضيةً لمكتبك</span>
+                  <span className="hrl-flag__t">لا توجد كليشة افتراضية لمكتبك</span>
                   <span className="hrl-flag__hint">
-                    يصدر الخطابُ بترويسةٍ مبنيّةٍ من بيانات المكتب — عيّن كليشةً افتراضيةً من «الكليشات».
+                    يصدر الخطاب بترويسة مبنية من بيانات المكتب. اختر كليشة افتراضية من «الكليشات».
                   </span>
                 </span>
               </p>

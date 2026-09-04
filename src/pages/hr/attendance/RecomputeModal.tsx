@@ -59,17 +59,17 @@ export const RecomputeModal: React.FC<Props> = ({ employee, onClose }) => {
 
   const submit = async () => {
     if (span === null || inverted) {
-      toast.error('اكتب مدىً صحيحاً — البدايةُ قبل النهاية.');
+      toast.error('اكتب مدى صحيحا. يجب أن تكون البداية قبل النهاية.');
       return;
     }
 
     if (future) {
-      toast.error('لا يُعاد احتسابُ يومٍ لم يقع بعد.');
+      toast.error('لا يعاد احتساب يوم لم يقع بعد.');
       return;
     }
 
     if (tooLong) {
-      toast.error(`أطولُ مدىً من الشاشة ${ATTENDANCE_RECOMPUTE_MAX_DAYS} يوماً — قصِّر المدى.`);
+      toast.error(`الحد الأقصى من هذه الشاشة ${ATTENDANCE_RECOMPUTE_MAX_DAYS} يوما. اختصر المدة.`);
       return;
     }
 
@@ -91,7 +91,7 @@ export const RecomputeModal: React.FC<Props> = ({ employee, onClose }) => {
     <div className="hr-modal-overlay" onClick={onClose}>
       <div className="hr-modal hra-modal" onClick={(e) => e.stopPropagation()}>
         <div className="hr-modal__h">
-          <h3>إعادةُ احتساب مدى</h3>
+          <h3>إعادة احتساب مدى</h3>
           <button type="button" className="hr-icon-btn" onClick={onClose} aria-label="إغلاق">
             <X size={18} />
           </button>
@@ -101,9 +101,9 @@ export const RecomputeModal: React.FC<Props> = ({ employee, onClose }) => {
           {result === null ? (
             <>
               <p className="hra-hint">
-                يُعاد النظرُ في أيامٍ محتسَبةٍ سلفاً بعد تغييرٍ رجعيّ (إجازةٌ سُجِّلت متأخّرةً ·
-                عطلةٌ اعتُمدت · جدولٌ أُسنِد بأثرٍ رجعيّ). والمحرّك <strong>يكتب ما تغيّر
-                وحدَه</strong> — واليومُ الذي لا تتغيّر حقيقتُه لا يُلمَس صفُّه.
+                يعاد احتساب أيام محتسبة مسبقا بعد تغيير رجعي (إجازة مسجلة متأخرا ·
+                عطلة معتمدة · جدول مسند بأثر رجعي). والمحرك <strong>يكتب ما تغير
+                فقط</strong>. واليوم الذي لا تتغير حقيقته يبقى كما هو.
               </p>
 
               <div className="hr-field hr-field--row">
@@ -137,28 +137,28 @@ export const RecomputeModal: React.FC<Props> = ({ employee, onClose }) => {
                     checked={onlyOne}
                     onChange={(e) => setOnlyOne(e.target.checked)}
                   />
-                  <span>اقصره على {employee.name ?? 'المنسوب المحدَّد'}</span>
+                  <span>على {employee.name ?? 'الموظف المحدد'} فقط</span>
                 </label>
               )}
 
               <div className="hra-impact">
-                <p className="hra-impact__t">ما سيقع عند الضغط</p>
+                <p className="hra-impact__t">ما سيحدث عند الضغط</p>
                 <ul className="hra-impact__l">
                   <li>
                     {span === null || inverted
-                      ? 'المدى غيرُ صحيح — البدايةُ قبل النهاية.'
+                      ? 'المدى غير صحيح. يجب أن تكون البداية قبل النهاية.'
                       : tooLong
-                        ? `${daysWord(span)} — والحدُّ من الشاشة ${ATTENDANCE_RECOMPUTE_MAX_DAYS} يوماً.`
-                        : `تُوسَم ${daysWord(span)} (${fmtDate(from)} ← ${fmtDate(to)}) لإعادة النظر.`}
+                        ? `${daysWord(span)}. والحد من هذه الشاشة ${ATTENDANCE_RECOMPUTE_MAX_DAYS} يوما.`
+                        : `يتم تحديد ${daysWord(span)} (${fmtDate(from)} ← ${fmtDate(to)}) لإعادة الاحتساب.`}
                   </li>
                   <li>
                     {onlyOne && employee !== null
-                      ? `على ${employee.name ?? 'المنسوب المحدَّد'} وحدَه.`
-                      : 'على كلّ متتبَّعٍ في المدى — والمدى يُقصّ عند تاريخ بدءِ كلّ ملفّ.'}
+                      ? `على ${employee.name ?? 'الموظف المحدد'} فقط.`
+                      : 'على كل من يشمله التتبع في المدى. ويقتصر المدى على ما بعد تاريخ بدء كل ملف.'}
                   </li>
                   <li>
-                    <strong>لا رقمَ يتغيّر الآن</strong>: الوسمُ يدخل الطابور، والمحرّكُ يصرفه
-                    ليلاً ({ENGINE_RUN_CLOCK} بتوقيت الرياض).
+                    <strong>لا يتغير أي رقم الآن</strong>: يدخل الطلب قائمة الانتظار، والمحرك
+                    ينفذه ليلا ({ENGINE_RUN_CLOCK} بتوقيت الرياض).
                   </li>
                 </ul>
               </div>
@@ -166,8 +166,8 @@ export const RecomputeModal: React.FC<Props> = ({ employee, onClose }) => {
               <p className="hra-note">
                 <CalendarClock size={13} aria-hidden="true" />
                 <span>
-                  لا تُعِد الضغطَ إن لم يتغيّر شيء — الأيامُ الموسومةُ سلفاً لا تُوسَم مرّتين،
-                  والطلبُ مخنوقٌ بثلاثِ محاولاتٍ في الدقيقة.
+                  لا تعد الضغط إن لم يتغير شيء. الأيام المحددة مسبقا لا يعاد تحديدها،
+                  والطلب محدود بثلاث محاولات في الدقيقة.
                 </span>
               </p>
             </>
@@ -184,21 +184,21 @@ export const RecomputeModal: React.FC<Props> = ({ employee, onClose }) => {
                 <dt>المشمولون</dt>
                 <dd>{peopleWord(result.employees)}</dd>
 
-                <dt>ما وُسم فعلاً</dt>
+                <dt>ما تم تحديده فعلا</dt>
                 <dd>
                   {result.days_marked === 0
-                    ? 'لا شيء — موسومٌ سلفاً وينتظر المحرّك'
-                    : `${fmtCount(result.days_marked)} يومَ موظفٍ`}
+                    ? 'لا شيء. محدد مسبقا وينتظر المحرك'
+                    : `${fmtCount(result.days_marked)} يوم موظف`}
                 </dd>
 
-                <dt>يعمل المحرّك</dt>
+                <dt>يعمل المحرك</dt>
                 <dd dir="ltr">{result.engine_runs_at}</dd>
               </dl>
 
               <p className="hra-note">
                 <CalendarClock size={13} aria-hidden="true" />
                 <span>
-                  لن تتغيّر أرقامُ هذه الشاشة قبل ذلك الوقت — وهذا هو السلوكُ الصحيح لا عطلاً.
+                  لن تتغير أرقام هذه الشاشة قبل ذلك الوقت. هذا هو السلوك المتوقع.
                 </span>
               </p>
             </>
@@ -217,7 +217,7 @@ export const RecomputeModal: React.FC<Props> = ({ employee, onClose }) => {
               onClick={() => { void submit(); }}
               disabled={recompute.isPending || span === null || tooLong || inverted || future}
             >
-              {recompute.isPending ? 'جارٍ الوسم…' : 'وسِّم المدى للاحتساب'}
+              {recompute.isPending ? 'جارٍ التحديد…' : 'حدد المدى لإعادة الاحتساب'}
             </button>
           )}
         </div>

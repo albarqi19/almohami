@@ -192,27 +192,27 @@ export function whyRows(day: AttendanceDayRow): WhyRow[] {
     key: 'rule',
     ok: rule !== 'none',
     text: rule === 'none'
-      ? 'لا دليلَ حسم هذا اليوم'
-      : `حسمه: ${ATTENDANCE_RULE_LABELS[rule] ?? rule}`,
+      ? 'لا دليل يحدد حالة هذا اليوم'
+      : `استند إلى: ${ATTENDANCE_RULE_LABELS[rule] ?? rule}`,
   });
 
   (explain.skipped ?? []).forEach((signal: AttendanceSignal) => {
     rows.push({
       key: `skip-${signal}`,
       ok: false,
-      text: `رُئي ولم يُرجَّح: ${ATTENDANCE_SIGNAL_LABELS[signal] ?? signal}`,
+      text: `ظهر ولم يعتمد: ${ATTENDANCE_SIGNAL_LABELS[signal] ?? signal}`,
     });
   });
 
   rows.push({
     key: 'punches',
     ok: day.punch_count > 0,
-    text: day.punch_count > 0 ? `${day.punch_count} بصمة في هذا اليوم` : 'صفرُ بصمات',
+    text: day.punch_count > 0 ? `${day.punch_count} بصمة في هذا اليوم` : 'لا بصمات',
   });
 
   const sessions = explain.session_ids ?? [];
   if (sessions.length > 0) {
-    rows.push({ key: 'sessions', ok: true, text: `${sessions.length} جلسةٌ مجدولةٌ في هذا اليوم` });
+    rows.push({ key: 'sessions', ok: true, text: `${sessions.length} جلسة مجدولة في هذا اليوم` });
   }
 
   if (day.holiday_name) {
@@ -220,19 +220,19 @@ export function whyRows(day: AttendanceDayRow): WhyRow[] {
   }
 
   if (day.leave_id !== null) {
-    rows.push({ key: 'leave', ok: true, text: 'يغطّيه سجلُّ إجازةٍ في الدفتر' });
+    rows.push({ key: 'leave', ok: true, text: 'يغطيه قيد في سجل الإجازات' });
   }
 
   if (day.legacy_admin_request_id !== null) {
-    rows.push({ key: 'legacy', ok: true, text: 'يغطّيه طلبٌ إداريٌّ معتمَدٌ في النظام السابق' });
+    rows.push({ key: 'legacy', ok: true, text: 'يغطيه طلب إداري معتمَد في النظام السابق' });
   }
 
   if (day.claim_id !== null) {
-    rows.push({ key: 'claim', ok: true, text: 'يغطّيه ادّعاءٌ معتمَد' });
+    rows.push({ key: 'claim', ok: true, text: 'يغطيه طلب تصحيح معتمَد' });
   }
 
   if (day.schedule_id === null) {
-    rows.push({ key: 'schedule', ok: false, text: 'لا جدولَ دوامٍ مُسنَدٌ لهذا اليوم' });
+    rows.push({ key: 'schedule', ok: false, text: 'لا يوجد جدول دوام مسنَد لهذا اليوم' });
   }
 
   return rows;
@@ -259,10 +259,10 @@ export function daysWord(count: number): string {
 export function peopleWord(count: number): string {
   const n = Math.abs(Math.round(count));
   if (n === 0) return 'لا أحد';
-  if (n === 1) return 'منسوبٌ واحد';
-  if (n === 2) return 'منسوبان';
-  if (n <= 10) return `${n} منسوبين`;
-  return `${n} منسوباً`;
+  if (n === 1) return 'موظف واحد';
+  if (n === 2) return 'موظفان';
+  if (n <= 10) return `${n} موظفين`;
+  return `${n} موظفاً`;
 }
 
 /** أوّلُ يومٍ في الشهر الجاري بصيغة `YYYY-MM-DD` — بتقويم الجهاز لا بـ`toISOString`. */
@@ -312,7 +312,7 @@ export const ENGINE_RUN_CLOCK = '04:50';
 
 /** جملةٌ واحدةٌ تُقال في كلّ موضعٍ يَعِد بأثرٍ ليليّ — نصٌّ واحدٌ لا أربع صياغات. */
 export const ENGINE_RUN_SENTENCE =
-  `الاحتسابُ يجري ليلاً (${ENGINE_RUN_CLOCK} بتوقيت الرياض) لا فوراً — ولن يتغيّر رقمٌ على الشاشة الآن.`;
+  `الاحتساب يجري ليلاً (${ENGINE_RUN_CLOCK} بتوقيت الرياض) لا فوراً. ولن يتغير أي رقم على الشاشة الآن.`;
 
 /**
  * سقفُ تاريخ البدء المسموح — **متحفّظٌ عمداً**: الخادمُ يقبل شهراً من اليوم

@@ -64,7 +64,7 @@ export const AttendanceHead: React.FC<Props> = ({
     <div className="ssp2-header__top">
       <div>
         <h1 className="hra-h1">الحضور والانصراف</h1>
-        <p className="hra-sub">النظامُ يَصِف ولا يحكم — يسجّل ما وقع، ويقترح تفسيراً، والقرارُ لك.</p>
+        <p className="hra-sub">النظام يسجل ما حدث ويقترح تفسيرا، والقرار لك.</p>
       </div>
 
       <div className="hra-headtools">
@@ -105,15 +105,15 @@ export const AttendanceHead: React.FC<Props> = ({
             type="button"
             className="ssp2-btn"
             onClick={onOpenSetup}
-            title="فتحُ التتبّع على من يبصم — والتتبّعُ مُطفأٌ على كلّ ملفٍّ افتراضياً"
+            title="فتح التتبع على من يسجل الحضور، والتتبع غير مفعل على أي ملف افتراضيا"
           >
-            <UserPlus size={13} /> مَن يبصم
+            <UserPlus size={13} /> من يسجل الحضور
           </button>
         )}
 
         {onOpenSchedule !== null && (
           <button type="button" className="ssp2-btn" onClick={onOpenSchedule}>
-            <Settings2 size={13} /> جدولُ الدوام
+            <Settings2 size={13} /> جدول الدوام
           </button>
         )}
 
@@ -122,9 +122,9 @@ export const AttendanceHead: React.FC<Props> = ({
             type="button"
             className="ssp2-btn"
             onClick={onRecompute}
-            title={`الاحتسابُ يجري ليلاً (${ENGINE_RUN_CLOCK} بتوقيت الرياض) لا فوراً — الزرُّ يوسم المدى فقط`}
+            title={`الاحتساب يجري ليلا (${ENGINE_RUN_CLOCK} بتوقيت الرياض) لا فورا، والزر يحدد المدى فقط`}
           >
-            <CalendarClock size={13} /> إعادةُ الاحتساب (ليلاً)
+            <CalendarClock size={13} /> إعادة الاحتساب (ليلا)
           </button>
         )}
       </div>
@@ -133,7 +133,7 @@ export const AttendanceHead: React.FC<Props> = ({
     <div className="ssp2-header__facts">
       <span className="ssp2-fact">
         <CalendarCheck size={13} aria-hidden="true" />
-        <span className="ssp2-fact__label">حالاتُ اليوم</span>
+        <span className="ssp2-fact__label">حالات اليوم</span>
       </span>
 
       {facts === null ? (
@@ -152,7 +152,7 @@ export const AttendanceHead: React.FC<Props> = ({
       <span className="ssp2-fact__sep" aria-hidden="true" />
 
       <span className="ssp2-fact">
-        <span className="ssp2-fact__label">يحتاج قراراً</span>
+        <span className="ssp2-fact__label">يحتاج قرارا</span>
         <b dir="ltr">{pendingDays === null ? '—' : fmtCount(pendingDays)}</b>
       </span>
     </div>

@@ -40,8 +40,8 @@ export function esc(value: unknown): string {
 function verifyText(emp: EmployeeProfile): string {
   if (!isLawyer(emp)) return '—';
 
-  if (emp.sba_verification_status === 'verified_same_firm') return 'موثّق · مكتبك';
-  if (emp.sba_verification_status === 'verified_other_firm') return 'موثّق · منشأة أخرى';
+  if (emp.sba_verification_status === 'verified_same_firm') return 'موثق · مكتبك';
+  if (emp.sba_verification_status === 'verified_other_firm') return 'موثق · منشأة أخرى';
   if (emp.sba_verification_status === 'expired') return 'رخصة منتهية';
   return 'قيد التحقق';
 }
@@ -68,7 +68,7 @@ export function printRoster(rows: EmployeeProfile[], total: number): void {
     .join('');
 
   const partial = rows.length < total
-    ? `<div class="sub">هذا الكشف يعرض أحدثَ ${esc(rows.length)} من ${esc(total)}.</div>`
+    ? `<div class="sub">هذا الكشف يعرض أحدث ${esc(rows.length)} من ${esc(total)}.</div>`
     : '';
 
   /*
@@ -78,7 +78,7 @@ export function printRoster(rows: EmployeeProfile[], total: number): void {
    * أدناه صلبةٌ عمداً ولا تُقاس بقاعدة «صفر hex» التي تحكم CSS التطبيق وJSX.
    */
   const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-    <title>كشف المنسوبين</title>
+    <title>كشف الموظفين</title>
     <style>
       * { font-family: 'Segoe UI', Tahoma, sans-serif; }
       body { padding: 28px; color: #1f2937; }
@@ -90,8 +90,8 @@ export function printRoster(rows: EmployeeProfile[], total: number): void {
       tr:nth-child(even) td { background: #f8fafc; }
       .foot { margin-top: 16px; font-size: 11px; color: #9ca3af; }
     </style></head><body>
-    <h1>كشف منسوبي المكتب</h1>
-    <div class="sub">عدد المنسوبين: ${esc(total)} · صدر بتاريخ ${esc(today)}</div>
+    <h1>كشف موظفي المكتب</h1>
+    <div class="sub">عدد الموظفين: ${esc(total)} · صدر بتاريخ ${esc(today)}</div>
     ${partial}
     <table>
       <thead><tr>
@@ -100,7 +100,7 @@ export function printRoster(rows: EmployeeProfile[], total: number): void {
       </tr></thead>
       <tbody>${body}</tbody>
     </table>
-    <div class="foot">نظام الرائد — الموارد البشرية</div>
+    <div class="foot">نظام الرائد · الموارد البشرية</div>
     </body></html>`;
 
   const w = window.open('', '_blank');

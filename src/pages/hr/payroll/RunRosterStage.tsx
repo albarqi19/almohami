@@ -46,22 +46,22 @@ export const RunRosterStage: React.FC<Props> = ({ detail, meta, rebuilding, onRe
           <span className="hrl-badge hrl-badge--flat">{outOf(roster.included_count, roster.total)}</span>
           {meta.can_prepare && meta.roster_editable && (
             <button type="button" className="hrl-block__a" disabled={rebuilding} onClick={onRebuild}>
-              <RefreshCw size={12} /> أعد بناءَ النطاق
+              <RefreshCw size={12} /> أعد بناء قائمة المشمولين
             </button>
           )}
         </header>
 
         <div className="hrl-block__b hrl-block__b--flush">
           {roster.included.length === 0 ? (
-            <p className="hrl-hint">لا منسوبَ في نطاق هذا المسير.</p>
+            <p className="hrl-hint">لا يوجد موظف مشمول بهذا المسير.</p>
           ) : (
             <table className="hrl-table hrp-roster">
               <thead>
                 <tr>
-                  <th scope="col">المنسوب</th>
+                  <th scope="col">الموظف</th>
                   <th scope="col">القسم</th>
-                  <th scope="col">نظامُ التأمينات</th>
-                  <th scope="col">أساسُ التجزئة</th>
+                  <th scope="col">نظام التأمينات</th>
+                  <th scope="col">أساس التجزئة</th>
                   <th scope="col">الآيبان</th>
                 </tr>
               </thead>
@@ -77,7 +77,7 @@ export const RunRosterStage: React.FC<Props> = ({ detail, meta, rebuilding, onRe
                     <td>{line.department ?? line.job_title}</td>
                     <td>{line.gosi_scheme === null ? '—' : GOSI_SCHEME_LABELS[line.gosi_scheme]}</td>
                     <td>{line.proration_basis === null ? '—' : PRORATION_LABELS[line.proration_basis]}</td>
-                    <td>{line.has_iban ? 'مسجَّل' : 'غيرُ مسجَّل'}</td>
+                    <td>{line.has_iban ? 'مسجل' : 'غير مسجل'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -88,8 +88,8 @@ export const RunRosterStage: React.FC<Props> = ({ detail, meta, rebuilding, onRe
         {roster.included.length > 0 && (
           <div className="hrl-block__b">
             <p className="hrl-hint">
-              أعمدةُ هذه المرحلة أهليةٌ وسياسةٌ لا مال: لم يُحتسب ريالٌ بعد، وأساسُ التجزئة
-              مجمَّدٌ على كلّ سطرٍ فتبديلُه لاحقاً لا يعيد كتابةَ هذا الشهر.
+              أعمدة هذه المرحلة للأهلية والسياسة فقط. لم يتم احتساب أي مبلغ بعد، وأساس التجزئة
+              مقفل على كل سطر فتغييره لاحقاً لا يعيد كتابة هذا الشهر.
             </p>
           </div>
         )}
@@ -106,7 +106,7 @@ export const RunRosterStage: React.FC<Props> = ({ detail, meta, rebuilding, onRe
 
         <div className="hrl-block__b">
           {roster.excluded.length === 0 ? (
-            <p className="hrl-hint">لا مستبعَد — كلُّ منسوبٍ في المكتب داخلٌ في هذا المسير.</p>
+            <p className="hrl-hint">لا يوجد مستبعد. كل موظفي المكتب داخلون في هذا المسير.</p>
           ) : (
             <ul className="hrp-excluded">
               {roster.excluded.map((row) => {
@@ -137,8 +137,7 @@ export const RunRosterStage: React.FC<Props> = ({ detail, meta, rebuilding, onRe
           )}
 
           <p className="hrl-hint">
-            هذه القائمةُ مجمَّدةٌ في المسير بأسمائها ورموزِ أسبابها: من يقرأ مسيرَ هذا الشهر
-            بعد سنةٍ يرى من استُبعد ولماذا، لا عدداً مجرَّداً.
+            هذه القائمة مقفلة في المسير بأسمائها ورموز أسبابها، وتبقى للرجوع إليها لاحقاً.
           </p>
         </div>
       </section>

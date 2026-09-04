@@ -43,7 +43,7 @@ export async function openLetterPdf(url: string, fileName: string, label = 'ال
   });
 
   if (!res.ok) {
-    let message = `تعذّر فتحُ ${label}`;
+    let message = `تعذر فتح ${label}`;
     try {
       const body = await res.clone().json();
       if (body?.message) message = String(body.message);

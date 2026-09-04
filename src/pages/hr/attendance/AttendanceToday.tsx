@@ -54,8 +54,8 @@ export const AttendanceToday: React.FC<Props> = ({
     return (
       <div className="hra-state hra-state--error">
         <AlertTriangle size={20} aria-hidden="true" />
-        <p className="hra-state__t">تعذّر جلبُ حضور اليوم</p>
-        <p className="hra-state__d">{errorText(error, 'انقطعَ الاتصال بالخادم.')}</p>
+        <p className="hra-state__t">تعذر تحميل حضور اليوم</p>
+        <p className="hra-state__d">{errorText(error, 'انقطع الاتصال بالخادم.')}</p>
         <button type="button" className="ssp2-btn" onClick={onRetry}>
           <RefreshCw size={13} /> إعادة المحاولة
         </button>
@@ -67,10 +67,10 @@ export const AttendanceToday: React.FC<Props> = ({
     return (
       <div className="hra-state">
         <CalendarDays size={22} aria-hidden="true" />
-        <p className="hra-state__t">لا صفَّ محتسَبٌ في {fmtDate(date)}</p>
+        <p className="hra-state__t">لا يوجد سجل محتسب في {fmtDate(date)}</p>
         <p className="hra-state__d">
-          المحرّكُ يحتسب أيامَ المكتب ليلاً بعد ساعة فصل اليوم — فاليومُ الجاري يظهر هنا صباحَ
-          غد. واختيارُ تاريخٍ سابقٍ يعرض ما احتُسب فعلاً.
+          يحتسب المحرك أيام المكتب ليلا بعد ساعة فصل اليوم، فاليوم الجاري يظهر هنا صباح غد.
+          واختيار تاريخ سابق يعرض ما تم احتسابه فعلا.
         </p>
       </div>
     );
@@ -82,7 +82,7 @@ export const AttendanceToday: React.FC<Props> = ({
         <div className="hra-day" key={row.id}>
           <div className="hra-day__main">
             <div className="hra-day__d">
-              <span>{row.employee?.name ?? 'منسوب'}</span>
+              <span>{row.employee?.name ?? 'موظف'}</span>
               <span className={statusClass(row.status)}>{statusLabel(row.status)}</span>
               {row.flags.length > 0 && (
                 <span className="hra-flags">
@@ -101,7 +101,7 @@ export const AttendanceToday: React.FC<Props> = ({
               <span dir="ltr">{fmtTime(row.first_in_at)}</span>
               {' ← '}
               <span dir="ltr">{fmtTime(row.last_out_at)}</span>
-              {row.worked_minutes !== null && ` · أُنجز ${fmtMinutes(row.worked_minutes)}`}
+              {row.worked_minutes !== null && ` · مدة العمل ${fmtMinutes(row.worked_minutes)}`}
               {row.employee?.job_title ? ` · ${row.employee.job_title}` : ''}
             </p>
           </div>

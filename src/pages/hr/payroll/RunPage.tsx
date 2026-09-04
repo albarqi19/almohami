@@ -138,7 +138,7 @@ export const RunPage: React.FC = () => {
       void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll', 'run', runId] });
       void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll', 'run-preflight', runId] });
     },
-    onError: (error) => setActionError(errorText(error, 'تعذّرت إعادةُ بناء النطاق.')),
+    onError: (error) => setActionError(errorText(error, 'تعذرت إعادة بناء قائمة المشمولين.')),
   });
 
   const computeMutation = useMutation({
@@ -150,7 +150,7 @@ export const RunPage: React.FC = () => {
       void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll', 'run-drift', runId] });
       void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll', 'payslip'] });
     },
-    onError: (error) => setActionError(errorText(error, 'تعذّر الاحتساب.')),
+    onError: (error) => setActionError(errorText(error, 'تعذر الاحتساب.')),
   });
 
   const setStage = (next: StageKey) => {
@@ -176,10 +176,10 @@ export const RunPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--locked">
           <Lock size={22} />
-          <p className="hrl-state__t">هذا المسيرُ غيرُ متاحٍ لك</p>
+          <p className="hrl-state__t">هذا المسير غير متاح لك</p>
           <p className="hrl-state__d">{lockedMessage}</p>
           <Link className="hrl-link" to="/hr/payroll">
-            عُد إلى الرواتب
+            ارجع إلى الرواتب
           </Link>
         </div>
       </div>
@@ -203,8 +203,8 @@ export const RunPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={22} />
-          <p className="hrl-state__t">تعذّر جلبُ المسير</p>
-          <p className="hrl-state__d">{errorText(runQuery.error, 'خطأٌ غيرُ متوقَّع.')}</p>
+          <p className="hrl-state__t">تعذر تحميل المسير</p>
+          <p className="hrl-state__d">{errorText(runQuery.error, 'خطأ غير متوقع.')}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void runQuery.refetch()}>
             <RefreshCw size={13} /> أعد المحاولة
           </button>
@@ -221,8 +221,8 @@ export const RunPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--empty">
           <FileSpreadsheet size={22} />
-          <p className="hrl-state__t">لا نطاقَ لهذا المسير</p>
-          <p className="hrl-state__d">المسيرُ لا يُفتح فارغاً — أعد بناءَ نطاقه أو افتح مسيراً جديداً.</p>
+          <p className="hrl-state__t">لا يوجد مشمولون في هذا المسير</p>
+          <p className="hrl-state__d">لا يفتح المسير فارغا. أعد بناء قائمة المشمولين أو افتح مسيرا جديدا.</p>
         </div>
       </div>
     );
@@ -240,7 +240,7 @@ export const RunPage: React.FC = () => {
           <h1 className="hrl-h1">
             {/* رقمُ المسير يُحجَز عند الاعتماد وحدَه — وقبله يُعرَّف بمعرّفه **موسوماً بأنّه
                 بلا رقم**، لا بكلمة «مسوّدة» التي تكذب على مسيرٍ محتسَبٍ مراجَع. */}
-            <FileSpreadsheet size={16} /> {run.run_number ?? `مسيرٌ بلا رقم #${run.id}`}
+            <FileSpreadsheet size={16} /> {run.run_number ?? `مسير بلا رقم #${run.id}`}
           </h1>
           <p className="hrl-sub">
             {RUN_TYPE_LABELS[run.run_type] ?? run.run_type} · {fmtDateHuman(run.period_start)} —{' '}
@@ -262,7 +262,7 @@ export const RunPage: React.FC = () => {
               🩸 و`dir="ltr"` للأرقام الصِرفة وحدَها — «٧ من ٨» تحت اتجاهٍ لاتينيٍّ تُقرأ
               «٨ من ٧»، وهو رقمٌ خاطئٌ يبدو صحيحاً. */}
           <span className="hrl-fact">
-            نطاقٌ مجمَّد
+            المشمولون وقت البناء
             <span className="hrl-fact__n">{outOf(run.headcount_included, run.headcount_total)}</span>
           </span>
           <span className="hrl-fact">
@@ -322,8 +322,8 @@ export const RunPage: React.FC = () => {
               ) : preflightQuery.isError ? (
                 <div className="hrl-state hrl-state--error">
                   <AlertTriangle size={22} />
-                  <p className="hrl-state__t">تعذّر الفحصُ القبْليّ</p>
-                  <p className="hrl-state__d">{errorText(preflightQuery.error, 'خطأٌ غيرُ متوقَّع.')}</p>
+                  <p className="hrl-state__t">تعذر الفحص التمهيدي</p>
+                  <p className="hrl-state__d">{errorText(preflightQuery.error, 'خطأ غير متوقع.')}</p>
                   <button type="button" className="hr-btn hr-btn--sm" onClick={() => void preflightQuery.refetch()}>
                     <RefreshCw size={13} /> أعد المحاولة
                   </button>
@@ -353,8 +353,8 @@ export const RunPage: React.FC = () => {
               ) : linesQuery.isError ? (
                 <div className="hrl-state hrl-state--error">
                   <AlertTriangle size={22} />
-                  <p className="hrl-state__t">تعذّر جلبُ جدول الاحتساب</p>
-                  <p className="hrl-state__d">{errorText(linesQuery.error, 'خطأٌ غيرُ متوقَّع.')}</p>
+                  <p className="hrl-state__t">تعذر تحميل جدول الاحتساب</p>
+                  <p className="hrl-state__d">{errorText(linesQuery.error, 'خطأ غير متوقع.')}</p>
                   <button type="button" className="hr-btn hr-btn--sm" onClick={() => void linesQuery.refetch()}>
                     <RefreshCw size={13} /> أعد المحاولة
                   </button>
@@ -380,8 +380,8 @@ export const RunPage: React.FC = () => {
               ) : driftQuery.isError ? (
                 <div className="hrl-state hrl-state--error">
                   <AlertTriangle size={22} />
-                  <p className="hrl-state__t">تعذّرت المراجعة</p>
-                  <p className="hrl-state__d">{errorText(driftQuery.error, 'خطأٌ غيرُ متوقَّع.')}</p>
+                  <p className="hrl-state__t">تعذرت المراجعة</p>
+                  <p className="hrl-state__d">{errorText(driftQuery.error, 'خطأ غير متوقع.')}</p>
                   <button type="button" className="hr-btn hr-btn--sm" onClick={() => void driftQuery.refetch()}>
                     <RefreshCw size={13} /> أعد المحاولة
                   </button>
@@ -405,8 +405,8 @@ export const RunPage: React.FC = () => {
               ) : linesQuery.isError ? (
                 <div className="hrl-state hrl-state--error">
                   <AlertTriangle size={22} />
-                  <p className="hrl-state__t">تعذّر جلبُ مجاميع المسير</p>
-                  <p className="hrl-state__d">{errorText(linesQuery.error, 'خطأٌ غيرُ متوقَّع.')}</p>
+                  <p className="hrl-state__t">تعذر تحميل مجاميع المسير</p>
+                  <p className="hrl-state__d">{errorText(linesQuery.error, 'خطأ غير متوقع.')}</p>
                   <button type="button" className="hr-btn hr-btn--sm" onClick={() => void linesQuery.refetch()}>
                     <RefreshCw size={13} /> أعد المحاولة
                   </button>
@@ -440,8 +440,8 @@ export const RunPage: React.FC = () => {
               ) : paymentsQuery.isError ? (
                 <div className="hrl-state hrl-state--error">
                   <AlertTriangle size={22} />
-                  <p className="hrl-state__t">تعذّر جلبُ لوح الدفع</p>
-                  <p className="hrl-state__d">{errorText(paymentsQuery.error, 'خطأٌ غيرُ متوقَّع.')}</p>
+                  <p className="hrl-state__t">تعذر تحميل لوحة الدفع</p>
+                  <p className="hrl-state__d">{errorText(paymentsQuery.error, 'خطأ غير متوقع.')}</p>
                   <button type="button" className="hr-btn hr-btn--sm" onClick={() => void paymentsQuery.refetch()}>
                     <RefreshCw size={13} /> أعد المحاولة
                   </button>
@@ -477,34 +477,34 @@ export const RunPage: React.FC = () => {
           ) : selectedLineId !== null && payslipQuery.isError ? (
             <div className="hrl-state hrl-state--error">
               <AlertTriangle size={22} />
-              <p className="hrl-state__t">تعذّر جلبُ القسيمة</p>
-              <p className="hrl-state__d">{errorText(payslipQuery.error, 'خطأٌ غيرُ متوقَّع.')}</p>
+              <p className="hrl-state__t">تعذر تحميل القسيمة</p>
+              <p className="hrl-state__d">{errorText(payslipQuery.error, 'خطأ غير متوقع.')}</p>
             </div>
           ) : stage === 'preflight' && preflightQuery.data !== undefined ? (
             <ReadinessBoard
               readiness={preflightQuery.data.readiness}
               runId={run.id}
               frozen={{ included: run.headcount_included, total: run.headcount_total }}
-              title="الجاهزيةُ الآن"
+              title="الجاهزية الآن"
               headingId="run-readiness-h"
             />
           ) : (
             <section className="hrl-block" aria-labelledby="run-side-h">
               <header className="hrl-block__h">
                 <h2 className="hrl-block__t" id="run-side-h">
-                  ما الذي جُمِّد في هذا المسير
+                  ما الذي تم تثبيته في هذا المسير
                 </h2>
               </header>
 
               <div className="hrl-block__b">
                 <dl className="hrl-kv">
-                  <dt>النطاقُ المجمَّد</dt>
-                  <dd>{outOf(run.headcount_included, run.headcount_total)} — بأسماء المستبعَدين ورموزِ أسبابهم.</dd>
+                  <dt>المشمولون وقت البناء</dt>
+                  <dd>{outOf(run.headcount_included, run.headcount_total)} مع أسماء المستبعَدين ورموز أسبابهم.</dd>
                   <dt>المرحلة</dt>
                   <dd>{RUN_STAGE_LABELS[run.stage]}</dd>
                   <dt>المحاسبة</dt>
                   <dd>{POSTING_STATE_LABELS[run.posting_state]}</dd>
-                  <dt>تاريخُ الصرف</dt>
+                  <dt>تاريخ الصرف</dt>
                   <dd>{fmtDateHuman(run.pay_date)}</dd>
                 </dl>
 
@@ -512,9 +512,9 @@ export const RunPage: React.FC = () => {
                     والفرقُ يقع في الإنتاج مع كلّ تعيينٍ بعد بناء النطاق — فيبدو أحدُهما
                     خطأً في الآخر ما لم يُقَل ما هو. */}
                 <p className="hrl-hint">
-                  والنطاقُ أعلاه <strong>لقطةٌ مجمَّدةٌ وقتَ بنائه</strong>، أمّا «الجاهزيةُ الآن»
-                  في الفحص القبْليّ فتُقاس على منسوبي المكتب اليوم — فمن عُيِّن بعد البناء يظهر
-                  فيها ولا يدخل هذا المسيرَ حتى يُعاد بناءُ نطاقه.
+                  وقائمة المشمولين أعلاه <strong>نسخة محفوظة وقت بنائها</strong>، أما «الجاهزية الآن»
+                  في الفحص التمهيدي فتقاس على موظفي المكتب اليوم. ومن تم تعيينه بعد البناء يظهر
+                  فيها ولا يدخل هذا المسير حتى يعاد بناء القائمة.
                 </p>
 
                 {/* 🩸 كان هذا التلميحُ يظهر في **كلّ** مرحلةٍ لا يُختار فيها سطر — فيقرؤه
@@ -524,8 +524,7 @@ export const RunPage: React.FC = () => {
                     ونفيُها عنه كذبةٌ ثانيةٌ من الباب نفسِه. */}
                 {stage === 'roster' && run.computed === false && (
                   <p className="hrl-hint">
-                    ولا رقمَ ماليَّ في هذه المرحلة: الأرقامُ تصل مع الاحتساب، وعرضُ أصفارٍ قبله
-                    يقول «الصافي صفر» عن مسيرٍ لم يُحسب.
+                    ولا تظهر أرقام مالية في هذه المرحلة. تصل الأرقام مع الاحتساب.
                   </p>
                 )}
               </div>

@@ -84,9 +84,9 @@ export const MyAttendanceCard: React.FC = () => {
   const doPunch = async () => {
     try {
       await punch.mutateAsync({ direction, clientKey: makeClientKey() });
-      toast.success(`سُجّل ${PUNCH_DIRECTION_LABELS[direction]}ك`);
+      toast.success(`تم تسجيل ${PUNCH_DIRECTION_LABELS[direction]}ك`);
     } catch (e) {
-      toast.error(errorText(e, 'تعذّر تسجيل البصمة'));
+      toast.error(errorText(e, 'تعذر تسجيل البصمة'));
     }
   };
 
@@ -103,19 +103,19 @@ export const MyAttendanceCard: React.FC = () => {
       <section className="hrl-block">
         <div className="hrl-block__h">
           <h2 className="hrl-block__t hrl-h2">
-            <Fingerprint size={14} aria-hidden="true" /> إثباتُ حضورك بيدك
+            <Fingerprint size={14} aria-hidden="true" /> إثبات حضورك بيدك
           </h2>
         </div>
 
         {record.isPending ? (
-          <div className="hra-state hra-state--loading" aria-busy="true" aria-label="جارٍ تحميل سجلّ حضورك">
+          <div className="hra-state hra-state--loading" aria-busy="true" aria-label="جارٍ تحميل سجل حضورك">
             {Array.from({ length: 3 }, (_, i) => <span className="hra-skel" key={i} />)}
           </div>
         ) : record.isError || !data ? (
           <div className="hra-state hra-state--error">
             <AlertTriangle size={18} aria-hidden="true" />
-            <p className="hra-state__t">تعذّر جلبُ سجلّ حضورك</p>
-            <p className="hra-state__d">{errorText(record.error, 'انقطعَ الاتصال بالخادم.')}</p>
+            <p className="hra-state__t">تعذر تحميل سجل حضورك</p>
+            <p className="hra-state__d">{errorText(record.error, 'انقطع الاتصال بالخادم.')}</p>
             <button type="button" className="hr-btn hr-btn--sm" onClick={() => { void record.refetch(); }}>
               <RefreshCw size={13} /> إعادة المحاولة
             </button>
@@ -140,18 +140,18 @@ export const MyAttendanceCard: React.FC = () => {
                   <>
                     <span>
                       {last === null
-                        ? 'لم تُسجّل حضوراً بعد اليوم.'
-                        : `آخرُ بصمةٍ اليوم: ${PUNCH_DIRECTION_LABELS[last.direction]} ${fmtTime(last.punched_at)}`}
+                        ? 'لم تسجل حضورك اليوم بعد.'
+                        : `آخر بصمة اليوم: ${PUNCH_DIRECTION_LABELS[last.direction]} ${fmtTime(last.punched_at)}`}
                     </span>
                     <span className="hra-punch__note">
-                      يُسجَّل الوقتُ من الخادم، <strong>ولا يُخزَّن موقعُك</strong>.
+                      يسجل النظام الوقت من الخادم، <strong>ولا يخزن موقعك</strong>.
                     </span>
                   </>
                 ) : (
                   <>
-                    <span>{data.punch_blocked_reason?.message ?? 'الحضورُ غيرُ مُفعَّلٍ على ملفّك.'}</span>
+                    <span>{data.punch_blocked_reason?.message ?? 'الحضور غير مفعل على ملفك.'}</span>
                     <span className="hra-punch__note">
-                      لا شيءَ مطلوبٌ منك — وما لم يُفعَّل لا يُحتسب عليك.
+                      لا شيء مطلوب منك، والحضور غير المفعل لا يحتسب عليك.
                     </span>
                   </>
                 )}
@@ -159,7 +159,7 @@ export const MyAttendanceCard: React.FC = () => {
             </div>
 
             {data.days.length === 0 ? (
-              <p className="hra-line">لا أيامَ محتسَبةً بعد في هذا الشهر</p>
+              <p className="hra-line">لا توجد أيام محتسبة بعد في هذا الشهر</p>
             ) : (
               <div className="hrl-block__b hrl-block__b--flush">
                 {/* `--rec`: صفُّ سجلٍّ في صفحةٍ عريضة — يجاور فعلُه محتواه بدل أن

@@ -41,9 +41,9 @@ import type { AdvanceRow, AdvanceStatus } from '../../../types/hrPayroll';
 const STATUS_TABS: Array<{ key: AdvanceStatus | 'all'; label: string }> = [
   { key: 'all', label: 'الكل' },
   { key: 'active', label: 'النشطة' },
-  { key: 'pending', label: 'لم تُصرف' },
+  { key: 'pending', label: 'غير المصروفة' },
   { key: 'paused', label: 'الموقوفة' },
-  { key: 'settled', label: 'المسدَّدة' },
+  { key: 'settled', label: 'المسددة' },
 ];
 
 export const AdvancesPage: React.FC = () => {
@@ -71,7 +71,7 @@ export const AdvancesPage: React.FC = () => {
       setActionError(null);
       void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll', 'advances'] });
     },
-    onError: (error) => setActionError(errorText(error, 'تعذّر تغييرُ حالة السلفة.')),
+    onError: (error) => setActionError(errorText(error, 'تعذر تغيير حالة السلفة.')),
   });
 
   const disburseMutation = useMutation({
@@ -80,7 +80,7 @@ export const AdvancesPage: React.FC = () => {
       setActionError(null);
       void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll', 'advances'] });
     },
-    onError: (error) => setActionError(errorText(error, 'تعذّر تسجيلُ الصرف.')),
+    onError: (error) => setActionError(errorText(error, 'تعذر تسجيل الصرف.')),
   });
 
   // ─────────── مقفلة: الوحدةُ مطفأةٌ أو الصلاحيةُ ناقصة ───────────
@@ -95,7 +95,7 @@ export const AdvancesPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--locked">
           <Lock size={22} />
-          <p className="hrl-state__t">سجلُّ السلف غيرُ متاحٍ لك</p>
+          <p className="hrl-state__t">سجل السلف غير متاح لك</p>
           <p className="hrl-state__d">{lockedMessage}</p>
         </div>
       </div>
@@ -119,8 +119,8 @@ export const AdvancesPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={22} />
-          <p className="hrl-state__t">تعذّر جلبُ السلف</p>
-          <p className="hrl-state__d">{errorText(listQuery.error, 'خطأٌ غيرُ متوقَّع.')}</p>
+          <p className="hrl-state__t">تعذر تحميل السلف</p>
+          <p className="hrl-state__d">{errorText(listQuery.error, 'خطأ غير متوقع.')}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void listQuery.refetch()}>
             <RefreshCw size={13} /> أعد المحاولة
           </button>
@@ -138,27 +138,27 @@ export const AdvancesPage: React.FC = () => {
       <header className="hrl-head">
         <div className="hrl-head__id">
           <h1 className="hrl-h1">
-            <HandCoins size={16} /> السلفُ والقروض
+            <HandCoins size={16} /> السلف والقروض
           </h1>
           <p className="hrl-sub">
-            كم على كلِّ منسوبٍ اليوم، وكم يُقتطَع الشهرَ القادم — والقسطُ يُقترَح ولا يُخصَم
-            بلا قرارٍ باسم صاحبه.
+            كم على كل موظف اليوم، وكم يخصم منه الشهر القادم. والقسط يقترح ولا يخصم إلا
+            بقرار مسجل باسم من اتخذه.
           </p>
         </div>
 
         <div className="hrl-head__badges">
           <span className="hrl-fact">
-            سلفٌ معروضة
+            سلف معروضة
             <span className="hrl-fact__n" dir="ltr">
               {listQuery.data?.page.total ?? 0}
             </span>
           </span>
           {/* الجاراتُ الثلاثُ موصولةٌ من بعضها: بندُ القائمة واحدٌ، والشاشاتُ ثلاث. */}
           <Link className="hrl-fact" to="/hr/payroll/penalties">
-            الجزاءاتُ التأديبية
+            الجزاءات التأديبية
           </Link>
           <Link className="hrl-fact" to="/hr/payroll/penalty-fund">
-            صندوقُ الغرامات (م.٧٣)
+            صندوق الغرامات (م.٧٣)
           </Link>
         </div>
       </header>
@@ -174,7 +174,7 @@ export const AdvancesPage: React.FC = () => {
         </div>
       )}
 
-      <nav className="hrl-tabs" aria-label="ترشيحُ السلف">
+      <nav className="hrl-tabs" aria-label="تصفية السلف">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.key}
@@ -197,10 +197,10 @@ export const AdvancesPage: React.FC = () => {
       {rows.length === 0 ? (
         <div className="hrl-state hrl-state--empty">
           <HandCoins size={22} />
-          <p className="hrl-state__t">لا سلفَ</p>
+          <p className="hrl-state__t">لا توجد سلف</p>
           <p className="hrl-state__d">
-            لم تُمنح سلفةٌ في هذا المكتب بعد. والسلفةُ مالٌ يخرج بسببٍ مكتوبٍ وباسمِ من اعتمده،
-            ويعود أقساطاً مسقَّفةً بعُشر الأجر المستحقّ.
+            لم يتم منح أي سلفة في هذا المكتب بعد. والسلفة مال يخرج بسبب مكتوب وباسم من اعتمده،
+            ويعود أقساطاً لا تتجاوز ١٠٪ من الأجر المستحق.
           </p>
         </div>
       ) : (
@@ -208,13 +208,13 @@ export const AdvancesPage: React.FC = () => {
           <thead>
             <tr>
               <th scope="col">السلفة</th>
-              <th scope="col">المنسوب</th>
+              <th scope="col">الموظف</th>
               <th scope="col">الأصل</th>
               <th scope="col">الأقساط</th>
-              <th scope="col">المتبقّي</th>
-              <th scope="col">قسطُ الشهر القادم</th>
+              <th scope="col">المتبقي</th>
+              <th scope="col">قسط الشهر القادم</th>
               <th scope="col">الحالة</th>
-              <th scope="col">الفعل</th>
+              <th scope="col">الإجراء</th>
             </tr>
           </thead>
           <tbody>
@@ -236,8 +236,8 @@ export const AdvancesPage: React.FC = () => {
 
       {/* سردُ الدفتر — «لماذا رصيدي كذا؟» يُجاب بأسبابٍ تُقرأ لا بمعادلةٍ تُشرح. */}
       {openId !== null && (
-        <section className="hrp-seg" aria-label="سجلُّ السلفة">
-          <h2 className="hrl-h2">حركةُ السلفة</h2>
+        <section className="hrp-seg" aria-label="سجل السلفة">
+          <h2 className="hrl-h2">حركة السلفة</h2>
 
           {detailQuery.isLoading && <span className="hrl-skel hrl-skel--line" />}
 
@@ -252,7 +252,7 @@ export const AdvancesPage: React.FC = () => {
           ))}
 
           {detailQuery.data !== undefined && detailQuery.data.ledger.length === 0 && (
-            <p className="hrl-hint">لا حركةَ بعد — تُسجَّل عند الصرف وعند كلّ قسطٍ يُخصَم في مسيرٍ معتمَد.</p>
+            <p className="hrl-hint">لا توجد حركة بعد. تسجل الحركة عند الصرف وعند كل قسط يخصم في مسير معتمَد.</p>
           )}
         </section>
       )}
@@ -281,7 +281,7 @@ const AdvanceRowView: React.FC<RowProps> = ({ row, canManage, busy, open, onTogg
           {row.advance_number}
         </button>
         <span className="hrl-row__meta">{ADVANCE_KIND_LABELS[row.kind]}</span>
-        <span className="hrl-row__meta">مُنحت {fmtDateHuman(row.granted_on)}</span>
+        <span className="hrl-row__meta">تاريخ المنح {fmtDateHuman(row.granted_on)}</span>
       </th>
 
       <td>
@@ -298,7 +298,7 @@ const AdvanceRowView: React.FC<RowProps> = ({ row, canManage, busy, open, onTogg
           {money(row.installment_amount) ?? EMPTY_MARK}
         </span>
         {row.schedule_extended && (
-          <span className="hrl-badge hrp-badge--warn">امتدّ الجدولُ بسقف م.٩٢/١</span>
+          <span className="hrl-badge hrp-badge--warn">امتد الجدول بسقف م.٩٢/١</span>
         )}
       </td>
 
@@ -328,7 +328,7 @@ const AdvanceRowView: React.FC<RowProps> = ({ row, canManage, busy, open, onTogg
             disabled={!canManage || busy}
             onClick={onDisburse}
           >
-            <Send size={13} /> سجّل الصرف
+            <Send size={13} /> تسجيل الصرف
           </button>
         )}
 
@@ -338,7 +338,7 @@ const AdvanceRowView: React.FC<RowProps> = ({ row, canManage, busy, open, onTogg
             className="hr-btn hr-btn--sm"
             disabled={!canManage || busy}
             onClick={() => {
-              const reason = window.prompt('سببُ إيقاف الأقساط (يُسجَّل باسمك):');
+              const reason = window.prompt('سبب إيقاف الأقساط (يسجل باسمك):');
               if (reason !== null && reason.trim().length >= 5) onPause(true, reason.trim());
             }}
           >
@@ -352,7 +352,7 @@ const AdvanceRowView: React.FC<RowProps> = ({ row, canManage, busy, open, onTogg
             className="hr-btn hr-btn--sm"
             disabled={!canManage || busy}
             onClick={() => {
-              const reason = window.prompt('سببُ استئناف الأقساط (يُسجَّل باسمك):');
+              const reason = window.prompt('سبب استئناف الأقساط (يسجل باسمك):');
               if (reason !== null && reason.trim().length >= 5) onPause(false, reason.trim());
             }}
           >
@@ -360,13 +360,13 @@ const AdvanceRowView: React.FC<RowProps> = ({ row, canManage, busy, open, onTogg
           </button>
         )}
 
-        {!canManage && <span className="hrl-row__meta">تلزمك صلاحيةُ منح السلف.</span>}
+        {!canManage && <span className="hrl-row__meta">تلزمك صلاحية منح السلف.</span>}
 
         {row.status === 'active' && (
           <span className="hrl-row__meta">
-            أوّلُ قسطٍ من {fmtMonthHuman(row.first_installment_period)} ·{' '}
+            أول قسط من {fmtMonthHuman(row.first_installment_period)} ·{' '}
             <Link className="hrl-link" to="/hr/payroll">
-              يُبتّ في طابور القرارات
+              القرار في قائمة القرارات المعلقة
             </Link>
           </span>
         )}

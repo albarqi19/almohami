@@ -57,7 +57,7 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
       <section className="hrl-block" aria-labelledby="bankfile-h">
         <header className="hrl-block__h">
           <h2 className="hrl-block__t" id="bankfile-h">
-            <Landmark size={14} /> كشفُ الرواتب للبنك
+            <Landmark size={14} /> كشف الرواتب للبنك
           </h2>
         </header>
         <div className="hrl-block__b">
@@ -73,12 +73,12 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
       <section className="hrl-block" aria-labelledby="bankfile-h">
         <header className="hrl-block__h">
           <h2 className="hrl-block__t" id="bankfile-h">
-            <Landmark size={14} /> كشفُ الرواتب للبنك
+            <Landmark size={14} /> كشف الرواتب للبنك
           </h2>
         </header>
         <div className="hrl-block__b">
           <p className="hrl-flag__t">
-            <AlertTriangle size={13} /> {errorText(previewQuery.error, 'تعذّرت معاينةُ الكشف.')}
+            <AlertTriangle size={13} /> {errorText(previewQuery.error, 'تعذرت معاينة الكشف.')}
           </p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void previewQuery.refetch()}>
             <RefreshCw size={13} /> أعد المحاولة
@@ -101,9 +101,9 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
 
     try {
       await hrPayrollService.downloadBankInputFile(runId, meta.file_name, draft);
-      setNote(`نزل [${meta.file_name}] — وسُجّل في أحداث المسير: من أصدره ومتى وكم سطراً وبأيّ إجمالي.`);
+      setNote(`تم تنزيل [${meta.file_name}]. وتم تسجيله في أحداث المسير: من أصدره ومتى وكم سطراً وبأي إجمالي.`);
     } catch (caught) {
-      setError(errorText(caught, 'تعذّر تنزيلُ الكشف.'));
+      setError(errorText(caught, 'تعذر تنزيل الكشف.'));
     } finally {
       setBusy(false);
     }
@@ -113,7 +113,7 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
     <section className="hrl-block" aria-labelledby="bankfile-h">
       <header className="hrl-block__h">
         <h2 className="hrl-block__t" id="bankfile-h">
-          <Landmark size={14} /> كشفُ الرواتب للبنك
+          <Landmark size={14} /> كشف الرواتب للبنك
         </h2>
         {file.refusal === null && (
           <span className="hrl-badge hrl-badge--flat">
@@ -122,7 +122,7 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
         )}
         {file.refusal === null && meta.can_export && (
           <button type="button" className="hrl-block__a" disabled={busy} onClick={() => void download()}>
-            {busy ? <Loader2 size={12} /> : <Download size={12} />} نزّل الكشف
+            {busy ? <Loader2 size={12} /> : <Download size={12} />} تنزيل الكشف
           </button>
         )}
       </header>
@@ -138,11 +138,11 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
           ))}
         </ul>
         <p className="hrl-hint">
-          والدورةُ كاملةً في{' '}
+          والدورة كاملة في{' '}
           <Link className="hrl-link" to="/hr/payroll/bank-cycle">
-            دورةِ الرواتب والبنك
+            دورة الرواتب والبنك
           </Link>
-          : المكتبُ يُصدّر ← يرفع لبنكه فيحوّل ← يطلب من البنك ملفَّ الأجور الموقَّع ← يرفعه بنفسه
+          : المكتب يصدر ← يرفع لبنكه فيحول ← يطلب من البنك ملف الأجور الموقع ← يرفعه بنفسه
           خلال ثلاثين يوماً.
         </p>
       </div>
@@ -183,17 +183,17 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
 
           {file.refusal.code === 'missing_iban' && (
             <p className="hrl-hint">
-              أضِف حساباتِهم في{' '}
+              أضف حساباتهم في{' '}
               <Link className="hrl-link" to="/hr/payroll/wages">
-                سجلّ الأجور
+                سجل الأجور
               </Link>
-              . وسطرٌ بلا حسابٍ يُحوَّل إليه ليس أمرَ دفعٍ أصلاً — فلا يُصدَّر ولو موسوماً مسوّدة.
+              . وسطر بلا حساب يحول إليه ليس أمر دفع، فلا يصدر ولو بصفة مسودة.
             </p>
           )}
 
           {file.refusal.code === DRAFTABLE_REFUSAL && (
             <button type="button" className="hr-btn hr-btn--sm" onClick={() => setDraft(true)}>
-              صدّرها «مسوّدةً للمراجعة» — لا تُسلَّم للبنك بهذه الحال
+              تصدير «مسودة للمراجعة». لا تسلم للبنك بهذه الحال
             </button>
           )}
         </div>
@@ -202,7 +202,7 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
           {file.draft && (
             <div className="hrl-flag hrl-flag--block" role="status">
               <p className="hrl-flag__t">
-                <AlertTriangle size={13} /> مسوّدةٌ للمراجعة — لا تُسلَّم للبنك بهذه الحال
+                <AlertTriangle size={13} /> مسودة للمراجعة. لا تسلم للبنك بهذه الحال
               </p>
               {file.draft_reasons.map((reason) => (
                 <p className="hrl-flag__hint" key={reason}>
@@ -214,17 +214,17 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
 
           <div className="hrl-block__b">
             <dl className="hrl-kv">
-              <dt>الرقمُ الموحّد للمنشأة</dt>
+              <dt>الرقم الموحد للمنشأة</dt>
               <dd className={file.establishment.mol_establishment_id === null ? 'is-empty' : undefined}>
-                {file.establishment.mol_establishment_id ?? 'غيرُ مُدخَل'}
+                {file.establishment.mol_establishment_id ?? 'غير مدخل'}
               </dd>
-              <dt>حسابُ المكتب المخصومُ منه</dt>
+              <dt>حساب المكتب المخصوم منه</dt>
               <dd className={file.establishment.bank_account === null ? 'is-empty' : undefined}>
                 <span dir="ltr">{file.establishment.bank_account ?? '—'}</span>
               </dd>
-              <dt>رمزُ البنك المنفِّذ</dt>
+              <dt>رمز البنك المنفذ</dt>
               <dd className={file.establishment.dest_id === null ? 'is-empty' : undefined}>
-                {file.establishment.dest_id ?? 'غيرُ مُدخَل'}
+                {file.establishment.dest_id ?? 'غير مدخل'}
               </dd>
             </dl>
           </div>
@@ -261,14 +261,14 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
                 جمعُ عائمٍ في المتصفّح يُنتج ١٠٩٥٥٠٫٢٩٩٩٩ فيخالف الملفَّ في آخر هللة. */}
             <div className="hrl-formula">
               <span className="hrl-formula__term hrl-formula__term--static">
-                <span className="hrl-formula__k">سطورُ الكشف</span>
+                <span className="hrl-formula__k">سطور الكشف</span>
                 <span className="hrl-formula__v" dir="ltr">
                   {file.row_count}
                 </span>
               </span>
               <span className="hrl-formula__k">⟵</span>
               <span className="hrl-formula__term hrl-formula__term--sum">
-                <span className="hrl-formula__k">إجماليُّ المُحوَّل</span>
+                <span className="hrl-formula__k">إجمالي المحول</span>
                 <span className="hrl-formula__v" dir="ltr">
                   {money(file.total)}
                 </span>
@@ -277,7 +277,7 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
 
             {file.rows.length > shown.length && (
               <p className="hrl-hint">
-                معروضٌ {shown.length} من {file.rows.length} — والملفُّ المنزَّل يحمل السطورَ كاملةً.
+                معروض {shown.length} من {file.rows.length}. والملف المنزل يحمل السطور كاملة.
               </p>
             )}
           </div>
@@ -286,7 +286,7 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
           {file.excluded.length > 0 && (
             <div className="hrl-block__b">
               <p className="hrl-flag__t">
-                <Info size={13} /> خارجَ هذا الكشف: {file.excluded.length}
+                <Info size={13} /> خارج هذا الكشف: {file.excluded.length}
               </p>
               <ul className="hrp-bank__list">
                 {file.excluded.map((person) => (
@@ -310,8 +310,8 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
           {! meta.can_export && (
             <div className="hrl-block__b">
               <p className="hrl-hint">
-                تنزيلُ الكشف يحتاج صلاحيةَ «تصدير كشف الرواتب المسلَّم للبنك» — والمعاينةُ أعلاه
-                متاحةٌ لك.
+                تنزيل الكشف يحتاج صلاحية «تصدير كشف الرواتب المسلم للبنك». والمعاينة أعلاه
+                متاحة لك.
               </p>
             </div>
           )}

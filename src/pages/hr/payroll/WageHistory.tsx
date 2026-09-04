@@ -49,7 +49,7 @@ export const WageHistory: React.FC<Props> = ({ records, canViewAmounts, canManag
     <section className="hrl-block hrl-block--scroll">
       <div className="hrl-block__h">
         <h2 className="hrl-block__t hrl-h2">
-          <History size={14} /> سجلُّ نسخ الأجر
+          <History size={14} /> سجل نسخ الأجر
         </h2>
         <span className="hrl-badge hrl-badge--flat">{records.length}</span>
       </div>
@@ -57,19 +57,19 @@ export const WageHistory: React.FC<Props> = ({ records, canViewAmounts, canManag
       {records.length === 0 ? (
         <div className="hrl-state hrl-state--empty">
           <History size={20} />
-          <p className="hrl-state__t">لا نسخَ بعد</p>
-          <p className="hrl-state__d">أوّلُ نسخةٍ تُسجَّل تظهر هنا بتاريخ سريانها وسببها ومن أدخلها.</p>
+          <p className="hrl-state__t">لا توجد نسخ بعد</p>
+          <p className="hrl-state__d">أول نسخة مسجلة تظهر هنا بتاريخ سريانها وسببها ومن أدخلها.</p>
         </div>
       ) : (
         <div className="hrl-block__b hrl-block__b--flush">
           <table className="hrl-ledger">
-            <caption className="hrl-sr">نسخُ الأجر مرتَّبةً من الأحدث سرياناً إلى الأقدم</caption>
+            <caption className="hrl-sr">نسخ الأجر مرتبة من الأحدث سرياناً إلى الأقدم</caption>
             <thead>
               <tr>
                 <th scope="col">السريان</th>
                 <th scope="col">الأجر الشهري</th>
                 <th scope="col">السبب</th>
-                <th scope="col">أدخلها</th>
+                <th scope="col">من أدخلها</th>
                 <th scope="col">
                   <span className="hrl-sr">إجراءات</span>
                 </th>
@@ -102,7 +102,7 @@ export const WageHistory: React.FC<Props> = ({ records, canViewAmounts, canManag
                             onClick={() => ask(record.id)}
                             disabled={voidingId === record.id}
                           >
-                            {voidingId === record.id ? <Loader2 size={12} /> : <Undo2 size={12} />} ألغِ
+                            {voidingId === record.id ? <Loader2 size={12} /> : <Undo2 size={12} />} إلغاء
                           </button>
                         ) : null}
                       </td>
@@ -112,18 +112,18 @@ export const WageHistory: React.FC<Props> = ({ records, canViewAmounts, canManag
                       <tr>
                         <td colSpan={5}>
                           <div className="hr-field">
-                            <label htmlFor={`void-reason-${record.id}`}>سببُ الإلغاء</label>
+                            <label htmlFor={`void-reason-${record.id}`}>سبب الإلغاء</label>
                             <input
                               id={`void-reason-${record.id}`}
                               type="text"
                               value={reason}
                               onChange={(event) => setReason(event.target.value)}
-                              placeholder="أُدخل الراتبُ لمنسوبٍ آخر · رقمٌ خاطئ…"
+                              placeholder="تم إدخال الراتب لموظف آخر · رقم خاطئ…"
                               maxLength={500}
                             />
                             <p className="hrl-hint">
-                              الإلغاءُ لا يحذف الصفَّ: يبقى ظاهراً موسوماً، ويُعاد فتحُ ذيل النسخة
-                              السابقة فلا يبقى المنسوبُ بلا أجرٍ سارٍ.
+                              الإلغاء لا يحذف السجل: يبقى ظاهراً مع بيان إلغائه، ويعاد فتح نهاية
+                              النسخة السابقة فلا يبقى الموظف بلا أجر سار.
                             </p>
                           </div>
                           <div className="hrl-block__a">
@@ -133,7 +133,7 @@ export const WageHistory: React.FC<Props> = ({ records, canViewAmounts, canManag
                               onClick={confirm}
                               disabled={reason.trim().length < 5}
                             >
-                              أكِّد الإلغاء
+                              أكد الإلغاء
                             </button>
                             <button type="button" className="hr-btn hr-btn--sm" onClick={() => setTarget(null)}>
                               تراجع
@@ -152,7 +152,7 @@ export const WageHistory: React.FC<Props> = ({ records, canViewAmounts, canManag
 
       {!canViewAmounts && records.length > 0 && (
         <p className="hrl-note">
-          التواريخُ والأسبابُ ومن أدخلها مرئيةٌ لك، والمبالغُ محجوبةٌ بصلاحيةٍ مستقلّة.
+          التواريخ والأسباب ومن أدخلها مرئية لك، والمبالغ محجوبة بصلاحية مستقلة.
         </p>
       )}
     </section>

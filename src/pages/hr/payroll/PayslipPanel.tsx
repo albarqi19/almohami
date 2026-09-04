@@ -93,7 +93,7 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
         'القسيمة'
       );
     } catch (error) {
-      toast.error(errorText(error, 'تعذّر فتحُ القسيمة'));
+      toast.error(errorText(error, 'تعذر فتح القسيمة'));
     } finally {
       setPrinting(false);
     }
@@ -114,7 +114,7 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
               {line.payslip_number}
             </span>
           )}
-          {line.is_frozen && <span className="hrl-badge hrl-badge--flat">مجمَّدة</span>}
+          {line.is_frozen && <span className="hrl-badge hrl-badge--flat">مقفلة</span>}
 
           {/* الزرُّ يظهر متى وُجد رقمٌ يُطبَع — ولا يُرسَم لسطرٍ لم يُحتسب: الخادمُ يردّه ٤٢٢. */}
           {computed && (
@@ -136,8 +136,8 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
               <span className="hrl-num__u">ر.س</span>
             </p>
             <p className="hrl-num__label">
-              الصافي المُودَع{run === null ? '' : ` · ${fmtDateHuman(run.pay_date)}`}
-              {line.iban_last4 === null ? '' : ` · حسابٌ منتهٍ بـ${line.iban_last4}`}
+              الصافي المودع{run === null ? '' : ` · ${fmtDateHuman(run.pay_date)}`}
+              {line.iban_last4 === null ? '' : ` · حساب ينتهي بـ${line.iban_last4}`}
             </p>
           </>
         ) : (
@@ -147,7 +147,7 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
                 {EMPTY_MARK}
               </span>
             </p>
-            <p className="hrl-num__label">لم يُحتسب بعد — والصفرُ المكتوبُ يُقرأ حقيقةً فلا يُكتب.</p>
+            <p className="hrl-num__label">لم يتم الاحتساب بعد.</p>
           </>
         )}
       </div>
@@ -190,10 +190,10 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
 
           {/* 🔴 D01: العددان معاً — التقويميُّ مقامُ الأجر، والدفتريُّ ما احتسبه دفترُ الإجازات. */}
           <p className="hrl-hint">
-            الأجرُ عن {daysFraction(line.paid_calendar_days, line.period_calendar_days)} يوماً تقويمياً
+            الأيام التقويمية المدفوعة {daysFraction(line.paid_calendar_days, line.period_calendar_days)}
             {line.leave_ledger_days === null || line.leave_ledger_days === '0.00'
               ? ''
-              : ` · وفي دفتر الإجازات ${String(line.leave_ledger_days).replace(/\.00$/, '')} يوماً بأساسه`}
+              : ` · وفي سجل الإجازات ${String(line.leave_ledger_days).replace(/\.00$/, '')} يوماً بحسابه الخاص`}
           </p>
 
           {/* 🔴 الكسرُ صريحاً بأمر المالك: «٢ من ٣٠» تُطبَع ليتحقّق منها إنسانٌ بالقسمة —
@@ -233,11 +233,11 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
       )}
 
       {/* ── الطبقةُ ٣: التفصيلُ سرداً لا جدولاً ── */}
-      {computed && open === 'earnings' && <ItemList items={earnings} emptyText="لا مستحقَّ في هذه القسيمة." />}
+      {computed && open === 'earnings' && <ItemList items={earnings} emptyText="لا يوجد مستحق في هذه القسيمة." />}
       {computed && open === 'deductions' && (
         <ItemList
           items={deductions}
-          emptyText="لا استقطاعَ في هذه القسيمة — ولا خصمَ يقع بلا قرارِ إنسانٍ مسمّى."
+          emptyText="لا يوجد استقطاع في هذه القسيمة. ولا يقع خصم بلا قرار مسجل باسم من اتخذه."
         />
       )}
 
@@ -247,10 +247,10 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
           <h3 className="hrl-h2">لماذا يختلف عن الشهر الماضي؟</h3>
 
           {payslip.previous === null ? (
-            <p className="hrl-hint">لا قسيمةَ سابقةً لهذا المنسوب — هذه أوّلُ قسيمةٍ تُحتسب له.</p>
+            <p className="hrl-hint">لا توجد قسيمة سابقة لهذا الموظف. هذه أول قسيمة تحتسب له.</p>
           ) : why.length === 0 ? (
             <p className="hrl-hint">
-              لا فرقَ عن الشهر الماضي: الصافي {money(payslip.previous.net_amount)} كما هو.
+              لا فرق عن الشهر الماضي. الصافي {money(payslip.previous.net_amount)} كما هو.
             </p>
           ) : (
             <ul className="hra-why">
@@ -268,7 +268,7 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
       {/* ── الطبقةُ ٥: كيف قُسِّم الأجر · وتكلفةُ المكتب · والحالة ── */}
       {computed && payslip.segments.length > 0 && (
         <div className="hrl-block__b">
-          <h3 className="hrl-h2">كيف قُسِّم الأجر</h3>
+          <h3 className="hrl-h2">كيف تم تقسيم الأجر</h3>
 
           <ul className="hrp-seg">
             {payslip.segments.map((segment) => (
@@ -278,10 +278,10 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
                 </span>
                 <span className="hrp-seg__f">
                   {segment.is_whole_period
-                    ? 'مدّةٌ كاملةٌ بلا يومٍ غيرِ مدفوع — الأجرُ حرفياً بلا قسمة'
+                    ? 'مدة كاملة بلا أيام غير مدفوعة. الأجر كامل بلا تجزئة'
                     : `${money(segment.formula?.monthly ?? segment.wage_actual)} · ${segment.formula?.fraction ?? EMPTY_MARK}`}
                   {segment.absorbs_remainder && segment.formula !== null && segment.formula.remainder !== '0.00'
-                    ? ` · ابتلعت كسرَ التوزيع (${segment.formula.remainder})`
+                    ? ` · أضيف إليها كسر التوزيع (${segment.formula.remainder})`
                     : ''}
                 </span>
                 <span className="hrp-seg__n" dir="ltr">
@@ -295,9 +295,9 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
 
       {computed && employerCost.length > 0 && (
         <div className="hrl-block__b hrp-cost">
-          <h3 className="hrl-h2">تكلفةُ المكتب</h3>
+          <h3 className="hrl-h2">تكلفة المكتب</h3>
           <p className="hrl-hint">
-            هذه لا تُخصَم من الموظف ولا تدخل صافيه — يتحمّلها المكتبُ فوق الأجر.
+            هذه المبالغ لا تخصم من الموظف ولا تدخل في صافيه. يتحملها المكتب فوق الأجر.
           </p>
 
           <ul className="hrp-item__list">
@@ -307,7 +307,7 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
           </ul>
 
           <dl className="hrl-kv">
-            <dt>مجموعُ التكلفة</dt>
+            <dt>مجموع التكلفة</dt>
             <dd dir="ltr">{money(line.employer_cost_amount) ?? EMPTY_MARK}</dd>
           </dl>
         </div>
@@ -330,14 +330,14 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
       <div className="hrl-block__b">
         <p className="hrl-hint">
           {editable
-            ? 'هذه القسيمةُ مسوّدةٌ قابلةٌ لإعادة الاحتساب — ولا تصير مستنداً إلا بالاعتماد.'
-            : 'قسيمةٌ مجمَّدةٌ: كلُّ رقمٍ فيها مخزَّنٌ في صفِّه، وتُعاد طباعتُها بعد سنواتٍ حرفاً بحرف.'}
-          {run !== null && run.posting_state === 'accounting_off' ? ' · لم تُقيَّد محاسبياً.' : ''}
-          {run !== null && run.self_approved ? ' · اعتمدها معدُّها بإقرارٍ مسجَّل.' : ''}
+            ? 'هذه القسيمة مسودة قابلة لإعادة الاحتساب، ولا تصبح وثيقة رسمية إلا بعد الاعتماد.'
+            : 'قسيمة مقفلة: كل رقم فيها محفوظ في سجله، وتعاد طباعتها كما هي تماما.'}
+          {run !== null && run.posting_state === 'accounting_off' ? ' · لم يتم قيدها في المحاسبة.' : ''}
+          {run !== null && run.self_approved ? ' · اعتمدها من أعدها بإقرار مسجل.' : ''}
           {/* 🔴 شرطُ فتح باب الإقرار: أن يبقى الأثرُ ظاهراً على القسيمة — لا في سجلٍّ يُفتَح
               بقصد. والاسمُ من اللقطة المجمَّدة لا من انضمامٍ حيّ. */}
           {run !== null && run.approver_was_subject
-            ? ` · اعتمدها من صُرف له فيها${run.approver_name === null ? '' : ` (${run.approver_name})`} بإقرارٍ مسجَّل.`
+            ? ` · اعتمدها موظف له مستحق في هذا المسير${run.approver_name === null ? '' : ` (${run.approver_name})`} بإقرار مسجل.`
             : ''}
         </p>
       </div>
@@ -387,7 +387,7 @@ const ItemRow: React.FC<{ item: PayrollItem }> = ({ item }) => {
           <span className="hrp-item__w">
             <span dir="ltr">{basis}</span>
             {unit === null ? '' : ` ${unit}`}
-            {item.basis_vessel === null ? '' : ` — ${VESSEL_LABELS[item.basis_vessel] ?? item.basis_vessel}`}
+            {item.basis_vessel === null ? '' : ` · ${VESSEL_LABELS[item.basis_vessel] ?? item.basis_vessel}`}
           </span>
         )}
 
@@ -395,7 +395,7 @@ const ItemRow: React.FC<{ item: PayrollItem }> = ({ item }) => {
           <span className="hrp-item__w">
             <Scale size={11} /> {rule}
             {item.article_ref === null ? '' : <span className="hrl-legal__ref"> {item.article_ref}</span>}
-            {item.rule_effective_from === null ? '' : ` · نسخةُ ${fmtDateHuman(item.rule_effective_from)}`}
+            {item.rule_effective_from === null ? '' : ` · نسخة ${fmtDateHuman(item.rule_effective_from)}`}
           </span>
         )}
 
@@ -407,8 +407,8 @@ const ItemRow: React.FC<{ item: PayrollItem }> = ({ item }) => {
 
         {item.decided_by_name !== null && (
           <span className="hrp-item__w">
-            <User size={11} /> قرّرها {item.decided_by_name}
-            {item.decision_reason === null ? '' : ` — ${item.decision_reason}`}
+            <User size={11} /> قررها {item.decided_by_name}
+            {item.decision_reason === null ? '' : ` · ${item.decision_reason}`}
           </span>
         )}
 
@@ -422,7 +422,7 @@ const ItemRow: React.FC<{ item: PayrollItem }> = ({ item }) => {
 
         {item.accrual_period !== '' && item.explain !== null && 'prior_period' in item.explain && (
           <span className="hrp-item__w">
-            <ChevronLeft size={11} /> تسويةٌ عن {item.accrual_period}
+            <ChevronLeft size={11} /> تسوية عن {item.accrual_period}
           </span>
         )}
       </div>

@@ -22,7 +22,7 @@ interface Props {
 /** اقتطاعٌ ثمّ «اعرض الكلّ (N)» — عرفُ `ContractsTab`/`DocumentsTab` نفسُه. */
 const VISIBLE_LIMIT = 12;
 
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 /**
  * **«منسوبون بحاجةِ فعل» — جوهرُ اللوحة: مَن أفتح ملفَّه الآن، ولماذا.**
@@ -57,7 +57,7 @@ export const BoardActionList: React.FC<Props> = ({ rows, error, isError, onRetry
     <section className="hrl-block">
       <div className="hrl-block__h">
         <h2 className="hrl-block__t hrl-h2">
-          <ListChecks size={14} /> منسوبون بحاجةِ فعل
+          <ListChecks size={14} /> موظفون يحتاجون إجراء
         </h2>
 
         {!isError && (
@@ -70,7 +70,7 @@ export const BoardActionList: React.FC<Props> = ({ rows, error, isError, onRetry
       {isError ? (
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={20} />
-          <p className="hrl-state__t">تعذّر جلب قائمة المنسوبين</p>
+          <p className="hrl-state__t">تعذر تحميل قائمة الموظفين</p>
           <p className="hrl-state__d">{errorText(error, CONNECTION_FALLBACK)}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={onRetry}>
             <RefreshCw size={13} /> إعادة المحاولة
@@ -82,17 +82,17 @@ export const BoardActionList: React.FC<Props> = ({ rows, error, isError, onRetry
               ومرتَّبٌ `latest('id')` في الخادم، فالفحصُ الشاملُ يحتاج ترتيباً وترشيحاً هناك. */}
           {total !== null && total > scanned && (
             <p className="hrl-note">
-              {`المكتب يضمّ ${fmtCount(total)} منسوباً، وهذه القائمة تفحص أحدثَ ${fmtCount(scanned)}. الفحصُ الشاملُ يحتاج ترتيباً وترشيحاً بالخادم.`}
+              {`المكتب يضم ${fmtCount(total)} موظفاً، وهذه القائمة تفحص أحدث ${fmtCount(scanned)}. الفحص الشامل يحتاج ترتيباً وتصفية بالخادم.`}
             </p>
           )}
 
           <div className="hrl-block__b hrl-block__b--flush">
             <table className="hrl-table">
-              <caption className="hrl-sr">منسوبون بحاجة فعل</caption>
+              <caption className="hrl-sr">موظفون يحتاجون إجراء</caption>
               <thead>
                 <tr>
-                  <th scope="col">المدّة</th>
-                  <th scope="col">المنسوب</th>
+                  <th scope="col">المدة</th>
+                  <th scope="col">الموظف</th>
                   <th scope="col">ما ينتظر</th>
                 </tr>
               </thead>
@@ -118,10 +118,10 @@ export const BoardActionList: React.FC<Props> = ({ rows, error, isError, onRetry
 
             {!expanded && rows.length > VISIBLE_LIMIT && (
               <EmptyLine
-                text={`تُعرض ${fmtCount(VISIBLE_LIMIT)} من ${fmtCount(rows.length)}`}
+                text={`تعرض ${fmtCount(VISIBLE_LIMIT)} من ${fmtCount(rows.length)}`}
                 action={(
                   <button type="button" className="hr-btn hr-btn--sm" onClick={() => setExpanded(true)}>
-                    اعرض الكلّ ({fmtCount(rows.length)})
+                    اعرض الكل ({fmtCount(rows.length)})
                   </button>
                 )}
               />

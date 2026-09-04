@@ -26,7 +26,7 @@ import ConvertLegacyModal from './ConvertLegacyModal';
 
 /** النصُّ الثابت حين لا يرسل الخادمُ تعليمَه — لا يُترك التبويبُ بلا تفسير. */
 const FALLBACK_NOTE =
-  'هذه طلباتٌ سجّلها الموظفون في «الطلبات الإدارية». لا تدخل في احتساب الرصيد حتى تُحوَّل إلى السجلّ.';
+  'هذه طلبات سجلها الموظفون في «الطلبات الإدارية». لا تدخل في احتساب الرصيد حتى يتم تحويلها إلى السجل.';
 
 const STATUS_BADGE: Record<string, string> = {
   approved: 'hr-badge--green',
@@ -85,13 +85,13 @@ export const LegacyRequestsTable: React.FC<Props> = ({
         <p className="hrl-note">{summary?.note || FALLBACK_NOTE}</p>
         <div className="hrl-state hrl-state--empty">
           <Users size={22} />
-          <p className="hrl-state__t">اختر منسوباً لعرض طلباته الإدارية</p>
+          <p className="hrl-state__t">اختر موظفا لعرض طلباته الإدارية</p>
           <p className="hrl-state__d">
             {summary
-              ? `في المكتب ${fmtCount(summary.approved_count)} طلباً مقبولاً و${fmtCount(
+              ? `في المكتب ${fmtCount(summary.approved_count)} طلبا مقبولا و${fmtCount(
                   summary.pending_count
-                )} قيد الانتظار — بمجموع ${fmtCount(summary.total_calendar_days)} يوماً تقويمياً لا تدخل في احتساب الرصيد.`
-              : 'الطلباتُ الإدارية تُقرأ لكلّ منسوبٍ على حدة.'}
+                )} قيد الانتظار. المجموع ${fmtCount(summary.total_calendar_days)} يوما تقويميا لا تدخل في احتساب الرصيد.`
+              : 'الطلبات الإدارية تعرض لكل موظف على حدة.'}
           </p>
         </div>
       </>
@@ -119,11 +119,11 @@ export const LegacyRequestsTable: React.FC<Props> = ({
         <p className="hrl-note">{note}</p>
         <div className="hrl-state hrl-state--empty">
           <Inbox size={22} />
-          <p className="hrl-state__t">لا طلباتٍ إدارية</p>
+          <p className="hrl-state__t">لا توجد طلبات إدارية</p>
           <p className="hrl-state__d">
             {filters.from || filters.to || filters.status
-              ? 'لا طلباتٍ إداريةً في هذه المدة.'
-              : `لا طلباتٍ إداريةً لـ${employeeName || 'هذا المنسوب'}.`}
+              ? 'لا توجد طلبات إدارية في هذه المدة.'
+              : `لا توجد طلبات إدارية لـ${employeeName || 'هذا الموظف'}.`}
           </p>
         </div>
       </>
@@ -146,7 +146,7 @@ export const LegacyRequestsTable: React.FC<Props> = ({
       <p className="hrl-note">{note}</p>
 
       <table className="hrl-table hrl-table--single">
-        <caption className="hrl-sr">الطلبات الإدارية السابقة وحالةُ تحويلها إلى سجلّ الإجازات</caption>
+        <caption className="hrl-sr">الطلبات الإدارية السابقة وحالة تحويلها إلى سجل الإجازات</caption>
         <thead>
           <tr>
             <th scope="col">نوع الطلب</th>
@@ -154,7 +154,7 @@ export const LegacyRequestsTable: React.FC<Props> = ({
             <th scope="col">الأيام</th>
             <th scope="col">الحالة</th>
             <th scope="col">المراجع</th>
-            <th scope="col">السجلّ</th>
+            <th scope="col">السجل</th>
           </tr>
         </thead>
         <tbody>
@@ -168,7 +168,7 @@ export const LegacyRequestsTable: React.FC<Props> = ({
                 <span className="hrl-cellnum" dir="ltr">
                   {row.calendar_duration_days === null ? EMPTY_MARK : fmtCount(row.calendar_duration_days)}
                 </span>
-                <span className="hrl-cellsub">تقويميّة — والمخصومُ يُحسب بقواعد النوع عند التحويل</span>
+                <span className="hrl-cellsub">تقويمية. المخصوم يحسب بقواعد النوع عند التحويل</span>
               </td>
               <td>
                 <span className={`hr-badge ${STATUS_BADGE[row.status] ?? 'hr-badge--gray'}`}>
@@ -183,14 +183,14 @@ export const LegacyRequestsTable: React.FC<Props> = ({
                 {/* محوَّلٌ: رابطٌ إلى نتيجته — لا زرٌّ مطفأٌ يوهم أنّ الفعلَ ما زال ممكناً */}
                 {row.is_converted ? (
                   <span className="hrl-convert">
-                    <span className="hr-badge hr-badge--green">محوَّل</span>
+                    <span className="hr-badge hr-badge--green">محول</span>
                     <Link className="hrl-link" to={`/hr/leave/${employeeId}?tab=records`}>
-                      سجلّ رقم {row.converted_leave_id} ←
+                      سجل رقم {row.converted_leave_id} ←
                     </Link>
                   </span>
                 ) : canManage && row.convertible ? (
                   <button type="button" className="hr-btn hr-btn--sm" onClick={() => setTarget(row)}>
-                    <ArrowLeftRight size={13} /> حوّل إلى السجلّ
+                    <ArrowLeftRight size={13} /> تحويل إلى السجل
                   </button>
                 ) : (
                   // ما ليس قابلاً للتحويل يُشرح بسببه — لا فراغَ ولا زرٌّ مطفأٌ بلا تفسير

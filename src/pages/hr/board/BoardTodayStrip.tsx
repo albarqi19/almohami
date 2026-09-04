@@ -37,7 +37,7 @@ import type { OnLeaveNowRow } from '../../../types/hr';
 /** سقفُ الأسماء — وما زاد يُختصر في سطرٍ يقود إلى السجلّ الكامل. */
 const NAME_LIMIT = 6;
 
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 interface Props {
   /**
@@ -75,7 +75,7 @@ export const BoardTodayStrip: React.FC<Props> = ({ query: onLeaveQuery }) => {
     return (
       <section className="hrl-conflict hrl-conflict--none" aria-label="اليوم في المكتب">
         <p>
-          <Check size={13} aria-hidden="true" /> {`لا غيابَ مسجَّلاً اليوم · ${today}`}
+          <Check size={13} aria-hidden="true" /> {`لا غياب مسجل اليوم · ${today}`}
         </p>
       </section>
     );
@@ -87,14 +87,14 @@ export const BoardTodayStrip: React.FC<Props> = ({ query: onLeaveQuery }) => {
   return (
     <section className="hrl-conflict" aria-label="اليوم في المكتب">
       {/* عقدةٌ نصّيةٌ واحدة — انظر الفخّ (٢) أعلاه */}
-      <p>{`اليوم ${today} · ${fmtCount(rows.length)} من المنسوبين في إجازةٍ أو غياب`}</p>
+      <p>{`اليوم ${today} · ${fmtCount(rows.length)} من الموظفين في إجازة أو غياب`}</p>
 
       {/* الأسماءُ رماديةٌ بحكم `.hrl-conflict ul` — وهذا مقصود: الملخّصُ هو العنوان،
           والأسماءُ تفصيلُه. */}
       <ul>
         {shown.map((row) => (
           <li key={row.leave_id}>
-            {`${row.user_name} — ${row.type_name}${row.half_day ? ' · نصفُ يوم' : ''} · يعود ${fmtLeaveDate(row.returns_on)}`}
+            {`${row.user_name} — ${row.type_name}${row.half_day ? ' · نصف يوم' : ''} · يعود ${fmtLeaveDate(row.returns_on)}`}
           </li>
         ))}
 

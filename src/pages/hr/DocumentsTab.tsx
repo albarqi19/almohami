@@ -16,7 +16,7 @@ import type { EmployeeDocument, EmployeeDocType } from '../../types/hr';
 const VISIBLE_LIMIT = 8;
 
 /** نصٌّ احتياطيٌّ واحدٌ لفرع الخطأ — عرفُ `LeaveTabPanel`. */
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 /** التسميةُ **حرفيةٌ** من `app/Enums/Permission.php:391` — لا صياغةَ فرونتيةً للصلاحية. */
 const VIEW_LABEL = 'عرض مستندات الموظفين';
@@ -131,7 +131,7 @@ const AddDocumentModal: React.FC<{
             </div>
           </div>
           <div className="hr-field">
-            <label>الاسم (اختياري — يُشتق من النوع)</label>
+            <label>الاسم (اختياري، يملأ تلقائياً من النوع)</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={metaFor(type).label} />
           </div>
           <div className="hr-field--row">
@@ -156,7 +156,7 @@ const AddDocumentModal: React.FC<{
               في `style`. الامتلاءُ يمرّ متغيّراً (`--hrl-f`) بالبدائيّة نفسِها التي
               يستعملها مقياسُ م.١١٧، فلا قاعدةَ تخطيطٍ ثانيةٌ في JSX. */}
           {busy && (
-            <div className="hrl-meter" role="img" aria-label={`تمّ رفعُ ${progress}٪`}>
+            <div className="hrl-meter" role="img" aria-label={`تم رفع ${progress}٪`}>
               <span className="hrl-meter__seg" style={meterVars(1, progress / 100)}>
                 <span className="hrl-meter__fill" />
               </span>
@@ -201,7 +201,7 @@ const DocumentsTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) =>
       const w = window.open(url, '_blank');
       if (!w) { window.location.href = url; }
     } catch (e: any) {
-      toast.error(e?.message || 'تعذّر التنزيل');
+      toast.error(e?.message || 'تعذر التنزيل');
     }
   };
 
@@ -228,8 +228,8 @@ const DocumentsTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) =>
         <div className="hrl-block__b">
           <div className="hrl-state hrl-state--locked">
             <Lock size={20} />
-            <p className="hrl-state__t">المستندات محميّة</p>
-            <p className="hrl-state__d">عرضُها يتطلّب صلاحية «{VIEW_LABEL}».</p>
+            <p className="hrl-state__t">المستندات محمية</p>
+            <p className="hrl-state__d">عرضها يتطلب صلاحية «{VIEW_LABEL}».</p>
           </div>
         </div>
       </section>
@@ -256,7 +256,7 @@ const DocumentsTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) =>
       return (
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={20} />
-          <p className="hrl-state__t">تعذّر جلب المستندات</p>
+          <p className="hrl-state__t">تعذر تحميل المستندات</p>
           <p className="hrl-state__d">{errorText(documentsQuery.error, CONNECTION_FALLBACK)}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void documentsQuery.refetch()}>
             <RefreshCw size={13} /> إعادة المحاولة
@@ -268,7 +268,7 @@ const DocumentsTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) =>
     if (rows.length === 0) {
       return (
         <EmptyLine
-          text="لا مستندَ محفوظ"
+          text="لا يوجد مستند محفوظ"
           action={canManage && (
             <button type="button" className="hr-btn hr-btn--sm hr-btn--primary" onClick={() => setShowAdd(true)}>
               <Plus size={14} /> إضافة مستند
@@ -311,10 +311,10 @@ const DocumentsTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) =>
 
         {!expanded && rows.length > VISIBLE_LIMIT && (
           <EmptyLine
-            text={`تُعرض ${fmtCount(VISIBLE_LIMIT)} من ${fmtCount(rows.length)}`}
+            text={`تعرض ${fmtCount(VISIBLE_LIMIT)} من ${fmtCount(rows.length)}`}
             action={(
               <button type="button" className="hr-btn hr-btn--sm" onClick={() => setExpanded(true)}>
-                اعرض الكلّ ({fmtCount(rows.length)})
+                اعرض الكل ({fmtCount(rows.length)})
               </button>
             )}
           />

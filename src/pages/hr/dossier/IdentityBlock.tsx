@@ -55,7 +55,7 @@ export const IdentityBlock: React.FC<Props> = ({ id, empId, emp, canManage, onEd
       toast.success(message);
       invalidateEmployee();
     } catch (error: unknown) {
-      toast.error(errorText(error, 'تعذّر بدء التحقّق من الرخصة'));
+      toast.error(errorText(error, 'تعذر بدء التحقق من الرخصة'));
     } finally {
       setVerifying(false);
     }
@@ -73,7 +73,7 @@ export const IdentityBlock: React.FC<Props> = ({ id, empId, emp, canManage, onEd
         {canManage && lawyer && (
           <div className="hrl-block__a">
             <button type="button" className="hr-btn hr-btn--sm" onClick={() => void verify()} disabled={verifying}>
-              <ShieldCheck size={13} /> {verifying ? 'جارٍ الإرسال…' : 'تحقّق من الهيئة الآن'}
+              <ShieldCheck size={13} /> {verifying ? 'جارٍ الإرسال…' : 'تحقق من الهيئة الآن'}
             </button>
           </div>
         )}
@@ -92,21 +92,21 @@ export const IdentityBlock: React.FC<Props> = ({ id, empId, emp, canManage, onEd
               value={emp.sba_license_expiry_raw || (emp.sba_license_expiry_gregorian ? fmtLeaveDate(emp.sba_license_expiry_gregorian) : null)}
             />
 
-            <dt>آخر تحقّق</dt>
+            <dt>آخر تحقق</dt>
             <KvValue value={emp.sba_last_checked_at ? fmtLeaveDate(emp.sba_last_checked_at) : null} />
           </dl>
         </div>
       ) : (
         // (أ) عدمُ انطباقٍ — تنويهٌ رماديٌّ **بلا أيقونة قفل**: لا شيءَ محميّاً هنا.
-        <p className="hrl-note">لا ينطبق التوثيقُ المهنيّ من الهيئة — هذا المنسوب غير مسجَّلٍ كمحامٍ.</p>
+        <p className="hrl-note">لا ينطبق التوثيق المهني من الهيئة. هذا الموظف غير مسجل كمحامٍ.</p>
       )}
 
       {/* (ب) محامٍ بلا رقم — فعلُها تعديلُ بيانات */}
       {noLicense && (
         <div className="hrl-state hrl-state--empty">
           <Award size={20} />
-          <p className="hrl-state__t">لم يُسجَّل رقمُ الرخصة</p>
-          <p className="hrl-state__d">بلا رقمِ رخصةٍ لا يستطيع النظامُ سؤالَ الهيئة عن سريانها.</p>
+          <p className="hrl-state__t">رقم الرخصة غير مسجل</p>
+          <p className="hrl-state__d">بدون رقم الرخصة لا يمكن التحقق من سريانها لدى الهيئة.</p>
           {canManage && (
             <button type="button" className="hr-btn hr-btn--sm hr-btn--primary" onClick={onEdit}>
               تسجيل رقم الرخصة
@@ -119,11 +119,11 @@ export const IdentityBlock: React.FC<Props> = ({ id, empId, emp, canManage, onEd
       {neverChecked && (
         <div className="hrl-state hrl-state--empty">
           <ShieldCheck size={20} />
-          <p className="hrl-state__t">لم يُتحقَّق من سجلّ الهيئة بعد</p>
-          <p className="hrl-state__d">التحقّقُ يقرأ سريانَ الرخصة من الهيئة ويحدّث الشارة أعلى الملفّ.</p>
+          <p className="hrl-state__t">لم يتم التحقق من سجل الهيئة بعد</p>
+          <p className="hrl-state__d">يتم التحقق من سريان الرخصة لدى الهيئة وتحديث حالة التوثيق أعلى الملف.</p>
           {canManage && (
             <button type="button" className="hr-btn hr-btn--sm hr-btn--primary" onClick={() => void verify()} disabled={verifying}>
-              {verifying ? 'جارٍ الإرسال…' : 'تحقّق من الهيئة'}
+              {verifying ? 'جارٍ الإرسال…' : 'تحقق من الهيئة'}
             </button>
           )}
         </div>

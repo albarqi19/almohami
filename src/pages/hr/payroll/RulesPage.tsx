@@ -52,7 +52,7 @@ export const RulesPage: React.FC = () => {
       setConfirmError(null);
       void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll', 'rules'] });
     },
-    onError: (error) => setConfirmError(errorText(error, 'تعذّر تسجيل التأكيد.')),
+    onError: (error) => setConfirmError(errorText(error, 'تعذر تسجيل التأكيد.')),
   });
 
   const setOn = (value: string) => {
@@ -74,7 +74,7 @@ export const RulesPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--locked">
           <Lock size={22} />
-          <p className="hrl-state__t">المرجعُ النظاميُّ غيرُ متاحٍ لك</p>
+          <p className="hrl-state__t">المرجع النظامي غير متاح لك</p>
           <p className="hrl-state__d">{lockedMessage}</p>
         </div>
       </div>
@@ -98,8 +98,8 @@ export const RulesPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={22} />
-          <p className="hrl-state__t">تعذّر جلبُ المرجع النظاميّ</p>
-          <p className="hrl-state__d">{errorText(rulesQuery.error, 'خطأٌ غيرُ متوقَّع.')}</p>
+          <p className="hrl-state__t">تعذر تحميل المرجع النظامي</p>
+          <p className="hrl-state__d">{errorText(rulesQuery.error, 'خطأ غير متوقع.')}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void rulesQuery.refetch()}>
             <RefreshCw size={13} /> أعد المحاولة
           </button>
@@ -116,9 +116,9 @@ export const RulesPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--empty">
           <Scale size={22} />
-          <p className="hrl-state__t">لم تُبذَر قواعدُ الرواتب لهذا المكتب بعد</p>
+          <p className="hrl-state__t">قواعد الرواتب غير معدة لهذا المكتب بعد</p>
           <p className="hrl-state__d">
-            التهيئةُ تقع مع تفعيل الوحدة. حدّث الصفحةَ، وإن بقيت خاليةً فالتفعيلُ لم يكتمل.
+            الإعداد يتم مع تفعيل الوحدة. أعد تحميل الصفحة، وإن بقيت خالية فالتفعيل لم يكتمل.
           </p>
         </div>
       </div>
@@ -134,29 +134,29 @@ export const RulesPage: React.FC = () => {
       <header className="hrl-head">
         <div className="hrl-head__id">
           <h1 className="hrl-h1">
-            <Scale size={16} /> المرجعُ النظاميّ
+            <Scale size={16} /> المرجع النظامي
           </h1>
           <p className="hrl-sub">
-            نظامُ العمل بياناً مؤرَّخاً لا شيفرة — كلُّ احتسابٍ يحلّ القاعدةَ بتاريخ الواقعة،
-            وتعديلُ مادّةٍ لا يعيد كتابةَ قسيمةٍ صُرفت.
+            نظام العمل مسجل كبيانات مؤرخة. كل احتساب يطبق القاعدة السارية بتاريخ الواقعة،
+            وتعديل مادة لا يعيد كتابة قسيمة صرفت.
           </p>
         </div>
 
         <div className="hrl-head__badges">
           <span className="hrl-fact hrl-fact--gold">
-            تُنفَّذ الآن
+            تنفذ الآن
             <span className="hrl-fact__n" dir="ltr">
               {meta.counts.readers_shipped}
             </span>
           </span>
           <span className="hrl-fact">
-            لم تُنفَّذ بعد
+            غير منفذة بعد
             <span className="hrl-fact__n" dir="ltr">
               {meta.counts.readers_pending}
             </span>
           </span>
           <span className="hrl-fact">
-            للاطّلاع
+            للاطلاع
             <span className="hrl-fact__n" dir="ltr">
               {meta.counts.informational}
             </span>
@@ -168,10 +168,10 @@ export const RulesPage: React.FC = () => {
       {data.approval_blocked && (
         <div className="hrl-flag hrl-flag--block" role="status">
           <p className="hrl-flag__t">
-            <AlertTriangle size={13} /> الاعتمادُ محجوبٌ حتى تُؤكَّد {data.approval_blockers.length} قاعدةً مُلزِمة
+            <AlertTriangle size={13} /> الاعتماد محجوب حتى يتم تأكيد {data.approval_blockers.length} قاعدة ملزمة
           </p>
           <p className="hrl-flag__hint">
-            {data.approval_blockers.map((blocker) => `${blocker.article_ref} — ${blocker.title_ar}`).join(' · ')}
+            {data.approval_blockers.map((blocker) => `${blocker.title_ar} (${blocker.article_ref})`).join(' · ')}
           </p>
         </div>
       )}
@@ -193,7 +193,7 @@ export const RulesPage: React.FC = () => {
           <section className="hrl-block" aria-labelledby="binding-h">
             <header className="hrl-block__h">
               <h2 className="hrl-block__t" id="binding-h">
-                <Gavel size={14} /> القواعدُ المُلزِمة
+                <Gavel size={14} /> القواعد الملزمة
               </h2>
               <span className="hrl-badge hrl-badge--flat">{data.binding.length}</span>
             </header>
@@ -203,7 +203,7 @@ export const RulesPage: React.FC = () => {
                 rules={enforced}
                 openCode={openCode}
                 onToggle={toggle}
-                emptyText="لا قاعدةَ مُلزِمةً يقرؤها شيءٌ اليوم."
+                emptyText="لا توجد قاعدة ملزمة منفذة اليوم."
               />
             </div>
 
@@ -211,8 +211,8 @@ export const RulesPage: React.FC = () => {
               <>
                 <div className="hrl-block__b">
                   <p className="hrl-hint">
-                    وهذه مبذورةٌ وموثَّقة، ولا يقرؤها شيءٌ بعد — تُنفَّذ حين تُشحن خطوتُها.
-                    عرضُها إعلانٌ بالنقص لا ادّعاءُ إنفاذ.
+                    وهذه قواعد معدة وموثقة، ولا يطبقها النظام بعد. تطبق عند تفعيل خطوتها.
+                    وعرضها هنا إعلان بما لم ينفذ بعد.
                   </p>
                 </div>
                 <div className="hrl-block__b hrl-block__b--flush">
@@ -225,7 +225,7 @@ export const RulesPage: React.FC = () => {
           <section className="hrl-block" aria-labelledby="informational-h">
             <header className="hrl-block__h">
               <h2 className="hrl-block__t" id="informational-h">
-                <AlertTriangle size={14} /> مراجعُ للاطّلاع — لا تُنفَّذ
+                <AlertTriangle size={14} /> مراجع للاطلاع غير منفذة
               </h2>
               <span className="hrl-badge hrl-badge--flat">{data.informational.length}</span>
             </header>
@@ -235,7 +235,7 @@ export const RulesPage: React.FC = () => {
                 rules={data.informational}
                 openCode={openCode}
                 onToggle={toggle}
-                emptyText="لا مراجعَ استدلاليةً مبذورة."
+                emptyText="لا توجد مراجع للاطلاع."
               />
             </div>
           </section>
@@ -243,7 +243,7 @@ export const RulesPage: React.FC = () => {
           <section className="hrl-block" aria-labelledby="catalog-h">
             <header className="hrl-block__h">
               <h2 className="hrl-block__t" id="catalog-h">
-                كتالوجُ بنود القسيمة
+                كتالوج بنود القسيمة
               </h2>
               <span className="hrl-badge hrl-badge--flat">{data.components.length}</span>
             </header>
@@ -259,13 +259,13 @@ export const RulesPage: React.FC = () => {
           <section className="hrl-block" aria-labelledby="asof-h">
             <header className="hrl-block__h">
               <h2 className="hrl-block__t" id="asof-h">
-                القاعدةُ السارية في
+                القاعدة السارية في
               </h2>
             </header>
 
             <div className="hrl-block__b">
               <label className="hrl-fset" htmlFor="rules-on">
-                <span className="hrl-fset__t">تاريخُ الواقعة</span>
+                <span className="hrl-fset__t">تاريخ الواقعة</span>
                 <input
                   id="rules-on"
                   className="hrl-search"
@@ -276,13 +276,13 @@ export const RulesPage: React.FC = () => {
               </label>
 
               <p className="hrl-hint">
-                تعرض هذه الصفحةُ ما كان سارياً في {fmtDateHuman(data.on)} لا ما هو ساري اليوم —
-                فتُراجَع قسيمةُ شهرٍ مضى بنصِّ زمنها.
+                تعرض هذه الصفحة ما كان سارياً في {fmtDateHuman(data.on)} لا ما هو ساري اليوم،
+                حتى تراجع قسيمة شهر مضى بنص زمنها.
               </p>
 
               {onParam !== null && (
                 <button type="button" className="hrl-link" onClick={() => setOn('')}>
-                  عُد إلى اليوم
+                  ارجع إلى اليوم
                 </button>
               )}
             </div>
@@ -291,23 +291,23 @@ export const RulesPage: React.FC = () => {
           <section className="hrl-block" aria-labelledby="legend-h">
             <header className="hrl-block__h">
               <h2 className="hrl-block__t" id="legend-h">
-                كيف تُقرأ الحالة
+                شرح الحالات
               </h2>
             </header>
 
             <div className="hrl-block__b">
               <dl className="hrl-kv">
-                <dt>تُنفَّذ الآن</dt>
-                <dd>قارئُها مشحونٌ ويقرؤها في كلّ احتساب.</dd>
-                <dt>لم تُنفَّذ بعد</dt>
-                <dd>مبذورةٌ وموثَّقة، ولا يقرؤها شيءٌ حتى تُشحن خطوتُها.</dd>
-                <dt>للاطّلاع فقط</dt>
-                <dd>مرجعٌ معروضٌ لا يُدَّعى إنفاذُه إطلاقاً.</dd>
+                <dt>تنفذ الآن</dt>
+                <dd>محرك الاحتساب مفعل ويطبقها في كل احتساب.</dd>
+                <dt>غير منفذة بعد</dt>
+                <dd>معدة وموثقة، ولا يطبقها النظام حتى يتم تفعيل خطوتها.</dd>
+                <dt>للاطلاع فقط</dt>
+                <dd>مرجع معروض غير منفذ.</dd>
               </dl>
 
               <p className="hrl-hint">
-                والقاعدةُ لا تُحرَّر من هذه الشاشة ولا من غيرِها: التعديلُ النظاميُّ نسخةٌ
-                مؤرَّخةٌ جديدةٌ تصل بترحيلِ بيانات، فيبقى الماضي كما حُسب.
+                والقاعدة غير قابلة للتعديل من هذه الشاشة ولا من غيرها: التعديل النظامي نسخة
+                مؤرخة جديدة تصل بترحيل بيانات، ولا تتغير الحسابات السابقة.
               </p>
             </div>
           </section>

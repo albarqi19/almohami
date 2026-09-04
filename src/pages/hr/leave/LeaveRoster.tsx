@@ -49,10 +49,10 @@ const LOW_BALANCE_DAYS = 5;
 
 /** مفاتيحُ الشرائح **هي مفاتيحُ الردّ نفسُها** (`LeaveRosterCounts`) — صفرُ ترجمةٍ بينهما. */
 const CHIPS: Array<{ key: LeaveRosterFilter; label: string; title: string }> = [
-  { key: 'all', label: 'الكل', title: 'كلُّ منسوبي المكتب ضمن هذا البحث' },
-  { key: 'on_leave', label: 'غائبٌ الآن', title: 'مَن له واقعةٌ معتمَدةٌ تشمل اليوم' },
-  { key: 'low', label: 'رصيدٌ منخفض', title: `رصيدٌ متاحٌ أقلُّ من ${LOW_BALANCE_DAYS} أيام` },
-  { key: 'uninitialized', label: 'غير مُهيَّأ', title: 'مَن لم يُسجَّل له رصيدٌ افتتاحيٌّ بعد' },
+  { key: 'all', label: 'الكل', title: 'كل موظفي المكتب ضمن هذا البحث' },
+  { key: 'on_leave', label: 'غائب الآن', title: 'من له إجازة معتمَدة تشمل اليوم' },
+  { key: 'low', label: 'رصيد منخفض', title: `رصيد متاح أقل من ${LOW_BALANCE_DAYS} أيام` },
+  { key: 'uninitialized', label: 'غير جاهز', title: 'من لم يسجل له رصيد افتتاحي بعد' },
 ];
 
 interface Props {
@@ -67,7 +67,7 @@ interface Props {
 }
 
 function employeeName(row: LeaveRosterRow): string {
-  return row.user?.name || `منسوب #${row.id}`;
+  return row.user?.name || `موظف #${row.id}`;
 }
 
 function initial(name: string): string {
@@ -127,7 +127,7 @@ export const LeaveRoster: React.FC<Props> = ({ selectedId, onSelect, onQuickReco
   const body = (() => {
     if (rosterQuery.isPending) {
       return (
-        <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل المنسوبين">
+        <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل الموظفين">
           {Array.from({ length: 8 }, (_, i) => (
             <span className="hrl-skel" key={i} />
           ))}
@@ -139,8 +139,8 @@ export const LeaveRoster: React.FC<Props> = ({ selectedId, onSelect, onQuickReco
       return (
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={22} />
-          <p className="hrl-state__t">تعذّر جلب المنسوبين</p>
-          <p className="hrl-state__d">{errorText(rosterQuery.error, 'انقطعَ الاتصال بالخادم.')}</p>
+          <p className="hrl-state__t">تعذر تحميل الموظفين</p>
+          <p className="hrl-state__d">{errorText(rosterQuery.error, 'انقطع الاتصال بالخادم.')}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void rosterQuery.refetch()}>
             <RefreshCw size={13} /> إعادة المحاولة
           </button>
@@ -155,9 +155,9 @@ export const LeaveRoster: React.FC<Props> = ({ selectedId, onSelect, onQuickReco
         return (
           <div className="hrl-state hrl-state--empty">
             <Users size={22} />
-            <p className="hrl-state__t">لا منسوبَ في هذه الشريحة</p>
+            <p className="hrl-state__t">لا يوجد موظف في هذا التصنيف</p>
             <p className="hrl-state__d">
-              {searching ? `لا أحدَ يطابق «${debounced}» في هذه الشريحة.` : 'الشريحةُ تُرشِّح المكتب كلَّه، لا الصفحةَ المعروضة.'}
+              {searching ? `لا أحد يطابق «${debounced}» في هذا التصنيف.` : 'التصفية تشمل المكتب كله، لا الصفحة المعروضة فقط.'}
             </p>
             <button type="button" className="hr-btn hr-btn--sm" onClick={() => pickChip('all')}>
               اعرض الكل
@@ -169,8 +169,8 @@ export const LeaveRoster: React.FC<Props> = ({ selectedId, onSelect, onQuickReco
       return searching ? (
         <div className="hrl-state hrl-state--empty">
           <SearchX size={22} />
-          <p className="hrl-state__t">لا نتيجةَ لهذا البحث</p>
-          <p className="hrl-state__d">لا منسوبَ يطابق «{debounced}».</p>
+          <p className="hrl-state__t">لا نتيجة لهذا البحث</p>
+          <p className="hrl-state__d">لا يوجد موظف يطابق «{debounced}».</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => setSearch('')}>
             <X size={13} /> امسح البحث
           </button>
@@ -178,11 +178,11 @@ export const LeaveRoster: React.FC<Props> = ({ selectedId, onSelect, onQuickReco
       ) : (
         <div className="hrl-state hrl-state--empty">
           <Users size={22} />
-          <p className="hrl-state__t">لا منسوبين في المكتب</p>
-          <p className="hrl-state__d">أضِف منسوباً ليظهر رصيدُه وسجلُّ غيابه هنا.</p>
+          <p className="hrl-state__t">لا يوجد موظفون في المكتب</p>
+          <p className="hrl-state__d">أضف موظفاً ليظهر رصيده وسجل غيابه هنا.</p>
           {canManageEmployees && (
             <button type="button" className="hr-btn hr-btn--sm hr-btn--primary" onClick={() => setShowAdd(true)}>
-              <UserPlus size={13} /> إضافة منسوب
+              <UserPlus size={13} /> إضافة موظف
             </button>
           )}
         </div>
@@ -215,7 +215,7 @@ export const LeaveRoster: React.FC<Props> = ({ selectedId, onSelect, onQuickReco
                 </span>
                 <span className="hrl-emprow__end">
                   {uninitialized ? (
-                    <span className="hrl-uninit">غير مُهيَّأ</span>
+                    <span className="hrl-uninit">غير جاهز</span>
                   ) : value !== null ? (
                     <span className={`hrl-mini${value < 0 ? ' is-neg' : ''}`} dir="ltr">
                       {fmtDays(value)}
@@ -260,8 +260,8 @@ export const LeaveRoster: React.FC<Props> = ({ selectedId, onSelect, onQuickReco
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="ابحث باسم المنسوب…"
-          aria-label="بحث في المنسوبين"
+          placeholder="ابحث باسم الموظف…"
+          aria-label="بحث في الموظفين"
         />
         {search !== '' && (
           <button type="button" className="hrl-searchclear" aria-label="مسح البحث" onClick={() => setSearch('')}>
@@ -270,7 +270,7 @@ export const LeaveRoster: React.FC<Props> = ({ selectedId, onSelect, onQuickReco
         )}
       </div>
 
-      <div className="hrl-chips" role="group" aria-label="تصفية المنسوبين">
+      <div className="hrl-chips" role="group" aria-label="تصفية الموظفين">
         {CHIPS.map((item) => (
           <button
             key={item.key}
@@ -290,7 +290,7 @@ export const LeaveRoster: React.FC<Props> = ({ selectedId, onSelect, onQuickReco
       {/* الشريحةُ الرابعة تقود إلى فعلٍ حقيقيّ: شاشةُ التهيئة الجماعية نفسُها. */}
       {chip === 'uninitialized' && counts !== null && counts.uninitialized > 0 && canManage && (
         <div className="hrl-note">
-          {counts.uninitialized} من منسوبي المكتب بلا رصيدٍ افتتاحيّ.{' '}
+          {counts.uninitialized} من موظفي المكتب بلا رصيد افتتاحي.{' '}
           <button type="button" className="hrl-link" onClick={onBulkInit}>
             تهيئة أرصدة هؤلاء
           </button>

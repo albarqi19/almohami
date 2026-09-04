@@ -37,11 +37,11 @@ import type { PenaltyRow, PenaltyState } from '../../../types/hrPayroll';
 
 const STATE_TABS: Array<{ key: PenaltyState | 'all'; label: string }> = [
   { key: 'all', label: 'الكل' },
-  { key: 'draft', label: 'مسوّدات' },
-  { key: 'notified', label: 'بُلّغ بها' },
+  { key: 'draft', label: 'مسودات' },
+  { key: 'notified', label: 'مبلَّغ بها' },
   { key: 'final', label: 'نافذة' },
   { key: 'charged', label: 'محصَّلة' },
-  { key: 'overturned', label: 'مُبطَلة' },
+  { key: 'overturned', label: 'مبطَلة' },
 ];
 
 export const PenaltiesPage: React.FC = () => {
@@ -64,20 +64,20 @@ export const PenaltiesPage: React.FC = () => {
   const notifyMutation = useMutation({
     mutationFn: (id: number) => hrPayrollService.notifyPenalty(id),
     onSuccess: invalidate,
-    onError: (error) => setActionError(errorText(error, 'تعذّر تسجيلُ التبليغ.')),
+    onError: (error) => setActionError(errorText(error, 'تعذر تسجيل التبليغ.')),
   });
 
   const finaliseMutation = useMutation({
     mutationFn: ({ id, waived }: { id: number; waived: boolean }) => hrPayrollService.finalisePenalty(id, waived),
     onSuccess: invalidate,
     // 🔴 رسالةُ الخادم كما هي: هي التي تقول «المهلةُ لم تنقضِ» وتاريخَ انقضائها.
-    onError: (error) => setActionError(errorText(error, 'تعذّر إنفاذُ الجزاء.')),
+    onError: (error) => setActionError(errorText(error, 'تعذر إنفاذ الجزاء.')),
   });
 
   const overturnMutation = useMutation({
     mutationFn: ({ id, reason }: { id: number; reason: string }) => hrPayrollService.overturnPenalty(id, reason),
     onSuccess: invalidate,
-    onError: (error) => setActionError(errorText(error, 'تعذّر إبطالُ الجزاء.')),
+    onError: (error) => setActionError(errorText(error, 'تعذر إبطال الجزاء.')),
   });
 
   const queryError = listQuery.error;
@@ -91,7 +91,7 @@ export const PenaltiesPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--locked">
           <Lock size={22} />
-          <p className="hrl-state__t">سجلُّ الجزاءات غيرُ متاحٍ لك</p>
+          <p className="hrl-state__t">سجل الجزاءات غير متاح لك</p>
           <p className="hrl-state__d">{lockedMessage}</p>
         </div>
       </div>
@@ -115,8 +115,8 @@ export const PenaltiesPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={22} />
-          <p className="hrl-state__t">تعذّر جلبُ الجزاءات</p>
-          <p className="hrl-state__d">{errorText(listQuery.error, 'خطأٌ غيرُ متوقَّع.')}</p>
+          <p className="hrl-state__t">تعذر تحميل الجزاءات</p>
+          <p className="hrl-state__d">{errorText(listQuery.error, 'خطأ غير متوقع.')}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void listQuery.refetch()}>
             <RefreshCw size={13} /> أعد المحاولة
           </button>
@@ -134,23 +134,23 @@ export const PenaltiesPage: React.FC = () => {
       <header className="hrl-head">
         <div className="hrl-head__id">
           <h1 className="hrl-h1">
-            <Gavel size={16} /> الجزاءاتُ التأديبية
+            <Gavel size={16} /> الجزاءات التأديبية
           </h1>
           <p className="hrl-sub">
-            بالأيام لا بالريال، وبدورةٍ لا تُختصَر: استجوابٌ ثمّ تبليغٌ ثمّ مهلةُ اعتراضٍ ثمّ
-            نفاذ — والخصمُ قرارٌ في مسير الشهر لا فعلٌ من هنا.
+            يقاس الجزاء بالأيام لا بالريال، ودورته لا تختصر: استجواب، ثم تبليغ، ثم مهلة
+            اعتراض، ثم نفاذ. والخصم قرار يتخذ في مسير الشهر لا من هذه الشاشة.
           </p>
         </div>
 
         <div className="hrl-head__badges">
           <span className="hrl-fact">
-            جزاءاتٌ معروضة
+            جزاءات معروضة
             <span className="hrl-fact__n" dir="ltr">
               {listQuery.data?.page.total ?? 0}
             </span>
           </span>
           <Link className="hrl-fact hrl-fact--gold" to="/hr/payroll/penalty-fund">
-            سجلُّ الغرامات (م.٧٣)
+            سجل الغرامات (م.٧٣)
           </Link>
         </div>
       </header>
@@ -162,18 +162,18 @@ export const PenaltiesPage: React.FC = () => {
           </p>
           <dl className="hrl-kv">
             <dt>م.٦٩</dt>
-            <dd>لا مؤاخذةَ بعد {meta.detection_window_days} يوماً من كشف المخالفة.</dd>
+            <dd>لا مؤاخذة بعد {meta.detection_window_days} يوماً من كشف المخالفة.</dd>
             <dt>م.٧٠</dt>
-            <dd>لا يزيد الجزاءُ على أجرِ {meta.max_days_per_offence} أيامٍ للمخالفة الواحدة.</dd>
+            <dd>لا يزيد الجزاء على أجر {meta.max_days_per_offence} أيام للمخالفة الواحدة.</dd>
             <dt>م.٧٢</dt>
             <dd>للعامل {meta.objection_days} يوماً للاعتراض من تاريخ التبليغ.</dd>
             <dt>م.٧٣</dt>
-            <dd>حصيلةُ الغرامات لا يُتصرَّف فيها إلا فيما يعود بالنفع على العمال.</dd>
+            <dd>حصيلة الغرامات لا يتصرف فيها إلا فيما يعود بالنفع على العمال.</dd>
           </dl>
         </div>
       )}
 
-      <nav className="hrl-tabs" aria-label="ترشيحُ الجزاءات">
+      <nav className="hrl-tabs" aria-label="تصفية الجزاءات">
         {STATE_TABS.map((tab) => (
           <button
             key={tab.key}
@@ -196,10 +196,10 @@ export const PenaltiesPage: React.FC = () => {
       {rows.length === 0 ? (
         <div className="hrl-state hrl-state--empty">
           <Gavel size={22} />
-          <p className="hrl-state__t">لا جزاءات</p>
+          <p className="hrl-state__t">لا توجد جزاءات</p>
           <p className="hrl-state__d">
-            لم يُوقَّع جزاءٌ في هذا المكتب. والجزاءُ فعلُ إنسانٍ مسمّىً بسببٍ مكتوبٍ بعد استجواب
-            (م.٧١)، لا نتيجةَ حسابٍ آليّ.
+            لم يتم توقيع أي جزاء في هذا المكتب. والجزاء قرار مسجل باسم من اتخذه، بسبب مكتوب
+            وبعد استجواب (م.٧١)، لا نتيجة حساب آلي.
           </p>
         </div>
       ) : (
@@ -207,12 +207,12 @@ export const PenaltiesPage: React.FC = () => {
           <thead>
             <tr>
               <th scope="col">الجزاء</th>
-              <th scope="col">المنسوب</th>
+              <th scope="col">الموظف</th>
               <th scope="col">المخالفة</th>
               <th scope="col">المقدار</th>
               <th scope="col">المهلة</th>
               <th scope="col">الحالة</th>
-              <th scope="col">الفعلُ التالي</th>
+              <th scope="col">الإجراء التالي</th>
             </tr>
           </thead>
           <tbody>
@@ -257,9 +257,9 @@ const PenaltyRowView: React.FC<RowProps> = ({ row, busy, onNotify, onFinalise, o
 
       <td>
         {row.offence_summary}
-        <span className="hrl-row__meta">كُشفت {fmtDateHuman(row.offence_detected_on)}</span>
+        <span className="hrl-row__meta">تاريخ الكشف {fmtDateHuman(row.offence_detected_on)}</span>
         {row.investigation_ref !== null && (
-          <span className="hrl-row__meta">محضرُ الاستجواب: {row.investigation_ref}</span>
+          <span className="hrl-row__meta">محضر الاستجواب: {row.investigation_ref}</span>
         )}
       </td>
 
@@ -279,7 +279,7 @@ const PenaltyRowView: React.FC<RowProps> = ({ row, busy, onNotify, onFinalise, o
 
       <td>
         {row.notified_at === null ? (
-          <span className="hrl-hint">لم يُبلَّغ بعد</span>
+          <span className="hrl-hint">لم يتم التبليغ بعد</span>
         ) : (
           <>
             {fmtDateHuman(row.objection_deadline)}
@@ -287,7 +287,7 @@ const PenaltyRowView: React.FC<RowProps> = ({ row, busy, onNotify, onFinalise, o
           </>
         )}
         {row.refund_due_by !== null && (
-          <span className="hrl-row__meta">يُردُّ قبل {fmtDateHuman(row.refund_due_by)} (م.٩١)</span>
+          <span className="hrl-row__meta">يرد قبل {fmtDateHuman(row.refund_due_by)} (م.٩١)</span>
         )}
       </td>
 
@@ -296,7 +296,7 @@ const PenaltyRowView: React.FC<RowProps> = ({ row, busy, onNotify, onFinalise, o
         {row.charged_run_id !== null && (
           <span className="hrl-row__meta">
             <Link className="hrl-link" to={`/hr/payroll/runs/${row.charged_run_id}`}>
-              حُصِّل في مسيره
+              تم تحصيله في مسيره
             </Link>
           </span>
         )}
@@ -307,7 +307,7 @@ const PenaltyRowView: React.FC<RowProps> = ({ row, busy, onNotify, onFinalise, o
 
         {row.state === 'draft' && (
           <button type="button" className="hr-btn hr-btn--sm" disabled={busy} onClick={onNotify}>
-            <BellRing size={13} /> سجّل التبليغ
+            <BellRing size={13} /> تسجيل التبليغ
           </button>
         )}
 
@@ -321,7 +321,7 @@ const PenaltyRowView: React.FC<RowProps> = ({ row, busy, onNotify, onFinalise, o
               disabled={busy || windowOpen}
               onClick={() => onFinalise(false)}
             >
-              <ShieldCheck size={13} /> أنفِذ الجزاء
+              <ShieldCheck size={13} /> أنفذ الجزاء
             </button>
 
             {windowOpen && (
@@ -330,12 +330,12 @@ const PenaltyRowView: React.FC<RowProps> = ({ row, busy, onNotify, onFinalise, o
                 className="hr-btn hr-btn--sm hr-btn--ghost"
                 disabled={busy}
                 onClick={() => {
-                  if (window.confirm('يُسجَّل أنّ العاملَ أقرّ بالجزاء وتنازل عن بقيّة المهلة. أتؤكّد؟')) {
+                  if (window.confirm('سيسجل أن العامل أقر بالجزاء وتنازل عن بقية المهلة. هل تؤكد؟')) {
                     onFinalise(true);
                   }
                 }}
               >
-                أقرّ العاملُ به
+                تسجيل إقرار العامل
               </button>
             )}
           </>
@@ -347,11 +347,11 @@ const PenaltyRowView: React.FC<RowProps> = ({ row, busy, onNotify, onFinalise, o
             className="hr-btn hr-btn--sm hr-btn--ghost"
             disabled={busy}
             onClick={() => {
-              const reason = window.prompt('سببُ إبطال الجزاء (يُسجَّل باسمك):');
+              const reason = window.prompt('سبب إبطال الجزاء (يسجل باسمك):');
               if (reason !== null && reason.trim().length >= 5) onOverturn(reason.trim());
             }}
           >
-            <Ban size={13} /> أبطِله
+            <Ban size={13} /> أبطله
           </button>
         )}
       </td>

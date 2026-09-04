@@ -61,7 +61,7 @@ export const PayBlock: React.FC<Props> = ({ id, emp }) => {
   // «آخرُ تغييرٍ سرى من …» — الحقلان يصلان مع الصفّ الحاليّ، وهما كلُّ ما نملكه من تاريخه
   // قبل أن يصل الخطُّ الكامل.
   const changeLine = comp?.effective_from
-    ? `آخرُ تغييرٍ سرى من ${fmtLeaveDate(comp.effective_from)}${comp.change_reason ? ` — ${comp.change_reason}` : ''}`
+    ? `آخر تغيير سرى من ${fmtLeaveDate(comp.effective_from)}${comp.change_reason ? ` (${comp.change_reason})` : ''}`
     : null;
 
   return (
@@ -114,9 +114,9 @@ export const PayBlock: React.FC<Props> = ({ id, emp }) => {
         // فارغٌ **بصلاحية**: لا صفَّ تعويضٍ لهذا المنسوب — والزرُّ أدناه يفتح بابَه.
         <div className="hrl-state hrl-state--empty">
           <Wallet size={20} />
-          <p className="hrl-state__t">لم يُسجَّل تعويضٌ لهذا المنسوب</p>
+          <p className="hrl-state__t">لا يوجد تعويض مسجل لهذا الموظف</p>
           <p className="hrl-state__d">
-            وبلا راتبٍ مسجَّلٍ لا يصدر خطابُ تعريف الراتب ولا يدخل المنسوبُ مسيرَ الرواتب.
+            بدون راتب مسجل لا يصدر خطاب تعريف الراتب ولا يدخل الموظف مسير الرواتب.
           </p>
         </div>
       )}
@@ -125,7 +125,7 @@ export const PayBlock: React.FC<Props> = ({ id, emp }) => {
       {open && records.length > 1 && (
         <div className="hrl-block__b hrl-block__b--flush">
           <table className="hrl-ledger">
-            <caption className="hrl-sr">نسخُ الأجر السابقة</caption>
+            <caption className="hrl-sr">نسخ الأجر السابقة</caption>
             <thead>
               <tr>
                 <th scope="col">
@@ -160,12 +160,12 @@ export const PayBlock: React.FC<Props> = ({ id, emp }) => {
 
       <div className="hrl-drawer__f">
         <span className="hrl-hint">
-          قراءةُ هذه الشاشة مُدقَّقة — يُسجَّل من فتح بيانات الأجر ومتى. والطيُّ يحمي من العين
-          المجاورة لا من التدقيق.
+          قراءة هذه الشاشة مسجلة في سجل التدقيق: من فتح بيانات الأجر ومتى. والإخفاء يحمي
+          خصوصية البيانات.
         </span>
         <span className="hrl-block__a">
           <Link className="hr-btn hr-btn--sm" to={`/hr/payroll/wages?employee=${emp.id}`}>
-            <PenLine size={13} /> {comp ? 'حدّث الأجر' : 'سجّل الراتب'}
+            <PenLine size={13} /> {comp ? 'تحديث الأجر' : 'تسجيل الراتب'}
           </Link>
         </span>
       </div>

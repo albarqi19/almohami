@@ -124,7 +124,7 @@ export const WageForm: React.FC<Props> = ({ profileId, currentFrom, saving, erro
     <form className="hrl-block" onSubmit={submit}>
       <div className="hrl-block__h">
         <h2 className="hrl-block__t hrl-h2">
-          <CalendarClock size={14} /> تسجيلُ نسخةِ أجرٍ جديدة
+          <CalendarClock size={14} /> تسجيل نسخة أجر جديدة
         </h2>
       </div>
 
@@ -142,8 +142,8 @@ export const WageForm: React.FC<Props> = ({ profileId, currentFrom, saving, erro
               required
             />
             <p className="hrl-hint">
-              يُقبل الماضي والمستقبل. والنسخةُ السابقةُ تُغلَق في هذا اليوم نفسِه — بلا يومٍ
-              مكرَّرٍ ولا يومٍ ساقطٍ بين نسختين.
+              يقبل الماضي والمستقبل. وتغلق النسخة السابقة في هذا اليوم نفسه، فلا يتكرر يوم
+              ولا يسقط يوم بين النسختين.
             </p>
           </div>
         </fieldset>
@@ -163,7 +163,7 @@ export const WageForm: React.FC<Props> = ({ profileId, currentFrom, saving, erro
               >
                 <span className="hrl-typecell__n">{COMPOSITION_LABELS[key]}</span>
                 <span className="hrl-typecell__r">
-                  {key === 'itemised' ? 'أساسيٌّ وبدلاتٌ منفصلة' : 'المبلغُ كلُّه أساسيّ'}
+                  {key === 'itemised' ? 'أساسي وبدلات منفصلة' : 'المبلغ كله أساسي'}
                 </span>
               </button>
             ))}
@@ -171,8 +171,8 @@ export const WageForm: React.FC<Props> = ({ profileId, currentFrom, saving, erro
 
           {lump && (
             <p className="hrl-hint">
-              اختيارُ «مبلغٍ واحد» يكتب المبلغَ كلَّه في الأجر الأساسيّ — فيصير وعاءُ التأمينات
-              هو المبلغَ كلَّه، وكذلك أساسُ زيادة العمل الإضافيّ. اختيارٌ صريحٌ لا خانةٌ متروكة.
+              اختيار «مبلغ واحد» يكتب المبلغ كله في الأجر الأساسي. فيصير وعاء التأمينات
+              هو المبلغ كله، وكذلك أساس زيادة العمل الإضافي.
             </p>
           )}
         </fieldset>
@@ -290,14 +290,14 @@ export const WageForm: React.FC<Props> = ({ profileId, currentFrom, saving, erro
               >
                 <span className="hrl-typecell__n">{PAY_FREQUENCY_LABELS[key]}</span>
                 <span className="hrl-typecell__r">
-                  {key === 'monthly' ? 'مرّةً في الشهر' : 'مرّةً كلَّ أسبوعٍ على الأقلّ'}
+                  {key === 'monthly' ? 'مرة في الشهر' : 'مرة كل أسبوع على الأقل'}
                 </span>
               </button>
             ))}
           </div>
 
           <p className="hrl-legal">
-            <span>الأجرُ الشهريُّ يُدفع مرّةً في الشهر، وما سواه مرّةً كلَّ أسبوعٍ على الأقلّ — ولا دورةَ ثالثة.</span>
+            <span>الأجر الشهري يدفع مرة في الشهر، وما سواه مرة كل أسبوع على الأقل. ولا توجد دورة ثالثة.</span>
             <span className="hrl-legal__ref">م.٩٠</span>
           </p>
 
@@ -308,12 +308,12 @@ export const WageForm: React.FC<Props> = ({ profileId, currentFrom, saving, erro
               type="text"
               value={form.reason}
               onChange={(event) => set({ reason: event.target.value })}
-              placeholder="علاوةٌ سنوية · ترقية · الراتب التعاقدي الأول…"
+              placeholder="علاوة سنوية · ترقية · الراتب التعاقدي الأول…"
               maxLength={500}
               required
             />
             <p className="hrl-hint">
-              يُطبَع في سجلّ النسخ ويبقى معه — فمن يقرأ الخطَّ بعد سنتين يعرف لماذا تغيّر الرقم.
+              يظهر في سجل النسخ ويبقى محفوظاً للرجوع إليه لاحقاً.
             </p>
           </div>
         </fieldset>
@@ -322,7 +322,7 @@ export const WageForm: React.FC<Props> = ({ profileId, currentFrom, saving, erro
       {/* أثرُ الفعل **قبل** النقر لا بعده. */}
       <div className="hrp-effect">
         <p className="hrp-effect__t">
-          <CalendarClock size={13} aria-hidden="true" /> ماذا يقع عند الحفظ؟
+          <CalendarClock size={13} aria-hidden="true" /> ماذا يحدث عند الحفظ؟
         </p>
         <ul className="hrp-effect__l">
           {impact.map((line) => (
@@ -341,12 +341,12 @@ export const WageForm: React.FC<Props> = ({ profileId, currentFrom, saving, erro
 
       <div className="hrl-drawer__f">
         <span className="hrl-hint">
-          {basicPositive ? 'جاهزٌ للحفظ.' : 'الأجرُ الأساسيُّ مطلوبٌ وأكبرُ من صفر.'}
+          {basicPositive ? 'جاهز للحفظ.' : 'الأجر الأساسي مطلوب وأكبر من صفر.'}
         </span>
         <span className="hrl-block__a">
           <button type="submit" className="hr-btn hr-btn--primary hr-btn--sm" disabled={!ready}>
             {saving ? <Loader2 size={13} /> : <Save size={13} />}
-            {saving ? 'يُحفَظ…' : 'احفظ النسخة'}
+            {saving ? 'جارٍ الحفظ…' : 'احفظ النسخة'}
           </button>
         </span>
       </div>

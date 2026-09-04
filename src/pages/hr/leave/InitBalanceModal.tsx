@@ -232,19 +232,19 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
   const submit = () => {
     if (!mayManage) return;
     if (typeId === null) {
-      toast.error('اختر نوع الرصيد أولاً.');
+      toast.error('اختر نوع الرصيد أولا.');
       return;
     }
     if (anchor === '') {
-      toast.error('تاريخ بدء الاستحقاق مطلوب — بدونه لا يُولَّد استحقاقٌ إطلاقاً.');
+      toast.error('تاريخ بدء الاستحقاق مطلوب. وبدونه لا يحتسب أي استحقاق.');
       return;
     }
     if (anchor < monthStart) {
-      toast.error('تاريخ بدء الاستحقاق لا يسبق أوّل الشهر الجاري.');
+      toast.error('تاريخ بدء الاستحقاق لا يسبق أول الشهر الجاري.');
       return;
     }
     if (selected.length === 0) {
-      toast.error('حدّد منسوباً واحداً على الأقل.');
+      toast.error('اختر موظفا واحدا على الأقل.');
       return;
     }
 
@@ -268,11 +268,11 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
 
           // النجاحُ يُعلَن بما كُتب لا بما رُدَّ: صفرُ قيدٍ جديدٍ ⇒ صفرُ رسالةِ نجاح.
           if (data.created > 0) {
-            toast.success(`هُيّئ رصيدُ ${fmtCount(data.created)} منسوباً — وبدأ استحقاقُهم من ${fmtLeaveDate(anchor)}.`);
+            toast.success(`تم إنشاء رصيد ${fmtCount(data.created)} موظفا. ويبدأ استحقاقهم من ${fmtLeaveDate(anchor)}.`);
           } else if (data.failed.length > 0) {
-            toast.error('لم يُكتب أيُّ رصيدٍ افتتاحيّ — راجع التفصيل أدناه.');
+            toast.error('لم يتم إنشاء أي رصيد افتتاحي. راجع التفصيل أدناه.');
           } else {
-            toast.info('لم يُنشأ قيدٌ جديد — للمحدَّدين رصيدٌ افتتاحيٌّ مسجَّلٌ سلفاً.');
+            toast.info('لم يتم إنشاء أي قيد جديد. للمحددين رصيد افتتاحي مسجل مسبقا.');
           }
 
           if (onDone) onDone(data);
@@ -313,9 +313,9 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
           {!mayManage ? (
             <div className="hrl-state hrl-state--locked">
               <Lock size={22} />
-              <p className="hrl-state__t">التهيئة محميّة</p>
+              <p className="hrl-state__t">التهيئة محمية</p>
               <p className="hrl-state__d">
-                كتابةُ الرصيد الافتتاحيّ وتاريخِ بدء الاستحقاق تحتاج صلاحية «إدارة الإجازات»
+                كتابة الرصيد الافتتاحي وتاريخ بدء الاستحقاق تحتاج صلاحية «إدارة الإجازات»
                 (hr.leave.manage). اطلبها من مدير المكتب.
               </p>
             </div>
@@ -337,7 +337,7 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                       ))}
                     </select>
                     <span className="hrl-hint">
-                      الأنواعُ المُدفتَرة وحدَها تظهر هنا — ما يُعدّ بالوقائع لا سلسلةَ قيودٍ له.
+                      لا تظهر هنا إلا الأنواع التي لها رصيد. وإجازات المناسبات لا سلسلة قيود لها.
                     </span>
                   </div>
 
@@ -362,8 +362,8 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                     onChange={(event) => setAnchor(event.target.value)}
                   />
                   <span className="hrl-hint">
-                    قبل هذا التاريخ لا يُولَّد استحقاقٌ إطلاقاً. تاريخُ المباشرة وحدَه لا يبدأ الاحتساب،
-                    ولا يسبق هذا التاريخُ أوّلَ الشهر الجاري — الماضي يُدخَل رصيداً افتتاحياً لا استحقاقاً مولَّداً.
+                    قبل هذا التاريخ لا يحتسب أي استحقاق. ولا يبدأ الاحتساب بتاريخ المباشرة،
+                    ولا يسبق هذا التاريخ أول الشهر الجاري. والماضي يسجل رصيدا افتتاحيا.
                   </span>
                 </div>
 
@@ -372,7 +372,7 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                     الراديو على عرض النافذة فينهار السطرُ إلى عمودٍ رأسيٍّ لا يُقرأ (رُصد بلقطة).
                     `hrl-basis` مكتفيةٌ بذاتها: إطارُها وحشوُها ومقاسُ مربّعها فيها. */}
                 <fieldset className="hrl-basis">
-                  <legend>ماذا يعني الرقمُ الذي ستكتبه؟ *</legend>
+                  <legend>ماذا يعني الرقم الذي ستكتبه؟ *</legend>
 
                   <label className="hrl-basis__opt">
                     <input
@@ -382,11 +382,11 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                       onChange={() => setBasis('full_entitlement')}
                     />
                     <span>
-                      <strong>الاستحقاق الكامل</strong> — يُكتب كما هو الآن، والإجازاتُ السابقةُ في
-                      «الطلبات الإدارية» <strong>تُخصم منه عند تحويل كلٍّ منها</strong> لا الآن.
+                      <strong>الاستحقاق الكامل</strong>: يكتب كما هو الآن، والإجازات السابقة في
+                      «الطلبات الإدارية» <strong>تخصم منه عند تحويل كل منها</strong> لا الآن.
                       <span className="hrl-hint">
-                        يصير الدفترُ تاريخاً كاملاً: استحقاقٌ يدخل، وإجازاتٌ تخرج، والرصيدُ نتيجةٌ لا
-                        رقمٌ سحريّ. وشرطُ سلامته أن يكون سجلُّ الماضي كاملاً — راجِع ما ينتظر التحويلَ أدناه.
+                        يظهر في السجل الاستحقاق والإجازات معا، والرصيد نتيجة احتسابهما. وشرط
+                        سلامته أن يكون سجل الماضي كاملا. راجع ما ينتظر التحويل أدناه.
                       </span>
                     </span>
                   </label>
@@ -399,17 +399,17 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                       onChange={() => setBasis('remaining_today')}
                     />
                     <span>
-                      <strong>المتبقّي اليوم</strong> — والسابقةُ <strong>تُسجَّل ولا تُخصم</strong>{' '}
-                      (مخصومةٌ سلفاً داخل الرقم).
+                      <strong>المتبقي اليوم</strong>: الإجازات السابقة <strong>تسجل ولا تخصم</strong>{' '}
+                      (مخصومة مسبقا داخل الرقم).
                       <span className="hrl-hint">
-                        اختره إن كان الرقمُ الذي بيدك هو ما تبقّى فعلاً بعد إجازاتِ هذا العام.
+                        اختره إن كان الرقم الذي بيدك هو ما تبقى فعلا بعد إجازات هذا العام.
                       </span>
                     </span>
                   </label>
 
                   <span className="hrl-hint">
-                    يُحفَظ هذا الاختيارُ مع قيد الرصيد نفسِه ويحكم كلَّ تحويلٍ لهؤلاء المنسوبين —
-                    ولا يُغيَّر بعدها من إعدادٍ عامّ.
+                    يحفظ هذا الاختيار مع قيد الرصيد نفسه ويحكم كل تحويل لهؤلاء الموظفين.
+                    ولا يتغير بعد ذلك من إعداد عام.
                   </span>
                 </fieldset>
 
@@ -427,7 +427,7 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
 
               <section className="hrl-fset">
                 <h4 className="hrl-fset__t">
-                  المنسوبون — حُدِّد {fmtCount(selected.length)} من {fmtCount(rows.length)}
+                  الموظفون (تم تحديد {fmtCount(selected.length)} من {fmtCount(rows.length)})
                 </h4>
 
                 {rosterQuery.isPending && (
@@ -441,7 +441,7 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                 {rosterQuery.isError && (
                   <div className="hrl-state hrl-state--error">
                     <AlertTriangle size={20} />
-                    <p className="hrl-state__t">تعذّر جلب المنسوبين</p>
+                    <p className="hrl-state__t">تعذر تحميل الموظفين</p>
                     <button type="button" className="hr-btn hr-btn--sm" onClick={() => void rosterQuery.refetch()}>
                       <RefreshCw size={13} /> إعادة المحاولة
                     </button>
@@ -450,15 +450,15 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
 
                 {!rosterQuery.isPending && !rosterQuery.isError && rows.length === 0 && (
                   <div className="hrl-state hrl-state--empty">
-                    <p className="hrl-state__t">لا منسوبين على رأس العمل</p>
-                    <p className="hrl-state__d">أضِف منسوبين من صفحة «الموارد البشرية» ثم عُد لتهيئة أرصدتهم.</p>
+                    <p className="hrl-state__t">لا يوجد موظفون على رأس العمل</p>
+                    <p className="hrl-state__d">أضف موظفين من صفحة «الموارد البشرية» ثم ارجع لتهيئة أرصدتهم.</p>
                   </div>
                 )}
 
                 {notShown > 0 && (
                   <p className="hrl-legal">
-                    معروضٌ {rows.length} من {totalRoster} منسوباً — و{notShown} خارجَ هذه الصفحة
-                    <strong> لن تُهيَّأ أرصدتُهم</strong>. ضيّق بالبحث ثمّ كرّر التهيئة لهم.
+                    معروض {rows.length} من {totalRoster} موظفا، و{notShown} خارج هذه الصفحة
+                    <strong> لن يتم إنشاء أرصدتهم</strong>. قلص القائمة بالبحث ثم كرر التهيئة لهم.
                   </p>
                 )}
 
@@ -467,7 +467,7 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                 {rows.length > 1 && (
                   <div className="hrl-fill">
                     <label className="hrl-fill__lbl" htmlFor="hrl-fill-days">
-                      املأ المحدَّدين برقمٍ واحد
+                      املأ المحددين برقم واحد
                     </label>
                     <input
                       id="hrl-fill-days"
@@ -487,17 +487,17 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                       onClick={applyToSelected}
                       disabled={bulkDays.trim() === '' || selected.length === 0}
                     >
-                      <ArrowDownToLine size={13} /> طبّق على {fmtCount(selected.length)}
+                      <ArrowDownToLine size={13} /> طبق على {fmtCount(selected.length)}
                     </button>
                     <span className="hrl-hint hrl-fill__note">
                       {seniorSelected > 0 ? (
                         <>
-                          يكتب الرقمَ في الحقول فتُعدّلها بعده صفّاً صفّاً. و
-                          <strong>{fmtCount(seniorSelected)}</strong> من المحدَّدين أمضى خمسَ سنواتٍ
-                          فأكثر — استحقاقُهم النظاميُّ أعلى، وهم معلَّمون في العمود.
+                          يكتب الرقم في الحقول ويمكنك تعديل كل حقل بعده. و
+                          <strong>{fmtCount(seniorSelected)}</strong> من المحددين أمضى خمس سنوات
+                          فأكثر. استحقاقهم النظامي أعلى، وعليهم علامة في العمود.
                         </>
                       ) : (
-                        'يكتب الرقمَ في الحقول فتُعدّلها بعده صفّاً صفّاً — اختصارُ كتابةٍ لا حفظٌ مباشر.'
+                        'يكتب الرقم في الحقول ويمكنك تعديل كل حقل بعده. ولا يحفظ مباشرة.'
                       )}
                     </span>
                   </div>
@@ -523,9 +523,9 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                             الكل
                           </label>
                         </th>
-                        <th scope="col">المنسوب</th>
+                        <th scope="col">الموظف</th>
                         <th scope="col">الحالة</th>
-                        <th scope="col">رصيد افتتاحيّ</th>
+                        <th scope="col">رصيد افتتاحي</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -557,10 +557,10 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                             <td>
                               {initialized ? (
                                 <span className="hrl-sub">
-                                  مُهيّأ{rowAnchor ? ` — المرساة ${fmtLeaveDate(rowAnchor)}` : ''} · سيُتخطّى
+                                  جاهز{rowAnchor ? ` (بدء الاستحقاق ${fmtLeaveDate(rowAnchor)})` : ''} · سيستثنى
                                 </span>
                               ) : (
-                                <span className="hrl-sub">غير مُهيّأ</span>
+                                <span className="hrl-sub">غير جاهز</span>
                               )}
                             </td>
                             <td>
@@ -579,7 +579,7 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                               {/* علامةُ أقدميّة — تنبيهٌ لا رقم. تظهر بعد التعبئة الجماعية فتقول
                                   للمدير أيَّ الصفوفِ يراجع، ولا تكتب في الحقل شيئاً. */}
                               {isSenior && (
-                                <span className="hrl-senior">٥ سنواتٍ فأكثر — راجِع استحقاقه</span>
+                                <span className="hrl-senior">٥ سنوات فأكثر · راجع استحقاقه</span>
                               )}
                             </td>
                           </tr>
@@ -615,7 +615,7 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                 )}
 
                 <p className="hrl-hint">
-                  الفراغُ يعني قيداً بصفرِ يوم. ومعنى الرقم هو ما اخترتَه أعلاه — لا يُخمَّن هنا.
+                  الفراغ يعني قيدا بصفر يوم. ومعنى الرقم هو ما اخترته أعلاه.
                 </p>
               </section>
 
@@ -624,15 +624,15 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                   <h4 className="hrl-fset__t">النتيجة</h4>
                   <div className="hrl-result">
                     <p className="hrl-result__row is-ok">
-                      <span>كُتب رصيدٌ افتتاحيٌّ وضُبطت المرساة</span>
+                      <span>تم إنشاء رصيد افتتاحي وضبط بدء الاستحقاق</span>
                       <span className="hrl-result__n" dir="ltr">{fmtCount(result.created)}</span>
                     </p>
                     <p className="hrl-result__row is-skip">
-                      <span>تُخطّي — لهم رصيدٌ افتتاحيٌّ سلفاً، ولم تُضبط مرساتُهم في هذا النداء</span>
+                      <span>تم تخطيهم. لهم رصيد افتتاحي مسبقا، ولم يتم ضبط تاريخ بدء الاستحقاق في هذه العملية</span>
                       <span className="hrl-result__n" dir="ltr">{fmtCount(result.skipped)}</span>
                     </p>
                     <p className="hrl-result__row is-fail">
-                      <span>لم يُكتب لهم شيء</span>
+                      <span>لم يتم إنشاء رصيد لهم</span>
                       <span className="hrl-result__n" dir="ltr">{fmtCount(result.failed.length)}</span>
                     </p>
                   </div>
@@ -666,7 +666,7 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
               onClick={submit}
               disabled={mutation.isPending || typeId === null || selected.length === 0}
             >
-              {mutation.isPending ? 'جارٍ الحفظ…' : `تهيئة ${fmtCount(selected.length)} منسوباً`}
+              {mutation.isPending ? 'جارٍ الحفظ…' : `تهيئة ${fmtCount(selected.length)} موظفا`}
             </button>
           )}
         </div>

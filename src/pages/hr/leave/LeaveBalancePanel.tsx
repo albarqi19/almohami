@@ -59,14 +59,14 @@ interface Props {
 }
 
 /** عنوانُ حالة «قبل التهيئة» — نصٌّ واحدٌ يخدم فرعَي «له صلاحية» و«محميّ». */
-const NOT_INITIALIZED_TITLE = 'الرصيد غير مُهيّأ';
+const NOT_INITIALIZED_TITLE = 'الرصيد غير جاهز';
 
 /** حدودُ المعادلة الأربعة — أسماءٌ ضيّقةٌ عمداً كي يبقى نوعُ القيمة رقماً بلا تحويل. */
 type FormulaKey = 'opening' | 'accrued' | 'consumed' | 'adjustments';
 
 const FORMULA_TERMS: Array<{ key: FormulaKey; label: string; entry: LedgerEntryType; op: string }> = [
-  { key: 'opening', label: 'افتتاحيّ', entry: 'opening', op: '' },
-  { key: 'accrued', label: 'مستحقّ', entry: 'accrual', op: '+' },
+  { key: 'opening', label: 'افتتاحي', entry: 'opening', op: '' },
+  { key: 'accrued', label: 'مستحق', entry: 'accrual', op: '+' },
   { key: 'consumed', label: 'مخصوم', entry: 'consumption', op: '−' },
   { key: 'adjustments', label: 'تسويات', entry: 'adjustment', op: '±' },
 ];
@@ -75,7 +75,7 @@ const FORMULA_TERMS: Array<{ key: FormulaKey; label: string; entry: LedgerEntryT
 const PanelShell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="hrl-block hrl-block--grow">
     <div className="hrl-block__h">
-      <h3 className="hrl-block__t"><Wallet size={14} /> الرصيد والتحليل النظاميّ</h3>
+      <h3 className="hrl-block__t"><Wallet size={14} /> الرصيد والتحليل النظامي</h3>
     </div>
     <div className="hrl-block__b hrl-block__b--flush">{children}</div>
   </div>
@@ -139,8 +139,8 @@ export const LeaveBalancePanel: React.FC<Props> = ({
         {empId === null ? (
           <div className="hrl-state hrl-state--empty">
             <Wallet size={22} />
-            <p className="hrl-state__t">لا منسوبَ مختار</p>
-            <p className="hrl-state__d">اختر منسوباً من القائمة ليظهر رصيدُه ومعادلتُه وعدّاداتُه النظامية.</p>
+            <p className="hrl-state__t">لا يوجد موظف مختار</p>
+            <p className="hrl-state__d">اختر موظفا من القائمة ليظهر رصيده ومعادلته وعداداته النظامية.</p>
           </div>
         ) : balanceQuery.isPending ? (
           <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل الرصيد">
@@ -152,9 +152,9 @@ export const LeaveBalancePanel: React.FC<Props> = ({
         ) : (
           <div className="hrl-state hrl-state--error">
             <AlertTriangle size={22} />
-            <p className="hrl-state__t">تعذّر جلب الرصيد</p>
+            <p className="hrl-state__t">تعذر تحميل الرصيد</p>
             <p className="hrl-state__d">
-              {balanceQuery.error instanceof Error ? balanceQuery.error.message : 'انقطعَ الاتصال بالخادم.'}
+              {balanceQuery.error instanceof Error ? balanceQuery.error.message : 'انقطع الاتصال بالخادم.'}
             </p>
             <button type="button" className="hr-btn hr-btn--sm" onClick={() => void balanceQuery.refetch()}>
               <RefreshCw size={13} /> إعادة المحاولة
@@ -200,7 +200,7 @@ export const LeaveBalancePanel: React.FC<Props> = ({
                 <UserPlus size={22} />
                 <p className="hrl-state__t">{NOT_INITIALIZED_TITLE}</p>
                 <p className="hrl-state__d">
-                  الاستحقاقُ يبدأ من تاريخِ مرساةٍ صريح. قبله لا يُولَّد يومٌ واحد، ولا يُعرض رقمٌ بلا أساس.
+                  الاستحقاق يبدأ من تاريخ بدء استحقاق محدد. قبله لا يحتسب أي يوم، ولا يعرض رقم بلا سند.
                 </p>
                 <button type="button" className="hr-btn hr-btn--sm hr-btn--primary" onClick={onInitBalance}>
                   تهيئة رصيد الإجازات
@@ -211,14 +211,14 @@ export const LeaveBalancePanel: React.FC<Props> = ({
                 <Lock size={22} />
                 <p className="hrl-state__t">{NOT_INITIALIZED_TITLE}</p>
                 <p className="hrl-state__d">
-                  التهيئةُ تحتاج صلاحية «إدارة الإجازات» (hr.leave.manage). اطلبها من مدير المكتب.
+                  التهيئة تحتاج صلاحية «إدارة الإجازات» (hr.leave.manage). اطلبها من مدير المكتب.
                 </p>
               </div>
             )}
 
             {consumedSoFar > 0 && (
               <p className="hrl-note">
-                مخصومٌ حتى الآن {fmtDaysWord(consumedSoFar)} — واقعةٌ مسجَّلةٌ لا رصيد. التسجيلُ مسموحٌ قبل التهيئة وبعدها.
+                مخصوم حتى الآن {fmtDaysWord(consumedSoFar)} من إجازات مسجلة. التسجيل مسموح قبل التهيئة وبعدها.
               </p>
             )}
           </div>
@@ -228,15 +228,15 @@ export const LeaveBalancePanel: React.FC<Props> = ({
               <span className={`hrl-num__v${activeType && toNum(activeType.balance) < 0 ? ' is-neg' : ''}`} dir="ltr">
                 {activeType ? fmtDays(activeType.balance) : EMPTY_MARK}
               </span>
-              <span className="hrl-num__u">يوماً متاحاً{activeType ? ` — ${activeType.name}` : ''}</span>
+              <span className="hrl-num__u">يوما متاحا{activeType ? ` — ${activeType.name}` : ''}</span>
             </p>
             <p className="hrl-num__label">{snapshot.balance_label}</p>
 
             {toNum(snapshot.future_committed_days) > 0 && (
               <p className="hrl-note">
-                منها {fmtDaysWord(snapshot.future_committed_days)} مخصومةٌ لإجازةٍ تبدأ لاحقاً.{' '}
+                منها {fmtDaysWord(snapshot.future_committed_days)} مخصومة لإجازة تبدأ لاحقا.{' '}
                 <button type="button" className="hrl-link" onClick={() => openLedger({ entryType: 'consumption' })}>
-                  عرضُ حركاتها
+                  عرض حركاتها
                 </button>
               </p>
             )}
@@ -270,21 +270,21 @@ export const LeaveBalancePanel: React.FC<Props> = ({
               <span className="hrl-formula__term hrl-formula__term--muted">
                 <span className="hrl-formula__k">قيد الاعتماد</span>
                 <span className="hrl-formula__v" dir="ltr">{fmtCount(pendingCount)}</span>
-                <span className="hrl-formula__k">لا يُخصم بعد</span>
+                <span className="hrl-formula__k">لا يخصم بعد</span>
               </span>
               <span className="hrl-formula__term hrl-formula__term--muted">
-                <span className="hrl-formula__k">طلباتٌ إدارية</span>
+                <span className="hrl-formula__k">طلبات إدارية</span>
                 <span className="hrl-formula__v" dir="ltr">{fmtCount(legacyCount)}</span>
-                <span className="hrl-formula__k">غير مُرحَّلة</span>
+                <span className="hrl-formula__k">غير محولة</span>
               </span>
             </div>
 
             {/* ═══ ٢) سطرُ الاشتقاق ═══ */}
             <p className="hrl-note">
-              المرساة {snapshot.accrual_anchor ? fmtLeaveDate(snapshot.accrual_anchor) : 'غير مضبوطة'}
-              {activeType?.next_accrual_at ? ` · الاستحقاقُ القادم ${fmtLeaveDate(activeType.next_accrual_at)}` : ''}
+              بدء الاستحقاق {snapshot.accrual_anchor ? fmtLeaveDate(snapshot.accrual_anchor) : 'غير محدد'}
+              {activeType?.next_accrual_at ? ` · الاستحقاق القادم ${fmtLeaveDate(activeType.next_accrual_at)}` : ''}
               {snapshot.hire_date ? ` · المباشرة ${fmtLeaveDate(snapshot.hire_date)}` : ''}
-              {snapshot.chain_settled_at ? ` · صُفّيت السلسلة في ${fmtLeaveDate(snapshot.chain_settled_at)}` : ''}
+              {snapshot.chain_settled_at ? ` · تمت تصفية السلسلة في ${fmtLeaveDate(snapshot.chain_settled_at)}` : ''}
             </p>
 
             {(snapshot.warnings ?? []).map((warning, index) => (
@@ -303,17 +303,17 @@ export const LeaveBalancePanel: React.FC<Props> = ({
       {/* ═══ ٣) المرضية — م.١١٧ ═══ */}
       <div className="hrl-block">
         <div className="hrl-block__h">
-          <h3 className="hrl-block__t"><Stethoscope size={14} /> النافذة المرضية — المادة ١١٧</h3>
+          <h3 className="hrl-block__t"><Stethoscope size={14} /> النافذة المرضية (المادة ١١٧)</h3>
         </div>
         <div className="hrl-block__b">
           {sick === null ? (
-            <p className="hrl-sub">لم تُفتح نافذةٌ مرضية لهذا الموظف.</p>
+            <p className="hrl-sub">لا توجد نافذة مرضية لهذا الموظف.</p>
           ) : (
             <>
               <div
                 className="hrl-meter"
                 role="img"
-                aria-label={`استُهلك ${fmtDays(sick.used)} من ${fmtDays(sick.total)} يوماً في نافذةٍ تبدأ ${fmtLeaveDate(
+                aria-label={`مخصوم ${fmtDays(sick.used)} من ${fmtDays(sick.total)} يوما في نافذة تبدأ ${fmtLeaveDate(
                   sick.anchor
                 )} وتنتهي ${fmtLeaveDate(sick.ends_on)}`}
               >
@@ -333,9 +333,9 @@ export const LeaveBalancePanel: React.FC<Props> = ({
               <dl className="hrl-kv">
                 <dt>النافذة</dt>
                 <dd>{fmtLeaveDate(sick.anchor)} — {fmtLeaveDate(sick.ends_on)}</dd>
-                <dt>المستهلَك</dt>
+                <dt>المخصوم</dt>
                 <dd dir="ltr">{fmtDays(sick.used)} / {fmtDays(sick.total)}</dd>
-                <dt>المتبقّي</dt>
+                <dt>المتبقي</dt>
                 <dd dir="ltr">{fmtDays(sick.remaining_total)}</dd>
               </dl>
             </>
@@ -346,14 +346,14 @@ export const LeaveBalancePanel: React.FC<Props> = ({
       {/* ═══ ٤) بلا أجر — م.١١٦ ═══ */}
       <div className={`hrl-block hrl-rule${toNum(snapshot.art116.excess) > 0 ? ' hrl-rule--warn' : ''}`}>
         <div className="hrl-block__h">
-          <h3 className="hrl-block__t"><Scale size={14} /> الإجازة بلا أجر — المادة ١١٦</h3>
+          <h3 className="hrl-block__t"><Scale size={14} /> الإجازة بلا أجر (المادة ١١٦)</h3>
           <span className="hrl-block__a hrl-rule__n" dir="ltr">
             {fmtDays(snapshot.art116.unpaid_days)} / {fmtDays(snapshot.art116.threshold)}
           </span>
         </div>
         <div className="hrl-block__b">
           <p className="hrl-sub">
-            سنةُ العقد {fmtLeaveDate(snapshot.art116.contract_year_start)} — {fmtLeaveDate(snapshot.art116.contract_year_end)}
+            سنة العقد {fmtLeaveDate(snapshot.art116.contract_year_start)} — {fmtLeaveDate(snapshot.art116.contract_year_end)}
             {' · '}
             {CONTRACT_YEAR_BASIS_LABELS[snapshot.art116.contract_year_basis] ?? snapshot.art116.contract_year_basis}
           </p>
@@ -361,8 +361,8 @@ export const LeaveBalancePanel: React.FC<Props> = ({
             <p className="hrl-drift">
               <AlertTriangle size={13} />
               <span>
-                تجاوزَ العتبةَ بـ<span className="hrl-drift__n" dir="ltr">{fmtDays(snapshot.art116.excess)}</span> يوماً.
-                العدّادُ يَصِف ولا يحكم — القرارُ في العقد.
+                تجاوز العتبة بـ<span className="hrl-drift__n" dir="ltr">{fmtDays(snapshot.art116.excess)}</span> يوما.
+                العداد يعرض ما سجل، والقرار في العقد.
               </span>
             </p>
           )}
@@ -372,15 +372,15 @@ export const LeaveBalancePanel: React.FC<Props> = ({
       {/* ═══ ٥) الانقطاع — م.٨٠ ═══ */}
       <div className="hrl-block">
         <div className="hrl-block__h">
-          <h3 className="hrl-block__t"><CalendarClock size={14} /> الانقطاع عن العمل — المادة ٨٠</h3>
+          <h3 className="hrl-block__t"><CalendarClock size={14} /> الانقطاع عن العمل (المادة ٨٠)</h3>
         </div>
         <div className="hrl-block__b">
           <dl className="hrl-kv">
-            <dt>متفرّق</dt>
+            <dt>متفرق</dt>
             <dd dir="ltr">{fmtDays(snapshot.art80.scattered_days)} / {fmtDays(snapshot.art80.thresholds.scattered)}</dd>
-            <dt>متتالٍ</dt>
+            <dt>متتالي</dt>
             <dd dir="ltr">{fmtDays(snapshot.art80.max_consecutive)} / {fmtDays(snapshot.art80.thresholds.consecutive)}</dd>
-            <dt>سنةُ العقد</dt>
+            <dt>سنة العقد</dt>
             <dd dir="ltr">
               {fmtLeaveDate(snapshot.art80.contract_year_start)} — {fmtLeaveDate(snapshot.art80.contract_year_end)}
             </dd>
@@ -394,13 +394,13 @@ export const LeaveBalancePanel: React.FC<Props> = ({
       {/* ═══ ٦) إجازاتُ الوقائع ═══ */}
       <div className="hrl-block hrl-block--grow hrl-block--scroll">
         <div className="hrl-block__h">
-          <h3 className="hrl-block__t"><Info size={14} /> إجازات الوقائع</h3>
+          <h3 className="hrl-block__t"><Info size={14} /> إجازات المناسبات</h3>
         </div>
         <div className="hrl-block__b hrl-block__b--flush">
           {(snapshot.per_event ?? []).length === 0 ? (
             <div className="hrl-state hrl-state--empty">
-              <p className="hrl-state__t">لا إجازاتِ وقائع</p>
-              <p className="hrl-state__d">لم يُعرِّف المكتبُ أنواعاً تُعدّ بالوقائع (زواج · وفاة · أبوّة · حج).</p>
+              <p className="hrl-state__t">لا توجد إجازات مناسبات</p>
+              <p className="hrl-state__d">لم يضف المكتب أنواعا تحسب بالمناسبات (زواج · وفاة · أبوة · حج).</p>
             </div>
           ) : (
             <ul className="hrl-list">
@@ -419,7 +419,7 @@ export const LeaveBalancePanel: React.FC<Props> = ({
                     </span>
                     <span className="hrl-row__meta">
                       {LEAVE_ENTITLEMENT_WINDOW_LABELS[row.window] ?? row.window}
-                      {row.last_used_at ? ` · استُعملت في ${fmtLeaveDate(row.last_used_at)}` : ' · لم تُستعمل'}
+                      {row.last_used_at ? ` · آخر استعمال ${fmtLeaveDate(row.last_used_at)}` : ' · بلا استعمال'}
                     </span>
                   </span>
                   <span className="hrl-mini" dir="ltr">

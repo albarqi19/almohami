@@ -139,7 +139,7 @@ export const LeaveRecordTable: React.FC<Props> = ({
 
   if (recordsQuery.isPending) {
     return (
-      <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل السجلّ">
+      <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل السجل">
         {Array.from({ length: 8 }, (_, i) => (
           <span className="hrl-skel" key={i} />
         ))}
@@ -151,8 +151,8 @@ export const LeaveRecordTable: React.FC<Props> = ({
     return (
       <div className="hrl-state hrl-state--error">
         <AlertTriangle size={22} />
-        <p className="hrl-state__t">تعذّر جلب السجلّ</p>
-        <p className="hrl-state__d">{errorText(recordsQuery.error, 'انقطعَ الاتصال بالخادم.')}</p>
+        <p className="hrl-state__t">تعذر تحميل السجل</p>
+        <p className="hrl-state__d">{errorText(recordsQuery.error, 'انقطع الاتصال بالخادم.')}</p>
         <button type="button" className="hr-btn hr-btn--sm" onClick={() => void recordsQuery.refetch()}>
           <RefreshCw size={13} /> إعادة المحاولة
         </button>
@@ -164,11 +164,11 @@ export const LeaveRecordTable: React.FC<Props> = ({
     return (
       <div className="hrl-state hrl-state--empty">
         <CalendarX size={22} />
-        <p className="hrl-state__t">لا وقائعَ مسجَّلة</p>
+        <p className="hrl-state__t">لا سجلات إجازة</p>
         <p className="hrl-state__d">
           {employeeId === null
-            ? 'لم تُسجَّل إجازةٌ ولا غيابٌ ضمن هذه المرشِّحات.'
-            : 'لم تُسجَّل لهذا المنسوب إجازةٌ ولا غيابٌ ضمن هذه المرشِّحات.'}
+            ? 'لم يتم تسجيل أي إجازة أو غياب ضمن هذه التصفية.'
+            : 'لم يتم تسجيل أي إجازة أو غياب لهذا الموظف ضمن هذه التصفية.'}
         </p>
       </div>
     );
@@ -177,10 +177,10 @@ export const LeaveRecordTable: React.FC<Props> = ({
   return (
     <>
       <table className={`hrl-table${employeeId === null ? '' : ' hrl-table--single'}`}>
-        <caption className="hrl-sr">سجلّ الإجازات والغياب</caption>
+        <caption className="hrl-sr">سجل الإجازات والغياب</caption>
         <thead>
           <tr>
-            <th scope="col" className="hrl-c-emp">المنسوب</th>
+            <th scope="col" className="hrl-c-emp">الموظف</th>
             <th scope="col">النوع</th>
             <th scope="col">المدى</th>
             <th scope="col">الأيام</th>
@@ -278,7 +278,7 @@ export const LeaveRecordTable: React.FC<Props> = ({
 
                   <td>
                     <span className="hrl-type__n">{LEAVE_SOURCE_LABELS[leave.source] ?? EMPTY_MARK}</span>
-                    {leave.self_approved && <span className="hrl-cellsub">اعتمدها بنفسه</span>}
+                    {leave.self_approved && <span className="hrl-cellsub">اعتماد ذاتي</span>}
                   </td>
 
                   <td>
@@ -289,8 +289,8 @@ export const LeaveRecordTable: React.FC<Props> = ({
                           <button
                             type="button"
                             className="hr-icon-btn hr-icon-btn--sm"
-                            title="البتّ في الطلب — قبولاً أو رفضاً"
-                            aria-label={`البتّ في واقعة ${fmtLeaveRange(leave.start_date, leave.end_date)}`}
+                            title="قبول الطلب أو رفضه"
+                            aria-label={`قبول أو رفض إجازة ${fmtLeaveRange(leave.start_date, leave.end_date)}`}
                             onClick={() => setDecideLeaveId(leave.id)}
                           >
                             <Gavel size={13} />
@@ -302,7 +302,7 @@ export const LeaveRecordTable: React.FC<Props> = ({
                             type="button"
                             className="hr-icon-btn hr-icon-btn--sm"
                             title="إلغاء"
-                            aria-label="إلغاء الواقعة"
+                            aria-label="إلغاء الإجازة"
                             onClick={() => onCorrect('cancel', leave)}
                           >
                             <Undo2 size={13} />
@@ -313,8 +313,8 @@ export const LeaveRecordTable: React.FC<Props> = ({
                           <button
                             type="button"
                             className="hr-icon-btn hr-icon-btn--sm"
-                            title="تقصير — عاد مبكّراً"
-                            aria-label="تقصير المدّة"
+                            title="تقصير المدة (عودة مبكرة)"
+                            aria-label="تقصير المدة"
                             onClick={() => onCorrect('shorten', leave)}
                           >
                             <Scissors size={13} />
@@ -324,8 +324,8 @@ export const LeaveRecordTable: React.FC<Props> = ({
                         <button
                           type="button"
                           className="hr-icon-btn hr-icon-btn--sm"
-                          title="تكرار على منسوبٍ آخر"
-                          aria-label="تكرار على منسوبٍ آخر"
+                          title="تكرار على موظف آخر"
+                          aria-label="تكرار على موظف آخر"
                           onClick={() => onRepeat(leave)}
                         >
                           <Copy size={13} />

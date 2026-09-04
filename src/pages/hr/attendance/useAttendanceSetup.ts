@@ -245,5 +245,5 @@ export function buildWeekPattern(
 
 /** الاسمُ المعروضُ لملفِّ موظف — من حساب المستخدم، وإلّا رقمُ الملفّ. */
 export function profileName(profile: EmployeeProfile): string {
-  return profile.user?.name ?? `ملفّ رقم ${profile.id}`;
+  return profile.user?.name ?? `ملف رقم ${profile.id}`;
 }

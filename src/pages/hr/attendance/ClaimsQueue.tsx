@@ -51,8 +51,8 @@ export const ClaimsQueue: React.FC<Props> = ({ employeeProfileId, canManage }) =
       const result = await approve.mutateAsync(claim.id);
       toast.success(
         result.punch_ids.length > 0
-          ? `اعتُمد الطلب — وأُضيفت ${result.punch_ids.length} بصمة`
-          : 'اعتُمد الطلب'
+          ? `تم اعتماد الطلب وإضافة ${result.punch_ids.length} بصمة`
+          : 'تم اعتماد الطلب'
       );
     } catch (e) {
       toast.error(errorText(e, 'فشل في اعتماد الطلب'));
@@ -64,13 +64,13 @@ export const ClaimsQueue: React.FC<Props> = ({ employeeProfileId, canManage }) =
 
     const clean = reason.trim();
     if (clean.length < 10) {
-      toast.error('اكتب سببَ الرفض — يقرؤه صاحبُ الطلب.');
+      toast.error('اكتب سبب الرفض. يقرؤه صاحب الطلب.');
       return;
     }
 
     try {
       await reject.mutateAsync({ claimId: rejecting.id, reason: clean });
-      toast.success('رُفض الطلب وأُبلغ صاحبُه بالسبب');
+      toast.success('تم رفض الطلب وإبلاغ صاحبه بالسبب');
       setRejecting(null);
       setReason('');
     } catch (e) {
@@ -82,14 +82,14 @@ export const ClaimsQueue: React.FC<Props> = ({ employeeProfileId, canManage }) =
     <>
       <div className="hra-sech">
         <h2 className="hra-sech__t">
-          <Inbox size={14} aria-hidden="true" /> طلباتُ التصحيح
+          <Inbox size={14} aria-hidden="true" /> طلبات التصحيح
         </h2>
         <button
           type="button"
           className="ssp2-btn"
           onClick={() => setStatus(status === 'pending' ? '' : 'pending')}
         >
-          {status === 'pending' ? 'أظهِر المبتوتة' : 'المعلَّقة فقط'}
+          {status === 'pending' ? 'أظهر الكل' : 'المعلقة فقط'}
         </button>
       </div>
 
@@ -100,8 +100,8 @@ export const ClaimsQueue: React.FC<Props> = ({ employeeProfileId, canManage }) =
       ) : claims.isError ? (
         <div className="hra-state hra-state--error">
           <AlertTriangle size={20} aria-hidden="true" />
-          <p className="hra-state__t">تعذّر جلبُ الطلبات</p>
-          <p className="hra-state__d">{errorText(claims.error, 'انقطعَ الاتصال بالخادم.')}</p>
+          <p className="hra-state__t">تعذر تحميل الطلبات</p>
+          <p className="hra-state__d">{errorText(claims.error, 'انقطع الاتصال بالخادم.')}</p>
           <button type="button" className="ssp2-btn" onClick={() => { void claims.refetch(); }}>
             <RefreshCw size={13} /> إعادة المحاولة
           </button>
@@ -109,9 +109,9 @@ export const ClaimsQueue: React.FC<Props> = ({ employeeProfileId, canManage }) =
       ) : rows.length === 0 ? (
         <div className="hra-state">
           <Inbox size={22} aria-hidden="true" />
-          <p className="hra-state__t">لا طلباتِ تصحيح</p>
+          <p className="hra-state__t">لا توجد طلبات تصحيح</p>
           <p className="hra-state__d">
-            حين يرى موظفٌ يوماً غيرَ صحيحٍ في سجلّه يرسل طلباً من صفحته، فيظهر هنا للاعتماد.
+            حين يرى موظف يوما غير صحيح في سجله يرسل طلبا من صفحته، فيظهر هنا للاعتماد.
           </p>
         </div>
       ) : (
@@ -119,19 +119,19 @@ export const ClaimsQueue: React.FC<Props> = ({ employeeProfileId, canManage }) =
           <div className="hra-day" key={claim.id}>
             <div className="hra-day__main">
               <div className="hra-day__d">
-                <span>{names[claim.employee_profile_id]?.name ?? 'منسوب'}</span>
+                <span>{names[claim.employee_profile_id]?.name ?? 'موظف'}</span>
                 <span className="hra-flag">{CLAIM_KIND_LABELS[claim.claim_type] ?? claim.claim_type}</span>
                 <span className="hra-st">{CLAIM_STATUS_LABELS[claim.status] ?? claim.status}</span>
-                {claim.self_approved && <span className="hra-flag hra-flag--danger">اعتمدَه صاحبُه</span>}
+                {claim.self_approved && <span className="hra-flag hra-flag--danger">معتمد من صاحبه</span>}
               </div>
               <p className="hra-day__sub">
                 {fmtRange(claim.start_date, claim.end_date)} · {claim.reason}
               </p>
               {claim.status === 'rejected' && claim.rejection_reason && (
-                <p className="hra-day__sub">سببُ الرفض: {claim.rejection_reason}</p>
+                <p className="hra-day__sub">سبب الرفض: {claim.rejection_reason}</p>
               )}
               {claim.approved_at && (
-                <p className="hra-day__sub">اعتُمد {fmtDateTime(claim.approved_at)}</p>
+                <p className="hra-day__sub">تم الاعتماد في {fmtDateTime(claim.approved_at)}</p>
               )}
             </div>
 
@@ -143,7 +143,7 @@ export const ClaimsQueue: React.FC<Props> = ({ employeeProfileId, canManage }) =
                   onClick={() => { void doApprove(claim); }}
                   disabled={approve.isPending}
                 >
-                  اعتمِد
+                  اعتمد
                 </button>
                 <button
                   type="button"
@@ -162,7 +162,7 @@ export const ClaimsQueue: React.FC<Props> = ({ employeeProfileId, canManage }) =
         <div className="hr-modal-overlay" onClick={() => setRejecting(null)}>
           <div className="hr-modal hra-modal" onClick={(e) => e.stopPropagation()}>
             <div className="hr-modal__h">
-              <h3>رفضُ طلب — {names[rejecting.employee_profile_id]?.name ?? 'منسوب'}</h3>
+              <h3>رفض طلب — {names[rejecting.employee_profile_id]?.name ?? 'موظف'}</h3>
               <button
                 type="button"
                 className="hr-icon-btn"
@@ -175,10 +175,10 @@ export const ClaimsQueue: React.FC<Props> = ({ employeeProfileId, canManage }) =
 
             <div className="hr-modal__b">
               <p className="hra-hint">
-                الرفضُ بلا سببٍ يُنتج سؤالاً في اليوم التالي — والسببُ يصل صاحبَ الطلب كما كتبتَه.
+                يصل السبب إلى صاحب الطلب كما كتبته.
               </p>
               <div className="hr-field">
-                <label htmlFor="hra-reject-reason">سببُ الرفض *</label>
+                <label htmlFor="hra-reject-reason">سبب الرفض *</label>
                 <textarea
                   id="hra-reject-reason"
                   rows={3}

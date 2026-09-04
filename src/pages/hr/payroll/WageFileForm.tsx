@@ -121,12 +121,12 @@ export const WageFileForm: React.FC<Props> = ({ file, canViewAmounts, canManage,
     <details className="hrl-block" open={isNew}>
       <summary className="hrl-block__h">
         <h2 className="hrl-block__t hrl-h2">
-          <ShieldCheck size={14} /> سياسةُ الأجر وملفُّه
+          <ShieldCheck size={14} /> سياسة الأجر وملفه
         </h2>
         {file ? (
           <span className="hrl-badge hrl-badge--flat">{IBAN_STATE_LABELS[file.iban_state]}</span>
         ) : (
-          <span className="hrl-badge hrl-badge--flat">لم يُفتح بعد</span>
+          <span className="hrl-badge hrl-badge--flat">غير مفتوح بعد</span>
         )}
         <ChevronDown size={14} aria-hidden="true" />
       </summary>
@@ -135,21 +135,21 @@ export const WageFileForm: React.FC<Props> = ({ file, canViewAmounts, canManage,
         <div className="hrl-block__b">
           {isNew && (
             <fieldset className="hrl-fset">
-              <legend className="hrl-fset__t">فتحُ الملفّ</legend>
+              <legend className="hrl-fset__t">فتح الملف</legend>
               <div className="hr-field">
-                <label htmlFor="file-reason">سببُ الفتح</label>
+                <label htmlFor="file-reason">سبب الفتح</label>
                 <input
                   id="file-reason"
                   type="text"
                   value={form.reason}
                   onChange={(event) => set({ reason: event.target.value })}
-                  placeholder="تعيينٌ جديد · عقدٌ موقَّع…"
+                  placeholder="تعيين جديد · عقد موقع…"
                   maxLength={500}
                   required
                   disabled={!canManage}
                 />
                 <p className="hrl-hint">
-                  فتحُ ملفّ الأجر إقرارٌ بأنّ هذا الشخص يُصرف له — فيُسجَّل باسمك وتاريخِه وسببِه.
+                  فتح ملف الأجر تأكيد بأن هذا الموظف يصرف له. ويسجل باسمك وتاريخه وسببه.
                 </p>
               </div>
             </fieldset>
@@ -176,8 +176,8 @@ export const WageFileForm: React.FC<Props> = ({ file, canViewAmounts, canManage,
             </div>
 
             <p className="hrl-hint">
-              يُصرَّح به دائماً ولا يُستنتَج من الجنسية: حقلُ الجنسية نصٌّ حرّ، والاستنتاجُ منه
-              يخصم من وافدٍ حصّةً لا يوجبها النظام.
+              يحدد يدوياً دائماً ولا يستنتج من الجنسية: حقل الجنسية نص حر، والاستنتاج منه
+              يخصم من وافد حصة لا يوجبها النظام.
             </p>
 
             <div className="hr-field">
@@ -216,8 +216,8 @@ export const WageFileForm: React.FC<Props> = ({ file, canViewAmounts, canManage,
 
             <p className="hrl-legal">
               <span>
-                المقامُ الافتراضيُّ ثلاثون بنصّ المادة الثانية، ويُبدَّل إلى أيام الشهر الفعلية
-                متى نصّت لائحةُ المكتب على ذلك. والشهرُ الكاملُ لا يمرّ بقسمةٍ أصلاً.
+                المقام الافتراضي ثلاثون بنص المادة ٢، ويتغير إلى أيام الشهر الفعلية
+                متى نصت لائحة المكتب على ذلك. والشهر الكامل لا يمر بقسمة أصلاً.
               </span>
               <span className="hrl-legal__ref">م.٢</span>
             </p>
@@ -236,7 +236,7 @@ export const WageFileForm: React.FC<Props> = ({ file, canViewAmounts, canManage,
                   </option>
                 ))}
               </select>
-              <p className="hrl-hint">قرارُ سياسةٍ لا حقيقة — وعليه وحدَه تُحسب زيادةُ العمل الإضافيّ.</p>
+              <p className="hrl-hint">هذا قرار سياسة. وعليه فقط تحسب زيادة العمل الإضافي.</p>
             </div>
           </fieldset>
 
@@ -273,13 +273,13 @@ export const WageFileForm: React.FC<Props> = ({ file, canViewAmounts, canManage,
                   disabled={!canManage}
                 />
                 <p className="hrl-hint">
-                  يُطبَّع ويُفحَص بنيوياً قبل الحفظ (بادئة SA · ٢٤ خانة · خانتا تحقّق). خانةٌ
-                  واحدةٌ مقلوبةٌ قد تُفشل كشفَ الرواتب المسلَّم للبنك كلَّه لا سطرَها وحدَه.
+                  ينسق ويتم التحقق من صيغته قبل الحفظ (بادئة SA · ٢٤ خانة · خانتا تحقق). خانة
+                  واحدة مقلوبة قد تفسد كشف الرواتب المسلم للبنك كله لا سطرها فقط.
                 </p>
               </div>
             ) : (
               <p className="hrl-hint">
-                الآيبان محجوبٌ عنك — وحالتُه ظاهرةٌ أعلى هذا اللوح فيعمل قياسُ الجاهزية بلا رقم.
+                الآيبان محجوب عنك. وحالته ظاهرة أعلى هذه اللوحة فيعمل قياس الجاهزية بلا رقم.
               </p>
             )}
 
@@ -322,12 +322,12 @@ export const WageFileForm: React.FC<Props> = ({ file, canViewAmounts, canManage,
         {canManage && (
           <div className="hrl-drawer__f">
             <span className="hrl-hint">
-              {form.scheme === '' ? 'اختر نظامَ التأمينات أوّلاً.' : 'السياسةُ تُحفظ مرّةً ولا تكتب نسخةَ أجر.'}
+              {form.scheme === '' ? 'اختر نظام التأمينات أولاً.' : 'السياسة تحفظ مرة ولا تكتب نسخة أجر.'}
             </span>
             <span className="hrl-block__a">
               <button type="submit" className="hr-btn hr-btn--sm" disabled={!ready}>
                 {saving ? <Loader2 size={13} /> : isNew ? <BadgeCheck size={13} /> : <Save size={13} />}
-                {saving ? 'يُحفَظ…' : isNew ? 'افتح ملفَّ الأجر' : 'احفظ السياسة'}
+                {saving ? 'جارٍ الحفظ…' : isNew ? 'افتح ملف الأجر' : 'احفظ السياسة'}
               </button>
             </span>
           </div>

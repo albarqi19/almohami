@@ -52,10 +52,10 @@ interface Props {
 
 /** عنوانُ الحوار واسمُ فعله — خريطةٌ واحدةٌ فلا يفترق نصّان لفعلٍ واحد. */
 const ACTION_LABELS: Record<CorrectionAction, { title: string; confirm: string }> = {
-  cancel: { title: 'إلغاء الواقعة', confirm: 'أكِّد الإلغاء' },
-  shorten: { title: 'تقصير المدّة — عاد مبكّراً', confirm: 'احفظ التقصير' },
-  reject: { title: 'رفض الطلب', confirm: 'أكِّد الرفض' },
-  recompute: { title: 'إعادة الاحتساب', confirm: 'احتسِب الآن' },
+  cancel: { title: 'إلغاء الإجازة', confirm: 'تأكيد الإلغاء' },
+  shorten: { title: 'تقصير المدة (عودة مبكرة)', confirm: 'حفظ التقصير' },
+  reject: { title: 'رفض الطلب', confirm: 'تأكيد الرفض' },
+  recompute: { title: 'إعادة الاحتساب', confirm: 'احتسب الآن' },
 };
 
 const TERMINAL: HrLeave['status'][] = ['rejected', 'cancelled', 'superseded'];
@@ -119,19 +119,19 @@ export const LeaveCorrectionModal: React.FC<Props> = ({
 
   const submit = () => {
     if (!mayManage) {
-      toast.error('تصحيحُ الوقائع يحتاج صلاحية «إدارة الإجازات».');
+      toast.error('تصحيح السجلات يحتاج صلاحية «إدارة الإجازات».');
       return;
     }
     if (isTerminal) return;
 
     if (action !== 'recompute' && reason.trim() === '') {
-      toast.error(action === 'reject' ? 'يجب ذكر سبب الرفض.' : 'السبب مطلوب — السجلُّ بلا سببٍ لا يُصدَّق.');
+      toast.error(action === 'reject' ? 'يجب ذكر سبب الرفض.' : 'السبب مطلوب. السجل بلا سبب غير مقبول.');
       return;
     }
 
     if (action === 'shorten') {
       if (newEnd === '') {
-        toast.error('حدّد تاريخ النهاية الجديد.');
+        toast.error('اختر تاريخ النهاية الجديد.');
         return;
       }
       if (newEnd < leave.start_date) {
@@ -139,7 +139,7 @@ export const LeaveCorrectionModal: React.FC<Props> = ({
         return;
       }
       if (newEnd >= leave.end_date) {
-        toast.error('التقصير يوجب نهايةً أقصر من الحالية.');
+        toast.error('التقصير يتطلب نهاية أقصر من الحالية.');
         return;
       }
     }
@@ -155,24 +155,24 @@ export const LeaveCorrectionModal: React.FC<Props> = ({
             balance.before !== null && balance.after !== null
               ? ` · الرصيد ${fmtDays(balance.before)} ← ${fmtDays(balance.after)}`
               : '';
-          toast.success(`أُلغيت الواقعة — أُعيد ${fmtDaysWord(data.days_restored)}${arrow}`);
+          toast.success(`تم إلغاء الإجازة وإعادة ${fmtDaysWord(data.days_restored)}${arrow}`);
         } else if (action === 'shorten' && 'superseded_id' in data) {
-          toast.success(`قُصِّرت المدّة — أُخلِف السجلُّ #${data.superseded_id} بسجلٍّ جديد.`);
+          toast.success(`تم تقصير المدة. تم استبدال السجل #${data.superseded_id} بسجل جديد.`);
         } else if (action === 'recompute' && 'delta_days' in data) {
           if (toNum(data.delta_days) === 0) {
-            toast.info('لا فارقَ في الاحتساب — لم يُكتب قيدٌ في الدفتر.');
+            toast.info('لا فارق في الاحتساب. لم يتم تسجيل أي قيد في السجل.');
           } else {
-            toast.success(`أُعيد الاحتساب — فارقٌ ${fmtDays(data.delta_days)} يوم.`);
+            toast.success(`تمت إعادة الاحتساب. الفارق ${fmtDays(data.delta_days)} يوم.`);
           }
         } else {
-          toast.success('رُفض الطلب.');
+          toast.success('تم رفض الطلب.');
         }
 
         if (onDone) onDone();
         onClose();
       },
       onError: (error) => {
-        toast.error(errorText(error, 'تعذّر تنفيذ التصحيح'));
+        toast.error(errorText(error, 'تعذر تنفيذ التصحيح'));
       },
     });
   };
@@ -204,15 +204,15 @@ export const LeaveCorrectionModal: React.FC<Props> = ({
 
         <div className="hr-modal__b">
           <section className="hrl-fset">
-            <h4 className="hrl-fset__t">الواقعة</h4>
+            <h4 className="hrl-fset__t">الإجازة المسجلة</h4>
             <dl className="hrl-kv">
-              <dt>المنسوب</dt>
+              <dt>الموظف</dt>
               <dd>{employeeName || leave.employee_profile?.user?.name || EMPTY_MARK}</dd>
               <dt>النوع</dt>
               <dd>{leaveTypeName(leave)}</dd>
               <dt>المدى</dt>
               <dd>{fmtLeaveRange(leave.start_date, leave.end_date)}</dd>
-              <dt>المدّة</dt>
+              <dt>المدة</dt>
               <dd dir="ltr">{fmtDays(leave.duration_days)}</dd>
               <dt>الحالة</dt>
               <dd>{LEAVE_STATUS_LABELS[leave.status] ?? leave.status}</dd>
@@ -226,9 +226,9 @@ export const LeaveCorrectionModal: React.FC<Props> = ({
           {!mayManage ? (
             <div className="hrl-state hrl-state--locked">
               <Lock size={22} />
-              <p className="hrl-state__t">التصحيح محميّ</p>
+              <p className="hrl-state__t">التصحيح محمي</p>
               <p className="hrl-state__d">
-                إلغاءُ الوقائع وتقصيرُها ورفضُها تحتاج صلاحية «إدارة الإجازات» (hr.leave.manage).
+                إلغاء الإجازات وتقصيرها ورفضها تحتاج صلاحية «إدارة الإجازات» (hr.leave.manage).
               </p>
             </div>
           ) : isTerminal ? (
@@ -236,10 +236,10 @@ export const LeaveCorrectionModal: React.FC<Props> = ({
               <ShieldAlert size={13} />
               <span>
                 <span className="hrl-flag__t">
-                  هذه الواقعة في حالةٍ نهائية ({LEAVE_STATUS_LABELS[leave.status] ?? leave.status}) — لا تُصحَّح.
+                  هذه الإجازة في حالة نهائية ({LEAVE_STATUS_LABELS[leave.status] ?? leave.status}) ولا يمكن تصحيحها.
                 </span>
                 <span className="hrl-flag__hint">
-                  التصحيحُ بعد حالةٍ نهائيةٍ يكون بصفٍّ جديدٍ لا بإحياء القديم.
+                  التصحيح بعد الحالة النهائية يكون بتسجيل إجازة جديدة.
                 </span>
               </span>
             </div>
@@ -252,40 +252,40 @@ export const LeaveCorrectionModal: React.FC<Props> = ({
                   {action === 'cancel' && (
                     <>
                       <span className="hrl-flag__t">
-                        يُعكس قيدُ الاستهلاك كاملاً
-                        {charged === undefined ? '' : ` — يعود ${fmtDaysWord(charged)} إلى الرصيد`}
+                        يتم عكس قيد الخصم كاملاً
+                        {charged === undefined ? '' : ` ويعود ${fmtDaysWord(charged)} إلى الرصيد`}
                         {balanceBefore !== null && charged !== undefined
                           ? ` (${fmtDays(balanceBefore)} ← ${fmtDays(balanceBefore + toNum(charged))})`
                           : ''}
                         .
                       </span>
                       <span className="hrl-flag__hint">
-                        الصفُّ يبقى في السجلّ بحالة «ملغاة» بسببه — لا يُحذف ولا يختفي.
+                        يبقى السجل ظاهراً بحالة «ملغاة» مع سببه.
                       </span>
                     </>
                   )}
                   {action === 'shorten' && (
                     <>
                       <span className="hrl-flag__t">
-                        يُخلَف السجلُّ الحاليّ بسجلٍّ جديدٍ ويُعكس قيدُه كاملاً ثمّ يُخصم الجديد.
+                        يتم استبدال السجل الحالي بسجل جديد، ويتم عكس قيده كاملاً ثم خصم الجديد.
                       </span>
                       <span className="hrl-flag__hint">
-                        ويبقى الأصلُ ظاهراً بحالة «مُخلَف» — فيقرأ المراجعُ لاحقاً ما جرى بالضبط.
+                        يبقى الأصل ظاهراً بحالة «مستبدَلة».
                       </span>
                     </>
                   )}
                   {action === 'reject' && (
                     <>
-                      <span className="hrl-flag__t">الرفضُ تغييرُ حالةٍ فقط — لا قيدَ في الدفتر لصفٍّ معلَّق.</span>
-                      <span className="hrl-flag__hint">السببُ إلزاميّ ويُعرض للموظف في سجلّه.</span>
+                      <span className="hrl-flag__t">الرفض تغيير حالة فقط، ولا يتم تسجيل قيد لطلب معلق.</span>
+                      <span className="hrl-flag__hint">السبب إلزامي ويظهر للموظف في سجله.</span>
                     </>
                   )}
                   {action === 'recompute' && (
                     <>
                       <span className="hrl-flag__t">
-                        يُقارَن ما يُحسب اليوم بالمجمَّد يوم الاعتماد، ويُكتب الفارقُ قيدَ تسوية.
+                        تتم مقارنة الاحتساب الحالي بالقيمة المحفوظة يوم الاعتماد، ثم يتم تسجيل الفارق كقيد تسوية.
                       </span>
-                      <span className="hrl-flag__hint">فارقٌ صفرٌ ⇒ صفرُ كتابة، والرسالةُ تقولها صراحةً.</span>
+                      <span className="hrl-flag__hint">إذا كان الفارق صفراً فلن يتم تسجيل أي قيد.</span>
                     </>
                   )}
                 </span>
@@ -304,17 +304,17 @@ export const LeaveCorrectionModal: React.FC<Props> = ({
                       value={newEnd}
                       onChange={(event) => setNewEnd(event.target.value)}
                     />
-                    <span className="hrl-hint">أقصرُ من النهاية الحالية وليس قبل البداية.</span>
+                    <span className="hrl-hint">أقصر من النهاية الحالية وليس قبل البداية.</span>
                   </div>
 
                   {preview.data && (
                     <p className={`hrl-impact${preview.isStale ? ' hrl-impact--pending' : ''}`}>
                       <span className="hrl-impact__c">
-                        <span className="hrl-impact__k">المدّة الجديدة</span>
+                        <span className="hrl-impact__k">المدة الجديدة</span>
                         <span className="hrl-impact__v" dir="ltr">{fmtDays(preview.data.duration.duration_days)}</span>
                       </span>
                       <span className="hrl-impact__c">
-                        <span className="hrl-impact__k">الرصيد بعد الإخلاف</span>
+                        <span className="hrl-impact__k">الرصيد بعد الاستبدال</span>
                         <span className="hrl-impact__v" dir="ltr">
                           {preview.data.balance.before === null || preview.data.balance.after === null
                             ? EMPTY_MARK
@@ -362,7 +362,7 @@ export const LeaveCorrectionModal: React.FC<Props> = ({
                       value={effectiveDate}
                       onChange={(event) => setEffectiveDate(event.target.value)}
                     />
-                    <span className="hrl-hint">يُترك فارغاً ليُسجَّل القيدُ العاكس بتاريخ اليوم.</span>
+                    <span className="hrl-hint">اتركه فارغاً حتى يتم تسجيل القيد العكسي بتاريخ اليوم.</span>
                   </div>
                 )}
               </section>

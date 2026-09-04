@@ -83,7 +83,7 @@ export const DossierActionChips: React.FC<Props> = ({ empId, emp, canManage, onE
   if (canManage && !emp.hire_date) {
     chips.push({
       key: 'hire-date',
-      label: 'تاريخُ المباشرة غير مسجَّل — الاستحقاقُ لا يُحتسب',
+      label: 'تاريخ المباشرة غير مسجل. الاستحقاق لا يحتسب',
       act: onEdit,
     });
   }
@@ -92,7 +92,7 @@ export const DossierActionChips: React.FC<Props> = ({ empId, emp, canManage, onE
   // مصدرُه `is_initialized` من الخادم لا تخميناً في الواجهة، ومقصدُه صفحةُ الإجازات حيث
   // تُهيَّأ المرساة — ولا يُعرض هنا رقمٌ بلا أساس (لا ٢١ ولا ٠ ولا شرطة).
   if (balanceQuery.data && !balanceQuery.data.is_initialized) {
-    chips.push({ key: 'balance', label: 'الرصيد غير مُهيَّأ', to: `/hr/leave/${empId}` });
+    chips.push({ key: 'balance', label: 'لم يتم إنشاء رصيد الإجازات', to: `/hr/leave/${empId}` });
   }
 
   // ═══ ٣) رخصةُ الهيئة ═══
@@ -127,11 +127,11 @@ export const DossierActionChips: React.FC<Props> = ({ empId, emp, canManage, onE
     }).length;
 
     if (documents.length === 0) {
-      chips.push({ key: 'docs-none', label: 'لا مستنداتِ محفوظة', jump: SEC.docs });
+      chips.push({ key: 'docs-none', label: 'لا توجد مستندات محفوظة', jump: SEC.docs });
     } else if (expired > 0) {
       chips.push({
         key: 'docs-expired',
-        label: `مستندٌ منتهٍ (${fmtCount(expired)})`,
+        label: `مستند منتهٍ (${fmtCount(expired)})`,
         tone: 'danger',
         jump: SEC.docs,
       });
@@ -142,7 +142,7 @@ export const DossierActionChips: React.FC<Props> = ({ empId, emp, canManage, onE
   const contracts = contractsQuery.data;
   if (contracts) {
     if (contracts.length === 0) {
-      chips.push({ key: 'contract-none', label: 'لا عقدَ مسجَّل', jump: SEC.contracts });
+      chips.push({ key: 'contract-none', label: 'لا يوجد عقد مسجل', jump: SEC.contracts });
     } else {
       // العقدُ الساري وحدَه هو المقصود؛ والمنتهي حالتُه في الجدول لا في التنبيه.
       const activeEnd = contracts.find((c) => c.status === 'active')?.end_date;
@@ -151,7 +151,7 @@ export const DossierActionChips: React.FC<Props> = ({ empId, emp, canManage, onE
       if (days != null && days < URGENT_DAYS) {
         chips.push({
           key: 'contract-end',
-          label: days <= 0 ? 'العقدُ منتهٍ' : `العقد ينتهي بعد ${fmtCount(days)} يوماً`,
+          label: days <= 0 ? 'العقد منتهٍ' : `العقد ينتهي بعد ${fmtCount(days)} يوماً`,
           tone: toneOf(days),
           jump: SEC.contracts,
         });
@@ -168,7 +168,7 @@ export const DossierActionChips: React.FC<Props> = ({ empId, emp, canManage, onE
     // شرطُ «لم تُهيَّأ» هو خلوُّ القائمة كلِّها — نفسُ شرطِ زرّ التهيئة في `OnboardingTab`،
     // فلا يقود بندٌ إلى زرٍّ لن يجده صاحبُه هناك.
     if (checklist.length === 0) {
-      chips.push({ key: 'onboarding-none', label: 'قائمةُ المباشرة لم تُهيَّأ', jump: SEC.onboarding });
+      chips.push({ key: 'onboarding-none', label: 'لم يتم إنشاء قائمة المباشرة', jump: SEC.onboarding });
     } else if (onboarding.length > 0 && done < onboarding.length) {
       chips.push({
         key: 'onboarding-progress',
@@ -192,14 +192,14 @@ export const DossierActionChips: React.FC<Props> = ({ empId, emp, canManage, onE
     return (
       <div className="hrl-conflict hrl-conflict--none">
         <p>
-          <Check size={13} /> لا شيءَ يستحقّ الفعل في هذا الملفّ اليوم.
+          <Check size={13} /> لا إجراء مطلوباً في هذا الملف اليوم.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="hrl-chips" role="group" aria-label="ما يستحقّ الفعل">
+    <div className="hrl-chips" role="group" aria-label="ما يحتاج إجراء">
       {chips.map((chip) => {
         const className = `hrl-chip${chip.tone ? ` hrl-chip--${chip.tone}` : ''}`;
 

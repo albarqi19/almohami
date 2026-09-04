@@ -49,10 +49,10 @@ export const RuleTable: React.FC<Props> = ({ rules, openCode, onToggle, emptyTex
 
   return (
     <table className="hrl-table">
-      <caption className="hrl-sr">قواعد نظام العمل المؤرَّخة السارية</caption>
+      <caption className="hrl-sr">قواعد نظام العمل المؤرخة السارية</caption>
       <thead>
         <tr>
-          <th scope="col">المادّة</th>
+          <th scope="col">المادة</th>
           <th scope="col">القاعدة</th>
           <th scope="col">النوع</th>
           <th scope="col">تسري من</th>
@@ -106,10 +106,10 @@ export const RuleTable: React.FC<Props> = ({ rules, openCode, onToggle, emptyTex
                       <p className="hrp-rule__who">
                         <BookOpen size={13} />
                         {rule.reader === null
-                          ? 'لا قارئَ مسجَّلٌ لهذه القاعدة.'
+                          ? 'لا محرك احتساب مسجل لهذه القاعدة.'
                           : rule.reader.shipped
-                            ? `يقرؤها: ${rule.reader.what}`
-                            : `سيقرؤها في الخطوة ${rule.reader.step}: ${rule.reader.what}`}
+                            ? `يطبقها: ${rule.reader.what}`
+                            : `سيطبقها في الخطوة ${rule.reader.step}: ${rule.reader.what}`}
                       </p>
 
                       {/* المفتاحُ مسارٌ لاتينيٌّ دائماً ⇒ `ltr` صريح. أمّا القيمةُ فقد
@@ -127,17 +127,17 @@ export const RuleTable: React.FC<Props> = ({ rules, openCode, onToggle, emptyTex
                       )}
 
                       <p className="hrl-legal">
-                        {rule.source_note ?? `${EMPTY_MARK} بلا مصدرٍ مسجَّل`}
+                        {rule.source_note ?? `${EMPTY_MARK} بلا مصدر مسجل`}
                       </p>
 
                       <p className="hrl-hint">
                         {rule.confirmed_at === null
-                          ? 'لم تُوثَّق بعد.'
+                          ? 'غير موثقة بعد.'
                           : rule.confirmed_by === null
-                            ? 'مؤكَّدةٌ نظاماً — نصٌّ منشورٌ روجع قبل النشر.'
-                            : `أكّدها المكتبُ في ${fmtDateHuman(rule.confirmed_at)}.`}
+                            ? 'مؤكَّدة نظاماً. النص منشور وتمت مراجعته قبل النشر.'
+                            : `أكدها المكتب في ${fmtDateHuman(rule.confirmed_at)}.`}
                         {' '}
-                        وتعديلُها لاحقاً نسخةٌ مؤرَّخةٌ جديدة، فلا يُعاد حسابُ شهرٍ مضى.
+                        وتعديلها لاحقاً ينشئ نسخة مؤرخة جديدة، فلا يعاد حساب شهر مضى.
                       </p>
                     </div>
                   </td>

@@ -32,14 +32,14 @@ import type { MyPayslipRow, PayslipDocItem, PayslipDocument } from '../../../typ
  */
 
 /** نصٌّ احتياطيٌّ واحدٌ لفرع الخطأ — عرفُ وحدة الإجازات. */
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 const PAYMENT_LABELS: Record<string, string> = {
-  pending: 'لم يُحوَّل بعد',
-  sent: 'أُرسل التحويل',
+  pending: 'بانتظار التحويل',
+  sent: 'التحويل مرسل',
   confirmed: 'وصل الحساب',
   failed: 'فشل التحويل',
-  held: 'موقوفٌ مؤقتاً',
+  held: 'موقوف مؤقتاً',
 };
 
 export const MyPayslipsCard: React.FC = () => {
@@ -70,7 +70,7 @@ export const MyPayslipsCard: React.FC = () => {
         'القسيمة'
       );
     } catch (error) {
-      toast.error(errorText(error, 'تعذّر فتحُ القسيمة'));
+      toast.error(errorText(error, 'تعذر فتح القسيمة'));
     } finally {
       setPrintingId(null);
     }
@@ -92,7 +92,7 @@ export const MyPayslipsCard: React.FC = () => {
       return (
         <div className="hrl-state hrl-state--locked">
           <Lock size={20} />
-          <p className="hrl-state__t">قسائمُ راتبك غير متاحة</p>
+          <p className="hrl-state__t">قسائم راتبك غير متاحة</p>
           <p className="hrl-state__d">{errorText(listQuery.error, 'غير متاح.')}</p>
         </div>
       );
@@ -102,7 +102,7 @@ export const MyPayslipsCard: React.FC = () => {
       return (
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={20} />
-          <p className="hrl-state__t">تعذّر جلبُ قسائمك</p>
+          <p className="hrl-state__t">تعذر تحميل قسائمك</p>
           <p className="hrl-state__d">{errorText(listQuery.error, CONNECTION_FALLBACK)}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void listQuery.refetch()}>
             <RefreshCw size={13} /> إعادة المحاولة
@@ -117,18 +117,18 @@ export const MyPayslipsCard: React.FC = () => {
       return (
         <div className="hrl-state hrl-state--empty">
           <Wallet size={20} />
-          <p className="hrl-state__t">لم تصدر قسيمةٌ باسمك بعد</p>
-          <p className="hrl-state__d">تظهر هنا قسائمُك بعد اعتماد مسير الرواتب — ولا تُعرَض مسوّدة.</p>
+          <p className="hrl-state__t">لم تصدر قسيمة باسمك بعد</p>
+          <p className="hrl-state__d">تظهر هنا قسائمك بعد اعتماد مسير الرواتب، ولا تظهر المسودات.</p>
         </div>
       );
     }
 
     return (
       <table className="hrl-table hrl-table--single">
-        <caption className="hrl-sr">قسائمي المعتمَدة مرتَّبةً من الأحدث</caption>
+        <caption className="hrl-sr">قسائمي المعتمَدة مرتبة من الأحدث</caption>
         <thead>
           <tr>
-            <th scope="col">المدّة</th>
+            <th scope="col">المدة</th>
             <th scope="col">الرقم</th>
             <th scope="col">الصافي</th>
             <th scope="col">الصرف</th>
@@ -203,7 +203,7 @@ export const MyPayslipsCard: React.FC = () => {
       {openId !== null && slipQuery.isError && (
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={20} />
-          <p className="hrl-state__t">تعذّر فتحُ القسيمة</p>
+          <p className="hrl-state__t">تعذر فتح القسيمة</p>
           <p className="hrl-state__d">{errorText(slipQuery.error, CONNECTION_FALLBACK)}</p>
         </div>
       )}
@@ -228,8 +228,8 @@ const MySlipDetail: React.FC<{ slip: PayslipDocument }> = ({ slip }) => (
       </p>
       <p className="hrl-num__label">
         {slip.document.period_label ?? EMPTY_MARK}
-        {slip.document.pay_date_label === null ? '' : ` · صرفُها ${slip.document.pay_date_label}`}
-        {slip.employee.iban_last4 === null ? '' : ` · حسابٌ منتهٍ بـ${slip.employee.iban_last4}`}
+        {slip.document.pay_date_label === null ? '' : ` · صرفها ${slip.document.pay_date_label}`}
+        {slip.employee.iban_last4 === null ? '' : ` · حساب منتهٍ بـ${slip.employee.iban_last4}`}
       </p>
     </div>
 
@@ -260,23 +260,23 @@ const MySlipDetail: React.FC<{ slip: PayslipDocument }> = ({ slip }) => (
         <p className="hrl-hint">{slip.period.fraction_sentence}</p>
         {slip.period.unpaid_ranges.map((range) => (
           <p className="hrl-hint" key={`${range.from}-${range.to}`}>
-            يومٌ بلا أجر: {range.label ?? EMPTY_MARK}
+            يوم بلا أجر: {range.label ?? EMPTY_MARK}
           </p>
         ))}
       </div>
     )}
 
-    <SlipItems title="ما استُحقّ" items={slip.earnings} empty="لا مستحقَّ في هذه القسيمة." />
+    <SlipItems title="المستحقات" items={slip.earnings} empty="لا مستحقات في هذه القسيمة." />
     <SlipItems
-      title="ما حُسم منك"
+      title="الاستقطاعات"
       items={slip.deductions}
-      empty="لا استقطاعَ في هذه القسيمة — ولا خصمَ يقع بلا قرارِ إنسانٍ مسمّى."
+      empty="لا استقطاع في هذه القسيمة. ولا يقع خصم بلا قرار مسجل باسم من اتخذه."
     />
 
     {slip.employer_cost.length > 0 && (
       <div className="hrl-block__b hrp-cost">
-        <h3 className="hrl-h2">تكلفةُ المكتب</h3>
-        <p className="hrl-hint">هذه لا تُخصَم منك ولا تدخل صافيك — يتحمّلها المكتبُ فوق أجرك.</p>
+        <h3 className="hrl-h2">تكلفة المكتب</h3>
+        <p className="hrl-hint">هذه لا تخصم منك ولا تدخل في صافيك، ويتحملها المكتب فوق أجرك.</p>
 
         <ul className="hrp-item__list">
           {slip.employer_cost.map((item) => (
@@ -346,7 +346,7 @@ const SlipItemRow: React.FC<{ item: PayslipDocItem }> = ({ item }) => (
 
       {item.decided_by !== null && (
         <span className="hrp-item__w">
-          قرّرها {item.decided_by}
+          قررها {item.decided_by}
           {item.decision_reason === null ? '' : ` — ${item.decision_reason}`}
         </span>
       )}
@@ -361,7 +361,7 @@ const SlipItemRow: React.FC<{ item: PayslipDocItem }> = ({ item }) => (
 
       {item.outstanding_after !== null && (
         <span className="hrp-item__w">
-          المتبقّي بعد هذا القسط: <span dir="ltr">{item.outstanding_after}</span>
+          المتبقي بعد هذا القسط: <span dir="ltr">{item.outstanding_after}</span>
         </span>
       )}
     </div>

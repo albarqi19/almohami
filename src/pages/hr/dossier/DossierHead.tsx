@@ -45,7 +45,7 @@ export const DossierHead: React.FC<Props> = ({ empId, emp, canManage, canLeave, 
   const lawyer = isLawyer(emp);
 
   // السطرُ الثانويّ: المسمّى · القسم · رقم — وعند فراغ الاثنين تُسمّى الحالةُ **بلا شرطة**.
-  const identity = [emp.job_title, emp.department].filter(Boolean).join(' · ') || 'ملفٌّ بلا مسمّىً ولا قسم';
+  const identity = [emp.job_title, emp.department].filter(Boolean).join(' · ') || 'ملف بلا مسمى ولا قسم';
   const subtitle = emp.employee_number ? `${identity} · رقم ${emp.employee_number}` : identity;
 
   const licenseDays = lawyer ? remainingDays(emp.sba_license_expiry_gregorian) : null;
@@ -88,11 +88,11 @@ export const DossierHead: React.FC<Props> = ({ empId, emp, canManage, canLeave, 
                 <span className="hrl-fact__n" dir="ltr">
                   {fmtDays(mainType.balance)}
                 </span>{' '}
-                يوماً
+                يوما
               </span>
             )
           ) : (
-            <span className="hrl-fact hrl-fact--gold">الرصيد غير مُهيَّأ</span>
+            <span className="hrl-fact hrl-fact--gold">الرصيد غير جاهز</span>
           ))}
 
         {nearest && (
@@ -105,7 +105,7 @@ export const DossierHead: React.FC<Props> = ({ empId, emp, canManage, canLeave, 
                 <span className="hrl-fact__n" dir="ltr">
                   {fmtCount(nearest.days)}
                 </span>{' '}
-                يوماً
+                يوما
               </>
             )}
           </span>
@@ -123,7 +123,7 @@ export const DossierHead: React.FC<Props> = ({ empId, emp, canManage, canLeave, 
             <CalendarPlus size={13} /> تسجيل غياب
           </button>
         )}
-        {!canManage && !canLeave && <span className="hrl-fact">عرضٌ فقط</span>}
+        {!canManage && !canLeave && <span className="hrl-fact">عرض فقط</span>}
       </div>
     </header>
   );

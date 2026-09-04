@@ -10,13 +10,13 @@ interface BadgeCfg {
 }
 
 const MAP: Record<SbaStatus, BadgeCfg> = {
-  verified_same_firm: { label: 'محامٍ موثّق · مكتبك', cls: 'hr-badge--green', icon: <ShieldCheck size={13} />, showDays: true },
-  verified_other_firm: { label: 'موثّق · منشأة أخرى', cls: 'hr-badge--gold', icon: <AlertTriangle size={13} />, showDays: true },
+  verified_same_firm: { label: 'محامٍ موثق · مكتبك', cls: 'hr-badge--green', icon: <ShieldCheck size={13} />, showDays: true },
+  verified_other_firm: { label: 'موثق · منشأة أخرى', cls: 'hr-badge--gold', icon: <AlertTriangle size={13} />, showDays: true },
   expired: { label: 'رخصة منتهية', cls: 'hr-badge--red', icon: <AlertTriangle size={13} />, showDays: false },
-  needs_national_id: { label: 'بحاجة رقم هوية', cls: 'hr-badge--blue', icon: <IdCard size={13} />, showDays: false },
+  needs_national_id: { label: 'يلزم رقم الهوية', cls: 'hr-badge--blue', icon: <IdCard size={13} />, showDays: false },
   pending: { label: 'قيد التحقق', cls: 'hr-badge--gray', icon: <Clock size={13} />, showDays: false },
-  not_found: { label: 'غير موثّق', cls: 'hr-badge--gray', icon: <AlertTriangle size={13} />, showDays: false },
-  unavailable: { label: 'تعذّر التحقق', cls: 'hr-badge--gray', icon: <Clock size={13} />, showDays: false },
+  not_found: { label: 'غير موثق', cls: 'hr-badge--gray', icon: <AlertTriangle size={13} />, showDays: false },
+  unavailable: { label: 'تعذر التحقق', cls: 'hr-badge--gray', icon: <Clock size={13} />, showDays: false },
 };
 
 interface Props {

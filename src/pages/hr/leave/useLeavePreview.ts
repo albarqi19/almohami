@@ -30,7 +30,7 @@ import type { LeaveBlocker, LeavePreview, LeavePreviewPayload, LeaveWarning } fr
 
 export const LEAVE_PREVIEW_DEBOUNCE_MS = 400;
 
-export const LEAVE_PREVIEW_STALE_NOTICE = 'تعذّر تحديث الاحتساب الآن — أعِد المحاولة.';
+export const LEAVE_PREVIEW_STALE_NOTICE = 'تعذر تحديث الاحتساب الآن. أعد المحاولة.';
 
 export interface LeavePreviewState {
   /** آخرُ نتيجةٍ صالحة — قد تكون لمُدخلٍ سابقٍ حين يكون `isStale` صحيحاً. */

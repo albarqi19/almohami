@@ -48,25 +48,25 @@ import type {
 
 const BASIS_HINTS: Partial<Record<TerminationBasisCode, string>> = {
   art85_resignation:
-    'الاستقالةُ وحدَها هي التي يُقصّ فيها الاستحقاق (ثلثٌ · ثلثان · كاملة). وتعديلُ ٢٠٢٥ عرّفها: '
-    + 'كتابيةٌ غيرُ مُكرَهةٍ غيرُ معلَّقة، مقبولةٌ أو انقضت مهلتُها — فمن ترك العملَ بلا استقالةٍ مقبولةٍ ليس مستقيلاً.',
+    'الاستقالة فقط هي التي يخفض فيها الاستحقاق (ثلث · ثلثان · كاملة). وتعديل ٢٠٢٥ عرفها: '
+    + 'كتابية غير مكرهة وغير معلقة، مقبولة أو انقضت مهلتها. ومن ترك العمل بلا استقالة مقبولة ليس مستقيلاً.',
   art81_worker_left_for_cause:
-    'كاملةٌ بلا تدرّج م.٨٥ — وهو **استنتاجٌ من مفهوم المخالفة لا نصٌّ صريح**، وعبءُ إثبات السبب على العامل. '
-    + 'ولذلك المستندُ إلزاميّ.',
+    'كاملة بلا تدرج م.٨٥. وهو **استنتاج من مفهوم المخالفة لا نص صريح**، وعبء إثبات السبب على العامل. '
+    + 'ولذلك المستند إلزامي.',
   art87_force_majeure:
-    '«القوّةُ القاهرة» لا تعريفَ نظاميَّ لها وتقديرُها للمحكمة العمالية حالةً بحالة — فلا تُنتقى بنقرةٍ مجرَّدةٍ بلا مستند.',
-  art87_marriage: 'مهلتُها ستّةُ أشهرٍ من تاريخ عقد الزواج — ويلزم تاريخُ الواقعة المرجعية.',
-  art87_delivery: 'مهلتُها ثلاثةُ أشهرٍ من تاريخ الوضع — ويلزم تاريخُ الواقعة المرجعية.',
+    '«القوة القاهرة» لا تعريف نظامي لها وتقديرها للمحكمة العمالية حالة بحالة. فلا تخترها بنقرة واحدة بلا مستند.',
+  art87_marriage: 'مهلتها ستة أشهر من تاريخ عقد الزواج، ويلزم تاريخ الواقعة المرجعية.',
+  art87_delivery: 'مهلتها ثلاثة أشهر من تاريخ الوضع، ويلزم تاريخ الواقعة المرجعية.',
   art80_dismissal:
-    'سقوطُ المكافأة كاملةً — **وشرطُ إتاحة فرصة المعارضة جزءٌ من نصّ المادة لا إجراءٌ تنظيميّ**: '
-    + 'فسخٌ بدونه قابلٌ للإبطال فتعود المكافأةُ كاملةً ومعها تعويضُ م.٧٧.',
+    'سقوط المكافأة كاملة. **وشرط إتاحة فرصة المعارضة جزء من نص المادة لا إجراء تنظيمي**: '
+    + 'فسخ بدونه قابل للإبطال فتعود المكافأة كاملة ومعها تعويض م.٧٧.',
 };
 
 /** الكتلُ الأربعُ بترتيب قراءتها — الاسمُ والأيقونةُ في موضعٍ واحدٍ فلا تتباعد نسختان. */
 const BLOCK_ORDER: Array<{ key: 'eos' | 'leave_cash' | 'final_period' | 'dues'; title: string; icon: React.ReactNode }> = [
   { key: 'eos', title: 'مكافأة نهاية الخدمة', icon: <Scale size={15} /> },
   { key: 'leave_cash', title: 'بدل رصيد الإجازة', icon: <CalendarClock size={15} /> },
-  { key: 'final_period', title: 'أجر آخر مدّة', icon: <Wallet size={15} /> },
+  { key: 'final_period', title: 'أجر آخر مدة', icon: <Wallet size={15} /> },
   { key: 'dues', title: 'ما على الموظف', icon: <ShieldAlert size={15} /> },
 ];
 
@@ -128,7 +128,7 @@ export const SettlementPage: React.FC = () => {
       setActionError(null);
       invalidate(fresh);
     },
-    onError: (error) => setActionError(errorText(error, 'تعذّر حفظُ سبب الإنهاء.')),
+    onError: (error) => setActionError(errorText(error, 'تعذر حفظ سبب الإنهاء.')),
   });
 
   const computeMutation = useMutation({
@@ -137,7 +137,7 @@ export const SettlementPage: React.FC = () => {
       setActionError(null);
       invalidate(fresh);
     },
-    onError: (error) => setActionError(errorText(error, 'تعذّر الاحتساب.')),
+    onError: (error) => setActionError(errorText(error, 'تعذر الاحتساب.')),
   });
 
   const approveMutation = useMutation({
@@ -146,7 +146,7 @@ export const SettlementPage: React.FC = () => {
       setActionError(null);
       invalidate(fresh);
     },
-    onError: (error) => setActionError(errorText(error, 'تعذّر الاعتماد.')),
+    onError: (error) => setActionError(errorText(error, 'تعذر الاعتماد.')),
   });
 
   if (!Number.isFinite(runId) || runId <= 0) {
@@ -154,7 +154,7 @@ export const SettlementPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={22} />
-          <p className="hrl-state__t">رقمُ تصفيةٍ غيرُ صالح</p>
+          <p className="hrl-state__t">رقم تصفية غير صالح</p>
         </div>
       </div>
     );
@@ -172,14 +172,14 @@ export const SettlementPage: React.FC = () => {
   }
 
   if (view.isError || statement === undefined || meta === undefined) {
-    const message = errorText(view.error, 'خطأٌ غيرُ متوقَّع.');
+    const message = errorText(view.error, 'خطأ غير متوقع.');
     const locked = /صلاحية|غير مصرح|Forbidden|Unauthorized/i.test(message);
 
     return (
       <div className="hrl-page">
         <div className={`hrl-state ${locked ? 'hrl-state--locked' : 'hrl-state--error'}`}>
           {locked ? <Lock size={22} /> : <AlertTriangle size={22} />}
-          <p className="hrl-state__t">{locked ? 'بيانُ التصفية غيرُ متاحٍ لك' : 'تعذّر جلبُ بيان التصفية'}</p>
+          <p className="hrl-state__t">{locked ? 'بيان التصفية غير متاح لك' : 'تعذر تحميل بيان التصفية'}</p>
           <p className="hrl-state__d">{message}</p>
           {!locked && (
             <button type="button" className="hr-btn hr-btn--sm" onClick={() => void view.refetch()}>
@@ -201,10 +201,10 @@ export const SettlementPage: React.FC = () => {
       <header className="hrs-head">
         <div className="hrs-head__id">
           <h1 className="hrs-head__t">
-            تصفيةُ حقوق {statement.employee.name}
+            تصفية حقوق {statement.employee.name}
           </h1>
           <p className="hrs-head__s">
-            التحق {fmtDateHuman(statement.employee.joined_on)} · آخرُ يومِ خدمة{' '}
+            التحق {fmtDateHuman(statement.employee.joined_on)} · آخر يوم خدمة{' '}
             {fmtDateHuman(statement.employee.last_working_day)}
             {meta.run.run_number === null ? '' : ` · ${meta.run.run_number}`}
           </p>
@@ -215,7 +215,7 @@ export const SettlementPage: React.FC = () => {
           </span>
           {statement.is_frozen && (
             <span className="hrs-stage hrs-stage--frozen">
-              <Lock size={12} /> مجمَّدة
+              <Lock size={12} /> مقفلة
             </span>
           )}
         </div>
@@ -225,14 +225,14 @@ export const SettlementPage: React.FC = () => {
       <section className={`hrs-card hrs-basis ${basisSet ? '' : 'hrs-basis--missing'}`}>
         <div className="hrs-card__head">
           <h2 className="hrs-card__t">
-            <FileText size={15} /> سببُ إنهاء العلاقة
+            <FileText size={15} /> سبب إنهاء الخدمة
           </h2>
           {basisSet ? (
             <span className="hrs-tag hrs-tag--ok">
               {statement.basis.label_ar} · {statement.basis.article_ref}
             </span>
           ) : (
-            <span className="hrs-tag hrs-tag--need">مطلوبٌ قبل احتساب المكافأة</span>
+            <span className="hrs-tag hrs-tag--need">مطلوب قبل احتساب المكافأة</span>
           )}
         </div>
 
@@ -242,23 +242,23 @@ export const SettlementPage: React.FC = () => {
 
         {basisSet && (
           <p className="hrs-who">
-            كيّفها <strong>{statement.basis.decided_by_name ?? EMPTY_MARK}</strong>
-            {statement.basis.decided_at === null ? '' : ` — ${fmtDateHuman(statement.basis.decided_at)}`}. وهو
-            المسؤولُ عنها عند النزاع؛ فالتكييفُ فعلُ إنسانٍ لا اشتقاقُ نظام.
+            صنفها <strong>{statement.basis.decided_by_name ?? EMPTY_MARK}</strong>
+            {statement.basis.decided_at === null ? '' : ` بتاريخ ${fmtDateHuman(statement.basis.decided_at)}`}. وهو
+            المسؤول عنها عند النزاع. والتصنيف قرار مسجل باسم من اتخذه ولا يحدد تلقائياً.
           </p>
         )}
 
         {editable ? (
           <div className="hrs-basis__form">
             <label className="hrs-field">
-              <span className="hrs-field__l">السبب — قائمةٌ مغلقةٌ باثني عشرَ سبباً</span>
+              <span className="hrs-field__l">السبب (قائمة مغلقة من اثني عشر سبباً)</span>
               <select
                 className="hrs-field__c"
                 value={basis}
                 disabled={busy}
                 onChange={(event) => setBasis(event.target.value as TerminationBasisCode | '')}
               >
-                <option value="">— اختر السببَ باسمك —</option>
+                <option value="">— اختر السبب —</option>
                 {statement.basis.options.map((option) => (
                   <option key={option.basis} value={option.basis}>
                     {option.label_ar} ({option.article_ref})
@@ -276,7 +276,7 @@ export const SettlementPage: React.FC = () => {
             {chosen?.document_required === true && (
               <label className="hrs-field">
                 <span className="hrs-field__l">
-                  مسارُ المستند — <strong>إلزاميّ</strong>: عبءُ الإثبات هنا لا يُترك لخيارٍ في قائمة
+                  مسار المستند (<strong>إلزامي</strong>) لإثبات السبب
                 </span>
                 <input
                   className="hrs-field__c"
@@ -292,7 +292,7 @@ export const SettlementPage: React.FC = () => {
             {(basis === 'art87_marriage' || basis === 'art87_delivery') && (
               <label className="hrs-field">
                 <span className="hrs-field__l">
-                  تاريخُ الواقعة المرجعية (عقدُ الزواج أو الوضع) — تُقاس منه المهلة، ولا يُفترَض
+                  تاريخ الواقعة المرجعية (عقد الزواج أو الوضع). تقاس منه المهلة ويلزم إدخاله
                 </span>
                 <input
                   className="hrs-field__c"
@@ -313,14 +313,14 @@ export const SettlementPage: React.FC = () => {
                   onChange={(event) => setObjectionGiven(event.target.checked)}
                 />
                 <span>
-                  أُتيحت للعامل فرصةُ إبداء أسباب معارضته للفسخ — <strong>شرطٌ في نصّ م.٨٠</strong>، وبدونه
-                  الفسخُ قابلٌ للإبطال.
+                  أتيحت للعامل فرصة إبداء أسباب معارضته للفسخ. <strong>وهو شرط في نص م.٨٠</strong>، وبدونه
+                  الفسخ قابل للإبطال.
                 </span>
               </label>
             )}
 
             <label className="hrs-field">
-              <span className="hrs-field__l">ملاحظةُ التكييف (اختيارية)</span>
+              <span className="hrs-field__l">ملاحظة التصنيف (اختيارية)</span>
               <input
                 className="hrs-field__c"
                 type="text"
@@ -338,7 +338,7 @@ export const SettlementPage: React.FC = () => {
                 disabled={basis === '' || busy || !meta.can_prepare}
                 onClick={() => basisMutation.mutate()}
               >
-                {basisMutation.isPending ? 'يُحفظ ويُعاد الحساب…' : 'احفظ السببَ وأعد الحساب'}
+                {basisMutation.isPending ? 'جارٍ الحفظ وإعادة الاحتساب…' : 'احفظ السبب وأعد الاحتساب'}
               </button>
               <button
                 type="button"
@@ -349,14 +349,14 @@ export const SettlementPage: React.FC = () => {
                 <RefreshCw size={13} /> أعد الاحتساب
               </button>
               {!meta.can_prepare && (
-                <span className="hrs-why-off">إعدادُ التصفية يلزمه صلاحيةُ «إعداد مسير الرواتب».</span>
+                <span className="hrs-why-off">إعداد التصفية يلزمه صلاحية «إعداد مسير الرواتب».</span>
               )}
             </div>
           </div>
         ) : (
           <p className="hrs-why-off">
-            <Lock size={13} /> التصفيةُ مجمَّدةٌ بعد الاعتماد — لا يُعدَّل سببُها ولا يُعاد احتسابُها.
-            والتصحيحُ إخلافٌ بمسيرٍ تصحيحيّ لا تحريرٌ في المكان.
+            <Lock size={13} /> التصفية مقفلة بعد الاعتماد، فلا يمكن تعديل سببها ولا إعادة احتسابها.
+            والتصحيح يتم باستبدالها بمسير تصحيحي.
           </p>
         )}
       </section>
@@ -384,30 +384,30 @@ export const SettlementPage: React.FC = () => {
       <section className="hrs-card">
         <div className="hrs-card__head">
           <h2 className="hrs-card__t">
-            <Scale size={15} /> الوعاءُ والمدّة
+            <Scale size={15} /> أساس الاحتساب والمدة
           </h2>
           <span className="hrs-tag">{statement.vessel.name_ar}</span>
         </div>
         <dl className="hrs-kv">
-          <Kv k="الأجر الفعليّ (الوعاء الخام)" v={money(statement.vessel.gross)} />
-          <Kv k="المستبعَد بم.٨٦ (اتفاقٌ مكتوب)" v={money(statement.vessel.excluded)} />
-          <Kv k="الوعاءُ الصافي" v={money(statement.vessel.net)} strong />
-          <Kv k="سنواتٌ تامّة" v={statement.service.whole_years === null ? null : String(statement.service.whole_years)} />
-          <Kv k="كسرُ السنة (أيام)" v={statement.service.remainder_days === null ? null : String(statement.service.remainder_days)} />
+          <Kv k="الأجر الفعلي (إجمالي أساس الاحتساب)" v={money(statement.vessel.gross)} />
+          <Kv k="المستبعد بم.٨٦ (اتفاق مكتوب)" v={money(statement.vessel.excluded)} />
+          <Kv k="صافي أساس الاحتساب" v={money(statement.vessel.net)} strong />
+          <Kv k="سنوات تامة" v={statement.service.whole_years === null ? null : String(statement.service.whole_years)} />
+          <Kv k="كسر السنة (أيام)" v={statement.service.remainder_days === null ? null : String(statement.service.remainder_days)} />
           <Kv
-            k="أيامُ وقف العقد المستبعَدة (م.١١٦)"
+            k="أيام وقف العقد المستبعدة (م.١١٦)"
             v={String(statement.service.unpaid_suspension_days)}
           />
           <Kv
-            k="مقامُ كسر السنة"
+            k="مقام كسر السنة"
             v={statement.service.year_fraction_divisor === null ? null : String(statement.service.year_fraction_divisor)}
           />
         </dl>
         <p className="hrs-note">
-          🔴 وعاءُ م.٨٤ هو <strong>الأجرُ الفعليّ</strong> لا الأساسيّ — والبرهانُ بنيويّ: م.٨٦ تُجيز الاتفاقَ
-          على استبعاد العمولات منه، ولو كان الأساسيَّ وحدَه لما احتاج المشرّعُ إذناً باستبعاد المستبعَد أصلاً.
+          🔴 أساس احتساب م.٨٤ هو <strong>الأجر الفعلي</strong> لا الأساسي. والدليل أن م.٨٦ تجيز الاتفاق
+          على استبعاد العمولات منه، ولو كان الأساسي فقط لما لزم إذن باستبعادها.
           {statement.service.divisor_is_convention_not_text && (
-            <> ومقامُ كسر السنة <strong>اجتهادٌ لا نصّ</strong>: م.٢ تُعرّف الشهر ولا تُعرّف السنة.</>
+            <> ومقام كسر السنة <strong>اجتهاد وليس نصاً</strong>: م.٢ فيها تعريف الشهر ولا تعريف للسنة.</>
           )}
         </p>
       </section>
@@ -416,16 +416,16 @@ export const SettlementPage: React.FC = () => {
       <section className="hrs-card hrs-deadline">
         <div className="hrs-card__head">
           <h2 className="hrs-card__t">
-            <CalendarClock size={15} /> مهلةُ إنهاء الحساب — {statement.deadline.article_ref}
+            <CalendarClock size={15} /> مهلة إنهاء الحساب ({statement.deadline.article_ref})
           </h2>
           <span className="hrs-tag">{statement.deadline.ended_by_label}</span>
         </div>
         <p className="hrs-deadline__d">
           {statement.deadline.date === null ? (
-            <>لم تُحسب بعد — تُقاس من <strong>من أنهى العقد</strong>، وهو لا يُعرف قبل تكييف السبب.</>
+            <>لم يتم احتسابها بعد. تقاس بحسب <strong>من أنهى العقد</strong>، وهو غير معروف قبل تصنيف السبب.</>
           ) : (
             <>
-              الموعدُ النهائيّ: <strong>{fmtDateHuman(statement.deadline.date)}</strong>
+              الموعد النهائي: <strong>{fmtDateHuman(statement.deadline.date)}</strong>
               {statement.deadline.days === null ? '' : ` (${statement.deadline.days} يوماً)`}
             </>
           )}
@@ -437,15 +437,15 @@ export const SettlementPage: React.FC = () => {
       <section className="hrs-card">
         <div className="hrs-card__head">
           <h2 className="hrs-card__t">
-            <Wallet size={15} /> بنودُ التصفية
+            <Wallet size={15} /> بنود التصفية
           </h2>
           {statement.computed_at !== null && (
-            <span className="hrs-tag">احتُسبت {fmtDateHuman(statement.computed_at)}</span>
+            <span className="hrs-tag">تم الاحتساب {fmtDateHuman(statement.computed_at)}</span>
           )}
         </div>
 
         {statement.items.length === 0 ? (
-          <p className="hrs-empty">لا بنودَ بعد — احتسب التصفيةَ لتظهر.</p>
+          <p className="hrs-empty">لا توجد بنود بعد. احتسب التصفية لتظهر.</p>
         ) : (
           <ul className="hrp-item__list">
             {statement.items.map((item) => (
@@ -455,9 +455,9 @@ export const SettlementPage: React.FC = () => {
         )}
 
         <dl className="hrs-kv hrs-kv--totals">
-          <Kv k="مجموع المستحقّ" v={money(statement.totals.gross_amount)} />
+          <Kv k="مجموع المستحق" v={money(statement.totals.gross_amount)} />
           <Kv k="مجموع ما عليه" v={money(statement.totals.deductions_amount)} />
-          <Kv k="الصافي المستحقّ" v={money(statement.totals.net_amount)} strong />
+          <Kv k="الصافي المستحق" v={money(statement.totals.net_amount)} strong />
         </dl>
       </section>
 
@@ -478,12 +478,12 @@ export const SettlementPage: React.FC = () => {
       {statement.disclosures.length > 0 && (
         <section className="hrs-card hrs-card--opinion">
           <h2 className="hrs-card__t">
-            <Info size={15} /> إفصاحاتٌ تُقرأ ولا تُخبَّأ
+            <Info size={15} /> الإفصاحات
           </h2>
           <ul className="hrs-list">
             {statement.disclosures.map((disclosure) => (
               <li key={disclosure.code}>
-                {disclosure.opinion_not_text && <strong className="hrs-op">رأيٌ راجحٌ لا نصّ · </strong>}
+                {disclosure.opinion_not_text && <strong className="hrs-op">اجتهاد وليس نصاً · </strong>}
                 {disclosure.article_ref === null ? '' : `${disclosure.article_ref} — `}
                 {disclosure.text_ar}
               </li>
@@ -502,7 +502,7 @@ export const SettlementPage: React.FC = () => {
             onClick={() => approveMutation.mutate()}
           >
             <CheckCircle2 size={14} />
-            {approveMutation.isPending ? 'يُعتمد ويُجمَّد…' : 'اعتمد التصفيةَ وجمّدها'}
+            {approveMutation.isPending ? 'جارٍ الاعتماد والإقفال…' : 'اعتمد التصفية وأقفلها'}
           </button>
 
           {statement.is_frozen ? (
@@ -515,19 +515,19 @@ export const SettlementPage: React.FC = () => {
         <p className="hrs-note">
           {statement.is_frozen ? (
             <>
-              مجمَّدة: كلُّ رقمٍ أعلاه <strong>مخزَّنٌ في صفّه</strong> ومعه لقطةُ القواعد التي حُسب بها، فلا
-              يتحرّك منه شيءٌ ولو تغيّر الراتبُ غداً. والصرفُ يمرّ من مسار الدفع بصلاحية «تسجيل الدفع».
+              مقفلة: كل رقم أعلاه <strong>محفوظ في سجله</strong> ومعه القواعد المطبقة وقت احتسابه، فلا
+              يتغير منه شيء ولو تغير الراتب غداً. والصرف يمر من مسار الدفع بصلاحية «تسجيل الدفع».
             </>
           ) : !basisSet ? (
-            <>🔴 لا اعتمادَ قبل تكييف السبب — وبدونه لم تُحسب مكافأةٌ أصلاً.</>
+            <>🔴 لا اعتماد قبل تصنيف السبب، وبدونه لا تحتسب المكافأة.</>
           ) : statement.blockers.length > 0 ? (
-            <>عالِج الموانعَ أعلاه ثمّ أعد الاحتساب قبل الاعتماد.</>
+            <>أزل الموانع أعلاه ثم أعد الاحتساب قبل الاعتماد.</>
           ) : !meta.can_approve ? (
-            <>الاعتمادُ يلزمه صلاحيةُ «اعتماد مسير الرواتب» — ومَن أعدّ لا يعتمد.</>
+            <>الاعتماد يلزمه صلاحية «اعتماد مسير الرواتب». ولا يعتمد من أعد المسير.</>
           ) : (
             <>
-              الاعتمادُ يجمّد القسيمةَ والبنود، ويكتب مطالباتِ الأيام فلا يُدفَع يومٌ مرّتين ولو تقاطعت مدّةُ
-              التصفية مع مسيرٍ شهريٍّ معتمَد.
+              الاعتماد يقفل القسيمة والبنود، ويسجل مطالبات الأيام فلا يدفع يوم مرتين ولو تقاطعت مدة
+              التصفية مع مسير شهري معتمد.
             </>
           )}
         </p>
@@ -549,7 +549,7 @@ const BlockCard: React.FC<{
         <h3 className="hrs-block__t">
           {icon} {title}
         </h3>
-        <p className="hrs-block__d">لم تُحتسب بعد.</p>
+        <p className="hrs-block__d">لم يتم الاحتساب بعد.</p>
       </article>
     );
   }
@@ -566,7 +566,7 @@ const BlockCard: React.FC<{
 
       {/* 🔴 مكانَ الرقم نداءٌ — لا صفرٌ ولا شرطةٌ صامتة. */}
       {awaiting ? (
-        <p className="hrs-block__ask">لم يُحسب — يلزمه سببُ الإنهاء أوّلاً.</p>
+        <p className="hrs-block__ask">لم يتم الاحتساب. يلزم سبب الإنهاء أولاً.</p>
       ) : (
         <p className="hrs-block__n">
           <span dir="ltr">{amount ?? EMPTY_MARK}</span>

@@ -31,7 +31,7 @@ interface Props {
 
 export const ComponentCatalog: React.FC<Props> = ({ components }) => {
   if (components.length === 0) {
-    return <p className="hrl-hint">لم يُبذَر كتالوجُ البنود بعد.</p>;
+    return <p className="hrl-hint">لم يتم إعداد كتالوج البنود بعد.</p>;
   }
 
   return (
@@ -41,7 +41,7 @@ export const ComponentCatalog: React.FC<Props> = ({ components }) => {
         <tr>
           <th scope="col">البند</th>
           <th scope="col">النوع</th>
-          <th scope="col">يتحمّله</th>
+          <th scope="col">يتحمله</th>
           <th scope="col">يذهب إلى</th>
           <th scope="col">الشروط</th>
           <th scope="col">يظهر في</th>
@@ -68,7 +68,7 @@ export const ComponentCatalog: React.FC<Props> = ({ components }) => {
                 <span className="hrl-chips">
                   {component.requires_decision && (
                     <span className="hrl-chip">
-                      <FileSignature size={11} /> قرارُ إنسان
+                      <FileSignature size={11} /> قرار مسجل
                     </span>
                   )}
                   {component.requires_document && (
@@ -84,7 +84,7 @@ export const ComponentCatalog: React.FC<Props> = ({ components }) => {
               </td>
               <td>
                 {component.allowed_run_types.length === 0 ? (
-                  <span className="hrl-chip hrl-chip--danger">لا يُصرف بحال</span>
+                  <span className="hrl-chip hrl-chip--danger">لا يصرف</span>
                 ) : (
                   <span className="hrl-row__meta">
                     {component.allowed_run_types.map((type) => RUN_TYPE_LABELS[type] ?? type).join(' · ')}

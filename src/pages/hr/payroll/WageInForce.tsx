@@ -49,10 +49,10 @@ export const WageInForce: React.FC<Props> = ({ vessels, canViewAmounts, hasWageR
         </div>
         <div className="hrl-state hrl-state--locked">
           <EyeOff size={20} />
-          <p className="hrl-state__t">الأرقامُ محجوبةٌ عنك</p>
+          <p className="hrl-state__t">الأرقام محجوبة عنك</p>
           <p className="hrl-state__d">
-            الأجرُ والآيبان حقلان حسّاسان لهما صلاحيةٌ مستقلّة (عرض التعويضات). وحالةُ الجاهزية
-            أمامك كاملةً: {hasWageRecord ? 'لهذا المنسوب أجرٌ مسجَّل.' : 'لا أجرَ مسجَّلاً لهذا المنسوب بعد.'}
+            الأجر والآيبان حقلان حساسان لهما صلاحية مستقلة (عرض التعويضات). وحالة الجاهزية
+            أمامك كاملة: {hasWageRecord ? 'لهذا الموظف أجر مسجل.' : 'لا يوجد أجر مسجل لهذا الموظف بعد.'}
           </p>
         </div>
       </section>
@@ -69,10 +69,10 @@ export const WageInForce: React.FC<Props> = ({ vessels, canViewAmounts, hasWageR
         </div>
         <div className="hrl-state hrl-state--empty">
           <Wallet size={20} />
-          <p className="hrl-state__t">لم يُسجَّل راتبٌ لهذا المنسوب</p>
+          <p className="hrl-state__t">لا يوجد راتب مسجل لهذا الموظف</p>
           <p className="hrl-state__d">
-            سجِّل النسخةَ الأولى بتاريخ سريانها من النموذج أدناه — ومنها يعمل خطابُ تعريف الراتب
-            ويدخل المنسوبُ مسيرَ الرواتب.
+            سجل النسخة الأولى بتاريخ سريانها من النموذج أدناه. ومنها يصدر خطاب تعريف الراتب
+            ويدخل الموظف مسير الرواتب.
           </p>
         </div>
       </section>
@@ -96,7 +96,7 @@ export const WageInForce: React.FC<Props> = ({ vessels, canViewAmounts, hasWageR
         <span className="hrl-num__u">{vessels.currency}</span>
       </div>
       <p className="hrl-num__label">
-        الأجرُ الشهريّ (م.٢) · يسري من {fmtDateHuman(vessels.effective_from)}
+        الأجر الشهري (م.٢) · يسري من {fmtDateHuman(vessels.effective_from)}
         {vessels.effective_to ? ` حتى ${fmtDateHuman(vessels.effective_to)}` : ''}
       </p>
 
@@ -158,16 +158,16 @@ export const WageInForce: React.FC<Props> = ({ vessels, canViewAmounts, hasWageR
 
       <p className="hrl-legal">
         <span>
-          «الأجر» يشمل الأساسيَّ وكلَّ البدلات، و«الأجر الأساسيّ» وحدَه أساسُ زيادة العمل الإضافيّ.
-          مقداران مختلفان في النظام لا صيغتان لرقمٍ واحد.
+          «الأجر» يشمل الأساسي وكل البدلات، وزيادة العمل الإضافي أساسها «الأجر الأساسي» فقط.
+          وهما مقداران مختلفان في النظام.
         </span>
         <span className="hrl-legal__ref">م.٢ · م.١٠٧</span>
       </p>
 
       {vessels.gosi_caps_evaluated ? null : (
         <p className="hrl-note">
-          وعاءُ التأمينات معروضٌ قبل الحدَّين الأدنى والأعلى — قاعدتاهما بياناتٌ مؤرَّخةٌ تصل مع
-          محرّك المسير، ولا يُدَّعى هنا تسقيفٌ لم يقع.
+          وعاء التأمينات معروض قبل الحدين الأدنى والأعلى. وقاعدتاهما بيانات مؤرخة تصل مع
+          محرك المسير.
         </p>
       )}
     </section>

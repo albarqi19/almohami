@@ -72,9 +72,9 @@ interface Props {
 type Step = 1 | 2 | 3;
 
 const STEP_TITLES: Record<Step, string> = {
-  1: 'أيامُ الدوام وساعاتُه',
-  2: 'مَن يبصم؟',
-  3: 'من أيّ تاريخ؟',
+  1: 'أيام الدوام وساعاته',
+  2: 'من يسجل الحضور؟',
+  3: 'من أي تاريخ؟',
 };
 
 /** الأرقامُ العربية للخطوات — تُقرأ ولا تُحسب، فتُكتب حروفاً لا `toLocaleString`. */
@@ -200,11 +200,11 @@ export const SetupWizardModal: React.FC<Props> = ({
   const goNext = () => {
     if (step === 1) {
       if (workingDays.length === 0) {
-        toast.error('اختر يومَ دوامٍ واحداً على الأقلّ — سبعةُ أيام عطلةٍ ليست جدولاً.');
+        toast.error('اختر يوم دوام واحداً على الأقل.');
         return;
       }
       if (dailyMinutes === null || dailyMinutes <= 0) {
-        toast.error('وقتُ الانصراف يجب أن يكون بعد وقت الحضور.');
+        toast.error('وقت الانصراف يجب أن يكون بعد وقت الحضور.');
         return;
       }
       setStep(2);
@@ -213,11 +213,11 @@ export const SetupWizardModal: React.FC<Props> = ({
 
     if (step === 2) {
       if (!stepTwoReady) {
-        toast.error('حدّد مَن يبصم، أو اطلب الكلَّ المؤهَّل صراحةً.');
+        toast.error('اختر من يسجل الحضور، أو اختر «الكل المؤهل».');
         return;
       }
       if (picked.length > ATTENDANCE_SETUP_MAX_PROFILES) {
-        toast.error(`أقصى ما يُهيَّأ دفعةً واحدة ${ATTENDANCE_SETUP_MAX_PROFILES} ملفّاً.`);
+        toast.error(`الحد الأقصى ${ATTENDANCE_SETUP_MAX_PROFILES} ملفاً في المرة الواحدة.`);
         return;
       }
       setStep(3);
@@ -226,12 +226,12 @@ export const SetupWizardModal: React.FC<Props> = ({
 
   const submit = async () => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
-      toast.error('اكتب تاريخَ بدءٍ صحيحاً.');
+      toast.error('اكتب تاريخ بدء صحيحاً.');
       return;
     }
 
     if (startDate < floor || startDate > ceiling) {
-      toast.error(`تاريخُ البدء بين ${fmtDate(floor)} و${fmtDate(ceiling)}.`);
+      toast.error(`تاريخ البدء بين ${fmtDate(floor)} و${fmtDate(ceiling)}.`);
       return;
     }
 
@@ -253,8 +253,8 @@ export const SetupWizardModal: React.FC<Props> = ({
 
       toast.success(
         data.created
-          ? `فُعِّل الحضورُ على ${peopleWord(data.tracked)} — يعمل المحرّكُ ${data.engine_runs_at}`
-          : 'كلُّ شيءٍ مُهيَّأٌ سلفاً — لم يُكتب صفٌّ واحد.'
+          ? `تم تفعيل الحضور على ${peopleWord(data.tracked)}. يعمل المحرك ${data.engine_runs_at}`
+          : 'كل شيء جاهز مسبقاً. لم يتم حفظ أي تغيير.'
       );
     } catch (e) {
       toast.error(errorText(e, 'فشل في تهيئة الحضور'));
@@ -267,7 +267,7 @@ export const SetupWizardModal: React.FC<Props> = ({
       <div className="hr-modal-overlay" onClick={onClose}>
         <div className="hr-modal hra-modal" onClick={(e) => e.stopPropagation()}>
           <div className="hr-modal__h">
-            <h3>تمّت التهيئة</h3>
+            <h3>تمت التهيئة</h3>
             <button type="button" className="hr-icon-btn" onClick={onClose} aria-label="إغلاق">
               <X size={18} />
             </button>
@@ -276,18 +276,18 @@ export const SetupWizardModal: React.FC<Props> = ({
           <div className="hr-modal__b">
             <p className="hra-hint">
               {result.created
-                ? 'كُتبت التهيئةُ في معاملةٍ واحدة.'
-                : 'كان المكتبُ مُهيَّأً بهذا التعريف سلفاً — فلم يُكتب صفٌّ واحد، ولا شيءَ يحتاج إعادة.'}
+                ? 'تم حفظ التهيئة في معاملة واحدة.'
+                : 'كان المكتب جاهزاً بهذا التعريف مسبقاً. لم يتم حفظ أي تغيير ولا يحتاج الأمر إعادة.'}
             </p>
 
             <dl className="hra-kv">
               <dt>الجدول</dt>
               <dd>
                 {result.schedule_name} · نسخة <span dir="ltr">{fmtCount(result.schedule_version)}</span>
-                {result.schedule_created ? ' (أُنشئت الآن)' : ' (كانت قائمة)'}
+                {result.schedule_created ? ' (أنشئت الآن)' : ' (كانت قائمة)'}
               </dd>
 
-              <dt>مَن يبصم</dt>
+              <dt>من يسجل الحضور</dt>
               <dd>{peopleWord(result.tracked)} من {peopleWord(result.selected)} في التحديد</dd>
 
               <dt>الإسناد</dt>
@@ -298,24 +298,24 @@ export const SetupWizardModal: React.FC<Props> = ({
                   : ''}
               </dd>
 
-              <dt>تاريخُ البدء</dt>
+              <dt>تاريخ البدء</dt>
               <dd>{fmtDate(result.attendance_start_date)}</dd>
 
-              <dt>ما وُسم للاحتساب</dt>
+              <dt>ما تم تحديده للاحتساب</dt>
               <dd>
                 {result.dirty_marked === 0
-                  ? 'لا شيء — تاريخُ البدء لم يقع بعد'
-                  : `${fmtCount(result.dirty_marked)} يومَ موظفٍ (${fmtDate(result.dirty_from)} ← ${fmtDate(result.dirty_to)})`}
+                  ? 'لا شيء لأن تاريخ البدء لم يأت بعد'
+                  : `${fmtCount(result.dirty_marked)} يوم موظف (${fmtDate(result.dirty_from)} ← ${fmtDate(result.dirty_to)})`}
               </dd>
 
-              <dt>يعمل المحرّك</dt>
+              <dt>يعمل المحرك</dt>
               <dd dir="ltr">{result.engine_runs_at}</dd>
             </dl>
 
             <p className="hra-note">
               <CalendarClock size={13} aria-hidden="true" />
               <span>
-                الأيامُ تظهر بعد أوّل احتسابٍ ليليّ لا فوراً — ولا رقمَ يتغيّر على الشاشة الآن.
+                الأيام تظهر بعد أول احتساب ليلي. ولا يتغير أي رقم على الشاشة الآن.
               </span>
             </p>
 
@@ -324,7 +324,7 @@ export const SetupWizardModal: React.FC<Props> = ({
 
           <div className="hr-modal__f">
             <button type="button" className="hr-btn hr-btn--primary" onClick={onClose}>
-              تمّ
+              تم
             </button>
           </div>
         </div>
@@ -336,7 +336,7 @@ export const SetupWizardModal: React.FC<Props> = ({
     <div className="hr-modal-overlay" onClick={onClose}>
       <div className="hr-modal hra-modal" onClick={(e) => e.stopPropagation()}>
         <div className="hr-modal__h">
-          <h3>{alreadyEnabled ? 'تهيئةُ الحضور — إضافةُ من يبصم' : 'تهيئةُ الحضور والانصراف'}</h3>
+          <h3>{alreadyEnabled ? 'تهيئة الحضور: إضافة موظفين إلى التتبع' : 'تهيئة الحضور والانصراف'}</h3>
           <button type="button" className="hr-icon-btn" onClick={onClose} aria-label="إغلاق">
             <X size={18} />
           </button>
@@ -344,7 +344,7 @@ export const SetupWizardModal: React.FC<Props> = ({
 
         <div className="hr-modal__b">
           {/* شريطُ الخطوات — الرقمُ نفسُه الذي تشرحه لوحةُ المكتب الفارغ. */}
-          <ol className="hra-wiz" aria-label="خطواتُ التهيئة">
+          <ol className="hra-wiz" aria-label="خطوات التهيئة">
             {([1, 2, 3] as Step[]).map((one) => (
               <li
                 className={`hra-wiz__s${one === step ? ' is-on' : ''}${one < step ? ' is-done' : ''}`}
@@ -364,14 +364,14 @@ export const SetupWizardModal: React.FC<Props> = ({
             <>
               <p className="hra-hint">
                 {alreadyEnabled
-                  ? 'هذه القيمُ من جدول مكتبك الحاليّ. أبقِها كما هي إن كنتَ تضيف من يبصم فقط — فلا تُنشأ نسخةٌ جديدة ولا يُعاد حسابُ يومٍ واحد.'
-                  : 'جدولٌ واحدٌ للمكتب.'}{' '}
-                وتحريرُه لاحقاً <strong>نسخةٌ جديدةٌ تسري من تاريخ</strong> لا تعديلٌ في
-                المكان — فتقريرُ شهرٍ مضى لا يتغيّر بلا أن يفعل أحدٌ شيئاً.
+                  ? 'هذه القيم من جدول مكتبك الحالي. اتركها كما هي إن كنت تضيف موظفين إلى التتبع فقط، فلا يتم إنشاء نسخة جديدة ولا إعادة حساب أي يوم.'
+                  : 'جدول واحد للمكتب.'}{' '}
+                وتحريره لاحقاً <strong>ينشئ نسخة جديدة تسري من تاريخ محدد</strong>. ولا تتغير
+                تقارير الشهور السابقة من تلقاء نفسها.
               </p>
 
               <div className="hr-field">
-                <label id="hra-days-l">أيامُ الدوام *</label>
+                <label id="hra-days-l">أيام الدوام *</label>
                 <div className="hra-days" role="group" aria-labelledby="hra-days-l">
                   {WEEK_DAY_KEYS.map((day) => (
                     <button
@@ -389,7 +389,7 @@ export const SetupWizardModal: React.FC<Props> = ({
 
               <div className="hr-field hr-field--row">
                 <div className="hr-field">
-                  <label htmlFor="hra-w-start">بدايةُ الدوام *</label>
+                  <label htmlFor="hra-w-start">بداية الدوام *</label>
                   <input
                     id="hra-w-start"
                     type="time"
@@ -399,7 +399,7 @@ export const SetupWizardModal: React.FC<Props> = ({
                 </div>
 
                 <div className="hr-field">
-                  <label htmlFor="hra-w-end">نهايتُه *</label>
+                  <label htmlFor="hra-w-end">نهايته *</label>
                   <input
                     id="hra-w-end"
                     type="time"
@@ -423,7 +423,7 @@ export const SetupWizardModal: React.FC<Props> = ({
                 </div>
 
                 <div className="hr-field">
-                  <label htmlFor="hra-w-grace">مهلةُ التأخّر (دقيقة)</label>
+                  <label htmlFor="hra-w-grace">مهلة التأخر (دقيقة)</label>
                   <input
                     id="hra-w-grace"
                     type="number"
@@ -436,17 +436,17 @@ export const SetupWizardModal: React.FC<Props> = ({
               </div>
 
               <div className="hra-impact">
-                <p className="hra-impact__t">ما سيُكتب في الجدول</p>
+                <p className="hra-impact__t">ما سيحفظ في الجدول</p>
                 <ul className="hra-impact__l">
                   <li>
                     {workingDays.length === 0
-                      ? 'لا يومَ دوامٍ مختار — لا بدّ من يومٍ واحدٍ على الأقلّ.'
-                      : `${fmtCount(workingDays.length)} أيامَ دوامٍ في الأسبوع · عطلة: ${daysText(offDays)}`}
+                      ? 'لم تختر أي يوم دوام. اختر يوماً واحداً على الأقل.'
+                      : `${fmtCount(workingDays.length)} أيام دوام في الأسبوع · عطلة: ${daysText(offDays)}`}
                   </li>
                   <li>
                     {dailyMinutes !== null && dailyMinutes > 0
-                      ? `${fmtMinutes(dailyMinutes)} مطلوبةٌ في اليوم (${start} ← ${end})`
-                      : 'وقتُ الانصراف يجب أن يكون بعد وقت الحضور.'}
+                      ? `${fmtMinutes(dailyMinutes)} مطلوبة في اليوم (${start} ← ${end})`
+                      : 'وقت الانصراف يجب أن يكون بعد وقت الحضور.'}
                   </li>
                 </ul>
               </div>
@@ -455,10 +455,10 @@ export const SetupWizardModal: React.FC<Props> = ({
                 <p className="hra-note hra-note--warn">
                   <AlertTriangle size={13} aria-hidden="true" />
                   <span>
-                    عطلةُ هذا الجدول ({daysText(offDays)}) تخالف عطلةَ المكتب المسجَّلة (
-                    {daysText(weekendSetting)}). الحضورُ يقرأ الجدولَ والإجازاتُ تقرأ الإعدادَ لمن
-                    لا إسنادَ له — فيخرج رقمان لمدىً واحدٍ بين الوحدتين. يُقبل ويُبلَّغ ولا
-                    يُصحَّح أحدُهما صامتاً.
+                    عطلة هذا الجدول ({daysText(offDays)}) تخالف عطلة المكتب المسجلة (
+                    {daysText(weekendSetting)}). الحضور يعتمد الجدول والإجازات تعتمد الإعداد لمن
+                    لا إسناد له، فيخرج رقمان لمدى واحد بين الوحدتين. يتم القبول مع التنبيه، ولا
+                    يصحح أحدهما تلقائياً.
                   </span>
                 </p>
               )}
@@ -469,11 +469,11 @@ export const SetupWizardModal: React.FC<Props> = ({
           {step === 2 && (
             <>
               <p className="hra-hint">
-                التتبّعُ <strong>مُطفأٌ على كلّ ملفٍّ افتراضياً</strong>، ويُفتح على من تختاره
-                وحدَه. الشركاءُ والمالكُ عادةً خارجَ التتبّع فلا يظهرون في أيّ تقرير.
+                التتبع <strong>غير مفعل على كل ملف افتراضياً</strong>، ويفتح على من تختاره
+                فقط. الشركاء والمالك عادةً خارج التتبع فلا يظهرون في أي تقرير.
               </p>
 
-              <div className="hra-modes" role="group" aria-label="نطاقُ التتبّع">
+              <div className="hra-modes" role="group" aria-label="نطاق التتبع">
                 <button
                   type="button"
                   className="hra-mode"
@@ -484,8 +484,8 @@ export const SetupWizardModal: React.FC<Props> = ({
                   <span className="hra-mode__n">أختارهم بالاسم</span>
                   <span className="hra-mode__h">
                     {canListEmployees
-                      ? 'الافتراضُ — ولا يُفتح التتبّعُ على أحدٍ لم تختره'
-                      : 'يحتاج صلاحيةَ سجلّ المنسوبين (hr.view)'}
+                      ? 'الخيار الافتراضي. لا يفتح التتبع على أحد لم تختره'
+                      : 'يحتاج صلاحية سجل الموظفين (hr.view)'}
                   </span>
                 </button>
 
@@ -495,9 +495,9 @@ export const SetupWizardModal: React.FC<Props> = ({
                   aria-pressed={trackAll}
                   onClick={() => setTrackAll(true)}
                 >
-                  <span className="hra-mode__n">الكلُّ المؤهَّل</span>
+                  <span className="hra-mode__n">الكل المؤهل</span>
                   <span className="hra-mode__h">
-                    كلُّ ملفٍّ نشطٍ لحسابٍ فعّالٍ ليس عميلاً — راجِع من غادر المكتبَ أوّلاً
+                    كل ملف نشط لحساب فعال ليس عميلاً. راجع من غادر المكتب أولاً
                   </span>
                 </button>
               </div>
@@ -506,14 +506,14 @@ export const SetupWizardModal: React.FC<Props> = ({
                 <p className="hra-note hra-note--warn">
                   <AlertTriangle size={13} aria-hidden="true" />
                   <span>
-                    ملفٌّ نشطٌ لمن لم يعد موظفاً يُسجَّل عليه «بلا سجلّ» كلَّ يومِ عملٍ إلى
-                    الأبد، فتمتلئ الشاشةُ بأسماءٍ لا وجودَ لها. والتراجعُ ممكنٌ من ملفّ الموظف.
+                    ملف نشط لمن لم يعد موظفاً يسجل عليه «بلا سجل» كل يوم عمل، فتمتلئ الشاشة
+                    بأسماء غير موجودة. والتراجع ممكن من ملف الموظف.
                   </span>
                 </p>
               ) : (
                 <>
                   <div className="hr-field">
-                    <label htmlFor="hra-pick-q">تصفيةٌ بالاسم أو المسمّى</label>
+                    <label htmlFor="hra-pick-q">تصفية بالاسم أو المسمى</label>
                     <input
                       id="hra-pick-q"
                       type="search"
@@ -524,16 +524,16 @@ export const SetupWizardModal: React.FC<Props> = ({
                   </div>
 
                   {employees.isPending ? (
-                    <div className="hra-state hra-state--loading" aria-busy="true" aria-label="جارٍ تحميل الملفّات">
+                    <div className="hra-state hra-state--loading" aria-busy="true" aria-label="جارٍ تحميل الملفات">
                       {Array.from({ length: 4 }, (_, i) => <span className="hra-skel" key={i} />)}
                     </div>
                   ) : employees.isError ? (
                     <p className="hra-line">
-                      {errorText(employees.error, 'تعذّر جلبُ ملفّات الموظفين')} — أو اختر «الكلُّ
-                      المؤهَّل».
+                      {errorText(employees.error, 'تعذر تحميل ملفات الموظفين')}، أو اختر «الكل
+                      المؤهل».
                     </p>
                   ) : rows.length === 0 ? (
-                    <p className="hra-line">لا ملفَّ مطابقاً في سجلّ المنسوبين.</p>
+                    <p className="hra-line">لا يوجد ملف مطابق في سجل الموظفين.</p>
                   ) : (
                     <div className="hra-picks">
                       {rows.map((row) => (
@@ -546,8 +546,8 @@ export const SetupWizardModal: React.FC<Props> = ({
                           <span className="hra-pick__main">
                             <span className="hra-pick__n">{row.name}</span>
                             <span className="hra-pick__m">
-                              {row.title ?? 'بلا مسمّى'}
-                              {row.tracked ? ' · يبصم سلفاً' : ''}
+                              {row.title ?? 'بلا مسمى'}
+                              {row.tracked ? ' · يسجل الحضور مسبقاً' : ''}
                               {row.anchor !== null ? ` · بدأ ${fmtDate(row.anchor)}` : ''}
                             </span>
                           </span>
@@ -558,9 +558,9 @@ export const SetupWizardModal: React.FC<Props> = ({
 
                   {(employees.data?.total ?? 0) > rows.length && filter.trim() === '' && (
                     <p className="hra-hint">
-                      يُعرض <span dir="ltr">{fmtCount(rows.length)}</span> من{' '}
-                      <span dir="ltr">{fmtCount(employees.data?.total)}</span> ملفّاً — صفِّ القائمةَ
-                      بالاسم، أو اختر «الكلُّ المؤهَّل».
+                      يعرض <span dir="ltr">{fmtCount(rows.length)}</span> من{' '}
+                      <span dir="ltr">{fmtCount(employees.data?.total)}</span> ملفاً. قلص القائمة
+                      بالبحث بالاسم، أو اختر «الكل المؤهل».
                     </p>
                   )}
                 </>
@@ -572,12 +572,12 @@ export const SetupWizardModal: React.FC<Props> = ({
           {step === 3 && (
             <>
               <p className="hra-hint">
-                تاريخُ البدء هو الحاجزُ الذي يمنع أن يرث كلُّ موظفٍ سنةً من الأيام بلا سجلّ في
-                أوّل ليلة. <strong>ويُكتب مرّةً ولا يتحرّك بعدها</strong>.
+                تاريخ البدء يمنع أن تنشأ لكل موظف سنة من الأيام بلا سجل في
+                أول ليلة. <strong>ويكتب مرة واحدة ولا يتغير بعدها</strong>.
               </p>
 
               <div className="hr-field">
-                <label htmlFor="hra-anchor">تاريخُ بدء الاحتساب *</label>
+                <label htmlFor="hra-anchor">تاريخ بدء الاحتساب *</label>
                 <input
                   id="hra-anchor"
                   type="date"
@@ -592,24 +592,24 @@ export const SetupWizardModal: React.FC<Props> = ({
               </div>
 
               <div className="hra-impact hra-impact--anchor">
-                <p className="hra-impact__t">أثرُ هذا الاختيار</p>
+                <p className="hra-impact__t">أثر هذا الاختيار</p>
                 <ul className="hra-impact__l">
                   <li>
-                    <strong>سيبدأ الاحتساب من {fmtDate(startDate)}</strong> — ولن تُنشأ سجلّاتٌ
-                    لما قبله إطلاقاً.
+                    <strong>سيبدأ الاحتساب من {fmtDate(startDate)}</strong>. ولن يتم إنشاء
+                    سجلات لما قبله.
                   </li>
                   <li>
                     {startDate > todayISO()
-                      ? 'التاريخُ في المستقبل — لن يُحتسب يومٌ حتى يقع.'
-                      : `تُحتسب الأيامُ من ${fmtDate(startDate)} إلى أمس في أوّل تشغيلٍ ليليّ.`}
+                      ? 'التاريخ في المستقبل، فلن يحتسب أي يوم حتى يأتي.'
+                      : `تحتسب الأيام من ${fmtDate(startDate)} إلى أمس في أول تشغيل ليلي.`}
                   </li>
                   <li>
                     {selectedCount === null
-                      ? 'كلُّ ملفٍّ مؤهَّلٍ في المكتب سيُفتح عليه التتبّع.'
-                      : `${peopleWord(selectedCount)} سيُفتح عليهم التتبّع — ولا أحدَ سواهم.`}
+                      ? 'سيفتح التتبع على كل ملف مؤهل في المكتب.'
+                      : `سيفتح التتبع على ${peopleWord(selectedCount)} فقط.`}
                   </li>
                   <li>
-                    أيامُ الدوام: {daysText(workingDays)} · العطلة: {daysText(offDays)}
+                    أيام الدوام: {daysText(workingDays)} · العطلة: {daysText(offDays)}
                   </li>
                 </ul>
               </div>
@@ -617,8 +617,8 @@ export const SetupWizardModal: React.FC<Props> = ({
               <p className="hra-note">
                 <CalendarClock size={13} aria-hidden="true" />
                 <span>
-                  الاحتسابُ يجري ليلاً ({ENGINE_RUN_CLOCK} بتوقيت الرياض) لا فوراً: بعد الضغط لن
-                  يتغيّر رقمٌ على الشاشة، وتظهر الأيامُ في أوّل تشغيلٍ للمحرّك.
+                  الاحتساب يجري ليلاً ({ENGINE_RUN_CLOCK} بتوقيت الرياض). بعد الضغط لن
+                  يتغير أي رقم على الشاشة، وتظهر الأيام في أول تشغيل للمحرك.
                 </span>
               </p>
 
@@ -626,8 +626,8 @@ export const SetupWizardModal: React.FC<Props> = ({
                 <p className="hra-note hra-note--warn">
                   <AlertTriangle size={13} aria-hidden="true" />
                   <span>
-                    عطلةُ الجدول تخالف عطلةَ المكتب المسجَّلة — سيُبلَّغ عنها ولن يُصحَّح أحدُهما
-                    صامتاً.
+                    عطلة الجدول تخالف عطلة المكتب المسجلة. سيظهر تنبيه بذلك ولن يصحح أحدهما
+                    تلقائياً.
                   </span>
                 </p>
               )}
@@ -660,7 +660,7 @@ export const SetupWizardModal: React.FC<Props> = ({
               onClick={() => { void submit(); }}
               disabled={setup.isPending}
             >
-              {setup.isPending ? 'جارٍ التهيئة…' : 'فعِّل الحضور'}
+              {setup.isPending ? 'جارٍ التهيئة…' : 'تفعيل الحضور'}
             </button>
           )}
         </div>
@@ -675,7 +675,7 @@ const Warnings: React.FC<{ list: AttendanceSetupWarning[] }> = ({ list }) => {
 
   return (
     <div className="hra-secb">
-      <p className="hra-hint">تنبيهاتٌ لا تمنع شيئاً — وتستحقّ القراءة:</p>
+      <p className="hra-hint">تنبيهات لا تمنع شيئاً وتستحق القراءة:</p>
       <ul className="hra-why">
         {list.map((warning) => (
           <li className="hra-why__i is-no" key={warning.code + warning.message}>

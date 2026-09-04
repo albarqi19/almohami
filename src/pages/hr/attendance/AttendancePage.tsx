@@ -78,9 +78,9 @@ const QUEUE_DAYS = 14;
 
 /** عنوانُ عمود العمل لكلّ نطاق — نصٌّ واحدٌ لا يتكرّر في JSX. */
 const VIEW_TITLES: Record<AttendanceView, string> = {
-  queue: 'طابورُ المراجعة',
-  today: 'حضورُ اليوم',
-  claims: 'طلباتُ التصحيح',
+  queue: 'قائمة المراجعة',
+  today: 'حضور اليوم',
+  claims: 'طلبات التصحيح',
 };
 
 interface EmpRef {
@@ -173,7 +173,7 @@ export const AttendancePage: React.FC = () => {
         name: value.name,
         meta: value.pending > 0
           ? `${daysWord(value.pending)} تنتظر قراراً`
-          : (value.today ?? 'لا شيءَ ينتظر'),
+          : (value.today ?? 'لا شيء ينتظر'),
         end: value.pending > 0 ? value.pending : null,
       }))
       .sort(byName);
@@ -305,7 +305,7 @@ export const AttendancePage: React.FC = () => {
         </div>
       ) : (
         <div className="ssp2-layout">
-          <aside className="ssp2-chatcol hra-side" aria-label="المنسوبون">
+          <aside className="ssp2-chatcol hra-side" aria-label="الموظفون">
             <AttendanceRoster
               view={view}
               onView={(next) => setParam({ view: next === 'queue' ? null : next })}
@@ -385,7 +385,7 @@ export const AttendancePage: React.FC = () => {
           </main>
 
           {showDetail && (
-            <aside className="ssp2-stagescol hra-side" aria-label="تفاصيلُ اليوم">
+            <aside className="ssp2-stagescol hra-side" aria-label="تفاصيل اليوم">
               <AttendanceDayDetail
                 profileId={openDay?.profileId ?? null}
                 day={openDay?.day ?? null}

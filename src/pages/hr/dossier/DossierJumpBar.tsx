@@ -109,7 +109,7 @@ export const DossierJumpBar: React.FC<Props> = ({ sections, scroller }) => {
   };
 
   return (
-    <nav className="hrl-tabs hrl-jump" aria-label="أقسام الملفّ">
+    <nav className="hrl-tabs hrl-jump" aria-label="أقسام الملف">
       {sections.map((section) => (
         <a
           key={section.id}

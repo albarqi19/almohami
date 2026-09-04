@@ -58,10 +58,10 @@ export const ApprovalConflictPanel: React.FC<Props> = ({ context, impact }) => {
   const clear = sessions.length === 0 && tasks.length === 0 && overlaps.length === 0;
 
   return (
-    <section className="hrla-panel" aria-label="ما يقع في مدّة الإجازة">
+    <section className="hrla-panel" aria-label="ما يقع في مدة الإجازة">
       <h4 className="hrla-panel__t">
         <CalendarDays size={13} aria-hidden="true" />
-        ما يقع في هذه المدّة
+        ما يقع في هذه المدة
       </h4>
 
       {/* ═══ السلامةُ تُنطَق ولا تُترك للسكوت ═══ */}
@@ -69,7 +69,7 @@ export const ApprovalConflictPanel: React.FC<Props> = ({ context, impact }) => {
         <p className="hrla-clear">
           <CheckCircle2 size={13} aria-hidden="true" />
           <span>
-            لا جلساتِ ولا مهامَّ ولا غياباتٍ متداخلةً في هذه المدّة — فُحصت المدّةُ ولم يُوجد
+            لا جلسات ولا مهام ولا غيابات متداخلة في هذه المدة. تم فحص المدة ولم يظهر
             ما يتعارض.
           </span>
         </p>
@@ -80,18 +80,18 @@ export const ApprovalConflictPanel: React.FC<Props> = ({ context, impact }) => {
         <div className="hrla-group hrla-group--grave">
           <h5 className="hrla-group__t">
             <Gavel size={12} aria-hidden="true" />
-            جلساتٌ مجدولةٌ للموظف
+            جلسات مجدولة للموظف
             <span className="hrla-group__n" dir="ltr">{sessions.length}</span>
           </h5>
           <p className="hrla-group__why">
-            جلسةٌ فائتةٌ قد تُسقط حقّاً. اعتمادُ الإجازة لا يُلغيها — يلزم من يحضرها أو تأجيلُها.
+            الغياب عن الجلسة قد يسقط الحق. اعتماد الإجازة لا يلغيها، ويلزم من يحضرها أو تأجيلها.
           </p>
           <ul className="hrla-list">
             {sessions.map((session) => (
               <li key={session.id} className="hrla-row">
                 <span className="hrla-row__d">{sessionDate(session)}</span>
                 <span className="hrla-row__m">
-                  {session.case?.title || 'قضيةٌ بلا عنوان'}
+                  {session.case?.title || 'قضية بلا عنوان'}
                   {/* «رقم» ورقمُها لا ينفصلان بكسر سطر: كلمةٌ معلَّقةٌ في آخر سطرٍ ورقمٌ
                       وحدَه في التالي يُقرأ نصّاً مكسوراً — وهذا الرقمُ ما يُبحَث به في ناجز. */}
                   {session.case?.file_number ? (
@@ -119,7 +119,7 @@ export const ApprovalConflictPanel: React.FC<Props> = ({ context, impact }) => {
         <div className="hrla-group">
           <h5 className="hrla-group__t">
             <ListTodo size={12} aria-hidden="true" />
-            مهامُّ مستحقّةٌ في المدّة
+            مهام مستحقة في المدة
             <span className="hrla-group__n" dir="ltr">{tasks.length}</span>
           </h5>
           <ul className="hrla-list">
@@ -148,7 +148,7 @@ export const ApprovalConflictPanel: React.FC<Props> = ({ context, impact }) => {
         <div className="hrla-group">
           <h5 className="hrla-group__t">
             <Users size={12} aria-hidden="true" />
-            غائبون في المدّة نفسِها
+            غائبون في المدة نفسها
             <span className="hrla-group__n" dir="ltr">{overlaps.length}</span>
           </h5>
           <ul className="hrla-list">
@@ -170,7 +170,7 @@ export const ApprovalConflictPanel: React.FC<Props> = ({ context, impact }) => {
 
       {/* ═══ سابقُ إجازاته — سياقٌ لا تهمة ═══ */}
       <p className="hrla-prev">
-        سابقُ إجازاته المعتمَدة: <span dir="ltr">{previous.all_approved}</span>
+        إجازاته المعتمَدة السابقة: <span dir="ltr">{previous.all_approved}</span>
         {' · من نفس النوع '}
         <span dir="ltr">{previous.same_type_count}</span>
         {' بمجموع '}
@@ -185,16 +185,16 @@ export const ApprovalConflictPanel: React.FC<Props> = ({ context, impact }) => {
         <p className={`hrla-impact${impact.will_go_negative ? ' hrla-impact--negative' : ''}`}>
           {impact.charges_ledger ? (
             <>
-              {'الاعتمادُ يخصم '}
+              {'الاعتماد يخصم '}
               <span dir="ltr">{fmtDays(impact.days)}</span>
-              {' يوماً من رصيده: '}
+              {' يوم من رصيده: '}
               <span dir="ltr">{fmtDays(impact.balance_before)}</span>
               {' ⇐ '}
               <span dir="ltr">{fmtDays(impact.balance_after)}</span>
-              {impact.will_go_negative ? ' — ويصير الرصيدُ سالباً.' : ''}
+              {impact.will_go_negative ? '، ويصير الرصيد سالبا.' : ''}
             </>
           ) : (
-            'هذا النوعُ لا يُخصم من رصيدٍ — الاعتمادُ يسجّل الواقعةَ ولا يحرّك رقماً.'
+            'هذا النوع لا يخصم من رصيد. الاعتماد يسجل الإجازة ولا يغير أي رقم.'
           )}
         </p>
       )}

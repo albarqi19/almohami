@@ -45,16 +45,16 @@ export const BoardStartHere: React.FC<Props> = ({ canManage, onAdd, onHolidays }
 
       <div className="hrl-state hrl-state--empty">
         <Users size={22} />
-        <p className="hrl-state__t">لا منسوبين في هذا المكتب بعد</p>
+        <p className="hrl-state__t">لا موظفين في هذا المكتب بعد</p>
         {/* 🔑 الجملتان منسوختان حرفياً من الحالة الفارغة في القائمة اليمنى: نصٌّ واحدٌ
             لحالةٍ واحدةٍ في شاشةٍ واحدة — وصياغةٌ ثانيةٌ لها هي عينُ الانحراف المُعالَج. */}
         <p className="hrl-state__d">
-          يبدأ الملفُّ بأوّل منسوب، ثمّ تُبنى عليه العقودُ والمستنداتُ والإجازات.
-          {!canManage && ' راجع إدارةَ المكتب.'}
+          يبدأ الملف بأول موظف، ثم تبنى عليه العقود والمستندات والإجازات.
+          {!canManage && ' تواصل مع إدارة المكتب.'}
         </p>
         {canManage && (
           <button type="button" className="hr-btn hr-btn--sm hr-btn--primary" onClick={onAdd}>
-            <UserPlus size={13} /> إضافة منسوب
+            <UserPlus size={13} /> إضافة موظف
           </button>
         )}
       </div>
@@ -62,18 +62,18 @@ export const BoardStartHere: React.FC<Props> = ({ canManage, onAdd, onHolidays }
       <div className="hrl-block__b hrl-block__b--flush">
         <div className="hrl-row hrl-row--static">
           <span className="hrl-row__main">
-            ثمّ: اعتمد التقويمَ الرسميّ — العطلُ غيرُ المعتمَدة لا تُستثنى من احتساب الإجازات.
+            ثم: اعتمد التقويم الرسمي. العطل غير المعتمدة لا تستثنى من احتساب الإجازات.
           </span>
           {canManage && (
             <button type="button" className="hr-btn hr-btn--sm" onClick={onHolidays}>
-              <CalendarDays size={13} /> التقويم الرسميّ
+              <CalendarDays size={13} /> التقويم الرسمي
             </button>
           )}
         </div>
 
         <div className="hrl-row hrl-row--static">
           <span className="hrl-row__main">
-            ثمّ: هيّئ الأرصدةَ الافتتاحية — بلا رصيدٍ افتتاحيٍّ لا يُحتسب استحقاق.
+            ثم: أنشئ الأرصدة الافتتاحية. بلا رصيد افتتاحي لا يحتسب استحقاق.
           </span>
           {canManage && (
             <button type="button" className="hr-btn hr-btn--sm" onClick={() => navigate('/hr/leave')}>

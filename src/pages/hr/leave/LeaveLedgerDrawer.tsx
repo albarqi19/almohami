@@ -68,7 +68,7 @@ const PER_PAGE = 20;
 /** اسمُ كلّ وضع — يُقرأ مرّةً للعنوان ومرّةً لزرّ التبديل (الذي يحمل اسمَ الوضع الآخر). */
 const MODE_LABELS: Record<LedgerDrawerMode, string> = {
   movements: 'حركات الرصيد',
-  record: 'تفاصيل الواقعة',
+  record: 'تفاصيل الإجازة',
 };
 
 export const LeaveLedgerDrawer: React.FC<Props> = ({
@@ -160,9 +160,9 @@ export const LeaveLedgerDrawer: React.FC<Props> = ({
               {ledgerQuery.isError && (
                 <div className="hrl-state hrl-state--error">
                   <AlertTriangle size={22} />
-                  <p className="hrl-state__t">تعذّر جلب الحركات</p>
+                  <p className="hrl-state__t">تعذر تحميل الحركات</p>
                   <p className="hrl-state__d">
-                    {ledgerQuery.error instanceof Error ? ledgerQuery.error.message : 'انقطعَ الاتصال بالخادم.'}
+                    {ledgerQuery.error instanceof Error ? ledgerQuery.error.message : 'انقطع الاتصال بالخادم.'}
                   </p>
                   <button type="button" className="hr-btn hr-btn--sm" onClick={() => void ledgerQuery.refetch()}>
                     <RefreshCw size={13} /> إعادة المحاولة
@@ -173,16 +173,16 @@ export const LeaveLedgerDrawer: React.FC<Props> = ({
               {!ledgerQuery.isPending && !ledgerQuery.isError && rows.length === 0 && (
                 <div className="hrl-state hrl-state--empty">
                   <ListOrdered size={22} />
-                  <p className="hrl-state__t">لا حركاتِ رصيد</p>
+                  <p className="hrl-state__t">لا توجد حركات رصيد</p>
                   <p className="hrl-state__d">
-                    لم يُكتب في الدفتر قيدٌ لهذا الموظف بعد — يبدأ الدفترُ بقيدِ رصيدٍ افتتاحيّ.
+                    لم يتم تسجيل أي قيد لهذا الموظف بعد. يبدأ السجل بقيد رصيد افتتاحي.
                   </p>
                 </div>
               )}
 
               {rows.length > 0 && (
                 <table className="hrl-ledger">
-                  <caption className="hrl-sr">حركات رصيد الإجازات مرتّبةً من الأحدث</caption>
+                  <caption className="hrl-sr">حركات رصيد الإجازات مرتبة من الأحدث</caption>
                   <thead>
                     <tr>
                       <th scope="col">التاريخ</th>
@@ -190,7 +190,7 @@ export const LeaveLedgerDrawer: React.FC<Props> = ({
                       <th scope="col">الأيام</th>
                       <th scope="col">الرصيد بعد</th>
                       <th scope="col">الوصف</th>
-                      <th scope="col">مَن</th>
+                      <th scope="col">بواسطة</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -219,8 +219,8 @@ export const LeaveLedgerDrawer: React.FC<Props> = ({
               {leave === null ? (
                 <div className="hrl-state hrl-state--empty">
                   <FileText size={22} />
-                  <p className="hrl-state__t">لا واقعةَ محدَّدة</p>
-                  <p className="hrl-state__d">اختر صفّاً من السجلّ لعرض تفاصيله.</p>
+                  <p className="hrl-state__t">لا توجد إجازة محددة</p>
+                  <p className="hrl-state__d">اختر إجازة من السجل لعرض تفاصيلها.</p>
                 </div>
               ) : (
                 <>
@@ -230,8 +230,9 @@ export const LeaveLedgerDrawer: React.FC<Props> = ({
                       {leaveTypeName(leave)}
                       {leaveArticleRef(leave) ? (
                         <>
-                          {' — '}
+                          {' ('}
                           <span className="hrl-legal__ref" dir="ltr">{leaveArticleRef(leave)}</span>
+                          {')'}
                         </>
                       ) : null}
                     </span>
@@ -248,7 +249,7 @@ export const LeaveLedgerDrawer: React.FC<Props> = ({
                       <dt>الأساس</dt>
                       <dd>{LEAVE_DURATION_BASIS_LABELS[leave.duration_basis_snapshot] ?? leave.duration_basis_snapshot}</dd>
 
-                      <dt>المدّة</dt>
+                      <dt>المدة</dt>
                       <dd dir="ltr">{fmtDays(leave.duration_days)}</dd>
 
                       {leave.half_day ? (
@@ -265,8 +266,8 @@ export const LeaveLedgerDrawer: React.FC<Props> = ({
 
                       {pendingHolidays.length > 0 ? (
                         <>
-                          <dt>عطلٌ لم تُعتمد</dt>
-                          <dd>{pendingHolidays.join(' · ')} — لم تُستثنَ من الاحتساب</dd>
+                          <dt>عطل غير معتمدة</dt>
+                          <dd>{pendingHolidays.join(' · ')} (لم يتم استثناؤها من الاحتساب)</dd>
                         </>
                       ) : null}
 
@@ -288,25 +289,25 @@ export const LeaveLedgerDrawer: React.FC<Props> = ({
                       <dt>الحالة</dt>
                       <dd>
                         {LEAVE_STATUS_LABELS[leave.status] ?? leave.status}
-                        {leave.self_approved ? ' · اعتمدها بنفسه' : ''}
+                        {leave.self_approved ? ' · اعتماد ذاتي' : ''}
                       </dd>
 
                       <dt>المصدر</dt>
                       <dd>{LEAVE_SOURCE_LABELS[leave.source] ?? leave.source}</dd>
 
-                      <dt>سُجّلت</dt>
+                      <dt>تاريخ التسجيل</dt>
                       <dd>{fmtLeaveDateTime(leave.created_at)}</dd>
 
                       {leave.approved_at ? (
                         <>
-                          <dt>اعتُمدت</dt>
+                          <dt>تاريخ الاعتماد</dt>
                           <dd>{fmtLeaveDateTime(leave.approved_at)}</dd>
                         </>
                       ) : null}
 
                       {leave.sick_window_start ? (
                         <>
-                          <dt>مرساة النافذة المرضية</dt>
+                          <dt>تاريخ بدء النافذة المرضية</dt>
                           <dd>{fmtLeaveDate(leave.sick_window_start)}</dd>
                         </>
                       ) : null}
@@ -335,8 +336,8 @@ export const LeaveLedgerDrawer: React.FC<Props> = ({
 
                       {leave.supersedes_leave_id ? (
                         <>
-                          <dt>إخلاف</dt>
-                          <dd dir="ltr">تُخلِف السجلَّ #{leave.supersedes_leave_id}</dd>
+                          <dt>الاستبدال</dt>
+                          <dd dir="ltr">بديل عن السجل #{leave.supersedes_leave_id}</dd>
                         </>
                       ) : null}
                     </dl>
@@ -352,10 +353,10 @@ export const LeaveLedgerDrawer: React.FC<Props> = ({
             <>
               <span>
                 {summary
-                  ? `الرصيد الحاليّ ${fmtDays(summary.current_balance)} · مستحقّ ${fmtDays(
+                  ? `الرصيد الحالي ${fmtDays(summary.current_balance)} · مستحق ${fmtDays(
                       summary.accrued
                     )} · مخصوم ${fmtDays(summary.consumed)}`
-                  : 'الملخّص غير متاح'}
+                  : 'الملخص غير متاح'}
               </span>
               <span className="hrl-block__a">
                 <button
@@ -382,7 +383,7 @@ export const LeaveLedgerDrawer: React.FC<Props> = ({
           ) : (
             <span>
               {leave?.charged_days === undefined
-                ? 'الأثرُ على الرصيد لم يصل مع هذا الصفّ'
+                ? 'الأثر على الرصيد غير متوفر لهذا السجل'
                 : `${fmtSignedDays(-toNum(leave.charged_days))} على الرصيد`}
             </span>
           )}

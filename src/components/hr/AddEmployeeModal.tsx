@@ -30,7 +30,7 @@ export const AddEmployeeModal: React.FC<Props> = ({ onClose, onCreated }) => {
   useEffect(() => {
     UserService.getAllUsers({ exclude_role: 'client', limit: 100 })
       .then((res) => setUsers((res.data as any) || []))
-      .catch(() => toast.error('تعذّر جلب المستخدمين'))
+      .catch(() => toast.error('تعذر تحميل المستخدمين'))
       .finally(() => setLoadingUsers(false));
   }, []);
 
@@ -64,7 +64,7 @@ export const AddEmployeeModal: React.FC<Props> = ({ onClose, onCreated }) => {
     <div className="hr-modal-overlay" onClick={onClose}>
       <div className="hr-modal" onClick={(e) => e.stopPropagation()}>
         <div className="hr-modal__h">
-          <h3>إضافة منسوب جديد</h3>
+          <h3>إضافة موظف جديد</h3>
           <button className="hr-icon-btn" onClick={onClose} aria-label="إغلاق"><X size={18} /></button>
         </div>
         <div className="hr-modal__b">

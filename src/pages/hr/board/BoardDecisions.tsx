@@ -40,13 +40,13 @@ export const BoardDecisions: React.FC<Props> = ({ items, failed, canManage, onHo
     <section className="hrl-block">
       <div className="hrl-block__h">
         <h2 className="hrl-block__t hrl-h2">
-          <Gavel size={14} /> قراراتُ المكتب
+          <Gavel size={14} /> قرارات المكتب
         </h2>
       </div>
 
       {failed ? (
         <p className="hrl-note">
-          تعذّر جلب حقائق الإجازات — بنودُ الرصيد والاعتماد والعطل لا تظهر الآن.
+          تعذر تحميل حقائق الإجازات. بنود الرصيد والاعتماد والعطل لا تظهر الآن.
         </p>
       ) : (
         <div className="hrl-block__b hrl-block__b--flush">
@@ -57,7 +57,7 @@ export const BoardDecisions: React.FC<Props> = ({ items, failed, canManage, onHo
 
               {item.key === 'holidays' && canManage && (
                 <button type="button" className="hr-btn hr-btn--sm" onClick={onHolidays}>
-                  <CalendarDays size={13} /> التقويم الرسميّ
+                  <CalendarDays size={13} /> التقويم الرسمي
                 </button>
               )}
 
@@ -73,7 +73,7 @@ export const BoardDecisions: React.FC<Props> = ({ items, failed, canManage, onHo
                   className="hr-btn hr-btn--sm"
                   onClick={() => navigate('/hr/leave?status=pending')}
                 >
-                  اعرض المعلَّقة ←
+                  اعرض المعلقة ←
                 </button>
               )}
             </div>

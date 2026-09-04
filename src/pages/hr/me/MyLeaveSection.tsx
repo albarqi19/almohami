@@ -48,7 +48,7 @@ import type { LeaveStatus, MyLeaveSummary } from '../../../types/hr';
  */
 
 /** نصٌّ احتياطيٌّ واحدٌ لفرع الخطأ — عرفُ وحدة الإجازات. */
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 const STATUS_BADGE: Record<LeaveStatus, string> = {
   pending: 'hr-badge--gold',
@@ -67,8 +67,8 @@ const STATUS_BADGE: Record<LeaveStatus, string> = {
  */
 const requestsNote = (
   <p className="hrl-note">
-    طلبُك يبقى معلَّقاً حتى يعتمده من يملك ذلك في مكتبك،{' '}
-    <strong>ولا يُخصم من الرصيد أعلاه قبل الاعتماد</strong>.
+    طلبك يبقى معلقاً حتى يعتمده من يملك ذلك في مكتبك،{' '}
+    <strong>ولا يخصم من الرصيد أعلاه قبل الاعتماد</strong>.
   </p>
 );
 
@@ -111,8 +111,8 @@ export const MyLeaveSection: React.FC = () => {
     return (
       <div className="hrl-state hrl-state--locked">
         <Lock size={22} />
-        <p className="hrl-state__t">ملفُّك الوظيفيّ لم يُنشأ بعد</p>
-        <p className="hrl-state__d">{errorText(summaryQuery.error, 'لا ملفَّ موارد بشرية لحسابك.')}</p>
+        <p className="hrl-state__t">لم يتم إنشاء ملفك الوظيفي بعد</p>
+        <p className="hrl-state__d">{errorText(summaryQuery.error, 'لا يوجد ملف موارد بشرية لحسابك.')}</p>
       </div>
     );
   }
@@ -133,7 +133,7 @@ export const MyLeaveSection: React.FC = () => {
     return (
       <div className="hrl-state hrl-state--error">
         <AlertTriangle size={22} />
-        <p className="hrl-state__t">تعذّر جلبُ رصيدك</p>
+        <p className="hrl-state__t">تعذر تحميل رصيدك</p>
         <p className="hrl-state__d">{errorText(summaryQuery.error, CONNECTION_FALLBACK)}</p>
         <button type="button" className="hr-btn hr-btn--sm" onClick={() => void summaryQuery.refetch()}>
           <RefreshCw size={13} /> إعادة المحاولة
@@ -159,8 +159,8 @@ export const MyLeaveSection: React.FC = () => {
 
           <div className="hrl-state hrl-state--empty">
             <Wallet size={22} />
-            <p className="hrl-state__t">رصيدُك غير مُهيَّأ</p>
-            <p className="hrl-state__d">لم يُسجَّل رصيدٌ افتتاحيٌّ لملفّك بعد — راجع إدارةَ المكتب.</p>
+            <p className="hrl-state__t">لم يتم إنشاء رصيدك بعد</p>
+            <p className="hrl-state__d">لم يتم تسجيل رصيد افتتاحي لملفك بعد. تواصل مع إدارة المكتب.</p>
           </div>
 
           {requestsNote}
@@ -189,7 +189,7 @@ export const MyLeaveSection: React.FC = () => {
         </div>
 
         {main === null ? (
-          <EmptyLine text="لا أنواعَ إجازةٍ مفعّلة" />
+          <EmptyLine text="لا توجد أنواع إجازة مفعلة" />
         ) : (
           <>
             <div className="hrl-num">
@@ -220,8 +220,8 @@ export const MyLeaveSection: React.FC = () => {
                 تُعرض **متى كانت أكبر من صفر** فقط — لا صفرَ يُطمئن كذباً. */}
             {summary.future_committed_days > 0 && (
               <p className="hrl-hint">
-                منها <span dir="ltr">{fmtDays(summary.future_committed_days)}</span> مخصومةٌ لإجازةٍ
-                قادمةٍ اعتُمدت ولم تبدأ بعد.
+                منها <span dir="ltr">{fmtDays(summary.future_committed_days)}</span> مخصومة لإجازة
+                قادمة معتمَدة لم تبدأ بعد.
               </p>
             )}
           </>
@@ -237,7 +237,7 @@ export const MyLeaveSection: React.FC = () => {
           </div>
           <div className="hrl-block__b">
             <dl className="hrl-kv">
-              <dt>بأجرٍ كامل</dt>
+              <dt>بأجر كامل</dt>
               <dd dir="ltr">{fmtDays(summary.sick.remaining_full)}</dd>
 
               <dt>تنتهي النافذة</dt>
@@ -247,8 +247,8 @@ export const MyLeaveSection: React.FC = () => {
           <p className="hrl-legal">
             <Scale size={13} />
             <span>
-              الأجرُ في الإجازة المرضية يتدرّج بشرائحَ خلال نافذةٍ سنوية —{' '}
-              <span className="hrl-legal__ref" dir="ltr">م.117</span>
+              الأجر في الإجازة المرضية يتدرج بشرائح خلال نافذة سنوية{' '}
+              (<span className="hrl-legal__ref" dir="ltr">م.117</span>)
             </span>
           </p>
         </section>
@@ -269,10 +269,10 @@ export const MyLeaveSection: React.FC = () => {
           </div>
           <div className="hrl-block__b hrl-block__b--flush myhr-tablewrap">
             {summary.upcoming.length === 0 ? (
-              <EmptyLine text="لا إجازاتٍ قادمة" />
+              <EmptyLine text="لا توجد إجازات قادمة" />
             ) : (
               <table className="hrl-table hrl-table--single">
-                <caption className="hrl-sr">إجازاتي التي لم تنتهِ بعد</caption>
+                <caption className="hrl-sr">إجازاتي التي لم تنته بعد</caption>
                 <thead>
                   <tr>
                     <th scope="col">النوع</th>
@@ -316,10 +316,10 @@ export const MyLeaveSection: React.FC = () => {
           </div>
           <div className="hrl-block__b hrl-block__b--flush myhr-tablewrap">
             {summary.recent_entries.length === 0 ? (
-              <EmptyLine text="لا حركاتٍ بعد" />
+              <EmptyLine text="لا توجد حركات بعد" />
             ) : (
               <table className="hrl-ledger">
-                <caption className="hrl-sr">آخر حركات رصيدي مرتَّبةً من الأحدث</caption>
+                <caption className="hrl-sr">آخر حركات رصيدي مرتبة من الأحدث</caption>
                 <thead>
                   <tr>
                     <th scope="col">التاريخ</th>
@@ -327,7 +327,7 @@ export const MyLeaveSection: React.FC = () => {
                     <th scope="col">الأيام</th>
                     <th scope="col">الرصيد بعد</th>
                     <th scope="col">الوصف</th>
-                    <th scope="col">مَن</th>
+                    <th scope="col">من سجلها</th>
                   </tr>
                 </thead>
                 <tbody>

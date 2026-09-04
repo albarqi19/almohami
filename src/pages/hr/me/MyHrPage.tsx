@@ -53,9 +53,9 @@ type Section = {
  * سؤالٌ شهريّ، والقسيمةُ والخطابُ حاجةٌ تعرض.
  */
 const SECTIONS: readonly Section[] = [
-  { key: 'attendance', label: 'حضوري', hint: 'البصمةُ وأيّامي', Icon: Fingerprint },
-  { key: 'leave', label: 'إجازاتي', hint: 'الرصيدُ والطلب', Icon: CalendarDays },
-  { key: 'pay', label: 'راتبي ووثائقي', hint: 'القسائمُ والخطابات', Icon: Wallet },
+  { key: 'attendance', label: 'حضوري', hint: 'البصمة وأيامي', Icon: Fingerprint },
+  { key: 'leave', label: 'إجازاتي', hint: 'الرصيد والطلب', Icon: CalendarDays },
+  { key: 'pay', label: 'راتبي ووثائقي', hint: 'القسائم والخطابات', Icon: Wallet },
 ];
 
 export const MyHrPage: React.FC = () => {
@@ -92,14 +92,14 @@ export const MyHrPage: React.FC = () => {
     <div className="hrl-page">
       <header className="hrl-head">
         <div className="hrl-head__id">
-          <h1 className="hrl-h1">ملفّي الوظيفيّ</h1>
+          <h1 className="hrl-h1">ملفي الوظيفي</h1>
           {/* المسمّى والقسمُ يعيشان على `employee_profiles` ولا يصلان في `/auth/me` —
               فلا يُعرضان ولا تُكتب مكانَهما شرطة. */}
           <p className="hrl-sub">{user?.name}</p>
         </div>
       </header>
 
-      <div className="myhr-nav" role="tablist" aria-label="أقسامُ ملفّي الوظيفيّ">
+      <div className="myhr-nav" role="tablist" aria-label="أقسام ملفي الوظيفي">
         {SECTIONS.map((section, index) => {
           const selected = section.key === active;
           return (

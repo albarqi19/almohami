@@ -52,17 +52,17 @@ export const ClaimModal: React.FC<Props> = ({ defaultDate, defaultKind, onClose,
     const clean = reason.trim();
 
     if (clean.length < MIN_REASON) {
-      toast.error(`اكتب سبباً لا يقلّ عن ${MIN_REASON} أحرف.`);
+      toast.error(`اكتب سببا لا يقل عن ${MIN_REASON} أحرف.`);
       return;
     }
 
     if (end < start) {
-      toast.error('تاريخُ النهاية قبل البداية — اضبط المدى.');
+      toast.error('تاريخ النهاية قبل البداية. اضبط المدى.');
       return;
     }
 
     if (isMissingPunch && inAt === '' && outAt === '') {
-      toast.error('اكتب وقتَ الدخول أو الخروج الذي نسيتَ تسجيله.');
+      toast.error('اكتب وقت الدخول أو الخروج الذي نسيت تسجيله.');
       return;
     }
 
@@ -77,7 +77,7 @@ export const ClaimModal: React.FC<Props> = ({ defaultDate, defaultKind, onClose,
         idempotency_key: idempotencyKey,
       });
 
-      toast.success('أُرسل طلبُك — سيظهر لمدير المكتب للاعتماد.');
+      toast.success('تم إرسال طلبك. سيظهر لمدير المكتب للاعتماد.');
       onDone();
       onClose();
     } catch (e) {
@@ -89,7 +89,7 @@ export const ClaimModal: React.FC<Props> = ({ defaultDate, defaultKind, onClose,
     <div className="hr-modal-overlay" onClick={onClose}>
       <div className="hr-modal hra-modal" onClick={(e) => e.stopPropagation()}>
         <div className="hr-modal__h">
-          <h3>هذا اليومُ غير صحيح</h3>
+          <h3>هذا اليوم غير صحيح</h3>
           <button type="button" className="hr-icon-btn" onClick={onClose} aria-label="إغلاق">
             <X size={18} />
           </button>
@@ -97,7 +97,7 @@ export const ClaimModal: React.FC<Props> = ({ defaultDate, defaultKind, onClose,
 
         <div className="hr-modal__b">
           <div className="hr-field">
-            <label id="hra-kind-l">ما الذي وقع فعلاً؟ *</label>
+            <label id="hra-kind-l">ما الذي حدث فعلا؟ *</label>
             <div className="hra-kinds" role="group" aria-labelledby="hra-kind-l">
               {KINDS.map((item) => (
                 <button
@@ -141,7 +141,7 @@ export const ClaimModal: React.FC<Props> = ({ defaultDate, defaultKind, onClose,
           {isMissingPunch && (
             <div className="hr-field hr-field--row">
               <div className="hr-field">
-                <label htmlFor="hra-claim-in">وقتُ الدخول</label>
+                <label htmlFor="hra-claim-in">وقت الدخول</label>
                 <input
                   id="hra-claim-in"
                   type="time"
@@ -150,7 +150,7 @@ export const ClaimModal: React.FC<Props> = ({ defaultDate, defaultKind, onClose,
                 />
               </div>
               <div className="hr-field">
-                <label htmlFor="hra-claim-out">وقتُ الخروج</label>
+                <label htmlFor="hra-claim-out">وقت الخروج</label>
                 <input
                   id="hra-claim-out"
                   type="time"
@@ -176,8 +176,8 @@ export const ClaimModal: React.FC<Props> = ({ defaultDate, defaultKind, onClose,
           </div>
 
           <p className="hra-hint">
-            الطلبُ يذهب لمدير المكتب. ونافذةُ التصحيح محدودةٌ بأيامٍ قليلةٍ من تاريخ اليوم —
-            وما تجاوزها يردّه الخادمُ برسالةٍ تشرح.
+            الطلب يذهب لمدير المكتب. ونافذة التصحيح محدودة بأيام قليلة من تاريخ اليوم،
+            وما تجاوزها يرده الخادم برسالة توضح السبب.
           </p>
         </div>
 
@@ -189,7 +189,7 @@ export const ClaimModal: React.FC<Props> = ({ defaultDate, defaultKind, onClose,
             onClick={() => { void submit(); }}
             disabled={create.isPending}
           >
-            {create.isPending ? 'جارٍ الإرسال…' : 'أرسِل الطلب'}
+            {create.isPending ? 'جارٍ الإرسال…' : 'أرسل الطلب'}
           </button>
         </div>
       </div>

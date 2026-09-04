@@ -78,20 +78,20 @@ export const AttendanceSetupBanner: React.FC<Props> = ({
           {unhealthy && summary !== null ? (
             <>
               <p className="hra-banner__t">
-                <span dir="ltr">{fmtRatio(ratio)}</span> من أيام العمل المحتسَبة بلا سجلّ —
-                الخللُ غالباً في الإعدادات لا في الموظفين.
+                <span dir="ltr">{fmtRatio(ratio)}</span> من أيام العمل المحتسبة بلا سجل. الخلل
+                غالبا في الإعدادات لا في الموظفين.
               </p>
               <p className="hra-banner__d">
-                {daysWord(noRecord)} بلا سجلّ من {fmtCount(summary.expected_work_days)} يومَ عملٍ
-                محتسَب
-                {notTracked > 0 ? ` · و${daysWord(notTracked)} على ملفّاتٍ خارجَ التتبّع` : ''}.
+                {daysWord(noRecord)} بلا سجل من {fmtCount(summary.expected_work_days)} يوم عمل
+                محتسب
+                {notTracked > 0 ? ` · و${daysWord(notTracked)} على ملفات خارج التتبع` : ''}.
                 {reasons.length === 0
-                  ? ' راجِع جدولَ الدوام وإسنادَه، والتقويمَ الرسميّ، وقائمةَ مَن يبصم — قبل أيّ تشديد.'
+                  ? ' راجع جدول الدوام وإسناده، والتقويم الرسمي، وقائمة من يسجل الحضور، قبل أي تشديد.'
                   : ''}
               </p>
             </>
           ) : (
-            <p className="hra-banner__t">أمورٌ في التهيئة تستحقّ نظرةً — ولا شيءَ منها يمنع العمل.</p>
+            <p className="hra-banner__t">أمور في التهيئة تحتاج مراجعة. لا شيء منها يمنع العمل.</p>
           )}
 
           {reasons.length > 0 && (
@@ -133,12 +133,12 @@ export const AttendanceSetupBanner: React.FC<Props> = ({
         <div className="hra-banner__body">
           <p className="hra-banner__t">
             {truncated
-              ? 'الطابورُ أطولُ مما تعرضه الشاشة — ضيّق المدى لتراه كاملاً.'
-              : 'أيامُ آخر ' + (silenceHours ?? 0) + ' ساعةً لا تظهر هنا بعد.'}
+              ? 'القائمة أطول مما تعرضه الشاشة. قلص المدة لتراها كاملة.'
+              : 'أيام آخر ' + (silenceHours ?? 0) + ' ساعة لا تظهر هنا بعد.'}
           </p>
           <p className="hra-banner__d">
-            نافذةُ صمتٍ مقصودة: التقريرُ الطبيُّ يصل بعد يومين، والإجازةُ تُسجَّل بأثرٍ رجعيّ —
-            فلا يظهر اليومُ حتى يكتمل بيانُه.
+            مهلة انتظار مقصودة: التقرير الطبي يصل بعد يومين، والإجازة تسجل بأثر رجعي، فلا يظهر
+            اليوم حتى يكتمل بيانه.
           </p>
         </div>
       </div>

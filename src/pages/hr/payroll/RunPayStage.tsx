@@ -31,18 +31,18 @@ import type {
  */
 
 const STATE_LABELS: Record<PaymentState, string> = {
-  pending: 'لم يُرسَل',
-  sent: 'أُرسل للبنك',
+  pending: 'غير مرسل',
+  sent: 'مرسل للبنك',
   confirmed: 'وصل',
   failed: 'لم يصل',
   held: 'موقوف',
 };
 
 const SKIP_REASONS: Record<string, string> = {
-  no_iban: 'بلا آيبان — أضِفه في سجلّ الأجور',
-  already_confirmed: 'مؤكَّدٌ سلفاً — ولا يُصرف مرّتين',
+  no_iban: 'بلا آيبان. أضفه في سجل الأجور',
+  already_confirmed: 'مؤكد بالفعل. لا يصرف مرتين',
   not_computed: 'بلا احتساب',
-  held: 'موقوفٌ بقرار — لا يُصرف ضمن الدفعة',
+  held: 'موقوف بقرار. لا يصرف ضمن الدفعة',
 };
 
 const todayInRiyadh = (): string => {
@@ -79,14 +79,14 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
       <section className="hrl-block" aria-labelledby="pay-locked-h">
         <header className="hrl-block__h">
           <h2 className="hrl-block__t" id="pay-locked-h">
-            <Lock size={14} /> مبالغُ الصرف محجوبة
+            <Lock size={14} /> مبالغ الصرف محجوبة
           </h2>
         </header>
 
         <div className="hrl-block__b">
           <p className="hrl-hint">
-            شاشةُ الدفع تعرض صافيَ كلّ فردٍ وحسابَه البنكيّ، وهي خلف صلاحيةِ أجرِ الأفراد نفسِها —
-            ولا يصلك صفٌّ واحدٌ منها، لا مصفَّراً ولا محجوبَ الحقول.
+            شاشة الدفع تعرض صافي كل موظف وحسابه البنكي، وهي تحتاج صلاحية عرض أجور الموظفين.
+            لا يظهر لك أي سجل منها.
           </p>
         </div>
       </section>
@@ -102,7 +102,7 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
       setNote(await fn());
       onChanged();
     } catch (caught) {
-      setError(errorText(caught, 'تعذّر تنفيذُ الإجراء.'));
+      setError(errorText(caught, 'تعذر تنفيذ الإجراء.'));
     } finally {
       setBusy(false);
     }
@@ -118,7 +118,7 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
 
       setPicked([]);
 
-      return `أُكّد صرفُ ${result.confirmed.length} سطراً بمجموع ${money(result.total) ?? '—'} ر.س.`;
+      return `تم تأكيد صرف ${result.confirmed.length} من التحويلات بمجموع ${money(result.total) ?? '—'} ر.س.`;
     });
 
   return (
@@ -128,7 +128,7 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
         <section className="hrl-block" aria-labelledby="pay-failed-h">
           <header className="hrl-block__h">
             <h2 className="hrl-block__t" id="pay-failed-h">
-              <AlertTriangle size={14} /> لم يصل {failed.length} تحويلاً — والمبلغُ ما زال مستحقّاً
+              <AlertTriangle size={14} /> لم يصل {failed.length} من التحويلات، والمبالغ ما زالت مستحقة
             </h2>
             {canPay && (
               <button
@@ -139,11 +139,11 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
                   void act(async () => {
                     const result = await hrPayrollService.sweepUnpaid(data.run.id, {});
 
-                    return `فُتح المسيرُ الاستثنائيّ ${result.run.run_number ?? ''} بـ${result.carried.length} مستحقّاً.`;
+                    return `تم فتح المسير الاستثنائي ${result.run.run_number ?? ''} بـ${result.carried.length} من المستحقات.`;
                   })
                 }
               >
-                <RefreshCw size={12} /> اجرفها إلى مسيرٍ استثنائيّ
+                <RefreshCw size={12} /> انقلها إلى مسير استثنائي
               </button>
             )}
           </header>
@@ -161,11 +161,11 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
                     </span>
                   </div>
 
-                  <p className="hrp-pay__why">{row.payment_failed_reason ?? 'لم يُسجَّل سببٌ للرفض.'}</p>
+                  <p className="hrp-pay__why">{row.payment_failed_reason ?? 'لم يتم تسجيل سبب للرفض.'}</p>
 
                   <div className="hrp-pay__f-act">
                     <span className="hrl-row__meta">
-                      المستحقُّ في الدفتر <span dir="ltr">{money(row.payable_balance) ?? '—'}</span> ر.س
+                      المستحق في السجل <span dir="ltr">{money(row.payable_balance) ?? '—'}</span> ر.س
                     </span>
                     {canPay && (
                       <button
@@ -174,7 +174,7 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
                         disabled={busy || reference.trim().length < 2}
                         onClick={() => void confirmPicked([row.line_id])}
                       >
-                        <RefreshCw size={12} /> أعد المحاولة ⟵ وصل بمرجعٍ جديد
+                        <RefreshCw size={12} /> أكد وصوله بمرجع جديد
                       </button>
                     )}
                   </div>
@@ -183,8 +183,8 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
             </ul>
 
             <p className="hrl-hint">
-              ولا زرَّ «ألغِ الدفعة» في هذه الشاشة: دفعةٌ مؤكَّدةٌ واقعةٌ وقعت، والبديلُ الصادق
-              تسجيلُ استرداد أو مسيرٌ تصحيحيّ.
+              لا يوجد زر «إلغاء الدفعة» في هذه الشاشة. الدفعة المؤكدة لا تلغى، والبديل تسجيل
+              استرداد أو فتح مسير تصحيحي.
             </p>
           </div>
         </section>
@@ -211,14 +211,14 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
                   });
 
                   return result.skipped.length === 0
-                    ? `وُسم ${result.sent} تحويلاً بأنّه أُرسل للبنك — ولم يُصرف ريالٌ بعد.`
-                    : `أُرسل ${result.sent}، ولم يُرسَل ${result.skipped
+                    ? `تم تسجيل إرسال ${result.sent} من التحويلات للبنك. ولم يتم صرف أي مبلغ بعد.`
+                    : `تم إرسال ${result.sent}، ولم يتم إرسال ${result.skipped
                         .map((row) => `${row.name} (${SKIP_REASONS[row.reason] ?? row.reason})`)
                         .join('، ')}.`;
                 })
               }
             >
-              <Send size={12} /> أُرسل الملفُّ للبنك
+              <Send size={12} /> سجل إرسال الملف للبنك
             </button>
           )}
         </header>
@@ -227,7 +227,7 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
           <div className="hrl-block__b">
             <div className="hrl-formula">
               <span className="hrl-formula__term hrl-formula__term--static">
-                <span className="hrl-formula__k">صُرف</span>
+                <span className="hrl-formula__k">المصروف</span>
                 <span className="hrl-formula__v" dir="ltr">
                   {money(data.totals.paid_amount)}
                 </span>
@@ -249,8 +249,8 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
             </div>
 
             <p className="hrl-hint">
-              الدفترُ ينقص عند تأكيد الصرف لا عند الاعتماد: ما لم يصل يبقى ديناً على المكتب في
-              سلسلة المستحقّات، فلا يضيع مستحقٌّ لأنّ تحويلاً فشل.
+              ينقص الرصيد في السجل عند تأكيد الصرف لا عند الاعتماد. ما لم يصل يبقى في ذمة
+              المكتب ضمن سلسلة المستحقات، فلا يضيع أي مستحق بسبب فشل التحويل.
             </p>
           </div>
         )}
@@ -259,19 +259,19 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
           <div className="hrl-block__b">
             <div className="hrp-pay__form">
               <label className="hrp-pay__l" htmlFor="pay-ref">
-                مرجعُ الحوالة
+                مرجع الحوالة
               </label>
               <input
                 id="pay-ref"
                 className="hrl-ctrl"
                 value={reference}
                 maxLength={120}
-                placeholder="رقمُ العملية في كشف البنك"
+                placeholder="رقم العملية في كشف البنك"
                 onChange={(event) => setReference(event.target.value)}
               />
 
               <label className="hrp-pay__l" htmlFor="pay-on">
-                تاريخُ الصرف
+                تاريخ الصرف
               </label>
               <input
                 id="pay-on"
@@ -287,7 +287,7 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
                 disabled={busy || picked.length === 0 || reference.trim().length < 2}
                 onClick={() => void confirmPicked(picked)}
               >
-                {busy ? <Loader2 size={13} /> : <CheckCircle2 size={13} />} أكّد وصولَ المحدَّد
+                {busy ? <Loader2 size={13} /> : <CheckCircle2 size={13} />} أكد وصول المحدد
                 {picked.length === 0 ? '' : ` (${picked.length})`}
               </button>
 
@@ -297,13 +297,12 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
                 disabled={busy || open.length === 0 || reference.trim().length < 2}
                 onClick={() => void confirmPicked(open.map((row) => row.line_id))}
               >
-                أكّد وصولَ الجميع
+                أكد وصول الجميع
               </button>
             </div>
 
             <p className="hrl-hint">
-              المرجعُ إلزاميٌّ ويُسجَّل باسمك: صرفٌ بلا مرجعٍ بنكيٍّ لا يُطابَق بكشف حسابٍ ولا
-              يُثبَت عند نزاع.
+              المرجع إلزامي ويسجل باسمك. الصرف بلا مرجع بنكي لا يمكن مطابقته بكشف الحساب.
             </p>
           </div>
         )}
@@ -326,11 +325,11 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
           <table className="hrl-table hrp-roster">
             <thead>
               <tr>
-                <th scope="col">المنسوب</th>
+                <th scope="col">الموظف</th>
                 <th scope="col">الصافي</th>
                 <th scope="col">الحساب</th>
-                <th scope="col">حالةُ التحويل</th>
-                <th scope="col">المستحقُّ في الدفتر</th>
+                <th scope="col">حالة التحويل</th>
+                <th scope="col">المستحق في السجل</th>
                 <th scope="col">إجراء</th>
               </tr>
             </thead>
@@ -370,7 +369,7 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
                 className="hrl-ctrl"
                 value={failReason}
                 maxLength={255}
-                placeholder="انسخ نصَّ رفض البنك كما ورد"
+                placeholder="انسخ نص رفض البنك كما ورد"
                 onChange={(event) => setFailReason(event.target.value)}
               />
 
@@ -387,15 +386,15 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
                     setFailFor(null);
                     setFailReason('');
 
-                    return 'سُجّل الفشل — والمبلغُ يبقى مستحقّاً ويظهر في الكتلة أعلى الشاشة.';
+                    return 'تم تسجيل الفشل. يبقى المبلغ ضمن المستحقات ويظهر ضمن التحويلات التي لم تصل أعلى الشاشة.';
                   })
                 }
               >
-                سجّل الفشل
+                سجل الفشل
               </button>
 
               <button type="button" className="hr-btn hr-btn--sm" disabled={busy} onClick={() => setFailFor(null)}>
-                تراجَع
+                تراجع
               </button>
             </div>
           </div>
@@ -403,7 +402,7 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
 
         {data.run.posting_state === 'accounting_off' && (
           <div className="hrl-block__b">
-            <p className="hrl-hint">لم يُقيَّد هذا المسيرُ محاسبياً — محاسبةُ المكتب غيرُ مفعّلة.</p>
+            <p className="hrl-hint">لم يتم قيد هذا المسير في المحاسبة. محاسبة المكتب غير مفعلة.</p>
           </div>
         )}
       </section>
@@ -430,7 +429,7 @@ const Row: React.FC<{
           {row.name}
         </button>
         {row.sweep_of_line_id !== null && (
-          <span className="hrl-row__meta">محمولٌ من مسيرٍ سابقٍ لم يصل فيه تحويلُه</span>
+          <span className="hrl-row__meta">محمول من مسير سابق لم يصل فيه تحويله</span>
         )}
       </th>
       <td dir="ltr">{money(row.net_amount) ?? '—'}</td>
@@ -458,7 +457,7 @@ const Row: React.FC<{
             </button>
           </span>
         )}
-        {confirmed && <span className="hrl-row__meta">صُرف — ولا يُلغى</span>}
+        {confirmed && <span className="hrl-row__meta">مصروف ولا يلغى</span>}
       </td>
     </tr>
   );

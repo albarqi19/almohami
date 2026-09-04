@@ -108,8 +108,8 @@ export const ConvertLegacyModal: React.FC<Props> = ({
 
         toast.success(
           data.will_deduct
-            ? `حُوّل الطلبُ وخُصم ${fmtDays(data.leave.duration_days)} يوماً — الرصيد الآن ${fmtDays(data.balance.after)}.`
-            : 'حُوّل الطلبُ وسُجّل بلا خصم — الرصيدُ الافتتاحيّ يشمله سلفاً.'
+            ? `تم تحويل الطلب وخصم ${fmtDays(data.leave.duration_days)} يوماً. الرصيد الآن ${fmtDays(data.balance.after)}.`
+            : 'تم تحويل الطلب وتسجيله بلا خصم. الرصيد الافتتاحي يشمله مسبقاً.'
         );
 
         if (onConverted) onConverted();
@@ -138,7 +138,7 @@ export const ConvertLegacyModal: React.FC<Props> = ({
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="hr-modal__h">
-          <h3 id={titleId}>تحويل طلبٍ إداريٍّ إلى سجلّ الإجازات</h3>
+          <h3 id={titleId}>تحويل طلب إداري إلى سجل الإجازات</h3>
           <button type="button" className="hr-icon-btn" onClick={onClose} aria-label="إغلاق">
             <X size={18} />
           </button>
@@ -148,23 +148,23 @@ export const ConvertLegacyModal: React.FC<Props> = ({
           {!canManage ? (
             <div className="hrl-state hrl-state--locked">
               <Lock size={22} />
-              <p className="hrl-state__t">التحويل محميّ</p>
+              <p className="hrl-state__t">التحويل محمي</p>
               <p className="hrl-state__d">
-                كتابةُ واقعةٍ في دفتر الإجازات تحتاج صلاحية «إدارة الإجازات» (hr.leave.manage) — وهي
-                غيرُ صلاحية اعتماد «الطلبات الإدارية». اطلبها من مدير المكتب.
+                تسجيل إجازة في سجل الإجازات يحتاج صلاحية «إدارة الإجازات» (hr.leave.manage). وهي
+                تختلف عن صلاحية اعتماد «الطلبات الإدارية». اطلبها من مدير المكتب.
               </p>
             </div>
           ) : (
             <>
               {/* ═══ الطلبُ القديم كما ورد — بلا استنتاجِ نوعٍ من نصّه ═══ */}
               <section className="hrl-fset">
-                <h4 className="hrl-fset__t">الطلبُ الإداريّ</h4>
+                <h4 className="hrl-fset__t">الطلب الإداري</h4>
 
                 <dl className="hrl-kv">
-                  <dt>المنسوب</dt>
-                  <dd>{employeeName || `منسوب #${employeeId}`}</dd>
+                  <dt>الموظف</dt>
+                  <dd>{employeeName || `موظف #${employeeId}`}</dd>
 
-                  <dt>نوعُ الطلب كما ورد</dt>
+                  <dt>نوع الطلب كما ورد</dt>
                   <dd>{row.type_name || EMPTY_MARK}</dd>
 
                   <dt>المدى</dt>
@@ -178,20 +178,20 @@ export const ConvertLegacyModal: React.FC<Props> = ({
 
                   {preview?.admin_request.reason && (
                     <>
-                      <dt>السببُ المكتوب</dt>
+                      <dt>السبب المكتوب</dt>
                       <dd>{preview.admin_request.reason}</dd>
                     </>
                   )}
                 </dl>
 
                 <p className="hrl-hint">
-                  السببُ نصٌّ حرٌّ كتبه الموظف، ولا يُشتقُّ منه نوعُ الإجازة — اقرأه واختر النوعَ بنفسك.
+                  السبب نص حر كتبه الموظف، ولا يحدد منه نوع الإجازة. اقرأه واختر النوع بنفسك.
                 </p>
               </section>
 
               {/* ═══ النوع — مُقترَحٌ لا مفروض ═══ */}
               <section className="hrl-fset">
-                <h4 className="hrl-fset__t">النوعُ في سجلّ الإجازات</h4>
+                <h4 className="hrl-fset__t">النوع في سجل الإجازات</h4>
 
                 <div className="hr-field">
                   <label htmlFor="hrl-convert-type">النوع *</label>
@@ -203,19 +203,19 @@ export const ConvertLegacyModal: React.FC<Props> = ({
                     {types.map((type) => (
                       <option key={type.id} value={type.id}>
                         {type.name}
-                        {type.id === suggested?.id ? ' (مُقترَح)' : ''}
+                        {type.id === suggested?.id ? ' (مقترَح)' : ''}
                       </option>
                     ))}
                   </select>
                   <span className="hrl-hint">
-                    المدّةُ تُحسب بقواعد هذا النوع (أيامُ عملٍ أو أيامُ تقويم) لا بفرق التاريخين.
+                    المدة تحسب بقواعد هذا النوع (أيام عمل أو أيام تقويم) لا بفرق التاريخين.
                   </span>
                 </div>
               </section>
 
               {/* ═══ الأثر — الرقمُ قبل الفعل ═══ */}
               <section className="hrl-fset">
-                <h4 className="hrl-fset__t">الأثرُ على الرصيد</h4>
+                <h4 className="hrl-fset__t">الأثر على الرصيد</h4>
 
                 {previewQuery.isPending && (
                   <div className="hrl-state hrl-state--loading" aria-busy="true">
@@ -227,8 +227,8 @@ export const ConvertLegacyModal: React.FC<Props> = ({
                 {previewQuery.isError && (
                   <div className="hrl-state hrl-state--error">
                     <AlertTriangle size={20} />
-                    <p className="hrl-state__t">تعذّرت المعاينة</p>
-                    <p className="hrl-state__d">{errorText(previewQuery.error, 'انقطعَ الاتصال بالخادم.')}</p>
+                    <p className="hrl-state__t">تعذرت المعاينة</p>
+                    <p className="hrl-state__d">{errorText(previewQuery.error, 'انقطع الاتصال بالخادم.')}</p>
                     <button type="button" className="hr-btn hr-btn--sm" onClick={() => void previewQuery.refetch()}>
                       <RefreshCw size={13} /> إعادة المحاولة
                     </button>
@@ -238,22 +238,22 @@ export const ConvertLegacyModal: React.FC<Props> = ({
                 {preview && (
                   <>
                     <dl className="hrl-kv">
-                      <dt>المدّةُ المحسوبة (بقواعد النوع)</dt>
+                      <dt>المدة المحسوبة (بقواعد النوع)</dt>
                       <dd>{fmtDays(preview.duration_days)} يوم</dd>
 
-                      <dt>أيامُ التقويم في المدى</dt>
+                      <dt>أيام التقويم في المدى</dt>
                       <dd>{preview.duration.calendar_days} يوم</dd>
                     </dl>
                     {/* لا يُذكر إلا ما استُثني فعلاً: «و٠ عطلةً رسميّة» صفرٌ يُقرأ ولا يعني شيئاً. */}
                     {preview.duration.excluded_weekend_days + preview.duration.excluded_holiday_days > 0 && (
                       <p className="hrl-hint">
-                        فرقُ اليوم أنّ هذا النوع يُحسب بأيام العمل — استُثني{' '}
+                        الفرق أن هذا النوع يحسب بأيام العمل، وتم استثناء{' '}
                         {[
                           preview.duration.excluded_weekend_days > 0
                             ? `${preview.duration.excluded_weekend_days} من نهاية الأسبوع`
                             : null,
                           preview.duration.excluded_holiday_days > 0
-                            ? `${preview.duration.excluded_holiday_days} من العطل الرسميّة`
+                            ? `${preview.duration.excluded_holiday_days} من العطل الرسمية`
                             : null,
                         ]
                           .filter(Boolean)
@@ -270,14 +270,14 @@ export const ConvertLegacyModal: React.FC<Props> = ({
                       {preview.opening.recorded ? <Wallet size={13} /> : <AlertTriangle size={13} />}
                       <span>
                         <span className="hrl-flag__t">
-                          الرصيدُ الافتتاحيُّ لهذا المنسوب: {OPENING_BASIS_LABELS[preview.opening.basis]}
+                          الرصيد الافتتاحي لهذا الموظف: {OPENING_BASIS_LABELS[preview.opening.basis]}
                         </span>
                         <span className="hrl-flag__hint">
                           {preview.opening.recorded
-                            ? `اختِير عند التهيئة${
+                            ? `تم اختياره عند التهيئة${
                                 preview.opening.opening_date ? ` بتاريخ ${fmtLeaveDate(preview.opening.opening_date)}` : ''
-                              }، ويحكم كلَّ تحويلٍ لهذا المنسوب.`
-                            : 'قيدُ الافتتاح كُتب قبل أن يوجد هذا الاختيار — فيُقرأ «المتبقّي اليوم» لأن شاشةَ التهيئة كانت تطلب المتبقّي. القراءةُ مستنتَجةٌ لا قرارٌ مكتوب.'}
+                              }، ويسري على كل تحويل لهذا الموظف.`
+                            : 'تم تسجيل القيد الافتتاحي قبل وجود هذا الاختيار، فيظهر «المتبقي اليوم» لأن شاشة التهيئة كانت تطلب المتبقي. هذه القراءة مستنتَجة ولم تسجل صراحة.'}
                         </span>
                       </span>
                     </p>
@@ -320,7 +320,7 @@ export const ConvertLegacyModal: React.FC<Props> = ({
                     checked={acknowledge}
                     onChange={(event) => setAcknowledge(event.target.checked)}
                   />
-                  أُقِرُّ بأنّ سجلّي يقول إنّه أخذ أكثرَ من استحقاقه — سجّل الرصيدَ سالباً.
+                  أؤكد أن سجلي يبين أن الموظف أخذ أكثر من استحقاقه. سجل الرصيد سالباً.
                 </label>
               )}
             </>
@@ -342,8 +342,8 @@ export const ConvertLegacyModal: React.FC<Props> = ({
               {mutation.isPending
                 ? 'جارٍ التحويل…'
                 : preview?.will_deduct
-                  ? `حوّل واخصم ${fmtDays(preview.duration_days)} يوماً`
-                  : 'حوّل وسجّل بلا خصم'}
+                  ? `حول واخصم ${fmtDays(preview.duration_days)} يوماً`
+                  : 'حول وسجل بلا خصم'}
             </button>
           )}
         </div>

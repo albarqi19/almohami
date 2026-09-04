@@ -283,19 +283,19 @@ export const RecordLeaveModal: React.FC<Props> = ({
 
   const submit = (keepOpen: boolean) => {
     if (!mayManage) {
-      toast.error('تسجيلُ الوقائع يحتاج صلاحية «إدارة الإجازات».');
+      toast.error('تسجيل الغياب والإجازات يحتاج صلاحية «إدارة الإجازات».');
       return;
     }
     if (target === null) {
-      toast.error('اختر المنسوب أولاً.');
+      toast.error('اختر الموظف أولا.');
       return;
     }
     if (typeId === null) {
-      toast.error('اختر نوع الواقعة.');
+      toast.error('اختر نوع الإجازة أو الغياب.');
       return;
     }
     if (!startDate || !endDate) {
-      toast.error('حدّد تاريخي البداية والنهاية.');
+      toast.error('اختر تاريخ البداية والنهاية.');
       return;
     }
     if (selectedType?.requires_reason && reason.trim() === '') {
@@ -317,9 +317,9 @@ export const RecordLeaveModal: React.FC<Props> = ({
           const after = result.balance.after;
           const balanceText =
             before !== null && after !== null ? ` · الرصيد ${fmtDays(before)} ← ${fmtDays(after)}` : '';
-          const createdText = result.profile_created ? ' · وأُنشئ ملفُّ موارد بشرية' : '';
+          const createdText = result.profile_created ? ' · وتم إنشاء ملف موارد بشرية' : '';
 
-          toast.success(`سُجِّلت الواقعة — ${days} يوماً${balanceText}${createdText}`);
+          toast.success(`تم التسجيل · ${days} يوما${balanceText}${createdText}`);
           (result.warnings ?? []).forEach((w) => toast.info(w.message));
 
           void queryClient.invalidateQueries({ queryKey: ['hr', 'leave'] });
@@ -340,7 +340,7 @@ export const RecordLeaveModal: React.FC<Props> = ({
         },
         onError: (error) => {
           // المفتاحُ **لا يُجدَّد** هنا: إعادةُ المحاولة بنفسه لا تُنشئ صفّاً ثانياً.
-          toast.error(errorText(error, 'فشل تسجيل الواقعة'));
+          toast.error(errorText(error, 'فشل التسجيل'));
         },
       }
     );
@@ -376,13 +376,13 @@ export const RecordLeaveModal: React.FC<Props> = ({
         <div className="hr-modal__b">
           {/* ═══ ١) الهدف ═══ */}
           <section className="hrl-fset">
-            <h4 className="hrl-fset__t">المنسوب</h4>
+            <h4 className="hrl-fset__t">الموظف</h4>
 
             {target !== null && !picking ? (
               <p className="hrl-ident">
                 <span>
                   {target.name}
-                  {target.kind === 'user' ? ' — بلا ملفِّ موارد بشرية' : ''}
+                  {target.kind === 'user' ? ' (بلا ملف موارد بشرية)' : ''}
                 </span>
                 <button type="button" className="hrl-link" onClick={() => setPicking(true)}>
                   تغيير
@@ -396,9 +396,9 @@ export const RecordLeaveModal: React.FC<Props> = ({
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="ابحث بالاسم…"
-                  aria-label="بحث عن منسوب"
+                  aria-label="بحث عن موظف"
                 />
-                <div className="hrl-combo__list" role="listbox" aria-label="المنسوبون">
+                <div className="hrl-combo__list" role="listbox" aria-label="الموظفون">
                   {profilesQuery.isPending || usersQuery.isPending ? (
                     <div className="hrl-state hrl-state--loading" aria-busy="true">
                       <span className="hrl-skel" />
@@ -407,7 +407,7 @@ export const RecordLeaveModal: React.FC<Props> = ({
                     </div>
                   ) : null}
 
-                  {profiles.length > 0 && <p className="hrl-combo__group">لهم ملفُّ موارد بشرية</p>}
+                  {profiles.length > 0 && <p className="hrl-combo__group">لهم ملف موارد بشرية</p>}
                   {profiles.map((row) => (
                     <button
                       key={`p-${row.id}`}
@@ -425,7 +425,7 @@ export const RecordLeaveModal: React.FC<Props> = ({
                     </button>
                   ))}
 
-                  {unlinkedUsers.length > 0 && <p className="hrl-combo__group">بلا ملفِّ موارد بشرية</p>}
+                  {unlinkedUsers.length > 0 && <p className="hrl-combo__group">بلا ملف موارد بشرية</p>}
                   {unlinkedUsers.map((row) => (
                     <button
                       key={`u-${row.id}`}
@@ -439,7 +439,7 @@ export const RecordLeaveModal: React.FC<Props> = ({
                       }}
                     >
                       <span>{row.name}</span>
-                      <span className="hrl-sub">يُنشأ ملفُّه عند الحفظ</span>
+                      <span className="hrl-sub">يتم إنشاء ملفه عند الحفظ</span>
                     </button>
                   ))}
 
@@ -449,9 +449,9 @@ export const RecordLeaveModal: React.FC<Props> = ({
                     unlinkedUsers.length === 0 && (
                       <div className="hrl-state hrl-state--empty">
                         <p className="hrl-state__t">لا نتيجة</p>
-                        <p className="hrl-state__d">لا منسوبَ يطابق «{search}».</p>
+                        <p className="hrl-state__d">لا يوجد موظف يطابق «{search}».</p>
                         <button type="button" className="hr-btn hr-btn--sm" onClick={() => setSearch('')}>
-                          مسحُ البحث
+                          مسح البحث
                         </button>
                       </div>
                     )}
@@ -461,7 +461,7 @@ export const RecordLeaveModal: React.FC<Props> = ({
 
             {target?.kind === 'user' && (
               <p className="hrl-hint">
-                سيُنشأ ملفُّ موارد بشرية لهذا المنسوب في نفس معاملة التسجيل — والاحتسابُ يظهر بعد الحفظ.
+                سيتم إنشاء ملف موارد بشرية لهذا الموظف في نفس معاملة التسجيل. ويظهر الاحتساب بعد الحفظ.
               </p>
             )}
           </section>
@@ -529,8 +529,8 @@ export const RecordLeaveModal: React.FC<Props> = ({
 
             {startDate !== endDate && (
               <p className="hrl-hint">
-                نصفُ اليوم يُسجَّل على يومٍ واحد — سجّل نصفَ اليوم الأول صفّاً، والأيامَ الكاملة صفّاً،
-                ونصفَ اليوم الأخير صفّاً.
+                نصف اليوم يسجل على يوم واحد. سجل نصف اليوم الأول ثم الأيام الكاملة ثم نصف اليوم الأخير،
+                كل واحد في سجل مستقل.
               </p>
             )}
           </section>
@@ -549,7 +549,7 @@ export const RecordLeaveModal: React.FC<Props> = ({
             {typesQuery.isError && (
               <div className="hrl-state hrl-state--error">
                 <AlertTriangle size={20} />
-                <p className="hrl-state__t">تعذّر جلب أنواع الإجازات</p>
+                <p className="hrl-state__t">تعذر تحميل أنواع الإجازات</p>
                 <button type="button" className="hr-btn hr-btn--sm" onClick={() => void typesQuery.refetch()}>
                   إعادة المحاولة
                 </button>
@@ -557,7 +557,7 @@ export const RecordLeaveModal: React.FC<Props> = ({
             )}
 
             {entitledTypes.length > 0 && (
-              <div className="hrl-typegrid" role="radiogroup" aria-label="نوع الواقعة">
+              <div className="hrl-typegrid" role="radiogroup" aria-label="نوع الإجازة">
                 {entitledTypes.map((type) => (
                   <TypeCell key={type.id} type={type} selected={typeId === type.id} onPick={setTypeId} />
                 ))}
@@ -568,7 +568,7 @@ export const RecordLeaveModal: React.FC<Props> = ({
               <div
                 className="hrl-typegrid hrl-typegrid--absence"
                 role="radiogroup"
-                aria-label="وقائع تأديبية — لا إجازة"
+                aria-label="أنواع الغياب التأديبي"
               >
                 {absenceTypes.map((type) => (
                   <TypeCell key={type.id} type={type} selected={typeId === type.id} onPick={setTypeId} />
@@ -599,7 +599,7 @@ export const RecordLeaveModal: React.FC<Props> = ({
               </p>
             ) : (
               <p className="hrl-hint">
-                يُحسب من الخادم بعد اختيار المنسوب والنوع والمدى — ولا يُدخَل يدوياً.
+                يحسب تلقائيا بعد اختيار الموظف والنوع والمدى، ولا يمكن إدخاله يدويا.
               </p>
             )}
           </section>
@@ -625,7 +625,7 @@ export const RecordLeaveModal: React.FC<Props> = ({
                   <span className="hrl-impact__k">الرصيد</span>
                   <span className="hrl-impact__v" dir="ltr">
                     {preview.data.employee.is_initialized === false
-                      ? 'غير مُهيّأ'
+                      ? 'غير جاهز'
                       : preview.data.balance.before === null || preview.data.balance.after === null
                         ? EMPTY_MARK
                         : `${fmtDays(preview.data.balance.before)} ← ${fmtDays(preview.data.balance.after)}`}
@@ -635,12 +635,12 @@ export const RecordLeaveModal: React.FC<Props> = ({
             ) : (
               <p className="hrl-hint">
                 {profileId === null
-                  ? 'الاحتسابُ يظهر بعد اختيار منسوبٍ له ملفُّ موارد بشرية.'
-                  : 'اختر النوعَ والمدى ليظهر الاحتساب.'}
+                  ? 'يظهر الاحتساب بعد اختيار موظف له ملف موارد بشرية.'
+                  : 'اختر النوع والمدى ليظهر الاحتساب.'}
               </p>
             )}
 
-            {preview.notice && <p className="hrl-hint">{preview.notice} الحفظُ يبقى متاحاً — الخادمُ يعيد الاحتساب تحت القفل.</p>}
+            {preview.notice && <p className="hrl-hint">{preview.notice} الحفظ يبقى متاحا، ويعاد الاحتساب عند الحفظ.</p>}
           </section>
 
           {/* ═══ ٦) السبب والمرفق ═══ */}
@@ -656,7 +656,7 @@ export const RecordLeaveModal: React.FC<Props> = ({
                   value={eventDate}
                   onChange={(event) => setEventDate(event.target.value)}
                 />
-                <span className="hrl-hint">يُحلّ النظامُ بنسخته يومَ الواقعة لا يومَ التسجيل.</span>
+                <span className="hrl-hint">يطبق النظام بنسخته في تاريخ الواقعة لا في تاريخ التسجيل.</span>
               </div>
             )}
 
@@ -685,7 +685,7 @@ export const RecordLeaveModal: React.FC<Props> = ({
                     <option key={doc.id} value={doc.id}>{doc.title || doc.file_name}</option>
                   ))}
                 </select>
-                <span className="hrl-hint">من مستندات الموظف القائمة — الخزنةُ نفسُها، لا خزنةٌ ثانية.</span>
+                <span className="hrl-hint">من مستندات الموظف القائمة.</span>
               </div>
             )}
 
@@ -741,13 +741,13 @@ export const RecordLeaveModal: React.FC<Props> = ({
             <div className={`hrl-conflict${conflictCount === 0 ? ' hrl-conflict--none' : ''}`}>
               {conflictCount === 0 ? (
                 <p>
-                  <CheckCircle2 size={13} /> لا جلساتِ ولا مهامَّ ولا غياباتٍ متداخلةً في هذه المدة.
+                  <CheckCircle2 size={13} /> لا توجد جلسات ولا مهام ولا غيابات متداخلة في هذه المدة.
                 </p>
               ) : (
                 <>
                   {conflicts.scheduled_sessions.length > 0 && (
                     <details>
-                      <summary>جلساتٌ مجدولة ({conflicts.scheduled_sessions.length})</summary>
+                      <summary>جلسات مجدولة ({conflicts.scheduled_sessions.length})</summary>
                       <ul>
                         {conflicts.scheduled_sessions.map((session) => (
                           <li key={session.id}>
@@ -760,7 +760,7 @@ export const RecordLeaveModal: React.FC<Props> = ({
                   )}
                   {conflicts.pending_tasks.length > 0 && (
                     <details>
-                      <summary>مهامُّ معلّقة ({conflicts.pending_tasks.length})</summary>
+                      <summary>مهام معلقة ({conflicts.pending_tasks.length})</summary>
                       <ul>
                         {conflicts.pending_tasks.map((task) => (
                           <li key={task.id}>
@@ -796,9 +796,9 @@ export const RecordLeaveModal: React.FC<Props> = ({
                   <ArticleRef value={preview.data.statute.article_ref} />
                 </span>
                 {preview.data.statute.effective_from
-                  ? ` — النسخةُ السارية من ${fmtLeaveDate(preview.data.statute.effective_from)}`
+                  ? ` (النسخة السارية من ${fmtLeaveDate(preview.data.statute.effective_from)})`
                   : ''}
-                {preview.data.statute.floor_applied ? ' · رُفع إلى الحدّ النظاميّ' : ''}
+                {preview.data.statute.floor_applied ? ' · تم الرفع إلى الحد النظامي' : ''}
               </span>
             </p>
           )}

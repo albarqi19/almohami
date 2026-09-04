@@ -13,7 +13,7 @@ import type { HrChecklistItem, ChecklistKind } from '../../types/hr';
 const KINDS: ChecklistKind[] = ['onboarding', 'offboarding'];
 
 /** نصٌّ احتياطيٌّ واحدٌ لفرع الخطأ — عرفُ `LeaveTabPanel`. */
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 /** التسميةُ **حرفيةٌ** من `app/Enums/Permission.php:388` — لا صياغةَ فرونتيةً للصلاحية. */
 const MANAGE_LABEL = 'إدارة ملفات الموظفين';
@@ -82,8 +82,8 @@ const OnboardingTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) =
         <div className="hrl-block__b">
           <div className="hrl-state hrl-state--locked">
             <Lock size={20} />
-            <p className="hrl-state__t">قائمةُ المباشرة محميّة</p>
-            <p className="hrl-state__d">عرضُها يتطلّب صلاحية «{MANAGE_LABEL}».</p>
+            <p className="hrl-state__t">قائمة المباشرة محمية</p>
+            <p className="hrl-state__d">عرضها يتطلب صلاحية «{MANAGE_LABEL}».</p>
           </div>
         </div>
       </section>
@@ -117,7 +117,7 @@ const OnboardingTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) =
       return (
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={20} />
-          <p className="hrl-state__t">تعذّر جلب القائمة</p>
+          <p className="hrl-state__t">تعذر تحميل القائمة</p>
           <p className="hrl-state__d">{errorText(checklistQuery.error, CONNECTION_FALLBACK)}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void checklistQuery.refetch()}>
             <RefreshCw size={13} /> إعادة المحاولة
@@ -129,7 +129,7 @@ const OnboardingTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) =
     if (current.length === 0) {
       return (
         <EmptyLine
-          text={`لا بنودَ في «${CHECKLIST_KIND_LABELS[kind]}»`}
+          text={`لا توجد بنود في «${CHECKLIST_KIND_LABELS[kind]}»`}
           // **الشرطُ `all.length === 0` مقصودٌ ولا يُبدَّل بفراغ النوع الحاليّ**: التهيئةُ
           // مرّتين تُضاعف البنود. وحين تسقط التهيئةُ يبقى حقلُ الإضافة أدناه فعلاً حقيقياً.
           action={canManage && all.length === 0 && (
@@ -188,8 +188,8 @@ const OnboardingTab: React.FC<{ id: string; empId: number }> = ({ id, empId }) =
           ولا يُرسَم بلا بندٍ واحد: مقياسٌ فوق قائمةٍ لا وجودَ لها مقياسٌ مخترَع. */}
       {settled && onboarding.length > 0 && (
         <div className="hrl-block__b">
-          <p className="hrl-hint">اكتمال المباشرة — <span dir="ltr">{pct}٪</span></p>
-          <div className={`hrl-meter${pct === 100 ? ' hrl-meter--done' : ''}`} role="img" aria-label={`اكتمالُ المباشرة ${pct}٪`}>
+          <p className="hrl-hint">اكتمال المباشرة: <span dir="ltr">{pct}٪</span></p>
+          <div className={`hrl-meter${pct === 100 ? ' hrl-meter--done' : ''}`} role="img" aria-label={`اكتمال المباشرة ${pct}٪`}>
             <span className="hrl-meter__seg" style={meterVars(1, pct / 100)}>
               <span className="hrl-meter__fill" />
             </span>

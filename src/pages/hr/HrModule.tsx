@@ -32,7 +32,7 @@ const SBA_COLOR: Record<string, string> = {
 };
 
 /** نصٌّ احتياطيٌّ واحدٌ لفرع الخطأ — عرفُ وحدة الإجازات. */
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 /** تسميات الأدوار بالعربية (للعرض في القائمة الجانبية). */
 const ROLE_LABELS: Record<string, string> = {
@@ -126,7 +126,7 @@ const HrModule: React.FC = () => {
   const rosterBody = (() => {
     if (listQuery.isPending) {
       return (
-        <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل المنسوبين">
+        <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل الموظفين">
           {Array.from({ length: 8 }, (_, i) => (
             <span className="hrl-skel" key={i} />
           ))}
@@ -138,7 +138,7 @@ const HrModule: React.FC = () => {
       return (
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={22} />
-          <p className="hrl-state__t">تعذّر جلب المنسوبين</p>
+          <p className="hrl-state__t">تعذر تحميل الموظفين</p>
           <p className="hrl-state__d">{errorText(listQuery.error, CONNECTION_FALLBACK)}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void listQuery.refetch()}>
             <RefreshCw size={13} /> إعادة المحاولة
@@ -151,8 +151,8 @@ const HrModule: React.FC = () => {
       return searching ? (
         <div className="hrl-state hrl-state--empty">
           <SearchX size={22} />
-          <p className="hrl-state__t">لا نتيجةَ لهذا البحث</p>
-          <p className="hrl-state__d">لا منسوبَ يطابق «{search.trim()}».</p>
+          <p className="hrl-state__t">لا نتيجة لهذا البحث</p>
+          <p className="hrl-state__d">لا يوجد موظف يطابق «{search.trim()}».</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={clearSearch}>
             <X size={13} /> امسح البحث
           </button>
@@ -160,11 +160,11 @@ const HrModule: React.FC = () => {
       ) : (
         <div className="hrl-state hrl-state--empty">
           <Users size={22} />
-          <p className="hrl-state__t">لا منسوبين في هذا المكتب بعد</p>
-          <p className="hrl-state__d">يبدأ الملفُّ بأوّل منسوب، ثمّ تُبنى عليه العقودُ والمستنداتُ والإجازات.</p>
+          <p className="hrl-state__t">لا موظفين في هذا المكتب بعد</p>
+          <p className="hrl-state__d">يبدأ الملف بأول موظف، ثم تبنى عليه العقود والمستندات والإجازات.</p>
           {canManage && (
             <button type="button" className="hr-btn hr-btn--sm hr-btn--primary" onClick={() => setShowAdd(true)}>
-              <UserPlus size={13} /> إضافة منسوب
+              <UserPlus size={13} /> إضافة موظف
             </button>
           )}
         </div>
@@ -221,7 +221,7 @@ const HrModule: React.FC = () => {
     <div className="hrl-page hrl-page--wall">
       <div className="hrl-layout">
         {/* العمود اليمين: قائمة المنسوبين */}
-        <nav className="hrl-side" aria-label="المنسوبون">
+        <nav className="hrl-side" aria-label="الموظفون">
           {/* العدسةُ **عنصرٌ شقيقٌ** لا خلفيةٌ مطلقة: يموت هنا العطبُ الفيزيائيُّ الوحيدُ
               في الوحدة (`inset-inline-start` منطقيّ مقابل حشوٍ فيزيائيّ ⇒ الأيقونةُ تركب
               النصَّ يميناً و٣٤px تُهدَر يساراً). والحشوُ كلُّه منطقيٌّ في `.hrl-search`. */}
@@ -230,7 +230,7 @@ const HrModule: React.FC = () => {
             <input
               type="search"
               placeholder="ابحث باسم، رقم وظيفي، أو جوال…"
-              aria-label="بحث في المنسوبين"
+              aria-label="بحث في الموظفين"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             />
@@ -243,13 +243,13 @@ const HrModule: React.FC = () => {
 
           {/* شريطٌ واحدٌ ملتصق: اللوحةُ أوّلاً ثمّ التصفية — و`aria-pressed` تحمل الحالةَ
               بدل صنفِ `--active`، فلا يعرف المحرِّكُ الصوتيُّ المختارَ من الشكل وحدَه. */}
-          <div className="hrl-chips" role="group" aria-label="عرضُ اللوحة وتصفيةُ المنسوبين">
+          <div className="hrl-chips" role="group" aria-label="عرض اللوحة وتصفية الموظفين">
             <button type="button" className="hrl-chip" aria-pressed={selectedId == null} onClick={showOverview}>
               <LayoutDashboard size={13} /> لوحة المكتب
             </button>
             <button type="button" className="hrl-chip" aria-pressed={statusChip === 'all'} onClick={() => setChip('all')}>الكل</button>
             <button type="button" className="hrl-chip" aria-pressed={statusChip === 'active'} onClick={() => setChip('active')}>على رأس العمل</button>
-            <button type="button" className="hrl-chip" aria-pressed={statusChip === 'terminated'} onClick={() => setChip('terminated')}>منتهون</button>
+            <button type="button" className="hrl-chip" aria-pressed={statusChip === 'terminated'} onClick={() => setChip('terminated')}>انتهت خدمتهم</button>
           </div>
 
           {rosterBody}

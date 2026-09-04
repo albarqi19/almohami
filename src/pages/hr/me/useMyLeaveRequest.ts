@@ -29,7 +29,7 @@ export const MY_LEAVE_KEYS = {
 
 export const MY_PREVIEW_DEBOUNCE_MS = 400;
 
-export const MY_PREVIEW_STALE_NOTICE = 'تعذّر تحديث الاحتساب الآن — أعِد المحاولة.';
+export const MY_PREVIEW_STALE_NOTICE = 'تعذر تحديث الاحتساب الآن. أعد المحاولة.';
 
 /** سجلُّ طلباتي وخياراتُ النموذج — ٤٠٤/٤٠٣ نتيجتان نهائيّتان لا أعطالٌ عابرة، فلا إعادةَ محاولة. */
 export function useMyLeaves() {

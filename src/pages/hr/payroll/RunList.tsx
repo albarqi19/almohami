@@ -32,10 +32,10 @@ export const RunList: React.FC<Props> = ({ runs, emptyText }) => {
       <thead>
         <tr>
           <th scope="col">المسير</th>
-          <th scope="col">المدّة</th>
+          <th scope="col">المدة</th>
           <th scope="col">الحالة</th>
           <th scope="col">المشمولون</th>
-          <th scope="col">تاريخُ الصرف</th>
+          <th scope="col">تاريخ الصرف</th>
           <th scope="col">المحاسبة</th>
         </tr>
       </thead>
@@ -44,7 +44,7 @@ export const RunList: React.FC<Props> = ({ runs, emptyText }) => {
           <tr key={run.id}>
             <th scope="row">
               <Link className="hrl-link" to={`/hr/payroll/runs/${run.id}`}>
-                <FileSpreadsheet size={12} /> {run.run_number ?? `مسوّدة #${run.id}`}
+                <FileSpreadsheet size={12} /> {run.run_number ?? `مسودة #${run.id}`}
               </Link>
               <span className="hrl-row__meta">{RUN_TYPE_LABELS[run.run_type] ?? run.run_type}</span>
             </th>
@@ -53,9 +53,9 @@ export const RunList: React.FC<Props> = ({ runs, emptyText }) => {
             </td>
             <td>
               <span className="hrl-badge hrl-badge--flat">{RUN_STAGE_LABELS[run.stage]}</span>
-              {run.self_approved && <span className="hrl-row__meta">اعتمدها معدُّها</span>}
+              {run.self_approved && <span className="hrl-row__meta">معتمد ممن أعده</span>}
               {run.approver_was_subject && (
-                <span className="hrl-row__meta">اعتمدها من صُرف له فيها</span>
+                <span className="hrl-row__meta">معتمد من موظف له قسيمة فيه</span>
               )}
             </td>
             <td>{outOf(run.headcount_included, run.headcount_total)}</td>

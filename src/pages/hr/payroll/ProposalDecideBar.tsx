@@ -60,7 +60,7 @@ export const ProposalDecideBar: React.FC<Props> = ({ runId, proposals, onDecided
         onDecided();
       }
     } catch (caught) {
-      setError(errorText(caught, 'تعذّر بتُّ المقترحات.'));
+      setError(errorText(caught, 'تعذر تنفيذ القرار على المقترحات.'));
     } finally {
       setBusy(false);
     }
@@ -74,7 +74,7 @@ export const ProposalDecideBar: React.FC<Props> = ({ runId, proposals, onDecided
     <div className="hrp-decide">
       <div className="hrp-decide__row">
         <label className="hrp-decide__l" htmlFor="decide-type">
-          بتُّ نوعٍ كامل
+          القرار على نوع كامل
         </label>
         <select
           id="decide-type"
@@ -85,7 +85,7 @@ export const ProposalDecideBar: React.FC<Props> = ({ runId, proposals, onDecided
             setPreview(null);
           }}
         >
-          <option value="">اختر نوعَ المقترح…</option>
+          <option value="">اختر نوع المقترح…</option>
           {types.map((key) => (
             <option value={key} key={key}>
               {PROPOSAL_TYPE_LABELS[key] ?? key} ({open.filter((row) => row.proposal_type === key).length})
@@ -103,7 +103,7 @@ export const ProposalDecideBar: React.FC<Props> = ({ runId, proposals, onDecided
           className="hrl-ctrl"
           value={reason}
           maxLength={500}
-          placeholder="يُسجَّل باسمك مع القرار"
+          placeholder="يسجل باسمك مع القرار"
           onChange={(event) => setReason(event.target.value)}
         />
       </div>
@@ -111,8 +111,8 @@ export const ProposalDecideBar: React.FC<Props> = ({ runId, proposals, onDecided
       {preview !== null && (
         <p className="hrl-hint">
           {preview.writes_money
-            ? `الأثرُ قبل النقر: ${money(preview.money_effect)} ر.س على ${preview.count} مقترحاً.`
-            : `${preview.count} مقترحاً — ولا يُكتب ريالٌ واحد: اليومُ غيرُ المدفوع لا يُنتج بندَ خصمٍ، والقبولُ إقرارٌ يرفع المانع.`}
+            ? `الأثر قبل النقر: ${money(preview.money_effect)} ر.س على ${preview.count} مقترحاً.`
+            : `${preview.count} مقترحاً بلا أثر مالي. اليوم غير المدفوع لا ينتج بند خصم، والقبول إقرار يرفع المانع.`}
         </p>
       )}
 
@@ -129,7 +129,7 @@ export const ProposalDecideBar: React.FC<Props> = ({ runId, proposals, onDecided
           disabled={busy || ids.length === 0}
           onClick={() => void run('accepted', true)}
         >
-          {busy ? <Loader2 size={13} /> : <CheckCheck size={13} />} أرِني الأثرَ أوّلاً
+          {busy ? <Loader2 size={13} /> : <CheckCheck size={13} />} اعرض الأثر أولاً
         </button>
 
         <button
@@ -152,8 +152,7 @@ export const ProposalDecideBar: React.FC<Props> = ({ runId, proposals, onDecided
       </div>
 
       <p className="hrl-hint">
-        القبولُ لا يكتب مالاً بنفسه: المالُ بندٌ يحمل اسمَ من قرّره وسببَه — يفرضه قيدٌ في
-        القاعدة لا انضباطُ شاشة.
+        القبول لا ينشئ بنداً مالياً بنفسه. كل بند مالي يسجل باسم من قرره وسببه.
       </p>
     </div>
   );

@@ -63,10 +63,10 @@ export const RunPreflightStage: React.FC<Props> = ({
       <section className="hrl-block" aria-labelledby="preflight-h">
         <header className="hrl-block__h">
           <h2 className="hrl-block__t" id="preflight-h">
-            <CheckCircle2 size={14} /> الفحصُ القبْليّ
+            <CheckCircle2 size={14} /> الفحص التمهيدي
           </h2>
           <span className="hrl-badge hrl-badge--flat">
-            {preflight.blocking_count > 0 ? `مانعٌ ${preflight.blocking_count}` : 'لا مانع'}
+            {preflight.blocking_count > 0 ? `مانع ${preflight.blocking_count}` : 'لا مانع'}
           </span>
         </header>
 
@@ -74,9 +74,9 @@ export const RunPreflightStage: React.FC<Props> = ({
           {preflight.all_clear && flags.length === 0 ? (
             <div className="hrl-state hrl-state--clear">
               <CheckCircle2 size={22} />
-              <p className="hrl-state__t">فُحص {preflight.checked_count} بنداً، ولا مانع</p>
+              <p className="hrl-state__t">تم فحص {preflight.checked_count} بنداً، ولا مانع</p>
               <p className="hrl-state__d">
-                لا نقصَ في النطاق، ولا قرارَ معلَّقٌ يمنع. والخطوةُ التالية الاحتساب.
+                لا نقص في قائمة المشمولين، ولا قرار معلق يمنع. والخطوة التالية الاحتساب.
               </p>
             </div>
           ) : (
@@ -102,7 +102,7 @@ export const RunPreflightStage: React.FC<Props> = ({
                     )}
 
                     {flag.blocks === 'approval' && (
-                      <p className="hrl-flag__hint">يمنع الاعتمادَ وحدَه — الفتحُ والاحتسابُ يمرّان.</p>
+                      <p className="hrl-flag__hint">يمنع الاعتماد فقط. والفتح والاحتساب يمران.</p>
                     )}
 
                     {flag.subjects !== undefined && flag.subjects.length > 0 && (
@@ -118,7 +118,7 @@ export const RunPreflightStage: React.FC<Props> = ({
 
                     {href !== null && (
                       <Link className="hrl-link" to={href}>
-                        اذهب إلى موضع العلاج{NBSP}<ArrowLeft size={11} />
+                        اذهب إلى موضع الإصلاح{NBSP}<ArrowLeft size={11} />
                       </Link>
                     )}
                   </div>
@@ -128,8 +128,8 @@ export const RunPreflightStage: React.FC<Props> = ({
           )}
 
           <p className="hrl-hint">
-            {SEVERITY_LABELS.block}: يمنع الاعتماد · {SEVERITY_LABELS.warn}: يمرّ بإقرارٍ يُسجَّل
-            باسم المُقرّ · {SEVERITY_LABELS.info}: يُعرَض ولا يعترض.
+            {SEVERITY_LABELS.block}: يمنع الاعتماد · {SEVERITY_LABELS.warn}: يمر بإقرار مسجل
+            باسم صاحبه · {SEVERITY_LABELS.info}: يظهر للاطلاع فقط.
           </p>
         </div>
       </section>
@@ -137,7 +137,7 @@ export const RunPreflightStage: React.FC<Props> = ({
       <section className="hrl-block" aria-labelledby="proposals-h">
         <header className="hrl-block__h">
           <h2 className="hrl-block__t" id="proposals-h">
-            طابورُ القرارات
+            قائمة القرارات المعلقة
           </h2>
           <span className="hrl-badge hrl-badge--flat">{proposals.length}</span>
         </header>
@@ -150,15 +150,15 @@ export const RunPreflightStage: React.FC<Props> = ({
             </div>
           ) : proposals.length === 0 ? (
             <p className="hrl-hint">
-              لا قرارَ ينتظر — شهرٌ نظيفٌ لا يُنتج مقترحاً واحداً، والصفرُ هنا صامتٌ عن عمد.
+              لا قرار ينتظر. الشهر بلا مقترحات، والصفر هنا لا يعرض تنبيهاً.
             </p>
           ) : (
             <table className="hrl-table">
               <thead>
                 <tr>
-                  <th scope="col">المنسوب</th>
-                  <th scope="col">الواقعة</th>
-                  <th scope="col">الدرجة</th>
+                  <th scope="col">الموظف</th>
+                  <th scope="col">النوع</th>
+                  <th scope="col">الأهمية</th>
                   <th scope="col">الدليل</th>
                 </tr>
               </thead>
@@ -182,14 +182,14 @@ export const RunPreflightStage: React.FC<Props> = ({
 
         <div className="hrl-block__b">
           <p className="hrl-hint">
-            الحضورُ والإجازةُ يقترحان ولا يخصمان: لا يصير المقترحُ مالاً إلا ببندٍ يحمل اسمَ من
-            قرّره وتاريخَه وسببَه.
+            الحضور والإجازة يقترحان ولا يخصمان: لا يصير المقترح مبلغاً إلا ببند يحمل اسم من
+            قرره وتاريخه وسببه.
           </p>
 
           {decideAvailable === false && (
             <p className="hrl-hint">
-              ولا يظهر لك زرُّ البتّ: إمّا لأنّ المسيرَ جُمِّد، وإمّا لأنّ الإعدادَ ليس من
-              صلاحياتك — ولا يُعرَض زرٌّ يَعِد بما لا يقع.
+              ولا يظهر لك زر اتخاذ القرار: إما لأن المسير مقفل، وإما لأن الإعداد ليس من
+              صلاحياتك.
             </p>
           )}
         </div>

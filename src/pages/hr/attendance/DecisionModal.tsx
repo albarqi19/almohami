@@ -47,12 +47,12 @@ export const DecisionModal: React.FC<Props> = ({
     const clean = reason.trim();
 
     if (clean.length < MIN_REASON) {
-      toast.error(`اكتب سبباً لا يقلّ عن ${MIN_REASON} أحرف — يُقرأ بعد سنةٍ في نزاع.`);
+      toast.error(`اكتب سببا لا يقل عن ${MIN_REASON} أحرف. يحفظ في سجل اليوم للرجوع إليه.`);
       return;
     }
 
     if (tooMany) {
-      toast.error(`الحدُّ الأقصى ${ATTENDANCE_MAX_DECISION_DATES} يوماً في القرار الواحد.`);
+      toast.error(`الحد الأقصى ${ATTENDANCE_MAX_DECISION_DATES} يوما في القرار الواحد.`);
       return;
     }
 
@@ -65,7 +65,7 @@ export const DecisionModal: React.FC<Props> = ({
       });
 
       if (result.written > 0) {
-        toast.success(`سُجّل تأكيدُ الحضور على ${daysWord(result.written)}`);
+        toast.success(`تم تسجيل تأكيد الحضور على ${daysWord(result.written)}`);
       }
 
       // نجاحٌ جزئيّ: يُفرَغ التحديدُ **ويبقى المودالُ مفتوحاً** بقائمة ما لم يُقبل — إغلاقُه
@@ -87,7 +87,7 @@ export const DecisionModal: React.FC<Props> = ({
     <div className="hr-modal-overlay" onClick={onClose}>
       <div className="hr-modal hra-modal" onClick={(e) => e.stopPropagation()}>
         <div className="hr-modal__h">
-          <h3>تأكيدُ حضور — {employee.name ?? 'منسوب'}</h3>
+          <h3>تأكيد حضور — {employee.name ?? 'موظف'}</h3>
           <button type="button" className="hr-icon-btn" onClick={onClose} aria-label="إغلاق">
             <X size={18} />
           </button>
@@ -95,9 +95,9 @@ export const DecisionModal: React.FC<Props> = ({
 
         <div className="hr-modal__b">
           <p className="hra-hint">
-            تشهد بأنّ هذا المنسوب كان حاضراً في {daysWord(dates.length)} أدناه رغم أنّ بصمتَه
+            تشهد بأن هذا الموظف كان حاضرا في {daysWord(dates.length)} أدناه رغم أن بصمته
             لم تصل.
-            القرارُ يُلحَق ولا يُمحى، ويُنقض بقرارٍ آخرَ إن تبيّن خلافُه.
+            يبقى القرار في السجل، ويمكن إلغاؤه بقرار آخر إن تبين خلافه.
           </p>
 
           <div className="hra-secb">
@@ -115,7 +115,7 @@ export const DecisionModal: React.FC<Props> = ({
               rows={3}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="مثال: كان في المحكمة صباحاً ولم يمرّ بالمكتب"
+              placeholder="مثال: كان في المحكمة صباحا ولم يمر بالمكتب"
             />
             <span className="hra-count" dir="ltr">
               {reason.trim().length} / {MIN_REASON}
@@ -124,7 +124,7 @@ export const DecisionModal: React.FC<Props> = ({
 
           {skipped.length > 0 && (
             <div className="hra-secb">
-              <p className="hra-hint">أيامٌ لم تُقبل — ولكلٍّ سببُه:</p>
+              <p className="hra-hint">أيام لم يتم قبولها، ولكل يوم سببه:</p>
               <dl className="hra-kv">
                 {skipped.map((row) => (
                   <React.Fragment key={row.work_date}>
@@ -147,7 +147,7 @@ export const DecisionModal: React.FC<Props> = ({
             onClick={() => { void submit(); }}
             disabled={decide.isPending}
           >
-            {decide.isPending ? 'جارٍ الحفظ…' : 'أكّد الحضور'}
+            {decide.isPending ? 'جارٍ الحفظ…' : 'أكد الحضور'}
           </button>
         </div>
       </div>

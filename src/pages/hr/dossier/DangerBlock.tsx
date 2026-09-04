@@ -44,19 +44,19 @@ export const DangerBlock: React.FC<Props> = ({ empId, emp, onEdit }) => {
   const name = empName(emp, empId);
 
   const remove = async () => {
-    if (!window.confirm(`حذف ملفّ «${name}»؟`)) return;
+    if (!window.confirm(`حذف ملف «${name}»؟`)) return;
 
     setBusy(true);
     try {
       await hrService.deleteEmployee(empId);
-      toast.success('حُذف ملفُّ المنسوب');
+      toast.success('تم حذف ملف الموظف');
 
       // **الاستثناءُ الثاني للإبطال الشامل** (والأوّلُ إنشاءُ منسوب): الحذفُ يغيّر
       // الإحصاءَ والقائمةَ والملفَّ معاً، ولا تبقى بعده شاشةٌ تقرأ مفاتيحَ هذا الملفّ.
       void queryClient.invalidateQueries({ queryKey: ['hr'] });
       navigate('/hr');
     } catch (error: unknown) {
-      toast.error(errorText(error, 'تعذّر حذف الملفّ'));
+      toast.error(errorText(error, 'تعذر حذف الملف'));
       setBusy(false);
     }
   };
@@ -65,7 +65,7 @@ export const DangerBlock: React.FC<Props> = ({ empId, emp, onEdit }) => {
     <div className="hrl-block">
       <div className="hrl-block__h">
         <h2 className="hrl-block__t hrl-h2">
-          <AlertTriangle size={14} /> إجراءاتٌ حسّاسة
+          <AlertTriangle size={14} /> إجراءات حساسة
         </h2>
       </div>
 
@@ -81,13 +81,13 @@ export const DangerBlock: React.FC<Props> = ({ empId, emp, onEdit }) => {
           onClick={() => void remove()}
           disabled={busy}
         >
-          {busy ? 'جارٍ الحذف…' : 'حذف الملفّ'}
+          {busy ? 'جارٍ الحذف…' : 'حذف الملف'}
         </button>
       </div>
 
       <p className="hrl-note">
-        إنهاءُ الخدمة يُبقي الملفَّ وسجلَّه ويوقف احتسابَ الاستحقاق. حذفُ الملفّ يُزيله من قائمة
-        المنسوبين — ولا يمسّ حسابَ المستخدم.
+        إنهاء الخدمة يبقي الملف وسجله ويوقف احتساب الاستحقاق. حذف الملف يزيله من قائمة
+        الموظفين ولا يؤثر على حساب المستخدم.
       </p>
     </div>
   );

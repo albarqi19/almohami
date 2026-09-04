@@ -41,10 +41,10 @@ export const BoardOfficeCard: React.FC<Props> = ({ office }) => {
           <dt>اسم المكتب</dt>
           <KvValue value={office.name} />
 
-          <dt>العنوان الوطنيّ</dt>
+          <dt>العنوان الوطني</dt>
           <KvValue value={office.national_address} />
 
-          <dt>الإيميل الرسميّ</dt>
+          <dt>الإيميل الرسمي</dt>
           <KvValue value={office.email} dir="ltr" />
 
           {office.phone && (

@@ -46,14 +46,14 @@ export const RunComputeStage: React.FC<Props> = ({
       <section className="hrl-block" aria-labelledby="compute-locked-h">
         <header className="hrl-block__h">
           <h2 className="hrl-block__t" id="compute-locked-h">
-            <Lock size={14} /> أرقامُ الأفراد محجوبة
+            <Lock size={14} /> أرقام الأفراد محجوبة
           </h2>
         </header>
 
         <div className="hrl-block__b">
           <p className="hrl-hint">
-            أجرُ الفرد حقلٌ حسّاسٌ خلف صلاحيةٍ مستقلّة — ولا تصلك صفوفُ المسير أصلاً، لا مصفَّرةً
-            ولا محجوبةَ الحقول. وعددُ المشمولين {meta.lines_count}.
+            أجر الفرد حقل حساس خلف صلاحية مستقلة، ولا تصلك سطور المسير أصلاً. وعدد
+            المشمولين {meta.lines_count}.
           </p>
         </div>
       </section>
@@ -101,24 +101,24 @@ export const RunComputeStage: React.FC<Props> = ({
             </div>
 
             <p className="hrl-hint">
-              وتكلفةُ المكتب فوق ذلك {money(totals.employer_cost_amount)} ر.س — حصّةُ صاحب العمل
-              لا تُخصَم من أحدٍ ولا تدخل صافياً.
+              وتكلفة المكتب فوق ذلك {money(totals.employer_cost_amount)} ر.س. وحصة صاحب العمل
+              لا تخصم من أحد ولا تدخل في الصافي.
               {totals.cutoff_at === null
                 ? ''
-                : ' · مبنيٌّ على دفتر الإجازات والحضور حتى لحظة القطع المسجَّلة في المسير.'}
+                : ' · مبني على سجل الإجازات والحضور حتى لحظة القطع المسجلة في المسير.'}
             </p>
           </div>
         )}
 
         <div className="hrl-block__b hrl-block__b--flush">
           {data.lines.length === 0 ? (
-            <p className="hrl-hint">لا سطرَ في هذا المسير — أعد بناءَ النطاق أوّلاً.</p>
+            <p className="hrl-hint">لا سطر في هذا المسير. أعد بناء قائمة المشمولين أولاً.</p>
           ) : (
             <table className="hrl-table hrp-roster">
               <thead>
                 <tr>
-                  <th scope="col">المنسوب</th>
-                  <th scope="col">أيامٌ مدفوعة</th>
+                  <th scope="col">الموظف</th>
+                  <th scope="col">أيام مدفوعة</th>
                   <th scope="col">المستحقات</th>
                   <th scope="col">التأمينات</th>
                   <th scope="col">الاستقطاعات</th>
@@ -143,8 +143,8 @@ export const RunComputeStage: React.FC<Props> = ({
         {data.lines.length > 0 && (
           <div className="hrl-block__b">
             <p className="hrl-hint">
-              انقر أيَّ رقمٍ ليُفتح تفصيلُه في القسيمة الجانبية: كلُّ بندٍ بوعائه ومعامله ومرجع
-              مادّته ومن قرّره.
+              انقر أي رقم ليظهر تفصيله في القسيمة الجانبية: كل بند بوعائه ومعامله ومرجع
+              مادته ومن قرره.
             </p>
           </div>
         )}
@@ -178,7 +178,7 @@ const Row: React.FC<{ line: PayrollComputedLine; selected: boolean; onSelect: ()
       <td dir="ltr">{money(line.gosi_ee_amount) ?? EMPTY_MARK}</td>
       <td dir="ltr">{money(line.deductions_amount) ?? EMPTY_MARK}</td>
       <td dir="ltr">{money(line.net_amount) ?? EMPTY_MARK}</td>
-      <td>{computed ? (blockers.length > 0 ? 'به مانع' : 'محتسَب') : 'لم يُحتسب'}</td>
+      <td>{computed ? (blockers.length > 0 ? 'به مانع' : 'محتسَب') : 'غير محتسَب'}</td>
     </tr>
   );
 };

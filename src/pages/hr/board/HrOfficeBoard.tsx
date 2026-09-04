@@ -59,7 +59,7 @@ import {
  */
 
 /** نصٌّ احتياطيٌّ واحدٌ لفرع الخطأ — عرفُ وحدة الإجازات. */
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 interface Props {
   /** `hr.manage` — تُقرأ مرّةً في `HrModule` وتُمرَّر، فلا تُقرأ الصلاحيةُ ذاتُها مرّتين. */
@@ -114,7 +114,7 @@ export const HrOfficeBoard: React.FC<Props> = ({ canManage, onAdd, onHolidays })
     return (
       <div className="hrl-state hrl-state--error">
         <AlertTriangle size={20} />
-        <p className="hrl-state__t">تعذّر فتحُ لوحة المكتب</p>
+        <p className="hrl-state__t">تعذر فتح لوحة المكتب</p>
         <p className="hrl-state__d">{errorText(statsQuery.error, CONNECTION_FALLBACK)}</p>
         <button
           type="button"
@@ -151,7 +151,7 @@ export const HrOfficeBoard: React.FC<Props> = ({ canManage, onAdd, onHolidays })
       <>
         <BoardHead
           office={office}
-          countLabel="لا منسوبين بعد"
+          countLabel="لا موظفين بعد"
           canManage={canManage}
           onAdd={onAdd}
           onHolidays={null}
@@ -183,7 +183,7 @@ export const HrOfficeBoard: React.FC<Props> = ({ canManage, onAdd, onHolidays })
     <>
       <BoardHead
         office={office}
-        countLabel={total === null ? null : `${fmtCount(total)} منسوباً`}
+        countLabel={total === null ? null : `${fmtCount(total)} موظفاً`}
         canManage={canManage}
         onAdd={onAdd}
         onHolidays={onHolidays}

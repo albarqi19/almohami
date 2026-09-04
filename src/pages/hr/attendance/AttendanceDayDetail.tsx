@@ -64,11 +64,11 @@ export const AttendanceDayDetail: React.FC<Props> = ({
       <>
         <div className="hra-sech">
           <h2 className="hra-sech__t">
-            <ListTree size={14} aria-hidden="true" /> تفاصيلُ اليوم
+            <ListTree size={14} aria-hidden="true" /> تفاصيل اليوم
           </h2>
         </div>
         <div className="hra-scroll">
-          <p className="hra-line">اختر يوماً من الطابور ليُشرح هنا</p>
+          <p className="hra-line">اختر يوما من القائمة لعرض تفاصيله هنا</p>
         </div>
       </>
     );
@@ -106,15 +106,15 @@ export const AttendanceDayDetail: React.FC<Props> = ({
             <dt>المطلوب</dt>
             <dd dir="ltr">{fmtMinutes(day.required_minutes)}</dd>
 
-            <dt>المُنجَز</dt>
+            <dt>المنجز</dt>
             <dd dir="ltr">{fmtMinutes(day.worked_minutes)}</dd>
 
             {/* 🚫 لا يُجمع `late_minutes` مع `undertime_minutes` في أيّ مجموعٍ أو رسم:
                 الأوّلُ مكوّنٌ تفسيريّ والثاني هو الرقمُ المجمَّع الوحيد. */}
-            <dt>العجز</dt>
+            <dt>نقص الدقائق</dt>
             <dd dir="ltr">{fmtMinutes(day.undertime_minutes)}</dd>
 
-            <dt>آخرُ احتساب</dt>
+            <dt>آخر احتساب</dt>
             <dd>{day.computed_at ? fmtDateTime(day.computed_at) : EMPTY_MARK}</dd>
           </dl>
         </div>
@@ -122,12 +122,12 @@ export const AttendanceDayDetail: React.FC<Props> = ({
         {resolution !== null && (
           <>
             <div className="hra-sech">
-              <h3 className="hra-sech__t">القرارُ النافذ</h3>
+              <h3 className="hra-sech__t">القرار النافذ</h3>
             </div>
             <div className="hra-secb">
               <p>
                 {RESOLUTION_DECISION_LABELS[resolution.decision] ?? resolution.decision}
-                {' — '}
+                {' · '}
                 {resolution.reason}
               </p>
               <p className="hra-sub">{fmtDateTime(resolution.decided_at)}</p>
@@ -138,7 +138,7 @@ export const AttendanceDayDetail: React.FC<Props> = ({
                     className="ssp2-btn"
                     onClick={() => onVoid(resolution.id)}
                   >
-                    انقض هذا القرار
+                    إلغاء هذا القرار
                   </button>
                 </p>
               )}
@@ -152,7 +152,7 @@ export const AttendanceDayDetail: React.FC<Props> = ({
           </h3>
           {canManage && (
             <button type="button" className="ssp2-btn" onClick={() => onAddPunch(profileId, date)}>
-              أضِف بصمة
+              أضف بصمة
             </button>
           )}
         </div>
@@ -164,14 +164,14 @@ export const AttendanceDayDetail: React.FC<Props> = ({
         ) : record.isError ? (
           <div className="hra-state hra-state--error">
             <AlertTriangle size={18} aria-hidden="true" />
-            <p className="hra-state__t">تعذّر جلبُ البصمات</p>
-            <p className="hra-state__d">{errorText(record.error, 'انقطعَ الاتصال بالخادم.')}</p>
+            <p className="hra-state__t">تعذر تحميل البصمات</p>
+            <p className="hra-state__d">{errorText(record.error, 'انقطع الاتصال بالخادم.')}</p>
             <button type="button" className="ssp2-btn" onClick={() => { void record.refetch(); }}>
               <RefreshCw size={13} /> إعادة المحاولة
             </button>
           </div>
         ) : punches.length === 0 ? (
-          <p className="hra-line">صفرُ بصماتٍ في هذا اليوم</p>
+          <p className="hra-line">لا توجد بصمات في هذا اليوم</p>
         ) : (
           <ul className="hra-tl">
             {punches.map((punch) => {

@@ -174,8 +174,8 @@ export const LeaveCalendar: React.FC<Props> = ({ month, employeeId, canManage, o
     return (
       <div className="hrl-state hrl-state--error">
         <AlertTriangle size={22} />
-        <p className="hrl-state__t">تعذّر جلب التقويم</p>
-        <p className="hrl-state__d">{errorText(calendarQuery.error, 'انقطعَ الاتصال بالخادم.')}</p>
+        <p className="hrl-state__t">تعذر تحميل التقويم</p>
+        <p className="hrl-state__d">{errorText(calendarQuery.error, 'انقطع الاتصال بالخادم.')}</p>
         <button type="button" className="hr-btn hr-btn--sm" onClick={() => void calendarQuery.refetch()}>
           <RefreshCw size={13} /> إعادة المحاولة
         </button>
@@ -203,12 +203,12 @@ export const LeaveCalendar: React.FC<Props> = ({ month, employeeId, canManage, o
   return (
     <>
       {weekendUnknown && (
-        <p className="hrl-note">تعذّر معرفةُ أيام نهاية الأسبوع لهذا المكتب — الأعمدةُ غيرُ مميَّزة.</p>
+        <p className="hrl-note">تعذر معرفة أيام نهاية الأسبوع لهذا المكتب. الأعمدة غير مميزة.</p>
       )}
 
       {payload.unconfirmed_holidays > 0 && (
         <p className="hrl-note">
-          {payload.unconfirmed_holidays} عطلةً في هذا الشهر غيرُ معتمَدة — تُعلَّم بخطٍّ منقّطٍ ولا تُستثنى من
+          {payload.unconfirmed_holidays} عطلة في هذا الشهر غير معتمَدة. تظهر بخط منقط ولا تستثنى من
           الاحتساب.
         </p>
       )}
@@ -216,19 +216,19 @@ export const LeaveCalendar: React.FC<Props> = ({ month, employeeId, canManage, o
       {rows.length === 0 ? (
         <div className="hrl-state hrl-state--empty">
           <CalendarX size={22} />
-          <p className="hrl-state__t">لا منسوبين في هذا الشهر</p>
-          <p className="hrl-state__d">لم يُرجع الخادمُ صفوفاً لهذه المدة.</p>
+          <p className="hrl-state__t">لا يوجد موظفون في هذا الشهر</p>
+          <p className="hrl-state__d">لا توجد بيانات لهذه المدة.</p>
         </div>
       ) : (
         <div className="hrl-calwrap">
           <table className="hrl-cal">
             <caption className="hrl-sr">
-              تقويم الغياب الشهريّ — صفٌّ لكلّ منسوبٍ وعمودٌ لكلّ يوم
+              تقويم الغياب الشهري: صف لكل موظف وعمود لكل يوم
             </caption>
             <thead>
               <tr>
                 <th scope="col" className="hrl-cal__name">
-                  المنسوب
+                  الموظف
                 </th>
                 {days.map((date) => {
                   const holiday = holidayByDate.get(date);
@@ -245,7 +245,7 @@ export const LeaveCalendar: React.FC<Props> = ({ month, employeeId, canManage, o
                   const title = holiday
                     ? holiday.confirmed
                       ? holiday.name
-                      : `${holiday.name} — غير معتمَدة، لا تُستثنى من الاحتساب`
+                      : `${holiday.name} (غير معتمَدة، لا تستثنى من الاحتساب)`
                     : undefined;
 
                   return (
@@ -288,7 +288,7 @@ export const LeaveCalendar: React.FC<Props> = ({ month, employeeId, canManage, o
                           cell.half_day && cell.half_day_period
                             ? ` — نصف يوم ${HALF_DAY_PERIOD_LABELS[cell.half_day_period]}`
                             : ''
-                        } — ${LEAVE_STATUS_LABELS[cell.status]} — افتح سجلَّه`
+                        } — ${LEAVE_STATUS_LABELS[cell.status]} — افتح سجله`
                       : `${row.user_name} — بلا غياب — ${fmtLeaveDate(date)}`;
 
                     const interactive = cell !== undefined || canManage;
@@ -330,7 +330,7 @@ export const LeaveCalendar: React.FC<Props> = ({ month, employeeId, canManage, o
 
       {!anyCell && rows.length > 0 && (
         <p className="hrl-note">
-          لا غياباتٍ مسجّلةٌ في {monthTitle}.
+          لا توجد غيابات مسجلة في {monthTitle}.
         </p>
       )}
 
@@ -349,8 +349,8 @@ export const LeaveCalendar: React.FC<Props> = ({ month, employeeId, canManage, o
       {canManage && (
         <p className="hrl-hint">
           {isDesktop
-            ? 'نقرةٌ على يومٍ خالٍ تفتح تسجيلاً معبّأً به · نقرةٌ على مدّةٍ تفتح سجلَّ صاحبها · الأسهمُ تنقل بين الأيام.'
-            : 'انقر يوماً خالياً لتسجيل غيابٍ فيه، أو مدّةً لفتح سجلّ صاحبها.'}
+            ? 'انقر يوماً خالياً لفتح تسجيل معبأ به · انقر إجازة مسجلة لفتح سجل صاحبها · الأسهم تنقل بين الأيام.'
+            : 'انقر يوماً خالياً لتسجيل غياب فيه، أو إجازة مسجلة لفتح سجل صاحبها.'}
         </p>
       )}
     </>

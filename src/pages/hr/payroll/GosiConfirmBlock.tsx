@@ -36,7 +36,7 @@ export const GosiConfirmBlock: React.FC<Props> = ({ gosi, canConfirm, submitting
     <section className="hrl-block" aria-labelledby="gosi-confirm-h">
       <header className="hrl-block__h">
         <h2 className="hrl-block__t" id="gosi-confirm-h">
-          <ShieldCheck size={14} /> نسبُ التأمينات الاجتماعية
+          <ShieldCheck size={14} /> نسب التأمينات الاجتماعية
         </h2>
         <span className={`hrl-badge hrl-badge--flat${gosi.confirmed ? '' : ' hrl-chip--warn'}`}>
           {gosi.confirmed ? 'مؤكَّدة' : 'بانتظار التأكيد'}
@@ -49,11 +49,11 @@ export const GosiConfirmBlock: React.FC<Props> = ({ gosi, canConfirm, submitting
           <thead>
             <tr>
               <th scope="col">النظام</th>
-              <th scope="col">معاشاتُ الموظف</th>
-              <th scope="col">ساندُ الموظف</th>
-              <th scope="col">معاشاتُ المكتب</th>
-              <th scope="col">ساندُ المكتب</th>
-              <th scope="col">الأخطارُ المهنية</th>
+              <th scope="col">معاشات الموظف</th>
+              <th scope="col">ساند الموظف</th>
+              <th scope="col">معاشات المكتب</th>
+              <th scope="col">ساند المكتب</th>
+              <th scope="col">الأخطار المهنية</th>
             </tr>
           </thead>
           <tbody>
@@ -86,7 +86,7 @@ export const GosiConfirmBlock: React.FC<Props> = ({ gosi, canConfirm, submitting
             })}
             {schemes.length === 0 && (
               <tr>
-                <td colSpan={6}>{EMPTY_MARK} لم تصل نسبٌ مقترحةٌ من الخادم.</td>
+                <td colSpan={6}>{EMPTY_MARK} لم تصل نسب مقترحة من الخادم.</td>
               </tr>
             )}
           </tbody>
@@ -97,12 +97,12 @@ export const GosiConfirmBlock: React.FC<Props> = ({ gosi, canConfirm, submitting
       {!gosi.cohorts_modelled && (
         <div className="hrl-flag hrl-flag--info">
           <p className="hrl-flag__t">
-            <AlertTriangle size={13} /> شرائحُ الالتحاق غيرُ مُنمذَجةٍ في هذه النسخة
+            <AlertTriangle size={13} /> شرائح الالتحاق غير مطبقة في هذه النسخة
           </p>
           <p className="hrl-flag__hint">
-            النسبُ أعلاه واحدةٌ لمن التحق قبل التعديل ولمن التحق بعده. حقلُ الشريحة موجودٌ على
-            ملفّ الأجر ولا يقرؤه شيءٌ بعد — فإن كان في مكتبك من تختلف نسبتُه، راجعه يدوياً قبل
-            أن تؤكّد.
+            النسب أعلاه واحدة لمن التحق قبل التعديل ولمن التحق بعده. حقل الشريحة موجود على
+            ملف الأجر ولا يستخدم بعد. فإن كان في مكتبك من تختلف نسبته، تحقق منه يدوياً قبل
+            أن تؤكد.
           </p>
         </div>
       )}
@@ -110,20 +110,20 @@ export const GosiConfirmBlock: React.FC<Props> = ({ gosi, canConfirm, submitting
       {gosi.confirmed ? (
         <div className="hrl-block__b">
           <p className="hrl-note">
-            <CheckCircle2 size={13} /> أكّدها {gosi.confirmed_by ?? 'مستخدمٌ محذوف'} في{' '}
-            {fmtDateHuman(gosi.confirmed_at)}. وتغييرُ النسب لاحقاً يُعيد الحاجزَ حتى تُؤكَّد
-            النسخةُ الجديدة.
+            <CheckCircle2 size={13} /> أكدها {gosi.confirmed_by ?? 'مستخدم محذوف'} في{' '}
+            {fmtDateHuman(gosi.confirmed_at)}. وتغيير النسب لاحقاً يعيد المانع حتى يتم تأكيد
+            النسخة الجديدة.
           </p>
         </div>
       ) : (
         <div className="hrl-block__b">
           <p className="hrl-hint">
-            هذه بياناتٌ تُراجَع قانونياً: قارئها من مصدرها الرسميّ قبل التأكيد. والتأكيدُ
-            يُسجَّل باسمك وتاريخِه، ويرفع الحاجزَ عن اعتماد المسيرات.
+            هذه بيانات تخضع للمراجعة القانونية: تحقق منها من مصدرها الرسمي قبل التأكيد. والتأكيد
+            يسجل باسمك وتاريخه، ويرفع المانع عن اعتماد المسيرات.
           </p>
 
           <label className="hrl-fset" htmlFor="gosi-note">
-            <span className="hrl-fset__t">مرجعُ المراجعة (اختياريّ)</span>
+            <span className="hrl-fset__t">مرجع المراجعة (اختياري)</span>
             <input
               id="gosi-note"
               className="hrl-search"
@@ -131,7 +131,7 @@ export const GosiConfirmBlock: React.FC<Props> = ({ gosi, canConfirm, submitting
               maxLength={500}
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="مثال: طُوبقت مع كشف الاشتراك الصادر عن المؤسسة"
+              placeholder="مثال: مطابقة كشف الاشتراك الصادر عن المؤسسة"
             />
           </label>
 
@@ -148,12 +148,12 @@ export const GosiConfirmBlock: React.FC<Props> = ({ gosi, canConfirm, submitting
             disabled={!canConfirm || submitting}
             onClick={() => onConfirm(note.trim() === '' ? undefined : note.trim())}
           >
-            {submitting ? 'يُسجَّل…' : 'أؤكّد هذه النسب باسمي'}
+            {submitting ? 'جارٍ التسجيل…' : 'أؤكد هذه النسب باسمي'}
           </button>
 
           {!canConfirm && (
             <p className="hrl-hint">
-              التأكيدُ بيد من يملك اعتمادَ المسيرات — فمن يرفع الحاجزَ هو من يوقّع على الصرف.
+              التأكيد متاح لمن يملك اعتماد المسيرات.
             </p>
           )}
         </div>

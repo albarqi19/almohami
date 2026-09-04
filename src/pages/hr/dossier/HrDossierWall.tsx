@@ -68,7 +68,7 @@ import {
  */
 
 /** نصٌّ احتياطيٌّ واحدٌ لفرع الخطأ — عرفُ `LeaveTabPanel`. */
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 interface Props {
   empId: number;
@@ -131,7 +131,7 @@ export const HrDossierWall: React.FC<Props> = ({ empId }) => {
 
   if (employeeQuery.isPending) {
     return (
-      <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل الملفّ">
+      <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل الملف">
         {Array.from({ length: 4 }, (_, i) => (
           <span className="hrl-skel" key={i} />
         ))}
@@ -144,7 +144,7 @@ export const HrDossierWall: React.FC<Props> = ({ empId }) => {
     return (
       <div className="hrl-state hrl-state--error">
         <AlertTriangle size={20} />
-        <p className="hrl-state__t">تعذّر فتحُ ملفّ المنسوب</p>
+        <p className="hrl-state__t">تعذر فتح ملف الموظف</p>
         <p className="hrl-state__d">{errorText(employeeQuery.error, CONNECTION_FALLBACK)}</p>
         <button type="button" className="hr-btn hr-btn--sm" onClick={() => void employeeQuery.refetch()}>
           <RefreshCw size={13} /> إعادة المحاولة

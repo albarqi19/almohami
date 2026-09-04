@@ -116,58 +116,58 @@ export function isPositiveMoney(value?: string | null): boolean {
 // ══════════════ خرائطُ الأسماء — صفرُ نصٍّ عربيٍّ متناثرٍ في JSX ══════════════
 
 export const GOSI_SCHEME_LABELS: Record<GosiScheme, string> = {
-  saudi: 'سعوديّ',
-  non_saudi: 'غيرُ سعوديّ',
-  exempt: 'معفىً',
+  saudi: 'سعودي',
+  non_saudi: 'غير سعودي',
+  exempt: 'معفى',
 };
 
 /** شرحُ كلّ نظامٍ — يُعرَض تحت الاختيار لأنّ الفرقَ بينها **مالٌ حقيقيّ** لا تسمية. */
 export const GOSI_SCHEME_HINTS: Record<GosiScheme, string> = {
-  saudi: 'اشتراكُ معاشاتٍ وساند على الطرفين.',
-  non_saudi: 'حصّةُ الموظف صفر — الأخطارُ المهنية على المكتب وحدَه.',
-  exempt: 'خارجَ نطاق التأمينات — يُصرَّح به ولا يُفترض.',
+  saudi: 'اشتراك معاشات وساند على الطرفين.',
+  non_saudi: 'حصة الموظف صفر. الأخطار المهنية على المكتب فقط.',
+  exempt: 'خارج نطاق التأمينات. يحدد صراحة ولا يفترض.',
 };
 
 export const WAGE_FILE_STATUS_LABELS: Record<WageFileStatus, string> = {
   active: 'نشط',
-  held: 'معلَّق',
+  held: 'معلق',
   closed: 'مغلق',
 };
 
 export const IBAN_STATE_LABELS: Record<IbanState, string> = {
   none: 'بلا آيبان',
-  valid: 'آيبانٌ صالح',
-  invalid: 'آيبانٌ فاسد',
+  valid: 'آيبان صالح',
+  invalid: 'آيبان غير صالح',
 };
 
 export const PRORATION_LABELS: Record<ProrationBasis, string> = {
   statutory_thirty: 'الشهر ثلاثون يوماً (م.٢)',
-  actual_month_days: 'أيامُ الشهر الفعلية',
+  actual_month_days: 'أيام الشهر الفعلية',
 };
 
 export const PRORATION_HINTS: Record<ProrationBasis, string> = {
-  statutory_thirty: 'المقامُ ٣٠ دائماً مهما كان عددُ أيام الشهر — وهو نصُّ المادة الثانية.',
-  actual_month_days: 'المقامُ ٢٨ أو ٢٩ أو ٣٠ أو ٣١ — يومُ الغياب في فبراير يكلّف أكثرَ من مثله في يناير.',
+  statutory_thirty: 'المقام ٣٠ دائماً مهما كان عدد أيام الشهر، وهو نص المادة الثانية.',
+  actual_month_days: 'المقام ٢٨ أو ٢٩ أو ٣٠ أو ٣١. يوم الغياب في فبراير يكلف أكثر من مثله في يناير.',
 };
 
 export const COMPOSITION_LABELS: Record<WageComposition, string> = {
-  itemised: 'مفصَّل',
-  lump_sum: 'مبلغٌ واحد',
+  itemised: 'مفصل',
+  lump_sum: 'مبلغ واحد',
 };
 
 export const PAY_FREQUENCY_LABELS: Record<PayFrequency, string> = {
-  monthly: 'شهريّ',
-  weekly: 'أسبوعيّ',
+  monthly: 'شهري',
+  weekly: 'أسبوعي',
 };
 
 export const BASIC_DEFINITION_LABELS: Record<BasicWageDefinition, string> = {
-  basic_only: 'الأساسيُّ وحدَه',
-  basic_plus_periodic: 'الأساسيُّ + العلاواتُ الدورية',
-  contract_defined: 'كما نصَّ العقدُ أو اللائحة',
+  basic_only: 'الأساسي فقط',
+  basic_plus_periodic: 'الأساسي + العلاوات الدورية',
+  contract_defined: 'كما نص العقد أو اللائحة',
 };
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  bank_transfer: 'تحويلٌ بنكيّ',
+  bank_transfer: 'تحويل بنكي',
   cash: 'نقداً',
   cheque: 'شيك',
 };
@@ -181,11 +181,11 @@ export const FILTER_LABELS: Record<WageRegisterFilter, string> = {
 };
 
 export const FILTER_HINTS: Record<WageRegisterFilter, string> = {
-  all: 'كلُّ منسوبي المكتب ضمن هذا البحث',
-  missing_wage: 'لا نسخةَ أجرٍ ساريةٌ اليوم بأساسيٍّ أكبرَ من صفر',
-  missing_iban: 'لا آيبانَ صالحاً — سطرٌ واحدٌ فاسدٌ قد يُفشل كشفَ الرواتب المسلَّم للبنك كلَّه',
-  missing_scheme: 'لم يُصرَّح بنظام التأمينات — ولا يُشتقّ من الجنسية',
-  ready: 'أجرٌ سارٍ وآيبانٌ صالحٌ ونظامُ تأميناتٍ مُصرَّحٌ به',
+  all: 'كل موظفي المكتب ضمن هذا البحث',
+  missing_wage: 'لا توجد نسخة أجر سارية اليوم بأساسي أكبر من صفر',
+  missing_iban: 'لا يوجد آيبان صالح. سطر واحد غير صالح قد يعطل كشف الرواتب المسلم للبنك كله',
+  missing_scheme: 'لم يتم تحديد نظام التأمينات، ولا يحدد تلقائياً من الجنسية',
+  ready: 'أجر ساري المفعول وآيبان صالح ونظام تأمينات محدد',
 };
 
 /**
@@ -205,13 +205,13 @@ export function gapCode(row: WageRegisterRow): WageRegisterFilter | null {
 export function gapAction(code: WageRegisterFilter | null): string {
   switch (code) {
     case 'missing_wage':
-      return 'سجّل راتبه';
+      return 'سجل راتبه';
     case 'missing_scheme':
-      return 'صرّح بنظام التأمينات';
+      return 'حدد نظام التأمينات';
     case 'missing_iban':
       return 'أضف آيباناً صالحاً';
     default:
-      return 'حدّث الأجر';
+      return 'حدث الأجر';
   }
 }
 
@@ -225,13 +225,13 @@ export function effectImpact(effectiveFrom: string, previousFrom?: string | null
   const lines: string[] = [];
   const pretty = fmtDateHuman(effectiveFrom);
 
-  lines.push(`تسري النسخةُ الجديدة من ${pretty}.`);
+  lines.push(`تسري النسخة الجديدة من ${pretty}.`);
 
   if (previousFrom) {
-    lines.push(`تُغلَق النسخةُ السارية (من ${fmtDateHuman(previousFrom)}) في ${pretty} — بلا يومٍ مكرَّرٍ ولا يومٍ ساقط.`);
+    lines.push(`تغلق النسخة السارية (من ${fmtDateHuman(previousFrom)}) في ${pretty} بلا يوم مكرر ولا يوم ساقط.`);
   }
 
-  lines.push('والقسائمُ السابقةُ لا تتغيّر: الماضي لا يُعاد كتابتُه.');
+  lines.push('والقسائم السابقة لا تتغير.');
 
   return lines;
 }
@@ -253,7 +253,7 @@ export function fmtDateHuman(iso?: string | null): string {
 /** مدى سريان النسخة — والذيلُ المفتوح يُقال صراحةً «سارية». */
 export function fmtSpan(from?: string | null, to?: string | null): string {
   if (!from) return '—';
-  if (!to) return `من ${fmtDateHuman(from)} — سارية`;
+  if (!to) return `من ${fmtDateHuman(from)} (سارية)`;
 
   return `${fmtDateHuman(from)} ← ${fmtDateHuman(to)}`;
 }
@@ -278,22 +278,22 @@ export function bp(points?: number | null): string {
 }
 
 export const RULE_KIND_LABELS: Record<string, string> = {
-  wage_basis: 'تعريفُ الأجر',
-  deduction_cap: 'سقفُ حسم',
-  deduction_priority: 'ترتيبُ الحسم',
-  contribution: 'اشتراكُ تأمينات',
-  overtime: 'العملُ الإضافيّ',
-  eos: 'نهايةُ الخدمة',
-  settlement_deadline: 'مهلةُ التصفية',
-  proration: 'تجزئةُ الأجر',
-  pay_cycle: 'دوريةُ الصرف',
-  fund_disposition: 'وجهةُ الحصيلة',
+  wage_basis: 'تعريف الأجر',
+  deduction_cap: 'سقف حسم',
+  deduction_priority: 'ترتيب الحسم',
+  contribution: 'اشتراك تأمينات',
+  overtime: 'العمل الإضافي',
+  eos: 'نهاية الخدمة',
+  settlement_deadline: 'مهلة التصفية',
+  proration: 'تجزئة الأجر',
+  pay_cycle: 'دورية الصرف',
+  fund_disposition: 'وجهة الحصيلة',
 };
 
 export const COMPONENT_KIND_LABELS: Record<string, string> = {
   earning: 'استحقاق',
   deduction: 'استقطاع',
-  employer_cost: 'تكلفةُ المكتب',
+  employer_cost: 'تكلفة المكتب',
   informational: 'لا يجوز',
 };
 
@@ -304,7 +304,7 @@ export const COUNTERPARTY_LABELS: Record<string, string> = {
   court: 'المحكمة',
   worker_fund: 'صندوق العمال',
   employer: 'المكتب',
-  third_party: 'طرفٌ ثالث',
+  third_party: 'طرف ثالث',
 };
 
 export const BEARER_LABELS: Record<string, string> = {
@@ -313,11 +313,11 @@ export const BEARER_LABELS: Record<string, string> = {
 };
 
 export const RUN_TYPE_LABELS: Record<string, string> = {
-  monthly: 'الشهريّ',
-  off_cycle: 'الاستثنائيّ',
-  correction: 'التصحيحيّ',
+  monthly: 'الشهري',
+  off_cycle: 'الاستثنائي',
+  correction: 'التصحيحي',
   final_settlement: 'التصفية',
-  leave_advance: 'سلفةُ الإجازة',
+  leave_advance: 'سلفة الإجازة',
 };
 
 /**
@@ -335,15 +335,15 @@ export function ruleEnforcement(rule: { informational: boolean; reader: { shippe
 }
 
 export const ENFORCEMENT_LABELS: Record<RuleEnforcement, string> = {
-  enforced: 'تُنفَّذ الآن',
-  pending_reader: 'لم تُنفَّذ بعد',
-  reference: 'للاطّلاع فقط',
+  enforced: 'تنفذ الآن',
+  pending_reader: 'غير منفذة بعد',
+  reference: 'للاطلاع فقط',
 };
 
 export const ENFORCEMENT_HINTS: Record<RuleEnforcement, string> = {
-  enforced: 'قارئُها مشحونٌ ويقرؤها في كلّ احتساب.',
-  pending_reader: 'مبذورةٌ وموثَّقة، ولا يقرؤها شيءٌ بعدُ — تُنفَّذ حين تُشحن خطوتُها.',
-  reference: 'معروضةٌ للاطّلاع، ولا يُدَّعى إنفاذُها إطلاقاً.',
+  enforced: 'محرك الاحتساب مفعل ويطبقها في كل احتساب.',
+  pending_reader: 'معدة مسبقاً وموثقة، ولا يطبقها شيء بعد. تعمل عند تفعيل خطوتها.',
+  reference: 'معروضة للاطلاع فقط ولا تطبق.',
 };
 
 /**
@@ -396,7 +396,7 @@ export function flattenPayload(payload: Record<string, unknown>, prefix = ''): A
 // ══════════════════════════════════════════════════════════════════════════
 
 export const RUN_STAGE_LABELS: Record<RunStage, string> = {
-  draft: 'مسوّدة',
+  draft: 'مسودة',
   calculated: 'محتسَب',
   approved: 'معتمَد',
   paying: 'قيد الصرف',
@@ -406,10 +406,10 @@ export const RUN_STAGE_LABELS: Record<RunStage, string> = {
 };
 
 export const POSTING_STATE_LABELS: Record<PostingState, string> = {
-  not_posted: 'لم يُقيَّد بعد',
-  posted: 'مُقيَّد محاسبياً',
-  reversed: 'قيدٌ معكوس',
-  accounting_off: 'لم يُقيَّد محاسبياً',
+  not_posted: 'غير مقيد بعد',
+  posted: 'مقيد محاسبياً',
+  reversed: 'قيد عكسي',
+  accounting_off: 'غير مقيد محاسبياً',
 };
 
 /**
@@ -420,32 +420,32 @@ export const POSTING_STATE_LABELS: Record<PostingState, string> = {
  * أجرٍ مسجَّل) وسارةُ القحطانيّ (انفكّت ٠٧-١٢)» هو الفرقُ بين نظامٍ يصمت ونظامٍ يقول.
  */
 export const EXCLUSION_LABELS: Record<ExclusionReason, string> = {
-  terminated_before: 'انفكّت علاقتُه قبل الفترة',
+  terminated_before: 'انتهت خدمته قبل الفترة',
   joined_after: 'التحق بعد الفترة',
-  already_claimed: 'له سطرٌ في مسيرٍ آخرَ لنفس الفترة',
-  no_wage_file: 'لم يُفتح له ملفُّ أجر',
-  wage_file_closed: 'ملفُّ أجره مُغلَق',
-  wage_file_held: 'ملفُّ أجره معلَّق',
+  already_claimed: 'له سطر في مسير آخر لنفس الفترة',
+  no_wage_file: 'لا يوجد له ملف أجر',
+  wage_file_closed: 'ملف أجره مغلق',
+  wage_file_held: 'ملف أجره معلق',
   no_gosi_scheme: 'بلا نظام تأمينات',
-  no_wage_row: 'بلا أجرٍ مسجَّل',
-  zero_wage: 'أجرُه الأساسيُّ صفر',
-  manual: 'استُبعد بقرار',
+  no_wage_row: 'بلا أجر مسجل',
+  zero_wage: 'أجره الأساسي صفر',
+  manual: 'مستبعَد بقرار',
 };
 
 /** «ما العمل» — أمرٌ للمستقبل لا حكمٌ على الماضي، ولا كلمةَ لومٍ في الخريطة كلِّها. */
 export const EXCLUSION_ACTIONS: Record<ExclusionReason, string> = {
-  terminated_before: 'واقعةٌ لا نقص — لا يُصرف عن فترةٍ سبقت انفكاكه.',
-  joined_after: 'واقعةٌ لا نقص — يدخل مسيرَ الشهر الذي التحق فيه.',
-  already_claimed: 'افتح المسيرَ الذي يطالب به، أو ألغِه إن فُتح خطأً.',
-  no_wage_file: 'افتح له ملفَّ أجرٍ وصرّح بنظام تأميناته.',
-  wage_file_closed: 'أعِد فتحَ ملفّ الأجر إن كانت العلاقةُ قائمة.',
-  wage_file_held: 'ارفع التعليقَ بعد استكمال سببه.',
-  no_gosi_scheme: 'صرّح بنظام التأمينات — ولا يُشتقّ من الجنسية.',
-  no_wage_row: 'سجّل له راتباً من تاريخِ سريان.',
+  terminated_before: 'لا إجراء مطلوباً. لا يصرف عن فترة سبقت انتهاء خدمته.',
+  joined_after: 'لا إجراء مطلوباً. يدخل مسير الشهر الذي التحق فيه.',
+  already_claimed: 'افتح المسير الذي يطالب به، أو ألغه إن فتح خطأً.',
+  no_wage_file: 'افتح له ملف أجر وحدد نظام تأميناته.',
+  wage_file_closed: 'أعد فتح ملف الأجر إن كانت خدمته قائمة.',
+  wage_file_held: 'ألغ الإيقاف بعد استكمال سببه.',
+  no_gosi_scheme: 'حدد نظام التأمينات، فهو لا يحدد تلقائياً من الجنسية.',
+  no_wage_row: 'سجل له راتباً من تاريخ سريان.',
   // لا تُكرّر السببَ في الفعل: السببُ مكتوبٌ في العمود الذي قبله، والتكرارُ ضجيجٌ يُقرأ
   // مرّتين ويُفهم مرّة.
-  zero_wage: 'سجّل نسخةً بالمبلغ الصحيح.',
-  manual: 'راجع قرارَ الاستبعاد.',
+  zero_wage: 'سجل نسخة بالمبلغ الصحيح.',
+  manual: 'راجع قرار الاستبعاد.',
 };
 
 /**
@@ -472,27 +472,27 @@ export function fixHref(target?: string | null, runId?: number, profileId?: numb
 
 /** نصُّ العلَم في الفحص القبْليّ — وما لا نعرف له نصّاً يُعرَض برمزه لا بجملةٍ مخترَعة. */
 export const FLAG_LABELS: Record<string, string> = {
-  no_eligible_employee: 'لا منسوبَ مؤهّلٌ لهذا المسير',
-  gosi_rates_unconfirmed: 'نسبُ التأمينات لم تُؤكَّد بعد',
-  missing_iban: 'منسوبون بلا آيبانٍ صالحٍ وطريقةُ صرفهم تحويلٌ بنكيّ',
-  fixable_exclusions: 'مستبعَدون بنقصٍ يمكن استكمالُه',
+  no_eligible_employee: 'لا يوجد موظف مؤهل لهذا المسير',
+  gosi_rates_unconfirmed: 'نسب التأمينات غير مؤكدة بعد',
+  missing_iban: 'موظفون بلا آيبان صالح وطريقة صرفهم تحويل بنكي',
+  fixable_exclusions: 'مستبعَدون بنقص يمكن استكماله',
   roster_excluded: 'مستبعَدون من هذا المسير',
-  'open_proposal:unpaid_leave': 'إجازاتٌ بلا أجرٍ تنتظر قراراً',
-  'open_proposal:sick_tier': 'إجازاتٌ بنسبٍ متدرّجةٍ تنتظر قراراً',
-  'open_proposal:undertime': 'نقصُ دقائقَ في الحضور ينتظر قراراً',
-  'open_proposal:unclassified_day': 'أيامٌ لم تُصنَّف',
+  'open_proposal:unpaid_leave': 'إجازات بلا أجر تنتظر قراراً',
+  'open_proposal:sick_tier': 'إجازات بنسب متدرجة تنتظر قراراً',
+  'open_proposal:undertime': 'نقص دقائق في الحضور ينتظر قراراً',
+  'open_proposal:unclassified_day': 'أيام غير مصنفة',
 };
 
 export const FLAG_HINTS: Record<string, string> = {
-  no_eligible_employee: 'سجّل راتباً واحداً ساري المفعول على الأقلّ ليُفتح المسير.',
-  gosi_rates_unconfirmed: 'الاعتمادُ محجوبٌ حتى يؤكّد المكتبُ النسبَ باسمه — والفتحُ والاحتسابُ يمرّان.',
-  missing_iban: 'أضف آيباناً صالحاً، أو غيّر طريقةَ الصرف مع ذكر سببها.',
-  fixable_exclusions: 'كلُّ سببٍ أدناه له طريقُ علاجٍ واحد — والنقصُ بيانٌ يُدخَل لا عطلٌ يُصلَح.',
-  roster_excluded: 'أسماؤهم وأسبابُهم في مرحلة النطاق — ولا يُكتب العددُ وحدَه.',
-  'open_proposal:unpaid_leave': 'صرفُ راتبٍ كاملٍ عن أيامٍ بلا أجرٍ خطأٌ صامت — القرارُ فعلُ إنسانٍ مسمّى.',
-  'open_proposal:sick_tier': 'النسبُ متدرّجةٌ ولا يخمّنها محرّك.',
-  'open_proposal:undertime': 'تنبيهٌ يمرّ بإقرارٍ مسجَّلٍ باسم المُقرّ.',
-  'open_proposal:unclassified_day': 'معلومةٌ تُعرَض ولا تقترح خصماً — محرّكُ الحضور لا يحكم بالغياب.',
+  no_eligible_employee: 'سجل راتباً واحداً ساري المفعول على الأقل حتى يتم فتح المسير.',
+  gosi_rates_unconfirmed: 'الاعتماد محجوب حتى يؤكد المكتب النسب باسمه. ويبقى الفتح والاحتساب متاحين.',
+  missing_iban: 'أضف آيباناً صالحاً، أو غير طريقة الصرف مع ذكر سببها.',
+  fixable_exclusions: 'لكل سبب أدناه طريق علاج واحد، ويعالج بإدخال البيانات الناقصة.',
+  roster_excluded: 'أسماؤهم وأسبابهم في مرحلة المشمولين.',
+  'open_proposal:unpaid_leave': 'صرف راتب كامل عن أيام بلا أجر خطأ لا يظهر تلقائياً، والقرار يسجل باسم من اتخذه.',
+  'open_proposal:sick_tier': 'النسب متدرجة ولا يحددها النظام تلقائياً.',
+  'open_proposal:undertime': 'تنبيه يمر بإقرار مسجل باسم من أقره.',
+  'open_proposal:unclassified_day': 'معلومة تعرض ولا تقترح خصماً. ومحرك الحضور لا يحتسبها غياباً.',
 };
 
 export function flagLabel(code: string): string {
@@ -500,15 +500,15 @@ export function flagLabel(code: string): string {
 }
 
 export const PROPOSAL_TYPE_LABELS: Record<ProposalType, string> = {
-  unpaid_leave: 'إجازةٌ بلا أجر',
-  sick_tier: 'إجازةٌ بنسبةٍ متدرّجة',
-  undertime: 'نقصُ دقائق',
-  unclassified_day: 'يومٌ لم يُصنَّف',
-  advance_installment: 'قسطُ سلفة',
-  penalty_due: 'جزاءٌ نافذ',
-  deferred_from_cap: 'مرحَّلٌ بالسقف',
-  retro_after_payroll: 'أثرٌ رجعيٌّ بعد الصرف',
-  overpayment: 'صرفٌ زائد',
+  unpaid_leave: 'إجازة بلا أجر',
+  sick_tier: 'إجازة بنسبة متدرجة',
+  undertime: 'نقص دقائق',
+  unclassified_day: 'يوم غير مصنف',
+  advance_installment: 'قسط سلفة',
+  penalty_due: 'جزاء نافذ',
+  deferred_from_cap: 'مرحل بالسقف',
+  retro_after_payroll: 'أثر رجعي بعد الصرف',
+  overpayment: 'صرف زائد',
 };
 
 export const SEVERITY_LABELS: Record<FlagSeverity, string> = {
@@ -550,10 +550,10 @@ export const DAY_FORMS = { one: 'يوم', two: 'يومين', few: 'أيام', ma
 
 /** تمييزُ «منسوب» — «٢ منسوبين» · «٩ منسوبين» · «١٧ منسوباً». */
 export const HEADCOUNT_FORMS = {
-  one: 'منسوب',
-  two: 'منسوبين',
-  few: 'منسوبين',
-  many: 'منسوباً',
+  one: 'موظف',
+  two: 'موظفان',
+  few: 'موظفين',
+  many: 'موظفاً',
 } as const;
 
 /**
@@ -563,19 +563,19 @@ export const HEADCOUNT_FORMS = {
  * المعدودَ الذي تختاره هي. فيُحمل معها في الصيغ الأربع.
  */
 export const DRAFT_PROFILE_FORMS = {
-  one: 'ملفٌّ مبدئيّ',
-  two: 'ملفّان مبدئيّان',
-  few: 'ملفّاتٍ مبدئية',
-  many: 'ملفّاً مبدئياً',
+  one: 'ملف غير مكتمل',
+  two: 'ملفان غير مكتملين',
+  few: 'ملفات غير مكتملة',
+  many: 'ملفاً غير مكتمل',
 } as const;
 
 /** «الصرفُ بعد 4 أيام» · «الصرفُ بعد 17 يوماً» · «تأخّر الصرفُ 3 أيام» — ولا رقمٌ سالبٌ عارٍ. */
 export function payCountdown(days: number): string {
-  if (days === 0) return 'الصرفُ اليوم';
-  if (days > 0) return `الصرفُ بعد ${counted(days, DAY_FORMS)}`;
+  if (days === 0) return 'الصرف اليوم';
+  if (days > 0) return `الصرف بعد ${counted(days, DAY_FORMS)}`;
 
   // المتأخّرُ منصوبٌ في الحالين («تأخّر الصرفُ يوماً») ولا يُقال «تأخّر الصرفُ يوم».
-  return `تأخّر الصرفُ ${counted(Math.abs(days), { ...DAY_FORMS, one: 'يوماً' })}`;
+  return `تأخر الصرف ${counted(Math.abs(days), { ...DAY_FORMS, one: 'يوماً' })}`;
 }
 
 /** «١٦ من ١٨» — الصيغةُ في موضعٍ واحدٍ، فلا يُكتب العددُ الأولُ وحدَه في أيّ شاشة (D22). */
@@ -612,10 +612,10 @@ export const WINDOW_TONE_CLASS: Record<PayrollStatutoryWindow['tone'], string> =
  * في لوح «دورةُ الرواتب والبنك».
  */
 export function windowCountdown(window: PayrollStatutoryWindow): string {
-  if (window.days_left === null) return 'مهلةُ الرفع';
-  if (window.tone === 'settled') return 'مهلةُ الرفع';
-  if (window.days_left < 0) return `انقضت المهلةُ منذ ${counted(Math.abs(window.days_left), { ...DAY_FORMS, one: 'يوماً' })}`;
-  if (window.days_left === 0) return 'المهلةُ تنقضي اليوم';
+  if (window.days_left === null) return 'مهلة الرفع';
+  if (window.tone === 'settled') return 'مهلة الرفع';
+  if (window.days_left < 0) return `انقضت المهلة منذ ${counted(Math.abs(window.days_left), { ...DAY_FORMS, one: 'يوماً' })}`;
+  if (window.days_left === 0) return 'المهلة تنقضي اليوم';
 
   return `يبقى على انقضاء المهلة ${counted(window.days_left, DAY_FORMS)}`;
 }
@@ -652,7 +652,7 @@ export function evidenceText(type: ProposalType, evidence: Record<string, unknow
 
     if (ledger !== null) {
       // الرقمُ الثاني بمسمّاه لا مجرَّداً: «ودفترُ الإجازات ٩» تقول أيَّ عدٍّ هو.
-      parts.push(`ودفترُ الإجازات ${ledger}`);
+      parts.push(`وسجل الإجازات ${ledger}`);
     }
 
     const from = get('from');
@@ -678,7 +678,7 @@ export function evidenceText(type: ProposalType, evidence: Record<string, unknow
   if (type === 'unclassified_day') {
     const days = get('days');
 
-    return days === null ? EMPTY_MARK : `${days} يوماً لم تُصنَّف`;
+    return days === null ? EMPTY_MARK : `${days} يوماً غير مصنف`;
   }
 
   const days = get('days');
@@ -811,12 +811,12 @@ export function counterpartyNote(item: PayrollItem): string | null {
 }
 
 export const CAP_LABELS: Record<CapCode, string> = {
-  art70_fine: 'سقفُ الجزاء: أجرُ خمسة أيام',
-  art91_damage: 'سقفُ الإتلاف: أجرُ خمسة أيام',
-  art92_category: 'سقفُ الفئة',
-  art93_total: 'السقفُ الكلّيّ: نصفُ المستحقّ',
-  art40_forbidden: 'خصمٌ باطل يتحمّله المكتب',
-  payable_ceiling: 'حدُّ المستحقّ: لا يُخصَم ما لم يُستحقّ',
+  art70_fine: 'سقف الجزاء: أجر خمسة أيام',
+  art91_damage: 'سقف الإتلاف: أجر خمسة أيام',
+  art92_category: 'سقف الفئة',
+  art93_total: 'السقف الكلي: نصف المستحق',
+  art40_forbidden: 'خصم باطل يتحمله المكتب',
+  payable_ceiling: 'حد المستحق: لا يخصم ما لم يستحق',
 };
 
 /**
@@ -833,9 +833,9 @@ export function capNote(item: PayrollItem): string | null {
   const deferred = money(item.deferred_amount);
   const parts: string[] = [label];
 
-  if (from !== null) parts.push(`طُلب ${from}`);
+  if (from !== null) parts.push(`المطلوب ${from}`);
   if (deferred !== null && isPositiveMoney(item.deferred_amount)) {
-    parts.push(`ورُحِّل ${deferred} إلى الفترة التالية`);
+    parts.push(`وتم ترحيل ${deferred} إلى الفترة التالية`);
   }
 
   return parts.join(' · ');
@@ -843,26 +843,26 @@ export function capNote(item: PayrollItem): string | null {
 
 /** مصدرُ البند — «من أين جاء» بلغةِ إنسانٍ لا بأسماء جداول. */
 export const SOURCE_LABELS: Record<string, string> = {
-  hr_payroll_line: 'محسوبٌ من بيانات المدّة',
-  manual: 'أُدخل بقرارٍ يدويّ',
-  hr_leave: 'من دفتر الإجازات',
-  hr_attendance_day: 'من سجلّ الحضور',
-  hr_advance: 'من سجلّ السلف',
-  hr_penalty: 'من سجلّ الجزاءات',
+  hr_payroll_line: 'محسوب من بيانات المدة',
+  manual: 'مدخل بقرار يدوي',
+  hr_leave: 'من سجل الإجازات',
+  hr_attendance_day: 'من سجل الحضور',
+  hr_advance: 'من سجل السلف',
+  hr_penalty: 'من سجل الجزاءات',
 };
 
 /** أسماءُ القواعد النظامية كما تُعرَض بجانب البند — بالمادّة لا بالكود. */
 export const RULE_TITLES: Record<string, string> = {
-  'payroll.proration_basis': 'أساسُ تجزئة الأجر',
-  'ksa.labor.art116.unpaid_suspension': 'الإجازةُ بلا أجر',
-  'ksa.labor.art107.overtime': 'الأجرُ الإضافيّ',
-  'ksa.labor.art92.deduction_caps': 'سقوفُ الحسم لكلّ فئة',
-  'ksa.labor.art93.total_cap': 'السقفُ الكلّيّ للحسم',
-  'ksa.labor.art70.fine_cap': 'سقفُ الجزاء التأديبيّ',
-  'ksa.labor.art91.damage_cap': 'سقفُ حسم الإتلاف',
-  'ksa.labor.art40.forbidden_deductions': 'ما لا يجوز خصمُه',
-  'gosi.contribution': 'نسبُ اشتراك التأمينات',
-  'gosi.wage_basis': 'وعاءُ أجر الاشتراك وحدّاه',
+  'payroll.proration_basis': 'أساس تجزئة الأجر',
+  'ksa.labor.art116.unpaid_suspension': 'الإجازة بلا أجر',
+  'ksa.labor.art107.overtime': 'الأجر الإضافي',
+  'ksa.labor.art92.deduction_caps': 'سقوف الحسم لكل فئة',
+  'ksa.labor.art93.total_cap': 'السقف الكلي للحسم',
+  'ksa.labor.art70.fine_cap': 'سقف الجزاء التأديبي',
+  'ksa.labor.art91.damage_cap': 'سقف حسم الإتلاف',
+  'ksa.labor.art40.forbidden_deductions': 'ما لا يجوز خصمه',
+  'gosi.contribution': 'نسب اشتراك التأمينات',
+  'gosi.wage_basis': 'وعاء أجر الاشتراك وحدوده',
 };
 
 export function ruleTitle(code: string | null): string | null {
@@ -884,7 +884,7 @@ export function whyRows(diff: PayrollDiff[]): Array<{ mark: 'up' | 'down' | 'fla
     if (row.code === 'wage_changed') {
       return {
         mark,
-        text: `الراتبُ تغيّر: من ${money(row.from ?? null) ?? EMPTY_MARK} إلى ${money(row.to ?? null) ?? EMPTY_MARK}`,
+        text: `الراتب تغير: من ${money(row.from ?? null) ?? EMPTY_MARK} إلى ${money(row.to ?? null) ?? EMPTY_MARK}`,
       };
     }
 
@@ -899,23 +899,23 @@ export function whyRows(diff: PayrollDiff[]): Array<{ mark: 'up' | 'down' | 'fla
       // 🔴 D01: الرقمان معاً — التقويميُّ مقامُ الأجر، والدفتريُّ ما احتسبه دفترُ الإجازات.
       const ledger = row.ledger_days ?? null;
       const ledgerText =
-        ledger === null || ledger === '0.00' ? '' : ` · وفي دفتر الإجازات ${String(ledger).replace(/\.00$/, '')}`;
+        ledger === null || ledger === '0.00' ? '' : ` · وفي سجل الإجازات ${String(ledger).replace(/\.00$/, '')}`;
 
       return { mark: 'down', text: `${days} يوماً تقويمياً بلا أجر${ranges === '' ? '' : ` (${ranges})`}${ledgerText}` };
     }
 
     if (row.code === 'gosi_changed') {
-      return { mark, text: `حصّةُ التأمينات تغيّرت بمقدار ${money(delta) ?? EMPTY_MARK}` };
+      return { mark, text: `حصة التأمينات تغيرت بمقدار ${money(delta) ?? EMPTY_MARK}` };
     }
 
     if (row.code === 'deductions_changed') {
-      return { mark, text: `الاستقطاعاتُ تغيّرت بمقدار ${money(delta) ?? EMPTY_MARK}` };
+      return { mark, text: `الاستقطاعات تغيرت بمقدار ${money(delta) ?? EMPTY_MARK}` };
     }
 
     if (row.code === 'capped_and_deferred') {
       return {
         mark: 'flat',
-        text: `قُصَّ حسمٌ بالسقف ورُحِّل ${money(row.amount ?? null) ?? EMPTY_MARK} إلى الفترة التالية`,
+        text: `تم تخفيض الحسم بالسقف وترحيل ${money(row.amount ?? null) ?? EMPTY_MARK} إلى الفترة التالية`,
       };
     }
 
@@ -943,13 +943,13 @@ export interface StageDef {
 
 /** 🔴 المشحونُ ستُّ مراحل — والباقيةُ تُعرَض معطَّلةً بسببها لا تُخفى. */
 export const STAGES: StageDef[] = [
-  { key: 'roster', n: 1, title: 'النطاق', disabledReason: null },
-  { key: 'preflight', n: 2, title: 'الفحصُ القبْليّ', disabledReason: null },
+  { key: 'roster', n: 1, title: 'المشمولون', disabledReason: null },
+  { key: 'preflight', n: 2, title: 'الفحص التمهيدي', disabledReason: null },
   { key: 'compute', n: 3, title: 'الاحتساب', disabledReason: null },
   { key: 'review', n: 4, title: 'المراجعة', disabledReason: null },
   { key: 'approve', n: 5, title: 'الاعتماد', disabledReason: null },
   { key: 'pay', n: 6, title: 'الدفع', disabledReason: null },
-  { key: 'publish', n: 7, title: 'النشر', disabledReason: 'النشرُ يُظهر القسيمةَ للموظف بعد صرفها.' },
+  { key: 'publish', n: 7, title: 'النشر', disabledReason: 'النشر يظهر القسيمة للموظف بعد صرفها.' },
 ];
 
 /** آخرُ مرحلةٍ **مشحونة** — إليها يُردُّ أيُّ اشتقاقٍ يقع على مرحلةٍ لم تُبنَ بعد. */
@@ -1005,9 +1005,9 @@ export function stageDoneThrough(stage?: RunStage | null): number {
   }
 }
 
-export const STAGE_DONE_LABEL = 'خطوةٌ منقضية';
+export const STAGE_DONE_LABEL = 'خطوة منقضية';
 
-export const STAGE_LOCKED_LABEL = 'خطوةٌ لم تُشحن بعد';
+export const STAGE_LOCKED_LABEL = 'خطوة غير مفعلة بعد';
 
 // ══════════════════════════════════════════════════════════════════════════
 // S5 — الاعتماد: نصُّ الإقرار، وما يفعله المستخدمُ بعد كلّ ردِّ رفض
@@ -1018,7 +1018,7 @@ export const STAGE_LOCKED_LABEL = 'خطوةٌ لم تُشحن بعد';
 
 /** نصُّ الإقرار الذي يُقرأ ويُرسَل ويُسجَّل — **واحدٌ**، فلا يُوقَّع على غير ما قُرئ. */
 export const SINGLE_APPROVER_ACK_TEXT =
-  'أنا المعتمِدُ الوحيدُ في المكتب ومُعِدُّ هذا المسير، وأقرُّ بذلك.';
+  'أنا المعتمِد الوحيد في المكتب ومعد هذا المسير، وأقر بذلك.';
 
 /**
  * 🔴 نصُّ إقرار **المشمول** — مستقلٌّ عن سابقه لا نسخةٌ منه.
@@ -1028,7 +1028,7 @@ export const SINGLE_APPROVER_ACK_TEXT =
  * إقرارين لم يُقرأ أحدُهما — والمخزَّنُ حرفياً هو المستند.
  */
 export const SUBJECT_APPROVER_ACK_TEXT =
-  'لي قسيمةٌ في هذا المسير، وأقرُّ باعتمادي مسيراً يُصرف لي فيه.';
+  'لي قسيمة في هذا المسير، وأقر باعتمادي مسيراً يصرف لي فيه.';
 
 /**
  * 🔴 **ما سيقع** — يُقرأ قبل التأشير لا بعده.
@@ -1037,29 +1037,29 @@ export const SUBJECT_APPROVER_ACK_TEXT =
  * «الغرضُ من القاعدة ليس المنع، بل أن يعلم من يقرأ القسيمة أنّ من اعتمدها هو من صُرف له».
  */
 export const SUBJECT_APPROVER_ACK_EFFECT =
-  'سيُطبَع على قسائم هذا المسير — على الشاشة وفي الورقة — أنّ من اعتمدها هو من صُرف له فيها، باسمك.';
+  'سيطبع باسمك على قسائم هذا المسير، على الشاشة وفي الورقة، أن من اعتمدها هو من صرف له فيها.';
 
 export const APPROVAL_DENIAL_HINTS: Record<string, string> = {
   approver_is_subject:
-    'بابٌ ظاهرٌ موسومٌ لا تجاوزٌ صامت: الأثرُ يبقى مطبوعاً على القسيمة، فيعلم قارئُها بعد سنتين مَن وقّع.',
+    'استثناء مسجل وظاهر على القسيمة: يبقى اسم من اعتمدها مطبوعاً عليها.',
   preparer_cannot_approve:
-    'مبدأٌ لا يُلغى: مَن أعدّ لا يعتمد. أحِل المسيرَ إلى معتمِدٍ آخرَ في المكتب.',
+    'من أعد المسير لا يعتمده. حول المسير إلى معتمِد آخر في المكتب.',
   single_approver_ack_required:
-    'لا معتمِدَ آخرَ في المكتب — فالبابُ ظاهرٌ موسوم: أقرّ بذلك صراحةً ليُسجَّل نصُّ إقرارك باسمك ويُوسَم المسيرُ «اعتمدها معدُّها».',
+    'لا يوجد معتمِد آخر في المكتب. أكد ذلك صراحة حتى يتم تسجيل نص إقرارك باسمك، ويظهر على المسير أن معده هو من اعتمده.',
   gosi_rates_unconfirmed:
-    'نقصُ بيانٍ لا نقصُ صفة: أكّد النسبَ باسمك في المرجع النظاميّ ثمّ عُد — ولا حاجةَ إلى شخصٍ آخر.',
-  run_has_blocking_flags: 'عالِج الموانعَ ثمّ أعد الاحتساب قبل الاعتماد.',
-  lines_not_computed: 'احتسب المسيرَ قبل اعتماده — لا يُعتمَد سطرٌ بلا رقم.',
-  lines_with_blockers: 'عالِج موانعَ الأسطر ثمّ أعد الاحتساب.',
-  open_blocking_proposals: 'بُتَّ القراراتِ المنتظرةَ في طابور القرارات ثمّ أعد الاحتساب.',
-  open_proposals: 'بُتَّ القراراتِ المنتظرةَ في طابور القرارات ثمّ أعد الاحتساب.',
+    'أكد النسب باسمك في المرجع النظامي ثم ارجع. ولا حاجة إلى شخص آخر.',
+  run_has_blocking_flags: 'أزل الموانع ثم أعد الاحتساب قبل الاعتماد.',
+  lines_not_computed: 'احتسب المسير قبل اعتماده، فلا يمكن اعتماد سطر بلا رقم.',
+  lines_with_blockers: 'أزل موانع الأسطر ثم أعد الاحتساب.',
+  open_blocking_proposals: 'احسم القرارات المنتظرة في قائمة القرارات المعلقة ثم أعد الاحتساب.',
+  open_proposals: 'احسم القرارات المنتظرة في قائمة القرارات المعلقة ثم أعد الاحتساب.',
   day_already_claimed:
-    'لا يُدفَع يومٌ مرّتين ولا يُخصم مرّتين: اسحب اعتمادَ المسير المطالِب أو صحّحه بمسيرٍ تصحيحيّ.',
-  day_map_missing: 'أعد الاحتساب قبل الاعتماد ليُقتطَع من خريطة الأيام ما يُطالَب به.',
+    'لا يدفع اليوم مرتين ولا يخصم مرتين. اسحب اعتماد المسير المطالِب أو صححه بمسير تصحيحي.',
+  day_map_missing: 'أعد الاحتساب قبل الاعتماد حتى يتم خصم ما يطالب به من خريطة الأيام.',
   proration_divisor_missing: 'أعد الاحتساب قبل الاعتماد.',
-  repayment_balance_unknown: 'أعد الاحتساب ليُثبَّت المتبقّي بعد القسط على الصفّ.',
-  run_has_no_lines: 'أعد بناءَ النطاق ثمّ احتسب قبل الاعتماد.',
-  run_not_approvable: 'لا يُعتمَد إلا مسيرٌ محتسَب — احتسبه أوّلاً.',
+  repayment_balance_unknown: 'أعد الاحتساب حتى يتم تثبيت المتبقي بعد القسط على السجل.',
+  run_has_no_lines: 'أعد بناء قائمة المشمولين ثم احتسب قبل الاعتماد.',
+  run_not_approvable: 'لا يعتمد إلا مسير محتسَب. احتسبه أولاً.',
 };
 
 /**
@@ -1099,14 +1099,14 @@ export function daysFraction(paid: string | null, total: number | null): string 
 
 /** نصُّ علَمِ السطر — وما لا نعرف له نصّاً يُعرَض برمزه لا بجملةٍ مخترَعة. */
 export const LINE_FLAG_LABELS: Record<string, string> = {
-  pay_breakdown_missing: 'إجازةٌ بشرائحَ ناقصةٍ — لا يمكن تقييمُ أيامها',
-  pay_breakdown_mismatch: 'شرائحُ الإجازة لا تساوي أيامَها التقويمية',
-  pay_breakdown_fractional: 'شريحةُ إجازةٍ بكسرِ يوم',
-  overlapping_leaves: 'إجازتان على تاريخٍ واحد',
-  entitlement_clamped_to_monthly_wage: 'حُصر الاستحقاقُ عند أجر الشهر',
-  deduction_exceeds_entitlement: 'حسمٌ يتجاوز المستحقّ — قُصَّ ورُحِّل',
-  gosi_rates_unconfirmed: 'نسبُ التأمينات لم تُؤكَّد بعد',
-  lines_with_blockers: 'أسطرٌ عليها موانع',
+  pay_breakdown_missing: 'إجازة بشرائح ناقصة، لا يمكن تقييم أيامها',
+  pay_breakdown_mismatch: 'شرائح الإجازة لا تساوي أيامها التقويمية',
+  pay_breakdown_fractional: 'شريحة إجازة بكسر يوم',
+  overlapping_leaves: 'إجازتان على تاريخ واحد',
+  entitlement_clamped_to_monthly_wage: 'الاستحقاق محصور عند أجر الشهر',
+  deduction_exceeds_entitlement: 'حسم يتجاوز المستحق، تم تخفيضه وترحيله',
+  gosi_rates_unconfirmed: 'نسب التأمينات غير مؤكدة بعد',
+  lines_with_blockers: 'أسطر عليها موانع',
 };
 
 export function lineFlagLabel(code: string): string {
@@ -1157,14 +1157,14 @@ export function fractionSentence(proration: FrozenProration | null): string | nu
 
   if (proration.mode === 'whole_period') {
     return paid === null
-      ? 'مدّةٌ كاملةٌ بلا يومٍ غيرِ مدفوع — الأجرُ الشهريُّ حرفياً بلا قسمة.'
-      : `مدّةٌ كاملة (${paid} يوماً) — الأجرُ الشهريُّ حرفياً بلا قسمة.`;
+      ? 'مدة كاملة بلا يوم غير مدفوع. الأجر الشهري كما هو بلا قسمة.'
+      : `مدة كاملة (${paid} يوماً). الأجر الشهري كما هو بلا قسمة.`;
   }
 
   const parts: string[] = [];
 
-  if (paid !== null) parts.push(`الأجرُ عن ${paid} يوماً`);
-  if (unpaid !== null) parts.push(`وحُسم ${unpaid} يوماً بلا أجر`);
+  if (paid !== null) parts.push(`الأجر عن ${paid} يوماً`);
+  if (unpaid !== null) parts.push(`وتم حسم ${unpaid} يوماً بلا أجر`);
 
   return parts.length === 0 ? null : `${parts.join('، ')}.`;
 }
@@ -1189,7 +1189,7 @@ export function divisorNote(
 
   if (divisor === null || divisor === periodCalendarDays) return null;
 
-  return `والعددان لا يتناقضان: ${periodCalendarDays} عددُ أيام الشهر، و${divisor} مقامُ القسمة الذي يُقسَم عليه الأجرُ مهما بلغت أيامُ الشهر.`;
+  return `والعددان لا يتناقضان: ${periodCalendarDays} عدد أيام الشهر، و${divisor} مقام القسمة الذي يقسم عليه الأجر مهما بلغت أيام الشهر.`;
 }
 
 /** محطّةٌ في الطريق — الوسمُ والمبلغُ ومعهما «من أين». */
@@ -1229,43 +1229,43 @@ export function netPathRows(line: {
     line.wage_basic === null || line.wage_actual === null
       ? null
       : cents(line.wage_basic) === cents(line.wage_actual)
-        ? 'أساسيٌّ بلا بدلات.'
-        : `منه أساسيٌّ ${money(line.wage_basic) ?? EMPTY_MARK} والباقي بدلات.`;
+        ? 'أساسي بلا بدلات.'
+        : `منه أساسي ${money(line.wage_basic) ?? EMPTY_MARK} والباقي بدلات.`;
 
   // 🔴 `"0.00"` سلسلةٌ صادقةٌ تمرّ من `!value` — الفحصُ بـ`isPositiveMoney` وحدَه.
   const deductionNote =
     line.deductions_amount === null
       ? null
       : !isPositiveMoney(line.deductions_amount)
-        ? 'لا استقطاعَ في هذه القسيمة.'
+        ? 'لا استقطاع في هذه القسيمة.'
         : isPositiveMoney(line.gosi_ee_amount)
-          ? `منها حصّةُ التأمينات ${money(line.gosi_ee_amount) ?? EMPTY_MARK} — تذهب إلى التأمينات لا إلى المكتب.`
-          : 'تفصيلُها في بنود الاستقطاع، ولكلّ خصمٍ قرارُ إنسانٍ مسمّى.';
+          ? `منها حصة التأمينات ${money(line.gosi_ee_amount) ?? EMPTY_MARK}، وتذهب إلى التأمينات لا إلى المكتب.`
+          : 'تفصيلها في بنود الاستقطاع، ولكل خصم قرار مسجل باسم من اتخذه.';
 
   return [
     {
       key: 'monthly_wage',
-      label: 'الأجرُ الشهريُّ المتّفق عليه',
+      label: 'الأجر الشهري المتفق عليه',
       amount: money(line.wage_actual),
       note: wageNote,
     },
     {
       key: 'entitlement',
-      label: 'مستحقُّ هذه المدّة',
+      label: 'مستحق هذه المدة',
       amount: money(line.earnings_amount),
       note: fractionSentence(proration),
     },
     {
       key: 'deductions',
-      label: 'يُحسم منه',
+      label: 'يحسم منه',
       amount: money(line.deductions_amount),
       note: deductionNote,
     },
     {
       key: 'net',
-      label: 'الصافي المُودَع',
+      label: 'الصافي المودَع',
       amount: money(line.net_amount),
-      note: line.iban_last4 === null ? null : `إلى حسابٍ منتهٍ بـ${line.iban_last4}.`,
+      note: line.iban_last4 === null ? null : `إلى الحساب المنتهي بـ${line.iban_last4}.`,
     },
   ];
 }
@@ -1278,56 +1278,56 @@ export function netPathRows(line: {
 // ══════════════════════════════════════════════════════════════════════════
 
 export const ADVANCE_KIND_LABELS: Record<AdvanceKind, string> = {
-  salary_advance: 'سلفةٌ على الراتب',
+  salary_advance: 'سلفة على الراتب',
   loan: 'قرض',
 };
 
 export const ADVANCE_STATUS_LABELS: Record<AdvanceStatus, string> = {
-  pending: 'مُنحت ولم تُصرف',
+  pending: 'ممنوحة وغير مصروفة',
   active: 'نشطة',
   paused: 'موقوفة',
-  settled: 'سُدّدت',
+  settled: 'مسددة',
   written_off: 'مشطوبة',
   cancelled: 'ملغاة',
 };
 
 /** ما يعنيه كلُّ حالٍ **للقسط** — وهو السؤالُ الذي يسأله من يفتح الشاشة. */
 export const ADVANCE_STATUS_HINTS: Record<AdvanceStatus, string> = {
-  pending: 'لا يُقترَح قسطٌ حتى يُسجَّل صرفُها — ولا يُخصَم ما لم يصل.',
-  active: 'يُقترَح قسطٌ كلَّ شهرٍ في طابور القرارات، ولا يُخصَم بلا بتٍّ باسم إنسان.',
-  paused: 'لا قسطَ حتى تُستأنف — والدَّينُ باقٍ كما هو في الدفتر.',
-  settled: 'بلغ الرصيدُ صفراً — والحالةُ نتيجةُ الدفتر لا يدٌ كتبتها.',
-  written_off: 'شُطب ما تبقّى بقرارٍ مسجَّل.',
-  cancelled: 'أُلغيت قبل صرفها.',
+  pending: 'لا يقترح قسط حتى يتم تسجيل صرفها، ولا يخصم مبلغ لم يصل.',
+  active: 'يقترح قسط كل شهر في قائمة القرارات المعلقة، ولا يخصم بلا قرار مسجل باسم من اتخذه.',
+  paused: 'لا قسط حتى تستأنف، ويبقى الدين كما هو في السجل.',
+  settled: 'بلغ الرصيد صفراً، والحالة محسوبة من السجل دون تعديل يدوي.',
+  written_off: 'تم شطب ما تبقى بقرار مسجل.',
+  cancelled: 'تم إلغاؤها قبل صرفها.',
 };
 
 export const PENALTY_KIND_LABELS: Record<PenaltyKind, string> = {
   warning: 'إنذار',
   fine: 'غرامة (م.٧٠)',
-  suspension_unpaid: 'إيقافٌ بلا أجر',
-  damage_recovery: 'حسمُ إتلاف (م.٩١)',
-  deferred_raise: 'تأجيلُ علاوة',
-  deferred_promotion: 'تأجيلُ ترقية',
+  suspension_unpaid: 'إيقاف بلا أجر',
+  damage_recovery: 'حسم إتلاف (م.٩١)',
+  deferred_raise: 'تأجيل علاوة',
+  deferred_promotion: 'تأجيل ترقية',
 };
 
 export const PENALTY_STATE_LABELS: Record<PenaltyState, string> = {
-  draft: 'مسوّدة',
-  notified: 'بُلّغ به',
+  draft: 'مسودة',
+  notified: 'مبلَّغ به',
   final: 'نافذ',
-  objected: 'مُعترَضٌ عليه',
-  overturned: 'مُبطَل',
-  charged: 'حُصِّل',
-  refunded: 'رُدَّ',
+  objected: 'معترَض عليه',
+  overturned: 'مبطَل',
+  charged: 'محصَّل',
+  refunded: 'مردود',
   void: 'ملغى',
 };
 
 /** الفعلُ التالي في دورة م.٦٦–٧٣ — واحدٌ لكلّ حال، فلا يُعرَض زرّان متنافسان. */
 export const PENALTY_NEXT_STEP: Record<PenaltyState, string | null> = {
-  draft: 'بلّغ العاملَ ليبدأ عدُّ مهلة الاعتراض (١٥ يوماً — م.٧٢).',
-  notified: 'يَنفُذ بانقضاء المهلة، أو بإقرارِ العامل صراحةً.',
-  final: 'يظهر مقترحَ خصمٍ في مسير الشهر — ولا يُخصَم بلا بتٍّ باسم إنسان.',
-  objected: 'ابتّ الاعتراضَ: يُبطَل أو يَنفُذ.',
-  overturned: 'يُردُّ ما حُصِّل خلال سبعة أيام (م.٩١).',
+  draft: 'بلغ العامل حتى تبدأ مهلة الاعتراض (١٥ يوماً، م.٧٢).',
+  notified: 'ينفذ بانقضاء المهلة، أو بإقرار العامل صراحة.',
+  final: 'يظهر مقترح خصم في مسير الشهر، ولا يخصم بلا قرار مسجل باسم من اتخذه.',
+  objected: 'احسم الاعتراض: يبطل أو ينفذ.',
+  overturned: 'يرد ما تم تحصيله خلال سبعة أيام (م.٩١).',
   charged: null,
   refunded: null,
   void: null,
@@ -1335,19 +1335,19 @@ export const PENALTY_NEXT_STEP: Record<PenaltyState, string | null> = {
 
 /** «الغرامةُ إلى صندوق العمال» — البُعدُ الذي يفرّق م.٧٣ عن حسمٍ يعود للمكتب (D14). */
 export function penaltyDestination(row: { to_worker_fund: boolean; kind: PenaltyKind }): string {
-  if (row.to_worker_fund) return 'حصيلتُها إلى صندوق العمال (م.٧٣) — لا إلى إيراد المكتب.';
-  if (row.kind === 'damage_recovery') return 'استردادٌ للمكتب عن إتلافٍ مقدَّرٍ (م.٩١).';
+  if (row.to_worker_fund) return 'حصيلتها إلى صندوق العمال (م.٧٣) لا إلى إيراد المكتب.';
+  if (row.kind === 'damage_recovery') return 'استرداد للمكتب عن إتلاف مقدَّر (م.٩١).';
 
-  return 'جزاءٌ بلا حصيلةٍ مالية.';
+  return 'جزاء بلا حصيلة مالية.';
 }
 
 /** عدّادُ مهلة الاعتراض — «تنتهي بعد ٤ أيام» · «انقضت قبل يومين». */
 export function objectionCountdown(daysLeft: number | null): string | null {
   if (daysLeft === null) return null;
-  if (daysLeft === 0) return 'مهلةُ الاعتراض تنتهي اليوم';
-  if (daysLeft > 0) return `مهلةُ الاعتراض تنتهي بعد ${counted(daysLeft, DAY_FORMS)}`;
+  if (daysLeft === 0) return 'مهلة الاعتراض تنتهي اليوم';
+  if (daysLeft > 0) return `مهلة الاعتراض تنتهي بعد ${counted(daysLeft, DAY_FORMS)}`;
 
-  return `انقضت مهلةُ الاعتراض قبل ${counted(Math.abs(daysLeft), { ...DAY_FORMS, one: 'يوم' })}`;
+  return `انقضت مهلة الاعتراض قبل ${counted(Math.abs(daysLeft), { ...DAY_FORMS, one: 'يوم' })}`;
 }
 
 /** `YYYY-MM` ⇒ «سبتمبر ٢٠٢٦» — شهرُ الأثر يُقرأ لا يُحلّل. */

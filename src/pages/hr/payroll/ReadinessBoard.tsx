@@ -79,7 +79,7 @@ export const ReadinessBoard: React.FC<Props> = ({ readiness, runId, frozen, titl
         <div
           className="hrl-meter"
           role="img"
-          aria-label={`يدخل المسيرَ ${outOf(included, total)} منسوباً`}
+          aria-label={`يدخل المسير ${outOf(included, total)} موظفاً`}
         >
           <span className="hrl-meter__seg" style={meterVars(1, total === 0 ? 0 : included / total)}>
             <span className="hrl-meter__fill" />
@@ -98,8 +98,8 @@ export const ReadinessBoard: React.FC<Props> = ({ readiness, runId, frozen, titl
             يتساويان لا يُكتب شيء: رقمٌ يكرّر رقماً فوقه ضجيجٌ يُقرأ مرّتين. */}
         {readiness.wage_recorded_count > included && (
           <p className="hrl-hint">
-            و{outOf(readiness.wage_recorded_count, total)} له أجرٌ مسجَّلٌ في السجلّ — فالفرقُ
-            عن «يدخل» ليس نقصَ راتبٍ بل ما تسمّيه الأسبابُ أدناه.
+            و{outOf(readiness.wage_recorded_count, total)} له أجر مسجل في السجل. والفرق عن
+            «يدخل» ليس نقص راتب بل ما تسميه الأسباب أدناه.
           </p>
         )}
 
@@ -107,14 +107,14 @@ export const ReadinessBoard: React.FC<Props> = ({ readiness, runId, frozen, titl
           <p className="hrl-hint">
             {drifted ? (
               <>
-                هذا قياسٌ لمنسوبي المكتب <strong>اليوم</strong>، ونطاقُ المسير المجمَّد{' '}
-                {outOf(frozen.included, frozen.total)} كما بُني. والفرقُ يعني تغييراً وقع بعد
-                البناء — أعد بناءَ النطاق في مرحلة النطاق ليدخل من استجدّ.
+                هذا قياس لموظفي المكتب <strong>اليوم</strong>، والمشمولون وقت البناء{' '}
+                {outOf(frozen.included, frozen.total)}. والفرق يعني تغييراً وقع بعد البناء، فأعد
+                بناء قائمة المشمولين من مرحلة المشمولين ليدخل من استجد.
               </>
             ) : (
               <>
-                هذا قياسٌ لمنسوبي المكتب <strong>اليوم</strong>، وهو مطابقٌ لنطاق المسير
-                المجمَّد {outOf(frozen.included, frozen.total)} — فلا شيءَ استجدّ بعد بنائه.
+                هذا قياس لموظفي المكتب <strong>اليوم</strong>، وهو مطابق للمشمولين وقت
+                البناء {outOf(frozen.included, frozen.total)}. ولم يستجد شيء بعده.
               </>
             )}
           </p>
@@ -191,7 +191,7 @@ export const ReadinessBoard: React.FC<Props> = ({ readiness, runId, frozen, titl
                 بالعناوين يجب أن يجده. */}
             <h3 className="hrp-drafts__t">
               <UserCog size={12} /> {counted(readiness.drafts.length, DRAFT_PROFILE_FORMS)} خارج
-              العدّ
+              العد
             </h3>
             <ul className="hrp-drafts__l">
               {readiness.drafts.map((row) => (
@@ -201,7 +201,7 @@ export const ReadinessBoard: React.FC<Props> = ({ readiness, runId, frozen, titl
                     className="hrl-link"
                     to={fixHref(row.fix_target, runId, row.profile_id) ?? '/hr'}
                   >
-                    اكتب تاريخَ الالتحاق
+                    اكتب تاريخ الالتحاق
                     {NBSP}
                     <ArrowLeft size={11} />
                   </Link>
@@ -209,8 +209,8 @@ export const ReadinessBoard: React.FC<Props> = ({ readiness, runId, frozen, titl
               ))}
             </ul>
             <p className="hrl-hint">
-              ملفٌّ أُنشئ مع حساب صاحبه ولم يُكتب له تاريخُ التحاقٍ ولا فُتح له ملفُّ أجر —
-              فلا يُنسب إليه نقصٌ ولا يُعدّ في مقام «يدخل المسير».
+              ملف تم إنشاؤه مع حساب صاحبه، وبلا تاريخ التحاق وبلا ملف أجر. فلا يحسب عليه
+              نقص ولا يدخل في إجمالي «يدخل المسير».
             </p>
           </div>
         )}
@@ -226,8 +226,8 @@ export const ReadinessBoard: React.FC<Props> = ({ readiness, runId, frozen, titl
 
         {readiness.gosi_confirmed === false && (
           <p className="hrl-hint">
-            نسبُ التأمينات لم تُؤكَّد بعد: الفتحُ والاحتسابُ يمرّان، و<strong>الاعتمادُ</strong> محجوبٌ
-            حتى يؤكّدها إنسانٌ باسمه من <Link className="hrl-link" to="/hr/payroll/rules">المرجع النظاميّ</Link>.
+            نسب التأمينات غير مؤكدة بعد: الفتح والاحتساب يمران، و<strong>الاعتماد</strong> محجوب
+            حتى يؤكدها موظف باسمه من <Link className="hrl-link" to="/hr/payroll/rules">المرجع النظامي</Link>.
           </p>
         )}
       </div>

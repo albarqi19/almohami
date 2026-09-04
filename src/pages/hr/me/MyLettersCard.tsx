@@ -36,7 +36,7 @@ const SELF_ISSUABLE: HrLetterType = 'employment_certificate';
 const LETTER_TYPES = Object.keys(HR_LETTER_TYPE_LABELS) as HrLetterType[];
 
 /** نصٌّ احتياطيٌّ واحدٌ لفرع الخطأ — عرفُ وحدة الإجازات. */
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 export const MyLettersCard: React.FC = () => {
   const qc = useQueryClient();
@@ -55,7 +55,7 @@ export const MyLettersCard: React.FC = () => {
     setIssuing(true);
     try {
       const letter = await hrLetterService.myIssue({ letter_type: SELF_ISSUABLE });
-      toast.success('صدر الخطاب برقم ' + letter.letter_number);
+      toast.success('تم إصدار الخطاب برقم ' + letter.letter_number);
 
       // الإبطالُ **قبل** فتح الـPDF: الورقةُ صدرت وحُجز رقمُها، فسقوطُ الفتح لا يجوز
       // أن يترك السردَ بلا صفٍّ لها.
@@ -64,10 +64,10 @@ export const MyLettersCard: React.FC = () => {
       try {
         await openLetterPdf(`/hr/me/letters/${letter.id}/pdf`, `hr-letter-${letter.letter_number}.pdf`);
       } catch (pdfError) {
-        toast.error(errorText(pdfError, 'تعذّر فتحُ الخطاب'));
+        toast.error(errorText(pdfError, 'تعذر فتح الخطاب'));
       }
     } catch (error) {
-      toast.error(errorText(error, 'تعذّر إصدار الخطاب'));
+      toast.error(errorText(error, 'تعذر إصدار الخطاب'));
     } finally {
       setIssuing(false);
     }
@@ -78,7 +78,7 @@ export const MyLettersCard: React.FC = () => {
     try {
       await openLetterPdf(`/hr/me/letters/${letter.id}/pdf`, `hr-letter-${letter.letter_number}.pdf`);
     } catch (error) {
-      toast.error(errorText(error, 'تعذّر فتحُ الخطاب'));
+      toast.error(errorText(error, 'تعذر فتح الخطاب'));
     } finally {
       setBusyId(null);
     }
@@ -100,7 +100,7 @@ export const MyLettersCard: React.FC = () => {
       return (
         <div className="hrl-state hrl-state--locked">
           <Lock size={20} />
-          <p className="hrl-state__t">سجلُّ خطاباتك غير متاح</p>
+          <p className="hrl-state__t">سجل خطاباتك غير متاح</p>
           <p className="hrl-state__d">{errorText(lettersQuery.error, 'غير متاح.')}</p>
         </div>
       );
@@ -110,7 +110,7 @@ export const MyLettersCard: React.FC = () => {
       return (
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={20} />
-          <p className="hrl-state__t">تعذّر جلب خطاباتك</p>
+          <p className="hrl-state__t">تعذر تحميل خطاباتك</p>
           <p className="hrl-state__d">{errorText(lettersQuery.error, CONNECTION_FALLBACK)}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void lettersQuery.refetch()}>
             <RefreshCw size={13} /> إعادة المحاولة
@@ -125,15 +125,15 @@ export const MyLettersCard: React.FC = () => {
       return (
         <div className="hrl-state hrl-state--empty">
           <FileBadge size={20} />
-          <p className="hrl-state__t">لم يصدر خطابٌ باسمك بعد</p>
-          <p className="hrl-state__d">تظهر هنا الخطاباتُ المرقَّمة الصادرة باسمك.</p>
+          <p className="hrl-state__t">لم يصدر خطاب باسمك بعد</p>
+          <p className="hrl-state__d">تظهر هنا الخطابات المرقمة الصادرة باسمك.</p>
         </div>
       );
     }
 
     return (
       <table className="hrl-table hrl-table--single">
-        <caption className="hrl-sr">خطاباتي الصادرة مرتَّبةً من الأحدث</caption>
+        <caption className="hrl-sr">خطاباتي الصادرة مرتبة من الأحدث</caption>
         <thead>
           <tr>
             <th scope="col">النوع</th>
@@ -209,8 +209,8 @@ export const MyLettersCard: React.FC = () => {
       </div>
 
       <p className="hrl-note">
-        تعريفُ الراتب وشهادةُ الخبرة وإخلاءُ الطرف يشهد بها المكتبُ عنك، فيصدرها مسؤولُ الموارد
-        البشرية — راجعه لطلبها.
+        تعريف الراتب وشهادة الخبرة وإخلاء الطرف يشهد بها المكتب عنك، ويصدرها مسؤول الموارد
+        البشرية. تواصل معه لطلبها.
       </p>
 
       <div className="hrl-block__b hrl-block__b--flush">{list}</div>

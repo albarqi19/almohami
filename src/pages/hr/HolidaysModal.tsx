@@ -9,7 +9,7 @@ import { HOLIDAY_TYPE_LABELS } from '../../types/hr';
 import type { HrHoliday } from '../../types/hr';
 
 /** نصٌّ احتياطيٌّ واحدٌ لفرع الخطأ — عرفُ `LeaveTabPanel`. */
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 const fmtDate = (v: string): string => {
   const d = new Date(v);
@@ -78,7 +78,7 @@ const HolidaysModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </button>
           </div>
           <div className="hr-holiday-note">
-            <AlertCircle size={14} /> المولّدة آلياً «قيد الاعتماد» ولا تؤثّر على احتساب الإجازات حتى تعتمدها (الأعياد تقريبية).
+            <AlertCircle size={14} /> المولدة آلياً «قيد الاعتماد» ولا تؤثر على احتساب الإجازات حتى تعتمدها (الأعياد تقريبية).
           </div>
 
           {/* ثلاثُ حالاتٍ متمايزة: هياكلُ التحميل · مثلثٌ أحمرُ بنصِّ الخادم وزرُّ إعادة ·
@@ -93,7 +93,7 @@ const HolidaysModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           ) : holidaysQuery.isError ? (
             <div className="hrl-state hrl-state--error">
               <AlertTriangle size={20} />
-              <p className="hrl-state__t">تعذّر جلب التقويم</p>
+              <p className="hrl-state__t">تعذر تحميل التقويم</p>
               <p className="hrl-state__d">{errorText(holidaysQuery.error, CONNECTION_FALLBACK)}</p>
               <button type="button" className="hr-btn hr-btn--sm" onClick={() => void holidaysQuery.refetch()}>
                 <RefreshCw size={13} /> إعادة المحاولة
@@ -101,7 +101,7 @@ const HolidaysModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </div>
           ) : !holidays || holidays.length === 0 ? (
             <EmptyLine
-              text={`لا إجازاتِ ${year} مسجَّلة`}
+              text={`لا توجد إجازات مسجلة في ${year}`}
               action={(
                 <button type="button" className="hr-btn hr-btn--sm" onClick={generate} disabled={busy}>
                   <Sparkles size={13} /> توليد إجازات {year}
@@ -134,7 +134,7 @@ const HolidaysModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           )}
 
           <div className="hr-holiday-add">
-            <input placeholder="اسم إجازة مخصّصة" value={name} onChange={(e) => setName(e.target.value)} />
+            <input placeholder="اسم إجازة مخصصة" value={name} onChange={(e) => setName(e.target.value)} />
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             <button className="hr-btn hr-btn--sm hr-btn--primary" onClick={add} disabled={busy || !name.trim() || !date}><Plus size={14} /> إضافة</button>
           </div>

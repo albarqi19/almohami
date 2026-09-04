@@ -37,7 +37,7 @@ import type { LeaveBalanceTypeRow, LeaveStatus } from '../../../types/hr';
 const RECENT_LIMIT = 8;
 
 /** نصٌّ احتياطيٌّ واحدٌ لفرعَي الخطأ — لا تتكرّر جملةٌ في الملفّ. */
-const CONNECTION_FALLBACK = 'انقطعَ الاتصال بالخادم.';
+const CONNECTION_FALLBACK = 'انقطع الاتصال بالخادم.';
 
 const STATUS_BADGE: Record<LeaveStatus, string> = {
   pending: 'hr-badge--gold',
@@ -54,8 +54,8 @@ interface Props {
 
 /** حدودُ المعادلة الأربعة — نفسُ ترتيب لوح الرصيد فلا يفترق قارئان. */
 const TERMS: Array<{ key: keyof Pick<LeaveBalanceTypeRow, 'opening' | 'accrued' | 'consumed' | 'adjustments'>; label: string; op: string }> = [
-  { key: 'opening', label: 'افتتاحيّ', op: '' },
-  { key: 'accrued', label: 'مستحقّ', op: '+' },
+  { key: 'opening', label: 'افتتاحي', op: '' },
+  { key: 'accrued', label: 'مستحق', op: '+' },
   { key: 'consumed', label: 'مخصوم', op: '−' },
   { key: 'adjustments', label: 'تسويات', op: '±' },
 ];
@@ -88,7 +88,7 @@ export const LeaveTabPanel: React.FC<Props> = ({ empId, employeeName }) => {
     <div className="hrl-tabpanel">
       {showRecord && (
         <RecordLeaveModal
-          employee={{ profileId: empId, name: employeeName || `منسوب #${empId}` }}
+          employee={{ profileId: empId, name: employeeName || `موظف #${empId}` }}
           canManage={canManage}
           onClose={() => setShowRecord(false)}
         />
@@ -120,7 +120,7 @@ export const LeaveTabPanel: React.FC<Props> = ({ empId, employeeName }) => {
         ) : balanceQuery.isError || !snapshot ? (
           <div className="hrl-state hrl-state--error">
             <AlertTriangle size={20} />
-            <p className="hrl-state__t">تعذّر جلب الرصيد</p>
+            <p className="hrl-state__t">تعذر تحميل الرصيد</p>
             <p className="hrl-state__d">{errorText(balanceQuery.error, CONNECTION_FALLBACK)}</p>
             <button type="button" className="hr-btn hr-btn--sm" onClick={() => void balanceQuery.refetch()}>
               <RefreshCw size={13} /> إعادة المحاولة
@@ -130,12 +130,12 @@ export const LeaveTabPanel: React.FC<Props> = ({ empId, employeeName }) => {
           // قبل التهيئة: **لا يُعرض ٢١ ولا ٠ ولا شرطة** — تُسمّى الحالةُ ويُقاد إلى الشاشة.
           <div className="hrl-state hrl-state--empty">
             <Wallet size={20} />
-            <p className="hrl-state__t">الرصيد غير مُهيّأ</p>
+            <p className="hrl-state__t">الرصيد غير جاهز</p>
             <p className="hrl-state__d">
-              الاستحقاقُ يبدأ من تاريخِ مرساةٍ صريح. قبله لا يُولَّد يومٌ واحد، ولا يُعرض رقمٌ بلا أساس.
+              لا يحتسب أي يوم قبل تحديد تاريخ بدء الاستحقاق، ولا يعرض رقم بلا أساس.
             </p>
             <Link className="hrl-link" to={`/hr/leave/${empId}`}>
-              تهيئةُ الرصيد من صفحة الإجازات ←
+              تهيئة الرصيد من صفحة الإجازات ←
             </Link>
           </div>
         ) : (
@@ -171,7 +171,7 @@ export const LeaveTabPanel: React.FC<Props> = ({ empId, employeeName }) => {
 
             {snapshot.future_committed_days > 0 && (
               <p className="hrl-note">
-                منها {fmtDays(snapshot.future_committed_days)} يوماً لإجازاتٍ تبدأ لاحقاً.
+                منها {fmtDays(snapshot.future_committed_days)} يوماً لإجازات تبدأ لاحقاً.
               </p>
             )}
           </>
@@ -182,18 +182,18 @@ export const LeaveTabPanel: React.FC<Props> = ({ empId, employeeName }) => {
       <div className="hrl-block">
         <div className="hrl-block__h">
           <h2 className="hrl-block__t hrl-h2">
-            <CalendarDays size={14} /> آخر الوقائع
+            <CalendarDays size={14} /> آخر سجلات الإجازة
           </h2>
           <div className="hrl-block__a">
             <Link className="hrl-link" to={`/hr/leave/${empId}`}>
-              فتحُ السجلّ الكامل ←
+              فتح السجل الكامل ←
             </Link>
           </div>
         </div>
 
         <div className="hrl-block__b hrl-block__b--flush">
           {recordsQuery.isPending ? (
-            <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل الوقائع">
+            <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل السجلات">
               {Array.from({ length: 4 }, (_, i) => (
                 <span className="hrl-skel" key={i} />
               ))}
@@ -201,7 +201,7 @@ export const LeaveTabPanel: React.FC<Props> = ({ empId, employeeName }) => {
           ) : recordsQuery.isError ? (
             <div className="hrl-state hrl-state--error">
               <AlertTriangle size={20} />
-              <p className="hrl-state__t">تعذّر جلب الوقائع</p>
+              <p className="hrl-state__t">تعذر تحميل السجلات</p>
               <p className="hrl-state__d">{errorText(recordsQuery.error, CONNECTION_FALLBACK)}</p>
               <button type="button" className="hr-btn hr-btn--sm" onClick={() => void recordsQuery.refetch()}>
                 <RefreshCw size={13} /> إعادة المحاولة
@@ -212,16 +212,16 @@ export const LeaveTabPanel: React.FC<Props> = ({ empId, employeeName }) => {
             // كاملةٍ في ملفٍّ جديدٍ ثلاثُ شاشاتِ عدم. والحالةُ الكاملةُ تبقى فوق لبلوك
             // الرصيد غير المُهيَّأ وحدَه لأنّه يشرح المرساة.
             <EmptyLine
-              text="لا وقائعَ مسجَّلة"
+              text="لا سجلات إجازة"
               action={canManage && (
                 <button type="button" className="hr-btn hr-btn--sm hr-btn--primary" onClick={() => setShowRecord(true)}>
-                  <CalendarPlus size={13} /> سجّل أوّل واقعة
+                  <CalendarPlus size={13} /> سجل أول إجازة
                 </button>
               )}
             />
           ) : (
             <table className="hrl-table hrl-table--single">
-              <caption className="hrl-sr">آخر وقائع الإجازة والغياب لهذا المنسوب</caption>
+              <caption className="hrl-sr">آخر سجلات الإجازة والغياب لهذا الموظف</caption>
               <thead>
                 <tr>
                   <th scope="col">النوع</th>

@@ -146,7 +146,7 @@ export const RunApproveStage: React.FC<Props> = ({
       const code = caught instanceof PayrollActionError ? caught.code : null;
       const required = acksRequired(caught, code);
 
-      setDenial({ code, message: errorText(caught, 'تعذّر الاعتماد.') });
+      setDenial({ code, message: errorText(caught, 'تعذر الاعتماد.') });
       setAsked(required);
       setPhase(required.length > 0 ? 'ack' : 'idle');
     } finally {
@@ -170,7 +170,7 @@ export const RunApproveStage: React.FC<Props> = ({
       <section className="hrl-block" aria-labelledby="approve-done-h">
         <header className="hrl-block__h">
           <h2 className="hrl-block__t" id="approve-done-h">
-            <ShieldCheck size={14} /> اعتُمد هذا المسير
+            <ShieldCheck size={14} /> هذا المسير معتمَد
           </h2>
           <span className="hrl-badge hrl-badge--flat">{RUN_STAGE_LABELS[run.stage]}</span>
         </header>
@@ -184,23 +184,23 @@ export const RunApproveStage: React.FC<Props> = ({
           )}
 
           <dl className="hrl-kv">
-            <dt>رقمُ المسير</dt>
+            <dt>رقم المسير</dt>
             <dd dir="ltr">{run.run_number ?? '—'}</dd>
-            <dt>تاريخُ الاعتماد</dt>
+            <dt>تاريخ الاعتماد</dt>
             <dd>{run.approved_at === null ? '—' : fmtDateHuman(run.approved_at.slice(0, 10))}</dd>
-            <dt>القسائمُ المجمَّدة</dt>
+            <dt>القسائم المقفلة</dt>
             <dd>{outOf(run.headcount_included, run.headcount_total)}</dd>
-            <dt>القيدُ المحاسبيّ</dt>
+            <dt>القيد المحاسبي</dt>
             <dd>{POSTING_STATE_LABELS[run.posting_state]}</dd>
           </dl>
 
           {run.self_approved && (
             <p className="hrl-flag hrl-flag--warn" role="status">
               <span className="hrl-flag__t">
-                <AlertTriangle size={13} /> اعتمدها معدُّها
+                <AlertTriangle size={13} /> اعتمدها من أعدها
               </span>
               <span className="hrl-flag__hint">
-                لم يكن في المكتب معتمِدٌ آخر، فاعتُمد المسيرُ بإقرارٍ صريحٍ مسجَّلٍ باسم مُقرّه.
+                لم يكن في المكتب من يملك صلاحية الاعتماد سواه، فتم اعتماد المسير بإقرار صريح مسجل باسمه.
               </span>
             </p>
           )}
@@ -209,18 +209,18 @@ export const RunApproveStage: React.FC<Props> = ({
           {run.approver_was_subject && (
             <p className="hrl-flag hrl-flag--warn" role="status">
               <span className="hrl-flag__t">
-                <AlertTriangle size={13} /> اعتمدها من صُرف له فيها
+                <AlertTriangle size={13} /> اعتمدها من صرف له فيها
               </span>
               <span className="hrl-flag__hint">
                 لمن اعتمد هذا المسير{run.approver_name === null ? '' : ` (${run.approver_name})`}{' '}
-                قسيمةٌ فيه، وأقرّ بذلك صراحةً — والعبارةُ مطبوعةٌ على كلّ قسيمةٍ في المسير.
+                قسيمة فيه، وقد أكد ذلك صراحة. وتطبع العبارة على كل قسيمة في المسير.
               </span>
             </p>
           )}
 
           <p className="hrl-hint">
-            القسائمُ والبنودُ مجمَّدةٌ الآن: لا يُضاف بندٌ ولا يُحذف ولا يُعاد احتسابٌ فوق هذا
-            المسير. والتصحيحُ بعد الاعتماد إخلافٌ بمسيرٍ تصحيحيٍّ يبقى الأصلُ معه كما صُرف.
+            القسائم والبنود مقفلة الآن: لا يمكن إضافة بند ولا حذفه ولا إعادة الاحتساب فوق هذا
+            المسير. والتصحيح بعد الاعتماد يتم باستبداله بمسير تصحيحي، ويبقى الأصل كما صرف.
           </p>
         </div>
       </section>
@@ -233,15 +233,15 @@ export const RunApproveStage: React.FC<Props> = ({
       <section className="hrl-block" aria-labelledby="approve-locked-h">
         <header className="hrl-block__h">
           <h2 className="hrl-block__t" id="approve-locked-h">
-            <Lock size={14} /> الاعتمادُ ليس من صلاحياتك
+            <Lock size={14} /> الاعتماد ليس من صلاحياتك
           </h2>
         </header>
 
         <div className="hrl-block__b">
           <p className="hrl-hint">
-            التوقيعُ على صرف الرواتب صلاحيةٌ مستقلّةٌ عن إعداد المسير وعن قراءته. والمسيرُ
-            الآن {RUN_STAGE_LABELS[run.stage]} — يراجعه من يملك إعدادَه، ويوقّع عليه من يملك
-            اعتمادَه.
+            التوقيع على صرف الرواتب صلاحية مستقلة عن إعداد المسير وعن قراءته. والمسير
+            الآن {RUN_STAGE_LABELS[run.stage]}. يراجعه من يملك صلاحية الإعداد، ويوقع عليه من
+            يملك صلاحية الاعتماد.
           </p>
         </div>
       </section>
@@ -254,15 +254,15 @@ export const RunApproveStage: React.FC<Props> = ({
       <section className="hrl-block" aria-labelledby="approve-early-h">
         <header className="hrl-block__h">
           <h2 className="hrl-block__t" id="approve-early-h">
-            <ShieldAlert size={14} /> لا يُعتمَد إلا مسيرٌ محتسَب
+            <ShieldAlert size={14} /> لا يمكن اعتماد مسير قبل احتسابه
           </h2>
           <span className="hrl-badge hrl-badge--flat">{RUN_STAGE_LABELS[run.stage]}</span>
         </header>
 
         <div className="hrl-block__b">
           <p className="hrl-hint">
-            الاعتمادُ توقيعٌ على أرقام، والأرقامُ تصل مع الاحتساب. احتسب المسيرَ ثمّ راجع
-            فروقَه ثمّ عُد إلى هذه الخطوة.
+            الاعتماد توقيع على أرقام، والأرقام تصل مع الاحتساب. احتسب المسير، ثم راجع
+            فروقه، ثم ارجع إلى هذه الخطوة.
           </p>
 
           <Link className="hrl-link" to={`/hr/payroll/runs/${run.id}?stage=compute`}>
@@ -279,17 +279,17 @@ export const RunApproveStage: React.FC<Props> = ({
       <section className="hrl-block" aria-labelledby="approve-empty-h">
         <header className="hrl-block__h">
           <h2 className="hrl-block__t" id="approve-empty-h">
-            <ShieldAlert size={14} /> لا سطرَ في هذا المسير
+            <ShieldAlert size={14} /> لا يوجد سطر في هذا المسير
           </h2>
         </header>
 
         <div className="hrl-block__b">
           <p className="hrl-hint">
-            لا يُعتمَد مسيرٌ بلا قسيمةٍ واحدة. أعد بناءَ النطاق ثمّ احتسب قبل الاعتماد.
+            لا يمكن اعتماد مسير بلا قسيمة واحدة. أعد بناء قائمة المشمولين، ثم احتسب قبل الاعتماد.
           </p>
 
           <Link className="hrl-link" to={`/hr/payroll/runs/${run.id}?stage=roster`}>
-            اذهب إلى النطاق{NBSP}<ArrowLeft size={11} />
+            اذهب إلى المشمولين{NBSP}<ArrowLeft size={11} />
           </Link>
         </div>
       </section>
@@ -310,9 +310,9 @@ export const RunApproveStage: React.FC<Props> = ({
 
       <div className="hrl-block__b">
         <p className="hrl-hint">
-          الاعتمادُ فعلٌ واحدٌ لا رجعةَ فيه: يُسنِد رقمَ المسير وأرقامَ القسائم، ويجمّد كلَّ
-          سطرٍ وكلَّ بند، ويكتب مطالباتِ الأيام التي تمنع دفعَ يومٍ مرّتين، ويقيّد المحاسبة —
-          كلُّها معاً أو لا شيء.
+          الاعتماد فعل واحد لا رجعة فيه: يسند رقم المسير وأرقام القسائم، ويقفل كل سطر وكل بند،
+          ويكتب مطالبات الأيام التي تمنع دفع يوم مرتين، ويقيد المحاسبة. وتتم كلها معا أو لا يتم
+          شيء منها.
         </p>
 
         {canViewAmounts && totals !== null && (
@@ -342,8 +342,8 @@ export const RunApproveStage: React.FC<Props> = ({
 
         {! canViewAmounts && (
           <p className="hrl-hint">
-            ومبالغُ الأفراد محجوبةٌ عنك بصلاحيةٍ مستقلّة — يظهر لك عددُ القسائم ولا يظهر لك
-            ريال. والتوقيعُ على مجاميعَ لا تراها قرارٌ تعرفه قبل أن تنقره.
+            ومبالغ الأفراد محجوبة عنك بصلاحية مستقلة. يظهر لك عدد القسائم دون المبالغ، وأنت
+            توقع على مجاميع لا تراها.
           </p>
         )}
       </div>
@@ -352,7 +352,7 @@ export const RunApproveStage: React.FC<Props> = ({
       {phase === 'confirm' && (
         <div className="hrl-block__b hrp-approve">
           <p className="hrl-note">
-            <ShieldAlert size={13} /> ما الذي سيُجمَّد الآن
+            <ShieldAlert size={13} /> ما الذي سيتم إقفاله الآن
           </p>
 
           <ol className="hrp-approve__list">
@@ -361,9 +361,9 @@ export const RunApproveStage: React.FC<Props> = ({
                 1
               </span>
               <span className="hrp-approve__k">
-                {outOf(linesCount, run.headcount_total)} قسيمةً عن المدّة{' '}
-                {fmtDateHuman(run.period_start)} — {fmtDateHuman(run.period_end)}: يُسنَد لكلٍّ
-                رقمُها، وتُقفَل بنودُها فلا تُعدَّل ولا تُحذف.
+                {outOf(linesCount, run.headcount_total)} قسيمة عن المدة{' '}
+                {fmtDateHuman(run.period_start)} — {fmtDateHuman(run.period_end)}: يسند لكل
+                قسيمة رقمها، وتقفل بنودها فلا يمكن تعديلها ولا حذفها.
               </span>
             </li>
             <li className="hrp-approve__i">
@@ -371,8 +371,8 @@ export const RunApproveStage: React.FC<Props> = ({
                 2
               </span>
               <span className="hrp-approve__k">
-                مطالباتُ أيام المدّة تُكتب باسم كلّ منسوب — وهي التي تمنع دفعَ يومٍ مرّتين
-                وخصمَه مرّتين في مسيرٍ آخر.
+                مطالبات أيام المدة تكتب باسم كل موظف، وهي التي تمنع دفع يوم مرتين وخصمه
+                مرتين في مسير آخر.
               </span>
             </li>
             <li className="hrp-approve__i">
@@ -380,8 +380,8 @@ export const RunApproveStage: React.FC<Props> = ({
                 3
               </span>
               <span className="hrp-approve__k">
-                القيدُ المحاسبيُّ يُكتب، أو يُوسَم المسيرُ «لم يُقيَّد محاسبياً» متى كانت
-                المحاسبةُ مطفأةً في المكتب — ولا يقع ذلك صامتاً. وحالتُه الآن:{' '}
+                يكتب القيد المحاسبي، أو تظهر على المسير حالة «غير مقيد محاسبيا» إذا كانت
+                المحاسبة معطلة في المكتب. وحالته الآن:{' '}
                 {POSTING_STATE_LABELS[run.posting_state]}.
               </span>
             </li>
@@ -390,8 +390,8 @@ export const RunApproveStage: React.FC<Props> = ({
                 4
               </span>
               <span className="hrp-approve__k">
-                تاريخُ الصرف {fmtDateHuman(run.pay_date)} — والتصحيحُ بعد الاعتماد إخلافٌ
-                بمسيرٍ تصحيحيّ، لا تعديلٌ فوق هذا المستند.
+                تاريخ الصرف {fmtDateHuman(run.pay_date)}. والتصحيح بعد الاعتماد يتم باستبداله
+                بمسير تصحيحي، لا بتعديل هذا المستند.
               </span>
             </li>
           </ol>
@@ -416,8 +416,8 @@ export const RunApproveStage: React.FC<Props> = ({
 
               {/* 🔴 ما سيقع — قبل التأشير لا بعده. */}
               <p className="hrl-hint">
-                {SUBJECT_APPROVER_ACK_EFFECT} ويُسجَّل نصُّ الإقرار باسمك وتاريخِه ورقمِ قسيمتك
-                في سجلّ المسير.
+                {SUBJECT_APPROVER_ACK_EFFECT} ويسجل نص الإقرار باسمك وتاريخه ورقم قسيمتك
+                في سجل المسير.
               </p>
             </>
           )}
@@ -435,8 +435,8 @@ export const RunApproveStage: React.FC<Props> = ({
               </label>
 
               <p className="hrl-hint">
-                يُسجَّل نصُّ هذا الإقرار باسمك وتاريخِه في سجلّ المسير، ويُوسَم المسيرُ
-                «اعتمدها معدُّها» — فيُقرأ الاستثناءُ حيث يُقرأ المسير.
+                يسجل نص هذا الإقرار باسمك وتاريخه في سجل المسير، وتظهر على المسير حالة
+                «اعتمدها من أعدها».
               </p>
             </>
           )}
@@ -453,7 +453,7 @@ export const RunApproveStage: React.FC<Props> = ({
 
           {fixHref !== null && (
             <Link className="hrl-link" to={fixHref}>
-              اذهب إلى موضع العلاج{NBSP}<ArrowLeft size={11} />
+              اذهب إلى موضع الإصلاح{NBSP}<ArrowLeft size={11} />
             </Link>
           )}
         </div>
@@ -485,7 +485,7 @@ export const RunApproveStage: React.FC<Props> = ({
                   disabled={busy}
                   onClick={() => void submit([])}
                 >
-                  {busy ? 'يُعتمَد…' : 'أعتمد الآن ولا رجعة'}
+                  {busy ? 'جارٍ الاعتماد…' : 'أعتمد الآن ولا رجعة'}
                 </button>
                 <button
                   type="button"
@@ -493,7 +493,7 @@ export const RunApproveStage: React.FC<Props> = ({
                   disabled={busy}
                   onClick={() => setPhase('idle')}
                 >
-                  تراجَع
+                  رجوع
                 </button>
               </>
             )}
@@ -507,10 +507,10 @@ export const RunApproveStage: React.FC<Props> = ({
                   onClick={() => void submit(asked)}
                 >
                   {busy
-                    ? 'يُعتمَد…'
+                    ? 'جارٍ الاعتماد…'
                     : asked.length > 1
-                      ? 'أعتمد بإقراريَّ المسجَّلين'
-                      : 'أعتمد بإقراري المسجَّل'}
+                      ? 'أعتمد بالإقرارين المسجلين'
+                      : 'أعتمد بالإقرار المسجل'}
                 </button>
                 <button
                   type="button"
@@ -522,7 +522,7 @@ export const RunApproveStage: React.FC<Props> = ({
                     setDenial(null);
                   }}
                 >
-                  تراجَع
+                  رجوع
                 </button>
               </>
             )}

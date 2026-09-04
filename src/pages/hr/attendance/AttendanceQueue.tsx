@@ -97,7 +97,7 @@ export const AttendanceQueue: React.FC<Props> = ({
 
   if (loading) {
     return (
-      <div className="hra-state hra-state--loading" aria-busy="true" aria-label="جارٍ تحميل الطابور">
+      <div className="hra-state hra-state--loading" aria-busy="true" aria-label="جارٍ تحميل القائمة">
         {Array.from({ length: 6 }, (_, i) => <span className="hra-skel" key={i} />)}
       </div>
     );
@@ -107,8 +107,8 @@ export const AttendanceQueue: React.FC<Props> = ({
     return (
       <div className="hra-state hra-state--error">
         <AlertTriangle size={20} aria-hidden="true" />
-        <p className="hra-state__t">تعذّر فتحُ طابور المراجعة</p>
-        <p className="hra-state__d">{errorText(error, 'انقطعَ الاتصال بالخادم.')}</p>
+        <p className="hra-state__t">تعذر فتح قائمة المراجعة</p>
+        <p className="hra-state__d">{errorText(error, 'انقطع الاتصال بالخادم.')}</p>
         <button type="button" className="ssp2-btn" onClick={onRetry}>
           <RefreshCw size={13} /> إعادة المحاولة
         </button>
@@ -120,10 +120,10 @@ export const AttendanceQueue: React.FC<Props> = ({
     return (
       <div className="hra-state">
         <CheckCheck size={22} aria-hidden="true" />
-        <p className="hra-state__t">لا شيءَ يحتاج قراراً</p>
+        <p className="hra-state__t">لا شيء يحتاج قراراً</p>
         <p className="hra-state__d">
-          كلُّ يومٍ في هذه النافذة إمّا مفسَّرٌ بدليلٍ أو بُتَّ فيه. وأيامُ الساعات الأخيرة لا
-          تظهر هنا عمداً حتى تمضي نافذةُ الصمت.
+          كل يوم في هذه النافذة إما مفسر بدليل أو صدر فيه قرار. وأيام الساعات الأخيرة لا
+          تظهر هنا عمداً حتى تنتهي مهلة الانتظار.
         </p>
       </div>
     );
@@ -152,7 +152,7 @@ export const AttendanceQueue: React.FC<Props> = ({
                 {isOpen(group.employee.id)
                   ? <ChevronDown size={14} aria-hidden="true" />
                   : <ChevronLeft size={14} aria-hidden="true" />}
-                <span className="hra-group__t">{group.employee.name ?? 'منسوبٌ بلا اسم'}</span>
+                <span className="hra-group__t">{group.employee.name ?? 'موظف بلا اسم'}</span>
                 <span className="hra-group__n" dir="ltr">{fmtCount(group.pending_days)}</span>
               </button>
             </h3>
@@ -171,7 +171,7 @@ export const AttendanceQueue: React.FC<Props> = ({
                           : selection.setGroup(group.employee.id, dates)
                       }
                     >
-                      {allOn ? 'أزِل التحديد' : 'حدّد كلَّ أيامه'}
+                      {allOn ? 'إلغاء التحديد' : 'حدد كل أيامه'}
                     </button>
                   </p>
                 )}
@@ -246,10 +246,10 @@ export const AttendanceQueue: React.FC<Props> = ({
       {canManage && selection.selection !== null && (
         <div className="hra-bar">
           <span className="hra-bar__t">
-            {daysWord(selection.count)} مُحدَّدة
+            {daysWord(selection.count)} محددة
             <span className="hra-bar__hint">
               {sharedKind === null
-                ? 'اختلفت أدلّةُ الأيام — يبقى تأكيدُ الحضور صالحاً لكلّها'
+                ? 'اختلفت أدلة الأيام. يبقى تأكيد الحضور صالحاً لكلها'
                 : SUGGESTION_HINTS[sharedKind]}
             </span>
           </span>
@@ -266,7 +266,7 @@ export const AttendanceQueue: React.FC<Props> = ({
 
           {canLeave && (
             <button type="button" className="ssp2-btn" onClick={() => onAct('leave', null)}>
-              سجّل إجازةً على هذه الأيام
+              سجل إجازة على هذه الأيام
             </button>
           )}
 
@@ -279,7 +279,7 @@ export const AttendanceQueue: React.FC<Props> = ({
             }
             onClick={() => onAct('present', null)}
           >
-            أكّد أنه حضر
+            أكد أنه حضر
           </button>
 
           <button type="button" className="ssp2-btn" onClick={selection.clear}>

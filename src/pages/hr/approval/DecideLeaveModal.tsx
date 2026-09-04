@@ -36,10 +36,10 @@ interface Props {
 
 /** حالاتُ الصفّ حين يكون القرارُ قد وقع سلفاً — خريطةٌ واحدةٌ، لا نصَّ حالةٍ في الشجرة. */
 const SETTLED_LABEL: Record<string, string> = {
-  approved: 'اعتُمد هذا الطلبُ سلفاً.',
-  rejected: 'رُفض هذا الطلبُ سلفاً.',
-  cancelled: 'أُلغيت هذه الواقعة.',
-  superseded: 'أُخلِفت هذه الواقعةُ بأخرى.',
+  approved: 'هذا الطلب معتمَد مسبقا.',
+  rejected: 'هذا الطلب مرفوض مسبقا.',
+  cancelled: 'هذه الإجازة ملغاة.',
+  superseded: 'هذه الإجازة مستبدَلة بأخرى.',
 };
 
 export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
@@ -74,12 +74,12 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
       const after = result.balance?.after;
       toast.success(
         typeof after === 'number'
-          ? `اعتُمدت الإجازة — صار الرصيدُ ${fmtDays(after)} يوماً.`
-          : 'اعتُمدت الإجازة.'
+          ? `تم اعتماد الإجازة. الرصيد الآن ${fmtDays(after)} يوماً.`
+          : 'تم اعتماد الإجازة.'
       );
       onClose();
     } catch (error) {
-      toast.error(errorText(error, 'تعذّر اعتماد الإجازة'));
+      toast.error(errorText(error, 'تعذر اعتماد الإجازة'));
     }
   };
 
@@ -93,10 +93,10 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
         reason: reason.trim(),
       });
 
-      toast.success('رُفض الطلبُ — والسببُ يظهر للموظف.');
+      toast.success('تم رفض الطلب. يظهر السبب للموظف.');
       onClose();
     } catch (error) {
-      toast.error(errorText(error, 'تعذّر رفض الطلب'));
+      toast.error(errorText(error, 'تعذر رفض الطلب'));
     }
   };
 
@@ -104,7 +104,7 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
     <div className="hr-modal-overlay" onClick={onClose}>
       <div className="hr-modal hrla-modal" onClick={(e) => e.stopPropagation()}>
         <div className="hr-modal__h">
-          <h3>قرارُ إجازة</h3>
+          <h3>قرار إجازة</h3>
           <button type="button" className="hr-icon-btn" onClick={onClose} aria-label="إغلاق">
             <X size={18} />
           </button>
@@ -115,7 +115,7 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
           {decision.isLoading && (
             <p className="hrla-state">
               <Loader2 size={14} aria-hidden="true" className="hrla-spin" />
-              يُجلَب سياقُ القرار…
+              جارٍ تحميل بيانات القرار…
             </p>
           )}
 
@@ -124,10 +124,10 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
             <div className="hrla-state hrla-state--error">
               <p>
                 <AlertTriangle size={14} aria-hidden="true" />
-                {errorText(decision.error, 'تعذّر جلب سياق القرار')}
+                {errorText(decision.error, 'تعذر تحميل بيانات القرار')}
               </p>
               <button type="button" className="hr-btn hr-btn--sm" onClick={() => void decision.refetch()}>
-                أعِد المحاولة
+                أعد المحاولة
               </button>
             </div>
           )}
@@ -156,7 +156,7 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
                   </dd>
                 </div>
                 <div className="hrla-head__i">
-                  <dt>المدّة</dt>
+                  <dt>المدة</dt>
                   <dd>
                     {fmtLeaveDate(leave.start_date)} {'←'} {fmtLeaveDate(leave.end_date)}
                     <span className="hrla-chip">
@@ -166,7 +166,7 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
                 </div>
                 <div className="hrla-head__i">
                   <dt>السبب</dt>
-                  <dd>{leave.reason || 'لم يُذكر'}</dd>
+                  <dd>{leave.reason || 'غير مذكور'}</dd>
                 </div>
               </dl>
 
@@ -175,7 +175,7 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
 
               {!data.is_pending && (
                 <p className="hrla-state hrla-state--settled">
-                  {SETTLED_LABEL[leave.status] ?? 'لم يعد هذا الطلبُ قابلاً لقرار.'}
+                  {SETTLED_LABEL[leave.status] ?? 'لا يمكن اتخاذ قرار في هذا الطلب.'}
                   {leave.rejection_reason ? ` السبب: ${leave.rejection_reason}` : ''}
                 </p>
               )}
@@ -183,7 +183,7 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
               {data.is_pending && data.is_own_request && (
                 <p className="hrla-state hrla-state--settled">
                   <ShieldAlert size={13} aria-hidden="true" />
-                  هذا طلبُك أنت — ولا يعتمد المرءُ طلبَ نفسِه. يعتمده زميلٌ له صلاحيةُ الإجازات.
+                  هذا طلبك أنت، ولا يعتمد الموظف طلب نفسه. يعتمده زميل له صلاحية الإجازات.
                 </p>
               )}
 
@@ -196,8 +196,8 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
                     onChange={(e) => setNegativeAck(e.target.checked)}
                   />
                   <span>
-                    أُقرّ بأنّ الاعتمادَ يُنزل رصيدَه إلى{' '}
-                    <span dir="ltr">{fmtDays(impact?.balance_after)}</span> يوماً — أي إلى السالب.
+                    أؤكد أن الاعتماد يخفض رصيده إلى{' '}
+                    <span dir="ltr">{fmtDays(impact?.balance_after)}</span> يوم، أي إلى السالب.
                   </span>
                 </label>
               )}
@@ -205,26 +205,26 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
               {/* ═══ الرفض — سببٌ إلزاميّ يُحفَظ ويظهر للموظف ═══ */}
               {data.is_pending && mode === 'reject' && (
                 <div className="hr-field">
-                  <label htmlFor="hrla-reason">سببُ الرفض *</label>
+                  <label htmlFor="hrla-reason">سبب الرفض *</label>
                   <textarea
                     id="hrla-reason"
                     rows={2}
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
-                    placeholder="يقرؤه الموظفُ في «إجازاتي» — فليكن سبباً يُفهم"
+                    placeholder="اكتب سببا واضحا يظهر للموظف في «إجازاتي»"
                   />
                 </div>
               )}
 
               {data.is_pending && mode === 'idle' && (
                 <div className="hr-field">
-                  <label htmlFor="hrla-notes">ملاحظةٌ على الاعتماد (اختياريّة)</label>
+                  <label htmlFor="hrla-notes">ملاحظة على الاعتماد (اختيارية)</label>
                   <input
                     id="hrla-notes"
                     type="text"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="تُضاف إلى ملاحظات الواقعة"
+                    placeholder="تضاف إلى ملاحظات الإجازة"
                   />
                 </div>
               )}
@@ -244,7 +244,7 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
                 onClick={() => void runReject()}
                 disabled={!canReject}
               >
-                {reject.isPending ? 'يُرفَض…' : 'تأكيدُ الرفض'}
+                {reject.isPending ? 'جارٍ الرفض…' : 'تأكيد الرفض'}
               </button>
             </>
           ) : (
@@ -269,9 +269,9 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
                     disabled={!canApprove}
                   >
                     {approve.isPending
-                      ? 'يُعتمَد…'
+                      ? 'جارٍ الاعتماد…'
                       : impact?.charges_ledger === true
-                        ? `موافقة — يُخصم ${fmtDays(impact.days)} يوم`
+                        ? `موافقة وخصم ${fmtDays(impact.days)} يوم`
                         : 'موافقة'}
                   </button>
                 </>

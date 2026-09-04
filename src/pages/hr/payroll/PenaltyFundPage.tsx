@@ -40,7 +40,7 @@ export const PenaltyFundPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--locked">
           <Lock size={22} />
-          <p className="hrl-state__t">سجلُّ الغرامات غيرُ متاحٍ لك</p>
+          <p className="hrl-state__t">سجل الغرامات غير متاح لك</p>
           <p className="hrl-state__d">{lockedMessage}</p>
         </div>
       </div>
@@ -63,8 +63,8 @@ export const PenaltyFundPage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={22} />
-          <p className="hrl-state__t">تعذّر جلبُ سجلّ الغرامات</p>
-          <p className="hrl-state__d">{errorText(fundQuery.error, 'خطأٌ غيرُ متوقَّع.')}</p>
+          <p className="hrl-state__t">تعذر تحميل سجل الغرامات</p>
+          <p className="hrl-state__d">{errorText(fundQuery.error, 'خطأ غير متوقع.')}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void fundQuery.refetch()}>
             <RefreshCw size={13} /> أعد المحاولة
           </button>
@@ -82,23 +82,22 @@ export const PenaltyFundPage: React.FC = () => {
       <header className="hrl-head">
         <div className="hrl-head__id">
           <h1 className="hrl-h1">
-            <Landmark size={16} /> صندوقُ غرامات العمال
+            <Landmark size={16} /> صندوق غرامات العمال
           </h1>
           <p className="hrl-sub">
-            سجلٌّ توجبه المادّةُ الثالثةُ والسبعون — وحصيلتُه التزامٌ محبوسٌ لمنفعة العمال لا
-            إيرادٌ للمكتب.
+            سجل توجبه المادة ٧٣. وحصيلته مبلغ مخصص لمنفعة العمال، وليس إيراداً للمكتب.
           </p>
         </div>
 
         <div className="hrl-head__badges">
           <span className="hrl-fact hrl-fact--gold">
-            رصيدُ الصندوق
+            رصيد الصندوق
             <span className="hrl-fact__n" dir="ltr">
               {money(data?.balance ?? null) ?? EMPTY_MARK}
             </span>
           </span>
           <Link className="hrl-fact" to="/hr/payroll/penalties">
-            الجزاءاتُ التأديبية
+            الجزاءات التأديبية
           </Link>
         </div>
       </header>
@@ -116,22 +115,22 @@ export const PenaltyFundPage: React.FC = () => {
       {rows.length === 0 ? (
         <div className="hrl-state hrl-state--empty">
           <Landmark size={22} />
-          <p className="hrl-state__t">لا غراماتٍ محصَّلة</p>
+          <p className="hrl-state__t">لا غرامات محصلة</p>
           <p className="hrl-state__d">
-            لم تُحصَّل غرامةٌ في قسيمةٍ معتمَدةٍ بعد. ويُكتب السجلُّ من القسائم المجمَّدة وحدَها —
-            ما صُرف فعلاً لا ما نُوي.
+            لم يتم تحصيل أي غرامة في قسيمة معتمَدة بعد. ويكتب السجل من القسائم المقفلة فقط:
+            ما تم صرفه فعلاً.
           </p>
         </div>
       ) : (
         <table className="hrl-table hrp-roster">
           <thead>
             <tr>
-              <th scope="col">المنسوب</th>
-              <th scope="col">أجرُه</th>
+              <th scope="col">الموظف</th>
+              <th scope="col">أجره</th>
               <th scope="col">المبلغ</th>
               <th scope="col">الأساس</th>
               <th scope="col">المخالفة</th>
-              <th scope="col">شهرُ الأثر</th>
+              <th scope="col">شهر الأثر</th>
               <th scope="col">المستند</th>
             </tr>
           </thead>

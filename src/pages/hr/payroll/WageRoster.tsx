@@ -62,15 +62,15 @@ export const WageRoster: React.FC<Props> = ({
   onSelect,
   onRetry,
 }) => (
-  <aside className="hrl-side" aria-label="منسوبو المكتب">
+  <aside className="hrl-side" aria-label="موظفو المكتب">
     <div className="hrl-search">
       <Search size={14} aria-hidden="true" />
       <input
         type="search"
         value={search}
         onChange={(event) => onSearch(event.target.value)}
-        placeholder="ابحث باسم المنسوب…"
-        aria-label="ابحث باسم المنسوب"
+        placeholder="ابحث باسم الموظف…"
+        aria-label="ابحث باسم الموظف"
       />
       {search !== '' && (
         <button type="button" className="hrl-searchclear" aria-label="مسح البحث" onClick={() => onSearch('')}>
@@ -79,7 +79,7 @@ export const WageRoster: React.FC<Props> = ({
       )}
     </div>
 
-    <div className="hrl-chips" role="group" aria-label="تصفية المنسوبين">
+    <div className="hrl-chips" role="group" aria-label="تصفية الموظفين">
       {CHIPS.map((key) => (
         <button
           key={key}
@@ -96,7 +96,7 @@ export const WageRoster: React.FC<Props> = ({
     </div>
 
     {loading && (
-      <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل المنسوبين">
+      <div className="hrl-state hrl-state--loading" aria-busy="true" aria-label="جارٍ تحميل الموظفين">
         <span className="hrl-skel" />
         <span className="hrl-skel" />
         <span className="hrl-skel" />
@@ -108,7 +108,7 @@ export const WageRoster: React.FC<Props> = ({
     {!loading && Boolean(error) && (
       <div className="hrl-state hrl-state--error">
         <AlertTriangle size={20} />
-        <p className="hrl-state__t">تعذّر جلب المنسوبين</p>
+        <p className="hrl-state__t">تعذر تحميل الموظفين</p>
         <button type="button" className="hr-btn hr-btn--sm" onClick={onRetry}>
           <RefreshCw size={13} /> إعادة المحاولة
         </button>
@@ -119,12 +119,12 @@ export const WageRoster: React.FC<Props> = ({
       <div className="hrl-state hrl-state--empty">
         {search === '' && filter === 'all' ? <Users size={20} /> : <SearchX size={20} />}
         <p className="hrl-state__t">
-          {search === '' && filter === 'all' ? 'لا منسوبين بعد' : 'لا منسوبَ في هذه الشريحة'}
+          {search === '' && filter === 'all' ? 'لا موظفين بعد' : 'لا موظف في هذا التصنيف'}
         </p>
         <p className="hrl-state__d">
           {search === '' && filter === 'all'
-            ? 'سجلُّ الأجور يبدأ من ملفّات الموظفين — أضِف منسوباً أوّلاً.'
-            : 'جرّب شريحةً أخرى أو امسح البحث.'}
+            ? 'سجل الأجور يبدأ من ملفات الموظفين. أضف موظفاً أولاً.'
+            : 'جرب تصنيفاً آخر أو امسح البحث.'}
         </p>
       </div>
     )}

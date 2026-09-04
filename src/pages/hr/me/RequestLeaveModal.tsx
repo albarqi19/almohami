@@ -69,7 +69,7 @@ const DOC_TYPE_LABELS: Record<string, string> = {
   national_id: 'هوية وطنية',
   iqama: 'إقامة',
   employment_contract: 'عقد عمل',
-  qualification: 'مؤهّل',
+  qualification: 'مؤهل',
   bar_license: 'رخصة محاماة',
   cv: 'سيرة ذاتية',
   other: 'مستند آخر',
@@ -77,8 +77,8 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 
 /** قيدُ الجنس **يُعرَض ولا يُفرَض** — لا عمودَ جنسٍ على ملفّ الموظف، فهو إرشادٌ لا حجب. */
 const GENDER_HINTS: Record<string, string> = {
-  male: 'مقرَّر للرجال',
-  female: 'مقرَّر للنساء',
+  male: 'مقرر للرجال',
+  female: 'مقرر للنساء',
 };
 
 const docLabel = (doc: MyLeaveDocumentOption): string => {
@@ -109,7 +109,7 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
       setUploaded((prev) => [doc, ...prev]);
       setDocumentId(doc.id); // يُختار فوراً — الرفعُ نيّةُ الإرفاق
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'تعذّر رفع المستند');
+      setUploadError(err instanceof Error ? err.message : 'تعذر رفع المستند');
     } finally {
       setUploading(false);
     }
@@ -156,11 +156,11 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
    * من الخادم كاملاً) ويُكتفى هنا بإحالةٍ إليها — لا يُكرَّر نصٌّ في موضعين.
    */
   const disabledWhy: string | null =
-    type === null ? 'اختر نوعَ الإجازة.'
-      : previewInput === null ? 'حدّد تاريخَي المدى.'
-        : preview.isFetching && duration === undefined ? 'جارٍ احتسابُ المدّة…'
-          : zeroDays ? 'لا يومَ عملٍ داخل المدى — بدِّل التاريخين.'
-            : blocked ? 'راجِع ما هو مذكورٌ أعلاه بالأحمر.'
+    type === null ? 'اختر نوع الإجازة.'
+      : previewInput === null ? 'اختر تاريخ البداية والنهاية.'
+        : preview.isFetching && duration === undefined ? 'جارٍ احتساب المدة…'
+          : zeroDays ? 'لا يوم عمل داخل المدى. غير التاريخين.'
+            : blocked ? 'راجع ما هو مذكور أعلاه بالأحمر.'
               : null;
 
   const cannotSend = send.isPending || disabledWhy !== null;
@@ -173,12 +173,12 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
 
       toast.success(
         result.pending
-          ? 'أُرسل طلبُك — سيظهر لمن يعتمده في المكتب.'
-          : 'سُجّلت إجازتُك واعتُمدت — لا معتمِدَ آخر في مكتبك.'
+          ? 'تم إرسال طلبك. سيظهر لمن يعتمده في المكتب.'
+          : 'تم تسجيل إجازتك واعتمادها. لا يوجد معتمِد آخر في مكتبك.'
       );
       onClose();
     } catch (e) {
-      toast.error(errorText(e, 'تعذّر إرسال الطلب'));
+      toast.error(errorText(e, 'تعذر إرسال الطلب'));
     }
   };
 
@@ -186,7 +186,7 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
     <div className="hr-modal-overlay hrl-modal-overlay" onClick={onClose}>
       <div className="hr-modal hrl-modal myhrq-modal" onClick={(e) => e.stopPropagation()}>
         <div className="hr-modal__h">
-          <h3>طلبُ إجازة</h3>
+          <h3>طلب إجازة</h3>
           <button type="button" className="hr-icon-btn" onClick={onClose} aria-label="إغلاق">
             <X size={18} />
           </button>
@@ -194,7 +194,7 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
 
         <div className="hr-modal__b">
           <div className="hr-field">
-            <label htmlFor="myhrq-type">نوعُ الإجازة *</label>
+            <label htmlFor="myhrq-type">نوع الإجازة *</label>
             <select
               id="myhrq-type"
               value={typeId}
@@ -217,14 +217,14 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
             {type !== null && (
               <p className="myhrq-typeline">
                 <span className="myhrq-typeline__f">
-                  {type.has_ledger_chain ? 'تُخصم من رصيدك' : 'لا تُخصم من رصيدك'}
+                  {type.has_ledger_chain ? 'تخصم من رصيدك' : 'لا تخصم من رصيدك'}
                 </span>
                 {type.legal_reference !== null && (
                   <span className="myhrq-typeline__f" dir="ltr">{type.legal_reference}</span>
                 )}
                 {type.max_days_per_event !== null && (
                   <span className="myhrq-typeline__f">
-                    حدُّها <span dir="ltr">{type.max_days_per_event}</span> يوماً
+                    حدها <span dir="ltr">{type.max_days_per_event}</span> يوماً
                   </span>
                 )}
                 {type.gender_restriction !== null && (
@@ -265,7 +265,7 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
 
           {type?.requires_event_date === true && (
             <div className="hr-field">
-              <label htmlFor="myhrq-event">تاريخُ الواقعة *</label>
+              <label htmlFor="myhrq-event">تاريخ الواقعة *</label>
               <input
                 id="myhrq-event"
                 type="date"
@@ -273,14 +273,14 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
                 onChange={(e) => setEventDate(e.target.value)}
               />
               <span className="myhrq-fieldnote">
-                تاريخُ الواقعة نفسِها (الزواج · الولادة · الوفاة) — به يُحسم الحدُّ النظاميّ.
+                تاريخ الواقعة نفسها (الزواج · الولادة · الوفاة). به يتحدد الحد النظامي.
               </span>
             </div>
           )}
 
           {needsDocument && (
             <div className="hr-field">
-              <label htmlFor="myhrq-doc">المستندُ المرفق *</label>
+              <label htmlFor="myhrq-doc">المستند المرفق *</label>
               {/* 🔴 كان هنا نصٌّ يقول «سلّمه لإدارة المكتب» — لأن الرفعَ كان محصوراً
                   في OneDrive ومحروساً بصلاحيةٍ لا يملكها الموظف، فكان نوعٌ يستلزم
                   مرفقاً بابًا مقفلاً. الآن يرفعه بنفسه ويُخزَّن على خادمنا. */}
@@ -290,7 +290,7 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
                   value={documentId ?? ''}
                   onChange={(e) => setDocumentId(e.target.value === '' ? null : Number(e.target.value))}
                 >
-                  <option value="">اختر مستنداً من ملفّك…</option>
+                  <option value="">اختر مستنداً من ملفك…</option>
                   {allDocuments.map((doc) => (
                     <option key={doc.id} value={doc.id}>
                       {docLabel(doc)}
@@ -318,7 +318,7 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
 
               {allDocuments.length === 0 && !uploading && (
                 <p className="myhrq-note">
-                  هذا النوع يستلزم مستنداً — ارفع صورةَ التقرير أو ملفَّ PDF (حتى ١٠ ميجابايت).
+                  هذا النوع يستلزم مستنداً. ارفع صورة التقرير أو ملف PDF (حتى ١٠ ميجابايت).
                 </p>
               )}
             </div>
@@ -326,21 +326,21 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
 
           <div className="hr-field">
             <label htmlFor="myhrq-reason">
-              السبب {type?.requires_reason === true ? '*' : '(اختياريّ)'}
+              السبب {type?.requires_reason === true ? '*' : '(اختياري)'}
             </label>
             <textarea
               id="myhrq-reason"
               rows={2}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="سطرٌ واحدٌ يكفي — يقرؤه من يعتمد الطلب"
+              placeholder="سطر واحد يكفي، يقرؤه من يعتمد الطلب"
             />
           </div>
 
           {/* ══ المعاينةُ الحيّة — أربعُ حالاتٍ متمايزة ══ */}
           <div className="myhrq-preview">
             <h4 className="myhrq-preview__t">
-              <CalendarDays size={13} aria-hidden="true" /> ما سيُحتسب
+              <CalendarDays size={13} aria-hidden="true" /> ما سيحتسب
               {/* المدى بخطّ الوحدة وأرقامها — القراءةُ المرجعية لِما التقطه المنتقي الأصليّ،
                   إذ أرقامُ ذاك يرسمها المتصفّحُ لا الصفحة. */}
               {previewInput !== null && (
@@ -350,20 +350,20 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
 
             {previewInput === null || (preview.isStale && preview.data === undefined) ? (
               <p className="myhrq-preview__idle">
-                اختر المدى (من · إلى) ليُحتسب ما سيُخصم قبل أن ترسل.
+                اختر المدى (من · إلى) حتى يظهر ما سيخصم قبل الإرسال.
               </p>
             ) : preview.isFetching && duration === undefined ? (
               <p className="myhrq-preview__idle" aria-busy="true">جارٍ الاحتساب…</p>
             ) : duration === undefined ? (
-              <p className="myhrq-preview__idle">{preview.notice ?? 'تعذّر الاحتساب.'}</p>
+              <p className="myhrq-preview__idle">{preview.notice ?? 'تعذر الاحتساب.'}</p>
             ) : zeroDays ? (
               /* 🔴 الصفرُ يُسمّى ولا يُرسم رقماً: «0.0 يوم عمل» رقمٌ يُقرأ نتيجةً، وهي ليست
                  نتيجةً بل عدمُها. والسطرُ يقول ما استُبعد بالاسم فيعرف المستخدمُ لماذا. */
               <>
-                <p className="myhrq-preview__zero">لا أيّامَ عملٍ داخل هذا المدى.</p>
+                <p className="myhrq-preview__zero">لا توجد أيام عمل داخل هذا المدى.</p>
                 <p className="myhrq-preview__d">
-                  {excludedLabel(duration) || 'المدى كلُّه خارجَ أيام العمل.'} — بدِّل التاريخين
-                  ليقعَ فيهما يومُ عملٍ واحدٌ على الأقل.
+                  {excludedLabel(duration) || 'المدى كله خارج أيام العمل'}. غير التاريخين
+                  حتى يقع فيهما يوم عمل واحد على الأقل.
                 </p>
               </>
             ) : (
@@ -378,13 +378,13 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
 
                 <p className="myhrq-preview__d">
                   {isCalendarBasis
-                    ? 'هذا النوع يجري بأيام التقويم — لا تُستثنى منه نهايةُ أسبوعٍ ولا عطلة.'
-                    : excludedLabel(duration) || 'لا يومَ مستثنىً داخل المدى.'}
+                    ? 'هذا النوع يحتسب بأيام التقويم. لا تستثنى منه نهاية الأسبوع ولا العطل.'
+                    : excludedLabel(duration) || 'لا يوجد يوم مستثنى داخل المدى.'}
                 </p>
 
                 {balance !== undefined && balance.available && balance.after !== null ? (
                   <p className="myhrq-preview__b">
-                    رصيدُك بعد اعتمادها:{' '}
+                    رصيدك بعد اعتمادها:{' '}
                     <span className="myhrq-preview__bv">{fmtDays(balance.after)}</span>
                     {balance.before !== null && (
                       <span className="myhrq-preview__bd">{' '}(الآن {fmtDays(balance.before)})</span>
@@ -392,7 +392,7 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
                   </p>
                 ) : (
                   <p className="myhrq-preview__b myhrq-preview__b--none">
-                    هذا النوع لا سلسلةَ رصيدٍ له — لا يُخصم من رصيدك.
+                    هذا النوع بلا رصيد، ولا يخصم من رصيدك.
                   </p>
                 )}
 
@@ -426,8 +426,8 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
           <p className="myhrq-note">
             <Scale size={13} aria-hidden="true" />
             <span>
-              الطلبُ يبقى <strong>معلَّقاً</strong> حتى يعتمده من يملك ذلك في مكتبك،
-              و<strong>لا يُخصم من رصيدك قبل الاعتماد</strong>.
+              الطلب يبقى <strong>معلقاً</strong> حتى يعتمده من يملك ذلك في مكتبك،
+              و<strong>لا يخصم من رصيدك قبل الاعتماد</strong>.
             </span>
           </p>
         </div>
@@ -444,7 +444,7 @@ export const RequestLeaveModal: React.FC<Props> = ({ types, documents, onClose }
               disabled={cannotSend}
               aria-describedby={disabledWhy === null ? undefined : 'myhrq-why'}
             >
-              {send.isPending ? 'جارٍ الإرسال…' : 'أرسِل الطلب'}
+              {send.isPending ? 'جارٍ الإرسال…' : 'أرسل الطلب'}
             </button>
           </div>
           {disabledWhy !== null && (

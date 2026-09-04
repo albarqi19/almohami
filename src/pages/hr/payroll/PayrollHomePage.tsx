@@ -71,7 +71,7 @@ export const PayrollHomePage: React.FC = () => {
     },
     // 🔴 رسالةُ الخادم تُعرَض كما هي: هي التي تسمّي الناقصَ بالرقم، ونصٌّ عامٌّ مكانَها
     // يجعل المستخدمَ يبحث عن العطل في الزرّ.
-    onError: (error) => setOpenError(errorText(error, 'تعذّر فتحُ المسير.')),
+    onError: (error) => setOpenError(errorText(error, 'تعذر فتح المسير.')),
   });
 
   const setPeriod = (value: string) => {
@@ -93,7 +93,7 @@ export const PayrollHomePage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--locked">
           <Lock size={22} />
-          <p className="hrl-state__t">وحدةُ الرواتب غيرُ متاحةٍ لك</p>
+          <p className="hrl-state__t">وحدة الرواتب غير متاحة لك</p>
           <p className="hrl-state__d">{lockedMessage}</p>
         </div>
       </div>
@@ -117,8 +117,8 @@ export const PayrollHomePage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--error">
           <AlertTriangle size={22} />
-          <p className="hrl-state__t">تعذّر جلبُ حالة الرواتب</p>
-          <p className="hrl-state__d">{errorText(overviewQuery.error, 'خطأٌ غيرُ متوقَّع.')}</p>
+          <p className="hrl-state__t">تعذر تحميل حالة الرواتب</p>
+          <p className="hrl-state__d">{errorText(overviewQuery.error, 'خطأ غير متوقع.')}</p>
           <button type="button" className="hr-btn hr-btn--sm" onClick={() => void overviewQuery.refetch()}>
             <RefreshCw size={13} /> أعد المحاولة
           </button>
@@ -135,8 +135,8 @@ export const PayrollHomePage: React.FC = () => {
       <div className="hrl-page">
         <div className="hrl-state hrl-state--empty">
           <Wallet size={22} />
-          <p className="hrl-state__t">لم تُهيَّأ وحدةُ الرواتب لهذا المكتب بعد</p>
-          <p className="hrl-state__d">التهيئةُ تقع مع تفعيل الوحدة — حدّث الصفحة.</p>
+          <p className="hrl-state__t">وحدة الرواتب غير جاهزة لهذا المكتب بعد</p>
+          <p className="hrl-state__d">يتم إعدادها مع تفعيل الوحدة. أعد تحميل الصفحة.</p>
         </div>
       </div>
     );
@@ -173,8 +173,8 @@ export const PayrollHomePage: React.FC = () => {
             <Wallet size={16} /> الرواتب
           </h1>
           <p className="hrl-sub">
-            من يدخل مسيرَ {fmtDateHuman(data.period_start)}، ومن لا يدخل، ولماذا — قبل أن
-            يُحسب ريالٌ واحد.
+            من يدخل مسير {fmtDateHuman(data.period_start)}، ومن لا يدخل، ولماذا، قبل احتساب
+            أي مبلغ.
           </p>
         </div>
 
@@ -198,7 +198,7 @@ export const PayrollHomePage: React.FC = () => {
             </span>
           )}
           <span className="hrl-fact">
-            قراراتٌ تنتظر
+            قرارات تنتظر
             <span className="hrl-fact__n" dir="ltr">
               {decisionTotal}
             </span>
@@ -215,28 +215,28 @@ export const PayrollHomePage: React.FC = () => {
       {isVirgin && (
         <div className="hrl-state hrl-state--empty">
           <Wallet size={22} />
-          <p className="hrl-state__t">لم يُسجَّل راتبٌ بعد</p>
+          <p className="hrl-state__t">لم يتم تسجيل أي راتب بعد</p>
           {/* 🔤 منظومةُ رقمٍ واحدةٌ في الجملة الواحدة: «8 منسوباً · ٠ منهم» تخلط اللاتينيةَ
               الآتيةَ من البيانات بالهنديّة المكتوبة يدوياً — وتمييزُ العدد من `counted`.
               🔴 والعددان كلاهما من الخادم: أوّلُ رقمٍ يُكتب هنا بيدِ مبرمجٍ يصير رقماً لا
               يتغيّر حين تتغيّر القاعدة — وهو بالضبط الصفرُ الذي كان يكذب. */}
           <p className="hrl-state__d">
             {counted(readiness.headcount_total, HEADCOUNT_FORMS)} في المكتب ·{' '}
-            {readiness.wage_recorded_count} منهم له أجرٌ مسجَّل. والمسيرُ لا يُفتح على جدولِ
-            أصفار.
+            {readiness.wage_recorded_count} منهم له أجر مسجل. ولا يفتح المسير قبل تسجيل
+            الرواتب.
           </p>
 
           {/* 🔴 الملفّاتُ المبدئيةُ تُقال ولا تُطوى: هي التي كانت تُضخّم «في المكتب» بحساباتٍ
               أُنشئت مع مستخدميها ولم يقل أحدٌ إنّها وظائف. */}
           {readiness.draft_count > 0 && (
             <p className="hrl-state__d">
-              وخارجَ العدِّ {counted(readiness.draft_count, DRAFT_PROFILE_FORMS)}: حسابٌ أُنشئ
-              ملفُّه مع المستخدم ولم يُكتب له تاريخُ التحاق — يدخل الرواتبَ متى استُكمل.
+              وخارج العد {counted(readiness.draft_count, DRAFT_PROFILE_FORMS)}: حساب تم إنشاء
+              ملفه مع المستخدم ولم يتم تسجيل تاريخ التحاقه. يدخل الرواتب متى اكتمل ملفه.
             </p>
           )}
 
           <Link className="hr-btn hr-btn--sm" to="/hr/payroll/wages">
-            <PlayCircle size={13} /> سجّل أوّل راتب
+            <PlayCircle size={13} /> سجل أول راتب
           </Link>
         </div>
       )}
@@ -247,7 +247,7 @@ export const PayrollHomePage: React.FC = () => {
             <AlertTriangle size={13} /> {openError}
           </p>
           <p className="hrl-flag__hint">
-            كلُّ نقصٍ في لوح الجاهزية جانباً له وصلةٌ تقود إلى إصلاحه.
+            كل نقص في لوحة الجاهزية جانبا له رابط لإصلاحه.
           </p>
         </div>
       )}
@@ -258,7 +258,7 @@ export const PayrollHomePage: React.FC = () => {
             <section className="hrl-block" aria-labelledby="open-h">
               <header className="hrl-block__h">
                 <h2 className="hrl-block__t" id="open-h">
-                  <CalendarClock size={14} /> فترةُ {data.period}
+                  <CalendarClock size={14} /> فترة {data.period}
                 </h2>
                 <span className="hrl-badge hrl-badge--flat">
                   {fmtDateHuman(data.period_start)} — {fmtDateHuman(data.period_end)}
@@ -268,8 +268,8 @@ export const PayrollHomePage: React.FC = () => {
               <div className="hrl-block__b">
                 {data.open_run !== null ? (
                   <p className="hrl-hint">
-                    لهذه الفترة مسيرٌ مفتوحٌ بنطاقِ {outOf(data.open_run.headcount_included, data.open_run.headcount_total)}{' '}
-                    — <Link className="hrl-link" to={`/hr/payroll/runs/${data.open_run.id}?stage=roster`}>افتحه</Link>.
+                    لهذه الفترة مسير مفتوح، والمشمولون فيه {outOf(data.open_run.headcount_included, data.open_run.headcount_total)}.{' '}
+                    <Link className="hrl-link" to={`/hr/payroll/runs/${data.open_run.id}?stage=roster`}>افتحه</Link>.
                   </p>
                 ) : (
                   <>
@@ -284,7 +284,7 @@ export const PayrollHomePage: React.FC = () => {
                       }
                       onClick={() => openMutation.mutate(data.period)}
                     >
-                      <PlayCircle size={13} /> افتح مسيرَ {data.period}
+                      <PlayCircle size={13} /> افتح مسير {data.period}
                     </button>
 
                     {readiness.can_open_run === false && (
@@ -292,7 +292,7 @@ export const PayrollHomePage: React.FC = () => {
                     )}
 
                     {readiness.can_open_run && meta.can_prepare === false && (
-                      <p className="hrl-hint">فتحُ المسير يحتاج صلاحيةَ إعداد الرواتب.</p>
+                      <p className="hrl-hint">فتح المسير يحتاج صلاحية إعداد الرواتب.</p>
                     )}
                   </>
                 )}
@@ -334,7 +334,7 @@ export const PayrollHomePage: React.FC = () => {
                 ) : (
                   <RunList
                     runs={runs}
-                    emptyText="لا مسيرَ بعد — ولن يُفتح مسيرٌ على جدولِ أصفار."
+                    emptyText="لا يوجد مسير بعد. ولا يفتح المسير قبل تسجيل الرواتب."
                   />
                 )}
               </div>
@@ -352,13 +352,13 @@ export const PayrollHomePage: React.FC = () => {
           <section className="hrl-block" aria-labelledby="period-h">
             <header className="hrl-block__h">
               <h2 className="hrl-block__t" id="period-h">
-                فترةٌ أخرى
+                فترة أخرى
               </h2>
             </header>
 
             <div className="hrl-block__b">
               <label className="hrl-fset" htmlFor="payroll-period">
-                <span className="hrl-fset__t">شهرُ الاستحقاق</span>
+                <span className="hrl-fset__t">شهر الاستحقاق</span>
                 <input
                   id="payroll-period"
                   className="hrl-search"
@@ -369,24 +369,24 @@ export const PayrollHomePage: React.FC = () => {
               </label>
 
               <p className="hrl-hint">
-                يومُ الصرف عند المكتب {data.settings.pay_day_of_month} من الشهر التالي — والنظامُ
-                يحدّد الدورةَ (مرّةً في الشهر للمشاهرة) لا اليوم.
+                يوم الصرف عند المكتب {data.settings.pay_day_of_month} من الشهر التالي. ونظام
+                العمل يحدد الدورة (مرة في الشهر للرواتب الشهرية) لا اليوم.
               </p>
 
               {/* 🔴 وصلةٌ إلى الدورة الحقيقية: المكتبُ يُصدّر ← يرفع لبنكه فيحوّل ← يطلب من
                   البنك ملفَّ الأجور الموقَّع ← يرفعه بنفسه خلال ثلاثين يوماً. وموضعُها تحت
                   عدّاد المهلة مباشرةً: من يقرأ «بقي ٩ أيام» يسأل «تسعةُ أيامٍ لأيّ شيء؟». */}
               <p className="hrl-hint">
-                والمهلةُ أعلاه لرفع <strong>ملفّ الأجور الذي يصدره بنكُك</strong> بعد التحويل —
-                يرفعه المكتبُ بنفسه، ولا يُنتجه هذا النظام.{' '}
+                والمهلة أعلاه لرفع <strong>ملف الأجور الذي يصدره بنكك</strong> بعد التحويل.
+                يرفعه المكتب بنفسه، ولا ينتجه هذا النظام.{' '}
                 <Link className="hrl-link" to="/hr/payroll/bank-cycle">
-                  الدورةُ في أربع خطوات
+                  الدورة في أربع خطوات
                 </Link>
               </p>
 
               {periodParam !== null && (
                 <button type="button" className="hrl-link" onClick={() => setPeriod('')}>
-                  عُد إلى الشهر الجاري
+                  ارجع إلى الشهر الجاري
                 </button>
               )}
             </div>

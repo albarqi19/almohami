@@ -30,16 +30,16 @@ export const MyPaySection: React.FC = () => (
     <section className="hrl-block">
       <div className="hrl-block__h">
         <h2 className="hrl-block__t hrl-h2">
-          <FolderLock size={14} aria-hidden="true" /> وثائقي ومددُ انتهائها
+          <FolderLock size={14} aria-hidden="true" /> وثائقي وتواريخ انتهائها
         </h2>
       </div>
 
       <div className="hrl-state hrl-state--locked">
         <FolderLock size={20} />
-        <p className="hrl-state__t">وثائقُ ملفّك تُدار من إدارة المكتب</p>
+        <p className="hrl-state__t">وثائق ملفك تدار من إدارة المكتب</p>
         <p className="hrl-state__d">
-          نسخُ هويّتك ورخصتك وشهاداتك ومددُ انتهائها محفوظةٌ في ملفّك، ولا تُفتح من هذه الشاشة —
-          راجع مسؤولَ الموارد البشرية لنسخةٍ أو لتاريخِ انتهاء وثيقة.
+          نسخ هويتك ورخصتك وشهاداتك وتواريخ انتهائها محفوظة في ملفك، ولا يمكن فتحها من هذه الشاشة.
+          تواصل مع مسؤول الموارد البشرية لطلب نسخة أو تاريخ انتهاء وثيقة.
         </p>
       </div>
     </section>

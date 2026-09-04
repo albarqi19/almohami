@@ -79,13 +79,13 @@ export const BoardHead: React.FC<Props> = ({
       <div className="hrl-head__actions">
         {canManage && (
           <button type="button" className="hr-btn hr-btn--sm hr-btn--primary" onClick={onAdd}>
-            <Plus size={13} /> إضافة منسوب
+            <Plus size={13} /> إضافة موظف
           </button>
         )}
 
         {showCalendar && onHolidays && (
           <button type="button" className="hr-btn hr-btn--sm" onClick={onHolidays}>
-            <CalendarDays size={13} /> التقويم الرسميّ
+            <CalendarDays size={13} /> التقويم الرسمي
           </button>
         )}
 
@@ -95,7 +95,7 @@ export const BoardHead: React.FC<Props> = ({
           </button>
         )}
 
-        {bare && <span className="hrl-fact">عرضٌ فقط</span>}
+        {bare && <span className="hrl-fact">عرض فقط</span>}
       </div>
     </header>
   );
