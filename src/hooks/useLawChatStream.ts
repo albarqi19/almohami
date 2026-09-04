@@ -58,7 +58,8 @@ export function useLawChatStream() {
 
       abortRef.current = streamLawChat(question, conversationId, {
         onStage: (s) => safeSet((p) => ({ ...p, stage: s })),
-        onToken: (t) => safeSet((p) => ({ ...p, text: p.text + t })),
+        // 🔑 أوّلُ حرفٍ يمحو مراحلَ ما قبله — فما يصل بعده من مراحل (فحصُ الاكتمال) يُعرض تحت الجواب لا فوقه
+        onToken: (t) => safeSet((p) => ({ ...p, text: p.text + t, stage: p.text ? p.stage : null })),
         onDone: (a) => {
           safeSet((p) => ({
             ...p,

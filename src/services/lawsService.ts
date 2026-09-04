@@ -87,6 +87,8 @@ export interface LawChatMessage {
   role: 'user' | 'assistant';
   content: string;
   cited_articles: CitedArticle[] | null;
+  /** استرجاعٌ ضعيفٌ حتى بعد إعادة الصياغة — لافتةٌ بارزة (يصل مع الجواب الحيّ فقط) */
+  weak_retrieval?: boolean;
   created_at: string;
 }
 
@@ -107,6 +109,7 @@ export interface LawChatAnswer {
     content: string;
     cited_articles: CitedArticle[];
     no_match: boolean;
+    weak_retrieval?: boolean;
     /** أسئلةُ متابعةٍ مشتقّةٌ من المواد المسترجَعة نفسِها — لا عبارات عامة */
     suggestions?: string[];
     created_at: string;

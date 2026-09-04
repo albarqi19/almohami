@@ -391,9 +391,20 @@ const LawChat: React.FC<Props> = ({ onOpenArticle }) => {
    * أثناء الانتظار نعرض السؤال محلياً، وبعد النجاح نعرض السؤال+الرد محلياً
    * إلى أن يصل تحديث الخادم (يمنع أي وميض/اختفاء).
    */
+  /*
+   * 🩸 صيدُ المراجعة: وسمُ الاسترجاع الضعيف لا يُخزَّن (كـno_match)، فكانت اللافتةُ
+   *    تومض ثم تختفي حين تحلّ نسخةُ الخادم محلّ الرسالة المحلية. المعرّفاتُ الموسومة
+   *    تُحفظ للجلسة فتبقى اللافتة ما بقيت الصفحة.
+   */
+  const weakIdsRef = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    const msg = chat.answer?.message;
+    if (msg?.weak_retrieval && msg.id > 0) weakIdsRef.current.add(msg.id);
+  }, [chat.answer]);
+
   const displayed = useMemo(() => {
     const server: LawChatMessage[] = conversation?.messages ?? [];
-    const items = [...server];
+    const items = server.map((m) => (weakIdsRef.current.has(m.id) ? { ...m, weak_retrieval: true } : m));
 
     // الدورُ الجاري يُعرض محلياً حتى يصل تحديثُ الخادم — فلا وميضَ ولا اختفاء
     const live = chat.status !== 'idle';
@@ -407,6 +418,7 @@ const LawChat: React.FC<Props> = ({ onOpenArticle }) => {
           role: 'assistant',
           content: chat.text,
           cited_articles: chat.answer?.message.cited_articles ?? null,
+          weak_retrieval: chat.answer?.message.weak_retrieval ?? false,
           created_at: chat.answer?.message.created_at ?? '',
         });
       }
@@ -569,6 +581,20 @@ const LawChat: React.FC<Props> = ({ onOpenArticle }) => {
                   {m.role === 'assistant' ? <Scale size={15} /> : null}
                 </div>
                 <div className="law-msg__bubble">
+                  {/*
+                    * لافتةُ الاسترجاع الضعيف — توصية المختبر P0-2: «لافتة بارزة لا وسم صغير».
+                    * تظهر فوق الجواب بعد اكتماله، حين لم يجد الخادمُ نصّاً يطابق حتى بعد
+                    * إعادة الصياغة بمفردات النظام.
+                    */}
+                  {m.role === 'assistant' && m.weak_retrieval && !(chat.isStreaming && m.id === -2) && (
+                    <div className="law-msg__weak" role="alert">
+                      <TriangleAlert size={15} />
+                      <div>
+                        <strong>لم أجد نصّاً نظامياً يطابق سؤالك بدقّة.</strong>
+                        ما يلي أقربُ ما وُجد — تحقّق من النص الرسمي قبل الاعتماد.
+                      </div>
+                    </div>
+                  )}
                   {m.role === 'assistant' ? (
                     <AnswerBody content={m.content} />
                   ) : (
@@ -618,6 +644,15 @@ const LawChat: React.FC<Props> = ({ onOpenArticle }) => {
             {/* مؤشّرُ المراحل — قبل وصول أوّل حرفٍ فقط، وبأسماء الأنظمة الفعلية */}
             {chat.isStreaming && !chat.text && (
               <ThinkingIndicator key="thinking" stage={chat.stage} />
+            )}
+            {/*
+              * مرحلةٌ لاحقة أثناء البثّ (فحصُ اكتمال المدة): سطرٌ خافت تحت الجواب.
+              * 🩸 صيدُ المراجعة: كانت تُبثّ ولا تُعرض، فيتجمّد الجواب ثم يتبدّل صامتاً.
+              */}
+            {chat.isStreaming && chat.text && chat.stage && (
+              <div className="law-poststage" key="poststage">
+                <em className="law-thinking__text">{chat.stage.label}</em>
+              </div>
             )}
           </AnimatePresence>
 
