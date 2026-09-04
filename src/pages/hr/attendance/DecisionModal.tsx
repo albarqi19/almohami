@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
-import { X } from 'lucide-react';
+import { CalendarClock, X } from 'lucide-react';
 
 import { ATTENDANCE_MAX_DECISION_DATES } from '../../../types/hr';
 import type { AttendanceDecisionSkip } from '../../../types/hr';
 import { useDecideDays } from './useAttendanceQueue';
-import { daysWord, errorText, fmtDayLine } from './attendanceFormat';
+import { daysWord, ENGINE_RUN_SENTENCE, errorText, fmtDayLine } from './attendanceFormat';
 
 /**
  * **القرارُ الجماعيّ** — موظفٌ واحدٌ، أيامٌ متعدّدة، **سببٌ واحدٌ يُكتب مرّة**.
@@ -65,7 +65,7 @@ export const DecisionModal: React.FC<Props> = ({
       });
 
       if (result.written > 0) {
-        toast.success(`تم تسجيل تأكيد الحضور على ${daysWord(result.written)}`);
+        toast.success(`تم تسجيل تأكيد الحضور على ${daysWord(result.written)}. ${ENGINE_RUN_SENTENCE}`);
       }
 
       // نجاحٌ جزئيّ: يُفرَغ التحديدُ **ويبقى المودالُ مفتوحاً** بقائمة ما لم يُقبل — إغلاقُه
@@ -121,6 +121,11 @@ export const DecisionModal: React.FC<Props> = ({
               {reason.trim().length} / {MIN_REASON}
             </span>
           </div>
+
+          <p className="hra-note">
+            <CalendarClock size={13} aria-hidden="true" />
+            <span>{ENGINE_RUN_SENTENCE}</span>
+          </p>
 
           {skipped.length > 0 && (
             <div className="hra-secb">

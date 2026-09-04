@@ -4,12 +4,13 @@ import { AlertTriangle, CalendarDays, RefreshCw } from 'lucide-react';
 import { ATTENDANCE_FLAG_LABELS } from '../../../types/hr';
 import type { AttendanceDayRow } from '../../../types/hr';
 import {
+  dayStatusClass,
+  dayStatusLabel,
+  dayStatusTitle,
   errorText,
   fmtDate,
   fmtMinutes,
   fmtTime,
-  statusClass,
-  statusLabel,
 } from './attendanceFormat';
 
 /**
@@ -83,7 +84,9 @@ export const AttendanceToday: React.FC<Props> = ({
           <div className="hra-day__main">
             <div className="hra-day__d">
               <span>{row.employee?.name ?? 'موظف'}</span>
-              <span className={statusClass(row.status)}>{statusLabel(row.status)}</span>
+              <span className={dayStatusClass(row)} title={dayStatusTitle(row)}>
+                {dayStatusLabel(row)}
+              </span>
               {row.flags.length > 0 && (
                 <span className="hra-flags">
                   {row.flags.map((flag) => (

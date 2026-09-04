@@ -130,14 +130,14 @@ export const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
   full_time: 'دوام كامل',
   part_time: 'دوام جزئي',
   contractor: 'متعاون',
-  intern: 'متدرّب',
+  intern: 'متدرب',
 };
 
 export const EMPLOYEE_STATUS_LABELS: Record<EmployeeStatus, string> = {
   active: 'نشط',
   on_leave: 'في إجازة',
   suspended: 'موقوف',
-  terminated: 'منتهٍ',
+  terminated: 'منتهي الخدمة',
 };
 
 // ───────────── عقود العمل (A1) ─────────────
@@ -180,18 +180,18 @@ export interface EmploymentContract {
 
 export const CONTRACT_TYPE_LABELS: Record<EmploymentContractType, string> = {
   permanent: 'دائم',
-  fixed_term: 'محدّد المدة',
+  fixed_term: 'محدد المدة',
   part_time: 'دوام جزئي',
-  remote: 'عن بُعد',
+  remote: 'عن بعد',
   training: 'تدريب',
 };
 
 export const CONTRACT_STATUS_LABELS: Record<EmploymentContractStatus, string> = {
-  draft: 'مسودّة',
+  draft: 'مسودة',
   active: 'ساري',
-  expired: 'منتهٍ',
+  expired: 'منتهي المدة',
   terminated: 'مفسوخ',
-  superseded: 'مُستبدل',
+  superseded: 'مستبدل',
 };
 
 // ───────────── مستندات الموظف (A2) ─────────────
@@ -251,7 +251,7 @@ export const HOLIDAY_TYPE_LABELS: Record<HolidayType, string> = {
   eid_adha: 'عيد الأضحى',
   national_day: 'اليوم الوطني',
   founding_day: 'يوم التأسيس',
-  custom: 'مخصّصة',
+  custom: 'عطلة مخصصة',
 };
 
 // ───────────── الإجازات والغياب (B2) ─────────────
@@ -1058,8 +1058,8 @@ export interface LegacyLeaveRow {
 export type OpeningBasis = 'full_entitlement' | 'remaining_today';
 
 export const OPENING_BASIS_LABELS: Record<OpeningBasis, string> = {
-  full_entitlement: 'الاستحقاق الكامل — والإجازاتُ السابقةُ تُخصم منه',
-  remaining_today: 'المتبقّي اليوم — والسابقةُ تُسجَّل ولا تُخصم',
+  full_entitlement: 'الاستحقاق الكامل — والإجازات السابقة تخصم منه',
+  remaining_today: 'المتبقي اليوم — والإجازات السابقة تسجل ولا تخصم',
 };
 
 /** ما سجّله قيدُ الافتتاح. `recorded=false` ⇒ قيدٌ كُتب قبل وجود الاختيار، والقراءةُ مستنتَجة. */
@@ -1225,10 +1225,10 @@ export interface LeavePreviewPayload {
 
 export const LEAVE_STATUS_LABELS: Record<LeaveStatus, string> = {
   pending: 'قيد الاعتماد',
-  approved: 'معتمَدة',
+  approved: 'معتمدة',
   rejected: 'مرفوضة',
   cancelled: 'ملغاة',
-  superseded: 'مُخلَفة',
+  superseded: 'مستبدلة',
 };
 
 export const LEAVE_SOURCE_LABELS: Record<LeaveSource, string> = {
@@ -1238,7 +1238,7 @@ export const LEAVE_SOURCE_LABELS: Record<LeaveSource, string> = {
 };
 
 export const LEAVE_CATEGORY_LABELS: Record<LeaveCategory, string> = {
-  entitled: 'مستحقّة برصيد',
+  entitled: 'مستحقة برصيد',
   statutory: 'نظامية',
   unpaid: 'بلا أجر',
   absence: 'غياب',
@@ -1264,13 +1264,13 @@ export const LEAVE_DURATION_BASIS_LABELS: Record<LeaveDurationBasis, string> = {
 export const LEAVE_ENTITLEMENT_WINDOW_LABELS: Record<LeaveEntitlementWindow, string> = {
   per_year: 'سنوياً',
   per_window: 'لكل نافذة',
-  per_event: 'لكل واقعة',
-  per_lifetime: 'مرّة في العمر',
+  per_event: 'لكل مناسبة',
+  per_lifetime: 'مرة واحدة في العمر',
   none: 'بلا استحقاق',
 };
 
 export const LEDGER_ENTRY_TYPE_LABELS: Record<LedgerEntryType, string> = {
-  opening: 'رصيد افتتاحيّ',
+  opening: 'رصيد افتتاحي',
   accrual: 'استحقاق',
   consumption: 'استهلاك',
   reversal: 'قيد عاكس',
@@ -1287,12 +1287,12 @@ export const LEAVE_TYPE_CODE_LABELS: Record<LeaveTypeCode, string> = {
   marriage: 'إجازة زواج',
   bereavement_direct: 'إجازة وفاة',
   bereavement_sibling: 'إجازة وفاة أخ أو أخت',
-  paternity: 'إجازة أبوّة',
+  paternity: 'إجازة أبوة',
   maternity: 'إجازة وضع',
   maternity_extension_unpaid: 'تمديد إجازة الوضع (شهر بلا أجر)',
   newborn_care: 'رعاية المولود المريض أو ذي الاحتياجات الخاصة',
   newborn_care_extension_unpaid: 'تمديد رعاية المولود (شهر بلا أجر)',
-  iddah: 'إجازة عدّة',
+  iddah: 'إجازة عدة',
   iddah_non_muslim: 'وفاة الزوج (عاملة غير مسلمة)',
   hajj: 'إجازة حج',
   exam: 'إجازة اختبارات',
@@ -1300,7 +1300,7 @@ export const LEAVE_TYPE_CODE_LABELS: Record<LeaveTypeCode, string> = {
 
 export const CONTRACT_YEAR_BASIS_LABELS: Record<ContractYearBasis, string> = {
   hire_date: 'من تاريخ التعيين',
-  accrual_anchor: 'من مرساة الاستحقاق',
+  accrual_anchor: 'من تاريخ بدء الاستحقاق',
   calendar_fallback: 'سنة ميلادية',
 };
 
@@ -1327,10 +1327,10 @@ export const HR_LETTER_TYPE_LABELS: Record<HrLetterType, string> = {
 
 /** سطرُ الشرط تحت اسم النوع في المنتقي — يُعرض دائماً، لا عند المنع فقط. */
 export const HR_LETTER_TYPE_HINTS: Record<HrLetterType, string> = {
-  salary_certificate: 'يذكر الأجر وتفصيلَ بدلاته — يلزمه سجلُّ تعويضٍ حاليّ',
-  employment_certificate: 'يذكر المسمّى وتاريخ المباشرة — بلا أيّ رقمٍ ماليّ',
-  experience_certificate: 'مدّةُ الخدمة كاملةً — بعد انتهاء الخدمة',
-  clearance: 'إخلاءُ العهدة — بعد انتهاء الخدمة وبإقرارِ المُصدِر',
+  salary_certificate: 'يذكر الراتب وتفصيل بدلاته — ويلزمه سجل راتب حالي',
+  employment_certificate: 'يذكر المسمى الوظيفي وتاريخ المباشرة — بلا أي رقم مالي',
+  experience_certificate: 'مدة الخدمة كاملة — بعد انتهاء الخدمة',
+  clearance: 'إخلاء العهدة — بعد انتهاء الخدمة وبإقرار من يصدره',
 };
 
 /**
@@ -1373,31 +1373,40 @@ export type AttendanceStatus =
   | 'no_record';
 
 export const ATTENDANCE_STATUS_LABELS: Record<AttendanceStatus, string> = {
-  not_tracked: 'غيرُ مُتتبَّع',
-  weekend: 'نهايةُ أسبوع',
-  holiday: 'عطلةٌ رسمية',
+  not_tracked: 'غير مشمول بالحضور',
+  weekend: 'راحة أسبوعية',
+  holiday: 'عطلة رسمية',
   on_leave: 'في إجازة',
-  absence_recorded: 'غيابٌ مسجَّل',
-  offsite: 'عن بُعد أو ميدانيّ',
+  absence_recorded: 'غياب مسجل',
+  offsite: 'عن بعد أو ميداني',
   present: 'حاضر',
-  incomplete: 'بصمةٌ ناقصة',
-  field_work_suspected: 'يُرجَّح عملٌ ميدانيّ',
-  no_record: 'بلا سجلّ',
+  incomplete: 'بصمة ناقصة',
+  field_work_suspected: 'يحتمل عمل ميداني',
+  no_record: 'بلا سجل',
 };
 
 /** سطرٌ يشرح الحالةَ حين تُعرض وحدَها — يمنع قراءةَ «بلا سجلّ» تهمةً. */
 export const ATTENDANCE_STATUS_HINTS: Record<AttendanceStatus, string> = {
-  not_tracked: 'الحضورُ غيرُ مُفعَّلٍ على هذا الملفّ في هذا اليوم.',
-  weekend: 'يومُ راحةٍ في جدول الدوام المُسنَد.',
-  holiday: 'عطلةٌ معتمَدةٌ في التقويم الرسميّ للمكتب.',
-  on_leave: 'يغطّيه سجلُّ إجازةٍ في «الإجازات والغياب».',
-  absence_recorded: 'سُجِّل غيابُه في دفتر الإجازات بفعلِ إنسانٍ مسمّى.',
-  offsite: 'يغطّيه ادّعاءٌ معتمَدٌ أو نمطُ يومٍ عن بُعد.',
-  present: 'دخولٌ وخروجٌ مكتملان.',
-  incomplete: 'طرفٌ واحدٌ من اليوم مُسجَّل — والناقصُ ليس غياباً.',
-  field_work_suspected: 'له جلسةٌ أو ارتباطٌ خارجيٌّ في هذا اليوم بلا بصمة.',
-  no_record: 'لم تصل بصمةٌ ولم يُوجد ما يغطّيه — واقعةٌ تقنيةٌ تنتظر تفسيراً.',
+  not_tracked: 'متابعة الحضور غير مفعلة على هذا الموظف في هذا اليوم.',
+  weekend: 'يوم راحة في جدول الدوام المسند إليه.',
+  holiday: 'عطلة معتمدة في التقويم الرسمي للمكتب.',
+  on_leave: 'يغطيه سجل إجازة في «الإجازات والغياب».',
+  absence_recorded: 'سجل المدير غيابه في دفتر الإجازات — ولم يستنتجه المحرك.',
+  offsite: 'يغطيه طلب تصحيح معتمد أو نمط يومه في الجدول «عن بعد».',
+  present: 'دخول وخروج مكتملان.',
+  incomplete: 'طرف واحد من اليوم مسجل — والناقص ليس غياباً.',
+  field_work_suspected: 'له جلسة أو ارتباط خارجي في هذا اليوم بلا بصمة.',
+  no_record: 'لم تصل بصمة ولم يوجد ما يغطي اليوم — والحالة تنتظر تفسيراً.',
 };
+
+/**
+ * تسميةُ اليوم الذي حسمه قرارٌ بشريّ — تُعرض بدل `ATTENDANCE_STATUS_LABELS`
+ * حين يحمل الصفُّ `decided_status`.
+ */
+export const ATTENDANCE_DECIDED_LABEL = 'حاضر بتأكيد الإدارة';
+
+/** سطرُ الشرح تحتها — لماذا صار اليومُ حضوراً بلا بصمة. */
+export const ATTENDANCE_DECIDED_HINT = 'أكد مسؤول حضوره في هذا اليوم ولم تصل بصمة.';
 
 /** نطاقُ حكم القرار البشريّ — نسخةُ `HrAttendanceDay::AMBIGUOUS_STATUSES`. */
 export const ATTENDANCE_AMBIGUOUS_STATUSES: AttendanceStatus[] = [
@@ -1420,15 +1429,15 @@ export type AttendanceRuleHit =
 
 /** أيُّ درجةٍ في السلّم حسمت اليوم — تُقرأ «حسمه: …». */
 export const ATTENDANCE_RULE_LABELS: Record<AttendanceRuleHit, string> = {
-  schedule: 'الجدولُ المُسنَد',
-  weekend: 'نهايةُ الأسبوع',
-  holiday: 'التقويمُ الرسميّ',
-  leave: 'سجلُّ إجازة',
-  legacy_request: 'طلبٌ إداريٌّ معتمَد',
-  claim: 'ادّعاءٌ معتمَد',
-  pattern: 'نمطُ اليوم في الجدول',
+  schedule: 'الجدول المسند',
+  weekend: 'الراحة الأسبوعية',
+  holiday: 'التقويم الرسمي',
+  leave: 'سجل إجازة',
+  legacy_request: 'طلب إداري معتمد',
+  claim: 'طلب تصحيح معتمد',
+  pattern: 'نمط اليوم في الجدول',
   punches: 'البصمات',
-  session: 'جلسةٌ مجدولة',
+  session: 'جلسة مجدولة',
   none: 'لا دليل',
 };
 
@@ -1444,15 +1453,15 @@ export type AttendanceFlag =
   | 'suspect_punch';
 
 export const ATTENDANCE_FLAG_LABELS: Record<AttendanceFlag, string> = {
-  resolution_conflict: 'قرارٌ بشريٌّ على يومٍ لم يعد ملتبساً',
-  half_day_leave: 'نصفُ يومِ إجازة',
-  pending_holiday_in_range: 'عطلةٌ غيرُ معتمَدةٍ في المدى',
-  crosses_cutoff: 'يعبر ساعةَ فصل اليوم',
-  duplicate_direction: 'بصمتان بالاتجاه نفسِه',
-  impossible_pairing: 'خروجٌ قبل دخول',
-  over_12h: 'حضورٌ يتجاوز ١٢ ساعة',
-  over_10h: 'حضورٌ يتجاوز ١٠ ساعات',
-  suspect_punch: 'بصمةٌ موسومةٌ للمراجعة',
+  resolution_conflict: 'قرار إداري على يوم لم يعد ملتبساً',
+  half_day_leave: 'نصف يوم إجازة',
+  pending_holiday_in_range: 'عطلة غير معتمدة داخل المدة',
+  crosses_cutoff: 'يتجاوز ساعة فصل اليوم',
+  duplicate_direction: 'بصمتان بالاتجاه نفسه',
+  impossible_pairing: 'خروج قبل دخول',
+  over_12h: 'حضور يتجاوز ١٢ ساعة',
+  over_10h: 'حضور يتجاوز ١٠ ساعات',
+  suspect_punch: 'بصمة موسومة للمراجعة',
 };
 
 /** الأدلّةُ التي رآها المحرّك — الفائزُ في `rule` والباقي في `skipped`. */
@@ -1466,13 +1475,13 @@ export type AttendanceSignal =
   | 'pending_holiday';
 
 export const ATTENDANCE_SIGNAL_LABELS: Record<AttendanceSignal, string> = {
-  leave: 'سجلُّ إجازة',
-  legacy_request: 'طلبٌ إداريٌّ معتمَد',
-  claim: 'ادّعاءٌ معتمَد',
-  pattern: 'نمطُ يومٍ في الجدول',
+  leave: 'سجل إجازة',
+  legacy_request: 'طلب إداري معتمد',
+  claim: 'طلب تصحيح معتمد',
+  pattern: 'نمط اليوم في الجدول',
   punches: 'بصمات',
-  sessions: 'جلسةٌ مجدولة',
-  pending_holiday: 'عطلةٌ غيرُ معتمَدة',
+  sessions: 'جلسة مجدولة',
+  pending_holiday: 'عطلة غير معتمدة',
 };
 
 export type PunchDirection = 'in' | 'out';
@@ -1485,22 +1494,22 @@ export const PUNCH_DIRECTION_LABELS: Record<PunchDirection, string> = {
 export type PunchSource = 'web' | 'mobile' | 'qr' | 'wifi' | 'device' | 'import' | 'manual';
 
 export const ATTENDANCE_SOURCE_LABELS: Record<PunchSource, string> = {
-  web: 'من المتصفّح',
+  web: 'من المتصفح',
   mobile: 'من التطبيق',
   qr: 'رمز QR',
-  wifi: 'شبكةُ المكتب',
-  device: 'جهازُ بصمة',
+  wifi: 'شبكة المكتب',
+  device: 'جهاز البصمة',
   import: 'استيراد',
-  manual: 'إدخالٌ يدويّ',
+  manual: 'إدخال يدوي',
 };
 
 export type PunchTrust = 'verified' | 'attested' | 'asserted' | 'disputed';
 
 export const ATTENDANCE_TRUST_LABELS: Record<PunchTrust, string> = {
-  verified: 'موثَّقة',
-  attested: 'بشهادةِ مسؤول',
-  asserted: 'بإقرارِ الموظف',
-  disputed: 'محلُّ نزاع',
+  verified: 'موثقة',
+  attested: 'بشهادة مسؤول',
+  asserted: 'بإقرار الموظف',
+  disputed: 'محل نزاع',
 };
 
 export type PunchSuspectReason =
@@ -1512,38 +1521,38 @@ export type PunchSuspectReason =
   | 'stale_qr';
 
 export const PUNCH_SUSPECT_LABELS: Record<PunchSuspectReason, string> = {
-  mock: 'موقعٌ مُصطنَع',
-  low_accuracy: 'دقّةٌ رديئة',
-  impossible_travel: 'انتقالٌ مستحيل',
-  shared_device: 'جهازٌ مشترَك',
-  clock_skew: 'انحرافُ ساعةِ الجهاز',
-  stale_qr: 'رمزٌ منتهٍ',
+  mock: 'موقع مصطنع',
+  low_accuracy: 'دقة الموقع ضعيفة',
+  impossible_travel: 'انتقال غير ممكن',
+  shared_device: 'جهاز مشترك',
+  clock_skew: 'ساعة الجهاز غير مضبوطة',
+  stale_qr: 'رمز منتهي الصلاحية',
 };
 
 export type ClaimKind = 'remote' | 'field_work' | 'mission' | 'training' | 'missing_punch';
 
 export const CLAIM_KIND_LABELS: Record<ClaimKind, string> = {
-  remote: 'عملٌ عن بُعد',
-  field_work: 'عملٌ ميدانيّ',
+  remote: 'عمل عن بعد',
+  field_work: 'عمل ميداني',
   mission: 'مأمورية',
   training: 'تدريب',
-  missing_punch: 'بصمةٌ منسيّة',
+  missing_punch: 'بصمة منسية',
 };
 
 /** سطرُ الشرط تحت اسم النوع في المنتقي — يُعرض دائماً لا عند المنع فقط. */
 export const CLAIM_KIND_HINTS: Record<ClaimKind, string> = {
-  remote: 'يومُ عملٍ من خارج المكتب باتفاق',
-  field_work: 'محكمةٌ أو جهةٌ أو زيارةُ عميل',
-  mission: 'انتدابٌ أو سفرُ عمل',
-  training: 'دورةٌ أو ورشةٌ باعتماد المكتب',
-  missing_punch: 'حضرَ ونسي تسجيلَ الدخول أو الخروج',
+  remote: 'يوم عمل من خارج المكتب باتفاق مسبق',
+  field_work: 'محكمة أو جهة حكومية أو زيارة عميل',
+  mission: 'انتداب أو سفر عمل',
+  training: 'دورة أو ورشة معتمدة من المكتب',
+  missing_punch: 'حضر ونسي تسجيل الدخول أو الخروج',
 };
 
 export type ClaimStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export const CLAIM_STATUS_LABELS: Record<ClaimStatus, string> = {
   pending: 'قيد الاعتماد',
-  approved: 'معتمَد',
+  approved: 'معتمد',
   rejected: 'مرفوض',
   cancelled: 'مسحوب',
 };
@@ -1552,7 +1561,7 @@ export type ClaimLinkType = 'case_session' | 'task' | 'meeting';
 
 export const CLAIM_LINK_TYPE_LABELS: Record<ClaimLinkType, string> = {
   case_session: 'جلسة',
-  task: 'مهمّة',
+  task: 'مهمة',
   meeting: 'اجتماع',
 };
 
@@ -1563,29 +1572,29 @@ export const CLAIM_LINK_TYPE_LABELS: Record<ClaimLinkType, string> = {
 export type ResolutionDecision = 'present_confirmed' | 'unclassified_closed' | 'void';
 
 export const RESOLUTION_DECISION_LABELS: Record<ResolutionDecision, string> = {
-  present_confirmed: 'حضرَ بلا سجلّ',
-  unclassified_closed: 'أُغلق بلا تصنيف',
-  void: 'منقوض',
+  present_confirmed: 'حضر بلا سجل',
+  unclassified_closed: 'أغلق بلا تصنيف',
+  void: 'ملغى',
 };
 
 /** الاقتراحُ المُسبَّق — نصُّ الزرّ الأوّل، ومصدرُه `label_key` من الخادم. */
 export type SuggestionKind = 'field_work' | 'leave' | 'missing_punch' | 'remote' | 'present_confirmed';
 
 export const SUGGESTION_LABELS: Record<SuggestionKind, string> = {
-  field_work: 'سجّله عملاً ميدانياً',
-  leave: 'سجّل إجازةً على هذا اليوم',
-  missing_punch: 'أكمِل البصمةَ الناقصة',
-  remote: 'سجّله عملاً عن بُعد',
-  present_confirmed: 'أكّد أنه حضر بلا سجلّ',
+  field_work: 'سجله عملاً ميدانياً',
+  leave: 'سجل إجازة على هذا اليوم',
+  missing_punch: 'أكمل البصمة الناقصة',
+  remote: 'سجله عملاً عن بعد',
+  present_confirmed: 'أكد أنه حضر بلا سجل',
 };
 
 /** لماذا اقتُرح هذا — يُعرض تحت الزرّ فلا يبدو الاقتراحُ حكماً بلا سبب. */
 export const SUGGESTION_HINTS: Record<SuggestionKind, string> = {
-  field_work: 'له جلسةٌ مجدولةٌ في هذا اليوم',
-  leave: 'له طلبٌ إداريٌّ معتمَدٌ يتداخل مع اليوم',
-  missing_punch: 'طرفٌ واحدٌ من اليوم مُسجَّل والآخرُ ناقص',
-  remote: 'نمطُ هذا اليوم في جدوله «عن بُعد»',
-  present_confirmed: 'لا دليلَ آخر — والشهادةُ شهادتُك',
+  field_work: 'له جلسة مجدولة في هذا اليوم',
+  leave: 'له طلب إداري معتمد يتداخل مع هذا اليوم',
+  missing_punch: 'طرف واحد من اليوم مسجل والآخر ناقص',
+  remote: 'نمط هذا اليوم في جدوله «عن بعد»',
+  present_confirmed: 'لا دليل آخر — والتأكيد مسؤوليتك',
 };
 
 export type SuggestionAction = 'claim' | 'leave' | 'resolution';
@@ -1594,15 +1603,15 @@ export type ScheduleDayMode = 'office' | 'remote' | 'field';
 
 export const DAY_MODE_LABELS: Record<ScheduleDayMode, string> = {
   office: 'من المكتب',
-  remote: 'عن بُعد',
-  field: 'ميدانيّ',
+  remote: 'عن بعد',
+  field: 'ميداني',
 };
 
 export type WorkScheduleType = 'fixed' | 'flexible';
 
 export const SCHEDULE_TYPE_LABELS: Record<WorkScheduleType, string> = {
-  fixed: 'دوامٌ ثابت',
-  flexible: 'دوامٌ مرن',
+  fixed: 'دوام ثابت',
+  flexible: 'دوام مرن',
 };
 
 /** سببُ تعذُّر البصمة كما يرسله الخادم — الرسالةُ عربيةٌ جاهزةٌ ولا تُترجَم هنا. */
@@ -1923,15 +1932,15 @@ export type WeekPattern = Partial<Record<WeekDayKey, ScheduleDayValue>>;
 export type HoursStandard = 'daily' | 'weekly';
 
 export const HOURS_STANDARD_LABELS: Record<HoursStandard, string> = {
-  daily: 'ساعاتٌ يومية',
-  weekly: 'ساعاتٌ أسبوعية',
+  daily: 'ساعات يومية',
+  weekly: 'ساعات أسبوعية',
 };
 
 export type GraceMode = 'forgive' | 'threshold';
 
 export const GRACE_MODE_LABELS: Record<GraceMode, string> = {
-  forgive: 'يُتسامَح عن التأخّر داخل المهلة',
-  threshold: 'المهلةُ عتبةٌ — يُحسب التأخّرُ كاملاً بعدها',
+  forgive: 'لا يحسب التأخير داخل المهلة',
+  threshold: 'المهلة حد — ويحسب التأخير كاملاً بعد تجاوزها',
 };
 
 /** استعمالُ نسخةٍ — «مستعمَلة» = لها إسنادٌ أو يومٌ محتسَبٌ يُشير إليها. */

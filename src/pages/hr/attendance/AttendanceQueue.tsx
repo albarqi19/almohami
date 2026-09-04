@@ -11,13 +11,14 @@ import type { AttendanceDayRow, AttendanceQueueGroup, SuggestionKind } from '../
 import type { SelectionApi } from './useAttendanceQueue';
 import { groupDates } from './useAttendanceQueue';
 import {
+  dayStatusClass,
+  dayStatusLabel,
+  dayStatusTitle,
   daysWord,
   errorText,
   fmtCount,
   fmtDayLine,
   fmtTime,
-  statusClass,
-  statusLabel,
 } from './attendanceFormat';
 
 /**
@@ -198,7 +199,9 @@ export const AttendanceQueue: React.FC<Props> = ({
                           {canManage
                             ? <label htmlFor={inputId}>{fmtDayLine(date)}</label>
                             : <span>{fmtDayLine(date)}</span>}
-                          <span className={statusClass(day.status)}>{statusLabel(day.status)}</span>
+                          <span className={dayStatusClass(day)} title={dayStatusTitle(day)}>
+                            {dayStatusLabel(day)}
+                          </span>
                           {day.flags.length > 0 && (
                             <span className="hra-flags">
                               {day.flags.map((flag) => (

@@ -186,6 +186,20 @@ export const RunPage: React.FC = () => {
     );
   }
 
+  if (!Number.isFinite(runId) || runId <= 0) {
+    return (
+      <div className="hrl-page">
+        <div className="hrl-state hrl-state--error">
+          <AlertTriangle size={22} />
+          <p className="hrl-state__t">رابط المسير غير صحيح</p>
+          <Link className="hrl-link" to="/hr/payroll">
+            ارجع إلى الرواتب
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (runQuery.isLoading) {
     return (
       <div className="hrl-page">
@@ -219,10 +233,13 @@ export const RunPage: React.FC = () => {
   if (detail === undefined || meta === undefined) {
     return (
       <div className="hrl-page">
-        <div className="hrl-state hrl-state--empty">
-          <FileSpreadsheet size={22} />
-          <p className="hrl-state__t">لا يوجد مشمولون في هذا المسير</p>
-          <p className="hrl-state__d">أعد بناء قائمة المشمولين أو افتح مسيرا جديدا.</p>
+        <div className="hrl-state hrl-state--error">
+          <AlertTriangle size={22} />
+          <p className="hrl-state__t">لم تصل بيانات المسير</p>
+          <p className="hrl-state__d">لم يكتمل التحميل.</p>
+          <button type="button" className="hr-btn hr-btn--sm" onClick={() => void runQuery.refetch()}>
+            <RefreshCw size={13} /> أعد المحاولة
+          </button>
         </div>
       </div>
     );

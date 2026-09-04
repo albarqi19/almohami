@@ -58,7 +58,8 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
 
   const busy = approve.isPending || reject.isPending;
   const needsAck = impact?.will_go_negative === true;
-  const canApprove = data?.is_pending === true && (!needsAck || negativeAck) && !busy;
+  const canApprove =
+    data?.is_pending === true && data?.is_own_request !== true && (!needsAck || negativeAck) && !busy;
   const canReject = data?.is_pending === true && reason.trim() !== '' && !busy;
 
   const runApprove = async () => {

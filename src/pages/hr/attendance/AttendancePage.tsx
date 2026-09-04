@@ -27,8 +27,8 @@ import type { QueueAction } from './AttendanceQueue';
 import {
   addDaysISO,
   byName,
+  dayStatusLabel,
   daysWord,
-  statusLabel,
   todayISO,
 } from './attendanceFormat';
 import {
@@ -155,7 +155,7 @@ export const AttendancePage: React.FC = () => {
       if (!emp) return;
       const current = map.get(emp.id) ?? { name: emp.name, today: null, pending: 0 };
       current.name = current.name ?? emp.name;
-      current.today = statusLabel(row.status);
+      current.today = dayStatusLabel(row);
       map.set(emp.id, current);
     });
 

@@ -9,13 +9,14 @@ import type { AttendanceDayRow, PunchDirection } from '../../../types/hr';
 import ClaimModal from '../attendance/ClaimModal';
 import { ATT_KEYS, usePunch } from '../attendance/useAttendanceQueue';
 import {
+  dayStatusClass,
+  dayStatusLabel,
+  dayStatusTitle,
   errorText,
   fmtDayLine,
   fmtTime,
   makeClientKey,
   monthStartISO,
-  statusClass,
-  statusLabel,
   todayISO,
 } from '../attendance/attendanceFormat';
 import { errorStatus } from './errorStatus';
@@ -169,7 +170,9 @@ export const MyAttendanceCard: React.FC = () => {
                     <div className="hra-day__main">
                       <div className="hra-day__d">
                         <span>{fmtDayLine(day.work_date)}</span>
-                        <span className={statusClass(day.status)}>{statusLabel(day.status)}</span>
+                        <span className={dayStatusClass(day)} title={dayStatusTitle(day)}>
+                          {dayStatusLabel(day)}
+                        </span>
                       </div>
                       <p className="hra-day__sub">
                         <span dir="ltr">{fmtTime(day.first_in_at)}</span>

@@ -11,13 +11,16 @@ import {
 import type { AttendanceDayRow } from '../../../types/hr';
 import { useAttendanceEmployee } from './useAttendanceQueue';
 import {
+  dayStatusClass,
+  dayStatusLabel,
+  dayStatusTitle,
   EMPTY_MARK,
   errorText,
   fmtDate,
   fmtDateTime,
   fmtMinutes,
+  isDecidedPresent,
   stampParts,
-  statusClass,
   statusLabel,
   whyRows,
 } from './attendanceFormat';
@@ -86,7 +89,9 @@ export const AttendanceDayDetail: React.FC<Props> = ({
           <ListTree size={14} aria-hidden="true" /> {fmtDate(date)}
         </h2>
         <span className="hra-day__end">
-          <span className={statusClass(day.status)}>{statusLabel(day.status)}</span>
+          <span className={dayStatusClass(day)} title={dayStatusTitle(day)}>
+            {dayStatusLabel(day)}
+          </span>
           <button type="button" className="ssp2-btn" onClick={onClose}>إغلاق</button>
         </span>
       </div>
@@ -103,6 +108,13 @@ export const AttendanceDayDetail: React.FC<Props> = ({
 
         <div className="hra-secb">
           <dl className="hra-kv">
+            {isDecidedPresent(day) && (
+              <>
+                <dt>الحالة المحتسَبة</dt>
+                <dd>{statusLabel(day.status)}</dd>
+              </>
+            )}
+
             <dt>المطلوب</dt>
             <dd dir="ltr">{fmtMinutes(day.required_minutes)}</dd>
 

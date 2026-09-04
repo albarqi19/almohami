@@ -1,4 +1,6 @@
 import {
+  ATTENDANCE_DECIDED_HINT,
+  ATTENDANCE_DECIDED_LABEL,
   ATTENDANCE_RULE_LABELS,
   ATTENDANCE_SIGNAL_LABELS,
   ATTENDANCE_STATUS_LABELS,
@@ -170,6 +172,40 @@ export function statusLabel(status: AttendanceStatus): string {
   return ATTENDANCE_STATUS_LABELS[status] ?? status;
 }
 
+/** ما يكفي من الصفّ لعرض حالته — يقبله صفُّ الطابور واليوم وسجلُّ الموظف معاً. */
+type DayStatusRow = Pick<AttendanceDayRow, 'status' | 'decided_status'>;
+
+/** قيمةُ `decided_status` التي تكتبها شهادةُ الحضور — مِرآةُ `DECISION_PRESENT_CONFIRMED`. */
+const DECIDED_PRESENT = 'present_confirmed';
+
+/**
+ * هل حسم قرارُ إنسانٍ هذا اليومَ حضوراً.
+ *
+ * الشهادةُ تُكتب في عمودها `decided_status` و`status` يبقى الحالةَ المحسوبة (`no_record`
+ * غالباً) — فصلٌ مقصودٌ في الخادم يميّز الحاضرَ ببصمةٍ من الحاضر بشهادة. ومن قرأ `status`
+ * وحدَه عرَض «بلا سجل» على يومٍ أكّده المديرُ بنفسه.
+ */
+export function isDecidedPresent(day: DayStatusRow): boolean {
+  return day.decided_status === DECIDED_PRESENT;
+}
+
+/** تسميةُ اليوم المعروضة — الشهادةُ تسبق الحالةَ المحسوبة. */
+export function dayStatusLabel(day: DayStatusRow): string {
+  return isDecidedPresent(day) ? ATTENDANCE_DECIDED_LABEL : statusLabel(day.status);
+}
+
+/** نبرةُ اليوم صنفاً — المؤكَّدُ يأخذ نبرةَ الحاضر، وأصلُه يبقى في التلميح. */
+export function dayStatusClass(day: DayStatusRow): string {
+  return isDecidedPresent(day) ? statusClass('present') : statusClass(day.status);
+}
+
+/** تلميحُ الشارة — يُبقي الحالةَ المحسوبة مقروءة. `undefined` لليوم غير المؤكَّد. */
+export function dayStatusTitle(day: DayStatusRow): string | undefined {
+  return isDecidedPresent(day)
+    ? `${ATTENDANCE_DECIDED_HINT} الحالة المحتسَبة: ${statusLabel(day.status)}.`
+    : undefined;
+}
+
 /** سطرٌ واحدٌ في سرد «لماذا» — `ok` يختار العلامةَ والنبرة، والنصُّ مُركَّبٌ من الخرائط. */
 export interface WhyRow {
   key: string;
@@ -187,6 +223,10 @@ export function whyRows(day: AttendanceDayRow): WhyRow[] {
   const rows: WhyRow[] = [];
   const explain = day.explain ?? {};
   const rule = (explain.rule ?? day.rule_hit) as AttendanceRuleHit;
+
+  if (isDecidedPresent(day)) {
+    rows.push({ key: 'decided', ok: true, text: ATTENDANCE_DECIDED_HINT });
+  }
 
   rows.push({
     key: 'rule',
