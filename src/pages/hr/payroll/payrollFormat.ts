@@ -228,7 +228,7 @@ export function effectImpact(effectiveFrom: string, previousFrom?: string | null
   lines.push(`تسري النسخة الجديدة من ${pretty}.`);
 
   if (previousFrom) {
-    lines.push(`تغلق النسخة السارية (من ${fmtDateHuman(previousFrom)}) في ${pretty} بلا يوم مكرر ولا يوم ساقط.`);
+    lines.push(`تغلق النسخة السارية (من ${fmtDateHuman(previousFrom)}) في ${pretty}، وهذا اليوم يحسب على النسخة الجديدة.`);
   }
 
   lines.push('والقسائم السابقة لا تتغير.');
@@ -341,7 +341,7 @@ export const ENFORCEMENT_LABELS: Record<RuleEnforcement, string> = {
 };
 
 export const ENFORCEMENT_HINTS: Record<RuleEnforcement, string> = {
-  enforced: 'محرك الاحتساب مفعل ويطبقها في كل احتساب.',
+  enforced: 'تطبق في كل احتساب.',
   pending_reader: 'معدة مسبقاً وموثقة، ولا يطبقها شيء بعد. تعمل عند تفعيل خطوتها.',
   reference: 'معروضة للاطلاع فقط ولا تطبق.',
 };
@@ -487,7 +487,7 @@ export const FLAG_HINTS: Record<string, string> = {
   no_eligible_employee: 'سجل راتباً واحداً ساري المفعول على الأقل حتى يتم فتح المسير.',
   gosi_rates_unconfirmed: 'الاعتماد محجوب حتى يؤكد المكتب النسب باسمه. ويبقى الفتح والاحتساب متاحين.',
   missing_iban: 'أضف آيباناً صالحاً، أو غير طريقة الصرف مع ذكر سببها.',
-  fixable_exclusions: 'لكل سبب أدناه طريق علاج واحد، ويعالج بإدخال البيانات الناقصة.',
+  fixable_exclusions: 'يعالج كل سبب أدناه بإدخال البيانات الناقصة.',
   roster_excluded: 'أسماؤهم وأسبابهم في مرحلة المشمولين.',
   'open_proposal:unpaid_leave': 'صرف راتب كامل عن أيام بلا أجر خطأ لا يظهر تلقائياً، والقرار يسجل باسم من اتخذه.',
   'open_proposal:sick_tier': 'النسب متدرجة ولا يحددها النظام تلقائياً.',
@@ -816,7 +816,7 @@ export const CAP_LABELS: Record<CapCode, string> = {
   art92_category: 'سقف الفئة',
   art93_total: 'السقف الكلي: نصف المستحق',
   art40_forbidden: 'خصم باطل يتحمله المكتب',
-  payable_ceiling: 'حد المستحق: لا يخصم ما لم يستحق',
+  payable_ceiling: 'حد المستحق: لا يخصم أكثر من المستحق',
 };
 
 /**
@@ -1005,7 +1005,7 @@ export function stageDoneThrough(stage?: RunStage | null): number {
   }
 }
 
-export const STAGE_DONE_LABEL = 'خطوة منقضية';
+export const STAGE_DONE_LABEL = 'خطوة مكتملة';
 
 export const STAGE_LOCKED_LABEL = 'خطوة غير مفعلة بعد';
 
@@ -1037,11 +1037,11 @@ export const SUBJECT_APPROVER_ACK_TEXT =
  * «الغرضُ من القاعدة ليس المنع، بل أن يعلم من يقرأ القسيمة أنّ من اعتمدها هو من صُرف له».
  */
 export const SUBJECT_APPROVER_ACK_EFFECT =
-  'سيطبع باسمك على قسائم هذا المسير، على الشاشة وفي الورقة، أن من اعتمدها هو من صرف له فيها.';
+  'سيطبع على قسائم هذا المسير، على الشاشة وفي الورقة، أنك اعتمدته ولك قسيمة فيه.';
 
 export const APPROVAL_DENIAL_HINTS: Record<string, string> = {
   approver_is_subject:
-    'استثناء مسجل وظاهر على القسيمة: يبقى اسم من اعتمدها مطبوعاً عليها.',
+    'استثناء مسجل: يطبع اسم المعتمِد على القسيمة.',
   preparer_cannot_approve:
     'من أعد المسير لا يعتمده. حول المسير إلى معتمِد آخر في المكتب.',
   single_approver_ack_required:
@@ -1049,13 +1049,13 @@ export const APPROVAL_DENIAL_HINTS: Record<string, string> = {
   gosi_rates_unconfirmed:
     'أكد النسب باسمك في المرجع النظامي ثم ارجع. ولا حاجة إلى شخص آخر.',
   run_has_blocking_flags: 'أزل الموانع ثم أعد الاحتساب قبل الاعتماد.',
-  lines_not_computed: 'احتسب المسير قبل اعتماده، فلا يمكن اعتماد سطر بلا رقم.',
+  lines_not_computed: 'احتسب المسير قبل اعتماده.',
   lines_with_blockers: 'أزل موانع الأسطر ثم أعد الاحتساب.',
   open_blocking_proposals: 'احسم القرارات المنتظرة في قائمة القرارات المعلقة ثم أعد الاحتساب.',
   open_proposals: 'احسم القرارات المنتظرة في قائمة القرارات المعلقة ثم أعد الاحتساب.',
   day_already_claimed:
-    'لا يدفع اليوم مرتين ولا يخصم مرتين. اسحب اعتماد المسير المطالِب أو صححه بمسير تصحيحي.',
-  day_map_missing: 'أعد الاحتساب قبل الاعتماد حتى يتم خصم ما يطالب به من خريطة الأيام.',
+    'اسحب اعتماد المسير الذي طالب بهذا اليوم، أو صححه بمسير تصحيحي.',
+  day_map_missing: 'أعد الاحتساب قبل الاعتماد.',
   proration_divisor_missing: 'أعد الاحتساب قبل الاعتماد.',
   repayment_balance_unknown: 'أعد الاحتساب حتى يتم تثبيت المتبقي بعد القسط على السجل.',
   run_has_no_lines: 'أعد بناء قائمة المشمولين ثم احتسب قبل الاعتماد.',
@@ -1293,7 +1293,7 @@ export const ADVANCE_STATUS_LABELS: Record<AdvanceStatus, string> = {
 
 /** ما يعنيه كلُّ حالٍ **للقسط** — وهو السؤالُ الذي يسأله من يفتح الشاشة. */
 export const ADVANCE_STATUS_HINTS: Record<AdvanceStatus, string> = {
-  pending: 'لا يقترح قسط حتى يتم تسجيل صرفها، ولا يخصم مبلغ لم يصل.',
+  pending: 'لا يقترح قسط حتى يسجل صرفها.',
   active: 'يقترح قسط كل شهر في قائمة القرارات المعلقة، ولا يخصم بلا قرار مسجل باسم من اتخذه.',
   paused: 'لا قسط حتى تستأنف، ويبقى الدين كما هو في السجل.',
   settled: 'بلغ الرصيد صفراً، والحالة محسوبة من السجل دون تعديل يدوي.',

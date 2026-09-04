@@ -98,8 +98,8 @@ export const ReadinessBoard: React.FC<Props> = ({ readiness, runId, frozen, titl
             يتساويان لا يُكتب شيء: رقمٌ يكرّر رقماً فوقه ضجيجٌ يُقرأ مرّتين. */}
         {readiness.wage_recorded_count > included && (
           <p className="hrl-hint">
-            و{outOf(readiness.wage_recorded_count, total)} له أجر مسجل في السجل. والفرق عن
-            «يدخل» ليس نقص راتب بل ما تسميه الأسباب أدناه.
+            و{outOf(readiness.wage_recorded_count, total)} له أجر مسجل. والفرق عن «يدخل»
+            ليس نقص راتب، بل أسباب الاستبعاد المذكورة أدناه.
           </p>
         )}
 

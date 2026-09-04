@@ -111,7 +111,8 @@ export const ClaimsQueue: React.FC<Props> = ({ employeeProfileId, canManage }) =
           <Inbox size={22} aria-hidden="true" />
           <p className="hra-state__t">لا توجد طلبات تصحيح</p>
           <p className="hra-state__d">
-            حين يرى موظف يوما غير صحيح في سجله يرسل طلبا من صفحته، فيظهر هنا للاعتماد.
+            تظهر هنا طلبات الموظفين لتصحيح أيام في سجلهم — يرسلها الموظف من صفحته،
+            ويعتمدها مدير المكتب أو يرفضها من هنا.
           </p>
         </div>
       ) : (

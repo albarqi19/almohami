@@ -51,8 +51,8 @@ export const WageInForce: React.FC<Props> = ({ vessels, canViewAmounts, hasWageR
           <EyeOff size={20} />
           <p className="hrl-state__t">الأرقام محجوبة عنك</p>
           <p className="hrl-state__d">
-            الأجر والآيبان حقلان حساسان لهما صلاحية مستقلة (عرض التعويضات). وحالة الجاهزية
-            أمامك كاملة: {hasWageRecord ? 'لهذا الموظف أجر مسجل.' : 'لا يوجد أجر مسجل لهذا الموظف بعد.'}
+            الأجر والآيبان يحتاجان صلاحية «عرض التعويضات».{' '}
+            {hasWageRecord ? 'لهذا الموظف أجر مسجل.' : 'لا يوجد أجر مسجل لهذا الموظف بعد.'}
           </p>
         </div>
       </section>
@@ -166,8 +166,7 @@ export const WageInForce: React.FC<Props> = ({ vessels, canViewAmounts, hasWageR
 
       {vessels.gosi_caps_evaluated ? null : (
         <p className="hrl-note">
-          وعاء التأمينات معروض قبل الحدين الأدنى والأعلى. وقاعدتاهما بيانات مؤرخة تصل مع
-          محرك المسير.
+          وعاء التأمينات معروض قبل تطبيق الحدين الأدنى والأعلى.
         </p>
       )}
     </section>

@@ -200,7 +200,7 @@ export const LeaveBalancePanel: React.FC<Props> = ({
                 <UserPlus size={22} />
                 <p className="hrl-state__t">{NOT_INITIALIZED_TITLE}</p>
                 <p className="hrl-state__d">
-                  الاستحقاق يبدأ من تاريخ بدء استحقاق محدد. قبله لا يحتسب أي يوم، ولا يعرض رقم بلا سند.
+                  الاستحقاق يبدأ من تاريخ تحدده عند التهيئة. قبله لا يحتسب أي يوم ولا يظهر رصيد.
                 </p>
                 <button type="button" className="hr-btn hr-btn--sm hr-btn--primary" onClick={onInitBalance}>
                   تهيئة رصيد الإجازات
@@ -362,7 +362,7 @@ export const LeaveBalancePanel: React.FC<Props> = ({
               <AlertTriangle size={13} />
               <span>
                 تجاوز العتبة بـ<span className="hrl-drift__n" dir="ltr">{fmtDays(snapshot.art116.excess)}</span> يوما.
-                العداد يعرض ما سجل، والقرار في العقد.
+                راجع عقد الموظف لتحديد أثر التجاوز.
               </span>
             </p>
           )}

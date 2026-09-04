@@ -64,7 +64,7 @@ export const AttendanceHead: React.FC<Props> = ({
     <div className="ssp2-header__top">
       <div>
         <h1 className="hra-h1">الحضور والانصراف</h1>
-        <p className="hra-sub">النظام يسجل ما حدث ويقترح تفسيرا، والقرار لك.</p>
+        <p className="hra-sub">حضور موظفي المكتب اليوم، والأيام التي تنتظر قرارك.</p>
       </div>
 
       <div className="hra-headtools">

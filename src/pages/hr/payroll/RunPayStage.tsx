@@ -128,7 +128,7 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
         <section className="hrl-block" aria-labelledby="pay-failed-h">
           <header className="hrl-block__h">
             <h2 className="hrl-block__t" id="pay-failed-h">
-              <AlertTriangle size={14} /> لم يصل {failed.length} من التحويلات، والمبالغ ما زالت مستحقة
+              <AlertTriangle size={14} /> لم يصل {failed.length} من التحويلات
             </h2>
             {canPay && (
               <button
@@ -183,8 +183,7 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
             </ul>
 
             <p className="hrl-hint">
-              لا يوجد زر «إلغاء الدفعة» في هذه الشاشة. الدفعة المؤكدة لا تلغى، والبديل تسجيل
-              استرداد أو فتح مسير تصحيحي.
+              الدفعة المؤكدة لا تلغى. البديل تسجيل استرداد أو فتح مسير تصحيحي.
             </p>
           </div>
         </section>
@@ -249,8 +248,8 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
             </div>
 
             <p className="hrl-hint">
-              ينقص الرصيد في السجل عند تأكيد الصرف لا عند الاعتماد. ما لم يصل يبقى في ذمة
-              المكتب ضمن سلسلة المستحقات، فلا يضيع أي مستحق بسبب فشل التحويل.
+              ينقص الرصيد في السجل عند تأكيد الصرف لا عند الاعتماد. وما لم يصل يبقى مستحقاً
+              للموظف في السجل.
             </p>
           </div>
         )}
@@ -302,7 +301,7 @@ export const RunPayStage: React.FC<Props> = ({ data, meta, selectedLineId, onSel
             </div>
 
             <p className="hrl-hint">
-              المرجع إلزامي ويسجل باسمك. الصرف بلا مرجع بنكي لا يمكن مطابقته بكشف الحساب.
+              المرجع إلزامي ويسجل باسمك.
             </p>
           </div>
         )}

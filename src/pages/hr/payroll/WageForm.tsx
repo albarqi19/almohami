@@ -142,8 +142,7 @@ export const WageForm: React.FC<Props> = ({ profileId, currentFrom, saving, erro
               required
             />
             <p className="hrl-hint">
-              يقبل الماضي والمستقبل. وتغلق النسخة السابقة في هذا اليوم نفسه، فلا يتكرر يوم
-              ولا يسقط يوم بين النسختين.
+              يقبل تاريخاً ماضياً أو مستقبلياً، وتغلق النسخة السابقة في اليوم نفسه.
             </p>
           </div>
         </fieldset>
@@ -313,7 +312,7 @@ export const WageForm: React.FC<Props> = ({ profileId, currentFrom, saving, erro
               required
             />
             <p className="hrl-hint">
-              يظهر في سجل النسخ ويبقى محفوظاً للرجوع إليه لاحقاً.
+              يظهر في سجل النسخ.
             </p>
           </div>
         </fieldset>

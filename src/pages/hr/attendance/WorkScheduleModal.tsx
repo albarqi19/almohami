@@ -315,7 +315,7 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                 <span>
                   <strong>التعديل هنا ينشئ نسخة جديدة تسري من تاريخ محدد.</strong>{' '}
                   كل يوم قبل تاريخ السريان يبقى محسوباً بالتعريف القديم، ولا تتغير تقارير
-                  الشهور السابقة. والنسخة القديمة تبقى كما هي لأنها مرجع الأيام المحسوبة بها.
+                  الشهور السابقة. والنسخة القديمة تبقى كما هي.
                 </span>
               </p>
 
@@ -376,7 +376,7 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                       <AlertTriangle size={13} aria-hidden="true" />
                       <span>
                         ساعات أيام هذه النسخة غير موحدة، وهذه الشاشة تدعم وقتاً واحداً لكل
-                        أيام الدوام. وحفظ تعريف جديد منها يوحدها.
+                        أيام الدوام. وأي حفظ لتعريف جديد من هنا سيوحد الساعات.
                       </span>
                     </p>
                   )}
@@ -520,7 +520,7 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                           <AlertTriangle size={13} aria-hidden="true" />
                           <span>
                             الإسناد يحتاج سجل الموظفين (صلاحية hr.view). والنسخة الجديدة بلا
-                            إسناد لا تنطبق على أحد وتبدو جاهزة، فالإجراء محجوب هنا.
+                            إسناد لا تنطبق على أحد، فالحفظ محجوب حتى تحصل على الصلاحية.
                           </span>
                         </p>
                       )}
@@ -528,7 +528,7 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                   ) : (
                     <p className="hra-hint">
                       هذه النسخة <strong>لم تستعمل بعد</strong> (لا إسناد ولا يوم محتسب
-                      يشير إليها)، فيمكن تعديلها مباشرة بلا نسخة جديدة، ولا يعاد احتساب أي يوم.
+                      يشير إليها)، فيمكن تعديلها مباشرة بلا نسخة جديدة.
                     </p>
                   )}
 
@@ -554,8 +554,8 @@ export const WorkScheduleModal: React.FC<Props> = ({ weekendSetting, onClose }) 
                       {needsAssignment && (
                         <li>
                           {retro
-                            ? 'السريان رجعي: يتم تحديد الأيام من تاريخ السريان إلى أمس، ويعيد المحرك ليلاً حساب ما تغير فقط.'
-                            : 'السريان من اليوم فما بعد: لا يتم تحديد أي يوم ولا تتغير الأيام السابقة.'}
+                            ? 'السريان رجعي: الاحتساب الليلي يعيد حساب ما تغير فقط من تاريخ السريان إلى أمس.'
+                            : 'السريان من اليوم فما بعد: لا تتغير الأيام السابقة.'}
                         </li>
                       )}
                     </ul>
@@ -606,7 +606,7 @@ const OutcomePanel: React.FC<{ value: ScheduleOutcome }> = ({ value }) => {
     return (
       <>
         <p className="hra-hint">
-          تم تحديث النسخة نفسها. لم تكن مستعملة، فلا يوجد يوم محتسب تغير معناه.
+          تم تحديث النسخة نفسها. لم تكن مستعملة، فلم يتغير أي يوم محتسب.
         </p>
         <WarningList list={value.warnings} />
       </>

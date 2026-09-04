@@ -158,7 +158,7 @@ export const PenaltiesPage: React.FC = () => {
       {meta !== undefined && (
         <div className="hrp-rule">
           <p className="hrp-rule__who">
-            <Scale size={13} /> ما يحكم هذه الشاشة
+            <Scale size={13} /> المواد النظامية المطبقة هنا
           </p>
           <dl className="hrl-kv">
             <dt>م.٦٩</dt>
@@ -245,6 +245,19 @@ const PenaltyRowView: React.FC<RowProps> = ({ row, busy, onNotify, onFinalise, o
   const countdown = objectionCountdown(row.objection_days_left);
   const nextStep = PENALTY_NEXT_STEP[row.state];
   const windowOpen = row.objection_days_left !== null && row.objection_days_left > 0;
+  const days = row.amount_days === null ? null : String(row.amount_days).replace(/\.0$/, '');
+  const daysText =
+    days === null
+      ? null
+      : Number(days) === 1
+        ? 'يوم'
+        : Number(days) === 2
+          ? 'يومين'
+          : Number(days) >= 3 && Number(days) <= 10
+            ? days + ' أيام'
+            : Number(days) >= 11
+              ? days + ' يوماً'
+              : days + ' يوم';
 
   return (
     <tr>
@@ -265,7 +278,7 @@ const PenaltyRowView: React.FC<RowProps> = ({ row, busy, onNotify, onFinalise, o
 
       <td>
         {/* 🔴 الأيامُ أوّلاً لأنها **المخزَّن**، والريالُ تحتها معاينةً بأجر اليوم النظاميّ. */}
-        {row.amount_days === null ? EMPTY_MARK : `${String(row.amount_days).replace(/\.0$/, '')} من أجر الأيام`}
+        {daysText === null ? EMPTY_MARK : `أجر ${daysText}`}
         <span className="hrl-row__meta" dir="ltr">
           {money(row.amount_preview) ?? EMPTY_MARK}
         </span>

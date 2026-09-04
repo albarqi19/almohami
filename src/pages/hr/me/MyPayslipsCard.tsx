@@ -270,13 +270,13 @@ const MySlipDetail: React.FC<{ slip: PayslipDocument }> = ({ slip }) => (
     <SlipItems
       title="الاستقطاعات"
       items={slip.deductions}
-      empty="لا استقطاع في هذه القسيمة. ولا يقع خصم بلا قرار مسجل باسم من اتخذه."
+      empty="لا استقطاع في هذه القسيمة."
     />
 
     {slip.employer_cost.length > 0 && (
       <div className="hrl-block__b hrp-cost">
         <h3 className="hrl-h2">تكلفة المكتب</h3>
-        <p className="hrl-hint">هذه لا تخصم منك ولا تدخل في صافيك، ويتحملها المكتب فوق أجرك.</p>
+        <p className="hrl-hint">يتحملها المكتب فوق أجرك، ولا تدخل في صافيك.</p>
 
         <ul className="hrp-item__list">
           {slip.employer_cost.map((item) => (

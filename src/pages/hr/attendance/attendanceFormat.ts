@@ -200,7 +200,7 @@ export function whyRows(day: AttendanceDayRow): WhyRow[] {
     rows.push({
       key: `skip-${signal}`,
       ok: false,
-      text: `ظهر ولم يعتمد: ${ATTENDANCE_SIGNAL_LABELS[signal] ?? signal}`,
+      text: `مؤشر لم يحدد الحالة: ${ATTENDANCE_SIGNAL_LABELS[signal] ?? signal}`,
     });
   });
 

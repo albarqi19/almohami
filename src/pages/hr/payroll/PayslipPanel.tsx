@@ -237,7 +237,7 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
       {computed && open === 'deductions' && (
         <ItemList
           items={deductions}
-          emptyText="لا يوجد استقطاع في هذه القسيمة. ولا يقع خصم بلا قرار مسجل باسم من اتخذه."
+          emptyText="لا يوجد استقطاع في هذه القسيمة."
         />
       )}
 
@@ -331,7 +331,7 @@ export const PayslipPanel: React.FC<Props> = ({ payslip, editable }) => {
         <p className="hrl-hint">
           {editable
             ? 'هذه القسيمة مسودة قابلة لإعادة الاحتساب، ولا تصبح وثيقة رسمية إلا بعد الاعتماد.'
-            : 'قسيمة مقفلة: كل رقم فيها محفوظ في سجله، وتعاد طباعتها كما هي تماما.'}
+            : 'قسيمة مقفلة. أرقامها ثابتة وتعاد طباعتها كما هي.'}
           {run !== null && run.posting_state === 'accounting_off' ? ' · لم يتم قيدها في المحاسبة.' : ''}
           {run !== null && run.self_approved ? ' · اعتمدها من أعدها بإقرار مسجل.' : ''}
           {/* 🔴 شرطُ فتح باب الإقرار: أن يبقى الأثرُ ظاهراً على القسيمة — لا في سجلٍّ يُفتَح

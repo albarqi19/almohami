@@ -22,7 +22,7 @@ export const LeaveApprovalPage: React.FC = () => (
           <h1 className="hrl-h1">اعتماد الإجازات</h1>
           <p className="hrl-sub">
             ما يقع في مدة كل طلب (جلسات ومهام وغيابات متداخلة) يظهر قبل القرار.
-            ولا يمنع أي منها الاعتماد، والقرار لك.
+            ولا يمنع أي منها الاعتماد.
           </p>
         </div>
       </header>

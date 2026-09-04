@@ -101,7 +101,7 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
 
     try {
       await hrPayrollService.downloadBankInputFile(runId, meta.file_name, draft);
-      setNote(`تم تنزيل [${meta.file_name}]. وتم تسجيله في أحداث المسير: من أصدره ومتى وكم سطراً وبأي إجمالي.`);
+      setNote(`تم تنزيل [${meta.file_name}]. وتم تسجيله في سجل المسير.`);
     } catch (caught) {
       setError(errorText(caught, 'تعذر تنزيل الكشف.'));
     } finally {
@@ -187,13 +187,13 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
               <Link className="hrl-link" to="/hr/payroll/wages">
                 سجل الأجور
               </Link>
-              . وسطر بلا حساب يحول إليه ليس أمر دفع، فلا يصدر ولو بصفة مسودة.
+              . ولا يصدر سطر بلا آيبان ولو مسودة.
             </p>
           )}
 
           {file.refusal.code === DRAFTABLE_REFUSAL && (
             <button type="button" className="hr-btn hr-btn--sm" onClick={() => setDraft(true)}>
-              تصدير «مسودة للمراجعة». لا تسلم للبنك بهذه الحال
+              تصدير مسودة للمراجعة
             </button>
           )}
         </div>
@@ -310,8 +310,7 @@ export const BankInputFilePanel: React.FC<Props> = ({ runId }) => {
           {! meta.can_export && (
             <div className="hrl-block__b">
               <p className="hrl-hint">
-                تنزيل الكشف يحتاج صلاحية «تصدير كشف الرواتب المسلم للبنك». والمعاينة أعلاه
-                متاحة لك.
+                تنزيل الكشف يحتاج صلاحية «تصدير كشف الرواتب المسلم للبنك».
               </p>
             </div>
           )}

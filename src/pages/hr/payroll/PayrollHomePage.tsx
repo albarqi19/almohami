@@ -247,7 +247,7 @@ export const PayrollHomePage: React.FC = () => {
             <AlertTriangle size={13} /> {openError}
           </p>
           <p className="hrl-flag__hint">
-            كل نقص في لوحة الجاهزية جانبا له رابط لإصلاحه.
+            لوحة الجاهزية بجانبك تعرض كل نقص مع رابط لإصلاحه.
           </p>
         </div>
       )}
@@ -378,7 +378,7 @@ export const PayrollHomePage: React.FC = () => {
                   عدّاد المهلة مباشرةً: من يقرأ «بقي ٩ أيام» يسأل «تسعةُ أيامٍ لأيّ شيء؟». */}
               <p className="hrl-hint">
                 والمهلة أعلاه لرفع <strong>ملف الأجور الذي يصدره بنكك</strong> بعد التحويل.
-                يرفعه المكتب بنفسه، ولا ينتجه هذا النظام.{' '}
+                يرفعه المكتب بنفسه.{' '}
                 <Link className="hrl-link" to="/hr/payroll/bank-cycle">
                   الدورة في أربع خطوات
                 </Link>

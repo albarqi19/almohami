@@ -106,7 +106,7 @@ export const MyLeaveRequestsCard: React.FC = () => {
                   <th scope="col">النوع</th>
                   <th scope="col">المدى</th>
                   <th scope="col">الأيام</th>
-                  <th scope="col">ما جرى</th>
+                  <th scope="col">السبب</th>
                 </tr>
               </thead>
               <tbody>

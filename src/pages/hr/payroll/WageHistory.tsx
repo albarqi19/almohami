@@ -57,8 +57,10 @@ export const WageHistory: React.FC<Props> = ({ records, canViewAmounts, canManag
       {records.length === 0 ? (
         <div className="hrl-state hrl-state--empty">
           <History size={20} />
-          <p className="hrl-state__t">لا توجد نسخ بعد</p>
-          <p className="hrl-state__d">أول نسخة مسجلة تظهر هنا بتاريخ سريانها وسببها ومن أدخلها.</p>
+          <p className="hrl-state__t">لا يوجد أجر مسجل بعد</p>
+          <p className="hrl-state__d">
+            تظهر هنا كل نسخة أجر بتاريخ سريانها وسببها ومن أدخلها، من أول تسجيل فما بعده.
+          </p>
         </div>
       ) : (
         <div className="hrl-block__b hrl-block__b--flush">
@@ -122,8 +124,8 @@ export const WageHistory: React.FC<Props> = ({ records, canViewAmounts, canManag
                               maxLength={500}
                             />
                             <p className="hrl-hint">
-                              الإلغاء لا يحذف السجل: يبقى ظاهراً مع بيان إلغائه، ويعاد فتح نهاية
-                              النسخة السابقة فلا يبقى الموظف بلا أجر سار.
+                              الإلغاء لا يحذف السجل: يبقى ظاهراً مع بيان إلغائه، ويعود الأجر
+                              السابق إلى السريان.
                             </p>
                           </div>
                           <div className="hrl-block__a">

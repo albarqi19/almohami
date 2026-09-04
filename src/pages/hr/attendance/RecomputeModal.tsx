@@ -103,7 +103,7 @@ export const RecomputeModal: React.FC<Props> = ({ employee, onClose }) => {
               <p className="hra-hint">
                 يعاد احتساب أيام محتسبة مسبقا بعد تغيير رجعي (إجازة مسجلة متأخرا ·
                 عطلة معتمدة · جدول مسند بأثر رجعي). والمحرك <strong>يكتب ما تغير
-                فقط</strong>. واليوم الذي لا تتغير حقيقته يبقى كما هو.
+                فقط</strong>.
               </p>
 
               <div className="hr-field hr-field--row">
@@ -187,18 +187,18 @@ export const RecomputeModal: React.FC<Props> = ({ employee, onClose }) => {
                 <dt>ما تم تحديده فعلا</dt>
                 <dd>
                   {result.days_marked === 0
-                    ? 'لا شيء. محدد مسبقا وينتظر المحرك'
+                    ? 'لا شيء. محدد مسبقا وينتظر الاحتساب الليلي'
                     : `${fmtCount(result.days_marked)} يوم موظف`}
                 </dd>
 
-                <dt>يعمل المحرك</dt>
+                <dt>موعد الاحتساب الليلي</dt>
                 <dd dir="ltr">{result.engine_runs_at}</dd>
               </dl>
 
               <p className="hra-note">
                 <CalendarClock size={13} aria-hidden="true" />
                 <span>
-                  لن تتغير أرقام هذه الشاشة قبل ذلك الوقت. هذا هو السلوك المتوقع.
+                  لن تتغير أرقام هذه الشاشة قبل ذلك الوقت، وهذا طبيعي.
                 </span>
               </p>
             </>

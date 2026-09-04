@@ -114,7 +114,7 @@ export const PayBlock: React.FC<Props> = ({ id, emp }) => {
         // فارغٌ **بصلاحية**: لا صفَّ تعويضٍ لهذا المنسوب — والزرُّ أدناه يفتح بابَه.
         <div className="hrl-state hrl-state--empty">
           <Wallet size={20} />
-          <p className="hrl-state__t">لا يوجد تعويض مسجل لهذا الموظف</p>
+          <p className="hrl-state__t">لا يوجد راتب مسجل لهذا الموظف</p>
           <p className="hrl-state__d">
             بدون راتب مسجل لا يصدر خطاب تعريف الراتب ولا يدخل الموظف مسير الرواتب.
           </p>
@@ -160,8 +160,7 @@ export const PayBlock: React.FC<Props> = ({ id, emp }) => {
 
       <div className="hrl-drawer__f">
         <span className="hrl-hint">
-          قراءة هذه الشاشة مسجلة في سجل التدقيق: من فتح بيانات الأجر ومتى. والإخفاء يحمي
-          خصوصية البيانات.
+          قراءة هذه الشاشة مسجلة في سجل التدقيق: من فتح بيانات الأجر ومتى.
         </span>
         <span className="hrl-block__a">
           <Link className="hr-btn hr-btn--sm" to={`/hr/payroll/wages?employee=${emp.id}`}>

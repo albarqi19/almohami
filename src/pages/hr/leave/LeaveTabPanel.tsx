@@ -132,7 +132,7 @@ export const LeaveTabPanel: React.FC<Props> = ({ empId, employeeName }) => {
             <Wallet size={20} />
             <p className="hrl-state__t">الرصيد غير جاهز</p>
             <p className="hrl-state__d">
-              لا يحتسب أي يوم قبل تحديد تاريخ بدء الاستحقاق، ولا يعرض رقم بلا أساس.
+              لا يحتسب أي يوم قبل تحديد تاريخ بدء الاستحقاق.
             </p>
             <Link className="hrl-link" to={`/hr/leave/${empId}`}>
               تهيئة الرصيد من صفحة الإجازات ←

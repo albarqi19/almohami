@@ -176,8 +176,7 @@ export const WageFileForm: React.FC<Props> = ({ file, canViewAmounts, canManage,
             </div>
 
             <p className="hrl-hint">
-              يحدد يدوياً دائماً ولا يستنتج من الجنسية: حقل الجنسية نص حر، والاستنتاج منه
-              يخصم من وافد حصة لا يوجبها النظام.
+              يحدد يدوياً ولا يستنتج من الجنسية.
             </p>
 
             <div className="hr-field">
@@ -216,8 +215,8 @@ export const WageFileForm: React.FC<Props> = ({ file, canViewAmounts, canManage,
 
             <p className="hrl-legal">
               <span>
-                المقام الافتراضي ثلاثون بنص المادة ٢، ويتغير إلى أيام الشهر الفعلية
-                متى نصت لائحة المكتب على ذلك. والشهر الكامل لا يمر بقسمة أصلاً.
+                أساس القسمة الافتراضي ثلاثون يوماً بنص المادة ٢، ويتغير إلى أيام الشهر
+                الفعلية إذا نصت لائحة المكتب على ذلك. والشهر الكامل لا يجزأ.
               </span>
               <span className="hrl-legal__ref">م.٢</span>
             </p>
@@ -236,7 +235,7 @@ export const WageFileForm: React.FC<Props> = ({ file, canViewAmounts, canManage,
                   </option>
                 ))}
               </select>
-              <p className="hrl-hint">هذا قرار سياسة. وعليه فقط تحسب زيادة العمل الإضافي.</p>
+              <p className="hrl-hint">على هذا التعريف وحده تحسب زيادة العمل الإضافي.</p>
             </div>
           </fieldset>
 
@@ -273,13 +272,13 @@ export const WageFileForm: React.FC<Props> = ({ file, canViewAmounts, canManage,
                   disabled={!canManage}
                 />
                 <p className="hrl-hint">
-                  ينسق ويتم التحقق من صيغته قبل الحفظ (بادئة SA · ٢٤ خانة · خانتا تحقق). خانة
-                  واحدة مقلوبة قد تفسد كشف الرواتب المسلم للبنك كله لا سطرها فقط.
+                  يتحقق من صيغته قبل الحفظ (بادئة SA · ٢٤ خانة · خانتا تحقق). وخانة واحدة
+                  خاطئة قد تجعل البنك يرد الكشف كله.
                 </p>
               </div>
             ) : (
               <p className="hrl-hint">
-                الآيبان محجوب عنك. وحالته ظاهرة أعلى هذه اللوحة فيعمل قياس الجاهزية بلا رقم.
+                الآيبان محجوب عنك. وحالته ظاهرة أعلى هذه اللوحة.
               </p>
             )}
 

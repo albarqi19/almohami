@@ -253,7 +253,7 @@ export const SetupWizardModal: React.FC<Props> = ({
 
       toast.success(
         data.created
-          ? `تم تفعيل الحضور على ${peopleWord(data.tracked)}. يعمل المحرك ${data.engine_runs_at}`
+          ? `تم تفعيل الحضور على ${peopleWord(data.tracked)}. يبدأ الاحتساب الليلي ${data.engine_runs_at}`
           : 'كل شيء جاهز مسبقاً. لم يتم حفظ أي تغيير.'
       );
     } catch (e) {
@@ -276,8 +276,8 @@ export const SetupWizardModal: React.FC<Props> = ({
           <div className="hr-modal__b">
             <p className="hra-hint">
               {result.created
-                ? 'تم حفظ التهيئة في معاملة واحدة.'
-                : 'كان المكتب جاهزاً بهذا التعريف مسبقاً. لم يتم حفظ أي تغيير ولا يحتاج الأمر إعادة.'}
+                ? 'تم حفظ التهيئة.'
+                : 'المكتب مهيأ بهذه الإعدادات مسبقاً. لم يتم حفظ أي تغيير ولا حاجة للإعادة.'}
             </p>
 
             <dl className="hra-kv">
@@ -301,14 +301,14 @@ export const SetupWizardModal: React.FC<Props> = ({
               <dt>تاريخ البدء</dt>
               <dd>{fmtDate(result.attendance_start_date)}</dd>
 
-              <dt>ما تم تحديده للاحتساب</dt>
+              <dt>أيام ستحتسب</dt>
               <dd>
                 {result.dirty_marked === 0
                   ? 'لا شيء لأن تاريخ البدء لم يأت بعد'
                   : `${fmtCount(result.dirty_marked)} يوم موظف (${fmtDate(result.dirty_from)} ← ${fmtDate(result.dirty_to)})`}
               </dd>
 
-              <dt>يعمل المحرك</dt>
+              <dt>موعد الاحتساب الليلي</dt>
               <dd dir="ltr">{result.engine_runs_at}</dd>
             </dl>
 
@@ -457,7 +457,7 @@ export const SetupWizardModal: React.FC<Props> = ({
                   <span>
                     عطلة هذا الجدول ({daysText(offDays)}) تخالف عطلة المكتب المسجلة (
                     {daysText(weekendSetting)}). الحضور يعتمد الجدول والإجازات تعتمد الإعداد لمن
-                    لا إسناد له، فيخرج رقمان لمدى واحد بين الوحدتين. يتم القبول مع التنبيه، ولا
+                    لا إسناد له، فيخرج رقمان لمدى واحد بين الوحدتين. يمكنك المتابعة، ولن
                     يصحح أحدهما تلقائياً.
                   </span>
                 </p>
@@ -572,8 +572,8 @@ export const SetupWizardModal: React.FC<Props> = ({
           {step === 3 && (
             <>
               <p className="hra-hint">
-                تاريخ البدء يمنع أن تنشأ لكل موظف سنة من الأيام بلا سجل في
-                أول ليلة. <strong>ويكتب مرة واحدة ولا يتغير بعدها</strong>.
+                تاريخ البدء يحدد أول يوم يحتسب فيه الحضور.{' '}
+                <strong>ويكتب مرة واحدة ولا يتغير بعدها</strong>.
               </p>
 
               <div className="hr-field">

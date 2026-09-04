@@ -125,7 +125,7 @@ export const LeaveCorrectionModal: React.FC<Props> = ({
     if (isTerminal) return;
 
     if (action !== 'recompute' && reason.trim() === '') {
-      toast.error(action === 'reject' ? 'يجب ذكر سبب الرفض.' : 'السبب مطلوب. السجل بلا سبب غير مقبول.');
+      toast.error(action === 'reject' ? 'يجب ذكر سبب الرفض.' : 'السبب مطلوب.');
       return;
     }
 

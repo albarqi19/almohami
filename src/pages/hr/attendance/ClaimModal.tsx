@@ -177,7 +177,7 @@ export const ClaimModal: React.FC<Props> = ({ defaultDate, defaultKind, onClose,
 
           <p className="hra-hint">
             الطلب يذهب لمدير المكتب. ونافذة التصحيح محدودة بأيام قليلة من تاريخ اليوم،
-            وما تجاوزها يرده الخادم برسالة توضح السبب.
+            وما تجاوزها لا يقبل من هنا — راجع مدير المكتب ليسجله عنك.
           </p>
         </div>
 

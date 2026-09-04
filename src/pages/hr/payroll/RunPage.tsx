@@ -222,7 +222,7 @@ export const RunPage: React.FC = () => {
         <div className="hrl-state hrl-state--empty">
           <FileSpreadsheet size={22} />
           <p className="hrl-state__t">لا يوجد مشمولون في هذا المسير</p>
-          <p className="hrl-state__d">لا يفتح المسير فارغا. أعد بناء قائمة المشمولين أو افتح مسيرا جديدا.</p>
+          <p className="hrl-state__d">أعد بناء قائمة المشمولين أو افتح مسيرا جديدا.</p>
         </div>
       </div>
     );

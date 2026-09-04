@@ -60,7 +60,7 @@ export const RunReviewStage: React.FC<Props> = ({ data, meta, selectedLineId, on
         <div className="hrl-block__b">
           {data.previous_run === null ? (
             <p className="hrl-hint">
-              لا يوجد مسير سابق لهذا المكتب، فلا فرق للمقارنة. ويراجع أول مسير بأرقامه لا بفروقه.
+              لا يوجد مسير سابق لهذا المكتب، فلا فرق للمقارنة. راجع أرقام هذا المسير من مرحلة الاحتساب.
             </p>
           ) : data.rows.length === 0 ? (
             <p className="hrl-hint">
@@ -68,7 +68,7 @@ export const RunReviewStage: React.FC<Props> = ({ data, meta, selectedLineId, on
             </p>
           ) : (
             <p className="hrl-hint">
-              تغير {data.changed} من {data.compared} سطراً، مرتبة بالمقدار المطلق، ولكل سطر سببه.
+              تغير {data.changed} من {data.compared} سطراً، مرتبة من الأكبر فرقاً، ولكل سطر سببه.
             </p>
           )}
         </div>
@@ -126,7 +126,7 @@ export const RunReviewStage: React.FC<Props> = ({ data, meta, selectedLineId, on
                       <span dir="ltr">{money(row.previous_net_amount) ?? EMPTY_MARK}</span> وليس في هذا
                     </span>
                     <span className="hrp-excluded__a">
-                      راجع أسباب الاستبعاد في مرحلة المشمولين. الغياب لا يظهر تلقائياً.
+                      راجع أسباب الاستبعاد في مرحلة المشمولين.
                     </span>
                   </li>
                 ))}

@@ -46,7 +46,7 @@ export const BoardDecisions: React.FC<Props> = ({ items, failed, canManage, onHo
 
       {failed ? (
         <p className="hrl-note">
-          تعذر تحميل حقائق الإجازات. بنود الرصيد والاعتماد والعطل لا تظهر الآن.
+          تعذر تحميل بيانات الإجازات. بنود الرصيد والاعتماد والعطل لا تظهر الآن.
         </p>
       ) : (
         <div className="hrl-block__b hrl-block__b--flush">

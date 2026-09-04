@@ -239,9 +239,8 @@ export const RunApproveStage: React.FC<Props> = ({
 
         <div className="hrl-block__b">
           <p className="hrl-hint">
-            التوقيع على صرف الرواتب صلاحية مستقلة عن إعداد المسير وعن قراءته. والمسير
-            الآن {RUN_STAGE_LABELS[run.stage]}. يراجعه من يملك صلاحية الإعداد، ويوقع عليه من
-            يملك صلاحية الاعتماد.
+            الاعتماد صلاحية مستقلة عن إعداد المسير وعن قراءته. والمسير الآن{' '}
+            {RUN_STAGE_LABELS[run.stage]}. ويعتمده من يملك هذه الصلاحية في المكتب.
           </p>
         </div>
       </section>
@@ -261,8 +260,7 @@ export const RunApproveStage: React.FC<Props> = ({
 
         <div className="hrl-block__b">
           <p className="hrl-hint">
-            الاعتماد توقيع على أرقام، والأرقام تصل مع الاحتساب. احتسب المسير، ثم راجع
-            فروقه، ثم ارجع إلى هذه الخطوة.
+            احتسب المسير، ثم راجع فروقه، ثم ارجع إلى هذه الخطوة.
           </p>
 
           <Link className="hrl-link" to={`/hr/payroll/runs/${run.id}?stage=compute`}>
@@ -371,8 +369,7 @@ export const RunApproveStage: React.FC<Props> = ({
                 2
               </span>
               <span className="hrp-approve__k">
-                مطالبات أيام المدة تكتب باسم كل موظف، وهي التي تمنع دفع يوم مرتين وخصمه
-                مرتين في مسير آخر.
+                تسجل أيام المدة باسم كل موظف، فلا يتكرر دفع اليوم نفسه أو خصمه في مسير آخر.
               </span>
             </li>
             <li className="hrp-approve__i">

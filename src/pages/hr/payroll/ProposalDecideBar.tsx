@@ -111,8 +111,8 @@ export const ProposalDecideBar: React.FC<Props> = ({ runId, proposals, onDecided
       {preview !== null && (
         <p className="hrl-hint">
           {preview.writes_money
-            ? `الأثر قبل النقر: ${money(preview.money_effect)} ر.س على ${preview.count} مقترحاً.`
-            : `${preview.count} مقترحاً بلا أثر مالي. اليوم غير المدفوع لا ينتج بند خصم، والقبول إقرار يرفع المانع.`}
+            ? `الأثر المالي عند القبول: ${money(preview.money_effect)} ر.س على ${preview.count} مقترحاً.`
+            : `${preview.count} مقترحاً بلا أثر مالي: اليوم غير المدفوع لا ينشئ بند خصم، والقبول يسجل الموافقة ويتيح اعتماد المسير.`}
         </p>
       )}
 

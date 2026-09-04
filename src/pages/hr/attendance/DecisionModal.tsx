@@ -97,7 +97,7 @@ export const DecisionModal: React.FC<Props> = ({
           <p className="hra-hint">
             تشهد بأن هذا الموظف كان حاضرا في {daysWord(dates.length)} أدناه رغم أن بصمته
             لم تصل.
-            يبقى القرار في السجل، ويمكن إلغاؤه بقرار آخر إن تبين خلافه.
+            يبقى القرار في السجل، ويمكن إلغاؤه لاحقا بقرار آخر.
           </p>
 
           <div className="hra-secb">

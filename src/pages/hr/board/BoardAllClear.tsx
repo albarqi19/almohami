@@ -46,13 +46,13 @@ export const BoardAllClear: React.FC<Props> = ({ checked, checks, total, scanned
       <ShieldCheck size={22} aria-hidden="true" />
       <p className="hrl-state__t">لا قرار ينتظر المكتب اليوم</p>
       <p className="hrl-state__d">
-        {`تم فحص ${fmtCount(checked)} ملفا على رأس العمل، وحقائق إجازات ${year}. لم يظهر أي بند يحتاج فتح ملف. وهذه البنود التي اجتازت الفحص:`}
+        {`تم فحص ${fmtCount(checked)} ملفاً على رأس العمل، وبيانات إجازات ${year}. البنود التي اجتازت الفحص:`}
       </p>
     </div>
 
     {total !== null && total > scanned && (
       <p className="hrl-note">
-        {`المكتب يضم ${fmtCount(total)} موظفا، وهذا الفحص يشمل أحدث ${fmtCount(scanned)}. الفحص الشامل يحتاج ترتيبا وتصفية بالخادم.`}
+        {`المكتب يضم ${fmtCount(total)} موظفاً، وهذا الفحص يشمل أحدث ${fmtCount(scanned)} منهم فقط.`}
       </p>
     )}
 

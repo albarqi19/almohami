@@ -88,8 +88,8 @@ export const RunRosterStage: React.FC<Props> = ({ detail, meta, rebuilding, onRe
         {roster.included.length > 0 && (
           <div className="hrl-block__b">
             <p className="hrl-hint">
-              أعمدة هذه المرحلة للأهلية والسياسة فقط. لم يتم احتساب أي مبلغ بعد، وأساس التجزئة
-              مقفل على كل سطر فتغييره لاحقاً لا يعيد كتابة هذا الشهر.
+              لم يتم احتساب أي مبلغ بعد. أساس التجزئة مثبت لكل موظف، وتغييره لاحقاً لا يؤثر
+              على هذا الشهر.
             </p>
           </div>
         )}
@@ -137,7 +137,7 @@ export const RunRosterStage: React.FC<Props> = ({ detail, meta, rebuilding, onRe
           )}
 
           <p className="hrl-hint">
-            هذه القائمة مقفلة في المسير بأسمائها ورموز أسبابها، وتبقى للرجوع إليها لاحقاً.
+            أسماء المستبعدين وأسباب استبعادهم مثبتة في هذا المسير للرجوع إليها لاحقاً.
           </p>
         </div>
       </section>

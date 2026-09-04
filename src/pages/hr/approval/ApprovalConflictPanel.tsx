@@ -69,8 +69,7 @@ export const ApprovalConflictPanel: React.FC<Props> = ({ context, impact }) => {
         <p className="hrla-clear">
           <CheckCircle2 size={13} aria-hidden="true" />
           <span>
-            لا جلسات ولا مهام ولا غيابات متداخلة في هذه المدة. تم فحص المدة ولم يظهر
-            ما يتعارض.
+            تم فحص المدة: لا جلسات ولا مهام ولا غيابات متداخلة.
           </span>
         </p>
       )}
@@ -84,7 +83,7 @@ export const ApprovalConflictPanel: React.FC<Props> = ({ context, impact }) => {
             <span className="hrla-group__n" dir="ltr">{sessions.length}</span>
           </h5>
           <p className="hrla-group__why">
-            الغياب عن الجلسة قد يسقط الحق. اعتماد الإجازة لا يلغيها، ويلزم من يحضرها أو تأجيلها.
+            الغياب عن الجلسة قد يسقط الحق. اعتماد الإجازة لا يلغي الجلسة، فكلف من يحضرها أو أجلها.
           </p>
           <ul className="hrla-list">
             {sessions.map((session) => (
@@ -194,7 +193,7 @@ export const ApprovalConflictPanel: React.FC<Props> = ({ context, impact }) => {
               {impact.will_go_negative ? '، ويصير الرصيد سالبا.' : ''}
             </>
           ) : (
-            'هذا النوع لا يخصم من رصيد. الاعتماد يسجل الإجازة ولا يغير أي رقم.'
+            'هذا النوع لا يخصم من الرصيد؛ الاعتماد يسجل الإجازة فقط.'
           )}
         </p>
       )}

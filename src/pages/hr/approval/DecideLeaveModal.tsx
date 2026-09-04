@@ -183,7 +183,7 @@ export const DecideLeaveModal: React.FC<Props> = ({ leaveId, onClose }) => {
               {data.is_pending && data.is_own_request && (
                 <p className="hrla-state hrla-state--settled">
                   <ShieldAlert size={13} aria-hidden="true" />
-                  هذا طلبك أنت، ولا يعتمد الموظف طلب نفسه. يعتمده زميل له صلاحية الإجازات.
+                  هذا طلبك، ولا يمكنك اعتماده. يعتمده زميل لديه صلاحية الإجازات.
                 </p>
               )}
 

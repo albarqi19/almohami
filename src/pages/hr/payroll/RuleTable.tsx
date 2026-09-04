@@ -109,7 +109,7 @@ export const RuleTable: React.FC<Props> = ({ rules, openCode, onToggle, emptyTex
                           ? 'لا محرك احتساب مسجل لهذه القاعدة.'
                           : rule.reader.shipped
                             ? `يطبقها: ${rule.reader.what}`
-                            : `سيطبقها في الخطوة ${rule.reader.step}: ${rule.reader.what}`}
+                            : `ستطبق لاحقاً: ${rule.reader.what}`}
                       </p>
 
                       {/* المفتاحُ مسارٌ لاتينيٌّ دائماً ⇒ `ltr` صريح. أمّا القيمةُ فقد
@@ -134,7 +134,7 @@ export const RuleTable: React.FC<Props> = ({ rules, openCode, onToggle, emptyTex
                         {rule.confirmed_at === null
                           ? 'غير موثقة بعد.'
                           : rule.confirmed_by === null
-                            ? 'مؤكَّدة نظاماً. النص منشور وتمت مراجعته قبل النشر.'
+                            ? 'مؤكَّدة من المنصة لا من المكتب.'
                             : `أكدها المكتب في ${fmtDateHuman(rule.confirmed_at)}.`}
                         {' '}
                         وتعديلها لاحقاً ينشئ نسخة مؤرخة جديدة، فلا يعاد حساب شهر مضى.

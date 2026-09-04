@@ -382,11 +382,11 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                       onChange={() => setBasis('full_entitlement')}
                     />
                     <span>
-                      <strong>الاستحقاق الكامل</strong>: يكتب كما هو الآن، والإجازات السابقة في
-                      «الطلبات الإدارية» <strong>تخصم منه عند تحويل كل منها</strong> لا الآن.
+                      <strong>الاستحقاق الكامل</strong>: يسجل الرقم كما تكتبه، والإجازات السابقة في
+                      «الطلبات الإدارية» <strong>تخصم منه عند تحويل كل منها</strong>، لا عند التهيئة.
                       <span className="hrl-hint">
-                        يظهر في السجل الاستحقاق والإجازات معا، والرصيد نتيجة احتسابهما. وشرط
-                        سلامته أن يكون سجل الماضي كاملا. راجع ما ينتظر التحويل أدناه.
+                        يظهر في السجل الاستحقاق والإجازات معا، والرصيد هو الباقي بعد خصمها. ويصح
+                        هذا الخيار إن كانت إجازات الماضي مسجلة كلها. راجع ما ينتظر التحويل أدناه.
                       </span>
                     </span>
                   </label>
@@ -408,8 +408,8 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                   </label>
 
                   <span className="hrl-hint">
-                    يحفظ هذا الاختيار مع قيد الرصيد نفسه ويحكم كل تحويل لهؤلاء الموظفين.
-                    ولا يتغير بعد ذلك من إعداد عام.
+                    يحفظ هذا الاختيار مع قيد الرصيد ويطبق على كل تحويل لهؤلاء الموظفين،
+                    ولا يمكن تغييره بعد الحفظ.
                   </span>
                 </fieldset>
 
@@ -628,7 +628,7 @@ export const InitBalanceModal: React.FC<Props> = ({ focusEmployeeId = null, canM
                       <span className="hrl-result__n" dir="ltr">{fmtCount(result.created)}</span>
                     </p>
                     <p className="hrl-result__row is-skip">
-                      <span>تم تخطيهم. لهم رصيد افتتاحي مسبقا، ولم يتم ضبط تاريخ بدء الاستحقاق في هذه العملية</span>
+                      <span>تم تخطيهم لوجود رصيد افتتاحي سابق، ولم يضبط تاريخ بدء استحقاقهم في هذه العملية</span>
                       <span className="hrl-result__n" dir="ltr">{fmtCount(result.skipped)}</span>
                     </p>
                     <p className="hrl-result__row is-fail">

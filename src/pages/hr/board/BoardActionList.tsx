@@ -82,7 +82,7 @@ export const BoardActionList: React.FC<Props> = ({ rows, error, isError, onRetry
               ومرتَّبٌ `latest('id')` في الخادم، فالفحصُ الشاملُ يحتاج ترتيباً وترشيحاً هناك. */}
           {total !== null && total > scanned && (
             <p className="hrl-note">
-              {`المكتب يضم ${fmtCount(total)} موظفاً، وهذه القائمة تفحص أحدث ${fmtCount(scanned)}. الفحص الشامل يحتاج ترتيباً وتصفية بالخادم.`}
+              {`المكتب يضم ${fmtCount(total)} موظفاً، وهذه القائمة تفحص أحدث ${fmtCount(scanned)} منهم فقط.`}
             </p>
           )}
 
@@ -93,7 +93,7 @@ export const BoardActionList: React.FC<Props> = ({ rows, error, isError, onRetry
                 <tr>
                   <th scope="col">المدة</th>
                   <th scope="col">الموظف</th>
-                  <th scope="col">ما ينتظر</th>
+                  <th scope="col">السبب</th>
                 </tr>
               </thead>
               <tbody>

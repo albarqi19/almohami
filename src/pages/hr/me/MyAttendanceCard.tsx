@@ -103,7 +103,7 @@ export const MyAttendanceCard: React.FC = () => {
       <section className="hrl-block">
         <div className="hrl-block__h">
           <h2 className="hrl-block__t hrl-h2">
-            <Fingerprint size={14} aria-hidden="true" /> إثبات حضورك بيدك
+            <Fingerprint size={14} aria-hidden="true" /> تسجيل الحضور
           </h2>
         </div>
 

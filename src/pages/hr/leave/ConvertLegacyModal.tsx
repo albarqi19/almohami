@@ -277,7 +277,7 @@ export const ConvertLegacyModal: React.FC<Props> = ({
                             ? `تم اختياره عند التهيئة${
                                 preview.opening.opening_date ? ` بتاريخ ${fmtLeaveDate(preview.opening.opening_date)}` : ''
                               }، ويسري على كل تحويل لهذا الموظف.`
-                            : 'تم تسجيل القيد الافتتاحي قبل وجود هذا الاختيار، فيظهر «المتبقي اليوم» لأن شاشة التهيئة كانت تطلب المتبقي. هذه القراءة مستنتَجة ولم تسجل صراحة.'}
+                            : 'تم تسجيل القيد الافتتاحي قبل وجود هذا الاختيار، وشاشة التهيئة وقتها كانت تطلب المتبقي — فهذه القراءة مستنتَجة لا مسجلة.'}
                         </span>
                       </span>
                     </p>
@@ -320,7 +320,7 @@ export const ConvertLegacyModal: React.FC<Props> = ({
                     checked={acknowledge}
                     onChange={(event) => setAcknowledge(event.target.checked)}
                   />
-                  أؤكد أن سجلي يبين أن الموظف أخذ أكثر من استحقاقه. سجل الرصيد سالباً.
+                  أقر بأن الموظف أخذ أكثر من استحقاقه، وأوافق على تسجيل الرصيد سالباً.
                 </label>
               )}
             </>

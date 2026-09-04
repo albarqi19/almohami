@@ -150,7 +150,7 @@ export const RunPreflightStage: React.FC<Props> = ({
             </div>
           ) : proposals.length === 0 ? (
             <p className="hrl-hint">
-              لا قرار ينتظر. الشهر بلا مقترحات، والصفر هنا لا يعرض تنبيهاً.
+              لا قرار ينتظر: لا مقترحات في هذا الشهر.
             </p>
           ) : (
             <table className="hrl-table">
@@ -182,8 +182,8 @@ export const RunPreflightStage: React.FC<Props> = ({
 
         <div className="hrl-block__b">
           <p className="hrl-hint">
-            الحضور والإجازة يقترحان ولا يخصمان: لا يصير المقترح مبلغاً إلا ببند يحمل اسم من
-            قرره وتاريخه وسببه.
+            الحضور والإجازة يقترحان ولا يخصمان. ولا يصير المقترح مبلغاً إلا ببند مسجل باسم
+            من قرره وتاريخه وسببه.
           </p>
 
           {decideAvailable === false && (

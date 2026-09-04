@@ -45,7 +45,7 @@ export const GosiConfirmBlock: React.FC<Props> = ({ gosi, canConfirm, submitting
 
       <div className="hrl-block__b hrl-block__b--flush">
         <table className="hrl-table">
-          <caption className="hrl-sr">النسب المقترحة لكل نظام تأمينات بنقاط الأساس</caption>
+          <caption className="hrl-sr">النسب المقترحة لكل نظام تأمينات</caption>
           <thead>
             <tr>
               <th scope="col">النظام</th>
@@ -86,7 +86,7 @@ export const GosiConfirmBlock: React.FC<Props> = ({ gosi, canConfirm, submitting
             })}
             {schemes.length === 0 && (
               <tr>
-                <td colSpan={6}>{EMPTY_MARK} لم تصل نسب مقترحة من الخادم.</td>
+                <td colSpan={6}>{EMPTY_MARK} لم تصل نسب مقترحة بعد.</td>
               </tr>
             )}
           </tbody>
@@ -111,15 +111,15 @@ export const GosiConfirmBlock: React.FC<Props> = ({ gosi, canConfirm, submitting
         <div className="hrl-block__b">
           <p className="hrl-note">
             <CheckCircle2 size={13} /> أكدها {gosi.confirmed_by ?? 'مستخدم محذوف'} في{' '}
-            {fmtDateHuman(gosi.confirmed_at)}. وتغيير النسب لاحقاً يعيد المانع حتى يتم تأكيد
-            النسخة الجديدة.
+            {fmtDateHuman(gosi.confirmed_at)}. وتغيير النسب لاحقاً يوقف اعتماد المسيرات حتى
+            تؤكد النسب الجديدة.
           </p>
         </div>
       ) : (
         <div className="hrl-block__b">
           <p className="hrl-hint">
-            هذه بيانات تخضع للمراجعة القانونية: تحقق منها من مصدرها الرسمي قبل التأكيد. والتأكيد
-            يسجل باسمك وتاريخه، ويرفع المانع عن اعتماد المسيرات.
+            تحقق من النسب من مصدرها الرسمي قبل التأكيد. يسجل التأكيد باسمك وتاريخه، ويتيح
+            اعتماد المسيرات.
           </p>
 
           <label className="hrl-fset" htmlFor="gosi-note">
