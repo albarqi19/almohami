@@ -4,7 +4,10 @@ import { MessageSquare, Chrome, AlertTriangle, ExternalLink, X, Link2 } from 'lu
 import { useAuth } from '../contexts/AuthContext';
 import CompanyLinkModal from './CompanyLinkModal';
 
-const API_BASE_URL = 'https://api.alraedlaw.com/api';
+import { API_ROOT } from '../utils/api';
+
+// يُشتقّ من VITE_API_URL — انظر التعليق في utils/api.ts
+const API_BASE_URL = API_ROOT;
 const CHROME_EXTENSION_URL = 'https://chromewebstore.google.com/detail/cmanbngddccpfalmmpmkglfgncopmmcn?utm_source=item-share-cb';
 const POLL_INTERVAL_MS = 30_000;
 

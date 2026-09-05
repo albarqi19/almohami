@@ -9,7 +9,13 @@ declare global {
 
 window.Pusher = Pusher;
 
-const REVERB_HOST = 'api.alraedlaw.com';
+import { API_HOST, API_ROOT } from '../utils/api';
+
+// 🔴 كان المضيفُ ونقطةُ المصادقة مثبَّتين هنا نصّاً، فلا يراهما `VITE_API_URL`.
+//    ونتيجتُه أن نشرةً على نطاقٍ آخر تفتح WebSocket إلى خادم المنصّة —
+//    ويموت البثُّ **صامتاً**: لا خطأ في الواجهة، بل دردشةٌ لا تصل وحضورٌ
+//    لا يتحدّث، ويظنّ المستخدمُ أن لا أحدَ يكتب.
+const REVERB_HOST = API_HOST;
 
 let echoInstance: Echo<'reverb'> | null = null;
 
@@ -23,7 +29,7 @@ export function getEcho(authToken: string): Echo<'reverb'> {
             wssPort: 443,
             forceTLS: true,
             enabledTransports: ['ws', 'wss'],
-            authEndpoint: 'https://api.alraedlaw.com/api/broadcasting/auth',
+            authEndpoint: `${API_ROOT}/broadcasting/auth`,
             auth: {
                 headers: {
                     Authorization: `Bearer ${authToken}`,

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { API_BASE_URL as SHARED_API_BASE_URL } from '../utils/api';
 
 // Tenant interface matching the backend response
 export interface Tenant {
@@ -36,7 +37,7 @@ interface TenantContextType {
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
 // API base URL
-const API_BASE_URL = 'https://api.alraedlaw.com/api/v1';
+const API_BASE_URL = SHARED_API_BASE_URL;
 
 // Reserved subdomains that should not be treated as tenant subdomains
 const RESERVED_SUBDOMAINS = ['www', 'api', 'app', 'admin', 'dashboard'];
