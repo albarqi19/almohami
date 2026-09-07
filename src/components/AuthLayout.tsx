@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Scale, Layers, ArrowRight } from 'lucide-react';
 import { useTenant } from '../contexts/TenantContext';
+import { wasEstablishmentOnly } from '../utils/establishmentOnly';
 import '../styles/auth.css';
 
 /**
@@ -12,6 +13,30 @@ import '../styles/auth.css';
 const AuthLayout: React.FC = () => {
     const location = useLocation();
     const { tenant, isSubdomain, isLoading } = useTenant();
+
+    /**
+     * 🩸 يُقرأ **مرّةً واحدةً عند التركيب** لا عند كل تصيير.
+     *
+     * قراءةُ `localStorage` داخل جسم التصيير تجعل مخرَجَ المكوّن غيرَ ثابت:
+     * `login()` يمسح التخزينَ ويعيد كتابته أثناء محاولة الدخول، فيقفز هذا
+     * المكوّن بين شجرتَي JSX مختلفتين تماماً في منتصف انتقالِ framer-motion —
+     * فينهار بـ«NotFoundError: removeChild» وتبتلعه حدودُ الخطأ، ويبقى المستخدم
+     * على شاشةٍ ميتة. وقد وقع فعلاً في المعاينة قبل هذا التثبيت.
+     *
+     * والتثبيتُ صحيحٌ دلالياً أيضاً: هويةُ شاشة الدخول لا يجوز أن تتبدّل تحت
+     * عين من يكتب فيها.
+     */
+    const [portalIdentity] = React.useState(() => wasEstablishmentOnly());
+
+    // وعنوانُ التبويب معه: `index.html` يثبّت اسمَ المنصّة، وإخفاؤه من الصفحة
+    // وتركُه في التبويب إخفاءٌ نصفُ منجَز. لا يُمسّ إلا لصاحب البوابة.
+    React.useEffect(() => {
+        if (!portalIdentity) return;
+        const previous = document.title;
+        document.title = 'بوابة المنشأة';
+
+        return () => { document.title = previous; };
+    }, [portalIdentity]);
 
     // Show loader while tenant data is loading for subdomains
     if (isSubdomain && isLoading) {
@@ -66,7 +91,13 @@ const AuthLayout: React.FC = () => {
     // hero «نظام الرائد» وعلامته ورابط «العودة للرئيسية» — أي اسم مزوّد آخر
     // على نطاق العميل. و`isSubdomain` يُحسب من الـhost تزامنياً فهو صحيح دائماً؛
     // أما `tenant` فيُستعمل لتعبئة الشعار فقط، وغيابه يعني نائباً محايداً.
-    if (isSubdomain) {
+    //
+    // ويلحق بها عميلُ بوابة المنشأة الحصريّ ولو كان على مضيف المنصّة: أثرُه في
+    // التخزين المحلّي يبقى بعد إعادة التحميل الكاملة التي ينفّذها فرعُ 401، فلا
+    // يهبط من انتهت جلستُه على شعارِ «نظام الرائد» وهو لا يعرف عن المنتج شيئاً.
+    // (وهذا يعالج الحالةَ الشائعة لا كلَّها: متصفّحٌ جديدٌ أو نافذةٌ خاصةٌ بلا
+    // أثرٍ سيريان الهويةَ الافتراضية — لا يُغلق ذلك إلا بساب-دومين للمكتب.)
+    if (isSubdomain || portalIdentity) {
         const logoUrl = tenant?.logo_url || tenant?.logo;
 
         return (

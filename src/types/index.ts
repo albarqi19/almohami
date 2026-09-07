@@ -30,6 +30,12 @@ export interface User {
   // Phase 3 - Permission System
   is_super_admin?: boolean;
   permissions_version?: number;
+  /**
+   * «الوضع الحصري» لبوابة المنشأة: هذا العميل لا يرى في حسابه غير بوابته.
+   * يضبطه مديرُ المكتب، ويصل في حمولتَي `/auth/login` و`/auth/me` معاً.
+   * راحةُ عرضٍ لا حماية — المنع الفعلي في الباك (RestrictEstablishmentOnlyClient).
+   */
+  establishment_only?: boolean;
   // معلومات الشركة (لبوابات الميزات في الواجهة — مثل hr_enabled)
   tenant?: {
     id: number;

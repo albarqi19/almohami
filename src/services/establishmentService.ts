@@ -93,6 +93,11 @@ export interface UpcomingAlert {
 
 export interface PortalSettings {
   portal_enabled?: boolean;
+  /**
+   * «الوضع الحصري»: هذا العميل لا يرى في حسابه غير بوابة المنشأة.
+   * يُقرأ هنا ويُكتب بمسارٍ منفصل (setExclusive) — بصلاحية إدارية لا clients.edit.
+   */
+  establishment_only?: boolean;
   alerts_enabled: boolean;
   alert_days: number[];
   notify_documents: boolean;
@@ -165,6 +170,21 @@ export const EstablishmentAdminService = {
 
   async updateSettings(clientId: number, settings: Partial<PortalSettings>): Promise<void> {
     unwrap(await apiClient.put<any>(`/client-management/${clientId}/establishment/settings`, settings));
+  },
+
+  /**
+   * قلبُ «الوضع الحصري» — مسارٌ منفصلٌ عن updateSettings عن قصد.
+   *
+   * صلاحيتُه إدارية (مالك المكتب أو مديره) لا `clients.edit` التي يملكها
+   * المساعد القانوني، لأنّ عزلَ إنسانٍ عن النظام كلّه قرارُ إدارةٍ لا قرارُ
+   * تحريرِ ملفّات. والباك يُبطل جلسات العميل المفتوحة عند القلب.
+   */
+  async setExclusive(clientId: number, value: boolean): Promise<PortalSettings> {
+    return unwrap(
+      await apiClient.put<any>(`/client-management/${clientId}/establishment/exclusive`, {
+        establishment_only: value,
+      })
+    );
   },
 
   async createEmployee(clientId: number, payload: EmployeePayload): Promise<void> {

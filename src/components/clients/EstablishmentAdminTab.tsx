@@ -9,6 +9,7 @@ import {
   FileText,
   Landmark,
   Loader2,
+  Lock,
   Pencil,
   Plus,
   RefreshCw,
@@ -18,6 +19,8 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { usePermissionContext } from '../../contexts/PermissionContext';
 import {
   EstablishmentAdminService,
   DATE_CATEGORY_LABELS,
@@ -99,6 +102,29 @@ export default function EstablishmentAdminTab({ clientId, canEdit }: Props) {
 
   const saveSettings = (patch: Record<string, unknown>) =>
     run.mutate(() => EstablishmentAdminService.updateSettings(clientId, patch));
+
+  /**
+   * «الوضع الحصري» — صلاحيةٌ إداريةٌ أضيقُ من canEdit (وهي clients.edit التي
+   * يملكها المساعد القانوني والمحامي الأول). والمفتاح **يُخفى** لا يُعطَّل عمّن
+   * لا يملكه: زرٌّ رماديٌّ يشرح لصاحبه ما لا يستطيع، ثم يذهب يطلبه.
+   * الباك يفرض الشيء نفسه بقفلٍ صريح — هذا للعرض فقط.
+   */
+  const { user } = useAuth();
+  const { has } = usePermissionContext();
+  const canToggleExclusive =
+    !!user?.is_super_admin ||
+    !!user?.is_tenant_owner ||
+    has('system.manage') ||
+    has('tenant.settings.manage');
+
+  const [exclusiveConfirm, setExclusiveConfirm] = useState(false);
+
+  const applyExclusive = (value: boolean) => {
+    setExclusiveConfirm(false);
+    run.mutate(async () => {
+      await EstablishmentAdminService.setExclusive(clientId, value);
+    });
+  };
 
   const submitEmployee = () => {
     if (!empForm.name?.trim()) return;
@@ -238,6 +264,61 @@ export default function EstablishmentAdminTab({ clientId, canEdit }: Props) {
           <span className="est-muted" style={{ fontSize: 11 }}>(يخصّصها العميل من بوابته أيضاً)</span>
         </div>
       </div>
+
+      {/* ═══ الوضع الحصري — مفتاح المدير ═══ */}
+      {canToggleExclusive && (
+        <div className="est-exclusive">
+          <div className="est-exclusive__row">
+            <div className="est-exclusive__text">
+              <div className="est-exclusive__title">
+                <Lock size={14} /> الوضع الحصري — بوابة المنشأة وحدها
+              </div>
+              <div className="est-exclusive__hint">
+                {settings.establishment_only
+                  ? 'هذا العميل يدخل حسابه فيجد بوابة منشأته وحدها: بلا قائمة جانبية، وبلا قضاياه ورسائله، وبلا اسم النظام.'
+                  : 'يجعل هذا العميل يرى بوابة منشأته وحدها عند دخوله. وإطفاؤه يعيده إلى الواجهة المعتادة كما هي.'}
+              </div>
+            </div>
+            <Toggle
+              on={!!settings.establishment_only}
+              onClick={() => setExclusiveConfirm(true)}
+              disabled={exclusiveConfirm}
+            />
+          </div>
+
+          {exclusiveConfirm && (
+            <div className="est-exclusive__confirm">
+              <div className="est-exclusive__confirm-text">
+                {settings.establishment_only ? (
+                  <>
+                    سيعود هذا العميل إلى الواجهة المعتادة: القائمة الجانبية وقضاياه ورسائله ومستنداته.
+                    <b> وستُغلق جلساته المفتوحة فيلزمه تسجيل الدخول من جديد.</b>
+                  </>
+                ) : (
+                  <>
+                    لن يرى هذا العميل بعدها: القائمة الجانبية، ولا قضاياه، ولا رسائله، ولا الإشعارات، ولا
+                    اسم النظام ولا شعاره. ولن يصل إلى أي شيء منها ولو كتب عنوانه مباشرةً.
+                    <b> وستُغلق جلساته المفتوحة فيلزمه تسجيل الدخول من جديد.</b>
+                  </>
+                )}
+              </div>
+              <div className="est-exclusive__confirm-actions">
+                <button
+                  className="est-btn est-btn--sm est-btn--primary"
+                  onClick={() => applyExclusive(!settings.establishment_only)}
+                  disabled={run.isPending}
+                >
+                  {run.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                  {settings.establishment_only ? 'أعِده إلى الواجهة المعتادة' : 'نعم، اجعله حصرياً'}
+                </button>
+                <button className="est-btn est-btn--sm" onClick={() => setExclusiveConfirm(false)}>
+                  <X size={13} /> تراجع
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ═══ موظفو المنشأة ═══ */}
       <section className="est-sec">

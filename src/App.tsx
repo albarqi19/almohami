@@ -13,6 +13,7 @@ import { TimerProvider } from './contexts/TimerContext';
 import { AnnouncementProvider } from './contexts/AnnouncementContext';
 import { ZatcaStatusProvider } from './contexts/ZatcaStatusContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import EstablishmentOnlyRedirect from './components/EstablishmentOnlyRedirect';
 import Forbidden from './pages/Forbidden';
 import LegacyRedirect from './components/LegacyRedirect';
 import PageLoader from './components/PageLoader';
@@ -156,6 +157,9 @@ function App() {
         <SubscriptionProvider>
           <UpdateBanner />
           <Router>
+            {/* 🏢 الوضع الحصري لبوابة المنشأة — فوق <Routes> ليغطّي مسارات
+                المستوى الأول التي لا يحكمها Layout ولا ProtectedRoute */}
+            <EstablishmentOnlyRedirect />
             <Suspense fallback={<PageLoader full />}>
             <Routes>
               <Route path="/" element={<SmartLandingPage />} />
