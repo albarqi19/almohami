@@ -1,5 +1,11 @@
 import { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
+// نسخةُ العميل الموضعيّة تبني بـ VITE_REGISTRATION_ENABLED=false فتختفي
+// مساراتُ التسجيل. أيُّ قيمةٍ غير "false" تُبقيها — فالسحابةُ لا تتأثّر ولو
+// لم يُضبط المتغيّرُ إطلاقاً.
+const REGISTRATION_ENABLED =
+  String(import.meta.env.VITE_REGISTRATION_ENABLED ?? 'true') !== 'false';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import UpdateBanner from './components/UpdateBanner';
@@ -166,8 +172,16 @@ function App() {
               {/* Auth routes with shared layout */}
               <Route element={<AuthLayout />}>
                 <Route path="/login" element={<LoginContent />} />
-                <Route path="/register" element={<RegisterChoiceContent />} />
-                <Route path="/register/tenant" element={<RegisterTenantContent />} />
+                {/* التسجيلُ يُطفأ في النسخ الموضعيّة: صندوقُ عميلٍ واحدٍ لا
+                    معنى فيه لإنشاء مكاتبَ جديدة. الافتراضُ مُفعَّلٌ فلا يتغيّر
+                    شيءٌ في السحابة. وهذا إخفاءٌ لا إغلاق — الإغلاقُ في الخلفيّة
+                    عبر registration_enabled، ومن يعرف المسارَ يناديه مباشرةً. */}
+                {REGISTRATION_ENABLED && (
+                  <>
+                    <Route path="/register" element={<RegisterChoiceContent />} />
+                    <Route path="/register/tenant" element={<RegisterTenantContent />} />
+                  </>
+                )}
               </Route>
               {/* Account Status - For expired subscriptions */}
               <Route path="/account-status" element={<AccountStatus />} />

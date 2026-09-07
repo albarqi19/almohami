@@ -47,3 +47,4 @@ nul
 # Claude temp files
 tmpclaude-*
 خطة الفجر
+.env.onprem
