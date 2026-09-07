@@ -1,0 +1,292 @@
+/* ====================================================
+   خدماتُ العميل («خدماتي» وتفاصيل الخدمة وطلب خدمة).
+   تعيد استعمال بدائيّات `cx-*` المشتركة لصفحات بوابة العميل (الترويسة، الألواح،
+   جدول الخصائص، الفارغ/التحميل/الخطأ)، وتضيف `cv-*` لما يخصّها وحدها.
+   فلات صرف: لا تدرّجات ولا توهّج ولا أشرطةَ تمييزٍ جانبية.
+   ==================================================== */
+
+.cv-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(140px, 0.8fr) 150px 28px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+  color: inherit;
+  text-decoration: none;
+}
+
+.cv-row:last-child {
+  border-bottom: none;
+}
+
+.cv-row:hover {
+  background: var(--quiet-gray-50);
+}
+
+.cv-row__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-heading);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cv-row__num {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+  direction: ltr;
+}
+
+.cv-row__meta {
+  margin-top: 5px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  display: flex;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+}
+
+.cv-row__meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cv-row__lawyer {
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.cv-row__lawyer b {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+}
+
+.cv-row__status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.cv-row__date {
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
+/* رقاقةُ الحالة: جارية بالكحلي، منتهية رمادية، ملغاة حمراء */
+.cv-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.cv-chip--active {
+  border-color: var(--law-navy);
+  color: var(--law-navy);
+}
+
+.cv-chip--new {
+  border-color: #a05a00;
+  color: #a05a00;
+}
+
+.cv-chip--closed {
+  border-color: var(--color-border);
+  color: var(--color-text-tertiary);
+}
+
+.cv-chip--cancelled {
+  border-color: #b23b3b;
+  color: #b23b3b;
+}
+
+.cv-chip--type {
+  font-weight: 500;
+}
+
+/* زرّ الطلب الرئيسي */
+.cv-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--law-navy);
+  background: var(--law-navy);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cv-primary:hover:not(:disabled) {
+  background: var(--law-navy-dark, var(--law-navy));
+}
+
+.cv-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* الوصف */
+.cv-desc {
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--color-heading);
+  white-space: pre-wrap;
+}
+
+/* خطُّ السير */
+.cv-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 10px 16px;
+}
+
+.cv-tl {
+  position: relative;
+  padding: 0 22px 14px 0;
+  font-size: 12.5px;
+}
+
+.cv-tl::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 4px;
+  top: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--law-navy);
+  background: var(--dashboard-card);
+}
+
+.cv-tl::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: 8px;
+  top: 15px;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border);
+}
+
+.cv-tl:last-child {
+  padding-bottom: 0;
+}
+
+.cv-tl:last-child::after {
+  display: none;
+}
+
+.cv-tl b {
+  color: var(--color-heading);
+  font-weight: 600;
+}
+
+.cv-tl span {
+  display: block;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+/* المستندات */
+.cv-doc {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12.5px;
+}
+
+.cv-doc:last-child {
+  border-bottom: none;
+}
+
+.cv-doc__icon {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.cv-doc__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.cv-doc__title {
+  font-weight: 600;
+  color: var(--color-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cv-doc__meta {
+  color: var(--color-text-secondary);
+  font-size: 11.5px;
+  margin-top: 2px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* نموذج الطلب داخل المودال: حقول كثيفة */
+.cv-form .form-group {
+  margin-bottom: 12px;
+}
+
+.cv-form .form-label {
+  font-size: 12.5px;
+}
+
+.cv-form__hint {
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+  margin-top: 4px;
+}
+
+.cv-form__error {
+  font-size: 11.5px;
+  color: #b23b3b;
+  margin-top: 4px;
+}
+
+.cv-form__note {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--quiet-gray-50);
+  margin-bottom: 12px;
+  line-height: 1.7;
+}
+
+@media (max-width: 900px) {
+  .cv-row {
+    grid-template-columns: minmax(0, 1fr) 28px;
+  }
+
+  .cv-row__lawyer,
+  .cv-row__status {
+    grid-column: 1 / -1;
+  }
+}

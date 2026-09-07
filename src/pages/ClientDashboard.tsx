@@ -3,24 +3,31 @@ import { Link } from 'react-router-dom';
 import {
   FileText,
   Calendar,
-  AlertCircle,
   Upload,
   MessageSquare,
   TrendingUp,
   Activity,
   Clock,
   ChevronLeft,
-  User
+  Gavel,
+  Landmark,
+  Video,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../utils/api';
+import {
+  formatSessionTime,
+  sessionDateParts,
+  relativeDays,
+  type ClientSession,
+} from '../services/clientSessionService';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface DashboardStats {
   totalCases: number;
   activeCases: number;
   documentsCount: number;
-  upcomingHearings: number;
+  upcomingSessions: number;
 }
 
 interface RecentActivity {
@@ -32,13 +39,34 @@ interface RecentActivity {
   case_id?: number;
 }
 
-interface UpcomingEvent {
-  id: string;
-  title: string;
-  date: string;
-  time: string;
-  location: string;
-  case_id?: number;
+/**
+ * شكلُ ردّ /client/dashboard كما يرسله الباك فعلاً (`ClientController::dashboard`):
+ * الإحصاءات تحت `statistics` (كانت الواجهة تقرأ `stats` فتعرض أصفاراً دائماً)،
+ * والجلسات الحقيقية تحت `today_sessions`/`upcoming_sessions`.
+ */
+interface DashboardResponse {
+  success: boolean;
+  data?: {
+    statistics?: {
+      total_cases?: number;
+      active_cases?: number;
+      closed_cases?: number;
+      pending_tasks?: number;
+      documents_count?: number;
+      upcoming_sessions?: number;
+      today_sessions?: number;
+    };
+    today_sessions?: ClientSession[];
+    upcoming_sessions?: ClientSession[];
+    recent_activities?: Array<{
+      id: number | string;
+      type?: string;
+      title?: string;
+      description?: string;
+      created_at?: string;
+      case_id?: number;
+    }>;
+  };
 }
 
 const ClientDashboard: React.FC = () => {
@@ -47,10 +75,11 @@ const ClientDashboard: React.FC = () => {
     totalCases: 0,
     activeCases: 0,
     documentsCount: 0,
-    upcomingHearings: 0
+    upcomingSessions: 0,
   });
   const [activities, setActivities] = useState<RecentActivity[]>([]);
-  const [events, setEvents] = useState<UpcomingEvent[]>([]);
+  const [todaySessions, setTodaySessions] = useState<ClientSession[]>([]);
+  const [upcomingSessions, setUpcomingSessions] = useState<ClientSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -60,23 +89,26 @@ const ClientDashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get('/client/dashboard') as {
-        success: boolean;
-        data?: {
-          stats?: { total_cases?: number; active_cases?: number; documents_count?: number; upcoming_hearings?: number };
-          recent_activities?: RecentActivity[];
-          upcoming_events?: UpcomingEvent[];
-        };
-      };
+      const response = await apiClient.get<DashboardResponse>('/client/dashboard');
       if (response.success && response.data) {
+        const s = response.data.statistics ?? {};
         setStats({
-          totalCases: response.data.stats?.total_cases || 0,
-          activeCases: response.data.stats?.active_cases || 0,
-          documentsCount: response.data.stats?.documents_count || 0,
-          upcomingHearings: response.data.stats?.upcoming_hearings || 0
+          totalCases: s.total_cases || 0,
+          activeCases: s.active_cases || 0,
+          documentsCount: s.documents_count || 0,
+          upcomingSessions: s.upcoming_sessions || 0,
         });
-        setActivities(response.data.recent_activities || []);
-        setEvents(response.data.upcoming_events || []);
+        setActivities((response.data.recent_activities || []).map(a => ({
+          id: String(a.id),
+          type: a.type || '',
+          // الباك يرسل صفَّ Activity خاماً (title/description/created_at)
+          title: a.title || a.description || '',
+          description: a.title ? (a.description || '') : '',
+          date: a.created_at || '',
+          case_id: a.case_id,
+        })));
+        setTodaySessions(response.data.today_sessions || []);
+        setUpcomingSessions(response.data.upcoming_sessions || []);
       }
     } catch (error) {
       console.error('Error loading dashboard:', error);
@@ -131,6 +163,35 @@ const ClientDashboard: React.FC = () => {
     return name.split(' ').map(n => n[0]).slice(0, 2).join('');
   };
 
+  const renderSessionItem = (s: ClientSession) => {
+    const parts = sessionDateParts(s);
+    const time = formatSessionTime(s.time);
+    const relative = relativeDays(s.days_remaining);
+    return (
+      <Link key={s.id} to={s.case ? `/my-cases/${s.case.id}` : '/my-sessions'} className="cs-dash-item">
+        <div className="cs-dash-item__date">
+          {parts ? (
+            <>
+              <span className="cs-dash-item__day">{parts.day}</span>
+              <span className="cs-dash-item__month">{parts.month}</span>
+            </>
+          ) : (
+            <span className="cs-dash-item__month">{s.date_hijri ? `${s.date_hijri} هـ` : 'غير محدد'}</span>
+          )}
+        </div>
+        <div className="cs-dash-item__body">
+          <div className="cs-dash-item__title">{s.case?.title || s.session_type || 'جلسة'}</div>
+          <div className="cs-dash-item__meta">
+            {time && <span><Clock size={12} style={{ verticalAlign: '-2px' }} /> {time}</span>}
+            {s.court && <span><Landmark size={12} style={{ verticalAlign: '-2px' }} /> {s.court}</span>}
+            {s.is_video_conference && <span><Video size={12} style={{ verticalAlign: '-2px' }} /> مرئية</span>}
+            {relative && relative !== 'اليوم' && <span>{relative}</span>}
+          </div>
+        </div>
+      </Link>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="client-dashboard">
@@ -155,6 +216,19 @@ const ClientDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* جلسات اليوم — يظهر فقط إن وُجدت */}
+      {todaySessions.length > 0 && (
+        <div className="cs-today">
+          <div className="cs-today__head">
+            <span><Gavel size={16} /> لديك {todaySessions.length === 1 ? 'جلسة اليوم' : `${todaySessions.length} جلسات اليوم`}</span>
+            <Link to="/my-sessions?scope=today" className="cs-today__link">
+              عرض جلسات اليوم <ChevronLeft size={14} />
+            </Link>
+          </div>
+          {todaySessions.map(renderSessionItem)}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="client-dashboard__stats">
@@ -183,20 +257,20 @@ const ClientDashboard: React.FC = () => {
             <Upload size={24} />
           </div>
           <div className="stat-card__content">
-            <div className="stat-card__label">الوثائق المرفوعة</div>
+            <div className="stat-card__label">وثائق القضايا</div>
             <div className="stat-card__value">{stats.documentsCount}</div>
           </div>
         </Link>
 
-        <div className="stat-card">
+        <Link to="/my-sessions" className="stat-card">
           <div className="stat-card__icon stat-card__icon--orange">
-            <Calendar size={24} />
+            <Gavel size={24} />
           </div>
           <div className="stat-card__content">
             <div className="stat-card__label">الجلسات القادمة</div>
-            <div className="stat-card__value">{stats.upcomingHearings}</div>
+            <div className="stat-card__value">{stats.upcomingSessions}</div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Main Content */}
@@ -232,7 +306,7 @@ const ClientDashboard: React.FC = () => {
                     </div>
                     <div className="activity-item__content">
                       <div className="activity-item__title">{activity.title}</div>
-                      <div className="activity-item__desc">{activity.description}</div>
+                      {activity.description && <div className="activity-item__desc">{activity.description}</div>}
                       <div className="activity-item__date">
                         <Clock size={12} style={{ marginLeft: 4 }} />
                         {formatDate(activity.date)}
@@ -247,39 +321,26 @@ const ClientDashboard: React.FC = () => {
 
         {/* Sidebar */}
         <div className="sidebar-stack">
-          {/* Upcoming Events */}
+          {/* الجلسات القادمة — من case_sessions الحقيقية */}
           <div className="dashboard-section">
             <div className="dashboard-section__header">
               <h2 className="dashboard-section__title">
-                <Calendar size={18} />
-                المواعيد القادمة
+                <Gavel size={18} />
+                الجلسات القادمة
               </h2>
+              <Link to="/my-sessions" className="dashboard-section__link">
+                عرض الكل
+                <ChevronLeft size={14} style={{ marginRight: 4 }} />
+              </Link>
             </div>
             <div className="dashboard-section__body">
-              {events.length === 0 ? (
+              {upcomingSessions.length === 0 ? (
                 <div className="dashboard-empty">
                   <Calendar size={32} className="dashboard-empty__icon" />
-                  <p className="dashboard-empty__text">لا توجد مواعيد قادمة</p>
+                  <p className="dashboard-empty__text">لا توجد جلسات قادمة مسجّلة</p>
                 </div>
               ) : (
-                events.slice(0, 3).map((event) => (
-                  <div
-                    key={event.id}
-                    className="event-card"
-                    onClick={() => event.case_id && (window.location.href = `/my-cases/${event.case_id}`)}
-                  >
-                    <div className="event-card__header">
-                      <AlertCircle size={16} className="event-card__icon" />
-                      <span className="event-card__title">{event.title}</span>
-                    </div>
-                    <div className="event-card__details">
-                      <div className="event-card__date">
-                        {formatDate(event.date)} - {event.time}
-                      </div>
-                      <div className="event-card__location">{event.location}</div>
-                    </div>
-                  </div>
-                ))
+                upcomingSessions.slice(0, 5).map(renderSessionItem)
               )}
             </div>
           </div>
@@ -297,6 +358,13 @@ const ClientDashboard: React.FC = () => {
                   <FileText size={18} />
                 </div>
                 <span className="quick-action__text">عرض جميع القضايا</span>
+              </Link>
+
+              <Link to="/my-sessions" className="quick-action">
+                <div className="quick-action__icon quick-action__icon--cases">
+                  <Gavel size={18} />
+                </div>
+                <span className="quick-action__text">جلساتي</span>
               </Link>
 
               <Link to="/my-documents-required" className="quick-action">

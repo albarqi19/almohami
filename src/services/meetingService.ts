@@ -494,6 +494,15 @@ export const clientMeetingService = {
     return response.data;
   },
 
+  // اعتماد طلب موعد قادم من بوابة العميل (pending ⇒ confirmed + رسالة التأكيد للعميل)
+  async confirm(id: number): Promise<ClientMeeting> {
+    const response = await apiClient.patch<{ success: boolean; data: ClientMeeting }>(
+      `/meetings/client/${id}/confirm`,
+      {}
+    );
+    return response.data;
+  },
+
   // إلغاء اجتماع
   async cancel(id: number, reason: string): Promise<ClientMeeting> {
     const response = await apiClient.patch<{ success: boolean; data: ClientMeeting }>(

@@ -1,0 +1,514 @@
+/* ====================================================
+   جلساتُ العميل — صفحة «جلساتي» وبلوكاتُها في اللوحة وصفحة القضية.
+   بدائيّاتُ `cs-*` وحدَها: لا تُعيد تعريفَ صنفٍ قائم ولا تتعلّق بترتيب الحقن.
+   فلات صرف: لا تدرّجات، لا توهّج، لا أشرطةَ تمييزٍ جانبية — الحالةُ رقاقةٌ نصّية.
+   ==================================================== */
+
+.cs-page {
+  background: var(--dashboard-bg);
+  min-height: 100vh;
+}
+
+/* --- الترويسة (نفس إيقاع «قضاياي») --- */
+.cs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  background: var(--dashboard-card);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.cs-header__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cs-header__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--law-navy-light);
+  color: var(--law-navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cs-header__h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin: 0;
+}
+
+.cs-header__sub {
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  margin: 2px 0 0;
+}
+
+/* --- التبويبات: أزرارٌ مجزّأة بحدٍّ واحد --- */
+.cs-tabs {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--dashboard-card);
+}
+
+.cs-tab {
+  appearance: none;
+  border: none;
+  border-inline-start: 1px solid var(--color-border);
+  background: transparent;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cs-tab:first-child {
+  border-inline-start: none;
+}
+
+.cs-tab:hover {
+  color: var(--color-heading);
+  background: var(--quiet-gray-50);
+}
+
+.cs-tab[aria-selected='true'] {
+  background: var(--law-navy);
+  color: #fff;
+}
+
+.cs-tab__count {
+  font-size: 11px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--quiet-gray-100);
+  color: var(--color-text-secondary);
+}
+
+.cs-tab[aria-selected='true'] .cs-tab__count {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+/* --- القائمة --- */
+.cs-content {
+  padding: 20px 24px;
+}
+
+.cs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--dashboard-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.cs-list--embedded {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.cs-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cs-row:last-child {
+  border-bottom: none;
+}
+
+.cs-list--embedded .cs-row {
+  padding: 12px 0;
+}
+
+/* كتلة التاريخ: رقم اليوم كبير، الشهر واليوم تحته — بلا لون خلفية */
+.cs-row__date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-inline-end: 1px solid var(--color-border);
+  padding-inline-end: 12px;
+  min-height: 52px;
+  color: var(--color-heading);
+}
+
+.cs-row__day {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cs-row__month {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 3px;
+}
+
+.cs-row__weekday {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-top: 1px;
+}
+
+.cs-row__date--unknown {
+  font-size: 11.5px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.cs-row--today .cs-row__day {
+  color: var(--law-navy);
+}
+
+.cs-row__main {
+  min-width: 0;
+}
+
+.cs-row__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-heading);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cs-row__title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cs-row__title a:hover {
+  text-decoration: underline;
+}
+
+.cs-row__file {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+}
+
+.cs-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.cs-row__meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cs-row__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* الرقاقة: نصٌّ بحدٍّ، لا شريط جانبي */
+.cs-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  background: transparent;
+  white-space: nowrap;
+}
+
+.cs-chip--today {
+  border-color: var(--law-navy);
+  color: var(--law-navy);
+}
+
+.cs-chip--upcoming {
+  border-color: #2f6f4e;
+  color: #2f6f4e;
+}
+
+.cs-chip--ended {
+  border-color: var(--color-border);
+  color: var(--color-text-tertiary);
+}
+
+.cs-chip--cancelled {
+  border-color: #b23b3b;
+  color: #b23b3b;
+}
+
+.cs-chip--muted {
+  font-weight: 500;
+}
+
+.cs-row__relative {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.cs-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 1px solid var(--color-border);
+  background: var(--dashboard-card);
+  color: var(--color-heading);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.cs-btn:hover:not(:disabled) {
+  border-color: var(--law-navy);
+  color: var(--law-navy);
+}
+
+.cs-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.cs-more {
+  display: flex;
+  justify-content: center;
+  padding: 14px;
+}
+
+/* --- الفارغ / التحميل / الخطأ --- */
+.cs-empty {
+  padding: 56px 20px;
+  text-align: center;
+  background: var(--dashboard-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.cs-empty__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--quiet-gray-50);
+  color: var(--color-text-tertiary);
+}
+
+.cs-empty__title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.cs-empty__text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.cs-skeleton {
+  background: var(--dashboard-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.cs-skeleton__row {
+  height: 66px;
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.cs-skeleton__row:last-child {
+  border-bottom: none;
+}
+
+.cs-skeleton__row::after {
+  content: '';
+  position: absolute;
+  inset: 18px 18px;
+  border-radius: 6px;
+  background: var(--quiet-gray-100);
+  opacity: 0.7;
+}
+
+.cs-error {
+  padding: 16px 18px;
+  border: 1px solid #b23b3b;
+  border-radius: 12px;
+  color: #b23b3b;
+  background: var(--dashboard-card);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --- بلوك «جلسات اليوم» في اللوحة --- */
+.cs-today {
+  margin: 0 24px 20px;
+  border: 1px solid var(--law-navy);
+  border-radius: 12px;
+  background: var(--dashboard-card);
+  overflow: hidden;
+}
+
+.cs-today__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--law-navy);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.cs-today__head span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cs-today__link {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--law-navy);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cs-today__link:hover {
+  text-decoration: underline;
+}
+
+/* --- بلوك «الجلسات القادمة» في اللوحة (يعيش داخل dashboard-section) --- */
+.cs-dash-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--color-border);
+  color: inherit;
+  text-decoration: none;
+}
+
+.cs-dash-item:last-child {
+  border-bottom: none;
+}
+
+.cs-dash-item:hover {
+  background: var(--quiet-gray-50);
+}
+
+.cs-dash-item__date {
+  width: 44px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cs-dash-item__day {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-heading);
+  line-height: 1;
+}
+
+.cs-dash-item__month {
+  display: block;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 3px;
+}
+
+.cs-dash-item__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.cs-dash-item__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-dash-item__meta {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 3px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .cs-row {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .cs-row__side {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .cs-content {
+    padding: 14px;
+  }
+
+  .cs-today {
+    margin: 0 14px 16px;
+  }
+}
