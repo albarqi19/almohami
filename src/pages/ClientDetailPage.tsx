@@ -29,12 +29,25 @@ import ClientDocumentsManager from '../components/ClientDocumentsManager';
 import WhatsAppSendModal from '../components/WhatsAppSendModal';
 import ComposeCorrespondenceModal from '../components/ComposeCorrespondenceModal';
 import EstablishmentAdminTab from '../components/clients/EstablishmentAdminTab';
+import ClientGeneralMessagesPanel from '../components/ClientGeneralMessagesPanel';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CredentialsModal from '../components/CredentialsModal';
 import { toast } from 'react-toastify';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
-type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'legal_services' | 'fee_proposals' | 'letters' | 'communications' | 'activities' | 'establishment';
+type TabKey = 'cases' | 'sessions' | 'tasks' | 'documents' | 'wekalat' | 'legal_services' | 'fee_proposals' | 'letters' | 'communications' | 'messages' | 'activities' | 'establishment';
+
+const TAB_KEYS: TabKey[] = ['cases', 'sessions', 'tasks', 'documents', 'wekalat', 'legal_services', 'fee_proposals', 'letters', 'communications', 'messages', 'activities', 'establishment'];
+
+/** التبويب الابتدائي من `?tab=` (إشعار «رسالة عامة» يقود إلى `?tab=messages`) */
+function initialTab(): TabKey {
+  try {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    return t && (TAB_KEYS as string[]).includes(t) ? (t as TabKey) : 'cases';
+  } catch {
+    return 'cases';
+  }
+}
 
 /**
  * حالاتُ القضية **المنتهية** — وما عداها مفتوح.
@@ -58,7 +71,7 @@ const ClientDetailPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { user: authUser } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<TabKey>('cases');
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [casesScope, setCasesScope] = useState<CaseScope>('all');
   const [tasksFilter, setTasksFilter] = useState<'all' | 'open' | 'overdue' | 'completed'>('open');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -455,6 +468,8 @@ const ClientDetailPage: React.FC = () => {
             )}
             <TabBtn active={activeTab === 'communications'} onClick={() => setActiveTab('communications')} icon={<MessageSquare size={13} />}
               count={communications.length}>التواصل</TabBtn>
+            {/* الرسائل العامة (بلا قضية) بين العميل والمكتب — تصله في بوابته */}
+            <TabBtn active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<Mail size={13} />}>الرسائل</TabBtn>
             <TabBtn active={activeTab === 'activities'} onClick={() => setActiveTab('activities')} icon={<Activity size={13} />}>النشاطات</TabBtn>
           </div>
 
@@ -511,6 +526,9 @@ const ClientDetailPage: React.FC = () => {
                 loading={communicationsQuery.isLoading}
                 onAdd={() => setIsLogCommModalOpen(true)}
               />
+            )}
+            {activeTab === 'messages' && clientId && (
+              <ClientGeneralMessagesPanel clientId={Number(clientId)} clientName={client.name} />
             )}
             {activeTab === 'activities' && <ActivitiesTab items={activities} loading={activitiesQuery.isLoading} />}
           </div>

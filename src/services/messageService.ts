@@ -36,12 +36,17 @@ export interface Message {
 }
 
 export interface Conversation {
-  case_id: number;
+  /** مفتاحُ السلسلة: معرّف القضية، أو `general` (العميل)، أو `general-<clientId>` (الموظف) */
+  conversation_key: string;
+  is_general: boolean;
+  case_id: number | null;
   case: {
     id: number;
     title: string;
     file_number?: string;
   } | null;
+  /** عند الموظف: العميلُ صاحبُ السلسلة العامة */
+  client?: { id: number; name: string; avatar: string | null } | null;
   other_party: {
     id: number;
     name: string;
@@ -63,10 +68,12 @@ export interface Recipient {
   name: string;
   avatar: string | null;
   role: string;
+  is_relationship_manager?: boolean;
 }
 
 export interface SendMessageRequest {
-  case_id: number;
+  /** بلا قضية (null/غياب) = رسالة عامة بين العميل والمكتب */
+  case_id?: number | null;
   recipient_id: number;
   message: string;
   subject?: string;
@@ -147,6 +154,37 @@ export class MessageService {
     } else {
       throw new Error(response.message || 'فشل في إرسال الرسالة');
     }
+  }
+
+  // ==================== الرسائل العامة (بلا قضية) ====================
+
+  /** سلسلة العميل العامة مع المكتب (وتُعلَّم المستلَمة مقروءة) */
+  static async getGeneralMessages(page: number = 1, perPage: number = 50): Promise<{ messages: CaseMessagesResponse['messages'] }> {
+    const response = await apiClient.get<ApiResponse<{ messages: CaseMessagesResponse['messages'] }>>(`/client/messages/general?page=${page}&per_page=${perPage}`);
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'فشل في جلب الرسائل العامة');
+  }
+
+  /** من يجوز للعميل مراسلته خارج قضية */
+  static async getGeneralRecipients(): Promise<Recipient[]> {
+    const response = await apiClient.get<ApiResponse<Recipient[]>>('/client/messages/general/recipients');
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'فشل في جلب المستلمين');
+  }
+
+  static async markGeneralAsRead(): Promise<void> {
+    await apiClient.put<ApiResponse<unknown>>('/client/messages/general/read-all');
+  }
+
+  /** (للمكتب) سلسلة عميل العامة */
+  static async getClientGeneralMessages(clientId: number, page: number = 1, perPage: number = 50): Promise<{ client: { id: number; name: string; avatar: string | null }; messages: CaseMessagesResponse['messages'] }> {
+    const response = await apiClient.get<ApiResponse<{ client: { id: number; name: string; avatar: string | null }; messages: CaseMessagesResponse['messages'] }>>(`/messages/general/${clientId}?page=${page}&per_page=${perPage}`);
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'فشل في جلب الرسائل');
+  }
+
+  static async markClientGeneralAsRead(clientId: number): Promise<void> {
+    await apiClient.put<ApiResponse<unknown>>(`/messages/general/${clientId}/read-all`);
   }
 
   /**

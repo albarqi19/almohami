@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare,
@@ -13,22 +13,37 @@ import {
   Loader2,
   AlertCircle,
   FileText,
-  RefreshCw
+  RefreshCw,
+  Building2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { MessageService, type Conversation, type Message, type Recipient } from '../services/messageService';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
+/** مفتاحُ السلسلة العامة (بلا قضية) — يطابق `conversation_key` في الباك */
+const GENERAL_KEY = 'general';
+
+/** سلسلةٌ عامة فارغة تُثبَّت في أعلى القائمة كي يستطيع العميل مراسلة المكتب بلا قضية */
+const emptyGeneralConversation = (): Conversation => ({
+  conversation_key: GENERAL_KEY,
+  is_general: true,
+  case_id: null,
+  case: null,
+  other_party: { id: 0, name: 'المكتب', avatar: null, role: 'office' },
+  last_message: { id: 0, message: 'راسل المكتب في أي موضوع لا يخصّ قضية بعينها', created_at: '', is_mine: false },
+  unread_count: 0,
+  total_messages: 0,
+});
+
 const ClientMessages: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // State
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedCaseId, setSelectedCaseId] = useState<number | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [selectedRecipient, setSelectedRecipient] = useState<Recipient | null>(null);
@@ -40,26 +55,37 @@ const ClientMessages: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [caseInfo, setCaseInfo] = useState<{ id: number; title: string; file_number?: string } | null>(null);
 
+  const isGeneral = selectedKey === GENERAL_KEY;
+  const selectedCaseId = selectedKey && !isGeneral ? Number(selectedKey) : null;
+
   // Load conversations on mount
   useEffect(() => {
     loadConversations();
   }, []);
 
-  // Check URL params for case_id
+  // Check URL params: ?thread=general أو ?case_id=
   useEffect(() => {
+    const thread = searchParams.get('thread');
     const caseId = searchParams.get('case_id');
-    if (caseId) {
-      setSelectedCaseId(parseInt(caseId));
+    if (thread === GENERAL_KEY) {
+      setSelectedKey(GENERAL_KEY);
+    } else if (caseId) {
+      setSelectedKey(caseId);
     }
   }, [searchParams]);
 
-  // Load messages when case is selected
+  // Load messages when a conversation is selected
   useEffect(() => {
-    if (selectedCaseId) {
-      loadCaseMessages(selectedCaseId);
-      loadRecipients(selectedCaseId);
+    if (!selectedKey) return;
+    setSelectedRecipient(null);
+    if (selectedKey === GENERAL_KEY) {
+      loadGeneralMessages();
+      loadGeneralRecipients();
+    } else {
+      loadCaseMessages(Number(selectedKey));
+      loadRecipients(Number(selectedKey));
     }
-  }, [selectedCaseId]);
+  }, [selectedKey]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -75,7 +101,9 @@ const ClientMessages: React.FC = () => {
       setIsLoading(true);
       setError(null);
       const data = await MessageService.getConversations();
-      setConversations(data);
+      // السلسلةُ العامة دائماً في الأعلى — موجودةً كانت أم لا
+      const general = data.find(c => c.is_general) ?? emptyGeneralConversation();
+      setConversations([general, ...data.filter(c => !c.is_general)]);
     } catch (err: any) {
       setError(err.message || 'فشل في تحميل المحادثات');
     } finally {
@@ -107,17 +135,56 @@ const ClientMessages: React.FC = () => {
     }
   };
 
+  const loadGeneralMessages = async () => {
+    try {
+      setIsLoadingMessages(true);
+      setError(null);
+      setCaseInfo(null);
+      const data = await MessageService.getGeneralMessages();
+      setMessages(data.messages.data);
+      setConversations(prev => prev.map(conv => (conv.is_general ? { ...conv, unread_count: 0 } : conv)));
+    } catch (err: any) {
+      setError(err.message || 'فشل في تحميل الرسائل');
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  };
+
   const loadRecipients = async (caseId: number) => {
     try {
       const data = await MessageService.getRecipients(caseId);
       setRecipients(data);
-      if (data.length > 0 && !selectedRecipient) {
-        setSelectedRecipient(data[0]);
-      }
+      setSelectedRecipient(data.length > 0 ? data[0] : null);
     } catch (err: any) {
       console.error('Failed to load recipients:', err);
     }
   };
+
+  const loadGeneralRecipients = async () => {
+    try {
+      const data = await MessageService.getGeneralRecipients();
+      setRecipients(data);
+      // مديرُ العلاقة أولاً، وإلا أوّلُ متاح
+      setSelectedRecipient(data.find(r => r.is_relationship_manager) ?? data[0] ?? null);
+    } catch (err: any) {
+      console.error('Failed to load recipients:', err);
+    }
+  };
+
+  const refreshOpenThread = useCallback(async () => {
+    if (!selectedKey) return;
+    try {
+      if (selectedKey === GENERAL_KEY) {
+        const data = await MessageService.getGeneralMessages();
+        setMessages(data.messages.data);
+      } else {
+        const data = await MessageService.getCaseMessages(Number(selectedKey));
+        setMessages(data.messages.data);
+      }
+    } catch (err) {
+      console.error('Failed to refresh messages:', err);
+    }
+  }, [selectedKey]);
 
   // تحديث تلقائي للمحادثات كل 10 ثواني
   useAutoRefresh({
@@ -129,29 +196,20 @@ const ClientMessages: React.FC = () => {
 
   // تحديث تلقائي للرسائل كل 5 ثواني عند فتح محادثة
   useAutoRefresh({
-    onRefresh: async () => {
-      if (selectedCaseId) {
-        try {
-          const data = await MessageService.getCaseMessages(selectedCaseId);
-          setMessages(data.messages.data);
-        } catch (err) {
-          console.error('Failed to refresh messages:', err);
-        }
-      }
-    },
+    onRefresh: refreshOpenThread,
     refetchOnFocus: true,
     pollingInterval: 5, // كل 5 ثواني
-    enabled: !!selectedCaseId, // فقط عند فتح محادثة
+    enabled: !!selectedKey, // فقط عند فتح محادثة
     minRefreshInterval: 3,
   });
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedCaseId || !selectedRecipient) return;
+    if (!newMessage.trim() || !selectedKey || !selectedRecipient) return;
 
     try {
       setIsSending(true);
       const sentMessage = await MessageService.sendMessage({
-        case_id: selectedCaseId,
+        case_id: isGeneral ? null : selectedCaseId,
         recipient_id: selectedRecipient.id,
         message: newMessage.trim(),
         type: 'general'
@@ -176,12 +234,13 @@ const ClientMessages: React.FC = () => {
     }
   };
 
-  const selectConversation = (caseId: number) => {
-    setSelectedCaseId(caseId);
-    setSearchParams({ case_id: caseId.toString() });
+  const selectConversation = (conv: Conversation) => {
+    setSelectedKey(conv.conversation_key);
+    setSearchParams(conv.is_general ? { thread: GENERAL_KEY } : { case_id: String(conv.case_id) });
   };
 
   const formatTime = (dateStr: string) => {
+    if (!dateStr) return '';
     const date = new Date(dateStr);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -199,6 +258,7 @@ const ClientMessages: React.FC = () => {
   };
 
   const filteredConversations = conversations.filter(conv =>
+    conv.is_general ||
     conv.case?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     conv.other_party?.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -207,10 +267,14 @@ const ClientMessages: React.FC = () => {
     const labels: { [key: string]: string } = {
       lawyer: 'محامي',
       admin: 'مدير',
+      owner: 'مالك المكتب',
+      partner: 'شريك',
+      senior_lawyer: 'محامٍ أول',
       legal_assistant: 'مساعد قانوني',
       client: 'عميل'
     };
-    return labels[role] || role;
+    // الأدوار المخصّصة لا تُعرض بمفتاحها التقني
+    return labels[role] || 'فريق المكتب';
   };
 
   return (
@@ -221,7 +285,7 @@ const ClientMessages: React.FC = () => {
           <MessageSquare className="header-icon" />
           <div>
             <h1>الرسائل</h1>
-            <p>تواصل مع فريقك القانوني</p>
+            <p>تواصل مع فريقك القانوني — في قضية بعينها أو في أي موضوع عام</p>
           </div>
         </div>
         <button onClick={loadConversations} className="refresh-btn" disabled={isLoading}>
@@ -259,14 +323,16 @@ const ClientMessages: React.FC = () => {
             ) : (
               filteredConversations.map(conv => (
                 <motion.div
-                  key={conv.case_id}
-                  className={`conversation-item ${selectedCaseId === conv.case_id ? 'active' : ''}`}
-                  onClick={() => selectConversation(conv.case_id)}
+                  key={conv.conversation_key}
+                  className={`conversation-item ${selectedKey === conv.conversation_key ? 'active' : ''}`}
+                  onClick={() => selectConversation(conv)}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
                   <div className="conversation-avatar">
-                    {conv.other_party?.avatar ? (
+                    {conv.is_general ? (
+                      <Building2 />
+                    ) : conv.other_party?.avatar ? (
                       <img src={conv.other_party.avatar} alt={conv.other_party.name} />
                     ) : (
                       <User />
@@ -277,12 +343,12 @@ const ClientMessages: React.FC = () => {
                   </div>
                   <div className="conversation-info">
                     <div className="conversation-header">
-                      <span className="party-name">{conv.other_party?.name || 'غير معروف'}</span>
+                      <span className="party-name">{conv.is_general ? 'المكتب — رسائل عامة' : (conv.other_party?.name || 'غير معروف')}</span>
                       <span className="message-time">{formatTime(conv.last_message.created_at)}</span>
                     </div>
                     <div className="case-title">
-                      <FileText className="case-icon" />
-                      <span>{conv.case?.title || 'قضية'}</span>
+                      {conv.is_general ? <MessageSquare className="case-icon" /> : <FileText className="case-icon" />}
+                      <span>{conv.is_general ? 'خارج ملفات القضايا' : (conv.case?.title || 'قضية')}</span>
                     </div>
                     <p className="last-message">
                       {conv.last_message.is_mine && <span className="you-label">أنت: </span>}
@@ -297,18 +363,20 @@ const ClientMessages: React.FC = () => {
 
         {/* Messages Panel */}
         <div className="messages-panel">
-          {selectedCaseId ? (
+          {selectedKey ? (
             <>
               {/* Chat Header */}
               <div className="chat-header">
-                <button className="back-btn" onClick={() => setSelectedCaseId(null)}>
+                <button className="back-btn" onClick={() => setSelectedKey(null)}>
                   <ArrowRight />
                 </button>
                 <div className="chat-info">
-                  <h3>{caseInfo?.title || 'محادثة'}</h3>
-                  {caseInfo?.file_number && (
+                  <h3>{isGeneral ? 'رسائل عامة مع المكتب' : (caseInfo?.title || 'محادثة')}</h3>
+                  {isGeneral ? (
+                    <span className="file-number">لأي موضوع لا يخصّ قضية بعينها</span>
+                  ) : caseInfo?.file_number ? (
                     <span className="file-number">رقم الملف: {caseInfo.file_number}</span>
-                  )}
+                  ) : null}
                 </div>
                 {recipients.length > 0 && (
                   <div className="recipient-selector">
@@ -321,7 +389,7 @@ const ClientMessages: React.FC = () => {
                     >
                       {recipients.map(r => (
                         <option key={r.id} value={r.id}>
-                          {r.name} ({getRoleLabel(r.role)})
+                          {r.name} ({r.is_relationship_manager ? 'مدير علاقتك' : getRoleLabel(r.role)})
                         </option>
                       ))}
                     </select>
@@ -340,7 +408,7 @@ const ClientMessages: React.FC = () => {
                   <div className="empty-messages">
                     <MessageSquare className="empty-icon" />
                     <p>لا توجد رسائل</p>
-                    <span>ابدأ المحادثة بإرسال رسالة</span>
+                    <span>{isGeneral ? 'اكتب للمكتب في أي موضوع — يصل مباشرةً لمن تختاره من فريقك' : 'ابدأ المحادثة بإرسال رسالة'}</span>
                   </div>
                 ) : (
                   <AnimatePresence>
@@ -406,7 +474,7 @@ const ClientMessages: React.FC = () => {
                 )}
                 <div className="input-container">
                   <textarea
-                    placeholder="اكتب رسالتك هنا..."
+                    placeholder={selectedRecipient ? `اكتب رسالتك إلى ${selectedRecipient.name}...` : 'لا يوجد مستلم متاح'}
                     value={newMessage}
                     onChange={e => setNewMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
@@ -427,7 +495,7 @@ const ClientMessages: React.FC = () => {
             <div className="no-chat-selected">
               <MessageSquare className="big-icon" />
               <h3>اختر محادثة</h3>
-              <p>اختر محادثة من القائمة للبدء في المراسلة</p>
+              <p>اختر محادثة من القائمة، أو «المكتب — رسائل عامة» لأي موضوع خارج القضايا</p>
             </div>
           )}
         </div>
