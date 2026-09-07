@@ -1,0 +1,344 @@
+/* ====================================================
+   مواعيدُ العميل («مواعيدي» وطلب موعد). تعيد استعمال بدائيّات `cx-*` المشتركة
+   وتضيف `ca-*` لما يخصّها. فلات صرف: لا تدرّجات ولا توهّج ولا أشرطةَ تمييزٍ جانبية.
+   ==================================================== */
+
+.ca-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ca-row:last-child {
+  border-bottom: none;
+}
+
+.ca-row__date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-inline-end: 1px solid var(--color-border);
+  padding-inline-end: 12px;
+  min-height: 52px;
+  color: var(--color-heading);
+}
+
+.ca-row__day {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ca-row__month {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 3px;
+}
+
+.ca-row__weekday {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-top: 1px;
+}
+
+.ca-row--past .ca-row__day {
+  color: var(--color-text-tertiary);
+}
+
+.ca-row__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.ca-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.ca-row__meta > span,
+.ca-row__meta > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ca-row__meta a {
+  color: var(--law-navy);
+  text-decoration: none;
+}
+
+.ca-row__meta a:hover {
+  text-decoration: underline;
+}
+
+.ca-row__note {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.ca-row__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ca-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.ca-chip--pending {
+  border-color: #a05a00;
+  color: #a05a00;
+}
+
+.ca-chip--confirmed {
+  border-color: #2f6f4e;
+  color: #2f6f4e;
+}
+
+.ca-chip--completed {
+  border-color: var(--law-navy);
+  color: var(--law-navy);
+}
+
+.ca-chip--cancelled_by_client,
+.ca-chip--cancelled_by_lawyer,
+.ca-chip--no_show {
+  border-color: #b23b3b;
+  color: #b23b3b;
+}
+
+.ca-section {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin: 4px 0 -6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ca-section em {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
+/* --- مودال الطلب: خطوات مضغوطة --- */
+.ca-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ca-step__label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ca-step__label em {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
+.ca-lawyers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ca-pick {
+  appearance: none;
+  border: 1px solid var(--color-border);
+  background: var(--dashboard-card);
+  color: var(--color-heading);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ca-pick small {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+}
+
+.ca-pick:hover:not(:disabled) {
+  border-color: var(--law-navy);
+}
+
+.ca-pick[aria-pressed='true'] {
+  background: var(--law-navy);
+  border-color: var(--law-navy);
+  color: #fff;
+}
+
+.ca-pick[aria-pressed='true'] small {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.ca-pick:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ca-days {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.ca-day {
+  appearance: none;
+  border: 1px solid var(--color-border);
+  background: var(--dashboard-card);
+  border-radius: 8px;
+  min-width: 64px;
+  padding: 6px 8px;
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--color-heading);
+  flex-shrink: 0;
+}
+
+.ca-day b {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ca-day span {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 3px;
+}
+
+.ca-day:hover {
+  border-color: var(--law-navy);
+}
+
+.ca-day[aria-pressed='true'] {
+  background: var(--law-navy);
+  border-color: var(--law-navy);
+  color: #fff;
+}
+
+.ca-day[aria-pressed='true'] span {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.ca-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px;
+  max-height: 176px;
+  overflow-y: auto;
+}
+
+.ca-slot {
+  appearance: none;
+  border: 1px solid var(--color-border);
+  background: var(--dashboard-card);
+  border-radius: 7px;
+  padding: 6px 0;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  color: var(--color-heading);
+  direction: ltr;
+}
+
+.ca-slot:hover {
+  border-color: var(--law-navy);
+}
+
+.ca-slot[aria-pressed='true'] {
+  background: var(--law-navy);
+  border-color: var(--law-navy);
+  color: #fff;
+}
+
+.ca-inline {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ca-inline > div {
+  flex: 1;
+  min-width: 180px;
+}
+
+.ca-muted {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  padding: 8px 0;
+}
+
+.ca-error {
+  font-size: 11.5px;
+  color: #b23b3b;
+  margin-top: 4px;
+}
+
+.ca-summary {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--quiet-gray-50);
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: var(--color-heading);
+  line-height: 1.8;
+}
+
+@media (max-width: 720px) {
+  .ca-row {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .ca-row__side {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}

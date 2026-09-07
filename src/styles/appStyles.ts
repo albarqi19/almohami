@@ -159,3 +159,5 @@ import './client-sessions.css';
 import './client-execution.css';
 // خدماتُ العميل — تعيد استعمال بدائيّات `cx-*` وتضيف `cv-*` وحدها، فلا تتعلّق بترتيب الحقن.
 import './client-services.css';
+// مواعيدُ العميل — تعيد استعمال بدائيّات `cx-*` وتضيف `ca-*` وحدها، فلا تتعلّق بترتيب الحقن.
+import './client-appointments.css';

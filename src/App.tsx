@@ -100,6 +100,7 @@ const ClientExecutionRequests = lazyWithRetry(() => import('./pages/ClientExecut
 const ClientExecutionRequestDetail = lazyWithRetry(() => import('./pages/ClientExecutionRequestDetail'));
 const ClientServices = lazyWithRetry(() => import('./pages/ClientServices'));
 const ClientServiceDetail = lazyWithRetry(() => import('./pages/ClientServiceDetail'));
+const ClientAppointments = lazyWithRetry(() => import('./pages/ClientAppointments'));
 const ClientEstablishmentPage = lazyWithRetry(() => import('./pages/ClientEstablishmentPage'));
 const PersonalNotebook = lazyWithRetry(() => import('./pages/NotebookWorkspace'));
 const UserGuide = lazyWithRetry(() => import('./pages/UserGuide'));
@@ -465,6 +466,12 @@ function App() {
               <Route path="my-services/:id" element={
                 <ProtectedRoute allowedRoles={['client']}>
                   <ClientServiceDetail />
+                </ProtectedRoute>
+              } />
+              {/* مواعيدُ العميل — طلبُ موعد ومتابعته؛ الخادم يفرض الملكية في /client/meetings */}
+              <Route path="my-appointments" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientAppointments />
                 </ProtectedRoute>
               } />
 

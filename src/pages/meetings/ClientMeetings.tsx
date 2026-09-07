@@ -225,6 +225,18 @@ const ClientMeetings: React.FC = () => {
     }
   };
 
+  // اعتمادُ طلبٍ قادم من بوابة العميل — يُرسل له التأكيد (واتساب/بريد) وجرس البوابة
+  const handleConfirmMeeting = async (meeting: ClientMeeting) => {
+    setActiveMenu(null);
+    try {
+      await clientMeetingService.confirm(meeting.id);
+      fetchData();
+    } catch (err) {
+      console.error('Error confirming meeting:', err);
+      alert(err instanceof Error ? err.message : 'تعذّر اعتماد الموعد');
+    }
+  };
+
   const handleCancelMeeting = async (meeting: ClientMeeting) => {
     const reason = prompt('سبب الإلغاء:');
     if (reason) {
@@ -769,6 +781,12 @@ const ClientMeetings: React.FC = () => {
                             </button>
                             {activeMenu === meeting.id && (
                               <div className="dropdown-menu">
+                                {meeting.status === 'pending' && (
+                                  <button onClick={() => handleConfirmMeeting(meeting)}>
+                                    <CheckCircle size={14} />
+                                    اعتماد الموعد وإبلاغ العميل
+                                  </button>
+                                )}
                                 <button onClick={() => handleOpenOutcome(meeting)}>
                                   <CheckCircle size={14} />
                                   إنهاء وتسجيل النتيجة
