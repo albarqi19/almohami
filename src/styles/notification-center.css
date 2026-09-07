@@ -265,3 +265,9 @@
     max-height: 60vh;
   }
 }
+
+/* ── محتوى توست التنبيه الحيّ (useRealtimeNotifications) ── */
+.rt-notif { display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
+.rt-notif__title { font-size: 13px; font-weight: 700; }
+.rt-notif__body { font-size: 12px; line-height: 1.5; opacity: 0.9; }
+.rt-notif__hint { font-size: 10.5px; opacity: 0.65; }

@@ -29,6 +29,7 @@ import ClientDocumentsManager from '../components/ClientDocumentsManager';
 import WhatsAppSendModal from '../components/WhatsAppSendModal';
 import ComposeCorrespondenceModal from '../components/ComposeCorrespondenceModal';
 import EstablishmentAdminTab from '../components/clients/EstablishmentAdminTab';
+import ClientEmailsCard from '../components/clients/ClientEmailsCard';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CredentialsModal from '../components/CredentialsModal';
 import { toast } from 'react-toastify';
@@ -84,6 +85,7 @@ const ClientDetailPage: React.FC = () => {
   // بوابة المنشأة: خلف establishment_portal_enabled؛ الكتابة داخل التبويب بـ clients.edit.
   const showEstablishmentTab = Boolean(authUser?.tenant?.establishment_portal_enabled);
   const canEditEstablishment = useAnyPermission(['clients.edit']);
+  const canEditClientEmails = useAnyPermission(['clients.edit']);
   // إرسال بيانات الدخول: نفس شرط manage.users بالباك (admin/owner أو مظلّة system.manage)
   const hasSystemManage = useAnyPermission(['system.manage']);
   const canResendCredentials = hasSystemManage
@@ -552,6 +554,11 @@ const ClientDetailPage: React.FC = () => {
               <InfoRow label="البريد" value={client.point_of_contact_email} dir="ltr" />
             </SideCard>
           )}
+
+          {/* بُرُد المراسلة الإضافية — جهةٌ بإدارات عدّة تراسل من بُرُدٍ شتّى وبريدُ العميل واحد */}
+          <SideCard title="بُرُد المراسلة">
+            <ClientEmailsCard clientId={Number(clientId)} canEdit={canEditClientEmails} />
+          </SideCard>
 
           <SideCard title="مدير الحساب">
             <select

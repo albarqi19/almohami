@@ -5,6 +5,8 @@ import { Menu, Search, Bell, Moon, Sun, User, LogOut, Palette, Feather } from 'l
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationCenter from './NotificationCenter';
+import { NotificationService } from '../services/notificationService';
+import { NOTIFICATIONS_CHANGED_EVENT } from '../hooks/useRealtimeNotifications';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -28,7 +30,27 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     const savedTheme = localStorage.getItem('theme') as ThemeMode;
     return savedTheme && ['light', 'dark', 'classic', 'diwan'].includes(savedTheme) ? savedTheme : 'diwan';
   });
-  const [notifications] = React.useState(3);
+  // عدّاد غير المقروء — كان رقماً ثابتاً (٣) لا يتغيّر. يُجلب عند الدخول ويُحدَّث
+  // فور وصول تنبيهٍ حيّ أو قراءته/حذفه من الجرس (أحداث window)، مع جلبٍ دوريّ احتياطيّ.
+  const [notifications, setNotifications] = React.useState(0);
+  const userId = user?.id;
+  React.useEffect(() => {
+    if (!userId) return;
+    let alive = true;
+    const refresh = () => {
+      NotificationService.getUnreadCount()
+        .then((count) => { if (alive) setNotifications(count); })
+        .catch(() => { /* الجرس تحسينٌ ثانوي — لا يُزعج */ });
+    };
+    refresh();
+    window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, refresh);
+    const timer = window.setInterval(refresh, 120_000);
+    return () => {
+      alive = false;
+      window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, refresh);
+      window.clearInterval(timer);
+    };
+  }, [userId]);
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const [showNotifications, setShowNotifications] = React.useState(false);
 

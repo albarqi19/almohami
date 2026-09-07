@@ -18,6 +18,19 @@ export const CLIENT_LANGUAGES: ReadonlyArray<{ value: string; label: string }> =
     { value: 'fr', label: 'الفرنسية — Français' },
 ];
 
+/** بريدٌ إضافيّ أو نطاقٌ كامل يُعرِّف العميل — جدول client_emails */
+export type ClientEmailKind = 'email' | 'domain';
+export interface ClientEmail {
+    id: number;
+    client_id: number;
+    kind: ClientEmailKind;
+    value: string;
+    label: string | null;
+    created_by: number | null;
+    creator?: { id: number; name: string } | null;
+    created_at: string;
+}
+
 export const clientLanguageLabel = (code?: string | null): string =>
     CLIENT_LANGUAGES.find(l => l.value === (code || 'ar'))?.label ?? code ?? 'العربية (الافتراضي)';
 
@@ -564,6 +577,27 @@ export class ClientManagementService {
 
     static async deleteClientDocument(clientId: number | string, docId: number | string): Promise<void> {
         await apiClient.delete<any>(`/client-management/${clientId}/client-documents/${docId}`);
+    }
+
+    // ===== بُرُد المراسلة الإضافية (بريد/نطاق) — تقرؤها مطابقة صندوق البريد الذكي =====
+
+    static async getClientEmails(clientId: number | string): Promise<ClientEmail[]> {
+        const response = await apiClient.get<{ success: boolean; data: ClientEmail[] }>(`/client-management/${clientId}/emails`);
+        return response.data || [];
+    }
+
+    static async addClientEmail(
+        clientId: number | string,
+        payload: { kind: ClientEmailKind; value: string; label?: string | null },
+    ): Promise<{ data: ClientEmail; rematched: number; message: string }> {
+        return await apiClient.post<{ success: boolean; data: ClientEmail; rematched: number; message: string }>(
+            `/client-management/${clientId}/emails`,
+            payload,
+        );
+    }
+
+    static async deleteClientEmail(clientId: number | string, emailId: number | string): Promise<void> {
+        await apiClient.delete<any>(`/client-management/${clientId}/emails/${emailId}`);
     }
 
     // ===== أعمال العميل: الخدمات/الاستشارات + الخطابات + تصدير ملف العميل PDF =====
