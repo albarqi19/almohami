@@ -157,3 +157,5 @@ import './case-station.css';
 import './client-sessions.css';
 // طلباتُ التنفيذ في بوابة العميل — بدائيّاتُ `cx-*` وحدَها، بلا إعادةِ تعريفِ أيّ صنفٍ قائم.
 import './client-execution.css';
+// خدماتُ العميل — تعيد استعمال بدائيّات `cx-*` وتضيف `cv-*` وحدها، فلا تتعلّق بترتيب الحقن.
+import './client-services.css';

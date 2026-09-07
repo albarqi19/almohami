@@ -61,6 +61,8 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: Gavel, label: 'جلساتي', path: '/my-sessions', permission: null, roles: ['client'] },
   // طلباتُ التنفيذ التي ربطها المكتب بحساب العميل (الخادم يفرض الملكية في /client/execution-requests)
   { icon: Scale, label: 'طلبات التنفيذ', path: '/my-execution-requests', permission: null, roles: ['client'] },
+  // خدماتُ العميل القانونية — يطلب خدمةً ويتابعها (الخادم يفرض الملكية في /client/services)
+  { icon: Briefcase, label: 'خدماتي', path: '/my-services', permission: null, roles: ['client'] },
   // بوابة المنشأة — متابعة العميل لوثائق منشأته وموظفيها (خلف establishment_portal_enabled)
   { icon: Landmark, label: 'منشأتي', path: '/my-establishment', permission: null, roles: ['client'], featureGate: 'establishment_portal', badge: 'جديد' },
   { icon: FolderUp, label: 'الوثائق المطلوبة', path: '/my-documents-required', permission: null, roles: ['client'] },

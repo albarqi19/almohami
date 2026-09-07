@@ -98,6 +98,8 @@ const ClientMessages = lazyWithRetry(() => import('./pages/ClientMessages'));
 const ClientSessions = lazyWithRetry(() => import('./pages/ClientSessions'));
 const ClientExecutionRequests = lazyWithRetry(() => import('./pages/ClientExecutionRequests'));
 const ClientExecutionRequestDetail = lazyWithRetry(() => import('./pages/ClientExecutionRequestDetail'));
+const ClientServices = lazyWithRetry(() => import('./pages/ClientServices'));
+const ClientServiceDetail = lazyWithRetry(() => import('./pages/ClientServiceDetail'));
 const ClientEstablishmentPage = lazyWithRetry(() => import('./pages/ClientEstablishmentPage'));
 const PersonalNotebook = lazyWithRetry(() => import('./pages/NotebookWorkspace'));
 const UserGuide = lazyWithRetry(() => import('./pages/UserGuide'));
@@ -452,6 +454,17 @@ function App() {
               <Route path="my-execution-requests/:id" element={
                 <ProtectedRoute allowedRoles={['client']}>
                   <ClientExecutionRequestDetail />
+                </ProtectedRoute>
+              } />
+              {/* خدماتُ العميل — طلبٌ ومتابعة؛ الخادم يفرض الملكية في /client/services */}
+              <Route path="my-services" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientServices />
+                </ProtectedRoute>
+              } />
+              <Route path="my-services/:id" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientServiceDetail />
                 </ProtectedRoute>
               } />
 
