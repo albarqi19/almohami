@@ -95,6 +95,9 @@ const CorrespondenceRegisterPage = lazyWithRetry(() => import('./pages/Correspon
 const IntakeRequestsPage = lazyWithRetry(() => import('./pages/IntakeRequestsPage'));
 const MemoApprovals = lazyWithRetry(() => import('./pages/MemoApprovals'));
 const ClientMessages = lazyWithRetry(() => import('./pages/ClientMessages'));
+const ClientSessions = lazyWithRetry(() => import('./pages/ClientSessions'));
+const ClientExecutionRequests = lazyWithRetry(() => import('./pages/ClientExecutionRequests'));
+const ClientExecutionRequestDetail = lazyWithRetry(() => import('./pages/ClientExecutionRequestDetail'));
 const ClientEstablishmentPage = lazyWithRetry(() => import('./pages/ClientEstablishmentPage'));
 const PersonalNotebook = lazyWithRetry(() => import('./pages/NotebookWorkspace'));
 const UserGuide = lazyWithRetry(() => import('./pages/UserGuide'));
@@ -432,6 +435,23 @@ function App() {
               <Route path="my-messages" element={
                 <ProtectedRoute allowedRoles={['client']}>
                   <ClientMessages />
+                </ProtectedRoute>
+              } />
+              {/* جلساتُ العميل — الخادم يفرض الملكية في /client/sessions (لا صلاحيات) */}
+              <Route path="my-sessions" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientSessions />
+                </ProtectedRoute>
+              } />
+              {/* طلباتُ التنفيذ المرتبطة بالعميل — الخادم يفرض الملكية في /client/execution-requests */}
+              <Route path="my-execution-requests" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientExecutionRequests />
+                </ProtectedRoute>
+              } />
+              <Route path="my-execution-requests/:id" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientExecutionRequestDetail />
                 </ProtectedRoute>
               } />
 

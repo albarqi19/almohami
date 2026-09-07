@@ -3,7 +3,7 @@ import {
   BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature,
   TrendingUp, Bell, Settings, ClipboardList, BarChart3, FolderUp, QrCode, Lightbulb,
   Landmark, AlarmClock, Archive, UserCog, Trash2, Inbox, CalendarOff, IdCard,
-  Fingerprint, Wallet, FileSpreadsheet, HandCoins, PenLine,
+  Fingerprint, Wallet, FileSpreadsheet, HandCoins, PenLine, Gavel,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -57,6 +57,10 @@ export const mainMenuItems: SidebarItem[] = [
   // بما يرفضه الخادمُ هو عينُ الفخّ الذي وثّقه تعليقُ بند «الإجازات والغياب» أدناه.
   { icon: IdCard, label: 'ملفّي الوظيفيّ', path: '/my-hr', permission: null, featureGate: 'hr' },
   { icon: FileText, label: 'قضاياي', path: '/my-cases', permission: null, roles: ['client'] },
+  // جلساتُ قضايا العميل — اليوم/القادمة/السابقة (الخادم يفرض الملكية في /client/sessions)
+  { icon: Gavel, label: 'جلساتي', path: '/my-sessions', permission: null, roles: ['client'] },
+  // طلباتُ التنفيذ التي ربطها المكتب بحساب العميل (الخادم يفرض الملكية في /client/execution-requests)
+  { icon: Scale, label: 'طلبات التنفيذ', path: '/my-execution-requests', permission: null, roles: ['client'] },
   // بوابة المنشأة — متابعة العميل لوثائق منشأته وموظفيها (خلف establishment_portal_enabled)
   { icon: Landmark, label: 'منشأتي', path: '/my-establishment', permission: null, roles: ['client'], featureGate: 'establishment_portal', badge: 'جديد' },
   { icon: FolderUp, label: 'الوثائق المطلوبة', path: '/my-documents-required', permission: null, roles: ['client'] },

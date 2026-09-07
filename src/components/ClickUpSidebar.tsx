@@ -151,6 +151,8 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
     const CLIENT_ALLOWED_PATHS = new Set<string>([
         '/dashboard',
         '/my-cases',
+        '/my-sessions',
+        '/my-execution-requests',
         '/my-establishment',
         '/my-documents-required',
         '/my-messages',

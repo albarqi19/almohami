@@ -29,6 +29,8 @@ import { ActivityService } from '../services/activityService';
 import type { TimelineItem } from '../services/activityService';
 import type { Case, Document } from '../types';
 import { isExternalLinkDoc, safeExternalHref, externalLinkHost } from '../types';
+import { ClientSessionService, formatSessionDate, formatSessionTime, type ClientSession } from '../services/clientSessionService';
+import ClientSessionRow from '../components/ClientSessionRow';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 const ClientCaseDetail: React.FC = () => {
@@ -47,6 +49,8 @@ const ClientCaseDetail: React.FC = () => {
   });
   const [recipients, setRecipients] = useState<Array<{ id: number; name: string; role: string }>>([]);
   const [selectedRecipient, setSelectedRecipient] = useState<number | null>(null);
+  const [sessions, setSessions] = useState<ClientSession[]>([]);
+  const [sessionsError, setSessionsError] = useState(false);
 
   useEffect(() => {
     const loadCaseData = async () => {
@@ -57,6 +61,16 @@ const ClientCaseDetail: React.FC = () => {
         // بوابة العميل تستخدم مسار العميل المخصّص (/client/cases/{id}) لا مسار الطاقم
         const caseData = await CaseService.getClientCaseDetails(caseId);
         setCaseData(caseData);
+
+        // جلسات القضية (مسار العميل — حقول محدودة، لا ضبط ولا ملاحظات)
+        try {
+          const s = await ClientSessionService.byCase(caseId);
+          setSessions(s.rows);
+          setSessionsError(false);
+        } catch (e) {
+          console.error('Error loading sessions:', e);
+          setSessionsError(true);
+        }
 
         const documentsData = await DocumentService.getDocuments({ case_id: caseId });
         setDocuments(documentsData.data || []);
@@ -346,10 +360,41 @@ const ClientCaseDetail: React.FC = () => {
                   <span className="case-info__label">الجلسة القادمة</span>
                   <span className="case-info__value">
                     <Calendar size={14} style={{ marginLeft: 6, opacity: 0.5 }} />
-                    {formatDate(caseData.next_hearing)}
+                    {(() => {
+                      // أقربُ جلسةٍ مفتوحة من الجلسات الحقيقية أولاً؛ وإلا حقلُ next_hearing على القضية
+                      const next = [...sessions]
+                        .filter(s => (s.status === 'today' || s.status === 'upcoming') && s.date)
+                        .sort((a, b) => (a.date! < b.date! ? -1 : a.date! > b.date! ? 1 : 0))[0];
+                      if (next) {
+                        const t = formatSessionTime(next.time);
+                        return `${formatSessionDate(next)}${t ? ` — ${t}` : ''}${next.status === 'today' ? ' (اليوم)' : ''}`;
+                      }
+                      return formatDate(caseData.next_hearing);
+                    })()}
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Sessions Card (جلسات القضية) */}
+          <div className="detail-card">
+            <div className="detail-card__header">
+              <h2 className="detail-card__title">
+                <Calendar size={18} />
+                الجلسات ({sessions.length})
+              </h2>
+            </div>
+            <div className="detail-card__body">
+              {sessionsError ? (
+                <p style={{ textAlign: 'center', color: 'var(--color-text-secondary)', padding: '1rem 0' }}>تعذّر جلب جلسات القضية</p>
+              ) : sessions.length === 0 ? (
+                <p style={{ textAlign: 'center', color: 'var(--color-text-secondary)', padding: '1rem 0' }}>لا توجد جلسات مسجّلة لهذه القضية بعد</p>
+              ) : (
+                <ul className="cs-list cs-list--embedded">
+                  {sessions.map(s => <ClientSessionRow key={s.id} session={s} showCase={false} />)}
+                </ul>
+              )}
             </div>
           </div>
 
