@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { API_ROOT } from '../utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import Modal from '../components/Modal';
 import {
@@ -132,7 +133,7 @@ interface MessageFilters {
 
 // ── API Helper ──
 
-const API_BASE_URL = 'https://api.alraedlaw.com/api';
+const API_BASE_URL = API_ROOT;
 
 const api = {
   get: async (url: string) => {

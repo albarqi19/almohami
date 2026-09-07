@@ -7,6 +7,38 @@
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL ?? 'https://api.alraedlaw.com/api/v1';
 
+// ─────────────────────────────────────────────────────────────────────────
+// مشتقّاتُ العنوان — تُبنى من `API_BASE_URL` ولا تُكتب ثانيةً.
+//
+// 🔴 كانت اثنا عشر موضعاً في سبعة ملفّاتٍ تُعيد إعلانَ العنوان بنفسها،
+//    فلا يراها `VITE_API_URL` إطلاقاً. ونتيجتُها أن نشرةً موجَّهةً لخادمٍ
+//    آخر تظلّ تنادي خادمَ المنصّة في تلك المسارات — **بلا رسالةِ خطأٍ
+//    واحدة**، لأن الطلبَ ينجح فعلاً لكن على الخادم الخطأ.
+//
+//    ولذلك تُشتقّ هنا مرّةً، ويستوردها الجميع.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** الأصل وحده: `https://api.example.sa` — لمانيفست إضافة Word وغيره. */
+export const API_ORIGIN = (() => {
+  try {
+    return new URL(API_BASE_URL).origin;
+  } catch {
+    return 'https://api.alraedlaw.com';
+  }
+})();
+
+/** جذرُ الـAPI بلا إصدار: `https://api.example.sa/api` — لمن يبني `${...}/v1/…`. */
+export const API_ROOT = `${API_ORIGIN}/api`;
+
+/** مضيفُ WebSocket بلا مخطَّط: `api.example.sa` — يحتاجه Reverb هكذا. */
+export const API_HOST = (() => {
+  try {
+    return new URL(API_BASE_URL).host;
+  } catch {
+    return 'api.alraedlaw.com';
+  }
+})();
+
 // HTTP Client with token management
 class ApiClient {
   private baseURL: string;

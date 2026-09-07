@@ -1,4 +1,4 @@
-import { apiClient } from '../utils/api';
+import { apiClient, API_BASE_URL } from '../utils/api';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
 import type { Document, ExternalLinkPayload } from '../types';
 
@@ -148,7 +148,7 @@ export class DocumentService {
    * تُحفظ حمولةُ JSON نفسها ملفاً باسم الوثيقة، فيصل المحامي ملفٌّ فاسدٌ لا رسالةُ عطل.
    */
   static async downloadDocument(id: string): Promise<Blob> {
-    const response = await fetch(`https://api.alraedlaw.com/api/v1/documents/${id}/download`, {
+    const response = await fetch(`${API_BASE_URL}/documents/${id}/download`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
       },
@@ -286,7 +286,7 @@ export class DocumentService {
   static async analyzeSmartDocument(formData: FormData): Promise<ApiResponse<any>> {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('https://api.alraedlaw.com/api/v1/smart-documents/analyze', {
+      const response = await fetch(`${API_BASE_URL}/smart-documents/analyze`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -310,7 +310,7 @@ export class DocumentService {
   static async saveSmartDocument(data: SmartDocumentSave): Promise<ApiResponse<Document>> {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('https://api.alraedlaw.com/api/v1/smart-documents/save', {
+      const response = await fetch(`${API_BASE_URL}/smart-documents/save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -329,7 +329,7 @@ export class DocumentService {
   static async deleteTempFile(tempPath: string): Promise<ApiResponse<any>> {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('https://api.alraedlaw.com/api/v1/smart-documents/temp', {
+      const response = await fetch(`${API_BASE_URL}/smart-documents/temp`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

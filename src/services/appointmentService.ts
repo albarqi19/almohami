@@ -1,6 +1,6 @@
 ﻿import type { Appointment, AppointmentType, AppointmentStatus } from '../types';
 
-const API_BASE_URL = 'https://api.alraedlaw.com/api/v1';
+import { API_BASE_URL } from '../utils/api';
 
 // دالة مساعدة لإجراء الطلبات
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_ORIGIN } from '../../utils/api';
 import { FileText, KeyRound, Copy, Check, Trash2, Loader2, Download, Sparkles } from 'lucide-react';
 import { WordAddinService } from '../../services/wordAddinService';
 import type { WordAddinTokenStatus } from '../../services/wordAddinService';
@@ -7,11 +8,11 @@ import type { WordAddinTokenStatus } from '../../services/wordAddinService';
  * إعدادات إضافة Microsoft Word — توليد/نسخ رمز الربط + تعليمات التثبيت.
  * لغير العملاء (التبويب نفسه محجوب عن دور client في Settings.tsx).
  */
-const MANIFEST_URL = 'https://api.alraedlaw.com/word-addin/manifest.xml';
+const MANIFEST_URL = `${API_ORIGIN}/word-addin/manifest.xml`;
 // يبدأ بكلمة `powershell` ليعمل من PowerShell ومن موجّه الأوامر (cmd) معاً —
 // المستخدمون يخلطون بينهما، وأمر `irm` المجرّد لا يعرفه cmd.
 const DESKTOP_INSTALL_CMD =
-  'powershell -ExecutionPolicy Bypass -Command "irm https://api.alraedlaw.com/word-addin/install-desktop.ps1 -OutFile $env:TEMP\\alraed-install.ps1; & $env:TEMP\\alraed-install.ps1"';
+  `powershell -ExecutionPolicy Bypass -Command "irm ${API_ORIGIN}/word-addin/install-desktop.ps1 -OutFile $env:TEMP\\alraed-install.ps1; & $env:TEMP\\alraed-install.ps1"`;
 
 /** زر نسخ أمر تثبيت سطح المكتب — الأمر نفسه لا يُعرض (مخيف للمستخدم العادي). */
 const InstallCommand: React.FC = () => {
