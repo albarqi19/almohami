@@ -14,6 +14,7 @@ import {
   FileText,
   Landmark,
   Loader2,
+  LogOut,
   RefreshCw,
   Search,
   Settings2,
@@ -30,6 +31,8 @@ import {
   type PortalSettings,
   type UpcomingAlert,
 } from '../services/establishmentService';
+import { useAuth } from '../contexts/AuthContext';
+import { isEstablishmentOnly } from '../utils/establishmentOnly';
 
 /**
  * «منشأتي» — بوابة المنشأة لعميل المكتب (دور client).
@@ -75,6 +78,21 @@ const alertIcon = (kind: UpcomingAlert['kind']) => {
 
 export default function ClientEstablishmentPage() {
   const queryClient = useQueryClient();
+
+  /**
+   * في «الوضع الحصري» هذه الصفحة هي التطبيق كلُّه: لا ترويسةَ فوقها ولا قائمةَ
+   * بجانبها، فزرُّ الخروج هنا هو المخرجُ الوحيد — وغيابُه حبسٌ. ويظهر في حالة
+   * الخطأ أيضاً لا في الحالة الناجحة وحدها: من هبط على «تعذّر فتح البوابة» بلا
+   * زرِّ خروجٍ لا يملك في الشاشة شيئاً يفعله.
+   */
+  const { user, logout } = useAuth();
+  const exclusive = isEstablishmentOnly(user);
+  const ExitButton = () =>
+    exclusive ? (
+      <button className="est-btn est-btn--sm" onClick={() => logout()} title="تسجيل الخروج">
+        <LogOut size={13} /> خروج
+      </button>
+    ) : null;
   const [docSearch, setDocSearch] = useState('');
   const [empSearch, setEmpSearch] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -167,9 +185,12 @@ export default function ClientEstablishmentPage() {
             <Building2 size={36} />
             <b>تعذّر فتح بوابة المنشأة</b>
             <span>{(error as Error)?.message || 'حدث خطأ غير متوقع'}</span>
-            <button className="est-btn" onClick={() => refetch()}>
-              <RefreshCw size={14} /> إعادة المحاولة
-            </button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button className="est-btn" onClick={() => refetch()}>
+                <RefreshCw size={14} /> إعادة المحاولة
+              </button>
+              <ExitButton />
+            </div>
           </div>
         </div>
       </div>
@@ -210,6 +231,7 @@ export default function ClientEstablishmentPage() {
             >
               <Settings2 size={13} /> تخصيص التنبيهات
             </button>
+            <ExitButton />
           </div>
         </div>
 

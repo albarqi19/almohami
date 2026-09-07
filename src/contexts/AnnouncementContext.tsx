@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { AnnouncementService, type Announcement, type AnnouncementChannel } from '../services/announcementService';
 import { useAuth } from './AuthContext';
+import { isEstablishmentOnly } from '../utils/establishmentOnly';
 
 interface AnnouncementContextValue {
   active: Announcement[];
@@ -61,7 +62,9 @@ export const AnnouncementProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const seenSentRef = useRef<Set<number>>(new Set());
 
   const fetchActive = useCallback(async () => {
-    if (!user) {
+    // عميلُ بوابة المنشأة الحصريّ لا إعلاناتِ مكتبٍ له: الباك يردّ المسار 403،
+    // والاستطلاعُ كلَّ دقائق ضجيجٌ في سجلّ المتصفّح لا فائدةَ منه.
+    if (!user || isEstablishmentOnly(user)) {
       setActive([]);
       return;
     }
@@ -82,7 +85,7 @@ export const AnnouncementProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   useEffect(() => {
     fetchActive();
-    if (!user) return;
+    if (!user || isEstablishmentOnly(user)) return;
     const id = setInterval(fetchActive, POLL_INTERVAL_MS);
     const onVisible = () => {
       if (document.visibilityState === 'visible') fetchActive();

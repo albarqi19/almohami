@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { Loader2, ShieldX, Clock } from 'lucide-react';
 import { useZatcaFeature } from '../../contexts/ZatcaStatusContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePermissionContext } from '../../contexts/PermissionContext';
 import { ZatcaPageHead } from '../../components/zatca/ZatcaPageShell';
 import ZatcaOnboardingWizard from '../../components/zatca/ZatcaOnboardingWizard';
 import ZatcaDashboard from '../../components/zatca/ZatcaDashboard';
@@ -15,6 +16,7 @@ import ZatcaDashboard from '../../components/zatca/ZatcaDashboard';
 const ZatcaCenter: React.FC = () => {
   const { available, enabled, environment, isLoading } = useZatcaFeature();
   const { user } = useAuth();
+  const { has } = usePermissionContext();
 
   // 1) تحميل الحالة
   if (isLoading) {
@@ -44,9 +46,9 @@ const ZatcaCenter: React.FC = () => {
     );
   }
 
-  // 3) متاحة لكن غير مفعّلة — معالج التفعيل (للمالك/admin فقط)
+  // 3) متاحة لكن غير مفعّلة — معالج التفعيل (للمالك/admin، ولحامل system.manage — نفس حارس الباك tenant.admin)
   if (!enabled) {
-    const canOnboard = !!user?.is_tenant_owner || user?.role === 'admin' || user?.role === 'owner';
+    const canOnboard = !!user?.is_tenant_owner || user?.role === 'admin' || user?.role === 'owner' || has('system.manage');
 
     if (!canOnboard) {
       return (

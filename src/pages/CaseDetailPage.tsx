@@ -69,6 +69,7 @@ import ReconciliationSection from '../components/ReconciliationSection';
 import NajizRequestsSection from '../components/NajizRequestsSection';
 import type { CaseRequestsSummary } from '../services/caseRequestService';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissionContext } from '../contexts/PermissionContext';
 import type { TimelineEvent } from '../components/Timeline';
 import { apiClient } from '../utils/api';
 import { toHijri } from '../utils/hijriDate';
@@ -114,6 +115,7 @@ interface CaseDetailPageProps {
 const CaseDetailPage: React.FC<CaseDetailPageProps> = ({ onTryNewDesign }) => {
   const { caseId } = useParams<{ caseId: string }>();
   const { user } = useAuth();
+  const { has } = usePermissionContext();
   const navigate = useNavigate();
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [reconciliationData, setReconciliationData] = useState<ReconciliationData | null>(null);
@@ -262,9 +264,11 @@ const CaseDetailPage: React.FC<CaseDetailPageProps> = ({ onTryNewDesign }) => {
 
     const isAssigned = Array.isArray(c.lawyers)
       && c.lawyers.some((l: any) => String(l.id) === String(user.id));
-    const isAdmin = user.role === 'admin' || user.role === 'super_admin' || Boolean(user.is_tenant_owner);
+    // بالصلاحية لا بالاسم: من يدير كلَّ قضايا المكتب يحتفل بالفوز أيضاً (الشريك والدور المخصّص)
+    const isAdmin = user.role === 'admin' || user.role === 'super_admin' || Boolean(user.is_tenant_owner)
+      || has('cases.manage-all') || has('system.manage');
     return Boolean(isAssigned || isAdmin);
-  }, [user]);
+  }, [user, has]);
 
   // بعد تحميل/تحديث caseData، افحص لو نُظهر الاحتفال
   useEffect(() => {
@@ -406,8 +410,11 @@ const CaseDetailPage: React.FC<CaseDetailPageProps> = ({ onTryNewDesign }) => {
     }
   };
 
-  // ── إدارة فريق المحامين (إضافة/إزالة بعد الإنشاء) ──
-  const canManageLawyers = !!user && (user.role === 'admin' || user.role === 'super_admin' || Boolean(user.is_tenant_owner));
+  // ── إدارة فريق المحامين (إضافة/إزالة بعد الإنشاء) — بالصلاحية لا بالاسم (CasePolicy::assign) ──
+  const canManageLawyers = !!user && (
+    user.role === 'admin' || user.role === 'super_admin' || Boolean(user.is_tenant_owner)
+    || has('cases.manage-all') || has('system.manage')
+  );
   const [availableLawyers, setAvailableLawyers] = useState<{ id: string; name: string }[]>([]);
   const [showAddLawyer, setShowAddLawyer] = useState(false);
   const [selectedNewLawyer, setSelectedNewLawyer] = useState('');

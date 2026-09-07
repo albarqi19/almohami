@@ -60,7 +60,8 @@ const MeetingSummaryModal: React.FC<Props> = ({ meeting, onClose, onSave }) => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await apiClient.get<any>('/users?roles=admin,lawyer,legal_assistant');
+        // الحصر بالاستثناء لا بقائمة سماح: كلُّ موظّف — بدوره النظامي أو المخصّص — مرشّحٌ لتكليف
+        const response = await apiClient.get<any>('/users?exclude_role=client&limit=200');
         let usersData: UserOption[] = [];
         // Fix for pagination structure
         if (response.data && response.data.data && Array.isArray(response.data.data)) {

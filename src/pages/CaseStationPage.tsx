@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissionContext } from '../contexts/PermissionContext';
 import { CaseService } from '../services/caseService';
 import { ActivityService } from '../services/activityService';
 import { DocumentService } from '../services/documentService';
@@ -429,8 +430,12 @@ const CaseStationPage: React.FC<Props> = ({ prefs, onPrefsChange, onSwitchToClas
     }
   };
 
-  // فريق المحامين
-  const canManageLawyers = !!user && (user.role === 'admin' || user.role === 'super_admin' || Boolean(user.is_tenant_owner));
+  // فريق المحامين — بالصلاحية لا بالاسم: الباك (CasePolicy::assign) يقبل من يدير كلَّ القضايا أو يحمل المظلّة
+  const { has: hasPerm } = usePermissionContext();
+  const canManageLawyers = !!user && (
+    user.role === 'admin' || user.role === 'super_admin' || Boolean(user.is_tenant_owner)
+    || hasPerm('cases.manage-all') || hasPerm('system.manage')
+  );
   const [availableLawyers, setAvailableLawyers] = useState<{ id: string; name: string }[]>([]);
   const [showAddLawyer, setShowAddLawyer] = useState(false);
   const [selectedNewLawyer, setSelectedNewLawyer] = useState('');

@@ -28,6 +28,9 @@ import AnnouncementToast from './announcements/AnnouncementToast';
 import MobileBetaInviteModal from './MobileBetaInviteModal';
 import { useAuth } from '../contexts/AuthContext';
 import { usePolicyCheck } from '../hooks/usePolicyCheck';
+// 🏢 الوضع الحصري لبوابة المنشأة — قشرةٌ بديلةٌ لا تعرف عن هذا الملفّ شيئاً
+import EstablishmentOnlyShell from './EstablishmentOnlyShell';
+import { isEstablishmentOnly, rememberEstablishmentOnly } from '../utils/establishmentOnly';
 
 // Sidebar Context للتناغم بين Sidebar والمحتوى
 interface SidebarContextType {
@@ -61,6 +64,18 @@ const Layout: React.FC = () => {
     prefetchLazyRoutes();
   }, []);
 
+  /**
+   * أثرُ «الوضع الحصري» في التخزين المحلّي — يُزامَن مع الحقيقة في الاتجاهين.
+   *
+   * غايتُه لحظةٌ واحدة: انتهاءُ الجلسة. فرعُ 401 في `utils/api.ts` ينفّذ
+   * `window.location.href = '/login'` — تحميلٌ كاملٌ لا يمرّ براوتر ولا بسياق،
+   * فلا يبقى شيءٌ يُخبر شاشةَ الدخول أنّ صاحبها عميلُ بوابةٍ لا مستخدمُ نظام.
+   * وإطفاءُ المكتب للمفتاح يمحو الأثرَ هنا نفسِه، فلا يبقى معلَّقاً بعد سببه.
+   */
+  useEffect(() => {
+    rememberEstablishmentOnly(isEstablishmentOnly(user));
+  }, [user]);
+
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   // إخفاء ودجتات الصف العائم — للجلسة الحالية فقط، تعود بتحديث الصفحة عمداً
@@ -83,6 +98,20 @@ const Layout: React.FC = () => {
   const handleSignOut = () => {
     logout();
   };
+
+  /**
+   * 🏢 **الوضع الحصري — فرعٌ ثانٍ لا شرطٌ متناثر.**
+   *
+   * عميلُ بوابة المنشأة المُعلَّم لا يرى من هذا الملفّ شيئاً: لا شريطاً جانبياً
+   * ولا ترويسةً ولا ودجتاً ولا لافتةً ولا إعلاناً. والفرع هنا **بعد كلّ الخطّافات**
+   * (قاعدة الخطّافات: عددُها وترتيبُها ثابتان في كلّ تصيير) وقبل أيّ تصيير.
+   *
+   * وهو خامدٌ تماماً لغير المُعلَّمين: قراءةُ علَمٍ واحدٍ من كائن المستخدم، بلا
+   * نداءٍ ولا حساب. فلا انحدار على أحد.
+   */
+  if (isEstablishmentOnly(user)) {
+    return <EstablishmentOnlyShell />;
+  }
 
   return (
     <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed, sidebarWidth }}>

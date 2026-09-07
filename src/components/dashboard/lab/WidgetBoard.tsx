@@ -205,8 +205,13 @@ const WidgetBoard: React.FC<Props> = ({ storageKey, starter, serverSync = false,
 
     const { width, containerRef, mounted } = useContainerWidth();
 
-    /* المعرض المرئي: فلترة بالصلاحيات والدور */
-    const adminish = !!user && (user.is_super_admin || ['admin', 'owner', 'partner'].includes(user.role));
+    /* المعرض المرئي: فلترة بالصلاحيات — والأسماء تبقى للتوافق، فالدور المخصّص يبلغ الودجتات الإدارية بالصلاحية */
+    const adminish = !!user && (
+        user.is_super_admin
+        || ['admin', 'owner', 'partner'].includes(user.role)
+        || has('cases.manage-all')
+        || has('system.manage')
+    );
     const visibleCatalog = useMemo(
         () => WIDGET_CATALOG.filter((w) => (!w.adminOnly || adminish) && (!w.requiredPermission || has(w.requiredPermission))),
         [adminish, has]

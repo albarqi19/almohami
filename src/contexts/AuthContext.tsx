@@ -5,6 +5,7 @@ import { destroyEcho } from '../lib/echo';
 import { queryClient } from '../main';
 import type { User } from '../types';
 import { collectTourKeys, restoreTourKeys } from '../utils/tourStorage';
+import { rememberEstablishmentOnly, wasEstablishmentOnly } from '../utils/establishmentOnly';
 
 interface LoginResult {
   success: boolean;
@@ -72,6 +73,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Preserve theme preference and tour completion flags before clearing cache
     const savedTheme = localStorage.getItem('theme');
     const savedTours = collectTourKeys();
+    // 🏢 وأثرَ «الوضع الحصري» معهما: هو ما يُبقي شاشةَ الدخول محايدةً لعميل
+    //    بوابة المنشأة. و`Layout` يعيد ضبطه على الحقيقة بعد نجاح الدخول،
+    //    فإبقاؤه هنا يخدم حالةَ الفشل وحدها (يُعاد إلى الشاشة نفسِها).
+    const savedExclusive = wasEstablishmentOnly();
 
     // Clear any cached data from previous user for security
     localStorage.clear();
@@ -84,6 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('theme', savedTheme);
     }
     restoreTourKeys(savedTours);
+    rememberEstablishmentOnly(savedExclusive);
 
     try {
       console.log('🔐 AuthContext: Calling AuthService.login()...');
@@ -150,6 +156,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Preserve theme preference and tour completion flags before clearing cache
     const savedTheme = localStorage.getItem('theme');
     const savedTours = collectTourKeys();
+    // 🏢 وأثرَ «الوضع الحصري»: بدونه يهبط عميلُ بوابة المنشأة بعد خروجه على
+    //    شاشةِ دخولٍ تحمل اسمَ المنصّة وشعارَها — وهو لا يعرف عنها شيئاً.
+    const savedExclusive = wasEstablishmentOnly();
 
     // إنهاء جلسة الحضور وقطع اتصال Reverb
     apiClient.post('/presence/end-session').catch(() => {});
@@ -171,6 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('theme', savedTheme);
       }
       restoreTourKeys(savedTours);
+      rememberEstablishmentOnly(savedExclusive);
 
       // Clear apiClient token
       apiClient.setToken(null);

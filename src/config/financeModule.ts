@@ -50,9 +50,6 @@ export interface FinanceTab {
   isVisible: (perms: PermissionChecker, role?: string, flags?: FinanceFeatureFlags) => boolean;
 }
 
-/** الأدوار التي ترى تبويب التحصيل العلوي المستقل (UX-06): billing.view + قيد دور. */
-const COLLECTIONS_ROLES = new Set(['accountant', 'admin', 'owner', 'super_admin']);
-
 /** تبويبات الوحدة بالترتيب، مع شرط الظهور لكل تبويب (مصفوفة ملحق ب.8). */
 export const FINANCE_TABS: FinanceTab[] = [
   {
@@ -88,8 +85,9 @@ export const FINANCE_TABS: FinanceTab[] = [
     label: 'التحصيل',
     path: 'collections',
     icon: TrendingUp,
-    // التبويب العلوي المستقل: billing.view + قيد دور (لا يظهر للمحامي/المساعد).
-    isVisible: (p, role) => p.has(FINANCE_PERMISSIONS.collectionsView) && !!role && COLLECTIONS_ROLES.has(role),
+    // التبويب العلوي المستقل: بالصلاحية وحدها — نفس حارس مساره في App.tsx (billing.view).
+    // قيدُ الأسماء القديم كان يخفي التبويب عن الشريك وعن كل دورٍ مخصّص مُنح billing.view.
+    isVisible: (p) => p.has(FINANCE_PERMISSIONS.collectionsView),
   },
   {
     key: 'reports',

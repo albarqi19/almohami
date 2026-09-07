@@ -429,7 +429,8 @@ const Settings: React.FC = () => {
   // Load Policy Settings
   useEffect(() => {
     const loadPolicySettings = async () => {
-      if (userRole !== 'admin') return;
+      // بالصلاحية لا بالاسم — كان `userRole !== 'admin'` يترك قسم السياسة فارغاً للمالك (owner) والدور المخصّص
+      if (!canManageOfficeSettings) return;
 
       try {
         const response: any = await apiClient.get('/tenant/advanced-settings/group/policy');
@@ -448,7 +449,7 @@ const Settings: React.FC = () => {
     };
 
     loadPolicySettings();
-  }, [userRole]);
+  }, [canManageOfficeSettings]);
 
   // Load User Profile
   useEffect(() => {
