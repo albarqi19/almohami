@@ -5,6 +5,7 @@
 // مرحلتا «عُرض السعر» و«مقبول» تصلان مع م١/م٢ ولا تُرسمان قبل أن تكونا حقيقيتين —
 // واجهةٌ تعرض مرحلةً لا يبلغها الباك تكذب على مستعملها.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Inbox, RefreshCw, X, Paperclip, Download, CheckCircle2, Ban,
@@ -45,6 +46,17 @@ const TARGET_META: Record<IntakeTarget, { label: string; icon: React.ReactNode }
   consultation: { label: 'استشارة', icon: <MessageSquare size={11} /> },
   case: { label: 'قضية', icon: <Scale size={11} /> },
 };
+
+/** حالات المهمة كما يخرجها الباك — تُعرض على الطلب المعتمَد كي لا يختفي أثرُ التكليف */
+const TASK_STATUS_LABELS: Record<string, string> = {
+  todo: 'لم تبدأ',
+  in_progress: 'قيد التنفيذ',
+  on_hold: 'موقوفة',
+  pending_approval: 'بانتظار الاعتماد',
+  completed: 'مكتملة',
+  cancelled: 'ملغاة',
+};
+const taskStatusLabel = (s: string) => TASK_STATUS_LABELS[s] ?? s;
 
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString('ar-SA', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
@@ -180,7 +192,12 @@ const IntakeRequestsPage: React.FC = () => {
       const href = d.case_id ? `/cases/${d.case_id}` : d.service_id ? `/legal-services/${d.service_id}` : null;
       const promoted = d.attachments_promoted > 0 ? ` · نُقل ${d.attachments_promoted} مرفقاً إلى مستندات الملف` : '';
       const tasked = d.task_id ? ' · وأُنشئت مهمة التكليف' : '';
-      toast.success(`${res.message}${promoted}${tasked}`);
+      const remembered = d.sender_remembered
+        ? (d.rematched && d.rematched > 0
+          ? ` · حُفظ بريد المُرسِل للعميل ورُبط به ${d.rematched} طلباً معلّقاً`
+          : ' · حُفظ بريد المُرسِل للعميل')
+        : '';
+      toast.success(`${res.message}${promoted}${tasked}${remembered}`);
       showUndo(`${res.message}${promoted}${tasked}`, href);
       setApproveFor(null);
       queryClient.invalidateQueries({ queryKey: ['intake-requests'] });
@@ -295,6 +312,11 @@ const IntakeRequestsPage: React.FC = () => {
                   <span>{r.matched_client?.name || r.from_name || r.from_email || 'مُرسِل غير معروف'}</span>
                   {!r.matched_client_id && <span className="rq-chip rq-chip--ghost">غير مطابق لعميل</span>}
                   {target && <span className="rq-row__target">{target.icon}{target.label}</span>}
+                  {r.task && (
+                    <span className={`rq-chip rq-chip--task is-${r.task.status}`} title={r.task.title}>
+                      <ClipboardCheck size={10} /> {taskStatusLabel(r.task.status)}
+                    </span>
+                  )}
                   {r.attachments_count ? (
                     <span className="rq-row__att"><Paperclip size={10} />{r.attachments_count}</span>
                   ) : null}
@@ -381,8 +403,36 @@ const IntakeRequestsPage: React.FC = () => {
                   <h3 className="rq-now__title">
                     {full.status === 'approved' ? 'انتهى مساره — فُتح الملف' : 'انتهى مساره'}
                   </h3>
-                  {full.case && <p className="rq-now__line">القضية <b>{full.case.file_number}</b> — {full.case.title}</p>}
-                  {full.service && <p className="rq-now__line">الخدمة <b>{full.service.service_number}</b> — {full.service.title}</p>}
+                  {full.case && (
+                    <p className="rq-now__line">
+                      القضية <b>{full.case.file_number}</b> — {full.case.title}
+                      <Link to={`/cases/${full.case.id}`} className="rq-now__link">فتح</Link>
+                    </p>
+                  )}
+                  {full.service && (
+                    <p className="rq-now__line">
+                      الخدمة <b>{full.service.service_number}</b> — {full.service.title}
+                      <Link to={`/legal-services/${full.service.id}`} className="rq-now__link">فتح</Link>
+                    </p>
+                  )}
+                  {/* مهمة التكليف — كانت تختفي بعد الاعتماد فلا يُعرف من كُلّف ولا أين وصل */}
+                  {full.task ? (
+                    <Link to={`/tasks/${full.task.id}`} className={`rq-task is-${full.task.status}`}>
+                      <span className="rq-task__head">
+                        <ClipboardCheck size={12} />
+                        <b>مهمة التكليف</b>
+                        <span className="rq-task__status">{taskStatusLabel(full.task.status)}</span>
+                      </span>
+                      <span className="rq-task__title">{full.task.title}</span>
+                      <span className="rq-task__meta">
+                        {full.task.assignee?.name && <span>المكلَّف: {full.task.assignee.name}</span>}
+                        {full.task.due_date && <span>التسليم: {fmtDate(full.task.due_date)}</span>}
+                        <span className="rq-task__open">فتح المهمة ‹</span>
+                      </span>
+                    </Link>
+                  ) : full.status === 'approved' ? (
+                    <p className="rq-now__note">اعتُمد بلا مهمة تكليف.</p>
+                  ) : null}
                   {full.review_note && <p className="rq-now__note">ملاحظة المراجع: {full.review_note}</p>}
                   {full.reviewer && <p className="rq-now__note">بواسطة {full.reviewer.name} · {fmtDate(full.reviewed_at)}</p>}
                 </div>
@@ -664,6 +714,9 @@ const ApproveModal: React.FC<{
   const [billingType, setBillingType] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [sendConfirmation, setSendConfirmation] = useState(true);
+  // تذكّر بريد المُرسِل على العميل: جهةٌ بإدارات عدّة تراسل من بُرُدٍ شتّى، وبلا هذا
+  // يُربط كلّ طلبٍ منها يدوياً من جديد. الباك يتجاهله إن كان البريد بريدَ العميل أصلاً.
+  const [rememberSender, setRememberSender] = useState(true);
   // التكليف — مفعّل افتراضياً: الطلب المعتمَد بلا مكلَّف ولا موعد يبقى ساكناً
   const [createTask, setCreateTask] = useState(true);
   const [approverId, setApproverId] = useState<number | ''>('');
@@ -730,6 +783,7 @@ const ApproveModal: React.FC<{
       create_task: createTask,
       task_approver_id: createTask ? Number(approverId) : null,
       task_due_days: createTask ? dueDaysNum : null,
+      remember_sender: rememberSender,
     });
   };
 
@@ -840,6 +894,15 @@ const ApproveModal: React.FC<{
           <input type="checkbox" checked={sendConfirmation} onChange={(e) => setSendConfirmation(e.target.checked)} />
           <span>أرسل رسالة «استلمنا طلبكم» إلى {request.from_email || 'المُرسِل'}</span>
         </label>
+
+        {request.from_email && (
+          <label className="rq-toggle">
+            <input type="checkbox" checked={rememberSender} onChange={(e) => setRememberSender(e.target.checked)} />
+            <span>
+              احفظ <span dir="ltr">{request.from_email}</span> بريداً لهذا العميل — رسائله القادمة والمعلّقة تُربط به تلقائياً
+            </span>
+          </label>
+        )}
 
         {/* ── التكليف ── */}
         <label className="rq-toggle rq-toggle--head">

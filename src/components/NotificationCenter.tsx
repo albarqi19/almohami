@@ -23,6 +23,7 @@ import { NotificationService, isImportantNotificationType, type Notification as 
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { usePermission } from '../hooks/usePermission';
 import { isNotificationSoundEnabled, setNotificationSoundEnabled } from '../utils/notificationSound';
+import { NOTIFICATION_CREATED_EVENT, NOTIFICATIONS_CHANGED_EVENT } from '../hooks/useRealtimeNotifications';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 interface NotificationCenterProps {
@@ -158,6 +159,17 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     minRefreshInterval: 10,
   });
 
+  // تنبيهٌ وصل حيّاً والقائمة مفتوحة — يظهر فوراً لا بعد ٣٠ ثانية
+  useEffect(() => {
+    if (!isOpen) return;
+    const onCreated = () => { void loadNotifications(); };
+    window.addEventListener(NOTIFICATION_CREATED_EVENT, onCreated);
+    return () => window.removeEventListener(NOTIFICATION_CREATED_EVENT, onCreated);
+  }, [isOpen, loadNotifications]);
+
+  // عدّاد الجرس في الترويسة يُعاد جلبه بعد أي قراءة/حذف من هنا
+  const announceChanged = () => window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED_EVENT));
+
   const filteredNotifications = notifications.filter(notification => {
     switch (filter) {
       case 'unread': return !notification.is_read;
@@ -176,6 +188,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
         prev.map(n => n.id === id ? { ...n, is_read: true } : n)
       );
       setStats(prev => ({ ...prev, unread: Math.max(0, prev.unread - 1), read: prev.read + 1 }));
+      announceChanged();
     } catch (err) {
       console.error('Failed to mark as read:', err);
     }
@@ -186,6 +199,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
       await NotificationService.markAllAsRead();
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setStats(prev => ({ ...prev, unread: 0, read: prev.total }));
+      announceChanged();
     } catch (err) {
       console.error('Failed to mark all as read:', err);
     }
@@ -201,6 +215,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
         unread: wasUnread ? prev.unread - 1 : prev.unread,
         read: wasUnread ? prev.read : prev.read - 1
       }));
+      if (wasUnread) announceChanged();
     } catch (err) {
       console.error('Failed to delete notification:', err);
     }

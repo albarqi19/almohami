@@ -67,6 +67,16 @@ export interface IntakeRequest {
   case_id: number | null;
   service?: { id: number; service_number: string; title: string } | null;
   case?: { id: number; file_number: string; title: string } | null;
+  /** مهمة التكليف المنشأة عند الاعتماد — كانت مفقودةً فيختفي أثر الطلب بعد اعتماده */
+  task_id?: number | null;
+  task?: {
+    id: number;
+    title: string;
+    status: string;
+    assigned_to?: number | null;
+    due_date?: string | null;
+    assignee?: { id: number; name: string } | null;
+  } | null;
   reviewed_by: number | null;
   reviewer?: { id: number; name: string } | null;
   reviewed_at: string | null;
@@ -103,6 +113,8 @@ export interface ApprovePayload {
   task_approver_id?: number | null;
   task_due_days?: number | null;
   task_title?: string | null;
+  /** حفظ بريد المُرسِل على العميل كي تُربط رسائله القادمة تلقائياً (افتراضه نعم) */
+  remember_sender?: boolean;
 }
 
 export interface ApproveResult {
@@ -112,6 +124,10 @@ export interface ApproveResult {
   attachments_promoted: number;
   /** معرّف المهمة المنشأة — null إن لم يُطلب التكليف */
   task_id: number | null;
+  /** حُفظ بريد المُرسِل على العميل */
+  sender_remembered?: boolean;
+  /** عدد الطلبات المعلّقة التي رُبطت بالعميل بفضل البريد المحفوظ */
+  rematched?: number;
 }
 
 /** مهلة التسليم الافتراضية — مطابقة IntakeRequestController::DEFAULT_TASK_DUE_DAYS */

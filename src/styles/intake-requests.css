@@ -426,3 +426,49 @@
   .rq-modal__row { grid-template-columns: 1fr; }
   .rq-field { border-inline-start: 0; border-bottom: 1px solid var(--rq-hair); }
 }
+
+/* ── مهمة التكليف على الطلب المعتمَد + روابط الفتح (إصلاح «تختفي المهمة من الصندوق») ── */
+.rq-now__link {
+  margin-inline-start: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary, #1f5f8b);
+  text-decoration: none;
+  border-bottom: 1px dashed currentColor;
+}
+.rq-now__link:hover { opacity: 0.8; }
+
+.rq-task {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border, #e3e6ea);
+  border-radius: 6px;
+  background: var(--color-surface, #fff);
+  color: inherit;
+  text-decoration: none;
+}
+.rq-task:hover { border-color: var(--color-primary, #1f5f8b); }
+.rq-task__head { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.rq-task__status {
+  margin-inline-start: auto;
+  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--color-background, #f3f5f7);
+  border: 1px solid var(--color-border, #e3e6ea);
+}
+.rq-task.is-completed .rq-task__status { background: #e6f4ea; border-color: #b7dfc2; color: #1e6b3a; }
+.rq-task.is-pending_approval .rq-task__status { background: #fff4e0; border-color: #f2d49b; color: #8a5a00; }
+.rq-task.is-in_progress .rq-task__status { background: #e8f0fb; border-color: #b9cff0; color: #1f4f8b; }
+.rq-task.is-cancelled .rq-task__status,
+.rq-task.is-on_hold .rq-task__status { background: #f5f5f5; color: #666; }
+.rq-task__title { font-size: 12.5px; font-weight: 600; }
+.rq-task__meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--color-text-secondary, #6b7280); }
+.rq-task__open { margin-inline-start: auto; color: var(--color-primary, #1f5f8b); font-weight: 600; }
+
+.rq-chip--task { display: inline-flex; align-items: center; gap: 3px; background: #eef2f7; border: 1px solid #d5dde8; color: #36506e; }
+.rq-chip--task.is-completed { background: #e6f4ea; border-color: #b7dfc2; color: #1e6b3a; }
+.rq-chip--task.is-pending_approval { background: #fff4e0; border-color: #f2d49b; color: #8a5a00; }
