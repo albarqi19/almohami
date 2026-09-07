@@ -67,10 +67,12 @@ const Clients: React.FC = () => {
     // تأكيد داخل الموقع (بديل window.confirm) للحذف/التحويل
     const [confirmAction, setConfirmAction] = useState<{ type: 'delete' | 'convert'; client: Client } | null>(null);
 
-    // الحذف (أرشفة) محمي بـ manage.users في الباك (admin/owner/مالك المكتب).
+    // الحذف (أرشفة) محمي بـ manage.users في الباك (admin/owner/مالك المكتب — وحامل system.manage).
+    const canSystemManage = usePermission('system.manage');
     const canDeleteClients = user?.role === 'admin'
         || user?.role === 'owner'
-        || (user as any)?.is_tenant_owner === true;
+        || (user as any)?.is_tenant_owner === true
+        || canSystemManage;
     // التعديل/التحويل يُفرض بالصلاحية لا باسم الدور (نفس مسار /convert = clients.edit).
     const canEditClients = usePermission('clients.edit');
 

@@ -39,6 +39,7 @@ import { AddWekalaModal } from '../components/AddWekalaModal';
 import { MissingWekalaCasesPanel } from '../components/MissingWekalaCasesPanel';
 import { Can } from '../components/Can';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissionContext } from '../contexts/PermissionContext';
 import { Link as RouterLink } from 'react-router-dom';
 import type { ArchivedFilter, Wekala, WekalaParty, WekalaPermission } from '../types';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
@@ -409,7 +410,10 @@ export const WekalaModal: React.FC<WekalaModalProps> = ({ wekala, isOpen, onClos
 
 const Wekalat: React.FC = () => {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+  const { has } = usePermissionContext();
+  // إعدادُ خصوصية الوكالات: بالصلاحية لا بالاسم (نفس حارس الباك tenant.settings.manage / system.manage)
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner'
+    || has('tenant.settings.manage') || has('system.manage');
 
   // Settings state
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);

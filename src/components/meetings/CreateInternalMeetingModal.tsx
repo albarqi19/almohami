@@ -154,8 +154,9 @@ const CreateInternalMeetingModal: React.FC<Props> = ({
     (async () => {
       try {
         const [staffRes, clientRes, cats] = await Promise.all([
+          // الحصر بالاستثناء لا بقائمة سماح (قرار المالك): كلُّ موظّف عدا العميل، فالدور المخصّص يظهر
           apiClient.get<{ data: UserOption[] | { data: UserOption[] } }>(
-            '/users?roles=admin,owner,partner,lawyer,senior_lawyer,legal_assistant,accountant,secretary&limit=200'
+            '/users?exclude_role=client&limit=200'
           ),
           apiClient.get<{ data: UserOption[] | { data: UserOption[] } }>('/users?role=client&limit=200'),
           meetingCategoryService.list(),

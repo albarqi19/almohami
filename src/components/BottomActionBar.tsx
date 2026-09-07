@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Chrome, AlertTriangle, ExternalLink, X, Link2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissionContext } from '../contexts/PermissionContext';
 import CompanyLinkModal from './CompanyLinkModal';
 
 const API_BASE_URL = 'https://api.alraedlaw.com/api';
@@ -20,6 +21,11 @@ interface InstanceLite {
 const BottomActionBar: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { has } = usePermissionContext();
+
+  // شريط المدير: بالصلاحية لا بالاسم — الدورُ المخصّص الذي مُنح إدارة النظام يراه،
+  // والاسمان يبقيان للتوافق (owner كان محجوباً رغم أنه مالك المكتب).
+  const isOfficeAdmin = !!user && (user.role === 'admin' || user.role === 'owner' || has('system.manage'));
 
   const [waStatus, setWaStatus] = useState<WaStatus>('unknown');
   const [waInstances, setWaInstances] = useState<InstanceLite[]>([]);
@@ -53,13 +59,13 @@ const BottomActionBar: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') return;
+    if (!isOfficeAdmin) return;
     fetchWaStatus();
     const intv = setInterval(fetchWaStatus, POLL_INTERVAL_MS);
     const onVis = () => { if (document.visibilityState === 'visible') fetchWaStatus(); };
     document.addEventListener('visibilitychange', onVis);
     return () => { clearInterval(intv); document.removeEventListener('visibilitychange', onVis); };
-  }, [user, fetchWaStatus]);
+  }, [isOfficeAdmin, fetchWaStatus]);
 
   useEffect(() => {
     if (!showWaTip) return;
@@ -72,7 +78,7 @@ const BottomActionBar: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [showWaTip]);
 
-  if (!user || user.role !== 'admin') return null;
+  if (!user || !isOfficeAdmin) return null;
 
   const connectedInstance = waInstances.find(i => i.status === 'connected');
   const isWaOk = waStatus === 'connected';

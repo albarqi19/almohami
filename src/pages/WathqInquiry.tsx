@@ -27,6 +27,7 @@ import {
     Key,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissionContext } from '../contexts/PermissionContext';
 import {
     wathqService,
     SERVICE_TYPES,
@@ -657,6 +658,13 @@ const WathqSettingsModal: React.FC<{
 // === Main Page Component ===
 const WathqInquiryPage: React.FC = () => {
     const { user } = useAuth();
+    const { has } = usePermissionContext();
+    // إعدادات واثق (مفتاح API للمكتب): بالصلاحية لا بالاسم — نفس حارس الباك tenant.settings.manage
+    const canManageWathqSettings = !!user && (
+        ['admin', 'owner'].includes(user.role)
+        || has('tenant.settings.manage')
+        || has('system.manage')
+    );
 
     // State
     const [activeGroup, setActiveGroup] = useState<ServiceGroup>('commerce');
@@ -1019,7 +1027,7 @@ const WathqInquiryPage: React.FC = () => {
                     </div>
                 </div>
                 <div className="wathq-header-actions">
-                    {user && ['admin', 'owner'].includes(user.role) && (
+                    {canManageWathqSettings && (
                         <button className="wathq-btn-settings" onClick={() => setSettingsOpen(true)}>
                             <Settings size={18} />
                         </button>
@@ -1036,7 +1044,7 @@ const WathqInquiryPage: React.FC = () => {
                 <div className="wathq-alert-warning">
                     <AlertTriangle size={18} />
                     <span>لم يتم إعداد بيانات واثق بعد. يرجى إضافة مفتاح API من الإعدادات.</span>
-                    {user && ['admin', 'owner'].includes(user.role) && (
+                    {canManageWathqSettings && (
                         <button onClick={() => setSettingsOpen(true)}>إعداد الآن</button>
                     )}
                 </div>
