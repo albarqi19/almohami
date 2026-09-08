@@ -1,0 +1,268 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   قالبُ الدخول القابلُ للتشكيل لكلّ مكتب — tenants.login_theme
+   يرث تنسيقاتِ البطاقة من .auth-page--tenant (auth.css) ويملك القشرةَ فقط:
+   الخلفية، اللوحة البصرية، الشعار، النصوص. مسطّحٌ بلا توهّج.
+   اللونُ من --theme-accent (accent_color) وإلّا --tenant-accent (primary_color).
+   ═══════════════════════════════════════════════════════════════════════ */
+.auth-page--tenant.auth-theme {
+  --theme-accent: var(--tenant-accent, #0f172a);
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+  align-items: stretch;
+  justify-content: stretch;
+  background-color: var(--tenant-ink, #111827);
+  background-image: none;
+}
+
+.auth-theme__backdrop {
+  position: absolute;
+  inset: 0;
+  background-image: var(--theme-bg-image);
+  background-size: cover;
+  background-position: center;
+}
+
+.auth-theme__backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgba(8, 11, 16, var(--theme-overlay, 0.55));
+}
+
+/* ── split: لوحةٌ بصريّة + نموذج ── */
+.auth-theme--split .auth-theme__backdrop {
+  display: none;
+}
+
+.auth-theme__visual {
+  position: relative;
+  min-height: 240px;
+  background-color: var(--tenant-ink, #111827);
+  background-image: var(--theme-bg-image);
+  background-size: cover;
+  background-position: center;
+}
+
+.auth-theme__visual::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 11, 16, calc(var(--theme-overlay, 0.55) - 0.2)) 0%,
+    rgba(8, 11, 16, var(--theme-overlay, 0.55)) 100%
+  );
+}
+
+.auth-theme__visual-inner {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-7) var(--space-8);
+  color: #ffffff;
+}
+
+.auth-theme__visual-top {
+  min-height: 1px;
+}
+
+.auth-theme__headline {
+  margin: 0 0 var(--space-3);
+  font-size: clamp(22px, 2.6vw, 38px);
+  font-weight: 700;
+  line-height: 1.45;
+  color: #ffffff;
+}
+
+.auth-theme__subheadline {
+  margin: 0;
+  max-width: 34rem;
+  font-size: 15px;
+  line-height: 1.9;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.auth-theme__footer {
+  margin: 0;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.auth-theme__logo {
+  display: block;
+  height: 72px;
+  width: auto;
+  max-width: 260px;
+  object-fit: contain;
+}
+
+.auth-theme__logo--md {
+  height: 56px;
+}
+
+.auth-theme__logo--xl {
+  height: 104px;
+  max-width: 340px;
+}
+
+.auth-theme__logo-placeholder {
+  width: 60px;
+  height: 60px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--theme-accent);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ── النموذج ── */
+.auth-theme__form {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-5);
+  background-color: #f8fafc;
+}
+
+.auth-theme__form-inner {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.auth-theme__form-logo .auth-theme__logo-placeholder {
+  color: var(--theme-accent);
+  border-color: #e2e8f0;
+  background-color: #ffffff;
+}
+
+.auth-theme__form-text {
+  text-align: center;
+}
+
+.auth-theme__form-text .auth-theme__headline {
+  font-size: clamp(20px, 2.2vw, 28px);
+}
+
+.auth-theme__footer--form {
+  color: #64748b;
+  text-align: center;
+}
+
+.auth-page--tenant.auth-theme .auth-card {
+  width: 100%;
+}
+
+.auth-page--tenant.auth-theme .auth-input:focus {
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent) 18%, transparent);
+}
+
+.auth-page--tenant.auth-theme .auth-btn--primary,
+.auth-page--tenant.auth-theme .button--primary,
+.auth-page--tenant.auth-theme .auth-btn--primary:hover,
+.auth-page--tenant.auth-theme .button--primary:hover {
+  background-color: var(--theme-accent);
+}
+
+.auth-page--tenant.auth-theme .auth-link {
+  color: var(--theme-accent);
+}
+
+/* ── centered / cover: البطاقةُ فوق الصورة ── */
+.auth-theme--centered,
+.auth-theme--cover {
+  grid-template-rows: 1fr;
+}
+
+.auth-theme--centered .auth-theme__form,
+.auth-theme--cover .auth-theme__form {
+  background-color: transparent;
+  min-height: 100vh;
+}
+
+.auth-theme--centered .auth-theme__form-text .auth-theme__headline,
+.auth-theme--cover .auth-theme__form-text .auth-theme__headline {
+  color: #ffffff;
+}
+
+.auth-theme--centered .auth-theme__form-text .auth-theme__subheadline,
+.auth-theme--cover .auth-theme__form-text .auth-theme__subheadline {
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.auth-theme--centered .auth-theme__footer--form,
+.auth-theme--cover .auth-theme__footer--form {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.auth-theme--centered .auth-theme__form-logo .auth-theme__logo-placeholder,
+.auth-theme--cover .auth-theme__form-logo .auth-theme__logo-placeholder {
+  border-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ── الشاشات الواسعة ── */
+@media (min-width: 1024px) {
+  .auth-theme--split {
+    grid-template-columns: minmax(0, 1.15fr) minmax(440px, 0.85fr);
+    grid-template-rows: 1fr;
+    min-height: 100vh;
+  }
+
+  .auth-theme--split .auth-theme__visual {
+    min-height: 100vh;
+  }
+
+  .auth-theme--split .auth-theme__visual-inner {
+    padding: var(--space-9) var(--space-10);
+  }
+
+  /* form_side=left: النموذجُ في العمود الأوّل بصرياً */
+  .auth-theme--split.auth-theme--form-left {
+    grid-template-columns: minmax(440px, 0.85fr) minmax(0, 1.15fr);
+  }
+
+  .auth-theme--split.auth-theme--form-left .auth-theme__visual {
+    order: 2;
+  }
+
+  .auth-theme--split .auth-theme__form {
+    padding: var(--space-9) var(--space-8);
+  }
+
+  .auth-theme--cover .auth-theme__form {
+    justify-content: flex-start;
+    padding-inline: clamp(32px, 8vw, 120px);
+  }
+
+  .auth-theme--cover.auth-theme--form-left .auth-theme__form {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 1023px) {
+  .auth-theme--split .auth-theme__visual-inner {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .auth-theme--split .auth-theme__visual-text,
+  .auth-theme--split .auth-theme__footer {
+    display: none;
+  }
+}

@@ -1,6 +1,23 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { API_BASE_URL as SHARED_API_BASE_URL } from '../utils/api';
 
+/**
+ * قالبُ صفحة الدخول القابلُ للتشكيل لكلّ مكتب (tenants.login_theme).
+ * null/غياب = التخطيطُ المحايد الحاليّ (شعارٌ أعلى النموذج).
+ */
+export interface LoginTheme {
+  layout: 'split' | 'centered' | 'cover';
+  form_side?: 'right' | 'left';        // split/cover: أيّ جهةٍ يقف فيها النموذج
+  background_url?: string | null;      // صورةُ الخلفية (رابطٌ مطلق أو مسارٌ من جذر الموقع)
+  background_overlay?: number;         // 0..0.9 — عتمةٌ فوق الصورة لقراءة النصّ
+  logo_position?: 'panel' | 'form' | 'both' | 'none';
+  logo_size?: 'md' | 'lg' | 'xl';
+  headline?: string | null;
+  subheadline?: string | null;
+  footer_text?: string | null;
+  accent_color?: string | null;        // يغلب primary_color في هذه الصفحة فقط
+}
+
 // Tenant interface matching the backend response
 export interface Tenant {
   id: number;
@@ -14,6 +31,7 @@ export interface Tenant {
   tagline: string | null;
   favicon_url: string | null;
   custom_branding_enabled: boolean;
+  login_theme?: LoginTheme | null;
 }
 
 /**
