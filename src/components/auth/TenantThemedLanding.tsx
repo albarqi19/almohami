@@ -15,7 +15,8 @@ interface Props {
  *
  * القشرةُ نفسُها التي تلبسها صفحةُ الدخول (الخلفيةُ والعتمةُ واللونُ والشعارُ على صحنه)
  * حتى لا ينتقل الزائرُ من صفحةٍ إلى أخرى مختلفةِ الهوية. المحتوى مقصودٌ في أقلّه:
- * الشعار، العنوان، زرُّ الدخول، وسطرُ التذييل إن وُجد — بلا سردٍ ولا ذكرٍ للرائد.
+ * الشعارُ كبيراً وزرُّ الدخول، وسطرُ التذييل إن وُجد — بلا عنوانٍ ولا سردٍ ولا ذكرٍ للرائد
+ * (العنوانُ headline يبقى لصفحة الدخول). الاسمُ يُكتب فقط حين لا شعار.
  */
 
 /** لونُ نصّ الزرّ بحسب سطوع لون التمييز — ذهبٌ فاتحٌ يحتاج نصّاً داكناً، وكحليٌّ يحتاج أبيض. */
@@ -54,14 +55,12 @@ const TenantThemedLanding: React.FC<Props> = ({ tenant, theme }) => {
                     className="tenant-hero__content"
                 >
                     {logoUrl ? (
-                        <div className={`tenant-hero__logo${plate ? ' tenant-hero__logo--plate' : ''}`}>
+                        <h1 className={`tenant-hero__logo${plate ? ' tenant-hero__logo--plate' : ''}`}>
                             <img src={logoUrl} alt={tenant.name} />
-                        </div>
+                        </h1>
                     ) : (
-                        <p className="tenant-hero__name">{tenant.name}</p>
+                        <h1 className="tenant-hero__headline">{tenant.name}</h1>
                     )}
-
-                    <h1 className="tenant-hero__headline">{theme.headline || tenant.name}</h1>
 
                     <span className="tenant-hero__rule" aria-hidden="true" />
 

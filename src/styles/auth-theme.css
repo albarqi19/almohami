@@ -344,6 +344,10 @@
   gap: 28px;
 }
 
+.tenant-hero__logo {
+  margin: 0;
+}
+
 .tenant-hero__logo img {
   display: block;
   height: 128px;
@@ -352,19 +356,24 @@
   object-fit: contain;
 }
 
+/* سطحُ المكتب: الشعارُ هو الصفحة — أكبرُ بوضوح؛ الجوّالُ يبقى على مقاسه */
+@media (min-width: 1024px) {
+  .tenant-hero__logo img {
+    height: 220px;
+    max-width: min(820px, 70vw);
+  }
+
+  .tenant-hero__content {
+    gap: 36px;
+  }
+}
+
 /* صحنٌ فاتحٌ تحت الشعار — شعارٌ داكنٌ شفّافٌ يختفي فوق العتمة بدونه */
 .tenant-hero__logo--plate img {
   background-color: #ffffff;
   padding: 18px 28px;
   border-radius: 12px;
   box-sizing: content-box;
-}
-
-.tenant-hero__name {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.86);
 }
 
 .tenant-hero__headline {
