@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Scale, Layers, ArrowRight } from 'lucide-react';
 import { useTenant } from '../contexts/TenantContext';
 import { wasEstablishmentOnly } from '../utils/establishmentOnly';
+import TenantThemedAuth from './auth/TenantThemedAuth';
 import '../styles/auth.css';
 
 /**
@@ -98,6 +99,15 @@ const AuthLayout: React.FC = () => {
     // (وهذا يعالج الحالةَ الشائعة لا كلَّها: متصفّحٌ جديدٌ أو نافذةٌ خاصةٌ بلا
     // أثرٍ سيريان الهويةَ الافتراضية — لا يُغلق ذلك إلا بساب-دومين للمكتب.)
     if (isSubdomain || portalIdentity) {
+        // قالبٌ مشكَّل من إعدادات المكتب (tenants.login_theme) — يغلب التخطيطَ المحايد أدناه.
+        if (tenant?.login_theme?.layout) {
+            return (
+                <TenantThemedAuth tenant={tenant} theme={tenant.login_theme}>
+                    <Outlet />
+                </TenantThemedAuth>
+            );
+        }
+
         const logoUrl = tenant?.logo_url || tenant?.logo;
 
         return (
