@@ -91,7 +91,11 @@ const TenantThemedAuth: React.FC<Props> = ({ tenant, theme, children }) => {
                     transition={{ duration: 0.35 }}
                     className="auth-theme__form-inner"
                 >
-                    {showFormLogo && <div className="auth-theme__form-logo">{logo}</div>}
+                    {showFormLogo && (
+                        <div className={`auth-theme__form-logo${showPanelLogo ? ' auth-theme__form-logo--dup' : ''}`}>
+                            {logo}
+                        </div>
+                    )}
                     {layout !== 'split' && hasText && (
                         <div className="auth-theme__form-text">
                             {theme.headline && <h2 className="auth-theme__headline">{theme.headline}</h2>}

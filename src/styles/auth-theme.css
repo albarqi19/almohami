@@ -182,8 +182,8 @@
 }
 
 /* ── centered / cover: البطاقةُ فوق الصورة ── */
-.auth-theme--centered,
-.auth-theme--cover {
+.auth-page--tenant.auth-theme--centered,
+.auth-page--tenant.auth-theme--cover {
   grid-template-rows: 1fr;
 }
 
@@ -216,7 +216,7 @@
 
 /* ── الشاشات الواسعة ── */
 @media (min-width: 1024px) {
-  .auth-theme--split {
+  .auth-page--tenant.auth-theme--split {
     grid-template-columns: minmax(0, 1.15fr) minmax(440px, 0.85fr);
     grid-template-rows: 1fr;
     min-height: 100vh;
@@ -231,7 +231,7 @@
   }
 
   /* form_side=left: النموذجُ في العمود الأوّل بصرياً */
-  .auth-theme--split.auth-theme--form-left {
+  .auth-page--tenant.auth-theme--split.auth-theme--form-left {
     grid-template-columns: minmax(440px, 0.85fr) minmax(0, 1.15fr);
   }
 
@@ -262,7 +262,8 @@
   }
 
   .auth-theme--split .auth-theme__visual-text,
-  .auth-theme--split .auth-theme__footer {
+  .auth-theme--split .auth-theme__footer,
+  .auth-theme__form-logo--dup {
     display: none;
   }
 }
