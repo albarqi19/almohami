@@ -277,6 +277,11 @@
     display: none;
   }
 
+  /* شعارٌ عريضٌ على صحنه (xl = 340px + حشو 36px) كان يتجاوز عرضَ الجوّال 375px */
+  .auth-theme__visual-top--plate .auth-theme__logo {
+    max-width: calc(100vw - 72px);
+  }
+
   .auth-theme--split .auth-theme__visual-text {
     margin-top: var(--space-4);
   }
@@ -284,5 +289,154 @@
   .auth-theme--split .auth-theme__headline {
     margin-bottom: 0;
     font-size: 1.125rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   صفحةُ هبوط المكتب المشكَّلة (TenantThemedLanding) — القشرةُ نفسُها:
+   الخلفيةُ والعتمةُ ولونُ التمييز والشعارُ على صحنه. فلات، بلا ظلٍّ ولا توهّج.
+   ═══════════════════════════════════════════════════════════════════════ */
+.tenant-hero {
+  --theme-accent: var(--tenant-accent, #0f172a);
+  --theme-accent-ink: #ffffff;
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  direction: rtl;
+  background-color: var(--tenant-ink, #111827);
+  color: #ffffff;
+  font-family: 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.tenant-hero__backdrop {
+  position: absolute;
+  inset: 0;
+  background-image: var(--theme-bg-image);
+  background-size: cover;
+  background-position: center;
+}
+
+.tenant-hero__backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgba(8, 11, 16, var(--theme-overlay, 0.55));
+}
+
+.tenant-hero__main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 20px;
+}
+
+.tenant-hero__content {
+  width: 100%;
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 28px;
+}
+
+.tenant-hero__logo img {
+  display: block;
+  height: 128px;
+  width: auto;
+  max-width: min(460px, 86vw);
+  object-fit: contain;
+}
+
+/* صحنٌ فاتحٌ تحت الشعار — شعارٌ داكنٌ شفّافٌ يختفي فوق العتمة بدونه */
+.tenant-hero__logo--plate img {
+  background-color: #ffffff;
+  padding: 18px 28px;
+  border-radius: 12px;
+  box-sizing: content-box;
+}
+
+.tenant-hero__name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.tenant-hero__headline {
+  margin: 0;
+  font-size: clamp(26px, 3.2vw, 42px);
+  font-weight: 700;
+  line-height: 1.45;
+  color: #ffffff;
+}
+
+.tenant-hero__rule {
+  display: block;
+  width: 56px;
+  height: 2px;
+  background-color: var(--theme-accent);
+}
+
+.tenant-hero__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 220px;
+  padding: 14px 36px;
+  border: 0;
+  border-radius: 8px;
+  background-color: var(--theme-accent);
+  color: var(--theme-accent-ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.tenant-hero__cta:hover {
+  filter: brightness(1.08);
+}
+
+.tenant-hero__cta:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
+.tenant-hero__footer {
+  position: relative;
+  z-index: 1;
+  padding: 20px 16px 26px;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+@media (max-width: 640px) {
+  .tenant-hero__main {
+    padding: 40px 16px;
+  }
+
+  .tenant-hero__content {
+    gap: 22px;
+  }
+
+  .tenant-hero__logo img {
+    height: 92px;
+  }
+
+  .tenant-hero__logo--plate img {
+    padding: 14px 18px;
+  }
+
+  .tenant-hero__cta {
+    width: 100%;
+    max-width: 320px;
   }
 }

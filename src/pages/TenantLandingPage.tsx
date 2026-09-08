@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogIn, Scale, ArrowLeft } from 'lucide-react';
 import { useTenant } from '../contexts/TenantContext';
 import { getCustomLanding } from './custom-landings';
+import TenantThemedLanding from '../components/auth/TenantThemedLanding';
 import useSEO from '../hooks/useSEO';
 
 /**
@@ -111,6 +112,12 @@ const TenantLandingPage: React.FC = () => {
         <CustomLanding />
       </Suspense>
     );
+  }
+
+  // قالبُ الدخول المشكَّل (tenants.login_theme) يلبس صفحةَ الهبوط أيضاً حتى تتّحد الهوية
+  // بين الهبوط والدخول. الصفحةُ المخصّصةُ بالكود (أعلاه) تبقى مقدَّمةً عليه.
+  if (tenant.login_theme?.layout) {
+    return <TenantThemedLanding tenant={tenant} theme={tenant.login_theme} />;
   }
 
   const logoUrl = tenant.logo_url || tenant.logo;

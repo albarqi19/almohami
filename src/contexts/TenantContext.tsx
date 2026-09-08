@@ -9,6 +9,7 @@ export interface LoginTheme {
   layout: 'split' | 'centered' | 'cover';
   form_side?: 'right' | 'left';        // split/cover: الجهةُ الفعليّةُ التي يقف فيها النموذج (الافتراضي left)
   logo_plate?: 'light' | 'none';       // split: صحنٌ فاتحٌ تحت شعار اللوحة (الافتراضي light) — none لشعارٍ أبيضَ مصمَّمٍ للداكن
+  logo_dark_url?: string | null;       // نسخةٌ فاتحةٌ من الشعار للأسطح الداكنة (اللوحة، الهبوط، centered/cover) — تُغني عن الصحن
   background_url?: string | null;      // صورةُ الخلفية (رابطٌ مطلق أو مسارٌ من جذر الموقع)
   background_overlay?: number;         // 0..0.9 — عتمةٌ فوق الصورة لقراءة النصّ
   logo_position?: 'panel' | 'form' | 'both' | 'none';
