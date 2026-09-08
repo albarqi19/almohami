@@ -13,7 +13,7 @@
           "value": ".*(facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|Pinterest|Googlebot|bingbot).*"
         }
       ],
-      "destination": "/api/og/$1"
+      "destination": "/api/og"
     },
     {
       "source": "/(.*)",
@@ -31,7 +31,7 @@
       ]
     },
     {
-      "source": "/api/og/(.*)",
+      "source": "/api/og",
       "headers": [
         {
           "key": "Cache-Control",
