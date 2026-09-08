@@ -14,6 +14,7 @@ import { lazyWithRetry } from '../../utils/lazyWithRetry';
 // المكتب كلها بشاشة خطأ عامة. الغلاف يعيد تحميل الصفحة مرة واحدة بدل ذلك.
 const AlkhibraLanding = lazyWithRetry(() => import('./AlkhibraLanding'));
 const LegalEditionLanding = lazyWithRetry(() => import('./LegalEditionLanding'));
+const ZubaidLanding = lazyWithRetry(() => import('./ZubaidLanding'));
 
 // يمكنك إضافة المزيد من الصفحات المخصصة هنا:
 // const AnotherCompanyLanding = React.lazy(() => import('./AnotherCompanyLanding'));
@@ -30,6 +31,7 @@ const LegalEditionLanding = lazyWithRetry(() => import('./LegalEditionLanding'))
 export const customLandingPages: Record<string, React.LazyExoticComponent<React.FC>> = {
   'alkhibra': AlkhibraLanding,
   'legaledition': LegalEditionLanding,
+  'zubaid': ZubaidLanding,
   // أضف المزيد من الشركات هنا
 };
 
