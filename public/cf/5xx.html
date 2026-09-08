@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>الخدمة غير متاحة مؤقتاً</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{--navy:#102028;--navy2:#1f3c4d;--gold:#c9a35d;--gold-soft:#e8cc96;--gold-dark:#8c6d3f;--paper:#f6f1e6;--card:#fdfaf1;--line:#e4d9c0;--ink:#1f3c4d;--muted:#5a6b77}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%;background:var(--paper)}
+  body{font-family:'IBM Plex Sans Arabic',-apple-system,'Segoe UI',Tahoma,Arial,sans-serif;color:var(--ink);line-height:1.9;display:flex;flex-direction:column;min-height:100vh}
+  .top{background:var(--navy);border-bottom:3px solid var(--gold);padding:18px 28px;display:flex;align-items:center;gap:12px;color:#fff}
+  .top .m{width:38px;height:38px;border:1.4px solid var(--gold);border-radius:10px;display:grid;place-items:center;background:#152a35}
+  .top .m svg{width:22px;height:22px} .top .m path{fill:none;stroke:#d9b873;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .top b{font-size:17px;display:block;line-height:1.3} .top span{font-size:11.5px;color:var(--gold-soft)}
+  main{flex:1;display:flex;align-items:center;justify-content:center;padding:36px 16px}
+  .card{width:100%;max-width:640px;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--gold);padding:34px 36px 30px}
+  h1{font-size:24px;color:var(--navy);line-height:1.5;margin-bottom:6px}
+  p.lead{font-size:15px;color:var(--navy2);margin-bottom:16px}
+  p{font-size:14.5px;margin-bottom:10px}
+  .steps{background:#fff;border:1px solid var(--line);border-right:3px solid var(--gold);padding:12px 18px;margin:14px 0 18px}
+  .steps b{color:var(--navy)} .steps ol{margin:6px 22px 0 0} .steps li{margin-bottom:4px;font-size:14px}
+  .retry{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:6px 0 16px}
+  .btn{display:inline-block;background:var(--navy);color:#fff;text-decoration:none;padding:10px 26px;border-radius:8px;font-weight:600;font-size:14.5px;border:0;cursor:pointer;font-family:inherit}
+  .btn:hover{background:var(--navy2)}
+  .count{font-size:13px;color:var(--muted)}
+  .contact{border-top:1px solid var(--line);padding-top:14px;font-size:13.5px;color:var(--muted)}
+  .contact b{color:var(--navy)} .ltr{direction:ltr;unicode-bidi:isolate}
+  .cf{margin-top:18px;font-size:11.5px;color:var(--muted);direction:ltr;text-align:left}
+  .cf details summary{cursor:pointer;color:var(--gold-dark);font-weight:600;font-size:12px}
+  .cf .cf-error-details,.cf .cf-error-details *{font-family:inherit!important;color:var(--muted)!important;background:transparent!important;border-color:var(--line)!important}
+  .en{font-size:12.5px;color:var(--muted);direction:ltr;text-align:left;margin-top:8px}
+  footer{padding:14px 28px;text-align:center;font-size:12px;color:var(--muted)}
+  @media (max-width:520px){.card{padding:26px 20px} h1{font-size:21px} .top{padding:14px 18px}}
+</style>
+</head>
+<body>
+  <header class="top"><div class="m"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="7" rx="2"/><rect x="2" y="14" width="20" height="7" rx="2"/><path d="M6 6.5h.01M6 17.5h.01"/></svg></div><div><b>بوّابة إدارة الأعمال القانونية</b><span>الخدمة غير متاحة في هذه اللحظة</span></div></header>
+  <main>
+    <div class="card">
+      <h1>الخدمة غير متاحة مؤقتاً</h1>
+      <p class="lead">الخادم متصل لكنه لا يستجيب حالياً؛ غالباً لأنه قيد إعادة التشغيل أو التحديث.</p>
+      <div class="steps"><b>ما الذي يحدث؟</b>
+        <ol><li>بعد انقطاع الكهرباء أو إعادة التشغيل يحتاج النظام إلى نحو دقيقتين ليعود للعمل.</li>
+        <li>أثناء التحديثات الدورية قد تتوقف الخدمة لدقائق معدودة.</li></ol></div>
+      <p>لا يلزمكم أي إجراء؛ أعيدوا المحاولة بعد قليل. إن استمرّ الأمر أكثر من عشر دقائق فتواصلوا مع الدعم الفني.</p>
+      <div class="retry"><button class="btn" onclick="location.reload()">إعادة المحاولة الآن</button><span class="count">سنعيد المحاولة تلقائياً خلال <b id="c">20</b> ثانية</span></div>
+      <div class="contact"><b>الدعم الفني:</b> <span class="ltr">+966 57 942 4294</span> (واتساب/جوال) · <span class="ltr">admin@alraedlaw.com</span></div>
+      <div class="en">The server is reachable but not responding — usually restarting or updating. It comes back within about two minutes; no action needed. Contact support if it lasts more than ten minutes.</div>
+      <div class="cf"><details><summary>التفاصيل التقنية · Technical details</summary>::CLOUDFLARE_ERROR_500S_BOX::</details></div>
+    </div>
+  </main>
+  <footer>الدعم الفني · <span class="ltr">+966 57 942 4294</span></footer>
+  <script>
+    (function(){var n=20,e=document.getElementById('c');var t=setInterval(function(){n--;if(e)e.textContent=n;if(n<=0){clearInterval(t);location.reload();}},1000);})();
+  </script>
+</body>
+</html>
