@@ -15,6 +15,7 @@ import { lazyWithRetry } from '../../utils/lazyWithRetry';
 const AlkhibraLanding = lazyWithRetry(() => import('./AlkhibraLanding'));
 const LegalEditionLanding = lazyWithRetry(() => import('./LegalEditionLanding'));
 const ZubaidLanding = lazyWithRetry(() => import('./ZubaidLanding'));
+const ShamrakhLanding = lazyWithRetry(() => import('./ShamrakhLanding'));
 
 // يمكنك إضافة المزيد من الصفحات المخصصة هنا:
 // const AnotherCompanyLanding = React.lazy(() => import('./AnotherCompanyLanding'));
@@ -32,6 +33,7 @@ export const customLandingPages: Record<string, React.LazyExoticComponent<React.
   'alkhibra': AlkhibraLanding,
   'legaledition': LegalEditionLanding,
   'zubaid': ZubaidLanding,
+  'shamrakh': ShamrakhLanding,
   // أضف المزيد من الشركات هنا
 };
 

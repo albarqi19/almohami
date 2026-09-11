@@ -1,0 +1,412 @@
+/**
+ * بوابة عملاء شركة شمراخ — app.shamrakh.sa
+ *
+ * فلات صرف: بلا ظلال ولا تدرّجات ولا توهّج. الفصل بالحدود والمسافات.
+ * الألوان مقيسةٌ من شعارهم: البنّي #825340 والرمادي #434645، على أرضية عاجية.
+ * كل شيء محصورٌ تحت .sh-page لأن Vite يحقن الـCSS عالمياً.
+ */
+
+.sh-page {
+    --sh-brown: #825340;
+    --sh-brown-dark: #6b4335;
+    --sh-ink: #2f3234;
+    --sh-slate: #434645;
+    --sh-muted: #7b736e;
+    --sh-line: #e6ded9;
+    --sh-surface: #ffffff;
+    --sh-bg: #faf7f5;
+
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--sh-bg);
+    color: var(--sh-ink);
+    font-family: 'Almarai', 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.7;
+    /* الاتجاه يُضبط على هذا الجذر وحده بينما <html> يبقى rtl، فالمحاذاة الموروثة
+       تظل يميناً في الإنجليزية. `start` يجعلها تتبع dir الفعليّ للصفحة. */
+    text-align: start;
+}
+
+.sh-container {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* ===== الترويسة ===== */
+.sh-header {
+    border-bottom: 1px solid var(--sh-line);
+    background: var(--sh-surface);
+}
+
+.sh-header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 68px;
+}
+
+.sh-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    min-width: 0;
+}
+
+.sh-brand__mark {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    flex: none;
+}
+
+.sh-brand:hover,
+.sh-brand:focus {
+    text-decoration: none;
+}
+
+.sh-brand__name {
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--sh-slate);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sh-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+}
+
+.sh-nav__link {
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--sh-muted);
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.sh-nav__link:hover {
+    color: var(--sh-brown);
+}
+
+.sh-lang {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--sh-slate);
+    background: transparent;
+    border: 1px solid var(--sh-line);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.sh-lang:hover {
+    border-color: var(--sh-brown);
+    color: var(--sh-brown);
+}
+
+/* ===== الأزرار ===== */
+.sh-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 13px 26px;
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.sh-btn--sm {
+    padding: 9px 16px;
+    font-size: 13px;
+}
+
+.sh-btn--primary {
+    background: var(--sh-brown);
+    color: #ffffff;
+}
+
+.sh-btn--primary:hover {
+    background: var(--sh-brown-dark);
+}
+
+.sh-btn--ghost {
+    background: transparent;
+    color: var(--sh-brown);
+    border-color: var(--sh-brown);
+}
+
+.sh-btn--ghost:hover {
+    background: rgba(130, 83, 64, 0.06);
+}
+
+/* ===== الهيرو ===== */
+.sh-hero {
+    padding: 72px 0 64px;
+}
+
+.sh-hero__grid {
+    display: grid;
+    grid-template-columns: 1.25fr 0.75fr;
+    gap: 56px;
+    align-items: center;
+}
+
+.sh-eyebrow {
+    margin: 0 0 14px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--sh-brown);
+}
+
+.sh-hero__title {
+    margin: 0 0 18px;
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1.35;
+    color: var(--sh-ink);
+    /* بلا موازنة تنفرد «في» في آخر السطر الأول بالعربية على سطح المكتب */
+    text-wrap: balance;
+}
+
+.sh-hero__lead {
+    margin: 0 0 28px;
+    max-width: 46ch;
+    font-size: 15.5px;
+    color: var(--sh-muted);
+}
+
+.sh-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.sh-hero__note {
+    margin: 20px 0 0;
+    max-width: 46ch;
+    font-size: 12.5px;
+    color: var(--sh-muted);
+}
+
+/* لوحُ الهوية — بديلُ صورة الهيرو: الرمزُ على أرضيةٍ بنّية */
+.sh-plate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    padding: 48px 32px;
+    background: var(--sh-brown);
+    border-radius: 6px;
+    text-align: center;
+}
+
+.sh-plate__mark {
+    width: 150px;
+    height: 150px;
+    object-fit: contain;
+    /* الرمزُ بنّيٌّ ورماديٌّ على أرضيةٍ بنّية ⇒ يُقلب أبيضَ خالصاً ليُقرأ */
+    filter: brightness(0) invert(1);
+}
+
+.sh-plate__motto {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.8;
+    color: #ffffff;
+}
+
+/* ===== شريط المزايا ===== */
+.sh-strip {
+    padding: 0 0 72px;
+}
+
+.sh-features {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: var(--sh-surface);
+    border: 1px solid var(--sh-line);
+    border-radius: 6px;
+}
+
+.sh-feature {
+    padding: 28px 24px;
+    border-inline-end: 1px solid var(--sh-line);
+}
+
+.sh-feature:last-child {
+    border-inline-end: none;
+}
+
+.sh-feature__icon {
+    display: inline-flex;
+    color: var(--sh-brown);
+    margin-bottom: 12px;
+}
+
+.sh-feature__title {
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--sh-slate);
+}
+
+.sh-feature__text {
+    margin: 0;
+    font-size: 13px;
+    color: var(--sh-muted);
+    line-height: 1.75;
+}
+
+/* ===== التذييل ===== */
+.sh-footer {
+    margin-top: auto;
+    padding: 40px 0 28px;
+    background: var(--sh-slate);
+    color: #ffffff;
+}
+
+.sh-contact {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin: 0 0 32px;
+    padding: 0;
+    list-style: none;
+}
+
+.sh-contact__item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 4px 10px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.sh-contact__label {
+    font-size: 12px;
+}
+
+.sh-contact__value {
+    grid-column: 2;
+    /* القيمة dir="ltr" فتمتدّ على عرض العمود وتلتصق نصوصُها باليسار حتى في
+       العربية، بعيداً عن عنوانها. start على الشبكة يتبع اتجاه الصفحة لا القيمة. */
+    justify-self: start;
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffffff;
+    text-decoration: none;
+    word-break: break-word;
+}
+
+.sh-contact__value:hover {
+    color: #e8d5cc;
+}
+
+.sh-footer__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    font-size: 12.5px;
+}
+
+.sh-footer__name {
+    font-weight: 700;
+}
+
+.sh-footer__rights {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+/* ===== الشاشات الصغيرة ===== */
+@media (max-width: 900px) {
+    .sh-hero__grid {
+        grid-template-columns: 1fr;
+        gap: 36px;
+    }
+
+    .sh-hero__title {
+        font-size: 32px;
+    }
+
+    .sh-features {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .sh-feature:nth-child(2n) {
+        border-inline-end: none;
+    }
+
+    .sh-feature:nth-child(-n + 2) {
+        border-bottom: 1px solid var(--sh-line);
+    }
+
+    .sh-contact {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+}
+
+@media (max-width: 600px) {
+    /* الرمزُ يبقى ويُخفى الاسمُ ورابطُ الموقع (وهو في التذييل أصلاً)، وإلا
+       انضغطت الترويسةُ فابتلع الشريطُ الرمزَ نفسه. */
+    .sh-brand {
+        flex: none;
+    }
+
+    .sh-brand__name,
+    .sh-nav__link {
+        display: none;
+    }
+
+    .sh-hero {
+        padding: 48px 0 44px;
+    }
+
+    .sh-hero__title {
+        font-size: 27px;
+    }
+
+    .sh-features {
+        grid-template-columns: 1fr;
+    }
+
+    .sh-feature {
+        border-inline-end: none;
+        border-bottom: 1px solid var(--sh-line);
+    }
+
+    .sh-feature:last-child {
+        border-bottom: none;
+    }
+}
