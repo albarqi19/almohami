@@ -1,18 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle, BookTemplate, Bot, Calendar, ChevronRight, ChevronsLeft, ChevronsRight, Clock, Coins, Download, FileText, Flag, FolderKanban,
-  Layers, Link2, ListChecks, MessageSquare, MoreHorizontal, Package, Pencil, Scale, Share2, Trash2, Users, Zap,
+  AlertTriangle, BookTemplate, Calendar, ChevronDown, ChevronRight, Clipboard, Clock, Coins, Download, Eye, FileText, Flag, GitBranch, History, Home, Layers,
+  Lightbulb, Link2, ListChecks, Map as MapIcon, MessageSquare, Pencil, Plus, Scale, Send, ShieldCheck, Sparkles, Trash2, Upload, Users,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
-import { usePermissionContext } from '../contexts/PermissionContext';
 import { ProjectService } from '../services/projectService';
 import type { UpdateProjectInput } from '../services/projectService';
-import type { ProjectFull, ProjectOverview, ProjectTemplateSummary, RoleMap } from '../types/projects';
+import type { ProjectEvent, ProjectFull, ProjectOverview, ProjectPhase, ProjectTemplateSummary, RoleMap } from '../types/projects';
 import { PROJECT_COLORS, PROJECT_COLOR_LABELS, PROJECT_CONFIDENTIALITY_LABELS, PROJECT_PRIORITY_LABELS, PROJECT_ROLE_LABELS, PROJECT_STATUS_LABELS } from '../types/projects';
-import { RoomContext, type SectionKey } from '../components/projects/room/RoomContext';
-import { Bar, Chip, ClientPicker, ErrorBox, Field, HealthChip, Modal, UserMultiSelect, UserSelect, daysFromToday, fmtDate, useOfficeUsers } from '../components/projects/ui';
+import { RoomContext, type QuickAction, type SectionKey } from '../components/projects/room/RoomContext';
+import { Av, Chip, ClientPicker, ErrorBox, Field, Health, Modal, PBar, UserMultiSelect, UserSelect, daysFromToday, firstName, fmtDayMonth, num, useOfficeUsers, whenAr } from '../components/projects/ui';
 import OverviewSection from '../components/projects/room/OverviewSection';
 import TimelineSection from '../components/projects/room/TimelineSection';
 import PhasesSection from '../components/projects/room/PhasesSection';
@@ -20,137 +19,109 @@ import RecordsSection from '../components/projects/room/RecordsSection';
 import DeliverablesSection from '../components/projects/room/DeliverablesSection';
 import DocumentsSection from '../components/projects/room/DocumentsSection';
 import PeopleSection from '../components/projects/room/PeopleSection';
-import EventsSection from '../components/projects/room/EventsSection';
+import EventsSection, { LinksModal } from '../components/projects/room/EventsSection';
 import MoneySection from '../components/projects/room/MoneySection';
 import ClientSection from '../components/projects/room/ClientSection';
 import FeedSection from '../components/projects/room/FeedSection';
 import ReportsSection from '../components/projects/room/ReportsSection';
 import ChatSection from '../components/projects/room/ChatSection';
-import AskSection from '../components/projects/room/AskSection';
-// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (projects.css + بدائيّات ssp2-*)
+import TaskCardModal from '../components/projects/room/TaskCardModal';
+// الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (projects.css)
 
-const SECTIONS: Array<{ key: SectionKey; label: string; icon: React.ReactNode; group: string }> = [
-  { key: 'overview', label: 'نظرة عامة', icon: <Layers size={14} />, group: 'المتابعة' },
-  { key: 'timeline', label: 'الجدول الزمني', icon: <Calendar size={14} />, group: 'المتابعة' },
-  { key: 'phases', label: 'المراحل والمهام', icon: <ListChecks size={14} />, group: 'المتابعة' },
-  { key: 'feed', label: 'الخط الزمني', icon: <Clock size={14} />, group: 'المتابعة' },
-  { key: 'issues', label: 'المسائل القانونية', icon: <Flag size={14} />, group: 'السجلات' },
-  { key: 'risks', label: 'المخاطر', icon: <Zap size={14} />, group: 'السجلات' },
-  { key: 'decisions', label: 'القرارات', icon: <Scale size={14} />, group: 'السجلات' },
-  { key: 'deliverables', label: 'المخرجات', icon: <Package size={14} />, group: 'السجلات' },
-  { key: 'documents', label: 'المستندات', icon: <FileText size={14} />, group: 'السجلات' },
-  { key: 'people', label: 'الأشخاص', icon: <Users size={14} />, group: 'الأطراف' },
-  { key: 'events', label: 'الارتباطات والجلسات', icon: <Link2 size={14} />, group: 'الأطراف' },
-  { key: 'client', label: 'العميل والمشاركة', icon: <Share2 size={14} />, group: 'الأطراف' },
-  { key: 'money', label: 'الوقت والمال', icon: <Coins size={14} />, group: 'الأطراف' },
-  { key: 'reports', label: 'التقارير', icon: <FileText size={14} />, group: 'التواصل' },
-  { key: 'chat', label: 'محادثة المشروع', icon: <MessageSquare size={14} />, group: 'التواصل' },
-  { key: 'ask', label: 'اسأل رائد', icon: <Bot size={14} />, group: 'التواصل' },
-];
+const ARCHETYPE_LABELS: Record<string, string> = { commercial_dispute: 'نزاع تجاري كبير', arbitration: 'تحكيم', ma_deal: 'صفقة استحواذ أو اندماج', bankruptcy: 'إفلاس وإعادة هيكلة', execution_portfolio: 'محفظة طلبات تنفيذ' };
+const SECTIONS: SectionKey[] = ['ov', 'map', 'tasks', 'issues', 'risks', 'decisions', 'deliv', 'docs', 'people', 'events', 'money', 'client', 'feed', 'reports', 'chat'];
+const LEGACY_VIEW: Record<string, SectionKey> = { overview: 'ov', timeline: 'map', phases: 'tasks', deliverables: 'deliv', documents: 'docs', chat: 'chat', ask: 'chat' };
 
 /**
- * غرفة المشروع — بالنمط الملتصق: ترويسة بحقائق، قائمة أقسام يمين، العمل وسط، وعمود انتباه يسار.
- * المسار: /tasks/projects/:projectId (داخل صفحة «المهام والمشاريع»، بلا صفحة جديدة في القائمة).
+ * غرفة المشروع — كما في التصوّر المعتمد: شريط علوي ثابت (الاسم والحالة والصحة والتقدم والمسؤولون
+ * والموعد النهائي وما يرتبط بالمشروع وشريط المراحل وقائمة «إجراء سريع»)، قائمة الصفحات يمين، والمسرح.
+ * المسار: /tasks/projects/:projectId?s=<page> — داخل «المهام والمشاريع».
  */
 const ProjectRoom: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { user } = useAuth();
-  const { has } = usePermissionContext();
   const { users } = useOfficeUsers();
   const id = Number(projectId);
 
   const [project, setProject] = useState<ProjectFull | null>(null);
   const [overview, setOverview] = useState<ProjectOverview | null>(null);
+  const [events, setEvents] = useState<ProjectEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [quota, setQuota] = useState<{ remaining: number; cap: number; enabled: boolean } | null>(null);
-  const [navMin, setNavMin] = useState(() => localStorage.getItem('prj_nav_min') === '1');
-  const [sideMin, setSideMin] = useState(() => localStorage.getItem('prj_side_min') === '1');
-  const [menu, setMenu] = useState(false);
+  const [taskCard, setTaskCard] = useState<number | null>(null);
+  const [phaseFilter, setPhaseFilter] = useState<number | null>(null);
+  const [pending, setPending] = useState<QuickAction | null>(null);
+  const [chatDraft, setChatDraft] = useState('');
+  const [qa, setQa] = useState(false);
   const [editModal, setEditModal] = useState(false);
+  const [linksModal, setLinksModal] = useState(false);
   const [templateModal, setTemplateModal] = useState<'apply' | 'save' | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
-  const section = (params.get('s') as SectionKey) || 'overview';
-  const goTo = useCallback((s: SectionKey) => { setParams((p) => { const n = new URLSearchParams(p); n.set('s', s); return n; }); }, [setParams]);
-  const openTask = useCallback((taskId: number) => navigate(`/tasks/${taskId}`), [navigate]);
+  const raw = params.get('s') ?? params.get('view') ?? 'ov';
+  const section: SectionKey = (SECTIONS as string[]).includes(raw) ? (raw as SectionKey) : (LEGACY_VIEW[raw] ?? 'ov');
+  const goTo = useCallback((s: SectionKey) => { setParams((p) => { const n = new URLSearchParams(p); n.set('s', s); n.delete('view'); return n; }); }, [setParams]);
 
   const load = useCallback(async () => {
     try {
-      const [p, o] = await Promise.all([ProjectService.get(id), ProjectService.overview(id)]);
-      setProject(p);
-      setOverview(o);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر فتح المشروع');
-    }
+      const [p, o, ev] = await Promise.all([ProjectService.get(id), ProjectService.overview(id), ProjectService.events(id).catch(() => [] as ProjectEvent[])]);
+      setProject(p); setOverview(o); setEvents(ev); setError(null);
+    } catch (e) { setError(e instanceof Error ? e.message : 'تعذر فتح المشروع'); }
   }, [id]);
-
   useEffect(() => { if (Number.isFinite(id)) load(); }, [id, load]);
-  useEffect(() => { ProjectService.aiQuota().then(setQuota).catch(() => setQuota(null)); }, []);
 
-  const reloadOverview = useCallback(async () => { try { setOverview(await ProjectService.overview(id)); } catch { /* الترويسة تكفي */ } }, [id]);
   const refresh = useCallback(async () => { await load(); }, [load]);
+  const openTask = useCallback((taskId: number) => setTaskCard(taskId), []);
+  const openTaskPage = useCallback((taskId: number) => navigate(`/tasks/${taskId}`), [navigate]);
+  const consumePending = useCallback((a: QuickAction) => { if (pending === a) { setPending(null); return true; } return false; }, [pending]);
+  const askRaed = useCallback((q?: string) => { setChatDraft(`@رائد ${q ?? ''}`); goTo('chat'); }, [goTo]);
+  const quick = (a: QuickAction) => {
+    setQa(false);
+    setPending(a);
+    const target: Record<QuickAction, SectionKey> = { task: 'tasks', phase: 'tasks', upload: 'docs', person: 'people', meeting: 'events', link: 'events', decision: 'decisions', issue: 'issues', risk: 'risks', client_update: 'reports', report: 'reports' };
+    if (a === 'link') { setPending(null); setLinksModal(true); return; }
+    goTo(target[a]);
+  };
 
   const canEdit = !!project?.can.edit;
   const canApprove = !!project?.can.approve;
-  const ctx = useMemo(() => (project ? { project, refresh, users, canEdit, canApprove, goTo, openTask } : null), [project, refresh, users, canEdit, canApprove, goTo, openTask]);
+  const ctx = useMemo(() => (project ? { project, overview, events, refresh, users, canEdit, canApprove, goTo, openTask, openTaskPage, phaseFilter, setPhaseFilter, pending, consumePending, askRaed, chatDraft, setChatDraft } : null),
+    [project, overview, events, refresh, users, canEdit, canApprove, goTo, openTask, openTaskPage, phaseFilter, pending, consumePending, askRaed, chatDraft]);
 
-  const toggleNav = () => { setNavMin((v) => { localStorage.setItem('prj_nav_min', v ? '0' : '1'); return !v; }); };
-  const toggleSide = () => { setSideMin((v) => { localStorage.setItem('prj_side_min', v ? '0' : '1'); return !v; }); };
+  const changeStatus = async (status: string) => { if (!project) return; try { await ProjectService.update(project.id, { status }); toast.success('حُدثت الحالة'); await load(); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر التحديث'); } };
+  const exportPlan = async () => { if (!project) return; try { const plan = await ProjectService.exportPlan(project.id); const blob = new Blob([JSON.stringify(plan, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${project.code}-plan.json`; a.click(); URL.revokeObjectURL(a.href); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر التصدير'); } };
+  const remove = async () => { if (!project) return; if (!window.confirm(`حذف المشروع «${project.name}»؟ مهامه تبقى مهاماً عادية ولا تُحذف.`)) return; try { await ProjectService.remove(project.id); toast.success('حُذف المشروع'); navigate('/tasks?view=projects'); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر الحذف'); } };
 
-  const changeStatus = async (status: string) => {
-    if (!project) return;
-    try { await ProjectService.update(project.id, { status }); toast.success('حُدثت الحالة'); await load(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر التحديث'); }
-  };
+  if (error) return <div className="prj-scope prj-room" dir="rtl"><div className="prj-empty"><b style={{ display: 'block', fontSize: 14 }}>{error}</b><button type="button" className="prj-btn" style={{ marginTop: 10 }} onClick={() => navigate('/tasks?view=projects')}>عودة إلى المشاريع</button></div></div>;
+  if (!project || !ctx) return <div className="prj-scope prj-room" dir="rtl"><div className="prj-empty">جارٍ فتح غرفة المشروع…</div></div>;
 
-  const exportPlan = async () => {
-    if (!project) return;
-    try {
-      const plan = await ProjectService.exportPlan(project.id);
-      const blob = new Blob([JSON.stringify(plan, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${project.code}-plan.json`; a.click(); URL.revokeObjectURL(a.href);
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر التصدير'); }
-  };
-
-  const remove = async () => {
-    if (!project) return;
-    if (!window.confirm(`حذف المشروع «${project.name}»؟ مهامه تبقى مهاماً عادية ولا تُحذف.`)) return;
-    setDeleting(true);
-    try { await ProjectService.remove(project.id); toast.success('حُذف المشروع'); navigate('/tasks?view=projects'); }
-    catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر الحذف'); setDeleting(false); }
-  };
-
-  if (error) {
-    return <div className="ssp2-page" dir="rtl"><div className="prj-empty"><h3>{error}</h3><button type="button" className="ssp2-btn" onClick={() => navigate('/tasks?view=projects')}>عودة إلى المشاريع</button></div></div>;
-  }
-  if (!project || !ctx) return <div className="ssp2-page" dir="rtl"><div className="prj-empty">جارٍ فتح غرفة المشروع…</div></div>;
-
-  const nextMs = project.next_milestone ? daysFromToday(project.next_milestone.date) : null;
-  const target = daysFromToday(project.target_end_date);
   const n = overview?.numbers;
-  const counts: Partial<Record<SectionKey, { v: number; tone?: 'bad' | 'warn' }>> = {
-    phases: { v: n?.tasks_late ?? project.tasks_late, tone: 'bad' },
-    issues: { v: n?.issues_open ?? 0, tone: 'warn' },
-    risks: { v: n?.risks_high ?? 0, tone: 'warn' },
-    decisions: { v: n?.decisions_pending ?? 0, tone: 'warn' },
-    deliverables: { v: n?.deliverables_in_progress ?? 0 },
-    documents: { v: n?.documents ?? 0 },
-    people: { v: n?.people ?? project.members.length },
-    events: { v: project.links.length },
+  const target = daysFromToday(project.target_end_date);
+  const nextMs = project.next_milestone;
+  const clientTeam = project.contacts.filter((c) => c.kind === 'client_team').length;
+  const externals = project.contacts.length - clientTeam;
+  const futureMeetings = events.filter((e) => e.kind === 'meeting' && e.is_future).length;
+  const phases = project.phases.filter((p) => p.status !== 'skipped');
+  const linkDetail = (l: ProjectFull['links'][number]) => {
+    const evs = events.filter((e) => e.link.id === l.id && e.is_future);
+    if (l.type === 'case') { const s = evs.find((e) => e.kind === 'session'); return s ? `جلسة ${fmtDayMonth(s.date)}` : (l.extra && typeof l.extra.status === 'string' ? String(l.extra.status) : ''); }
+    if (l.type === 'legal_service') { const st = evs.find((e) => e.kind === 'stage'); return st ? `مرحلة ${st.title.split(' · ')[0]}` : (l.extra && typeof l.extra.status === 'string' ? String(l.extra.status) : ''); }
+    if (l.type === 'meeting') { const m = events.find((e) => e.link.id === l.id); return m ? fmtDayMonth(m.date) : ''; }
+    return l.extra && typeof l.extra.status === 'string' ? String(l.extra.status) : '';
   };
+  const linkIcon = (t: string) => (t === 'case' ? <Scale size={12} /> : t === 'execution_request' ? <Flag size={12} /> : t === 'legal_service' ? <Layers size={12} /> : t === 'contract' ? <Coins size={12} /> : <Calendar size={12} />);
+  const phaseMeta = (p: ProjectPhase) => (p.status === 'completed' ? `اكتملت ${fmtDayMonth(p.due_date)}` : p.status === 'active' ? `${p.tasks_done}/${p.tasks_total} مهام · حتى ${fmtDayMonth(p.due_date)}` : p.status === 'awaiting_approval' ? 'تنتظر الموافقة' : p.status === 'hidden' ? 'بعد القرار' : `${fmtDayMonth(p.start_date)} → ${fmtDayMonth(p.due_date)}`);
+  const navCount = (v: number, tone?: 'bad') => (v > 0 ? <span className={`prj-cnt num ${tone ? 'prj-cnt--bad' : ''}`}>{v}</span> : null);
 
   const renderSection = () => {
     switch (section) {
-      case 'timeline': return <TimelineSection />;
-      case 'phases': return <PhasesSection />;
+      case 'map': return <TimelineSection />;
+      case 'tasks': return <PhasesSection />;
       case 'issues': return <RecordsSection kind="issues" />;
       case 'risks': return <RecordsSection kind="risks" />;
       case 'decisions': return <RecordsSection kind="decisions" />;
-      case 'deliverables': return <DeliverablesSection />;
-      case 'documents': return <DocumentsSection />;
+      case 'deliv': return <DeliverablesSection />;
+      case 'docs': return <DocumentsSection />;
       case 'people': return <PeopleSection />;
       case 'events': return <EventsSection />;
       case 'money': return <MoneySection />;
@@ -158,144 +129,119 @@ const ProjectRoom: React.FC = () => {
       case 'feed': return <FeedSection />;
       case 'reports': return <ReportsSection />;
       case 'chat': return <ChatSection />;
-      case 'ask': return <AskSection quota={quota} />;
-      default: return <OverviewSection overview={overview} reload={reloadOverview} />;
+      default: return <OverviewSection />;
     }
   };
-  const current = SECTIONS.find((s) => s.key === section) ?? SECTIONS[0];
 
   return (
     <RoomContext.Provider value={ctx}>
-      <div className={`ssp2-page prj-room prj-color-${project.color}`} dir="rtl">
-        <header className="ssp2-header">
-          <div className="ssp2-header__top">
-            <div className="ssp2-header__info prj-room__title">
-              <button type="button" className="ssp2-icon-btn" onClick={() => navigate('/tasks?view=projects')} title="عودة إلى المشاريع"><ChevronRight size={17} /></button>
-              <span className="ssp2-header__badge"><FolderKanban size={13} /> غرفة المشروع</span>
-              <span className="prj-room__code">{project.code}</span>
-              <h1 className="ssp2-header__title">{project.name}</h1>
-              {project.client && <span className="ssp2-header__client">{project.client.name}</span>}
-              <HealthChip health={project.health} reasons={project.health_reasons} />
-              <Chip tone={project.priority === 'critical' || project.priority === 'high' ? 'bad' : 'muted'}>{PROJECT_PRIORITY_LABELS[project.priority]}</Chip>
-            </div>
-            <div className="prj-room__actions">
-              <span className="prj-room__progress"><Bar value={project.progress} tone={project.health === 'late' ? 'late' : project.health === 'attention' ? 'attention' : ''} />{project.progress}٪</span>
-              {canEdit ? (
-                <select className="ssp2-input" style={{ width: 'auto', padding: '4px 8px', fontSize: 12 }} value={project.status} onChange={(e) => changeStatus(e.target.value)} title="حالة المشروع">
-                  {Object.entries(PROJECT_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              ) : <Chip tone="navy">{project.status_label}</Chip>}
-              <button type="button" className="ssp2-btn" onClick={() => goTo('ask')}><Bot size={13} /> اسأل رائد</button>
-              <button type="button" className="ssp2-btn" onClick={() => goTo('client')}><Share2 size={13} /> مشاركة</button>
-              {canEdit && <button type="button" className="ssp2-btn" onClick={() => setEditModal(true)}><Pencil size={13} /> تعديل</button>}
-              <div style={{ position: 'relative' }}>
-                <button type="button" className="ssp2-icon-btn" onClick={() => setMenu((m) => !m)} title="المزيد"><MoreHorizontal size={16} /></button>
-                {menu && (
-                  <div className="prj-picker__list" style={{ insetInlineStart: 'auto', insetInlineEnd: 0, minWidth: 220 }} onMouseLeave={() => setMenu(false)}>
-                    {canEdit && <button type="button" className="prj-picker__item" onClick={() => { setMenu(false); setTemplateModal('apply'); }}><BookTemplate size={12} /> تطبيق قالب على المشروع</button>}
-                    {canEdit && <button type="button" className="prj-picker__item" onClick={() => { setMenu(false); setTemplateModal('save'); }}><BookTemplate size={12} /> حفظ كقالب للمكتب</button>}
-                    <button type="button" className="prj-picker__item" onClick={() => { setMenu(false); exportPlan(); }}><Download size={12} /> تصدير الخطة (JSON)</button>
-                    <button type="button" className="prj-picker__item" onClick={async () => { setMenu(false); try { await ProjectService.recompute(project.id); await load(); toast.success('أُعيد الحساب'); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر'); } }}>إعادة حساب الصحة والتقدم</button>
-                    {project.can.delete && <button type="button" className="prj-picker__item" style={{ color: 'var(--status-red)' }} disabled={deleting} onClick={() => { setMenu(false); remove(); }}><Trash2 size={12} /> حذف المشروع</button>}
+      <div className={`prj-scope prj-room prj-color-${project.color}`} dir="rtl">
+        <header className="prj-ws-head">
+          <div className="prj-ws-top">
+            <button type="button" className="prj-ibtn" onClick={() => navigate('/tasks?view=projects')} title="عودة إلى المشاريع"><ChevronRight size={15} /></button>
+            <span className="prj-badge">مشروع</span>
+            <span className="prj-dot" /><span className="prj-code">{project.code}</span>
+            <h2 className="prj-ws-title" title={project.name}>{project.name}</h2>
+            {project.archetype && ARCHETYPE_LABELS[project.archetype] && <Chip tone="proj">{ARCHETYPE_LABELS[project.archetype]}</Chip>}
+            {canEdit ? (
+              <select className="prj-sel" style={{ padding: '2px 6px', fontSize: 11 }} value={project.status} onChange={(e) => changeStatus(e.target.value)} title="حالة المشروع">
+                {Object.entries(PROJECT_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            ) : <Chip tone="doing">{project.status_label}</Chip>}
+            <Health health={project.health} reasons={project.health_reasons} />
+            {(project.priority === 'high' || project.priority === 'critical') && <Chip tone="hold">أولوية {PROJECT_PRIORITY_LABELS[project.priority]}</Chip>}
+            <span className="prj-spacer" />
+            <button type="button" className="prj-btn prj-btn--sm prj-btn--gold" onClick={() => askRaed()}><Sparkles size={12} /> اسأل رائد عن المشروع</button>
+            {canEdit && (
+              <div className="prj-qa">
+                <button type="button" className="prj-btn prj-btn--sm prj-btn--primary" onClick={() => setQa((v) => !v)}><Plus size={12} /> إجراء سريع <ChevronDown size={11} /></button>
+                {qa && (
+                  <div className="prj-qa__menu" onMouseLeave={() => setQa(false)}>
+                    <button type="button" onClick={() => quick('task')}><ListChecks size={12} /> مهمة</button>
+                    <button type="button" onClick={() => quick('phase')}><Flag size={12} /> مرحلة</button>
+                    <button type="button" onClick={() => quick('upload')}><Upload size={12} /> رفع مستند</button>
+                    <button type="button" onClick={() => quick('person')}><Users size={12} /> إضافة شخص</button>
+                    <button type="button" onClick={() => quick('link')}><Link2 size={12} /> ربط قضية أو اجتماع</button>
+                    <button type="button" onClick={() => quick('decision')}><ShieldCheck size={12} /> قرار</button>
+                    <button type="button" onClick={() => quick('issue')}><Lightbulb size={12} /> مسألة قانونية</button>
+                    <button type="button" onClick={() => quick('risk')}><AlertTriangle size={12} /> مخاطرة</button>
+                    <button type="button" onClick={() => quick('client_update')}><Send size={12} /> تحديث للعميل</button>
+                    <button type="button" onClick={() => quick('report')}><FileText size={12} /> تقرير</button>
+                    <div style={{ borderTop: '1px solid var(--pj-line)', margin: '4px 0' }} />
+                    <button type="button" onClick={() => { setQa(false); setTemplateModal('apply'); }}><BookTemplate size={12} /> تطبيق قالب</button>
+                    <button type="button" onClick={() => { setQa(false); setTemplateModal('save'); }}><BookTemplate size={12} /> حفظ كقالب للمكتب</button>
+                    <button type="button" onClick={() => { setQa(false); exportPlan(); }}><Download size={12} /> تصدير الخطة</button>
+                    {project.can.delete && <button type="button" style={{ color: 'var(--pj-bad)' }} onClick={() => { setQa(false); remove(); }}><Trash2 size={12} /> حذف المشروع</button>}
                   </div>
                 )}
               </div>
+            )}
+            {canEdit && <button type="button" className="prj-btn prj-btn--sm" onClick={() => setEditModal(true)}><Pencil size={12} /> تعديل</button>}
+          </div>
+          <div className="prj-facts">
+            <span className="prj-fact"><span className="k">التقدم</span> <PBar value={project.progress} tone={project.health === 'late' ? 'bad' : project.health === 'attention' ? 'warn' : ''} /> <span className="num">{project.progress}٪</span></span>
+            <span className="prj-fact"><span className="k">الشريك المسؤول</span> {project.partner ? <><Av name={project.partner.name} /> {firstName(project.partner.name)}</> : '—'}</span>
+            <span className="prj-fact"><span className="k">مدير المشروع</span> {project.manager ? <><Av name={project.manager.name} /> {firstName(project.manager.name)}</> : '—'}</span>
+            <span className="prj-fact"><Users size={12} /> <span className="prj-avs">{project.members.slice(0, 5).map((m) => <Av key={m.id} name={m.name} />)}</span> <span className="prj-dim num">{project.members.length} من المكتب{clientTeam ? ` · ${clientTeam} من العميل` : ''}{externals ? ` · ${externals} خارجيون` : ''}</span></span>
+            <span className="prj-fact"><Calendar size={12} /> <span className="k">البداية</span> <span className="num">{fmtDayMonth(project.start_date)}</span></span>
+            <span className="prj-fact"><span className="k">الموعد النهائي</span> <span className="num" style={target && target.days < 0 && project.status === 'active' ? { color: 'var(--pj-bad)' } : undefined}>{project.target_end_date ? `${fmtDayMonth(project.target_end_date)}${target ? ` · ${target.label}` : ''}` : nextMs ? `${nextMs.name} · ${fmtDayMonth(nextMs.date)}` : '—'}</span></span>
+            <span className="prj-fact"><Clock size={12} /> <span className="num">{num(n?.hours_actual ?? 0)} من {num(n?.hours_estimated ?? project.estimated_hours ?? 0)} ساعة</span></span>
+            <span className="prj-fact"><span className="k">آخر تحديث</span> <span className="num">{whenAr(project.updated_at)}</span></span>
+            <span className="prj-fact"><span className="k">السرية</span> {PROJECT_CONFIDENTIALITY_LABELS[project.confidentiality]}</span>
+          </div>
+          <div className="prj-links">
+            <span className="prj-dim" style={{ fontSize: 11 }}>مرتبط بـ:</span>
+            {project.links.map((l) => { const d = linkDetail(l); return (
+              <button type="button" key={l.id} className="prj-lnk" onClick={() => (l.url && l.exists ? navigate(l.url) : setLinksModal(true))} title={l.label}>
+                {linkIcon(l.type)} {l.type === 'case' && l.extra && typeof l.extra.file_number === 'string' ? <><b>{String(l.extra.file_number)}</b> {l.label.replace(`${String(l.extra.file_number)} · `, '')}</> : <>{l.type_label}: <b>{l.label}</b></>}{d ? ` · ${d}` : ''}
+              </button>
+            ); })}
+            {futureMeetings > 0 && <button type="button" className="prj-lnk" onClick={() => goTo('events')}><Calendar size={12} /> <b>{futureMeetings}</b> اجتماعات قادمة</button>}
+            {canEdit && <button type="button" className="prj-link" style={{ fontSize: 11, textDecoration: 'none' }} onClick={() => setLinksModal(true)}>+ ربط</button>}
+            {project.links.length === 0 && !canEdit && <span className="prj-dim" style={{ fontSize: 11 }}>لا ارتباطات.</span>}
+          </div>
+          {phases.length > 0 && (
+            <div className="prj-phases">
+              {phases.map((p) => { const pct = p.tasks_total ? Math.round((p.tasks_done / p.tasks_total) * 100) : (p.status === 'completed' ? 100 : 0); return (
+                <button type="button" key={p.id} className={`prj-ph ${p.status === 'completed' ? 'prj-ph--done' : ''} ${p.status === 'active' || p.status === 'awaiting_approval' ? 'prj-ph--cur' : ''} ${p.status === 'hidden' ? 'prj-ph--branch' : ''} ${phaseFilter === p.id ? 'is-sel' : ''}`} onClick={() => { setPhaseFilter(phaseFilter === p.id ? null : p.id); goTo('tasks'); }} title={p.objective ?? p.name}>
+                  <span className="prj-ph__row"><span className="prj-ph__n num">{p.status === 'completed' ? '✓' : p.order}</span><span className="prj-ph__name">{p.name}</span>{p.requires_approval && <ShieldCheck size={11} className="gate" />}{p.client_visible && <Eye size={11} className="eye" />}</span>
+                  <span className="prj-ph__meta">{phaseMeta(p)}</span>
+                  <PBar value={pct} tone={p.tasks_late ? 'bad' : ''} />
+                </button>
+              ); })}
             </div>
-          </div>
-          <div className="ssp2-header__facts">
-            <span className="ssp2-fact"><span className="ssp2-fact__label">المدير</span><b>{project.manager?.name ?? '—'}</b></span>
-            <span className="ssp2-fact__sep" />
-            <span className="ssp2-fact"><span className="ssp2-fact__label">الشريك</span><b>{project.partner?.name ?? '—'}</b></span>
-            <span className="ssp2-fact__sep" />
-            <span className="ssp2-fact"><span className="ssp2-fact__label">البداية</span><b>{fmtDate(project.start_date)}</b></span>
-            <span className="ssp2-fact__sep" />
-            <span className="ssp2-fact"><span className="ssp2-fact__label">الهدف</span><b style={target && target.days < 0 && project.status === 'active' ? { color: 'var(--status-red)' } : undefined}>{project.target_end_date ? `${fmtDate(project.target_end_date)} (${target?.label})` : '—'}</b></span>
-            <span className="ssp2-fact__sep" />
-            <span className="ssp2-fact"><span className="ssp2-fact__label">المرحلة الجارية</span><b>{project.current_phase ? `${project.current_phase.order}. ${project.current_phase.name}` : '—'}</b></span>
-            <span className="ssp2-fact__sep" />
-            <span className="ssp2-fact"><span className="ssp2-fact__label">الموعد القادم</span><b>{project.next_milestone ? `${project.next_milestone.name} · ${fmtDate(project.next_milestone.date)}${nextMs ? ` (${nextMs.label})` : ''}` : '—'}</b></span>
-            <span className="ssp2-fact__sep" />
-            <span className="ssp2-fact"><span className="ssp2-fact__label">المهام</span><b>{project.tasks_done}/{project.tasks_total}{project.tasks_late ? <span style={{ color: 'var(--status-red)' }}> · {project.tasks_late} متأخرة</span> : null}</b></span>
-            <span className="ssp2-fact__sep" />
-            <span className="ssp2-fact"><span className="ssp2-fact__label">يراه</span><b>{PROJECT_CONFIDENTIALITY_LABELS[project.confidentiality]}</b></span>
-          </div>
+          )}
         </header>
 
-        <div className="ssp2-layout">
-          <nav className={`prj-nav ${navMin ? 'prj-nav--min' : ''}`} aria-label="أقسام المشروع">
-            {navMin ? (
-              <div className="prj-nav__mini">
-                <button type="button" className="ssp2-icon-btn" onClick={toggleNav} title="توسيع القائمة"><ChevronsLeft size={15} /></button>
-                {SECTIONS.map((s) => <button type="button" key={s.key} className={`ssp2-icon-btn ${section === s.key ? 'ssp2-icon-btn--active' : ''}`} title={s.label} onClick={() => goTo(s.key)}>{s.icon}</button>)}
-              </div>
-            ) : (
-              <>
-                <div className="prj-nav__group" style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 6px' }}><button type="button" className="ssp2-icon-btn" onClick={toggleNav} title="طي القائمة"><ChevronsRight size={15} /></button></div>
-                {Array.from(new Set(SECTIONS.map((s) => s.group))).map((g) => (
-                  <div key={g} className="prj-nav__group">
-                    <div className="prj-nav__label">{g}</div>
-                    {SECTIONS.filter((s) => s.group === g).map((s) => {
-                      const c = counts[s.key];
-                      return (
-                        <button type="button" key={s.key} className={`prj-nav__item ${section === s.key ? 'prj-nav__item--active' : ''}`} onClick={() => goTo(s.key)}>
-                          {s.icon}<span>{s.label}</span>
-                          {c && c.v > 0 && <span className={`prj-nav__count ${c.tone ? `prj-nav__count--${c.tone}` : ''}`}>{c.v}</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))}
-              </>
-            )}
+        <div className="prj-room__body">
+          <nav className="prj-pnav" aria-label="صفحات المشروع">
+            <button type="button" className={section === 'ov' ? 'is-on' : ''} onClick={() => goTo('ov')}><Home size={13} /> نظرة عامة</button>
+            <div className="grp">الخطة</div>
+            <button type="button" className={section === 'map' ? 'is-on' : ''} onClick={() => goTo('map')}><MapIcon size={13} /> الجدول الزمني</button>
+            <button type="button" className={section === 'tasks' ? 'is-on' : ''} onClick={() => goTo('tasks')}><ListChecks size={13} /> المراحل والمهام {n && <span className="prj-cnt num">{n.tasks_done}/{n.tasks_total}{n.tasks_late ? <span className="prj-cnt--bad"> · {n.tasks_late} متأخرة</span> : ''}</span>}</button>
+            <div className="grp">السجلات</div>
+            <button type="button" className={section === 'issues' ? 'is-on' : ''} onClick={() => goTo('issues')}><Lightbulb size={13} /> المسائل القانونية {n && n.issues_open > 0 && <span className="prj-cnt num">{n.issues_open} مفتوحة</span>}</button>
+            <button type="button" className={section === 'risks' ? 'is-on' : ''} onClick={() => goTo('risks')}><AlertTriangle size={13} /> المخاطر {n && navCount(n.risks_open)}</button>
+            <button type="button" className={section === 'decisions' ? 'is-on' : ''} onClick={() => goTo('decisions')}><ShieldCheck size={13} /> القرارات {n && n.decisions_pending > 0 && <span className="prj-cnt num prj-cnt--bad">{n.decisions_pending} معلقة</span>}</button>
+            <button type="button" className={section === 'deliv' ? 'is-on' : ''} onClick={() => goTo('deliv')}><FileText size={13} /> المخرجات {n && n.deliverables_total > 0 && <span className="prj-cnt num">{n.deliverables_final} من {n.deliverables_total}</span>}</button>
+            <div className="grp">المشروع</div>
+            <button type="button" className={section === 'docs' ? 'is-on' : ''} onClick={() => goTo('docs')}><Clipboard size={13} /> المستندات {n && navCount(n.documents)}</button>
+            <button type="button" className={section === 'people' ? 'is-on' : ''} onClick={() => goTo('people')}><Users size={13} /> الأشخاص {navCount(project.members.length + project.contacts.length)}</button>
+            <button type="button" className={section === 'events' ? 'is-on' : ''} onClick={() => goTo('events')}><Calendar size={13} /> الاجتماعات والجلسات {events.filter((e) => e.is_future).length > 0 && <span className="prj-cnt num">{events.filter((e) => e.is_future).length} قادمة</span>}</button>
+            <button type="button" className={section === 'money' ? 'is-on' : ''} onClick={() => goTo('money')}><Coins size={13} /> الوقت والمال</button>
+            <button type="button" className={section === 'client' ? 'is-on' : ''} onClick={() => goTo('client')}><Eye size={13} /> العميل</button>
+            <div className="grp">المتابعة</div>
+            <button type="button" className={section === 'feed' ? 'is-on' : ''} onClick={() => goTo('feed')}><History size={13} /> الخط الزمني</button>
+            <button type="button" className={section === 'reports' ? 'is-on' : ''} onClick={() => goTo('reports')}><Send size={13} /> التقارير</button>
+            <button type="button" className={section === 'chat' ? 'is-on' : ''} onClick={() => goTo('chat')}><MessageSquare size={13} /> محادثة المشروع</button>
+            {project.decision_points.some((dp) => !dp.chosen_key) && <div className="grp" style={{ display: 'flex', gap: 5, alignItems: 'center' }}><GitBranch size={11} /> فيه نقطة قرار</div>}
           </nav>
-
-          <main className="prj-main">
-            <div className="prj-main__head"><h2>{current.icon} {current.label}</h2></div>
-            <div className="prj-main__scroll">{renderSection()}</div>
-          </main>
-
-          <aside className={`prj-side ${sideMin ? 'prj-side--min' : ''}`}>
-            {sideMin ? (
-              <button type="button" className="ssp2-chatcol__reopen" onClick={toggleSide} title="إظهار عمود الانتباه"><ChevronsRight size={15} /><span style={{ writingMode: 'vertical-rl', fontSize: 11.5, fontWeight: 700 }}>الانتباه والفريق</span></button>
-            ) : (
-              <>
-                <div className="ssp2-card">
-                  <div className="ssp2-card__head"><span className="ssp2-card__title"><AlertTriangle size={13} /> يحتاج انتباهاً</span><button type="button" className="ssp2-icon-btn" onClick={toggleSide} title="طي"><ChevronsLeft size={14} /></button></div>
-                  <div className="prj-attn">
-                    {(overview?.attention ?? []).length === 0 && <div className="ssp2-empty">لا شيء عاجل.</div>}
-                    {(overview?.attention ?? []).slice(0, 6).map((a, i) => (
-                      <div key={i} className={`prj-attn__item prj-attn__item--${a.severity}`}><AlertTriangle size={12} /><span>{a.kind === 'task' && a.id ? <button type="button" onClick={() => openTask(a.id!)}>{a.text}</button> : a.text}</span></div>
-                    ))}
-                  </div>
-                </div>
-                <div className="ssp2-card">
-                  <div className="ssp2-card__head"><span className="ssp2-card__title"><Calendar size={13} /> القادم</span></div>
-                  <div className="prj-attn">
-                    {(overview?.upcoming ?? []).length === 0 && <div className="ssp2-empty">لا مواعيد قريبة.</div>}
-                    {(overview?.upcoming ?? []).slice(0, 6).map((u) => { const d = daysFromToday(u.at); return (
-                      <div key={u.key} className="prj-attn__item prj-attn__item--info"><Clock size={12} /><span><b style={{ fontWeight: 700 }}>{d?.label}</b> · {u.subject_type === 'task' && u.subject_id ? <button type="button" onClick={() => openTask(u.subject_id!)}>{u.title}</button> : u.title}</span></div>
-                    ); })}
-                  </div>
-                </div>
-                <div className="ssp2-card">
-                  <div className="ssp2-card__head"><span className="ssp2-card__title"><Users size={13} /> الفريق</span><button type="button" className="prj-link" style={{ fontSize: 11 }} onClick={() => goTo('people')}>الكل</button></div>
-                  <div>
-                    {project.members.slice(0, 8).map((m) => <div key={m.id} className="prj-person" style={{ padding: '5px 12px' }}><span className="prj-person__avatar" style={{ width: 24, height: 24, fontSize: 10.5 }}>{m.name.slice(0, 2)}</span><div><div className="prj-person__name" style={{ fontSize: 12 }}>{m.name}</div><div className="prj-person__role">{m.role_label}</div></div></div>)}
-                    {project.members.length === 0 && <div className="ssp2-empty">بلا فريق بعد.</div>}
-                  </div>
-                </div>
-                {project.links.length > 0 && (
-                  <div className="ssp2-card">
-                    <div className="ssp2-card__head"><span className="ssp2-card__title"><Link2 size={13} /> المرتبط</span><button type="button" className="prj-link" style={{ fontSize: 11 }} onClick={() => goTo('events')}>الكل</button></div>
-                    <div>{project.links.slice(0, 6).map((l) => <div key={l.id} className="prj-person" style={{ padding: '5px 12px' }}><Chip tone="muted">{l.type_label}</Chip><span style={{ fontSize: 12, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.label}</span></div>)}</div>
-                  </div>
-                )}
-              </>
-            )}
-          </aside>
+          <div className="prj-stage">{renderSection()}</div>
         </div>
 
+        {taskCard !== null && <TaskCardModal taskId={taskCard} onClose={() => setTaskCard(null)} />}
         {editModal && <EditProjectModal project={project} onClose={() => setEditModal(false)} onSaved={async () => { setEditModal(false); await load(); }} />}
+        {linksModal && <LinksModal onClose={() => setLinksModal(false)} onRemove={async (l) => { if (!window.confirm(`فك ربط «${l.label}»؟`)) return; try { await ProjectService.removeLink(project.id, l.id); await load(); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر فك الربط'); } }} />}
         {templateModal === 'apply' && <ApplyTemplateModal project={project} users={users} currentUserId={user ? Number(user.id) : null} onClose={() => setTemplateModal(null)} onDone={async () => { setTemplateModal(null); await load(); }} />}
         {templateModal === 'save' && <SaveTemplateModal project={project} onClose={() => setTemplateModal(null)} />}
       </div>
@@ -307,34 +253,32 @@ const EditProjectModal: React.FC<{ project: ProjectFull; onClose: () => void; on
   const { users } = useOfficeUsers();
   const [f, setF] = useState<UpdateProjectInput & { client: { id: number; name: string } | null }>({
     name: project.name, description: project.description ?? '', color: project.color, priority: project.priority, confidentiality: project.confidentiality,
-    partner_id: project.partner?.id ?? null, manager_id: project.manager?.id ?? null, start_date: project.start_date ?? '', target_end_date: project.target_end_date ?? '', client: project.client,
+    partner_id: project.partner?.id ?? null, manager_id: project.manager?.id ?? null, start_date: project.start_date ?? '', target_end_date: project.target_end_date ?? '', client: project.client, archetype: project.archetype ?? '',
   });
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const submit = async () => {
     if (!f.name?.trim()) { setErr('الاسم مطلوب'); return; }
     setBusy(true);
-    try {
-      const { client, ...rest } = f;
-      await ProjectService.update(project.id, { ...rest, name: f.name!.trim(), description: f.description || null, client_id: client?.id ?? null, start_date: f.start_date || null, target_end_date: f.target_end_date || null });
-      toast.success('حُفظ'); await onSaved();
-    } catch (e) { setErr(e instanceof Error ? e.message : 'تعذر الحفظ'); }
+    try { const { client, ...rest } = f; await ProjectService.update(project.id, { ...rest, name: f.name!.trim(), description: f.description || null, client_id: client?.id ?? null, start_date: f.start_date || null, target_end_date: f.target_end_date || null, archetype: f.archetype || null }); toast.success('حُفظ'); await onSaved(); }
+    catch (e) { setErr(e instanceof Error ? e.message : 'تعذر الحفظ'); }
     finally { setBusy(false); }
   };
   return (
-    <Modal title="تعديل المشروع" onClose={onClose} wide foot={<><button type="button" className="ssp2-btn" onClick={onClose}>إلغاء</button><button type="button" className="ssp2-btn ssp2-btn--primary" onClick={submit} disabled={busy}>حفظ</button></>}>
+    <Modal title="تعديل المشروع" onClose={onClose} wide foot={<><button type="button" className="prj-btn" onClick={onClose}>إلغاء</button><button type="button" className="prj-btn prj-btn--primary" onClick={submit} disabled={busy}>حفظ</button></>}>
       <ErrorBox error={err} />
       <div className="prj-form">
-        <Field label="الاسم" full><input className="ssp2-input" value={f.name ?? ''} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
-        <Field label="الوصف" full><textarea className="ssp2-input" rows={3} value={f.description ?? ''} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
+        <Field label="الاسم" full><input className="prj-in" value={f.name ?? ''} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
+        <Field label="الوصف" full><textarea className="prj-in" rows={3} style={{ minHeight: 70 }} value={f.description ?? ''} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
         <Field label="العميل"><ClientPicker value={f.client} onChange={(c) => setF({ ...f, client: c })} /></Field>
-        <Field label="الأولوية"><select className="ssp2-input" value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })}>{Object.entries(PROJECT_PRIORITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
+        <Field label="نوع المشروع"><select className="prj-in" value={f.archetype ?? ''} onChange={(e) => setF({ ...f, archetype: e.target.value })}><option value="">—</option>{Object.entries(ARCHETYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
+        <Field label="الأولوية"><select className="prj-in" value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })}>{Object.entries(PROJECT_PRIORITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
+        <Field label="مستوى السرية"><select className="prj-in" value={f.confidentiality} onChange={(e) => setF({ ...f, confidentiality: e.target.value })}>{Object.entries(PROJECT_CONFIDENTIALITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
         <Field label="مدير المشروع"><UserSelect users={users} value={f.manager_id} onChange={(id) => setF({ ...f, manager_id: id })} /></Field>
         <Field label="الشريك المسؤول"><UserSelect users={users} value={f.partner_id} onChange={(id) => setF({ ...f, partner_id: id })} /></Field>
-        <Field label="البداية"><input type="date" className="ssp2-input" value={f.start_date ?? ''} onChange={(e) => setF({ ...f, start_date: e.target.value })} /></Field>
-        <Field label="الهدف"><input type="date" className="ssp2-input" value={f.target_end_date ?? ''} onChange={(e) => setF({ ...f, target_end_date: e.target.value })} /></Field>
-        <Field label="من يرى المشروع"><select className="ssp2-input" value={f.confidentiality} onChange={(e) => setF({ ...f, confidentiality: e.target.value })}>{Object.entries(PROJECT_CONFIDENTIALITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
-        <Field label="اللون"><div className="prj-chips">{PROJECT_COLORS.map((c) => <button type="button" key={c} className={`prj-chip prj-color-${c} ${f.color === c ? 'prj-chip--navy' : ''}`} style={{ cursor: 'pointer' }} onClick={() => setF({ ...f, color: c })}><span className="prj-dot" /> {PROJECT_COLOR_LABELS[c]}</button>)}</div></Field>
+        <Field label="البداية"><input type="date" className="prj-in" value={f.start_date ?? ''} onChange={(e) => setF({ ...f, start_date: e.target.value })} /></Field>
+        <Field label="الموعد النهائي"><input type="date" className="prj-in" value={f.target_end_date ?? ''} onChange={(e) => setF({ ...f, target_end_date: e.target.value })} /></Field>
+        <Field label="اللون" full><span className="prj-pal">{PROJECT_COLORS.map((c) => <i key={c} className={`prj-color-${c} ${f.color === c ? 'is-on' : ''}`} style={{ background: 'var(--prj-c)' }} title={PROJECT_COLOR_LABELS[c]} onClick={() => setF({ ...f, color: c })} />)}</span></Field>
       </div>
     </Modal>
   );
@@ -347,23 +291,15 @@ const ApplyTemplateModal: React.FC<{ project: ProjectFull; users: ReturnType<typ
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => { ProjectService.templates().then(setTemplates).catch((e: Error) => setErr(e.message)); }, []);
-  const submit = async () => {
-    if (!templateId) { setErr('اختر قالباً'); return; }
-    setBusy(true);
-    try { const r = await ProjectService.applyTemplate(project.id, templateId, roleMap); toast.success(r.message || `أُضيفت ${r.applied.phases} مراحل و${r.applied.tasks} مهمة`); await onDone(); }
-    catch (e) { setErr(e instanceof Error ? e.message : 'تعذر التطبيق'); }
-    finally { setBusy(false); }
-  };
+  const submit = async () => { if (!templateId) { setErr('اختر قالباً'); return; } setBusy(true); try { const r = await ProjectService.applyTemplate(project.id, templateId, roleMap); toast.success(r.message || `أُضيفت ${r.applied.phases} مراحل و${r.applied.tasks} مهمة`); await onDone(); } catch (e) { setErr(e instanceof Error ? e.message : 'تعذر التطبيق'); } finally { setBusy(false); } };
   return (
-    <Modal title="تطبيق قالب على المشروع" onClose={onClose} wide foot={<><button type="button" className="ssp2-btn" onClick={onClose}>إلغاء</button><button type="button" className="ssp2-btn ssp2-btn--primary" onClick={submit} disabled={busy}>تطبيق</button></>}>
+    <Modal title="تطبيق قالب على المشروع" onClose={onClose} wide foot={<><button type="button" className="prj-btn" onClick={onClose}>إلغاء</button><button type="button" className="prj-btn prj-btn--primary" onClick={submit} disabled={busy}>تطبيق</button></>}>
       <ErrorBox error={err} />
-      <p className="ssp2-hint">القالب يضيف مراحله ومهامه بعد المراحل الحالية ولا يحذف شيئاً.</p>
-      <div className="prj-tpl">{templates.map((t) => <button type="button" key={t.id} className={`prj-tpl__item ${templateId === t.id ? 'prj-tpl__item--active' : ''}`} onClick={() => setTemplateId(t.id)}><div><div className="prj-tpl__name">{t.name}</div><div className="prj-tpl__desc">{t.description}</div></div><div className="prj-tpl__stats">{t.stats.phases} مراحل · {t.stats.tasks} مهمة</div></button>)}</div>
-      <div style={{ marginTop: 8 }}>
+      <p className="prj-dim" style={{ margin: 0, fontSize: 12 }}>القالب يضيف مراحله ومهامه بعد المراحل الحالية ولا يحذف شيئاً.</p>
+      <div className="prj-tiles" style={{ flexDirection: 'column' }}>{templates.map((t) => <button type="button" key={t.id} className={`prj-tile ${templateId === t.id ? 'is-on' : ''}`} onClick={() => setTemplateId(t.id)}><b>{t.name}</b><span>{t.description} · {t.stats.phases} مراحل · {t.stats.tasks} مهمة</span></button>)}</div>
+      <div className="prj-roles">
         {(['partner', 'manager', 'lawyer', 'assistant', 'researcher'] as Array<keyof RoleMap>).map((role) => (
-          <div key={role} className="prj-role-row"><div className="prj-role-row__label">{PROJECT_ROLE_LABELS[role]}</div>
-            {role === 'lawyer' ? <UserMultiSelect users={users} value={roleMap.lawyer} onChange={(ids) => setRoleMap({ ...roleMap, lawyer: ids })} /> : <UserSelect users={users} value={roleMap[role] as number | null} onChange={(id) => setRoleMap({ ...roleMap, [role]: id })} />}
-          </div>
+          <div key={role} className="r"><span className="k">{PROJECT_ROLE_LABELS[role]}</span>{role === 'lawyer' ? <UserMultiSelect users={users} value={roleMap.lawyer} onChange={(ids) => setRoleMap({ ...roleMap, lawyer: ids })} /> : <UserSelect users={users} value={roleMap[role] as number | null} onChange={(id) => setRoleMap({ ...roleMap, [role]: id })} />}</div>
         ))}
       </div>
     </Modal>
@@ -374,19 +310,13 @@ const SaveTemplateModal: React.FC<{ project: ProjectFull; onClose: () => void }>
   const [name, setName] = useState(`قالب من ${project.name}`);
   const [description, setDescription] = useState('');
   const [busy, setBusy] = useState(false);
-  const submit = async () => {
-    if (!name.trim()) return;
-    setBusy(true);
-    try { await ProjectService.saveAsTemplate(project.id, name.trim(), description.trim() || undefined); toast.success('حُفظ القالب. سيظهر عند إنشاء مشروع جديد.'); onClose(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر الحفظ'); }
-    finally { setBusy(false); }
-  };
+  const submit = async () => { if (!name.trim()) return; setBusy(true); try { await ProjectService.saveAsTemplate(project.id, name.trim(), description.trim() || undefined); toast.success('حُفظ القالب. سيظهر عند إنشاء مشروع جديد.'); onClose(); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر الحفظ'); } finally { setBusy(false); } };
   return (
-    <Modal title="حفظ المشروع كقالب للمكتب" onClose={onClose} foot={<><button type="button" className="ssp2-btn" onClick={onClose}>إلغاء</button><button type="button" className="ssp2-btn ssp2-btn--primary" onClick={submit} disabled={busy}>حفظ</button></>}>
-      <p className="ssp2-hint">يُحفظ هيكل المشروع (المراحل والمهام والمواعيد النسبية والمخرجات) بلا أسماء الأشخاص ولا بيانات العميل.</p>
+    <Modal title="حفظ المشروع كقالب للمكتب" onClose={onClose} foot={<><button type="button" className="prj-btn" onClick={onClose}>إلغاء</button><button type="button" className="prj-btn prj-btn--primary" onClick={submit} disabled={busy}>حفظ</button></>}>
+      <p className="prj-dim" style={{ margin: 0, fontSize: 12 }}>يُحفظ هيكل المشروع (المراحل والمهام والمواعيد النسبية والمخرجات) بلا أسماء الأشخاص ولا بيانات العميل.</p>
       <div className="prj-form">
-        <Field label="اسم القالب" full><input className="ssp2-input" value={name} onChange={(e) => setName(e.target.value)} /></Field>
-        <Field label="وصف" full><textarea className="ssp2-input" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
+        <Field label="اسم القالب" full><input className="prj-in" value={name} onChange={(e) => setName(e.target.value)} /></Field>
+        <Field label="وصف" full><textarea className="prj-in" rows={2} style={{ minHeight: 56 }} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
       </div>
     </Modal>
   );

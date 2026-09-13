@@ -1,164 +1,223 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Eye, GitBranch, Layers, Plus, Scale, ShieldCheck, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { ProjectService } from '../../../services/projectService';
-import type { ProjectMap, ProjectMilestone } from '../../../types/projects';
-import { MILESTONE_STATUS_LABELS, PHASE_STATUS_LABELS } from '../../../types/projects';
-import { Chip, ErrorBox, Field, Modal, daysFromToday, fmtDate } from '../ui';
+import type { ProjectMap, ProjectMilestone, ProjectPhase } from '../../../types/projects';
+import { MILESTONE_STATUS_LABELS } from '../../../types/projects';
+import { ErrorBox, Field, Modal, fmtDate, fmtDayMonth } from '../ui';
 import { useRoom } from './RoomContext';
 
 const DAY = 86400000;
-const toDay = (s: string | null | undefined): number | null => {
+const toMs = (s?: string | null): number | null => {
   if (!s) return null;
   const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : Math.floor(d.getTime() / DAY);
+  return Number.isNaN(d.getTime()) ? null : d.getTime();
 };
+const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
-/** الخط الزمني: المراحل كأشرطة على محور الأيام، والمواعيد الرئيسية معينات، وجلسات القضايا المربوطة. */
+/**
+ * الجدول الزمني كما في التصوّر: صف لكل مسار بشريط تقدم، ومراحله أشرطة تحته، ونقطة القرار
+ * ومساراتها المخفية بخط متقطع، والخطة الأصلية شبحاً تحت ما زُحزح، والمواعيد معينات بألوانها،
+ * وجلسات القضايا المرتبطة في صف خاص. اليوم خط ذهبي.
+ */
 const TimelineSection: React.FC = () => {
-  const { project, canEdit, refresh, goTo } = useRoom();
+  const { project, canEdit, refresh, goTo, setPhaseFilter } = useRoom();
   const [map, setMap] = useState<ProjectMap | null>(null);
   const [msModal, setMsModal] = useState<{ ms: ProjectMilestone | null } | null>(null);
 
-  const load = async () => {
-    try { setMap(await ProjectService.map(project.id)); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر جلب الخريطة'); }
-  };
+  const load = async () => { try { setMap(await ProjectService.map(project.id)); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر جلب الخريطة'); } };
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [project.id, project.updated_at]);
 
-  const range = useMemo(() => {
+  const scale = useMemo(() => {
     if (!map) return null;
-    const days: number[] = [];
-    map.phases.forEach((p) => { const a = toDay(p.start_date); const b = toDay(p.due_date); if (a !== null) days.push(a); if (b !== null) days.push(b); });
-    map.milestones.forEach((m) => { const d = toDay(m.date); if (d !== null) days.push(d); });
-    map.linked_events.forEach((le) => le.events.forEach((e) => { const d = toDay(e.date); if (d !== null) days.push(d); }));
-    const today = Math.floor(Date.now() / DAY);
-    days.push(today);
-    if (days.length === 0) return null;
-    const min = Math.min(...days) - 3;
-    const max = Math.max(...days) + 7;
-    return { min, max, span: Math.max(14, max - min), today };
-  }, [map]);
-
-  const pct = (day: number) => (range ? ((day - range.min) / range.span) * 100 : 0);
-
-  const ticks = useMemo(() => {
-    if (!range) return [];
-    const out: Array<{ day: number; label: string }> = [];
-    const start = new Date(range.min * DAY);
-    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-    while (Math.floor(cursor.getTime() / DAY) <= range.max) {
-      const d = Math.floor(cursor.getTime() / DAY);
-      if (d >= range.min) out.push({ day: d, label: cursor.toLocaleDateString('ar-SA-u-nu-latn', { month: 'short', year: '2-digit' }) });
-      cursor.setMonth(cursor.getMonth() + 1);
+    const stamps: number[] = [Date.now()];
+    map.phases.forEach((p) => [p.start_date, p.due_date, p.planned_start, p.planned_due].forEach((d) => { const m = toMs(d); if (m !== null) stamps.push(m); }));
+    map.milestones.forEach((m) => { const s = toMs(m.date); if (s !== null) stamps.push(s); });
+    map.linked_events.forEach((le) => le.events.forEach((e) => { const s = toMs(e.date); if (s !== null) stamps.push(s); }));
+    const minD = new Date(Math.min(...stamps));
+    const maxD = new Date(Math.max(...stamps));
+    const start = new Date(minD.getFullYear(), minD.getMonth(), 1);
+    const end = new Date(maxD.getFullYear(), maxD.getMonth() + 2, 1);
+    const months: Array<{ label: string; year: string; isToday: boolean }> = [];
+    const now = new Date();
+    for (let c = new Date(start); c < end; c.setMonth(c.getMonth() + 1)) {
+      months.push({ label: MONTHS_AR[c.getMonth()], year: String(c.getFullYear()), isToday: c.getMonth() === now.getMonth() && c.getFullYear() === now.getFullYear() });
     }
-    return out;
-  }, [range]);
+    const span = end.getTime() - start.getTime();
+    return { start: start.getTime(), end: end.getTime(), span, months, pct: (ms: number) => Math.max(0, Math.min(100, ((ms - start.getTime()) / span) * 100)) };
+  }, [map]);
 
   const saveMilestone = async (data: { name: string; date: string; phase_id: number | null; client_visible: boolean; note: string; status?: string }) => {
     try {
       if (msModal?.ms) await ProjectService.updateMilestone(project.id, msModal.ms.id, data);
       else await ProjectService.createMilestone(project.id, { ...data, source: 'manual' });
-      setMsModal(null);
-      await load();
-      await refresh();
+      setMsModal(null); await load(); await refresh();
     } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر الحفظ'); }
   };
-
   const removeMilestone = async (ms: ProjectMilestone) => {
     if (!window.confirm(`حذف الموعد «${ms.name}»؟`)) return;
     try { await ProjectService.deleteMilestone(project.id, ms.id); setMsModal(null); await load(); await refresh(); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر الحذف'); }
   };
 
-  if (!map || !range) return <div className="prj-muted">جارٍ التحميل…</div>;
-  const visiblePhases = map.phases.filter((p) => p.status !== 'skipped');
+  if (!map || !scale) return <div className="prj-empty">جارٍ التحميل…</div>;
+
+  const todayPct = scale.pct(Date.now());
+  const todayLine = <i className="prj-map__today" style={{ right: `${todayPct}%` }} />;
+  const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+
+  const barStyle = (a: number | null, b: number | null): React.CSSProperties | null => {
+    if (a === null) return null;
+    const endMs = b !== null && b >= a ? b + DAY : a + DAY;
+    const right = scale.pct(a);
+    const width = Math.max(0.6, scale.pct(endMs) - right);
+    return { right: `${right}%`, width: `${width}%` };
+  };
+  const phaseTone = (p: ProjectPhase, late: boolean) => p.status === 'completed' ? 'done' : p.status === 'active' || p.status === 'awaiting_approval' ? 'cur' : p.status === 'hidden' ? 'branch' : p.status === 'upcoming' ? 'next' : 'plan' + (late ? '' : '');
+  const phaseProgress = (p: ProjectPhase) => (p.tasks_total ? Math.round((p.tasks_done / p.tasks_total) * 100) : (p.status === 'completed' ? 100 : 0));
+
+  // تجميع المراحل حسب المسار بترتيب المسارات في الخطة
+  const wsNames = map.workstreams.map((w) => w.name);
+  project.phases.forEach((p) => { if (p.workstream && !wsNames.includes(p.workstream)) wsNames.push(p.workstream); });
+  const groups = wsNames.map((name) => ({ name, phases: map.phases.filter((p) => p.workstream === name && p.status !== 'skipped') })).filter((g) => g.phases.length);
+  const orphans = map.phases.filter((p) => !p.workstream && p.status !== 'skipped');
+  if (orphans.length) groups.push({ name: 'المراحل', phases: orphans });
+
+  // نقاط القرار: تظهر قبل أول مرحلة من فروعها
+  const decisionForPhase = new Map<number, ProjectMap['decision_points'][number]>();
+  map.decision_points.forEach((dp) => {
+    const first = dp.options.flatMap((o) => o.activates).map((id) => map.phases.find((p) => p.id === id)).filter(Boolean).sort((a, b) => (a!.order - b!.order))[0];
+    if (first) decisionForPhase.set(first.id, dp);
+  });
+
+  const renderPhaseRow = (p: ProjectPhase) => {
+    const a = toMs(p.start_date); const b = toMs(p.due_date);
+    const pa = toMs(p.planned_start); const pb = toMs(p.planned_due);
+    const shifted = pa !== null && a !== null && (pa !== a || pb !== b);
+    const late = p.status === 'active' && b !== null && b < today0.getTime();
+    const style = barStyle(a, b);
+    const ghost = shifted ? barStyle(pa, pb) : null;
+    const isBranch = p.status === 'hidden' || p.activation === 'decision';
+    const dp = decisionForPhase.get(p.id);
+    const pct = phaseProgress(p);
+    return (
+      <React.Fragment key={p.id}>
+        {dp && (
+          <div className="prj-map__row prj-map__row--dec">
+            <div className="prj-map__label"><GitBranch size={13} /><span className="t">نقطة القرار: {dp.question}</span>{dp.chosen_key && <span className="prj-chip prj-chip--gate">قُرر</span>}</div>
+            <div className="prj-map__track">{todayLine}{(() => { const after = map.phases.find((x) => x.id === dp.after_phase_id); const d = toMs(after?.due_date); return d !== null ? <><span className="prj-ms prj-ms--dec" style={{ right: `${scale.pct(d)}%` }} title={dp.question} /><span className="prj-ms__l" style={{ right: `${scale.pct(d)}%` }}>{dp.chosen_key ? dp.options.find((o) => o.key === dp.chosen_key)?.label : 'يُختار المسار بعد الحكم'}<small>{fmtDayMonth(after?.due_date)}</small></span></> : null; })()}</div>
+          </div>
+        )}
+        <div className={`prj-map__row ${isBranch ? 'prj-map__row--branch' : ''} ${ghost ? 'prj-map__row--tall' : ''}`}>
+          <div className="prj-map__label prj-map__label--click" onClick={() => { setPhaseFilter(p.id); goTo('tasks'); }} title={p.objective ?? p.name}>
+            {isBranch ? <span className="prj-dim">↳</span> : <span className="prj-dim num">{p.order}</span>}
+            <span className="t">{p.name}</span>
+            {p.requires_approval && <ShieldCheck size={12} style={{ color: 'var(--pj-navy)' }} />}
+            {p.client_visible && <Eye size={12} style={{ color: 'var(--pj-violet)' }} />}
+            <span className="prj-mi num">{p.tasks_done}/{p.tasks_total}</span>
+          </div>
+          <div className="prj-map__track">
+            {todayLine}
+            {style && (
+              <div className={`prj-mbar prj-mbar--${phaseTone(p, late)} ${late ? 'prj-mbar--late' : ''}`} style={style} title={`${fmtDate(p.start_date)} → ${fmtDate(p.due_date)} · ${pct}٪`} onClick={() => { setPhaseFilter(p.id); goTo('tasks'); }}>
+                {p.status === 'active' && <span className="prj-mbar__fill" style={{ width: `${pct}%` }} />}
+                <span>{p.name}{p.status === 'active' ? ` · ${pct}٪` : ''}</span>
+              </div>
+            )}
+            {p.requires_approval && b !== null && <span className="prj-gate-ic" style={{ right: `${scale.pct(b + DAY)}%` }} title="تحتاج موافقة الشريك قبل الانتقال"><ShieldCheck size={10} /></span>}
+            {ghost && <span className="prj-mghost" style={ghost} title={`الخطة الأصلية: ${fmtDate(p.planned_start)} → ${fmtDate(p.planned_due)}`} />}
+          </div>
+        </div>
+      </React.Fragment>
+    );
+  };
+
+  // المواعيد: مستويان للتسميات حتى لا تتراكب
+  const sortedMs = [...map.milestones].filter((m) => m.status !== 'cancelled' && toMs(m.date) !== null).sort((x, y) => (toMs(x.date)! - toMs(y.date)!));
 
   return (
-    <div>
-      <div className="prj-legend">
-        <span><i style={{ background: 'rgba(30,58,95,0.14)', border: '1px solid var(--law-navy)' }} /> مرحلة جارية</span>
-        <span><i style={{ background: 'rgba(22,163,74,0.14)', border: '1px solid var(--status-green)' }} /> مكتملة</span>
-        <span><i style={{ background: 'var(--quiet-gray-200)', border: '1px dashed var(--quiet-gray-400)' }} /> تنتظر قراراً</span>
-        <span><i style={{ background: 'var(--law-gold)', transform: 'rotate(45deg)' }} /> موعد مقدر</span>
-        <span><i style={{ background: 'var(--status-purple)', transform: 'rotate(45deg)' }} /> من المحكمة</span>
-        <span><i style={{ background: 'var(--status-red)', transform: 'rotate(45deg)' }} /> فات</span>
-        {canEdit && <button type="button" className="ssp2-btn" style={{ marginInlineStart: 'auto', padding: '3px 9px', fontSize: 11.5 }} onClick={() => setMsModal({ ms: null })}><Plus size={12} /> موعد رئيسي</button>}
-      </div>
-      <div className="prj-table-wrap">
-        {/* عرض المحور يتبع طول المدة: ٤ بكسل لكل يوم حتى تبقى الأشرطة مقروءة، والتمرير أفقي داخل الحاوية */}
-        <div className="prj-gantt" style={{ minWidth: Math.max(720, range.span * 4 + 220) }}>
-          <div className="prj-gantt__axis">
-            {ticks.map((t) => <span key={t.day} className="prj-gantt__tick" style={{ insetInlineStart: `${pct(t.day)}%` }}>{t.label}</span>)}
+    <div className="prj-view">
+      <div className="prj-map" style={{ ['--pj-months' as string]: scale.months.length }}>
+        <div style={{ minWidth: 270 + scale.months.length * 64 }}>
+        <div className="prj-map__row prj-map__row--head">
+          <div className="prj-map__label"><Layers size={13} /><span className="t">المسارات والمراحل</span></div>
+          <div className="prj-map__track" style={{ backgroundImage: 'none' }}>
+            <div className="prj-map__months">{scale.months.map((m, i) => <div key={i} className={`prj-map__m ${m.isToday ? 'is-today' : ''}`}><b>{m.label}</b><span>{m.year}</span></div>)}</div>
+            {todayLine}
           </div>
-          {visiblePhases.map((p) => {
-            const a = toDay(p.start_date); const b = toDay(p.due_date);
-            const late = p.status === 'active' && b !== null && b < range.today;
-            const width = a !== null && b !== null ? Math.max(0.8, pct(b + 1) - pct(a)) : 0;
-            const done = p.tasks_total ? Math.round((p.tasks_done / p.tasks_total) * 100) : (p.status === 'completed' ? 100 : 0);
-            return (
-              <div key={p.id} className="prj-gantt__row">
-                <div className="prj-gantt__label" onClick={() => goTo('phases')} title={p.objective ?? undefined}>
-                  <span>{p.order}. {p.name}</span>
-                  <small>{PHASE_STATUS_LABELS[p.status]} · {p.tasks_done}/{p.tasks_total} مهام{p.owner ? ` · ${p.owner.name}` : ''}</small>
-                </div>
-                <div className="prj-gantt__track">
-                  <span className="prj-gantt__today" style={{ insetInlineStart: `${pct(range.today)}%` }} />
-                  {a !== null && (
-                    <div className={`prj-gantt__bar prj-gantt__bar--${p.status} ${late ? 'prj-gantt__bar--late' : ''}`} style={{ insetInlineStart: `${pct(a)}%`, width: `${width}%` }} title={`${fmtDate(p.start_date)} → ${fmtDate(p.due_date)}`} onClick={() => goTo('phases')}>
-                      <span className="prj-gantt__fill" style={{ width: `${done}%` }} />
-                      <span style={{ position: 'relative' }}>{p.name}</span>
-                    </div>
-                  )}
-                </div>
+        </div>
+
+        {groups.map((g) => {
+          const dates = g.phases.flatMap((p) => [toMs(p.start_date), toMs(p.due_date)]).filter((x): x is number => x !== null);
+          const done = g.phases.reduce((s, p) => s + p.tasks_done, 0); const tot = g.phases.reduce((s, p) => s + p.tasks_total, 0);
+          const style = dates.length ? barStyle(Math.min(...dates), Math.max(...dates)) : null;
+          return (
+            <React.Fragment key={g.name}>
+              <div className="prj-map__row prj-map__row--ws">
+                <div className="prj-map__label"><Layers size={13} style={{ color: 'var(--pj-gold)' }} /><span className="t">{g.name}</span><span className="prj-mi num">{done}/{tot}</span></div>
+                <div className="prj-map__track">{todayLine}{style && <span className="prj-mbar prj-mbar--ws" style={style}><b style={{ width: `${tot ? Math.round((done / tot) * 100) : 0}%` }} /></span>}</div>
               </div>
-            );
-          })}
-          <div className="prj-gantt__row prj-gantt__msrow">
-            <div className="prj-gantt__label"><span>المواعيد الرئيسية</span><small>{map.milestones.length} موعد</small></div>
-            <div className="prj-gantt__track">
-              <span className="prj-gantt__today" style={{ insetInlineStart: `${pct(range.today)}%` }} />
-              {map.milestones.map((m) => { const d = toDay(m.date); if (d === null) return null; return (
-                <span key={m.id} className={`prj-gantt__ms ${m.status === 'done' ? 'prj-gantt__ms--done' : ''} ${m.status === 'missed' ? 'prj-gantt__ms--missed' : ''} ${m.source_type ? 'prj-gantt__ms--court' : ''}`} style={{ insetInlineStart: `${pct(d)}%` }} title={`${m.name} · ${fmtDate(m.date)} · ${MILESTONE_STATUS_LABELS[m.status]}`} onClick={() => canEdit && !m.source_type && setMsModal({ ms: m })} />
+              {g.phases.map(renderPhaseRow)}
+            </React.Fragment>
+          );
+        })}
+
+        <div className="prj-map__row prj-map__row--ws">
+          <div className="prj-map__label"><span className="t">المواعيد الرئيسية</span><span className="prj-mi num">{sortedMs.length}</span></div>
+          <div className="prj-map__track">{todayLine}</div>
+        </div>
+        <div className="prj-map__row prj-map__row--ms">
+          <div className="prj-map__label"><span className="t prj-dim">محدد · تقديري · من ناجز · تم</span></div>
+          <div className="prj-map__track">
+            {todayLine}
+            {sortedMs.map((m, i) => {
+              const ms = toMs(m.date)!;
+              const cls = m.status === 'done' ? 'prj-ms--done' : m.status === 'missed' ? 'prj-ms--missed' : m.source_type === 'case_session' || m.source_type === 'case_judgement' ? 'prj-ms--najiz' : m.source === 'estimate' ? 'prj-ms--est' : '';
+              const editable = canEdit && !m.source_type;
+              return (
+                <React.Fragment key={m.id}>
+                  <span className={`prj-ms ${cls}`} style={{ right: `${scale.pct(ms)}%`, cursor: editable ? 'pointer' : 'default' }} title={`${m.name} · ${fmtDate(m.date)} · ${MILESTONE_STATUS_LABELS[m.status]}`} onClick={() => editable && setMsModal({ ms: m })} />
+                  <span className={`prj-ms__l ${i % 2 ? 'prj-ms__l--l1' : ''}`} style={{ right: `${scale.pct(ms)}%` }}>{m.name}<small>{fmtDayMonth(m.date)}{m.source === 'estimate' ? ' · تقديري' : ''}</small></span>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+
+        {map.linked_events.length > 0 && (
+          <div className="prj-map__row prj-map__row--ws">
+            <div className="prj-map__label"><Scale size={13} style={{ color: 'var(--pj-gold)' }} /><span className="t">ما يرتبط بالمشروع · يُقرأ تلقائياً</span></div>
+            <div className="prj-map__track">{todayLine}</div>
+          </div>
+        )}
+        {map.linked_events.map((le) => (
+          <div key={le.link.id} className="prj-map__row prj-map__row--tall">
+            <div className="prj-map__label"><span className="prj-chip prj-chip--todo">{le.link.type_label}</span><span className="t" title={le.link.label}>{le.link.label}</span><span className="prj-mi num">{le.events.length}</span></div>
+            <div className="prj-map__track">
+              {todayLine}
+              {le.events.map((e, i) => { const ms = toMs(e.date); if (ms === null) return null; const past = ms < today0.getTime(); return (
+                <React.Fragment key={`${e.kind}-${e.id}-${i}`}>
+                  <span className={`prj-ms ${e.kind === 'session' ? (e.status === 'cancelled' ? 'prj-ms--missed' : past ? 'prj-ms--done' : 'prj-ms--najiz') : e.kind === 'judgement' ? 'prj-ms--dec' : 'prj-ms--est'}`} style={{ right: `${scale.pct(ms)}%`, cursor: 'default' }} title={`${e.name} · ${fmtDate(e.date)}${e.status ? ` · ${e.status}` : ''}`} />
+                  {!past && <span className="prj-ms__l" style={{ right: `${scale.pct(ms)}%` }}>{e.name}<small>{fmtDayMonth(e.date)}</small></span>}
+                </React.Fragment>
               ); })}
             </div>
           </div>
-          {map.linked_events.map((le) => (
-            <div key={le.link.id} className="prj-gantt__row prj-gantt__msrow">
-              <div className="prj-gantt__label"><span>{le.link.type_label}: {le.link.label}</span><small>{le.events.length} حدث</small></div>
-              <div className="prj-gantt__track">
-                <span className="prj-gantt__today" style={{ insetInlineStart: `${pct(range.today)}%` }} />
-                {le.events.map((e) => { const d = toDay(e.date); if (d === null) return null; return (
-                  <span key={`${e.kind}-${e.id}`} className={`prj-gantt__ms prj-gantt__ms--court ${e.status === 'cancelled' ? 'prj-gantt__ms--missed' : ''}`} style={{ insetInlineStart: `${pct(d)}%` }} title={`${e.name} · ${fmtDate(e.date)}${e.status ? ` · ${e.status}` : ''}`} />
-                ); })}
-              </div>
-            </div>
-          ))}
+        ))}
         </div>
       </div>
 
-      <div className="prj-block" style={{ marginTop: 14 }}>
-        <div className="prj-block__head">المواعيد الرئيسية بالتفصيل</div>
-        <div className="prj-table-wrap">
-          <table className="prj-table">
-            <thead><tr><th>الموعد</th><th>التاريخ</th><th>المصدر</th><th>المرحلة</th><th>الحالة</th><th>للعميل</th>{canEdit && <th />}</tr></thead>
-            <tbody>
-              {map.milestones.length === 0 && <tr><td colSpan={7} className="muted">لا مواعيد بعد.</td></tr>}
-              {map.milestones.map((m) => {
-                const d = daysFromToday(m.date);
-                return (
-                  <tr key={m.id}>
-                    <td><b>{m.name}</b>{m.note && <div className="muted">{m.note}</div>}</td>
-                    <td className="num">{fmtDate(m.date)}{d && m.status === 'planned' ? <span className="muted"> · {d.label}</span> : null}</td>
-                    <td className="muted">{m.source_type === 'case_session' ? 'جلسة من القضية' : m.source_type === 'case_judgement' ? 'حكم' : m.source === 'estimate' ? 'تقدير' : m.source === 'meeting' ? 'اجتماع' : m.source === 'case' ? 'واقعة من القضية' : 'يدوي'}</td>
-                    <td className="muted">{project.phases.find((p) => p.id === m.phase_id)?.name ?? '—'}</td>
-                    <td><Chip tone={m.status === 'done' ? 'done' : m.status === 'missed' ? 'bad' : m.status === 'cancelled' ? 'muted' : ''}>{MILESTONE_STATUS_LABELS[m.status]}</Chip></td>
-                    <td className="muted">{m.client_visible ? 'يظهر' : 'لا'}</td>
-                    {canEdit && <td className="prj-actions">{!m.source_type && <button type="button" className="prj-link" onClick={() => setMsModal({ ms: m })}>تعديل</button>}</td>}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      <div className="prj-legend">
+        <span><i style={{ background: 'var(--pj-ok-tint)' }} /> مكتملة</span>
+        <span><i style={{ background: 'var(--pj-info-tint)', border: '1px solid var(--pj-info)' }} /> جارية</span>
+        <span><i style={{ background: 'var(--pj-paper)', border: '1px solid var(--pj-line)' }} /> مخططة</span>
+        <span><i style={{ border: '1px dashed var(--pj-ink-3)' }} /> مسار مخفي حتى القرار</span>
+        <span><span className="d" style={{ background: 'var(--pj-navy)' }} /> موعد محدد</span>
+        <span><span className="d" style={{ background: 'var(--pj-paper)', border: '2px solid var(--pj-navy)', boxSizing: 'border-box' }} /> تقديري</span>
+        <span><span className="d" style={{ background: 'var(--pj-bad)' }} /> جلسة من ناجز</span>
+        <span><span className="d" style={{ background: 'var(--pj-gold)' }} /> نقطة قرار</span>
+        <span><i style={{ borderTop: '2px dashed var(--pj-ink-3)', height: 0 }} /> الخطة الأصلية</span>
+        <span className="prj-spacer" />
+        {canEdit && <button type="button" className="prj-btn prj-btn--sm" onClick={() => setMsModal({ ms: null })}><Plus size={12} /> موعد رئيسي</button>}
       </div>
 
       {msModal && <MilestoneModal ms={msModal.ms} onClose={() => setMsModal(null)} onSave={saveMilestone} onDelete={msModal.ms ? () => removeMilestone(msModal.ms!) : undefined} />}
@@ -184,17 +243,17 @@ const MilestoneModal: React.FC<{ ms: ProjectMilestone | null; onClose: () => voi
   };
   return (
     <Modal title={ms ? 'تعديل موعد رئيسي' : 'موعد رئيسي جديد'} onClose={onClose} foot={<>
-      {onDelete && <button type="button" className="ssp2-btn" style={{ marginInlineEnd: 'auto', color: 'var(--status-red)' }} onClick={onDelete}><Trash2 size={12} /> حذف</button>}
-      <button type="button" className="ssp2-btn" onClick={onClose}>إلغاء</button>
-      <button type="button" className="ssp2-btn ssp2-btn--primary" onClick={submit} disabled={busy}>حفظ</button>
+      {onDelete && <button type="button" className="prj-btn prj-btn--danger" style={{ marginInlineEnd: 'auto' }} onClick={onDelete}><Trash2 size={12} /> حذف</button>}
+      <button type="button" className="prj-btn" onClick={onClose}>إلغاء</button>
+      <button type="button" className="prj-btn prj-btn--primary" onClick={submit} disabled={busy}>حفظ</button>
     </>}>
       <ErrorBox error={err} />
       <div className="prj-form">
-        <Field label="الاسم" full><input className="ssp2-input" value={name} onChange={(e) => setName(e.target.value)} autoFocus /></Field>
-        <Field label="التاريخ"><input type="date" className="ssp2-input" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
-        <Field label="المرحلة"><select className="ssp2-input" value={phaseId ?? ''} onChange={(e) => setPhaseId(e.target.value ? Number(e.target.value) : null)}><option value="">— بلا —</option>{project.phases.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
-        {ms && <Field label="الحالة"><select className="ssp2-input" value={status} onChange={(e) => setStatus(e.target.value as ProjectMilestone['status'])}>{Object.entries(MILESTONE_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>}
-        <Field label="ملاحظة" full><input className="ssp2-input" value={note} onChange={(e) => setNote(e.target.value)} /></Field>
+        <Field label="الاسم" full><input className="prj-in" value={name} onChange={(e) => setName(e.target.value)} autoFocus /></Field>
+        <Field label="التاريخ"><input type="date" className="prj-in" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+        <Field label="المرحلة"><select className="prj-in" value={phaseId ?? ''} onChange={(e) => setPhaseId(e.target.value ? Number(e.target.value) : null)}><option value="">— بلا —</option>{project.phases.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
+        {ms && <Field label="الحالة"><select className="prj-in" value={status} onChange={(e) => setStatus(e.target.value as ProjectMilestone['status'])}>{Object.entries(MILESTONE_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>}
+        <Field label="ملاحظة" full><input className="prj-in" value={note} onChange={(e) => setNote(e.target.value)} /></Field>
         <label className="prj-check prj-form__full"><input type="checkbox" checked={clientVisible} onChange={(e) => setClientVisible(e.target.checked)} /> يظهر للعميل في بوابته</label>
       </div>
     </Modal>

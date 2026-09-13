@@ -5,16 +5,19 @@ import { useNavigate } from 'react-router-dom';
 import { ProjectService } from '../../../services/projectService';
 import type { FeedItem } from '../../../types/projects';
 import { FEED_TYPE_LABELS } from '../../../types/projects';
-import { fmtDate } from '../ui';
+import { fmtDayMonth, fmtTime } from '../ui';
 import { useRoom } from './RoomContext';
 
-const ICONS: Record<string, React.ReactNode> = {
-  task: <CheckSquare size={13} />, session: <Gavel size={13} />, meeting: <Users size={13} />, document: <FileText size={13} />, decision: <Scale size={13} />,
-  phase: <Layers size={13} />, risk: <Zap size={13} />, issue: <Flag size={13} />, approval: <ShieldCheck size={13} />, client: <Users size={13} />, raed: <Bot size={13} />,
-  milestone: <Flag size={13} />, system: <Layers size={13} />, comment: <MessageSquare size={13} />, deliverable: <Package size={13} />, member: <Users size={13} />, link: <Layers size={13} />, report: <FileText size={13} />,
+const ICON: Record<string, { el: React.ReactNode; cls: string }> = {
+  task: { el: <CheckSquare size={12} />, cls: 'task' }, session: { el: <Gavel size={12} />, cls: 'sess' }, meeting: { el: <Users size={12} />, cls: 'meet' },
+  document: { el: <FileText size={12} />, cls: 'doc' }, decision: { el: <Scale size={12} />, cls: 'dec' }, phase: { el: <Layers size={12} />, cls: 'phase' },
+  risk: { el: <Zap size={12} />, cls: 'risk' }, issue: { el: <Flag size={12} />, cls: 'risk' }, approval: { el: <ShieldCheck size={12} />, cls: 'appr' },
+  client: { el: <Users size={12} />, cls: 'client' }, raed: { el: <Bot size={12} />, cls: 'raed' }, milestone: { el: <Flag size={12} />, cls: 'dec' },
+  system: { el: <Layers size={12} />, cls: 'doc' }, comment: { el: <MessageSquare size={12} />, cls: 'meet' }, deliverable: { el: <Package size={12} />, cls: 'task' },
+  member: { el: <Users size={12} />, cls: 'doc' }, link: { el: <Layers size={12} />, cls: 'doc' }, report: { el: <FileText size={12} />, cls: 'client' },
 };
 
-/** الخط الزمني الموحد: كل ما حدث في المشروع من أي مصدر، وما هو قادم، بفلاتر بالنوع. */
+/** الخط الزمني الموحد كما في التصوّر: رقاقات نوع، أيام، صف لكل حدث (وقت، أيقونة ملونة، عنوان وتفصيل، من). */
 const FeedSection: React.FC = () => {
   const { project, openTask } = useRoom();
   const navigate = useNavigate();
@@ -26,7 +29,7 @@ const FeedSection: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    ProjectService.feed(project.id, active, 120, 60)
+    ProjectService.feed(project.id, active, 150, 60)
       .then((r) => { if (!cancelled) { setItems(r.items); setTypes(r.types); } })
       .catch((e: Error) => { if (!cancelled) toast.error(e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -38,46 +41,34 @@ const FeedSection: React.FC = () => {
     items.forEach((i) => { const day = (i.at || '').slice(0, 10); if (!map.has(day)) map.set(day, []); map.get(day)!.push(i); });
     return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
   }, [items]);
-
-  const open = (i: FeedItem) => {
-    if (i.subject_type === 'task' && i.subject_id) return openTask(i.subject_id);
-    if (i.url && !i.url.startsWith('/tasks/projects/')) navigate(i.url);
-  };
-
   const today = new Date().toISOString().slice(0, 10);
+  const open = (i: FeedItem) => { if (i.subject_type === 'task' && i.subject_id) return openTask(i.subject_id); if (i.url && !i.url.startsWith('/tasks/projects/')) navigate(i.url); };
+  const clickable = (i: FeedItem) => (i.subject_type === 'task' && i.subject_id) || (i.url && !i.url.startsWith('/tasks/projects/'));
 
   return (
-    <div>
-      <div className="prj-feed__types" style={{ marginBottom: 10 }}>
-        <button type="button" className={`prj-chip ${active.length === 0 ? 'prj-chip--active' : ''}`} onClick={() => setActive([])}>الكل</button>
-        {types.map((t) => (
-          <button type="button" key={t} className={`prj-chip ${active.includes(t) ? 'prj-chip--active' : ''}`} onClick={() => setActive(active.includes(t) ? active.filter((x) => x !== t) : [...active, t])}>
-            {ICONS[t]} {FEED_TYPE_LABELS[t as keyof typeof FEED_TYPE_LABELS] ?? t}
-          </button>
+    <div className="prj-view">
+      <div className="prj-feed">
+        <div className="prj-fchips">
+          <button type="button" className={`prj-fchip ${active.length === 0 ? 'is-on' : ''}`} onClick={() => setActive([])}>الكل</button>
+          {types.map((t) => <button type="button" key={t} className={`prj-fchip ${active.includes(t) ? 'is-on' : ''}`} onClick={() => setActive(active.includes(t) ? active.filter((x) => x !== t) : [...active, t])}>{FEED_TYPE_LABELS[t as keyof typeof FEED_TYPE_LABELS] ?? t}</button>)}
+        </div>
+        {loading && items.length === 0 ? <div className="prj-empty">جارٍ التحميل…</div> : groups.length === 0 ? <div className="prj-empty">لا أحداث.</div> : groups.map(([day, list]) => (
+          <React.Fragment key={day}>
+            {day === today ? <div className="prj-ftoday">اليوم · {fmtDayMonth(day)}</div> : <div className="prj-fday">{fmtDayMonth(day)}{day > today ? ' · قادم' : ''}</div>}
+            {list.map((i) => {
+              const ic = ICON[i.type] ?? { el: <Calendar size={12} />, cls: 'doc' };
+              return (
+                <div key={i.key} className={`prj-fev ${i.is_future ? 'prj-fev--future' : ''}`}>
+                  <span className="tm num">{i.is_future ? '—' : fmtTime(i.at)}</span>
+                  <span className={`ico prj-ico--${ic.cls}`} title={FEED_TYPE_LABELS[i.type as keyof typeof FEED_TYPE_LABELS] ?? i.type}>{ic.el}</span>
+                  <span className="t">{clickable(i) ? <button type="button" onClick={() => open(i)}>{i.title}</button> : i.title}{i.body && <small>{i.body}</small>}</span>
+                  <span className="by">{i.actor_name ?? (i.type === 'raed' ? 'رائد' : '')}</span>
+                </div>
+              );
+            })}
+          </React.Fragment>
         ))}
       </div>
-      {loading && items.length === 0 ? <div className="prj-muted">جارٍ التحميل…</div> : groups.length === 0 ? <div className="ssp2-empty">لا أحداث.</div> : (
-        <div className="prj-block prj-block__body--flush">
-          <div className="prj-feed">
-            {groups.map(([day, list]) => (
-              <React.Fragment key={day}>
-                <div className="prj-feed__day">{day === today ? 'اليوم' : fmtDate(day)}{day > today ? ' · قادم' : ''}</div>
-                {list.map((i) => (
-                  <div key={i.key} className={`prj-feed__item ${i.is_future ? 'prj-feed__item--future' : ''}`}>
-                    <span className="prj-feed__time">{i.is_future ? '' : new Date(i.at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
-                    <span className="prj-feed__icon" title={FEED_TYPE_LABELS[i.type as keyof typeof FEED_TYPE_LABELS] ?? i.type}>{ICONS[i.type] ?? <Calendar size={13} />}</span>
-                    <div>
-                      <div className="prj-feed__title">{(i.subject_type === 'task' && i.subject_id) || (i.url && !i.url.startsWith('/tasks/projects/')) ? <button type="button" onClick={() => open(i)}>{i.title}</button> : i.title}</div>
-                      {i.body && <div className="prj-feed__body">{i.body}</div>}
-                      {i.actor_name && <div className="prj-feed__meta">{i.actor_name}</div>}
-                    </div>
-                  </div>
-                ))}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

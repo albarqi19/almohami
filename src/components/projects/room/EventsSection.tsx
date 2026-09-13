@@ -1,83 +1,101 @@
-import React, { useEffect, useState } from 'react';
-import { ExternalLink, FileInput, Link2, Trash2 } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { ExternalLink, FileInput, Link2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { ProjectService } from '../../../services/projectService';
 import type { Linkable, ProjectEvent, ProjectLink, ProjectLinkType } from '../../../types/projects';
-import { Chip, ErrorBox, Field, LinkablePicker, Modal, UserSelect, daysFromToday, fmtDate } from '../ui';
+import { Chip, ErrorBox, Field, LinkablePicker, Modal, UserSelect, daysFromToday, fmtDayMonth } from '../ui';
 import { useRoom } from './RoomContext';
 
-/** الارتباطات وأحداثها: قضايا وجلساتها وأحكامها، طلبات تنفيذ، خدمات ومراحلها، اجتماعات ومحاضرها، عقود. */
+type Filter = 'all' | 'session' | 'internal' | 'client';
+const WEEKDAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+
+/** الاجتماعات والجلسات كما في التصوّر: فلاتر، ثم القادم فالماضي، لكل حدث تاريخه وعنوانه ورقاقته وتفاصيله وأزراره. */
 const EventsSection: React.FC = () => {
-  const { project, canEdit, refresh } = useRoom();
+  const { project, events, canEdit, refresh, consumePending } = useRoom();
   const navigate = useNavigate();
-  const [events, setEvents] = useState<ProjectEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<Filter>('all');
+  const [linkModal, setLinkModal] = useState(() => consumePending('link') || consumePending('meeting'));
   const [importFor, setImportFor] = useState<ProjectLink | null>(null);
 
-  const load = async () => {
-    setLoading(true);
-    try { setEvents(await ProjectService.events(project.id)); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر الجلب'); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [project.id, project.updated_at]);
+  const rows = useMemo(() => events.filter((e) => {
+    if (filter === 'session') return e.kind === 'session' || e.kind === 'judgement';
+    if (filter === 'internal') return e.kind === 'meeting';
+    if (filter === 'client') return e.kind === 'stage';
+    return true;
+  }), [events, filter]);
+  const future = rows.filter((e) => e.is_future);
+  const past = rows.filter((e) => !e.is_future).slice(0, 40);
 
-  const add = async (type: ProjectLinkType, item: Linkable) => {
-    try { await ProjectService.addLink(project.id, type, item.id); toast.success('رُبط بالمشروع'); await refresh(); await load(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر الربط'); }
-  };
+  const cycleTasksNote = (e: ProjectEvent) => (e.kind === 'session' && e.is_future ? 'دورة الجلسة: تحضير، مذكرة، حضور، تقرير للعميل' : null);
+  const weekday = (d: string | null) => { if (!d) return ''; const x = new Date(d); return Number.isNaN(x.getTime()) ? '' : WEEKDAYS[x.getDay()]; };
+  const removeLink = async (l: ProjectLink) => { if (!window.confirm(`فك ربط «${l.label}»؟ تبقى مواعيده المسجلة في الخط الزمني.`)) return; try { await ProjectService.removeLink(project.id, l.id); await refresh(); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر فك الربط'); } };
 
-  const remove = async (l: ProjectLink) => {
-    if (!window.confirm(`فك ربط «${l.label}»؟ تبقى مواعيده المسجلة في الخط الزمني.`)) return;
-    try { await ProjectService.removeLink(project.id, l.id); await refresh(); await load(); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر فك الربط'); }
+  const renderEvent = (e: ProjectEvent, i: number) => {
+    const d = daysFromToday(e.date);
+    const link = e.link;
+    const isSession = e.kind === 'session';
+    return (
+      <div key={`${e.kind}-${e.id}-${i}`} className={`prj-ev ${e.is_future ? '' : 'is-past'}`}>
+        <div className="d num">{fmtDayMonth(e.date)}<small>{weekday(e.date)}{d ? ` · ${d.label}` : ''}</small></div>
+        <div className="t">
+          <b>{e.title}</b>{' '}
+          {isSession && <Chip tone={e.is_future ? 'bad' : 'done'}>{e.is_future ? 'من ناجز' : 'تمت'}</Chip>}
+          {e.kind === 'judgement' && <Chip tone="gate">حكم</Chip>}
+          {e.kind === 'meeting' && <Chip tone="todo">اجتماع</Chip>}
+          {e.kind === 'stage' && <Chip tone="client">مرحلة خدمة</Chip>}
+          {e.status && !isSession && <span className="prj-dim"> · {e.status}</span>}
+          <small>{link.type_label}: {link.label}{cycleTasksNote(e) ? ` · ${cycleTasksNote(e)}` : ''}</small>
+        </div>
+        <div className="acts">
+          {link.url && link.exists && <button type="button" className="prj-btn prj-btn--sm" onClick={() => navigate(link.url!)}><ExternalLink size={11} /> {link.type === 'case' ? 'القضية' : link.type === 'meeting' ? 'الاجتماع' : 'فتح'}</button>}
+          {e.kind === 'meeting' && canEdit && <button type="button" className="prj-btn prj-btn--sm" onClick={() => setImportFor(link)}><FileInput size={11} /> المحضر</button>}
+        </div>
+      </div>
+    );
   };
-
-  const future = events.filter((e) => e.is_future);
-  const past = events.filter((e) => !e.is_future);
 
   return (
-    <div className="prj-grid-2">
-      <div className="prj-block">
-        <div className="prj-block__head"><Link2 size={14} /> المرتبط بالمشروع <Chip tone="muted">{project.links.length}</Chip></div>
-        <div className="prj-block__body">
-          {canEdit && <div style={{ marginBottom: 10 }}><LinkablePicker onPick={add} exclude={project.links.map((l) => ({ type: l.type, id: l.link_id }))} /></div>}
-          {project.links.length === 0 && <div className="ssp2-empty">لا ارتباطات. اربط القضية أو الخدمة أو الاجتماع ليدخل ما فيها هنا.</div>}
-          {project.links.map((l) => (
-            <div key={l.id} className="prj-person">
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="prj-person__name"><Chip tone="muted">{l.type_label}</Chip> {l.label}</div>
-                <div className="prj-person__role">{l.extra && typeof l.extra.status === 'string' ? String(l.extra.status) : ''}{l.note ? ` · ${l.note}` : ''}{!l.exists ? ' · لم يعد موجوداً' : ''}</div>
-              </div>
-              <div className="prj-person__tools">
-                {l.type === 'meeting' && canEdit && <button type="button" className="ssp2-btn" style={{ padding: '3px 8px', fontSize: 11 }} title="تحويل بنود المحضر إلى مهام وقرارات" onClick={() => setImportFor(l)}><FileInput size={12} /> المحضر</button>}
-                {l.url && l.exists && <button type="button" className="ssp2-icon-btn" title="فتح" onClick={() => navigate(l.url!)}><ExternalLink size={13} /></button>}
-                {canEdit && <button type="button" className="ssp2-icon-btn" title="فك الربط" onClick={() => remove(l)}><Trash2 size={13} /></button>}
-              </div>
-            </div>
-          ))}
-        </div>
+    <div className="prj-view">
+      <div className="prj-subtools">
+        {([['all', 'الكل'], ['session', 'الجلسات (من القضايا المرتبطة)'], ['internal', 'الاجتماعات'], ['client', 'مراحل الخدمات']] as Array<[Filter, string]>).map(([k, l]) => <button type="button" key={k} className={`prj-fchip ${filter === k ? 'is-on' : ''}`} onClick={() => setFilter(k)}>{l}</button>)}
+        <span className="prj-spacer" />
+        {canEdit && <button type="button" className="prj-btn prj-btn--sm" onClick={() => setLinkModal(true)}><Link2 size={11} /> ربط</button>}
+        {canEdit && <button type="button" className="prj-btn prj-btn--sm" onClick={() => navigate('/meetings/internal')}><Plus size={11} /> اجتماع</button>}
       </div>
-
-      <div className="prj-block">
-        <div className="prj-block__head">الجلسات والأحكام والمراحل المرتبطة</div>
-        <div className="prj-block__body prj-block__body--flush">
-          {loading ? <div className="prj-muted" style={{ padding: 12 }}>جارٍ التحميل…</div> : events.length === 0 ? <div className="ssp2-empty">لا أحداث من الارتباطات بعد. جلسات القضايا تظهر هنا وفي الخط الزمني تلقائياً.</div> : (
-            <div className="prj-ms-list">
-              {future.length > 0 && <div className="prj-feed__day">القادمة</div>}
-              {future.map((e) => { const d = daysFromToday(e.date); return (
-                <div key={`${e.kind}-${e.id}`} className="prj-ms"><span className="prj-ms__date">{fmtDate(e.date)}{d ? <><br />{d.label}</> : null}</span><span className="prj-ms__name">{e.title}</span><Chip tone={e.kind === 'judgement' ? 'purple' : 'navy'}>{e.status ?? e.kind}</Chip></div>
-              ); })}
-              {past.length > 0 && <div className="prj-feed__day">السابقة</div>}
-              {past.slice(0, 30).map((e) => (
-                <div key={`${e.kind}-${e.id}`} className="prj-ms prj-ms--done"><span className="prj-ms__date">{fmtDate(e.date)}</span><span className="prj-ms__name">{e.title}</span><Chip tone="muted">{e.status ?? e.kind}</Chip></div>
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="prj-list--pad">
+        {rows.length === 0 && <div className="prj-empty">لا أحداث من الارتباطات بعد. اربط القضية أو الخدمة أو الاجتماع لتظهر جلساتها ومراحلها هنا وفي الخط الزمني تلقائياً.</div>}
+        {future.length > 0 && <div className="prj-fday">القادم</div>}
+        {future.map(renderEvent)}
+        {past.length > 0 && <div className="prj-fday">ما مضى</div>}
+        {past.map(renderEvent)}
       </div>
-
-      {importFor && <ImportMinutesModal link={importFor} onClose={() => setImportFor(null)} onDone={async () => { setImportFor(null); await refresh(); await load(); }} />}
+      {linkModal && <LinksModal onClose={() => setLinkModal(false)} onRemove={removeLink} />}
+      {importFor && <ImportMinutesModal link={importFor} onClose={() => setImportFor(null)} onDone={async () => { setImportFor(null); await refresh(); }} />}
     </div>
+  );
+};
+
+/** نافذة الربط: ما يرتبط بالمشروع الآن + بحث لإضافة قضية أو طلب تنفيذ أو خدمة أو اجتماع أو عقد */
+export const LinksModal: React.FC<{ onClose: () => void; onRemove: (l: ProjectLink) => Promise<void> }> = ({ onClose, onRemove }) => {
+  const { project, canEdit, refresh } = useRoom();
+  const add = async (type: ProjectLinkType, item: Linkable) => { try { await ProjectService.addLink(project.id, type, item.id); toast.success('رُبط بالمشروع'); await refresh(); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر الربط'); } };
+  return (
+    <Modal title="ما يرتبط بالمشروع" onClose={onClose} foot={<button type="button" className="prj-btn" onClick={onClose}>إغلاق</button>}>
+      {canEdit && <LinkablePicker onPick={add} exclude={project.links.map((l) => ({ type: l.type, id: l.link_id }))} />}
+      <div>
+        {project.links.length === 0 && <div className="prj-empty">لا ارتباطات بعد.</div>}
+        {project.links.map((l) => (
+          <div key={l.id} className="prj-prow" style={{ paddingInline: 0 }}>
+            <Chip tone="todo">{l.type_label}</Chip>
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.label}</span>
+            <span className="r">{l.extra && typeof l.extra.status === 'string' ? String(l.extra.status) : ''}{!l.exists ? ' · لم يعد موجوداً' : ''}</span>
+            {canEdit && <button type="button" className="prj-ibtn" title="فك الربط" onClick={() => onRemove(l)}><Trash2 size={11} /></button>}
+          </div>
+        ))}
+      </div>
+      <p className="prj-dim" style={{ margin: 0, fontSize: 11 }}>جلسات القضايا وأحكامها ومراحل الخدمات والاجتماعات المربوطة تدخل الخط الزمني تلقائياً، ومستنداتها تظهر في مستندات المشروع.</p>
+    </Modal>
   );
 };
 
@@ -97,31 +115,25 @@ const ImportMinutesModal: React.FC<{ link: ProjectLink; onClose: () => void; onD
     finally { setBusy(false); }
   };
   return (
-    <Modal title={`محضر «${link.label}» إلى مهام وقرارات`} onClose={onClose} wide foot={<><button type="button" className="ssp2-btn" onClick={onClose}>إلغاء</button><button type="button" className="ssp2-btn ssp2-btn--primary" onClick={submit} disabled={busy}>تحويل</button></>}>
+    <Modal title={`محضر «${link.label}» إلى مهام وقرارات`} onClose={onClose} wide foot={<><button type="button" className="prj-btn" onClick={onClose}>إلغاء</button><button type="button" className="prj-btn prj-btn--primary" onClick={submit} disabled={busy}>تحويل</button></>}>
       <ErrorBox error={err} />
-      <div className="prj-block"><div className="prj-block__head">بنود العمل → مهام في المرحلة الجارية</div>
-        <div className="prj-block__body">
-          {items.map((it, i) => (
-            <div key={i} className="prj-form prj-form--3" style={{ marginBottom: 6 }}>
-              <Field label="البند"><input className="ssp2-input" value={it.title} onChange={(e) => setItems(items.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} /></Field>
-              <Field label="المكلف"><UserSelect users={users} value={it.assigned_to} onChange={(id) => setItems(items.map((x, j) => (j === i ? { ...x, assigned_to: id } : x)))} placeholder="مدير المشروع" /></Field>
-              <Field label="الموعد"><div style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="date" className="ssp2-input" value={it.due_date} onChange={(e) => setItems(items.map((x, j) => (j === i ? { ...x, due_date: e.target.value } : x)))} /><label className="prj-check" title="مطلوب من العميل"><input type="checkbox" checked={it.client_action} onChange={(e) => setItems(items.map((x, j) => (j === i ? { ...x, client_action: e.target.checked } : x)))} /> عميل</label></div></Field>
-            </div>
-          ))}
-          <button type="button" className="prj-link" onClick={() => setItems([...items, { title: '', assigned_to: null, due_date: '', client_action: false }])}>+ بند</button>
+      <div className="prj-card__head" style={{ marginInline: -14 }}>بنود العمل → مهام في المرحلة الجارية</div>
+      {items.map((it, i) => (
+        <div key={i} className="prj-form prj-form--3">
+          <Field label="البند"><input className="prj-in" value={it.title} onChange={(e) => setItems(items.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} /></Field>
+          <Field label="المكلف"><UserSelect users={users} value={it.assigned_to} onChange={(id) => setItems(items.map((x, j) => (j === i ? { ...x, assigned_to: id } : x)))} placeholder="مدير المشروع" /></Field>
+          <Field label="الموعد"><div style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="date" className="prj-in" value={it.due_date} onChange={(e) => setItems(items.map((x, j) => (j === i ? { ...x, due_date: e.target.value } : x)))} /><label className="prj-check" title="مطلوب من العميل"><input type="checkbox" checked={it.client_action} onChange={(e) => setItems(items.map((x, j) => (j === i ? { ...x, client_action: e.target.checked } : x)))} /> عميل</label></div></Field>
         </div>
-      </div>
-      <div className="prj-block"><div className="prj-block__head">القرارات → سجل القرارات</div>
-        <div className="prj-block__body">
-          {decisions.map((d, i) => (
-            <div key={i} className="prj-form" style={{ marginBottom: 6 }}>
-              <Field label="القرار"><input className="ssp2-input" value={d.title} onChange={(e) => setDecisions(decisions.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} /></Field>
-              <Field label="السبب"><input className="ssp2-input" value={d.reason} onChange={(e) => setDecisions(decisions.map((x, j) => (j === i ? { ...x, reason: e.target.value } : x)))} /></Field>
-            </div>
-          ))}
-          <button type="button" className="prj-link" onClick={() => setDecisions([...decisions, { title: '', reason: '' }])}>+ قرار</button>
+      ))}
+      <button type="button" className="prj-link" style={{ alignSelf: 'flex-start' }} onClick={() => setItems([...items, { title: '', assigned_to: null, due_date: '', client_action: false }])}>+ بند</button>
+      <div className="prj-card__head" style={{ marginInline: -14 }}>القرارات → سجل القرارات</div>
+      {decisions.map((d, i) => (
+        <div key={i} className="prj-form">
+          <Field label="القرار"><input className="prj-in" value={d.title} onChange={(e) => setDecisions(decisions.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} /></Field>
+          <Field label="السبب"><input className="prj-in" value={d.reason} onChange={(e) => setDecisions(decisions.map((x, j) => (j === i ? { ...x, reason: e.target.value } : x)))} /></Field>
         </div>
-      </div>
+      ))}
+      <button type="button" className="prj-link" style={{ alignSelf: 'flex-start' }} onClick={() => setDecisions([...decisions, { title: '', reason: '' }])}>+ قرار</button>
     </Modal>
   );
 };

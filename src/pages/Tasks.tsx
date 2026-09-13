@@ -1740,7 +1740,7 @@ const Tasks: React.FC = () => {
               </div>
             )}
             {viewMode === 'projects' ? (
-              <ProjectsList canCreate={canCreateProjects} />
+              <ProjectsList canCreate={canCreateProjects} onNewTask={() => setIsAddModalOpen(true)} />
             ) : loading ? (
               <div className="tasks-loading">جاري التحميل...</div>
             ) : getFilteredTasks().length === 0 ? (

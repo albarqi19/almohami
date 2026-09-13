@@ -473,8 +473,10 @@ export class ProjectService {
   static async comments(id: number): Promise<ProjectComment[]> {
     return ok(await apiClient.get<ApiResponse<ProjectComment[]>>(`/projects/${id}/comments`), 'تعذر جلب المحادثة');
   }
-  static async addComment(id: number, body: string, mentions: number[] = []): Promise<ProjectComment> {
-    return ok(await apiClient.post<ApiResponse<ProjectComment>>(`/projects/${id}/comments`, { body, mentions }), 'تعذر الإرسال');
+  /** رسالة في المحادثة؛ إن ذُكر @رائد ترجع تشغيلة سؤال يُنشر جوابها رسالةً باسم رائد عند الجهوز */
+  static async addComment(id: number, body: string, mentions: number[] = []): Promise<{ comment: ProjectComment; raedRunId: number | null; raedMessage: string | null }> {
+    const res = await apiClient.post<ApiResponse<ProjectComment> & { raed_run_id?: number | null; raed_message?: string | null }>(`/projects/${id}/comments`, { body, mentions });
+    return { comment: ok(res, 'تعذر الإرسال'), raedRunId: res.raed_run_id ?? null, raedMessage: res.raed_message ?? null };
   }
   static async deleteComment(id: number, commentId: number): Promise<void> {
     const res = await apiClient.delete<ApiResponse<unknown>>(`/projects/${id}/comments/${commentId}`);

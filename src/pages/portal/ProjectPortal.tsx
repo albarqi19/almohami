@@ -42,6 +42,13 @@ const STYLE = `
 .pp-err{color:${C.rust};font-size:13px}
 .pp-foot{text-align:center;font-size:12px;color:${C.faint};margin-top:18px}
 .pp-report{white-space:pre-wrap;font-size:13.5px;line-height:1.9;color:${C.ink}}
+.pp-track{display:flex;overflow-x:auto;border-top:1px solid ${C.hair};margin-top:14px}
+.pp-step{flex:1;min-width:120px;display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-inline-start:1px solid ${C.hair};font-size:11.5px;color:${C.mute}}
+.pp-step:first-child{border-inline-start:0}
+.pp-step b{color:${C.ink};font-size:12.5px}
+.pp-step.is-done b{color:${C.green}}
+.pp-step.is-cur{background:rgba(201,163,93,.12)}
+.pp-step.is-cur b{color:${C.goldDeep}}
 @media(max-width:600px){.pp-kpis{grid-template-columns:1fr 1fr}.pp-row{grid-template-columns:1fr;gap:4px}}
 `;
 
@@ -143,6 +150,19 @@ const ProjectPortal: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {view.scope.phases && view.phases.length > 0 && (
+              <div className="pp-card" style={{ padding: 0 }}>
+                <div className="pp-track" style={{ marginTop: 0, borderTop: 0 }}>
+                  {view.phases.map((p) => (
+                    <div key={p.id} className={`pp-step ${p.status === 'completed' ? 'is-done' : ''} ${p.is_current ? 'is-cur' : ''}`}>
+                      <b>{p.status === 'completed' ? '✓ ' : ''}{p.name}</b>
+                      <span>{p.status === 'completed' ? `اكتملت ${fmt(p.due_date)}` : p.is_current ? 'الجارية الآن' : `متوقعة ${fmt(p.start_date)}`}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {view.tasks.length > 0 && (
               <div className="pp-card"><p className="pp-sec">مطلوب منكم</p>
