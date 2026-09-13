@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AlertTriangle, Calendar, Flag, History, Lightbulb, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { ProjectService } from '../../../services/projectService';
-import { Av, Chip, Health, PBar, fmtDayMonth, whenAr } from '../ui';
+import { Av, Chip, Health, PBar, daysFromToday, fmtDayMonth, whenAr } from '../ui';
 import { useRoom } from './RoomContext';
 
 /**
@@ -10,7 +10,7 @@ import { useRoom } from './RoomContext';
  * يحتاج انتباهك · القادم · تقدم المراحل · السجلات · آخر نشاط.
  */
 const OverviewSection: React.FC = () => {
-  const { project, overview, canEdit, canApprove, goTo, openTask, refresh, askRaed, setPhaseFilter } = useRoom();
+  const { project, overview, canEdit, canApprove, goTo, openTask, refresh, askRaed, setPhaseFilter, openDecision } = useRoom();
   const [summaryBusy, setSummaryBusy] = useState(false);
   const [decideBusy, setDecideBusy] = useState<number | null>(null);
 
@@ -93,18 +93,29 @@ const OverviewSection: React.FC = () => {
         </div>
       </div>
 
-      {pendingPoints.map((dp) => (
-        <div key={dp.id} className="prj-raedbox" style={{ background: 'var(--pj-paper-2)' }}>
-          <Flag size={16} style={{ color: 'var(--pj-navy)' }} />
-          <div className="prj-grow" style={{ whiteSpace: 'normal' }}>
-            <b>نقطة قرار بعد «{dp.after_phase_name}»: {dp.question}</b>
-            <div className="acts">
-              {dp.options.map((o) => <button type="button" key={o.key} className="prj-btn prj-btn--sm" disabled={!(canEdit || canApprove) || decideBusy === dp.id} onClick={() => decide(dp.id, o.key)}>{decideBusy === dp.id ? <Loader2 size={12} className="ssp2-spin" /> : null} {o.label}</button>)}
+      {project.decision_points.map((dp) => {
+        const after = project.phases.find((p) => p.id === dp.after_phase_id);
+        const ready = pendingPoints.some((x) => x.id === dp.id);
+        const chosen = dp.chosen_key ? dp.options.find((o) => o.key === dp.chosen_key) : null;
+        const exp = daysFromToday(after?.due_date);
+        return (
+          <div key={dp.id} className="prj-dpcard">
+            <span className={`prj-diamond ${chosen ? 'prj-diamond--done' : ''}`} />
+            <div className="prj-dpcard__body">
+              <b>{chosen ? 'نقطة قرار قُررت' : ready ? 'نقطة قرار جاهزة الآن' : 'نقطة قرار قادمة'}: {dp.question}</b>
+              {' '}
+              {chosen
+                ? <span>القرار «{chosen.label}»{dp.decided_by ? ` · ${dp.decided_by.name}` : ''}{dp.decided_at ? ` · ${fmtDayMonth(dp.decided_at)}` : ''}.</span>
+                : <span>تأتي بعد «{after?.name ?? '—'}»{after?.due_date ? ` (متوقعة ${fmtDayMonth(after.due_date)}${exp ? ` · ${exp.label}` : ''})` : ''} · {dp.options.length} مسارات: {dp.options.map((o) => o.label).join(' / ')}.</span>}
+              <div className="prj-dpcard__acts">
+                <button type="button" className="prj-btn prj-btn--sm" onClick={() => openDecision(dp.id)}>افتح نقطة القرار</button>
+                {ready && canApprove && dp.options.map((o) => <button type="button" key={o.key} className="prj-btn prj-btn--sm prj-btn--primary" disabled={decideBusy === dp.id} onClick={() => decide(dp.id, o.key)}>{decideBusy === dp.id ? <Loader2 size={12} className="ssp2-spin" /> : null} {o.label}</button>)}
+                {!chosen && !ready && <span className="prj-dim">المسارات مطوية حتى يُختار أحدها.</span>}
+              </div>
             </div>
-            <span className="prj-dim">الخيار يفعّل المسار المناسب ويطوي المسارات الأخرى.</span>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       <div className="prj-ov2">
         <div className="prj-ov__tile">
@@ -113,7 +124,7 @@ const OverviewSection: React.FC = () => {
             {attention.length === 0 && <div className="prj-empty">لا شيء عاجل. المشروع على المسار.</div>}
             {attention.map((a, i) => {
               const t = attentionTone(a.kind, a.severity);
-              const go = a.kind === 'task' && a.id ? () => openTask(a.id!) : attentionTarget(a.kind);
+              const go = a.kind === 'task' && a.id ? () => openTask(a.id!) : a.kind === 'decision_point' && a.id ? () => openDecision(a.id!) : attentionTarget(a.kind);
               return (
                 <div key={i} className={`prj-row ${go ? 'prj-row--click' : ''}`} onClick={go ?? undefined}>
                   <span className={`prj-health prj-health--${a.severity === 'bad' ? 'bad' : a.severity === 'warn' ? 'warn' : 'ok'}`}><i /></span>

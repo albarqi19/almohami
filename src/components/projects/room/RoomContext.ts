@@ -31,6 +31,8 @@ export interface RoomCtx {
   consumePending: (action: QuickAction) => boolean;
   /** يفتح محادثة المشروع بسؤال لرائد (يبدأ بـ@رائد) */
   askRaed: (question?: string) => void;
+  /** يفتح نافذة نقطة القرار (السؤال والمسارات ومن يقرر) */
+  openDecision: (pointId: number) => void;
   chatDraft: string;
   setChatDraft: (s: string) => void;
 }

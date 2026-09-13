@@ -26,6 +26,7 @@ import FeedSection from '../components/projects/room/FeedSection';
 import ReportsSection from '../components/projects/room/ReportsSection';
 import ChatSection from '../components/projects/room/ChatSection';
 import TaskCardModal from '../components/projects/room/TaskCardModal';
+import DecisionPointModal from '../components/projects/room/DecisionPointModal';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (projects.css)
 
 const ARCHETYPE_LABELS: Record<string, string> = { commercial_dispute: 'نزاع تجاري كبير', arbitration: 'تحكيم', ma_deal: 'صفقة استحواذ أو اندماج', bankruptcy: 'إفلاس وإعادة هيكلة', execution_portfolio: 'محفظة طلبات تنفيذ' };
@@ -57,6 +58,8 @@ const ProjectRoom: React.FC = () => {
   const [editModal, setEditModal] = useState(false);
   const [linksModal, setLinksModal] = useState(false);
   const [templateModal, setTemplateModal] = useState<'apply' | 'save' | null>(null);
+  const [decisionOpen, setDecisionOpen] = useState<number | null>(null);
+  const openDecision = useCallback((pointId: number) => setDecisionOpen(pointId), []);
 
   const raw = params.get('s') ?? params.get('view') ?? 'ov';
   const section: SectionKey = (SECTIONS as string[]).includes(raw) ? (raw as SectionKey) : (LEGACY_VIEW[raw] ?? 'ov');
@@ -85,8 +88,8 @@ const ProjectRoom: React.FC = () => {
 
   const canEdit = !!project?.can.edit;
   const canApprove = !!project?.can.approve;
-  const ctx = useMemo(() => (project ? { project, overview, events, refresh, users, canEdit, canApprove, goTo, openTask, openTaskPage, phaseFilter, setPhaseFilter, pending, consumePending, askRaed, chatDraft, setChatDraft } : null),
-    [project, overview, events, refresh, users, canEdit, canApprove, goTo, openTask, openTaskPage, phaseFilter, pending, consumePending, askRaed, chatDraft]);
+  const ctx = useMemo(() => (project ? { project, overview, events, refresh, users, canEdit, canApprove, goTo, openTask, openTaskPage, phaseFilter, setPhaseFilter, pending, consumePending, askRaed, openDecision, chatDraft, setChatDraft } : null),
+    [project, overview, events, refresh, users, canEdit, canApprove, goTo, openTask, openTaskPage, phaseFilter, pending, consumePending, askRaed, openDecision, chatDraft]);
 
   const changeStatus = async (status: string) => { if (!project) return; try { await ProjectService.update(project.id, { status }); toast.success('حُدثت الحالة'); await load(); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر التحديث'); } };
   const exportPlan = async () => { if (!project) return; try { const plan = await ProjectService.exportPlan(project.id); const blob = new Blob([JSON.stringify(plan, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${project.code}-plan.json`; a.click(); URL.revokeObjectURL(a.href); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر التصدير'); } };
@@ -202,13 +205,30 @@ const ProjectRoom: React.FC = () => {
           </div>
           {phases.length > 0 && (
             <div className="prj-phases">
-              {phases.map((p) => { const pct = p.tasks_total ? Math.round((p.tasks_done / p.tasks_total) * 100) : (p.status === 'completed' ? 100 : 0); return (
-                <button type="button" key={p.id} className={`prj-ph ${p.status === 'completed' ? 'prj-ph--done' : ''} ${p.status === 'active' || p.status === 'awaiting_approval' ? 'prj-ph--cur' : ''} ${p.status === 'hidden' ? 'prj-ph--branch' : ''} ${phaseFilter === p.id ? 'is-sel' : ''}`} onClick={() => { setPhaseFilter(phaseFilter === p.id ? null : p.id); goTo('tasks'); }} title={p.objective ?? p.name}>
-                  <span className="prj-ph__row"><span className="prj-ph__n num">{p.status === 'completed' ? '✓' : p.order}</span><span className="prj-ph__name">{p.name}</span>{p.requires_approval && <ShieldCheck size={11} className="gate" />}{p.client_visible && <Eye size={11} className="eye" />}</span>
-                  <span className="prj-ph__meta">{phaseMeta(p)}</span>
-                  <PBar value={pct} tone={p.tasks_late ? 'bad' : ''} />
-                </button>
-              ); })}
+              {phases.map((p) => {
+                const pct = p.tasks_total ? Math.round((p.tasks_done / p.tasks_total) * 100) : (p.status === 'completed' ? 100 : 0);
+                // نقطة القرار تظهر في الشريط بعد مرحلتها مباشرة، وما بعدها مسارات مطوية حتى يُختار أحدها
+                const dps = project.decision_points.filter((dp) => dp.after_phase_id === p.id);
+                return (
+                  <React.Fragment key={p.id}>
+                    <button type="button" className={`prj-ph ${p.status === 'completed' ? 'prj-ph--done' : ''} ${p.status === 'active' || p.status === 'awaiting_approval' ? 'prj-ph--cur' : ''} ${p.status === 'hidden' ? 'prj-ph--branch' : ''} ${phaseFilter === p.id ? 'is-sel' : ''}`} onClick={() => { setPhaseFilter(phaseFilter === p.id ? null : p.id); goTo('tasks'); }} title={p.objective ?? p.name}>
+                      <span className="prj-ph__row"><span className="prj-ph__n num">{p.status === 'completed' ? '✓' : p.order}</span><span className="prj-ph__name">{p.name}</span>{p.requires_approval && <ShieldCheck size={11} className="gate" />}{p.client_visible && <Eye size={11} className="eye" />}</span>
+                      <span className="prj-ph__meta">{phaseMeta(p)}</span>
+                      <PBar value={pct} tone={p.tasks_late ? 'bad' : ''} />
+                    </button>
+                    {dps.map((dp) => {
+                      const chosen = dp.chosen_key ? dp.options.find((o) => o.key === dp.chosen_key) : null;
+                      return (
+                        <button type="button" key={`dp-${dp.id}`} className="prj-ph prj-ph--dec" onClick={() => openDecision(dp.id)} title={dp.question}>
+                          <span className="prj-ph__row"><span className={`prj-diamond ${chosen ? 'prj-diamond--done' : ''}`} /><span className="prj-ph__name">نقطة قرار: {dp.question}</span><GitBranch size={11} style={{ color: 'var(--pj-gold)' }} /></span>
+                          <span className="prj-ph__meta">{chosen ? `قُرر: ${chosen.label}` : p.status === 'completed' ? 'جاهزة للقرار الآن' : `${dp.options.length} مسارات · تُختار بعد «${p.name}»`}</span>
+                          <span className="prj-ph__meta">{chosen ? (dp.decided_by ? `${dp.decided_by.name.split(' ')[0]} · ${fmtDayMonth(dp.decided_at)}` : '') : 'اضغط لرؤية المسارات'}</span>
+                        </button>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
             </div>
           )}
         </header>
@@ -234,12 +254,28 @@ const ProjectRoom: React.FC = () => {
             <button type="button" className={section === 'feed' ? 'is-on' : ''} onClick={() => goTo('feed')}><History size={13} /> الخط الزمني</button>
             <button type="button" className={section === 'reports' ? 'is-on' : ''} onClick={() => goTo('reports')}><Send size={13} /> التقارير</button>
             <button type="button" className={section === 'chat' ? 'is-on' : ''} onClick={() => goTo('chat')}><MessageSquare size={13} /> محادثة المشروع</button>
-            {project.decision_points.some((dp) => !dp.chosen_key) && <div className="grp" style={{ display: 'flex', gap: 5, alignItems: 'center' }}><GitBranch size={11} /> فيه نقطة قرار</div>}
+            {project.decision_points.length > 0 && (
+              <>
+                <div className="grp">نقاط القرار</div>
+                {project.decision_points.map((dp) => {
+                  const after = project.phases.find((p) => p.id === dp.after_phase_id);
+                  const ready = !dp.chosen_key && after?.status === 'completed';
+                  return (
+                    <button type="button" key={dp.id} onClick={() => openDecision(dp.id)} title={dp.question}>
+                      <span className={`prj-diamond ${dp.chosen_key ? 'prj-diamond--done' : ''}`} />
+                      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dp.question}</span>
+                      <span className={`prj-cnt ${ready ? 'prj-cnt--bad' : dp.chosen_key ? '' : 'prj-cnt--gold'}`}>{dp.chosen_key ? 'قُررت' : ready ? 'الآن' : `بعد ${after?.name ? after.name.split(' ')[0] : '—'}`}</span>
+                    </button>
+                  );
+                })}
+              </>
+            )}
           </nav>
           <div className="prj-stage">{renderSection()}</div>
         </div>
 
         {taskCard !== null && <TaskCardModal taskId={taskCard} onClose={() => setTaskCard(null)} />}
+        {decisionOpen !== null && <DecisionPointModal pointId={decisionOpen} onClose={() => setDecisionOpen(null)} />}
         {editModal && <EditProjectModal project={project} onClose={() => setEditModal(false)} onSaved={async () => { setEditModal(false); await load(); }} />}
         {linksModal && <LinksModal onClose={() => setLinksModal(false)} onRemove={async (l) => { if (!window.confirm(`فك ربط «${l.label}»؟`)) return; try { await ProjectService.removeLink(project.id, l.id); await load(); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر فك الربط'); } }} />}
         {templateModal === 'apply' && <ApplyTemplateModal project={project} users={users} currentUserId={user ? Number(user.id) : null} onClose={() => setTemplateModal(null)} onDone={async () => { setTemplateModal(null); await load(); }} />}

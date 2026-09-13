@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Eye, GitBranch, Layers, Plus, Scale, ShieldCheck, Trash2 } from 'lucide-react';
+import { Eye, Layers, Plus, Scale, ShieldCheck, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { ProjectService } from '../../../services/projectService';
 import type { ProjectMap, ProjectMilestone, ProjectPhase } from '../../../types/projects';
@@ -21,7 +21,7 @@ const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'ما
  * وجلسات القضايا المرتبطة في صف خاص. اليوم خط ذهبي.
  */
 const TimelineSection: React.FC = () => {
-  const { project, canEdit, refresh, goTo, setPhaseFilter } = useRoom();
+  const { project, canEdit, refresh, goTo, setPhaseFilter, openDecision } = useRoom();
   const [map, setMap] = useState<ProjectMap | null>(null);
   const [msModal, setMsModal] = useState<{ ms: ProjectMilestone | null } | null>(null);
 
@@ -103,7 +103,7 @@ const TimelineSection: React.FC = () => {
       <React.Fragment key={p.id}>
         {dp && (
           <div className="prj-map__row prj-map__row--dec">
-            <div className="prj-map__label"><GitBranch size={13} /><span className="t">نقطة القرار: {dp.question}</span>{dp.chosen_key && <span className="prj-chip prj-chip--gate">قُرر</span>}</div>
+            <div className="prj-map__label prj-map__label--click" onClick={() => openDecision(dp.id)} title="افتح نقطة القرار"><span className={`prj-diamond ${dp.chosen_key ? 'prj-diamond--done' : ''}`} /><span className="t">نقطة القرار: {dp.question}</span>{dp.chosen_key ? <span className="prj-chip prj-chip--done">قُررت</span> : <span className="prj-chip prj-chip--gate">{dp.options.length} مسارات</span>}</div>
             <div className="prj-map__track">{todayLine}{(() => { const after = map.phases.find((x) => x.id === dp.after_phase_id); const d = toMs(after?.due_date); return d !== null ? <><span className="prj-ms prj-ms--dec" style={{ right: `${scale.pct(d)}%` }} title={dp.question} /><span className="prj-ms__l" style={{ right: `${scale.pct(d)}%` }}>{dp.chosen_key ? dp.options.find((o) => o.key === dp.chosen_key)?.label : 'يُختار المسار بعد الحكم'}<small>{fmtDayMonth(after?.due_date)}</small></span></> : null; })()}</div>
           </div>
         )}

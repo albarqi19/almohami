@@ -29,9 +29,13 @@ export interface RegisterData {
 
 export class AuthService {
   static async login(credentials: LoginForm): Promise<LoginResponse> {
+    // للتجربة المحلية: `/login?tenant=<slug>` يرسل معرّف المكتب صراحةً (الباك يقبله «للتوافقية»)
+    // لأن جذر النطاق لا يُدخِل إلا مالك المكتب، ولا نطاقات فرعية على localhost.
+    const tenantSlug = new URLSearchParams(window.location.search).get('tenant');
     const response = await apiClient.post<ApiResponse<LoginResponse>>('/auth/login', {
       national_id: credentials.nationalId,
       pin: credentials.pin,
+      ...(tenantSlug ? { tenant_slug: tenantSlug } : {}),
     });
 
     // DEBUG: Log the full response
