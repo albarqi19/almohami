@@ -60,6 +60,7 @@ const ClientCaseDetail = lazyWithRetry(() => import('./pages/ClientCaseDetail'))
 const ClientDocumentsRequired = lazyWithRetry(() => import('./pages/ClientDocumentsRequired'));
 const Tasks = lazyWithRetry(() => import('./pages/Tasks'));
 const TaskDetail = lazyWithRetry(() => import('./pages/TaskDetail'));
+const ProjectRoom = lazyWithRetry(() => import('./pages/ProjectRoom'));
 const Documents = lazyWithRetry(() => import('./pages/Documents'));
 const Activities = lazyWithRetry(() => import('./pages/Activities'));
 const LawyersReport = lazyWithRetry(() => import('./pages/LawyersReport'));
@@ -109,6 +110,8 @@ const ClientServices = lazyWithRetry(() => import('./pages/ClientServices'));
 const ClientServiceDetail = lazyWithRetry(() => import('./pages/ClientServiceDetail'));
 const ClientAppointments = lazyWithRetry(() => import('./pages/ClientAppointments'));
 const ClientEstablishmentPage = lazyWithRetry(() => import('./pages/ClientEstablishmentPage'));
+const ClientProjects = lazyWithRetry(() => import('./pages/ClientProjects'));
+const ClientProjectDetail = lazyWithRetry(() => import('./pages/ClientProjectDetail'));
 const PersonalNotebook = lazyWithRetry(() => import('./pages/NotebookWorkspace'));
 const UserGuide = lazyWithRetry(() => import('./pages/UserGuide'));
 
@@ -152,6 +155,8 @@ const LegalPage = lazyWithRetry(() => import('./pages/LegalPage'));
 const ExtensionGuidePage = lazyWithRetry(() => import('./pages/ExtensionGuidePage'));
 // Public Service Portal (White-Label, no auth required)
 const ServicePortal = lazyWithRetry(() => import('./pages/portal/ServicePortal'));
+// نافذة المشروع برابط ورقم سري (بلا تسجيل دخول)
+const ProjectPortal = lazyWithRetry(() => import('./pages/portal/ProjectPortal'));
 
 // Component to choose between tenant and main landing page
 const SmartLandingPage: React.FC = () => {
@@ -209,6 +214,8 @@ function App() {
               <Route path="/booking/:token" element={<PublicBooking />} />
               {/* Public Service Portal (White-Label) - No auth required */}
               <Route path="/portal/service/:token" element={<ServicePortal />} />
+              {/* Public Project Portal (link + PIN) - No auth required */}
+              <Route path="/project-portal/:token" element={<ProjectPortal />} />
 
               {/* Forbidden page - Phase 3 */}
               <Route path="/forbidden" element={<Forbidden />} />
@@ -448,6 +455,17 @@ function App() {
                   <ClientEstablishmentPage />
                 </ProtectedRoute>
               } />
+              {/* مشاريع العميل — الخادم يفرض الملكية في /client/projects */}
+              <Route path="my-projects" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientProjects />
+                </ProtectedRoute>
+              } />
+              <Route path="my-projects/:projectId" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientProjectDetail />
+                </ProtectedRoute>
+              } />
               <Route path="my-documents-required" element={
                 <ProtectedRoute allowedRoles={['client']}>
                   <ClientDocumentsRequired />
@@ -501,6 +519,12 @@ function App() {
               <Route path="tasks/:taskId" element={
                 <ProtectedRoute requiredPermission="tasks.view" denyClient>
                   <TaskDetail />
+                </ProtectedRoute>
+              } />
+              {/* غرفة المشروع — داخل «المهام والمشاريع»؛ الباك يفرض projects.view وسياسة الرؤية */}
+              <Route path="tasks/projects/:projectId" element={
+                <ProtectedRoute requiredPermission="projects.view" denyClient>
+                  <ProjectRoom />
                 </ProtectedRoute>
               } />
               {/* الوثائق — حراسة بالصلاحية لا بالدور.

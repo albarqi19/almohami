@@ -1,3 +1,4 @@
+import { FolderKanban } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
@@ -494,6 +495,16 @@ const TaskDetail: React.FC = () => {
                 : 'مهمة عامة'}
             </b>
           </span>
+          {task.project && (
+            <>
+              <span className="ssp2-fact__sep" />
+              <span className="ssp2-fact">
+                <FolderKanban size={13} />
+                <span className="ssp2-fact__label">المشروع</span>
+                <b><button type="button" className="prj-link" style={{ textDecoration: 'none', fontWeight: 700 }} onClick={() => navigate(`/tasks/projects/${task.project!.id}`)}>{task.project.code} · {task.project.name}</button>{task.project_phase ? ` · ${task.project_phase.name}` : ''}</b>
+              </span>
+            </>
+          )}
           {(task.requires_approval || task.requires_attachment) && (
             <>
               <span className="ssp2-fact__sep" />

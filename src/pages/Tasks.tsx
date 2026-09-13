@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePermissionContext } from '../contexts/PermissionContext';
 import { useIsCoarsePointer } from '../hooks/useIsCoarsePointer';
 import {
   Plus,
@@ -58,6 +59,8 @@ import { CSS } from '@dnd-kit/utilities';
 
 import type { ArchivedFilter, Task, TaskStatus, Priority, TaskFolder, TaskFolderColor } from '../types';
 import { TaskService, type TaskFilters, type TaskStats, type TaskWidgets } from '../services/taskService';
+import { FolderKanban } from 'lucide-react';
+import ProjectsList from '../components/projects/ProjectsList';
 import { TaskFolderService } from '../services/taskFolderService';
 import { UserService } from '../services/UserService';
 import { Can } from '../components/Can';
@@ -451,7 +454,11 @@ const Tasks: React.FC = () => {
   const loadedCountRef = useRef(PAGE_SIZE);
   const [totalCount, setTotalCount] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
+  // 'projects' = قسم المشاريع داخل الصفحة نفسها (المهام والمشاريع) — يُفتح من ?view=projects أيضاً
+  const [viewMode, setViewMode] = useState<'list' | 'board' | 'projects'>(() => (new URLSearchParams(window.location.search).get('view') === 'projects' ? 'projects' : 'list'));
+  const { has: hasPermission } = usePermissionContext();
+  const canSeeProjects = hasPermission('projects.view');
+  const canCreateProjects = hasPermission('projects.create');
   const [groupBy, setGroupBy] = useState<GroupBy>('status');
   const [users, setUsers] = useState<{ [key: string]: { name: string; avatar?: string | null } }>(() => UsersCache.get());
 
@@ -1271,6 +1278,12 @@ const Tasks: React.FC = () => {
                               </>
                             )}
                           </span>
+                          {task.project && (
+                            <span className={`task-case-subtext prj-color-${task.project.color ?? 'navy'}`} title={`مشروع: ${task.project.name}`} onClick={(e) => { e.stopPropagation(); navigate(`/tasks/projects/${task.project!.id}`); }}>
+                              <FolderKanban size={10} className="inline-icon" />
+                              {task.project.code} · {task.project.name}{task.project_phase ? ` · ${task.project_phase.name}` : ''}
+                            </span>
+                          )}
                           {task.case ? (
                             <span className="task-case-subtext" title={task.case.title} onClick={(e) => { e.stopPropagation(); navigate(`/cases/${task.caseId}`); }}>
                               <Layers size={10} className="inline-icon" />
@@ -1696,6 +1709,16 @@ const Tasks: React.FC = () => {
                 <LayoutGrid size={14} />
                 <span>كانبان</span>
               </button>
+              {canSeeProjects && (
+                <button
+                  className={`tasks-view-btn ${viewMode === 'projects' ? 'active' : ''}`}
+                  onClick={() => setViewMode('projects')}
+                  title="المشاريع القانونية الكبرى"
+                >
+                  <FolderKanban size={14} />
+                  <span>المشاريع</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -1716,7 +1739,9 @@ const Tasks: React.FC = () => {
                 <span>أرشيف المهام{archivedCount > 0 ? ` — ${tasksCountLabel(archivedCount)}` : ''}</span>
               </div>
             )}
-            {loading ? (
+            {viewMode === 'projects' ? (
+              <ProjectsList canCreate={canCreateProjects} />
+            ) : loading ? (
               <div className="tasks-loading">جاري التحميل...</div>
             ) : getFilteredTasks().length === 0 ? (
               <div className="tasks-empty">
@@ -1745,7 +1770,7 @@ const Tasks: React.FC = () => {
             )}
 
             {/* Pagination / Load More */}
-            {!loading && tasks.length < totalCount && (
+            {viewMode !== 'projects' && !loading && tasks.length < totalCount && (
               <div className="load-more-container">
                 <button onClick={loadMore} disabled={loadingMore} className="load-more-btn">
                   {/* المفتوحةُ كلُّها محمَّلةٌ أصلاً (open_first)، فالمتبقّي منتهٍ لا غير */}

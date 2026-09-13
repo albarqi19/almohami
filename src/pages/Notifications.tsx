@@ -1,3 +1,4 @@
+import { FolderKanban as ProjectNotifIcon } from 'lucide-react';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -41,6 +42,24 @@ const getNotificationIcon = (type: string) => {
     case 'case_update':
     case 'case_created':
       return <Briefcase size={18} />;
+    case 'project_tasks_assigned':
+    case 'project_task_ready':
+    case 'project_phase_approval':
+    case 'project_phase_rejected':
+    case 'project_phase_started':
+    case 'project_session_cycle':
+    case 'project_session_moved':
+    case 'project_judgement':
+    case 'project_decision_point':
+    case 'project_decision_pending':
+    case 'project_all_phases_done':
+    case 'project_deliverable_returned':
+    case 'project_issue_assigned':
+    case 'project_client_upload':
+    case 'project_client_approval':
+    case 'project_mention':
+    case 'project_report_sent':
+      return <ProjectNotifIcon size={18} />;
     case 'system':
       return <Clock size={18} />;
     default:
@@ -57,6 +76,24 @@ const getIconClass = (type: string) => {
     case 'document_uploaded': return 'notification-card__icon--document';
     case 'case_update':
     case 'case_created': return 'notification-card__icon--case';
+    case 'project_tasks_assigned':
+    case 'project_task_ready':
+    case 'project_phase_approval':
+    case 'project_phase_rejected':
+    case 'project_phase_started':
+    case 'project_session_cycle':
+    case 'project_session_moved':
+    case 'project_judgement':
+    case 'project_decision_point':
+    case 'project_decision_pending':
+    case 'project_all_phases_done':
+    case 'project_deliverable_returned':
+    case 'project_issue_assigned':
+    case 'project_client_upload':
+    case 'project_client_approval':
+    case 'project_mention':
+    case 'project_report_sent':
+      return 'notification-card__icon--task';
     case 'system': return 'notification-card__icon--system';
     default: return 'notification-card__icon--system';
   }
@@ -71,6 +108,24 @@ const getTypeClass = (type: string) => {
     case 'document_uploaded': return 'notification-card__type--document';
     case 'case_update':
     case 'case_created': return 'notification-card__type--case';
+    case 'project_tasks_assigned':
+    case 'project_task_ready':
+    case 'project_phase_approval':
+    case 'project_phase_rejected':
+    case 'project_phase_started':
+    case 'project_session_cycle':
+    case 'project_session_moved':
+    case 'project_judgement':
+    case 'project_decision_point':
+    case 'project_decision_pending':
+    case 'project_all_phases_done':
+    case 'project_deliverable_returned':
+    case 'project_issue_assigned':
+    case 'project_client_upload':
+    case 'project_client_approval':
+    case 'project_mention':
+    case 'project_report_sent':
+      return 'notification-card__type--task';
     default: return 'notification-card__type--case';
   }
 };
@@ -86,6 +141,23 @@ const getNotificationTypeText = (type: string) => {
     case 'case_update': return 'تحديث قضية';
     case 'case_created': return 'قضية جديدة';
     case 'user_assigned': return 'تعيين مستخدم';
+    case 'project_tasks_assigned': return 'مهام مشروع';
+    case 'project_task_ready': return 'مهمة جاهزة للبدء';
+    case 'project_phase_approval': return 'موافقة على مرحلة';
+    case 'project_phase_rejected': return 'مرحلة أُعيدت للعمل';
+    case 'project_phase_started': return 'بدأت مرحلة';
+    case 'project_session_cycle': return 'دورة جلسة';
+    case 'project_session_moved': return 'تأجلت جلسة المشروع';
+    case 'project_judgement': return 'حكم في مشروع';
+    case 'project_decision_point': return 'نقطة قرار';
+    case 'project_decision_pending': return 'قرار ينتظر';
+    case 'project_all_phases_done': return 'اكتملت المراحل';
+    case 'project_deliverable_returned': return 'مخرج أُعيد';
+    case 'project_issue_assigned': return 'مسألة قانونية';
+    case 'project_client_upload': return 'رفع العميل ملفاً';
+    case 'project_client_approval': return 'رد العميل على مخرج';
+    case 'project_mention': return 'إشارة في مشروع';
+    case 'project_report_sent': return 'تقرير مشروع';
     case 'system': return 'نظام';
     default: return 'نظام';
   }
@@ -105,6 +177,24 @@ const getNotificationTip = (type: string) => {
     case 'case_update':
     case 'case_created':
       return 'حدث تحديث على ملف القضية. يُرجى مراجعة التطورات الجديدة وتحديث بيانات العميل.';
+    case 'project_tasks_assigned':
+    case 'project_task_ready':
+    case 'project_phase_approval':
+    case 'project_phase_rejected':
+    case 'project_phase_started':
+    case 'project_session_cycle':
+    case 'project_session_moved':
+    case 'project_judgement':
+    case 'project_decision_point':
+    case 'project_decision_pending':
+    case 'project_all_phases_done':
+    case 'project_deliverable_returned':
+    case 'project_issue_assigned':
+    case 'project_client_upload':
+    case 'project_client_approval':
+    case 'project_mention':
+    case 'project_report_sent':
+      return 'إشعار من مشروع قانوني: افتح غرفة المشروع من الرابط لمتابعة ما يخصك.';
     default:
       return 'إشعار نظام لإعلامك بالنشاطات والتحديثات الجارية في المنصة.';
   }
@@ -136,7 +226,7 @@ const formatTimeAgo = (dateString: string) => {
  *    الباك يسقط خارج التبويبات كلِّها ويظهر في «الكل» وحده. و`mention`
  *    كانت يتيمةً بالفعل قبل أن يُضاف `task_comment` (#22).
  */
-const TASK_NOTIFICATION_TYPES = ['task_assigned', 'task_due', 'task_completed', 'task_comment', 'mention'];
+const TASK_NOTIFICATION_TYPES = ['task_assigned', 'task_due', 'task_completed', 'task_comment', 'mention', 'project_tasks_assigned', 'project_task_ready', 'project_phase_approval', 'project_phase_rejected', 'project_phase_started', 'project_session_cycle', 'project_session_moved', 'project_judgement', 'project_decision_point', 'project_decision_pending', 'project_all_phases_done', 'project_deliverable_returned', 'project_issue_assigned', 'project_client_upload', 'project_client_approval', 'project_mention', 'project_report_sent'];
 
 const Notifications: React.FC = () => {
   const navigate = useNavigate();

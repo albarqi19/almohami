@@ -1,3 +1,4 @@
+import { FolderKanban as ProjectNotifIcon } from 'lucide-react';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -53,6 +54,24 @@ const getTypeIcon = (type: string) => {
     case 'new_message': return <MessageSquare size={18} />;
     case 'user_created':
     case 'new_client': return <UserPlus size={18} />;
+    case 'project_tasks_assigned':
+    case 'project_task_ready':
+    case 'project_phase_approval':
+    case 'project_phase_rejected':
+    case 'project_phase_started':
+    case 'project_session_cycle':
+    case 'project_session_moved':
+    case 'project_judgement':
+    case 'project_decision_point':
+    case 'project_decision_pending':
+    case 'project_all_phases_done':
+    case 'project_deliverable_returned':
+    case 'project_issue_assigned':
+    case 'project_client_upload':
+    case 'project_client_approval':
+    case 'project_mention':
+    case 'project_report_sent':
+      return <ProjectNotifIcon size={18} />;
     case 'system': return <Settings size={18} />;
     default: return <Info size={18} />;
   }
@@ -71,6 +90,23 @@ const getIconClass = (type: string) => {
     'new_message': 'info',
     'user_created': 'success',
     'new_client': 'success',
+    'project_tasks_assigned': 'task',
+    'project_task_ready': 'task',
+    'project_phase_approval': 'task',
+    'project_phase_rejected': 'task',
+    'project_phase_started': 'task',
+    'project_session_cycle': 'task',
+    'project_session_moved': 'task',
+    'project_judgement': 'task',
+    'project_decision_point': 'task',
+    'project_decision_pending': 'task',
+    'project_all_phases_done': 'task',
+    'project_deliverable_returned': 'task',
+    'project_issue_assigned': 'task',
+    'project_client_upload': 'task',
+    'project_client_approval': 'task',
+    'project_mention': 'task',
+    'project_report_sent': 'task',
     'system': 'info',
   };
   const cssType = typeMap[type] || type;

@@ -1,3 +1,4 @@
+import { FolderKanban } from 'lucide-react';
 import {
   Home, FileText, FileCheck, Calendar, Scale, Briefcase, Users, Clock, CheckSquare,
   BookOpen, MessageSquare, Upload, ShieldCheck, FileSignature,
@@ -46,7 +47,7 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: Users, label: 'الاجتماعات', path: '/meetings/internal', permission: 'meetings.view' },
   { icon: Calendar, label: 'مواعيد العملاء', path: '/meetings/client', permission: 'meetings.view' },
   { icon: Clock, label: 'إعدادات التوفر', path: '/meetings/availability', permission: 'meetings.view' },
-  { icon: CheckSquare, label: 'المهام', path: '/tasks', permission: 'tasks.view' },
+  { icon: CheckSquare, label: 'المهام والمشاريع', path: '/tasks', permission: 'tasks.view' },
   { icon: BookOpen, label: 'المفكرة الشخصية', path: '/notebook', permission: null },
   { icon: BarChart3, label: 'أدائي', path: '/my-performance', permission: 'cases.view' },
   // ملفّي الوظيفيّ — بوّابةُ الموظف عن نفسه (رصيدُ إجازاته وحركاتُه).
@@ -63,6 +64,8 @@ export const mainMenuItems: SidebarItem[] = [
   { icon: Scale, label: 'طلبات التنفيذ', path: '/my-execution-requests', permission: null, roles: ['client'] },
   // خدماتُ العميل القانونية — يطلب خدمةً ويتابعها (الخادم يفرض الملكية في /client/services)
   { icon: Briefcase, label: 'خدماتي', path: '/my-services', permission: null, roles: ['client'] },
+  // مشاريعُ العميل القانونية الكبرى — مراحلها ومواعيدها وما هو مطلوب منه (الخادم يفرض الملكية في /client/projects)
+  { icon: FolderKanban, label: 'مشاريعي', path: '/my-projects', permission: null, roles: ['client'] },
   // مواعيدُ العميل مع المكتب — يطلب موعداً من فترات المحامي المتاحة (الخادم يفرض الملكية في /client/meetings)
   { icon: Calendar, label: 'مواعيدي', path: '/my-appointments', permission: null, roles: ['client'] },
   // بوابة المنشأة — متابعة العميل لوثائق منشأته وموظفيها (خلف establishment_portal_enabled)
