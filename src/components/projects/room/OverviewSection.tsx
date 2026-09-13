@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Calendar, Flag, History, Lightbulb, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertTriangle, Calendar, Flag, GitBranch, History, Lightbulb, Loader2, Plus, RefreshCw, Sparkles } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { ProjectService } from '../../../services/projectService';
 import { Av, Chip, Health, PBar, daysFromToday, fmtDayMonth, whenAr } from '../ui';
@@ -10,9 +10,11 @@ import { useRoom } from './RoomContext';
  * يحتاج انتباهك · القادم · تقدم المراحل · السجلات · آخر نشاط.
  */
 const OverviewSection: React.FC = () => {
-  const { project, overview, canEdit, canApprove, goTo, openTask, refresh, askRaed, setPhaseFilter, openDecision } = useRoom();
+  const { project, overview, canEdit, canApprove, goTo, openTask, refresh, askRaed, setPhaseFilter, openDecision, openDecisionForm } = useRoom();
   const [summaryBusy, setSummaryBusy] = useState(false);
   const [decideBusy, setDecideBusy] = useState<number | null>(null);
+  const [suggestBusy, setSuggestBusy] = useState(false);
+  const [dpBusy, setDpBusy] = useState<number | null>(null);
 
   const refreshSummary = async () => {
     setSummaryBusy(true);
@@ -30,6 +32,34 @@ const OverviewSection: React.FC = () => {
     try { const r = await ProjectService.decide(project.id, pointId, optionKey); toast.success(r.message || 'سُجل القرار'); await refresh(); }
     catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر تسجيل القرار'); }
     finally { setDecideBusy(null); }
+  };
+
+  /** رائد يقرأ المشروع ويقترح نقاط قرار؛ ننتظر التشغيلة ثم نعيد الجلب */
+  const suggest = async () => {
+    setSuggestBusy(true);
+    try {
+      const run = await ProjectService.suggestDecisions(project.id);
+      const done = await ProjectService.waitForRun(run.id);
+      if (done.status === 'failed') { toast.error(done.error || 'تعذر اقتراح نقاط القرار'); return; }
+      const n = Number((done.result as { suggested?: number } | null)?.suggested ?? 0);
+      if (n > 0) toast.success(`اقترح رائد ${n} نقاط قرار. افتحها لاعتمادها أو تجاهلها.`);
+      else toast.info('لا يرى رائد نقاط قرار جديدة في المشروع الآن.');
+      await refresh();
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر اقتراح نقاط القرار'); }
+    finally { setSuggestBusy(false); }
+  };
+  const acceptSuggestion = async (pointId: number) => {
+    setDpBusy(pointId);
+    try { const r = await ProjectService.acceptDecisionPoint(project.id, pointId); toast.success(r.message || 'اعتُمدت نقطة القرار'); await refresh(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر الاعتماد'); }
+    finally { setDpBusy(null); }
+  };
+  const dismissSuggestion = async (pointId: number, question: string) => {
+    if (!window.confirm(`تجاهل اقتراح رائد «${question}»؟ لن يعيده رائد.`)) return;
+    setDpBusy(pointId);
+    try { const r = await ProjectService.deleteDecisionPoint(project.id, pointId); toast.success(r.message); await refresh(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر التجاهل'); }
+    finally { setDpBusy(null); }
   };
 
   if (!overview) return <div className="prj-empty">جارٍ التحميل…</div>;
@@ -93,11 +123,37 @@ const OverviewSection: React.FC = () => {
         </div>
       </div>
 
+      {(project.decision_points.length > 0 || canEdit) && (
+        <div className="prj-dpcard__head">
+          <GitBranch size={13} style={{ color: 'var(--pj-gold)' }} /> نقاط القرار
+          {project.decision_points.length === 0 && <span className="prj-dim" style={{ fontWeight: 400 }}>لا نقاط قرار في هذا المشروع بعد.</span>}
+          <span className="prj-spacer" />
+          {canEdit && <button type="button" className="prj-btn prj-btn--sm" onClick={() => openDecisionForm()}><Plus size={12} /> نقطة قرار</button>}
+          {canEdit && <button type="button" className="prj-btn prj-btn--sm prj-btn--gold" disabled={suggestBusy} onClick={suggest} title="رائد يقرأ المشروع ويقترح نقاط قرار تعتمدها أو تتجاهلها">{suggestBusy ? <Loader2 size={12} className="ssp2-spin" /> : <Sparkles size={12} />} {suggestBusy ? 'رائد يقرأ المشروع…' : 'اطلب اقتراح رائد'}</button>}
+        </div>
+      )}
       {project.decision_points.map((dp) => {
         const after = project.phases.find((p) => p.id === dp.after_phase_id);
         const ready = pendingPoints.some((x) => x.id === dp.id);
         const chosen = dp.chosen_key ? dp.options.find((o) => o.key === dp.chosen_key) : null;
         const exp = daysFromToday(after?.due_date);
+        if (dp.status === 'suggested') {
+          return (
+            <div key={dp.id} className="prj-dpcard prj-dpcard--sug">
+              <span className="prj-diamond prj-diamond--sug" />
+              <div className="prj-dpcard__body">
+                <b>يقترح رائد نقطة قرار: {dp.question}</b>
+                {' '}
+                <span>{dp.rationale ? `${dp.rationale} ` : ''}تأتي بعد «{after?.name ?? '—'}» · {dp.options.length} مسارات: {dp.options.map((o) => o.label).join(' / ')}. لم يُنشأ شيء بعد.</span>
+                <div className="prj-dpcard__acts">
+                  <button type="button" className="prj-btn prj-btn--sm" onClick={() => openDecision(dp.id)}>افتح الاقتراح</button>
+                  {canEdit && <button type="button" className="prj-btn prj-btn--sm prj-btn--gold" disabled={dpBusy === dp.id} onClick={() => acceptSuggestion(dp.id)}>{dpBusy === dp.id ? <Loader2 size={12} className="ssp2-spin" /> : <Sparkles size={12} />} اعتمد وأنشئ المسارات</button>}
+                  {canEdit && <button type="button" className="prj-btn prj-btn--sm" disabled={dpBusy === dp.id} onClick={() => dismissSuggestion(dp.id, dp.question)}>تجاهل</button>}
+                </div>
+              </div>
+            </div>
+          );
+        }
         return (
           <div key={dp.id} className="prj-dpcard">
             <span className={`prj-diamond ${chosen ? 'prj-diamond--done' : ''}`} />

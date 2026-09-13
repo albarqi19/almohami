@@ -5,6 +5,8 @@ import type {
   ClientProjectCard,
   ClientProjectView,
   DecisionPoint,
+  DecisionPointDeleteResult,
+  DecisionPointInput,
   FeedItem,
   Linkable,
   PortalAccess,
@@ -273,6 +275,31 @@ export class ProjectService {
   static async deleteMilestone(id: number, msId: number): Promise<void> {
     const res = await apiClient.delete<ApiResponse<unknown>>(`/projects/${id}/milestones/${msId}`);
     if (!res.success) throw new Error(res.message || 'تعذر حذف الموعد');
+  }
+
+  /** نقطة قرار يدوية: خياراتها تربط مراحل قائمة تصير مخفية حتى القرار */
+  static async createDecisionPoint(id: number, input: DecisionPointInput): Promise<DecisionPoint> {
+    return ok(await apiClient.post<ApiResponse<DecisionPoint>>(`/projects/${id}/decision-points`, input), 'تعذر إضافة نقطة القرار');
+  }
+
+  static async updateDecisionPoint(id: number, pointId: number, input: Partial<DecisionPointInput>): Promise<DecisionPoint> {
+    return ok(await apiClient.put<ApiResponse<DecisionPoint>>(`/projects/${id}/decision-points/${pointId}`, input), 'تعذر حفظ نقطة القرار');
+  }
+
+  /** الحذف: اقتراح رائد يُتجاهل، والفعّالة تُحذف مع مساراتها المخفية التي لم يبدأ فيها عمل */
+  static async deleteDecisionPoint(id: number, pointId: number): Promise<DecisionPointDeleteResult> {
+    return ok(await apiClient.delete<ApiResponse<DecisionPointDeleteResult>>(`/projects/${id}/decision-points/${pointId}`), 'تعذر حذف نقطة القرار');
+  }
+
+  /** اعتماد اقتراح رائد: تُنشأ مراحل المسارات مخفية بمهامها */
+  static async acceptDecisionPoint(id: number, pointId: number): Promise<{ point: DecisionPoint; message: string }> {
+    const res = await apiClient.post<ApiResponse<DecisionPoint>>(`/projects/${id}/decision-points/${pointId}/accept`);
+    return { point: ok(res, 'تعذر اعتماد نقطة القرار'), message: res.message ?? '' };
+  }
+
+  /** رائد يقرأ المشروع ويقترح نقاط قرار (تشغيلة في الخلفية) */
+  static async suggestDecisions(id: number): Promise<AiRun> {
+    return ok(await apiClient.post<ApiResponse<AiRun>>(`/projects/${id}/decision-points/suggest`), 'تعذر طلب اقتراح رائد');
   }
 
   static async decide(id: number, pointId: number, optionKey: string, note?: string): Promise<{ point: DecisionPoint; message: string }> {

@@ -27,7 +27,7 @@ export type ReportKind = 'executive' | 'weekly' | 'client';
 export type ReportStatus = 'draft' | 'approved' | 'sent';
 export type FeedType = 'task' | 'session' | 'meeting' | 'document' | 'decision' | 'phase' | 'risk' | 'issue' | 'approval'
   | 'client' | 'raed' | 'milestone' | 'system' | 'comment' | 'deliverable' | 'member' | 'link' | 'report';
-export type AiRunKind = 'plan' | 'ask' | 'summary' | 'report';
+export type AiRunKind = 'plan' | 'ask' | 'summary' | 'report' | 'suggest_decisions';
 export type AiRunStatus = 'queued' | 'running' | 'ready' | 'failed';
 
 export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
@@ -171,7 +171,16 @@ export interface ProjectMilestone {
   note: string | null;
 }
 
-export interface DecisionPointOption { key: string; label: string; activates: number[] }
+/** من كتب نقطة القرار: القالب، أو رائد (اقتراح)، أو الفريق يدوياً */
+export type DecisionPointSource = 'template' | 'raed' | 'manual';
+/** فعّالة · اقتراح من رائد ينتظر الاعتماد · تجاهلها الفريق (لا تُعرض) */
+export type DecisionPointStatus = 'active' | 'suggested' | 'dismissed';
+export const DECISION_SOURCE_LABELS: Record<DecisionPointSource, string> = { template: 'من القالب', raed: 'اقترحها رائد', manual: 'أضافها الفريق' };
+
+export interface DecisionDraftTask { title: string; role: string; duration_days: number }
+/** مسودة مرحلة في اقتراح رائد: تُنشأ فعلاً عند الاعتماد */
+export interface DecisionDraftPhase { name: string; objective: string | null; duration_days: number; tasks: DecisionDraftTask[] }
+export interface DecisionPointOption { key: string; label: string; activates: number[]; phases?: DecisionDraftPhase[] }
 export interface DecisionPoint {
   id: number;
   key: string | null;
@@ -179,11 +188,23 @@ export interface DecisionPoint {
   after_phase_name: string | null;
   question: string;
   options: DecisionPointOption[];
+  source: DecisionPointSource;
+  status: DecisionPointStatus;
+  rationale: string | null;
   chosen_key: string | null;
   decided_by: NamedRef | null;
   decided_at: string | null;
   note: string | null;
+  created_at?: string | null;
 }
+export interface DecisionPointInput {
+  question: string;
+  after_phase_id: number | null;
+  rationale?: string | null;
+  note?: string | null;
+  options: Array<{ key?: string; label: string; activates: number[] }>;
+}
+export interface DecisionPointDeleteResult { dismissed: boolean; deleted_phases: number; deleted_tasks: number; released_phases: number; message: string }
 
 export interface ProjectCard {
   id: number;

@@ -6,7 +6,7 @@ import type { ProjectEvent, ProjectFull, ProjectOverview } from '../../../types/
 export type SectionKey = 'ov' | 'map' | 'tasks' | 'issues' | 'risks' | 'decisions' | 'deliv' | 'docs' | 'people' | 'events' | 'money' | 'client' | 'feed' | 'reports' | 'chat';
 
 /** بنود قائمة «إجراء سريع» في الترويسة — كل بند يفتح نافذته في صفحته */
-export type QuickAction = 'task' | 'phase' | 'upload' | 'person' | 'meeting' | 'decision' | 'issue' | 'risk' | 'client_update' | 'report' | 'link';
+export type QuickAction = 'task' | 'phase' | 'upload' | 'person' | 'meeting' | 'decision' | 'decision_point' | 'issue' | 'risk' | 'client_update' | 'report' | 'link';
 
 export interface RoomCtx {
   project: ProjectFull;
@@ -33,6 +33,8 @@ export interface RoomCtx {
   askRaed: (question?: string) => void;
   /** يفتح نافذة نقطة القرار (السؤال والمسارات ومن يقرر) */
   openDecision: (pointId: number) => void;
+  /** يفتح نموذج نقطة قرار يدوية: جديدة (بلا معرف) أو تعديل قائمة */
+  openDecisionForm: (pointId?: number) => void;
   chatDraft: string;
   setChatDraft: (s: string) => void;
 }

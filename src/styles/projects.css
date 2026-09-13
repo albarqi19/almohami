@@ -570,6 +570,25 @@ select.prj-in { appearance: auto; }
 .prj-dpcard__body { flex: 1; min-width: 0; font-size: 12px; color: var(--pj-ink-2); line-height: 1.7; }
 .prj-dpcard__body b { color: var(--pj-ink); }
 .prj-dpcard__acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+/* اقتراح رائد: معيّن مفرّغ وخلفية ذهبية خفيفة حتى يُعتمد أو يُتجاهل */
+.prj-dpcard__head { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--pj-line); font-size: 12px; font-weight: 700; color: var(--pj-ink); background: var(--pj-paper-2); flex: none; flex-wrap: wrap; }
+.prj-dpcard--sug { background: var(--pj-gold-tint); }
+.prj-diamond--sug { background: transparent; border: 1.5px solid var(--pj-gold); box-sizing: border-box; }
+.prj-ph--sug { border-inline-start: 1px dashed var(--pj-ink-3); background: var(--pj-paper-2); }
+.prj-dp__sug { display: flex; gap: 10px; padding: 10px 12px; background: var(--pj-gold-tint); border: 1px dashed var(--pj-gold); font-size: 12px; color: var(--pj-ink-2); line-height: 1.7; }
+.prj-dp__sug > svg { color: var(--pj-gold); flex: none; margin-top: 3px; }
+.prj-dp__sug b { color: var(--pj-ink); }
+.prj-dp__tasks { margin: 0; padding: 0 18px 0 0; font-size: 11.5px; color: var(--pj-ink-2); line-height: 1.8; columns: 2; column-gap: 18px; }
+.prj-dp__tasks small { color: var(--pj-ink-3); }
+/* نموذج نقطة القرار اليدوية */
+.prj-dpf__opts { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.prj-dpf__head { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--pj-ink); }
+.prj-dpf__head .prj-dim { font-size: 11px; font-weight: 400; line-height: 1.6; }
+.prj-dpf__opt { border: 1px solid var(--pj-line); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; background: var(--pj-paper); }
+.prj-dpf__opt__h { display: flex; align-items: center; gap: 8px; }
+.prj-dpf__opt__h .prj-in { flex: 1; }
+.prj-dpf__phases { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.prj-check.is-off { opacity: 0.5; cursor: not-allowed; }
 
 /* ── تجاوب ── */
 @media (max-width: 1100px) {
