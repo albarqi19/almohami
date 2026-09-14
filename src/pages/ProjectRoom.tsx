@@ -10,7 +10,7 @@ import { ProjectService } from '../services/projectService';
 import type { UpdateProjectInput } from '../services/projectService';
 import type { ProjectEvent, ProjectFull, ProjectOverview, ProjectPhase, ProjectTemplateSummary, RoleMap } from '../types/projects';
 import { PROJECT_COLORS, PROJECT_COLOR_LABELS, PROJECT_CONFIDENTIALITY_LABELS, PROJECT_PRIORITY_LABELS, PROJECT_ROLE_LABELS, PROJECT_STATUS_LABELS } from '../types/projects';
-import { RoomContext, type QuickAction, type SectionKey } from '../components/projects/room/RoomContext';
+import { RoomContext, type DrawerItem, type DrawerType, type QuickAction, type SectionKey } from '../components/projects/room/RoomContext';
 import { Av, Chip, ClientPicker, ErrorBox, Field, Health, Modal, PBar, UserMultiSelect, UserSelect, daysFromToday, firstName, fmtDayMonth, num, useOfficeUsers, whenAr } from '../components/projects/ui';
 import OverviewSection from '../components/projects/room/OverviewSection';
 import TimelineSection from '../components/projects/room/TimelineSection';
@@ -25,7 +25,7 @@ import ClientSection from '../components/projects/room/ClientSection';
 import FeedSection from '../components/projects/room/FeedSection';
 import ReportsSection from '../components/projects/room/ReportsSection';
 import ChatSection from '../components/projects/room/ChatSection';
-import TaskCardModal from '../components/projects/room/TaskCardModal';
+import RoomDrawer from '../components/projects/room/drawer/RoomDrawer';
 import DecisionPointModal from '../components/projects/room/DecisionPointModal';
 import DecisionPointFormModal from '../components/projects/room/DecisionPointFormModal';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (projects.css)
@@ -33,6 +33,13 @@ import DecisionPointFormModal from '../components/projects/room/DecisionPointFor
 const ARCHETYPE_LABELS: Record<string, string> = { commercial_dispute: 'نزاع تجاري كبير', arbitration: 'تحكيم', ma_deal: 'صفقة استحواذ أو اندماج', bankruptcy: 'إفلاس وإعادة هيكلة', execution_portfolio: 'محفظة طلبات تنفيذ' };
 const SECTIONS: SectionKey[] = ['ov', 'map', 'tasks', 'issues', 'risks', 'decisions', 'deliv', 'docs', 'people', 'events', 'money', 'client', 'feed', 'reports', 'chat'];
 const LEGACY_VIEW: Record<string, SectionKey> = { overview: 'ov', timeline: 'map', phases: 'tasks', deliverables: 'deliv', documents: 'docs', chat: 'chat', ask: 'chat' };
+const DRAWER_TYPES: DrawerType[] = ['task', 'case', 'session', 'exec', 'service', 'meeting', 'doc', 'client'];
+/** ?open=task:12,case:5 → اللوحات المفتوحة بترتيبها (حتى ثلاث) */
+const parseOpen = (raw: string | null): DrawerItem[] => (raw ?? '')
+  .split(',')
+  .map((s) => { const [t, i] = s.split(':'); const id = Number(i); return DRAWER_TYPES.includes(t as DrawerType) && Number.isFinite(id) && id > 0 ? { type: t as DrawerType, id } : null; })
+  .filter((x): x is DrawerItem => !!x)
+  .slice(-3);
 
 /**
  * غرفة المشروع — كما في التصوّر المعتمد: شريط علوي ثابت (الاسم والحالة والصحة والتقدم والمسؤولون
@@ -51,7 +58,20 @@ const ProjectRoom: React.FC = () => {
   const [overview, setOverview] = useState<ProjectOverview | null>(null);
   const [events, setEvents] = useState<ProjectEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [taskCard, setTaskCard] = useState<number | null>(null);
+  // اللوحة الجانبية: ما هو مفتوح يعيش في الرابط (?open=task:12,case:5) فيصير قابلاً للمشاركة، وزر الرجوع يغلق الأعلى
+  const drawerStack = useMemo<DrawerItem[]>(() => parseOpen(params.get('open')), [params]);
+  const setDrawerStack = useCallback((next: DrawerItem[]) => {
+    setParams((p) => { const n = new URLSearchParams(p); if (next.length) n.set('open', next.map((i) => `${i.type}:${i.id}`).join(',')); else n.delete('open'); return n; });
+  }, [setParams]);
+  const currentStack = () => parseOpen(new URLSearchParams(window.location.search).get('open'));
+  const openIn = useCallback((item: DrawerItem, push = true) => {
+    const cur = currentStack();
+    const top = cur[cur.length - 1];
+    if (top && top.type === item.type && top.id === item.id) return;
+    setDrawerStack(push ? [...cur.filter((i) => !(i.type === item.type && i.id === item.id)), item].slice(-3) : [item]);
+  }, [setDrawerStack]);
+  const closeDrawer = useCallback((all = false) => { const cur = currentStack(); setDrawerStack(all ? [] : cur.slice(0, -1)); }, [setDrawerStack]);
+  const popDrawerTo = useCallback((index: number) => { setDrawerStack(currentStack().slice(0, index + 1)); }, [setDrawerStack]);
   const [phaseFilter, setPhaseFilter] = useState<number | null>(null);
   const [pending, setPending] = useState<QuickAction | null>(null);
   const [chatDraft, setChatDraft] = useState('');
@@ -77,7 +97,7 @@ const ProjectRoom: React.FC = () => {
   useEffect(() => { if (Number.isFinite(id)) load(); }, [id, load]);
 
   const refresh = useCallback(async () => { await load(); }, [load]);
-  const openTask = useCallback((taskId: number) => setTaskCard(taskId), []);
+  const openTask = useCallback((taskId: number) => openIn({ type: 'task', id: taskId }), [openIn]);
   const openTaskPage = useCallback((taskId: number) => navigate(`/tasks/${taskId}`), [navigate]);
   const consumePending = useCallback((a: QuickAction) => { if (pending === a) { setPending(null); return true; } return false; }, [pending]);
   const askRaed = useCallback((q?: string) => { setChatDraft(`@رائد ${q ?? ''}`); goTo('chat'); }, [goTo]);
@@ -92,8 +112,8 @@ const ProjectRoom: React.FC = () => {
 
   const canEdit = !!project?.can.edit;
   const canApprove = !!project?.can.approve;
-  const ctx = useMemo(() => (project ? { project, overview, events, refresh, users, canEdit, canApprove, goTo, openTask, openTaskPage, phaseFilter, setPhaseFilter, pending, consumePending, askRaed, openDecision, openDecisionForm, chatDraft, setChatDraft } : null),
-    [project, overview, events, refresh, users, canEdit, canApprove, goTo, openTask, openTaskPage, phaseFilter, pending, consumePending, askRaed, openDecision, openDecisionForm, chatDraft]);
+  const ctx = useMemo(() => (project ? { project, overview, events, refresh, users, canEdit, canApprove, goTo, openTask, openTaskPage, openIn, drawerStack, closeDrawer, popDrawerTo, phaseFilter, setPhaseFilter, pending, consumePending, askRaed, openDecision, openDecisionForm, chatDraft, setChatDraft } : null),
+    [project, overview, events, refresh, users, canEdit, canApprove, goTo, openTask, openTaskPage, openIn, drawerStack, closeDrawer, popDrawerTo, phaseFilter, pending, consumePending, askRaed, openDecision, openDecisionForm, chatDraft]);
 
   const changeStatus = async (status: string) => { if (!project) return; try { await ProjectService.update(project.id, { status }); toast.success('حُدثت الحالة'); await load(); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر التحديث'); } };
   const exportPlan = async () => { if (!project) return; try { const plan = await ProjectService.exportPlan(project.id); const blob = new Blob([JSON.stringify(plan, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${project.code}-plan.json`; a.click(); URL.revokeObjectURL(a.href); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر التصدير'); } };
@@ -277,10 +297,9 @@ const ProjectRoom: React.FC = () => {
               </>
             )}
           </nav>
-          <div className="prj-stage">{renderSection()}</div>
+          <div className="prj-stage">{renderSection()}{drawerStack.length > 0 && <RoomDrawer />}</div>
         </div>
 
-        {taskCard !== null && <TaskCardModal taskId={taskCard} onClose={() => setTaskCard(null)} />}
         {decisionOpen !== null && <DecisionPointModal pointId={decisionOpen} onClose={() => setDecisionOpen(null)} />}
         {dpForm && <DecisionPointFormModal pointId={dpForm.id} onClose={() => setDpForm(null)} />}
         {editModal && <EditProjectModal project={project} onClose={() => setEditModal(false)} onSaved={async () => { setEditModal(false); await load(); }} />}

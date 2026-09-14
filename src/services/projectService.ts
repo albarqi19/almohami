@@ -52,6 +52,22 @@ const ok = <T>(res: ApiResponse<T>, fallback: string): T => {
   throw new Error(res.message || fallback);
 };
 
+/** تعديل جزئي لمهمة من بطاقتها داخل الغرفة */
+export interface ProjectTaskPatch {
+  title?: string;
+  description?: string | null;
+  phase_id?: number | null;
+  assigned_to?: number | null;
+  assignee_ids?: number[];
+  due_date?: string | null;
+  start_date?: string | null;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  estimated_hours?: number | null;
+  client_visible?: boolean;
+  client_action?: boolean;
+  requires_approval?: boolean;
+}
+
 export interface ProjectListFilters {
   status?: 'open' | 'planning' | 'active' | 'on_hold' | 'completed' | 'cancelled' | '';
   health?: string;
@@ -163,6 +179,16 @@ export class ProjectService {
 
   static async tasks(id: number): Promise<ProjectTask[]> {
     return ok(await apiClient.get<ApiResponse<ProjectTask[]>>(`/projects/${id}/tasks`), 'تعذر جلب المهام');
+  }
+
+  /** مهمة واحدة بشكل الغرفة (الاعتماديات والساعات والمرحلة)، النائمة أيضاً */
+  static async task(id: number, taskId: number): Promise<ProjectTask> {
+    return ok(await apiClient.get<ApiResponse<ProjectTask>>(`/projects/${id}/tasks/${taskId}`), 'تعذر جلب المهمة');
+  }
+
+  /** تعديل جزئي من بطاقة المهمة داخل الغرفة */
+  static async updateTask(id: number, taskId: number, input: ProjectTaskPatch): Promise<ProjectTask> {
+    return ok(await apiClient.patch<ApiResponse<ProjectTask>>(`/projects/${id}/tasks/${taskId}`, input), 'تعذر حفظ المهمة');
   }
 
   static async createTask(id: number, input: ProjectTaskInput): Promise<ProjectTask> {

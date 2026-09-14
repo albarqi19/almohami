@@ -5,6 +5,10 @@ import type { ProjectEvent, ProjectFull, ProjectOverview } from '../../../types/
 /** مفاتيح صفحات الغرفة كما في التصوّر (ov, map, tasks, …) — تُحفظ في ?s= */
 export type SectionKey = 'ov' | 'map' | 'tasks' | 'issues' | 'risks' | 'decisions' | 'deliv' | 'docs' | 'people' | 'events' | 'money' | 'client' | 'feed' | 'reports' | 'chat';
 
+/** ما يُفتح في اللوحة الجانبية داخل الغرفة بلا مغادرة (يعيش في الرابط ?open=task:12,case:5) */
+export type DrawerType = 'task' | 'case' | 'session' | 'exec' | 'service' | 'meeting' | 'doc' | 'client';
+export interface DrawerItem { type: DrawerType; id: number }
+
 /** بنود قائمة «إجراء سريع» في الترويسة — كل بند يفتح نافذته في صفحته */
 export type QuickAction = 'task' | 'phase' | 'upload' | 'person' | 'meeting' | 'decision' | 'decision_point' | 'issue' | 'risk' | 'client_update' | 'report' | 'link';
 
@@ -19,8 +23,16 @@ export interface RoomCtx {
   canEdit: boolean;
   canApprove: boolean;
   goTo: (section: SectionKey) => void;
-  /** يفتح بطاقة المهمة داخل الغرفة */
+  /** يفتح بطاقة المهمة داخل الغرفة (في اللوحة الجانبية) */
   openTask: (taskId: number) => void;
+  /** يفتح عنصراً في اللوحة الجانبية فوق ما قبله (push) أو بدلاً من كل ما قبله */
+  openIn: (item: DrawerItem, push?: boolean) => void;
+  /** اللوحات المفتوحة بترتيبها؛ الأخيرة هي الظاهرة */
+  drawerStack: DrawerItem[];
+  /** يغلق اللوحة العليا، أو كلها */
+  closeDrawer: (all?: boolean) => void;
+  /** يعود إلى لوحة بعينها في المسار (ويغلق ما فوقها) */
+  popDrawerTo: (index: number) => void;
   /** يذهب إلى صفحة المهمة الكاملة */
   openTaskPage: (taskId: number) => void;
   /** تصفية المهام على مرحلة (من شريط المراحل في الترويسة) */

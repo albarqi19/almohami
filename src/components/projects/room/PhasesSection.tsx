@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Clock, Eye, Flag, LayoutGrid, Link2, List, Loader2, MessageSquare, Paperclip, Pencil, Plus, Rows3, ShieldCheck, Trash2, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { ProjectService } from '../../../services/projectService';
+import { TaskService } from '../../../services/taskService';
 import type { PhaseInput, ProjectTaskInput } from '../../../services/projectService';
 import type { ProjectPhase, ProjectTask } from '../../../types/projects';
 import { PHASE_STATUS_LABELS, PROJECT_ROLE_LABELS } from '../../../types/projects';
@@ -31,6 +32,22 @@ const PhasesSection: React.FC = () => {
   const [taskModal, setTaskModal] = useState<{ phaseId: number | null } | null>(null);
   const [approveModal, setApproveModal] = useState<ProjectPhase | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // السحب بين أعمدة اللوحة يغيّر الحالة بنفس قواعد صفحة المهمة (الاعتماد لا يُتجاوز)
+  const [dragId, setDragId] = useState<number | null>(null);
+  const [overCol, setOverCol] = useState<Col | null>(null);
+  const dropOn = async (col: Col) => {
+    const id = dragId; setDragId(null); setOverCol(null);
+    if (id === null) return;
+    const t = tasks.find((x) => x.id === id);
+    if (!t || COLS.find((c) => c.key === col)!.statuses.includes(t.status)) return;
+    if (col === 'review' && !t.requires_approval) { toast.info('عمود «للمراجعة» للمهام التي تحتاج اعتماداً'); return; }
+    const status = col === 'todo' ? 'todo' : col === 'doing' ? 'in_progress' : 'completed';
+    try {
+      if (t.status === 'on_hold') await TaskService.resumeTask(String(id));
+      if (!(t.status === 'on_hold' && status === 'in_progress')) await TaskService.updateTaskStatus(String(id), status);
+      await load(); await refresh();
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر تغيير الحالة'); }
+  };
 
   const load = async () => { try { setTasks(await ProjectService.tasks(project.id)); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر جلب المهام'); } };
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [project.id, project.updated_at]);
@@ -133,14 +150,18 @@ const PhasesSection: React.FC = () => {
           {COLS.map((c) => {
             const its = visible.filter((t) => c.statuses.includes(t.status));
             return (
-              <div key={c.key} className="prj-bcol">
+              <div key={c.key} className={`prj-bcol ${overCol === c.key && dragId !== null ? 'is-over' : ''}`}
+                onDragOver={(e) => { if (dragId !== null) { e.preventDefault(); if (overCol !== c.key) setOverCol(c.key); } }}
+                onDragLeave={() => { if (overCol === c.key) setOverCol(null); }}
+                onDrop={(e) => { e.preventDefault(); dropOn(c.key); }}>
                 <div className="prj-bcol__head"><span className="cdot" style={{ background: c.color }} />{c.label}<span className="prj-cnt num">{its.length}</span></div>
                 <div className="prj-bcol__body">
-                  {its.length === 0 && <div className="prj-bcol__hint">لا شيء هنا</div>}
+                  {its.length === 0 && <div className="prj-bcol__hint">{dragId !== null ? 'أفلت هنا' : 'لا شيء هنا'}</div>}
                   {its.map((t) => {
                     const ph = t.phase_id ? phaseById.get(t.phase_id) : null;
                     return (
-                      <button type="button" key={t.id} className={`prj-tcard ${t.status === 'completed' ? 'is-done' : ''}`} onClick={() => openTask(t.id)}>
+                      <button type="button" key={t.id} className={`prj-tcard ${t.status === 'completed' ? 'is-done' : ''} ${dragId === t.id ? 'is-drag' : ''}`} onClick={() => openTask(t.id)}
+                        draggable={canEdit && !t.is_dormant} onDragStart={(e) => { setDragId(t.id); e.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => { setDragId(null); setOverCol(null); }}>
                         <div className="prj-tcard__ph"><Flag size={10} /> {ph ? `${ph.order}. ${ph.name}` : 'بلا مرحلة'}{t.role_label ? <span> · {t.role_label}</span> : null}</div>
                         <div className="prj-tcard__t">{t.title}</div>
                         <div className="prj-tcard__chips">{chips(t)}</div>
