@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePermissionContext } from '../contexts/PermissionContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useIsCoarsePointer } from '../hooks/useIsCoarsePointer';
 import {
   Plus,
@@ -61,6 +62,7 @@ import type { ArchivedFilter, Task, TaskStatus, Priority, TaskFolder, TaskFolder
 import { TaskService, type TaskFilters, type TaskStats, type TaskWidgets } from '../services/taskService';
 import { FolderKanban } from 'lucide-react';
 import ProjectsList from '../components/projects/ProjectsList';
+import { ProjectService } from '../services/projectService';
 import { TaskFolderService } from '../services/taskFolderService';
 import { UserService } from '../services/UserService';
 import { Can } from '../components/Can';
@@ -459,6 +461,22 @@ const Tasks: React.FC = () => {
   const { has: hasPermission } = usePermissionContext();
   const canSeeProjects = hasPermission('projects.view');
   const canCreateProjects = hasPermission('projects.create');
+  const { user: currentUser } = useAuth();
+  const currentUserId = currentUser ? String(currentUser.id) : '';
+  // مهام المشاريع في القائمة الرئيسية: فلتر بالمشروع، وتجميع مهام غيري في صف مطوي لكل مشروع،
+  // وخيار إخفاء تلك الصفوف (يُحفظ في المتصفح). مهامي أنا تبقى في القائمة كأي مهمة.
+  const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [projectOptions, setProjectOptions] = useState<Array<{ id: number; code: string; name: string }>>([]);
+  const [hideProjectTasks, setHideProjectTasks] = useState<boolean>(() => { try { return localStorage.getItem('tasks.hideProjectTasks') === '1'; } catch { return false; } });
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const toggleProjectGroup = (id: string) => setExpandedProjects((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const toggleHideProjectTasks = () => setHideProjectTasks((v) => { const next = !v; try { localStorage.setItem('tasks.hideProjectTasks', next ? '1' : '0'); } catch { /* المتصفح قد يمنع التخزين */ } return next; });
+  useEffect(() => {
+    if (!canSeeProjects) return;
+    ProjectService.list({ status: 'open', sort_by: 'name', sort_dir: 'asc', per_page: 100 })
+      .then(({ page }) => setProjectOptions(page.data.map((p) => ({ id: p.id, code: p.code, name: p.name }))))
+      .catch(() => setProjectOptions([]));
+  }, [canSeeProjects]);
   const [groupBy, setGroupBy] = useState<GroupBy>('status');
   const [users, setUsers] = useState<{ [key: string]: { name: string; avatar?: string | null } }>(() => UsersCache.get());
 
@@ -503,8 +521,8 @@ const Tasks: React.FC = () => {
   const [folderDeleting, setFolderDeleting] = useState(false);
 
   // مرآة للفلاتر الحالية حتى تقرأها loadTasks من داخل أي callback بدون قيم قديمة
-  const filtersRef = useRef({ search: '', status: 'all' as TaskStatus | 'all', assignee: 'all', priority: 'all', special: null as SpecialFilter, folderId: null as number | null, archived: '0' as ArchivedFilter });
-  filtersRef.current = { search: searchTerm, status: statusFilter, assignee: assigneeFilter, priority: priorityFilter, special: specialFilter, folderId: activeFolderId, archived: archivedFilter };
+  const filtersRef = useRef({ search: '', status: 'all' as TaskStatus | 'all', assignee: 'all', priority: 'all', special: null as SpecialFilter, folderId: null as number | null, archived: '0' as ArchivedFilter, project: 'all' });
+  filtersRef.current = { search: searchTerm, status: statusFilter, assignee: assigneeFilter, priority: priorityFilter, special: specialFilter, folderId: activeFolderId, archived: archivedFilter, project: projectFilter };
 
   // [ARCHIVE] كاش localStorage للمهام مفتاحه ثابت (tasks_cache_v2) ولا يفرّق بين
   // الحيّ والمؤرشف، فلا يُكتب إلا حين تكون الصفحة المعروضة حيّة صرفاً — وإلا سرّبت
@@ -711,7 +729,7 @@ const Tasks: React.FC = () => {
   const loadTasks = async () => {
     try {
       if (tasks.length === 0) setLoading(true);
-      const { search, status, assignee, priority, special, folderId, archived } = filtersRef.current;
+      const { search, status, assignee, priority, special, folderId, archived, project } = filtersRef.current;
       // `open_first`: الخادمُ يقدّم المفتوحةَ ويوسّع الصفحةَ لتسعها كلَّها، ثم
       // يُضيف `per_page` من المنتهية — فـ«تحميل المزيد» صار يخصّ المنتهية وحدها.
       const filters: TaskFilters = { per_page: loadedCountRef.current, open_first: 1 };
@@ -722,6 +740,8 @@ const Tasks: React.FC = () => {
       if (status !== 'all') filters.status = status;
       if (assignee !== 'all' && assignee !== 'unassigned') filters.assigned_to = assignee;
       if (priority !== 'all') filters.priority = priority;
+      // المشروع: 'none' = بلا مشروع، رقم = مشروع بعينه
+      if (project !== 'all') filters.project_id = project;
       if (special) filters[special] = 1;
       // مجلد نشط = مهامه فقط؛ العرض العام يخفي مهام المجلدات (المشتركة + شخصياتي)
       // — الفلاتر الخاصة (متأخرة/اليوم/ضبط) تعرض كل شيء كي لا تضيع مهمة داخل مجلد
@@ -758,7 +778,7 @@ const Tasks: React.FC = () => {
       loadTasks();
     }, delay);
     return () => clearTimeout(t);
-  }, [searchTerm, statusFilter, assigneeFilter, priorityFilter, specialFilter, activeFolderId, archivedFilter]);
+  }, [searchTerm, statusFilter, assigneeFilter, priorityFilter, specialFilter, activeFolderId, archivedFilter, projectFilter]);
 
   const loadMore = async () => {
     loadedCountRef.current += PAGE_SIZE;
@@ -1211,28 +1231,46 @@ const Tasks: React.FC = () => {
     list.some(t => t.status === 'archived') ? [...TASK_STATUSES, ARCHIVED_STATUS] : TASK_STATUSES;
 
   const renderListView = () => {
-    let groups: { id: string; label: string; color: string; tasks: Task[] }[] = [];
+    type ListGroup = { id: string; label: string; color: string; tasks: Task[]; project?: { id: number; code: string; name: string; color: string | null; late: number; mine: number } };
+    const all = getFilteredTasks();
+    const isMine = (t: Task) => !!currentUserId && (String(t.assignedTo ?? '') === currentUserId || !!t.assignees?.some(a => String(a.id) === currentUserId));
+    // مهام المشاريع المسندة لغيري تُجمع في صف مطوي لكل مشروع؛ مهامي تبقى في القائمة كأي مهمة
+    const isGroupedProjectTask = (t: Task) => !!t.project && projectFilter === 'all' && !isMine(t);
+    const listTasks = all.filter(t => !isGroupedProjectTask(t));
+    const projectGroups: ListGroup[] = [];
+    if (!hideProjectTasks) {
+      const byProject = new Map<number, Task[]>();
+      all.filter(isGroupedProjectTask).forEach(t => { const pid = t.project!.id; byProject.set(pid, [...(byProject.get(pid) ?? []), t]); });
+      byProject.forEach((groupTasks, pid) => {
+        const p = groupTasks[0].project!;
+        const late = groupTasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'completed' && t.status !== 'cancelled').length;
+        const mine = all.filter(t => t.project?.id === pid && isMine(t)).length;
+        projectGroups.push({ id: `project-${pid}`, label: p.name, color: 'var(--law-navy)', tasks: groupTasks, project: { id: pid, code: p.code, name: p.name, color: p.color ?? null, late, mine } });
+      });
+    }
+    let groups: ListGroup[] = [];
 
     if (groupBy === 'status') {
-      groups = displayStatuses(getFilteredTasks()).map(s => ({
+      groups = displayStatuses(listTasks).map(s => ({
         id: s.key,
         label: s.label,
         color: s.color,
-        tasks: getTasksByStatus(s.key)
+        tasks: listTasks.filter(t => t.status === s.key)
       }));
     } else if (groupBy === 'assignee') {
-      const userGroups = Object.keys(users).map(uid => ({
+      const userGroups: ListGroup[] = Object.keys(users).map(uid => ({
         id: uid,
         label: users[uid].name,
         color: '#3b82f6',
-        tasks: getFilteredTasks().filter(t => t.assignedTo === uid)
+        tasks: listTasks.filter(t => t.assignedTo === uid)
       }));
-      const unassigned = getFilteredTasks().filter(t => !t.assignedTo);
+      const unassigned = listTasks.filter(t => !t.assignedTo);
       if (unassigned.length > 0) {
         userGroups.push({ id: 'unassigned', label: 'غير محدد', color: '#94a3b8', tasks: unassigned });
       }
       groups = userGroups;
     }
+    groups = [...projectGroups, ...groups];
 
     return (
       <div className="tasks-table-container">
@@ -1250,18 +1288,34 @@ const Tasks: React.FC = () => {
           <tbody>
             {groups.map(group => {
               if (group.tasks.length === 0) return null;
-              const isCollapsed = collapsedGroups.has(group.id);
+              // صفوف المشاريع مطوية افتراضياً، وبقية المجموعات مفتوحة افتراضياً
+              const isCollapsed = group.project ? !expandedProjects.has(group.id) : collapsedGroups.has(group.id);
 
               return (
                 <React.Fragment key={group.id}>
-                  <tr className="task-group-header" onClick={() => toggleGroup(group.id)} style={{ cursor: 'pointer' }}>
+                  <tr className={`task-group-header ${group.project ? 'task-group-header--project' : ''}`} onClick={() => (group.project ? toggleProjectGroup(group.id) : toggleGroup(group.id))} style={{ cursor: 'pointer' }}>
                     <td colSpan={6} style={{ padding: '8px 16px', background: 'var(--quiet-gray-50)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <ChevronDown size={14} style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.15s ease' }} />
-                        <span style={{ color: group.color }}>{group.label}</span>
-                        <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', background: 'rgba(0,0,0,0.05)', padding: '2px 6px', borderRadius: '4px' }}>
-                          {groupBy === 'status' ? statusTotal(group.id, group.tasks.length) : group.tasks.length}
-                        </span>
+                        {group.project ? (
+                          <>
+                            <span className={`tasks-project-dot prj-color-${group.project.color ?? 'navy'}`} />
+                            <FolderKanban size={13} style={{ color: 'var(--color-text-secondary)' }} />
+                            <span>{group.project.code} · {group.project.name}</span>
+                            <span className="tasks-project-meta">
+                              {group.tasks.length} مهمة لغيرك{group.project.late ? ` · ${group.project.late} متأخرة` : ''}{group.project.mine ? ` · ${group.project.mine} لك في القائمة` : ''}
+                            </span>
+                            <span style={{ flex: 1 }} />
+                            <button type="button" className="tasks-project-open" onClick={(e) => { e.stopPropagation(); navigate(`/tasks/projects/${group.project!.id}`); }}>افتح المشروع</button>
+                          </>
+                        ) : (
+                          <>
+                            <span style={{ color: group.color }}>{group.label}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', background: 'rgba(0,0,0,0.05)', padding: '2px 6px', borderRadius: '4px' }}>
+                              {groupBy === 'status' ? statusTotal(group.id, group.tasks.length) : group.tasks.length}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1631,6 +1685,31 @@ const Tasks: React.FC = () => {
                 ))}
                 <option value="unassigned">غير معيّن</option>
               </select>
+              {canSeeProjects && (
+                <select
+                  value={projectFilter}
+                  onChange={(e) => setProjectFilter(e.target.value)}
+                  className="tasks-header-select"
+                  title="تصفية حسب المشروع"
+                >
+                  <option value="all">كل المشاريع</option>
+                  <option value="none">بلا مشروع</option>
+                  {projectOptions.map((p) => (
+                    <option key={p.id} value={String(p.id)}>{p.code} · {p.name}</option>
+                  ))}
+                </select>
+              )}
+              {canSeeProjects && projectFilter === 'all' && (
+                <button
+                  type="button"
+                  className={`tasks-header-select ${hideProjectTasks ? 'is-active' : ''}`}
+                  onClick={toggleHideProjectTasks}
+                  title={hideProjectTasks ? 'صفوف مهام المشاريع المسندة لغيرك مخفية. اضغط لإظهارها' : 'أخفِ صفوف مهام المشاريع المسندة لغيرك من القائمة العامة. مهامك أنت تبقى ظاهرة'}
+                >
+                  <FolderKanban size={13} />
+                  {hideProjectTasks ? 'مهام المشاريع مخفية' : 'أخفِ مهام المشاريع'}
+                </button>
+              )}
 
               {/* [ARCHIVE] زرّ-رقاقة الأرشيف — في شريط الأدوات المشترك فيسري على القائمة والكانبان معاً.
                   خاملاً: زرّ ثانوي هادئ بصنف عناصر الشريط نفسه. نشطاً: رقاقة بلون الهوية وفيها ✕ للخروج. */}

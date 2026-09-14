@@ -13,6 +13,8 @@ export interface TaskFilters {
   execution_request_id?: string | number;
   /** مهام خدمة قانونية بعينها — شاشة الخدمة تقرأ بها حالة التكليف */
   legal_service_id?: string | number;
+  /** مهام مشروع بعينه، أو 'none' للمهام التي بلا مشروع (صفحة المهام والمشاريع) */
+  project_id?: string | number;
   search?: string;
   page?: number;
   limit?: number;
