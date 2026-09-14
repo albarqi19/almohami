@@ -81,6 +81,7 @@ const PhasesSection: React.FC = () => {
         {t.requires_approval && t.status !== 'pending_approval' && t.status !== 'completed' && <Chip tone="gate"><ShieldCheck size={10} /> باعتماد</Chip>}
         {t.is_late && t.status !== 'completed' && <Chip tone="late">متأخرة</Chip>}
         {t.status === 'on_hold' && <Chip tone="hold">موقوفة</Chip>}
+        {t.is_dormant && <Chip tone="est" title="لا تظهر لأحد خارج المشروع حتى يُختار هذا المسار">مسار لم يُختر بعد</Chip>}
         {t.cycle_session_id && <Chip tone="proj">دورة جلسة</Chip>}
       </>
     );

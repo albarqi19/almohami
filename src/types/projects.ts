@@ -286,6 +286,8 @@ export interface ProjectTask {
   client_visible: boolean;
   requires_approval: boolean;
   requires_attachment: boolean;
+  /** نائمة: في مسار لم يُختر بعد، لا تظهر لأحد خارج الغرفة حتى يُختار المسار */
+  is_dormant?: boolean;
   project_key: string | null;
   project_order: number | null;
   cycle_session_id: number | null;
