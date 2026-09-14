@@ -8,7 +8,7 @@ import { useRoom } from './RoomContext';
 
 /** المستندات كما في التصوّر: رقاقات التصنيف، مصدر، جدول (المستند، التصنيف، النسخة، المسؤول، المصدر، مرتبط بـ، المراجعة، السرية، التاريخ). تُجمع ولا تُنسخ. */
 const DocumentsSection: React.FC = () => {
-  const { project, canEdit, openTask, consumePending } = useRoom();
+  const { project, canEdit, openTask, consumePending, openIn } = useRoom();
   const [items, setItems] = useState<ProjectDocument[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -24,7 +24,8 @@ const DocumentsSection: React.FC = () => {
 
   const catCounts = useMemo(() => { const m = new Map<string, number>(); items.forEach((d) => { const k = d.category || 'بلا تصنيف'; m.set(k, (m.get(k) ?? 0) + 1); }); return m; }, [items]);
   const visible = items.filter((d) => (source === 'all' || d.source === source) && (cat === 'all' || (d.category || 'بلا تصنيف') === cat));
-  const open = async (d: ProjectDocument) => { try { const r = await ProjectService.documentUrl(project.id, d.id); window.open(r.url, '_blank', 'noopener'); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر فتح المستند'); } };
+  // المستند يُفتح في اللوحة الجانبية (معاينة داخل الغرفة)؛ الروابط الخارجية وحدها تُفتح في تبويب جديد
+  const open = async (d: ProjectDocument) => { if (!d.is_external) { openIn({ type: 'doc', id: d.id }); return; } try { const r = await ProjectService.documentUrl(project.id, d.id); window.open(r.url, '_blank', 'noopener'); } catch (e) { toast.error(e instanceof Error ? e.message : 'تعذر فتح المستند'); } };
   const sourceLabel = (d: ProjectDocument) => (d.source === 'project' ? 'المشروع' : d.source === 'task' ? 'مهمة' : d.source === 'case' ? 'قضية' : 'أخرى');
   const linkedLabel = (d: ProjectDocument) => {
     const parts: React.ReactNode[] = [];

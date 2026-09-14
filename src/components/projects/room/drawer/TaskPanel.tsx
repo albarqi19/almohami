@@ -22,10 +22,12 @@ const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'cancelled', label: 'ملغاة' },
 ];
 const PRIORITY_LABELS: Record<string, string> = { low: 'منخفضة', medium: 'متوسطة', high: 'عالية', urgent: 'عاجلة' };
+const ymd = (v: unknown): string => { if (!v) return ''; const d = new Date(v as string); return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10); };
 
 /**
  * بطاقة المهمة الكاملة داخل الغرفة: كل ما يفعله المستخدم في صفحة المهمة يفعله هنا، بالمكوّنات نفسها
  * (الخطوات، المحادثة، المؤقت)، فلا سلوك مختلف بين المكانين. المشروع يضيف المرحلة والاعتماديات.
+ * مهمة من خارج المشروع (فُتحت من لوحة القضية مثلاً) تُعرض بلا مرحلة واعتماديات.
  */
 const TaskPanel: React.FC<{ taskId: number; onTitle: (title: string) => void }> = ({ taskId, onTitle }) => {
   const { project, users, canEdit, refresh, openIn, goTo, setPhaseFilter } = useRoom();
@@ -44,7 +46,9 @@ const TaskPanel: React.FC<{ taskId: number; onTitle: (title: string) => void }> 
 
   const load = useCallback(async () => {
     try {
-      const [t, p] = await Promise.all([TaskService.getTask(String(taskId)), ProjectService.task(project.id, taskId)]);
+      const t = await TaskService.getTask(String(taskId));
+      // مهمة من خارج هذا المشروع: تُعرض بلا مرحلة واعتماديات
+      const p = Number(t.project_id) === project.id ? await ProjectService.task(project.id, taskId).catch(() => null) : null;
       setTask(t); setPtask(p); setError(null);
       onTitleRef.current(t.title);
     } catch (e) { setError(e instanceof Error ? e.message : 'تعذر فتح المهمة'); }
@@ -83,23 +87,29 @@ const TaskPanel: React.FC<{ taskId: number; onTitle: (title: string) => void }> 
   };
 
   if (error) return <div className="prj-panel"><div className="prj-panel__body"><div className="prj-error" style={{ margin: 14 }}>{error}</div></div></div>;
-  if (!task || !ptask) return <div className="prj-panel"><div className="prj-panel__body"><div className="prj-empty"><Loader2 size={14} className="ssp2-spin" /> جارٍ فتح المهمة…</div></div></div>;
+  if (!task) return <div className="prj-panel"><div className="prj-panel__body"><div className="prj-empty"><Loader2 size={14} className="ssp2-spin" /> جارٍ فتح المهمة…</div></div></div>;
 
   const st = taskStatus(task.status);
-  const phase = ptask.phase_id ? project.phases.find((p) => p.id === ptask.phase_id) ?? null : null;
+  const phase = ptask?.phase_id ? project.phases.find((p) => p.id === ptask.phase_id) ?? null : null;
   const done = task.status === 'completed';
-  const late = ptask.is_late && !done;
+  const dueYmd = ptask?.due_date ?? ymd(task.dueDate);
+  const startYmd = ptask?.start_date ?? ymd(task.startDate);
+  const today = new Date().toISOString().slice(0, 10);
+  const late = (ptask ? ptask.is_late : !!dueYmd && dueYmd < today) && !done && task.status !== 'cancelled';
   const team = task.assignees && task.assignees.length > 0 ? task.assignees : (task.assignee ? [task.assignee] : []);
   const primaryId = task.assignee ? Number(task.assignee.id) : (task.assignedTo ? Number(task.assignedTo) : null);
   const canManageDocs = task.can_manage_documents ?? canEdit;
   const pendingApproval = task.status === 'pending_approval';
+  const editable = canEdit && !!ptask;
   const docs = task.documents ?? [];
+  const hoursActual = ptask ? ptask.hours_actual : Number(task.actualHours ?? 0);
+  const hoursEstimated = ptask ? ptask.estimated_hours : task.estimatedHours ?? null;
 
   return (
     <div className="prj-panel">
       <div className="prj-panel__head">
         <div className="prj-panel__title">
-          <button type="button" className={`prj-chk prj-chk--big ${done ? 'is-done' : ''}`} title={done ? 'أعد فتح المهمة' : (task.requires_approval ? 'أرسل للاعتماد' : 'أنهِ المهمة')} disabled={busy !== null || pendingApproval} onClick={() => setStatus(done ? 'todo' : 'completed')}><Check size={11} /></button>
+          <button type="button" className={`prj-chk prj-chk--big ${done ? 'is-done' : ''}`} title={done ? 'أعد فتح المهمة' : (task.requires_approval ? 'أرسل للاعتماد' : 'أنهِ المهمة')} disabled={busy !== null || pendingApproval || !canEdit} onClick={() => setStatus(done ? 'todo' : 'completed')}><Check size={11} /></button>
           {editing ? (
             <input className="prj-in" value={draftTitle} onChange={(e) => setDraftTitle(e.target.value)} style={{ flex: 1, fontWeight: 700 }} />
           ) : (
@@ -115,12 +125,14 @@ const TaskPanel: React.FC<{ taskId: number; onTitle: (title: string) => void }> 
           {pendingApproval && <Chip tone="review">بانتظار الاعتماد</Chip>}
           {late && <Chip tone="late">متأخرة</Chip>}
           {task.client_action && <Chip tone="client"><Eye size={10} /> مطلوبة من العميل</Chip>}
-          {ptask.is_dormant && <Chip tone="est">مسار لم يُختر بعد</Chip>}
-          {canEdit && !editing && <button type="button" className="prj-ibtn" title="تعديل العنوان والوصف" onClick={() => { setDraftTitle(task.title); setDraftDesc(task.description ?? ''); setEditing(true); }}><PenLine size={12} /></button>}
+          {ptask?.is_dormant && <Chip tone="est">مسار لم يُختر بعد</Chip>}
+          {editable && !editing && <button type="button" className="prj-ibtn" title="تعديل العنوان والوصف" onClick={() => { setDraftTitle(task.title); setDraftDesc(task.description ?? ''); setEditing(true); }}><PenLine size={12} /></button>}
         </div>
         <div className="prj-panel__sub">
           <span className="prj-badge">مهمة</span>
-          <span><b>{project.code}</b>{phase ? ` · ${phase.order}. ${phase.name}` : ' · بلا مرحلة'}{phase?.workstream ? ` · ${phase.workstream}` : ''}</span>
+          {ptask
+            ? <span><b>{project.code}</b>{phase ? ` · ${phase.order}. ${phase.name}` : ' · بلا مرحلة'}{phase?.workstream ? ` · ${phase.workstream}` : ''}</span>
+            : <span>{task.project ? <><b>{task.project.code}</b> · مشروع آخر</> : 'مهمة خارج المشروع'}{task.case ? ` · ${task.case.title}` : ''}</span>}
           {task.status === 'on_hold' && task.hold_reason && <span>سبب الإيقاف: <b>{task.hold_reason}</b></span>}
         </div>
       </div>
@@ -147,27 +159,29 @@ const TaskPanel: React.FC<{ taskId: number; onTitle: (title: string) => void }> 
             ? <button type="button" className="prj-btn prj-btn--sm" disabled={busy !== null} onClick={() => setStatus('in_progress')}><Play size={12} /> استأنف</button>
             : canEdit && !done && task.status !== 'cancelled' && <button type="button" className="prj-btn prj-btn--sm" disabled={busy !== null} onClick={() => setStatus('on_hold')}><Pause size={12} /> أوقف مؤقتاً</button>}
           {canEdit && task.status === 'todo' && <button type="button" className="prj-btn prj-btn--sm" disabled={busy !== null} onClick={() => setStatus('in_progress')}><Play size={12} /> ابدأ</button>}
-          <UserSelect users={users} value={primaryId} disabled={!canEdit || busy !== null} onChange={(id) => { if (id) patch('assignee', { assigned_to: id }, 'غُيّر المكلف'); }} placeholder="— المكلف —" />
-          <input type="date" className="prj-in" value={ptask.due_date ?? ''} disabled={!canEdit || busy !== null} style={late ? { color: 'var(--pj-bad)', fontWeight: 700 } : undefined} onChange={(e) => patch('due', { due_date: e.target.value || null }, 'غُيّر الموعد')} title="الموعد" />
-          <select className="prj-sel" value={task.priority} disabled={!canEdit || busy !== null} onChange={(e) => patch('priority', { priority: e.target.value as ProjectTaskPatch['priority'] })} title="الأولوية">
+          <UserSelect users={users} value={primaryId} disabled={!editable || busy !== null} onChange={(id) => { if (id) patch('assignee', { assigned_to: id }, 'غُيّر المكلف'); }} placeholder="— المكلف —" />
+          <input type="date" className="prj-in" value={dueYmd} disabled={!editable || busy !== null} style={late ? { color: 'var(--pj-bad)', fontWeight: 700 } : undefined} onChange={(e) => patch('due', { due_date: e.target.value || null }, 'غُيّر الموعد')} title="الموعد" />
+          <select className="prj-sel" value={task.priority} disabled={!editable || busy !== null} onChange={(e) => patch('priority', { priority: e.target.value as ProjectTaskPatch['priority'] })} title="الأولوية">
             {Object.entries(PRIORITY_LABELS).map(([k, v]) => <option key={k} value={k}>الأولوية: {v}</option>)}
           </select>
-          <select className="prj-sel" value={ptask.phase_id ?? ''} disabled={!canEdit || busy !== null} onChange={(e) => patch('phase', { phase_id: e.target.value ? Number(e.target.value) : null }, 'نُقلت المهمة')} title="المرحلة">
-            <option value="">بلا مرحلة</option>
-            {project.phases.filter((p) => p.status !== 'skipped').map((p) => <option key={p.id} value={p.id}>{p.order}. {p.name}{p.status === 'hidden' ? ' (مسار لم يُختر)' : ''}</option>)}
-          </select>
+          {ptask && (
+            <select className="prj-sel" value={ptask.phase_id ?? ''} disabled={!editable || busy !== null} onChange={(e) => patch('phase', { phase_id: e.target.value ? Number(e.target.value) : null }, 'نُقلت المهمة')} title="المرحلة">
+              <option value="">بلا مرحلة</option>
+              {project.phases.filter((p) => p.status !== 'skipped').map((p) => <option key={p.id} value={p.id}>{p.order}. {p.name}{p.status === 'hidden' ? ' (مسار لم يُختر)' : ''}</option>)}
+            </select>
+          )}
           {busy && <Loader2 size={13} className="ssp2-spin" />}
         </div>
       )}
 
       <div className="prj-panel__body">
         <div className="prj-kv2">
-          <div><span className="k">الدور</span><span className="v">{ptask.role_hint ? PROJECT_ROLE_LABELS[ptask.role_hint as keyof typeof PROJECT_ROLE_LABELS] ?? ptask.role_hint : '—'}</span></div>
-          <div><span className="k">الساعات</span><span className="v num">{num(ptask.hours_actual)}{ptask.estimated_hours ? ` من ${num(ptask.estimated_hours)} مقدرة` : ''}</span></div>
+          <div><span className="k">الدور</span><span className="v">{ptask?.role_hint ? PROJECT_ROLE_LABELS[ptask.role_hint as keyof typeof PROJECT_ROLE_LABELS] ?? ptask.role_hint : '—'}</span></div>
+          <div><span className="k">الساعات</span><span className="v num">{num(hoursActual)}{hoursEstimated ? ` من ${num(hoursEstimated)} مقدرة` : ''}</span></div>
           <div><span className="k">الفريق</span><span className="v">{team.length ? team.map((m) => <span key={String(m.id)} style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}><Av name={m.name} /> {m.name.split(' ')[0]}</span>) : '—'}</span></div>
-          <div><span className="k">من / إلى</span><span className="v num">{fmtDate(ptask.start_date)} ← {fmtDate(ptask.due_date)}</span></div>
-          <div><span className="k">بعد إنهاء</span><span className="v">{ptask.predecessors.length ? ptask.predecessors.map((p, i) => <React.Fragment key={p.id}>{i > 0 && '، '}<button type="button" className="prj-link" onClick={() => openIn({ type: 'task', id: p.id })}>{p.title}</button>{p.status === 'completed' ? ' ✓' : ''}</React.Fragment>) : 'لا شيء'}</span></div>
-          <div><span className="k">تعتمد عليها</span><span className="v num">{ptask.successors_count ? `${ptask.successors_count} مهام` : 'لا شيء'}</span></div>
+          <div><span className="k">من / إلى</span><span className="v num">{fmtDate(startYmd || null)} ← {fmtDate(dueYmd || null)}</span></div>
+          <div><span className="k">بعد إنهاء</span><span className="v">{ptask?.predecessors.length ? ptask.predecessors.map((p, i) => <React.Fragment key={p.id}>{i > 0 && '، '}<button type="button" className="prj-link" onClick={() => openIn({ type: 'task', id: p.id })}>{p.title}</button>{p.status === 'completed' ? ' ✓' : ''}</React.Fragment>) : 'لا شيء'}</span></div>
+          <div><span className="k">تعتمد عليها</span><span className="v num">{ptask?.successors_count ? `${ptask.successors_count} مهام` : 'لا شيء'}</span></div>
           <div><span className="k">القضية</span><span className="v">{task.case ? <button type="button" className="prj-link" onClick={() => openIn({ type: 'case', id: Number(task.case!.id) })}>{task.case.file_number ? `${task.case.file_number} · ` : ''}{task.case.title}</button> : '—'}</span></div>
           <div><span className="k">للعميل</span><span className="v">{task.client_action ? 'مطلوبة منه' : task.client_visible ? 'يراها' : 'لا تظهر له'}</span></div>
         </div>

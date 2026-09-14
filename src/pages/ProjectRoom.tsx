@@ -34,6 +34,8 @@ const ARCHETYPE_LABELS: Record<string, string> = { commercial_dispute: 'نزاع
 const SECTIONS: SectionKey[] = ['ov', 'map', 'tasks', 'issues', 'risks', 'decisions', 'deliv', 'docs', 'people', 'events', 'money', 'client', 'feed', 'reports', 'chat'];
 const LEGACY_VIEW: Record<string, SectionKey> = { overview: 'ov', timeline: 'map', phases: 'tasks', deliverables: 'deliv', documents: 'docs', chat: 'chat', ask: 'chat' };
 const DRAWER_TYPES: DrawerType[] = ['task', 'case', 'session', 'exec', 'service', 'meeting', 'doc', 'client'];
+/** نوع الارتباط في المشروع ← نوع اللوحة الجانبية التي تفتحه بلا مغادرة */
+const drawerTypeOf = (linkType: string): DrawerType | null => (linkType === 'case' ? 'case' : linkType === 'execution_request' ? 'exec' : linkType === 'legal_service' ? 'service' : linkType === 'meeting' ? 'meeting' : null);
 /** ?open=task:12,case:5 → اللوحات المفتوحة بترتيبها (حتى ثلاث) */
 const parseOpen = (raw: string | null): DrawerItem[] => (raw ?? '')
   .split(',')
@@ -220,10 +222,11 @@ const ProjectRoom: React.FC = () => {
           <div className="prj-links">
             <span className="prj-dim" style={{ fontSize: 11 }}>مرتبط بـ:</span>
             {project.links.map((l) => { const d = linkDetail(l); return (
-              <button type="button" key={l.id} className="prj-lnk" onClick={() => (l.url && l.exists ? navigate(l.url) : setLinksModal(true))} title={l.label}>
+              <button type="button" key={l.id} className="prj-lnk" onClick={() => { const dt = drawerTypeOf(l.type); if (dt && l.exists) openIn({ type: dt, id: l.link_id }); else if (l.url && l.exists) navigate(l.url); else setLinksModal(true); }} title={l.label}>
                 {linkIcon(l.type)} {l.type === 'case' && l.extra && typeof l.extra.file_number === 'string' ? <><b>{String(l.extra.file_number)}</b> {l.label.replace(`${String(l.extra.file_number)} · `, '')}</> : <>{l.type_label}: <b>{l.label}</b></>}{d ? ` · ${d}` : ''}
               </button>
             ); })}
+            {project.client && <button type="button" className="prj-lnk" onClick={() => openIn({ type: 'client', id: project.client!.id })} title="بطاقة العميل"><Users size={12} /> العميل: <b>{project.client.name}</b></button>}
             {futureMeetings > 0 && <button type="button" className="prj-lnk" onClick={() => goTo('events')}><Calendar size={12} /> <b>{futureMeetings}</b> اجتماعات قادمة</button>}
             {canEdit && <button type="button" className="prj-link" style={{ fontSize: 11, textDecoration: 'none' }} onClick={() => setLinksModal(true)}>+ ربط</button>}
             {project.links.length === 0 && !canEdit && <span className="prj-dim" style={{ fontSize: 11 }}>لا ارتباطات.</span>}

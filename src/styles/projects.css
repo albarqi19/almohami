@@ -620,6 +620,21 @@ select.prj-in { appearance: auto; }
 .prj-panel__preview { margin: 10px 14px; border: 1px solid var(--pj-line); background: var(--pj-paper-3); min-height: 360px; display: flex; flex-direction: column; }
 .prj-panel__preview > * { flex: 1; min-height: 0; }
 .prj-chk--big { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; }
+.prj-dr-tabs { display: flex; border-bottom: 1px solid var(--pj-line); padding: 0 8px; background: var(--pj-paper); flex: none; overflow-x: auto; }
+.prj-dr-tabs button { padding: 7px 9px; font-size: 11.5px; font-weight: 600; color: var(--pj-ink-3); border: 0; border-bottom: 2px solid transparent; background: none; white-space: nowrap; display: inline-flex; gap: 5px; align-items: center; cursor: pointer; font-family: inherit; }
+.prj-dr-tabs button.is-on { color: var(--pj-ink); border-color: var(--pj-gold); }
+.prj-row.is-done .prj-grow { color: var(--pj-ink-3); }
+.prj-money { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--pj-line); }
+.prj-money > div { padding: 8px 14px; border-inline-start: 1px solid var(--pj-line); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.prj-money > div:first-child { border-inline-start: 0; }
+.prj-money b { font-size: 14px; color: var(--pj-ink); white-space: nowrap; }
+.prj-money span { font-size: 11px; color: var(--pj-ink-3); }
+.prj-money .prj-pbar { width: 100%; margin-top: 4px; }
+.prj-pipe { display: flex; padding: 8px 14px; border-bottom: 1px solid var(--pj-line); overflow-x: auto; }
+.prj-pipe span { flex: 1; font-size: 10.5px; text-align: center; padding: 5px 4px; border: 1px solid var(--pj-line); border-inline-start: 0; color: var(--pj-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 70px; }
+.prj-pipe span:first-child { border-inline-start: 1px solid var(--pj-line); }
+.prj-pipe .is-done { color: var(--pj-ok); background: var(--pj-ok-tint); }
+.prj-pipe .is-cur { color: var(--pj-gold); background: var(--pj-gold-tint); font-weight: 700; }
 .prj-chk.is-done { background: var(--pj-ok); border-color: var(--pj-ok); color: #fff; }
 .prj-tcard.is-drag { opacity: 0.4; }
 .prj-bcol.is-over .prj-bcol__body { background: var(--pj-gold-tint); }

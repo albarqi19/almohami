@@ -12,7 +12,7 @@ const WEEKDAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأر�
 
 /** الاجتماعات والجلسات كما في التصوّر: فلاتر، ثم القادم فالماضي، لكل حدث تاريخه وعنوانه ورقاقته وتفاصيله وأزراره. */
 const EventsSection: React.FC = () => {
-  const { project, events, canEdit, refresh, consumePending } = useRoom();
+  const { project, events, canEdit, refresh, consumePending, openIn } = useRoom();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>('all');
   const [linkModal, setLinkModal] = useState(() => consumePending('link') || consumePending('meeting'));
@@ -48,7 +48,12 @@ const EventsSection: React.FC = () => {
           <small>{link.type_label}: {link.label}{cycleTasksNote(e) ? ` · ${cycleTasksNote(e)}` : ''}</small>
         </div>
         <div className="acts">
-          {link.url && link.exists && <button type="button" className="prj-btn prj-btn--sm" onClick={() => navigate(link.url!)}><ExternalLink size={11} /> {link.type === 'case' ? 'القضية' : link.type === 'meeting' ? 'الاجتماع' : 'فتح'}</button>}
+          {isSession && link.exists && <button type="button" className="prj-btn prj-btn--sm" onClick={() => openIn({ type: 'session', id: e.id })}>الجلسة</button>}
+          {e.kind === 'meeting' && link.exists && <button type="button" className="prj-btn prj-btn--sm" onClick={() => openIn({ type: 'meeting', id: e.id })}>الاجتماع</button>}
+          {link.type === 'case' && link.exists && <button type="button" className="prj-btn prj-btn--sm" onClick={() => openIn({ type: 'case', id: link.link_id })}>القضية</button>}
+          {link.type === 'legal_service' && link.exists && <button type="button" className="prj-btn prj-btn--sm" onClick={() => openIn({ type: 'service', id: link.link_id })}>الخدمة</button>}
+          {link.type === 'execution_request' && link.exists && <button type="button" className="prj-btn prj-btn--sm" onClick={() => openIn({ type: 'exec', id: link.link_id })}>طلب التنفيذ</button>}
+          {!['case', 'legal_service', 'execution_request', 'meeting'].includes(link.type) && link.url && link.exists && <button type="button" className="prj-btn prj-btn--sm" onClick={() => navigate(link.url!)}><ExternalLink size={11} /> فتح</button>}
           {e.kind === 'meeting' && canEdit && <button type="button" className="prj-btn prj-btn--sm" onClick={() => setImportFor(link)}><FileInput size={11} /> المحضر</button>}
         </div>
       </div>
@@ -99,7 +104,7 @@ export const LinksModal: React.FC<{ onClose: () => void; onRemove: (l: ProjectLi
   );
 };
 
-const ImportMinutesModal: React.FC<{ link: ProjectLink; onClose: () => void; onDone: () => Promise<void> }> = ({ link, onClose, onDone }) => {
+export const ImportMinutesModal: React.FC<{ link: ProjectLink; onClose: () => void; onDone: () => Promise<void> }> = ({ link, onClose, onDone }) => {
   const { project, users } = useRoom();
   const [items, setItems] = useState<Array<{ title: string; assigned_to: number | null; due_date: string; client_action: boolean }>>([{ title: '', assigned_to: null, due_date: '', client_action: false }]);
   const [decisions, setDecisions] = useState<Array<{ title: string; reason: string }>>([]);

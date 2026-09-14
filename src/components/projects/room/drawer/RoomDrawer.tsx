@@ -6,6 +6,12 @@ import { useRoom } from '../RoomContext';
 import type { DrawerItem, DrawerType } from '../RoomContext';
 import TaskPanel from './TaskPanel';
 import DocPanel from './DocPanel';
+import CasePanel from './CasePanel';
+import SessionPanel from './SessionPanel';
+import ExecPanel from './ExecPanel';
+import ServicePanel from './ServicePanel';
+import MeetingPanel from './MeetingPanel';
+import ClientPanel from './ClientPanel';
 
 const TYPE_LABEL: Record<DrawerType, string> = { task: 'مهمة', case: 'قضية', session: 'جلسة', exec: 'طلب تنفيذ', service: 'خدمة قانونية', meeting: 'اجتماع', doc: 'مستند', client: 'العميل' };
 
@@ -14,6 +20,7 @@ export const fullPagePath = (item: DrawerItem): string | null => {
   switch (item.type) {
     case 'task': return `/tasks/${item.id}`;
     case 'case': return `/cases/${item.id}`;
+    case 'session': return '/sessions';
     case 'exec': return '/execution-requests';
     case 'service': return `/legal-services/${item.id}`;
     case 'meeting': return '/meetings/internal';
@@ -58,6 +65,12 @@ const RoomDrawer: React.FC = () => {
     switch (item.type) {
       case 'task': return <TaskPanel key={keyOf(item)} taskId={item.id} onTitle={(t) => setTitle(item, t)} />;
       case 'doc': return <DocPanel key={keyOf(item)} documentId={item.id} onTitle={(t) => setTitle(item, t)} />;
+      case 'case': return <CasePanel key={keyOf(item)} caseId={item.id} onTitle={(t) => setTitle(item, t)} />;
+      case 'session': return <SessionPanel key={keyOf(item)} sessionId={item.id} onTitle={(t) => setTitle(item, t)} />;
+      case 'exec': return <ExecPanel key={keyOf(item)} requestId={item.id} onTitle={(t) => setTitle(item, t)} />;
+      case 'service': return <ServicePanel key={keyOf(item)} serviceId={item.id} onTitle={(t) => setTitle(item, t)} />;
+      case 'meeting': return <MeetingPanel key={keyOf(item)} meetingId={item.id} onTitle={(t) => setTitle(item, t)} />;
+      case 'client': return <ClientPanel key={keyOf(item)} clientId={item.id} onTitle={(t) => setTitle(item, t)} />;
       default:
         return (
           <div className="prj-panel">
