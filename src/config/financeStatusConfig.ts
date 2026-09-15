@@ -195,7 +195,19 @@ export function collectionRisk(daysOverdue: number): { label: string; tone: Stat
 /** أزرار العقد المتاحة حسب الحالة (مطابقة لحُرّاس ContractController). */
 export function contractActions(status?: ContractStatus | string | null) {
   const s = status ?? '';
+  const lockMessage = s === 'pending_signature'
+    ? 'العقد مرسل للتوقيع: لا يُعدَّل نصه ولا قيمته. أعده إلى مسودة إن أردت تعديله.'
+    : s === 'active'
+      ? 'العقد موقّع: لا يُعدَّل نصه ولا قيمته ولا تواريخه. أي تغيير يكون بملحق عقد جديد.'
+      : s === 'completed' || s === 'cancelled'
+        ? 'العقد مغلق ولا يُعدَّل.'
+        : '';
   return {
+    // [CTR-LOCK] نص العقد وقيمته يُعدَّلان في المسودة فقط؛ الملاحظات وشروط الدفع كما كانت.
+    canEditContent: s === 'draft',
+    canRecallToDraft: s === 'pending_signature',
+    isLocked: s !== '' && s !== 'draft',
+    lockMessage,
     canEdit: s !== 'completed' && s !== 'cancelled',
     canSend: s === 'draft' || s === 'pending_signature', // إرسال للتوقيع
     canSign: s === 'pending_signature', // الباك يتطلّب pending_signature

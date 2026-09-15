@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import {
   ArrowRight, FileSignature, Download, Eye, Send, Trash2, Edit2, Plus, Users, Wallet,
   Receipt, FileText, CheckCircle, Gavel,
+  Lock, Undo2, Pencil,
 } from 'lucide-react';
 import { contractService } from '../../services/contractService';
 import { Modal, StatusBadge } from '../../components/erp';
@@ -76,6 +77,12 @@ const ContractDetailPage: React.FC = () => {
     mutationFn: (method: 'email' | 'whatsapp') => contractService.sendContract(contractId, method),
     onSuccess: (res) => { toast.success(res.message || 'تم إرسال العقد'); invalidate(); },
     onError: (e: Error) => toast.error(e.message || 'تعذّر إرسال العقد'),
+  });
+  // [CTR-LOCK] إرجاع العقد المرسل للتوقيع إلى مسودة ليُعدَّل
+  const recallMutation = useMutation({
+    mutationFn: () => contractService.updateContract(contractId, { status: 'draft' }),
+    onSuccess: () => { toast.success('أُعيد العقد إلى مسودة'); invalidate(); },
+    onError: (e: Error) => toast.error(e.message || 'تعذّر إرجاع العقد'),
   });
   const deleteMutation = useMutation({
     mutationFn: () => contractService.deleteContract(contractId),
@@ -163,6 +170,12 @@ const ContractDetailPage: React.FC = () => {
         <div className="fin-detail-header__actions">
           <button type="button" className="fin-btn fin-btn--sm" onClick={() => setShowPreview(true)}><Eye size={14} /> معاينة</button>
           <button type="button" className="fin-btn fin-btn--sm" onClick={() => contractService.downloadPdf(contract.id, contract.contract_number).catch(() => toast.error('تعذّر تحميل PDF'))}><Download size={14} /> PDF</button>
+          {canEdit && actions.canEditContent && (
+            <button type="button" className="fin-btn fin-btn--sm" onClick={() => navigate(`/finance/contracts/${contract.id}/edit`)}><Pencil size={14} /> تعديل المسودة</button>
+          )}
+          {canEdit && actions.canRecallToDraft && (
+            <button type="button" className="fin-btn fin-btn--sm" disabled={recallMutation.isPending} title="يوقف الإرسال الحالي ويعيد العقد للتعديل" onClick={() => recallMutation.mutate()}><Undo2 size={14} /> إرجاع إلى مسودة</button>
+          )}
           {canEdit && actions.canSend && (
             <>
               {/* قناتان صريحتان (نمط صفحة الفاتورة) — كان الزر المفرد يثبّت email فيفشل لعملاء بلا بريد رغم وجود جوالهم */}
@@ -178,6 +191,14 @@ const ContractDetailPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* [CTR-LOCK] العقد المرسل/الموقّع مقفل — رقاقة نصية مسطّحة */}
+      {actions.isLocked && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 6, fontSize: 12.5, color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)', background: 'var(--color-bg-secondary, transparent)' }}>
+          <Lock size={13} style={{ flexShrink: 0 }} />
+          <span>{actions.lockMessage} ما زال بالإمكان إضافة شروط دفع وملاحظات.</span>
+        </div>
+      )}
 
       {/* بطاقات الملخّص */}
       <div className="fin-cards">
