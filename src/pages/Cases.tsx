@@ -46,6 +46,8 @@ import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
 import { resolveOpponent } from '../utils/partyHelpers';
 import { apiClient } from '../utils/api';
+import { pageRange } from '../utils/pageRange';
+import { toHijri } from '../utils/hijriDate';
 
 type ViewMode = 'grid' | 'table' | 'kanban';
 
@@ -126,6 +128,11 @@ const formatDate = (value?: Date | string | null): string => {
 	if (isNaN(date.getTime())) return '-';
 	return date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
 };
+
+// تواريخ القائمة هجرية (أم القرى) بطلب المالك، والميلادي في التلميح. المتصفحات الحديثة
+// تعرض ar-SA ميلادياً، فلا نعتمد على اللغة بل على toHijri؛ ولو لم يدعم المتصفح التقويم
+// نسقط للميلادي بدل عرض رقم خاطئ.
+const formatListDate = (value?: Date | string | null): string => toHijri(value) ?? formatDate(value);
 
 const getLawyerName = (caseObj: unknown): string => {
 	if (!caseObj || typeof caseObj !== 'object') return '-';
@@ -1041,12 +1048,12 @@ const Cases: React.FC = () => {
 									<div className="erp-cell">
 										<div className="erp-cell__row">
 											<Clock size={12} className="erp-cell__icon" />
-											<span>{formatDate((c as any).filing_date || c.created_at)}</span>
+											<span title={formatDate((c as any).filing_date || c.created_at)}>{formatListDate((c as any).filing_date || c.created_at)}</span>
 										</div>
 										{c.next_hearing ? (
 											<div className="erp-cell__row erp-cell__row--highlight">
 												<Calendar size={11} className="erp-cell__icon" />
-												<span>{formatDate(c.next_hearing)}</span>
+												<span title={formatDate(c.next_hearing)}>{formatListDate(c.next_hearing)}</span>
 												{(c as any).next_hearing_time && <span className="erp-cell__time">{(c as any).next_hearing_time}</span>}
 											</div>
 										) : (
@@ -1074,6 +1081,7 @@ const Cases: React.FC = () => {
 													source={(c as any).outcome_source}
 													appealed={(c as any).outcome_appealed}
 													partial={(c as any).outcome_is_partial}
+													final={(c as any).outcome_is_final}
 												/>
 											)}
 										</div>
@@ -1163,12 +1171,13 @@ const Cases: React.FC = () => {
 									source={(c as any).outcome_source}
 									appealed={(c as any).outcome_appealed}
 									partial={(c as any).outcome_is_partial}
+									final={(c as any).outcome_is_final}
 								/>
 							)}
 						</div>
 						<div className="case-card__footer">
 							<span><User size={12} /> {c.client_name || '-'}</span>
-							<span><Calendar size={12} /> {formatDate((c as any).filing_date)}</span>
+							<span title={formatDate((c as any).filing_date)}><Calendar size={12} /> {formatListDate((c as any).filing_date)}</span>
 						</div>
 					</div>
 				);
@@ -1208,7 +1217,7 @@ const Cases: React.FC = () => {
 										<div className="kanban-card__meta">
 											{isCaseArchived(c) && <span className="erp-cell__tag" title="قضية مؤرشفة — مخفيّة عن القائمة الحيّة">مؤرشفة</span>}
 											<span><User size={11} /> {c.client_name || '-'}</span>
-											<span><Calendar size={11} /> {formatDate((c as any).filing_date)}</span>
+											<span title={formatDate((c as any).filing_date)}><Calendar size={11} /> {formatListDate((c as any).filing_date)}</span>
 										</div>
 									</div>
 								))}
@@ -1640,56 +1649,20 @@ const Cases: React.FC = () => {
 								<ChevronRight size={14} /> السابق
 							</button>
 							<div className="pagination-pages">
-								{(() => {
-									const { currentPage, totalPages } = pagination;
-									const pages: (number | string)[] = [];
-									const maxVisible = 5;
-
-									if (totalPages <= maxVisible + 2) {
-										// إظهار كل الصفحات إذا كان العدد قليل
-										for (let i = 1; i <= totalPages; i++) pages.push(i);
-									} else {
-										// دائماً أظهر الصفحة الأولى
-										pages.push(1);
-
-										// حساب بداية ونهاية النطاق حول الصفحة الحالية
-										let start = Math.max(2, currentPage - 1);
-										let end = Math.min(totalPages - 1, currentPage + 1);
-
-										// تعديل النطاق إذا كنا قريبين من البداية أو النهاية
-										if (currentPage <= 3) {
-											end = Math.min(totalPages - 1, 4);
-										} else if (currentPage >= totalPages - 2) {
-											start = Math.max(2, totalPages - 3);
-										}
-
-										// إضافة ... قبل النطاق إذا لزم الأمر
-										if (start > 2) pages.push('...');
-
-										// إضافة الصفحات في النطاق
-										for (let i = start; i <= end; i++) pages.push(i);
-
-										// إضافة ... بعد النطاق إذا لزم الأمر
-										if (end < totalPages - 1) pages.push('...');
-
-										// دائماً أظهر الصفحة الأخيرة
-										if (totalPages > 1) pages.push(totalPages);
-									}
-
-									return pages.map((page, index) => (
-										typeof page === 'number' ? (
-											<button
-												key={page}
-												className={`pagination-page ${page === currentPage ? 'pagination-page--active' : ''}`}
-												onClick={() => fetchCases(page)}
-											>
-												{page}
-											</button>
-										) : (
-											<span key={`ellipsis-${index}`} className="pagination-ellipsis">...</span>
-										)
-									));
-								})()}
+								{pageRange(pagination.currentPage, pagination.totalPages).map((page, index) => (
+									typeof page === 'number' ? (
+										<button
+											key={page}
+											className={`pagination-page ${page === pagination.currentPage ? 'pagination-page--active' : ''}`}
+											onClick={() => fetchCases(page)}
+											aria-current={page === pagination.currentPage ? 'page' : undefined}
+										>
+											{page}
+										</button>
+									) : (
+										<span key={`ellipsis-${index}`} className="pagination-ellipsis">...</span>
+									)
+								))}
 							</div>
 							<button
 								className="pagination-btn"

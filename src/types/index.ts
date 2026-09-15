@@ -213,6 +213,8 @@ export interface Case {
   outcome_source?: 'manual' | 'ai' | null;
   outcome_appealed?: boolean;
   outcome_is_partial?: boolean;
+  /** هل النتيجة حكم نهائي؟ true نهائي، false غير نهائي، null لا نعرف — من الباك (outcome_is_final) */
+  outcome_is_final?: boolean | null;
   outcome_detected_at?: string | null;
   outcome_judgement_id?: number | null;
   outcome_summary?: string | null; // ملخص ذكي من AI للعرض في WinCelebrationModal
