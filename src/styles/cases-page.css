@@ -88,6 +88,89 @@
     background: var(--quiet-gray-500);
 }
 
+/* === أزرار المصدر في الرأس (ناجز / معين / تراضي / إفلاس / يدوية) ===
+   كل مصدر بلونه الخفيف: --sp مكوّنات RGB للخلفية والحدّ، و--sp-text لون النص.
+   فلات: بلا ظلّ ولا تدرّج؛ النشط أغمق قليلاً وبحدّ من لونه. */
+.cases-header-bar__sources {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.src-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    background: rgba(var(--sp), 0.09);
+    color: var(--sp-text);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s, border-color 0.12s;
+}
+
+.src-pill b {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.src-pill:hover {
+    background: rgba(var(--sp), 0.15);
+}
+
+.src-pill--active {
+    background: rgba(var(--sp), 0.18);
+    border-color: rgba(var(--sp), 0.55);
+    font-weight: 600;
+}
+
+.src-pill--active svg {
+    opacity: 0.7;
+}
+
+.src-pill--active:hover svg {
+    opacity: 1;
+}
+
+.src-pill--najiz { --sp: 30, 58, 95; --sp-text: var(--law-navy); }
+.src-pill--moeen { --sp: 109, 40, 217; --sp-text: #5b21b6; }
+.src-pill--taradhi { --sp: 21, 115, 71; --sp-text: #157347; }
+.src-pill--bankruptcy { --sp: 184, 134, 11; --sp-text: #8a6508; }
+.src-pill--manual { --sp: 100, 116, 139; --sp-text: var(--color-text-secondary); }
+
+/* قائمة الترتيب حين تكون على غير الافتراضي — تُرى أنها مضبوطة */
+.filter-select--set {
+    border-color: var(--law-navy);
+    color: var(--law-navy);
+}
+
+/* رأس عمود قابل للترتيب */
+.cases-th--sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.cases-th--sortable:hover {
+    color: var(--law-navy);
+}
+
+.cases-th--sortable.is-sorted {
+    color: var(--law-navy);
+}
+
+.cases-th--sortable svg {
+    vertical-align: middle;
+    margin-inline-start: 4px;
+}
+
 .cases-header-bar__center {
     display: flex;
     align-items: center;
@@ -1159,8 +1242,13 @@ body.dark .kanban-column {
         width: 100%;
     }
 
-    .cases-header-bar__stats {
-        display: none;
+    /* أزرار المصدر فلاتر لا زينة — تلتفّ على سطرها ولا تُخفى */
+    .cases-header-bar__start {
+        flex-wrap: wrap;
+    }
+
+    .cases-header-bar__sources {
+        width: 100%;
     }
 }
 
