@@ -1703,11 +1703,12 @@ const Tasks: React.FC = () => {
                 <button
                   type="button"
                   className={`tasks-header-select ${hideProjectTasks ? 'is-active' : ''}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: 'none' }}
                   onClick={toggleHideProjectTasks}
                   title={hideProjectTasks ? 'صفوف مهام المشاريع المسندة لغيرك مخفية. اضغط لإظهارها' : 'أخفِ صفوف مهام المشاريع المسندة لغيرك من القائمة العامة. مهامك أنت تبقى ظاهرة'}
                 >
                   <FolderKanban size={13} />
-                  {hideProjectTasks ? 'مهام المشاريع مخفية' : 'أخفِ مهام المشاريع'}
+                  <span>{hideProjectTasks ? 'مهام المشاريع مخفية' : 'أخفِ مهام المشاريع'}</span>
                 </button>
               )}
 
