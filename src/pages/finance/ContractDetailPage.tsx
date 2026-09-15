@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import {
   ArrowRight, FileSignature, Download, Eye, Send, Trash2, Edit2, Plus, Users, Wallet,
-  Receipt, FileText, CheckCircle, Gavel,
+  Receipt, FileText, CheckCircle, Gavel, ShieldCheck, PenLine, Copy, ExternalLink, XCircle,
 } from 'lucide-react';
 import { contractService } from '../../services/contractService';
 import { Modal, StatusBadge } from '../../components/erp';
@@ -50,6 +50,11 @@ const ContractDetailPage: React.FC = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [showSign, setShowSign] = useState(false);
   const [signedBy, setSignedBy] = useState('');
+  // مودال «إرسال للتوقيع»: القناة + طريقة التوقيع (عادي من البوابة / موثّق عبر صادق) + ملاحظة.
+  const [showSend, setShowSend] = useState(false);
+  const [sendMethod, setSendMethod] = useState<'email' | 'whatsapp'>('whatsapp');
+  const [sendMode, setSendMode] = useState<'simple' | 'sadq'>('simple');
+  const [sendNote, setSendNote] = useState('');
   const [showDelete, setShowDelete] = useState(false);
   const [partyForm, setPartyForm] = useState<Partial<ContractParty> | null>(null);
   const [termForm, setTermForm] = useState<Partial<PaymentTerm> | null>(null);
@@ -69,12 +74,12 @@ const ContractDetailPage: React.FC = () => {
 
   const signMutation = useMutation({
     mutationFn: () => contractService.signContract(contractId, signedBy),
-    onSuccess: () => { toast.success('تم توقيع العقد'); invalidate(); setShowSign(false); setSignedBy(''); },
-    onError: (e: Error) => toast.error(e.message || 'تعذّر توقيع العقد'),
+    onSuccess: () => { toast.success('سُجّل التوقيع الورقي'); invalidate(); setShowSign(false); setSignedBy(''); },
+    onError: (e: Error) => toast.error(e.message || 'تعذّر تسجيل التوقيع'),
   });
   const sendMutation = useMutation({
-    mutationFn: (method: 'email' | 'whatsapp') => contractService.sendContract(contractId, method),
-    onSuccess: (res) => { toast.success(res.message || 'تم إرسال العقد'); invalidate(); },
+    mutationFn: () => contractService.sendContract(contractId, sendMethod, sendNote.trim() || undefined, sendMode),
+    onSuccess: (res) => { toast.success(res.message || 'تم إرسال العقد'); invalidate(); setShowSend(false); setSendNote(''); },
     onError: (e: Error) => toast.error(e.message || 'تعذّر إرسال العقد'),
   });
   const deleteMutation = useMutation({
@@ -164,14 +169,12 @@ const ContractDetailPage: React.FC = () => {
           <button type="button" className="fin-btn fin-btn--sm" onClick={() => setShowPreview(true)}><Eye size={14} /> معاينة</button>
           <button type="button" className="fin-btn fin-btn--sm" onClick={() => contractService.downloadPdf(contract.id, contract.contract_number).catch(() => toast.error('تعذّر تحميل PDF'))}><Download size={14} /> PDF</button>
           {canEdit && actions.canSend && (
-            <>
-              {/* قناتان صريحتان (نمط صفحة الفاتورة) — كان الزر المفرد يثبّت email فيفشل لعملاء بلا بريد رغم وجود جوالهم */}
-              <button type="button" className="fin-btn fin-btn--sm" disabled={sendMutation.isPending} onClick={() => sendMutation.mutate('email')}><Send size={14} /> للتوقيع: بريد</button>
-              <button type="button" className="fin-btn fin-btn--sm" disabled={sendMutation.isPending} onClick={() => sendMutation.mutate('whatsapp')}><Send size={14} /> للتوقيع: واتساب</button>
-            </>
+            <button type="button" className="fin-btn fin-btn--primary fin-btn--sm" disabled={sendMutation.isPending} onClick={() => { setSendMode(contract.signature?.sadq_active ? sendMode : 'simple'); setShowSend(true); }}>
+              <Send size={14} /> {contract.status === 'pending_signature' ? 'إعادة الإرسال للتوقيع' : 'إرسال للتوقيع'}
+            </button>
           )}
           {canEdit && actions.canSign && (
-            <button type="button" className="fin-btn fin-btn--primary fin-btn--sm" onClick={() => { setSignedBy(contract.client?.name ?? ''); setShowSign(true); }}><CheckCircle size={14} /> توقيع</button>
+            <button type="button" className="fin-btn fin-btn--sm" onClick={() => { setSignedBy(contract.client?.name ?? ''); setShowSign(true); }} title="عقد وُقّع ورقياً أو حضورياً — يُسجَّل بلا إثبات إلكتروني"><PenLine size={14} /> تسجيل توقيع ورقي</button>
           )}
           {canDelete && actions.canDelete && (
             <button type="button" className="fin-btn fin-btn--danger fin-btn--sm" onClick={() => setShowDelete(true)}><Trash2 size={14} /> حذف</button>
@@ -192,6 +195,11 @@ const ContractDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* التوقيع الإلكتروني — طريقته وآخر طلب (عادي من البوابة / موثّق عبر صادق / ورقي) */}
+      {(contract.signature?.latest_request || contract.signed_at) && (
+        <SignatureCard contract={contract} />
+      )}
 
       {/* تخطيط عمودين: رئيسي (الفواتير + الشروط) + جانبي (معلومات العقد + الأطراف) */}
       <div className="fin-detail-grid">
@@ -327,22 +335,71 @@ const ContractDetailPage: React.FC = () => {
         />
       )}
 
-      {/* مودال التوقيع */}
+      {/* مودال الإرسال للتوقيع */}
+      <Modal
+        open={showSend}
+        onClose={() => setShowSend(false)}
+        title="إرسال العقد للتوقيع"
+        icon={Send}
+        size="narrow"
+        footer={(
+          <>
+            <button type="button" className="fin-btn" onClick={() => setShowSend(false)}>إلغاء</button>
+            <button type="button" className="fin-btn fin-btn--primary" disabled={sendMutation.isPending} onClick={() => sendMutation.mutate()}>
+              {sendMutation.isPending ? 'جارٍ الإرسال...' : 'إرسال'}
+            </button>
+          </>
+        )}
+      >
+        <div className="fin-field">
+          <label className="fin-field__label">طريقة التوقيع</label>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', lineHeight: 1.6 }}>
+              <input type="radio" name="sig-mode" checked={sendMode === 'simple'} onChange={() => setSendMode('simple')} style={{ marginTop: 4 }} />
+              <span><b><PenLine size={13} /> توقيع عادي من بوابة العميل</b><br /><span style={{ fontSize: 12, color: 'var(--quiet-gray-500, #6b7280)' }}>يصله رابط بوابته، يقرأ العقد ويرسم توقيعه ويقرّ بالموافقة. يُسجَّل الوقت وعنوان الاتصال وتُحفظ نسخة موقّعة.</span></span>
+            </label>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: contract.signature?.sadq_active ? 'pointer' : 'not-allowed', opacity: contract.signature?.sadq_active ? 1 : 0.55, lineHeight: 1.6 }}>
+              <input type="radio" name="sig-mode" disabled={!contract.signature?.sadq_active} checked={sendMode === 'sadq'} onChange={() => setSendMode('sadq')} style={{ marginTop: 4 }} />
+              <span><b><ShieldCheck size={13} /> توقيع موثّق بهوية نفاذ (صادق)</b><br /><span style={{ fontSize: 12, color: 'var(--quiet-gray-500, #6b7280)' }}>
+                {contract.signature?.sadq_active
+                  ? `يتحقق العميل بتطبيق نفاذ ويعود العقد بشهادة صادق. الرصيد: ${contract.signature.sadq_credits} توقيع.`
+                  : 'غير مفعّل لهذا المكتب — يُفعَّل من الإعدادات › التوقيع الإلكتروني إن أتاحته المنصّة.'}
+              </span></span>
+            </label>
+          </div>
+        </div>
+        <div className="fin-field">
+          <label className="fin-field__label">قناة الإرسال</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className={`fin-btn fin-btn--sm${sendMethod === 'whatsapp' ? ' fin-btn--primary' : ''}`} onClick={() => setSendMethod('whatsapp')}>واتساب</button>
+            <button type="button" className={`fin-btn fin-btn--sm${sendMethod === 'email' ? ' fin-btn--primary' : ''}`} onClick={() => setSendMethod('email')}>بريد</button>
+          </div>
+        </div>
+        <div className="fin-field">
+          <label className="fin-field__label">ملاحظة للعميل (اختياري)</label>
+          <textarea className="fin-textarea" value={sendNote} onChange={(e) => setSendNote(e.target.value)} rows={2} />
+        </div>
+      </Modal>
+
+      {/* مودال تسجيل التوقيع الورقي */}
       <Modal
         open={showSign}
         onClose={() => setShowSign(false)}
-        title="توقيع العقد"
-        icon={CheckCircle}
+        title="تسجيل توقيع ورقي"
+        icon={PenLine}
         size="narrow"
         footer={(
           <>
             <button type="button" className="fin-btn" onClick={() => setShowSign(false)}>إلغاء</button>
             <button type="button" className="fin-btn fin-btn--primary" disabled={signMutation.isPending || !signedBy.trim()} onClick={() => signMutation.mutate()}>
-              {signMutation.isPending ? 'جارٍ التوقيع...' : 'تأكيد التوقيع'}
+              {signMutation.isPending ? 'جارٍ التسجيل...' : 'تسجيل التوقيع'}
             </button>
           </>
         )}
       >
+        <p style={{ fontSize: 12, color: 'var(--quiet-gray-500, #6b7280)', marginTop: 0, lineHeight: 1.7 }}>
+          لعقد وُقّع على الورق أو حضورياً. يُفعَّل العقد باسمك كمسجِّل بلا إثبات إلكتروني من العميل. للتوقيع الإلكتروني استعمل «إرسال للتوقيع».
+        </p>
         <div className="fin-field">
           <label className="fin-field__label">اسم الموقّع<span className="req">*</span></label>
           <input className="fin-input" value={signedBy} onChange={(e) => setSignedBy(e.target.value)} />
@@ -597,6 +654,59 @@ const JudgmentModal: React.FC<{
         </div>
       </div>
     </Modal>
+  );
+};
+
+/** بطاقة التوقيع: الطريقة، آخر طلب وحالته، الرابط (بوابة/نفاذ)، وسبب الرفض إن وُجد. */
+const SignatureCard: React.FC<{ contract: Contract }> = ({ contract }) => {
+  const sig = contract.signature;
+  const req = sig?.latest_request ?? null;
+  const signed = !!contract.signed_at;
+  const tone = req ? ({ pending: 'info', viewed: 'info', signed: 'success', rejected: 'danger', cancelled: 'neutral', expired: 'warning', failed: 'danger' } as const)[req.status] ?? 'neutral' : 'neutral';
+  const copy = (text: string) => { navigator.clipboard?.writeText(text).then(() => toast.success('نُسخ الرابط')).catch(() => toast.error('تعذّر النسخ')); };
+  const when = (v?: string | null) => (v ? new Date(v).toLocaleString('ar-SA') : null);
+
+  return (
+    <div className="fin-section" style={{ marginBottom: 12 }}>
+      <div className="fin-section__head">
+        <span className="fin-section__title">{contract.signature_method === 'sadq' ? <ShieldCheck size={15} /> : <PenLine size={15} />} التوقيع</span>
+        {req && <ToneBadge tone={tone}>{req.status_label}</ToneBadge>}
+      </div>
+      <div style={{ padding: '10px 14px', display: 'grid', gap: 6, fontSize: 13 }}>
+        {signed && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: 'var(--status-success, #047857)', fontWeight: 600 }}>
+            <CheckCircle size={15} /> {sig?.method_label || 'موقّع'} — {contract.signed_by} {when(contract.signed_at) && `· ${when(contract.signed_at)}`}
+            {sig?.has_signed_file && <span style={{ fontWeight: 400, color: 'var(--quiet-gray-500, #6b7280)' }}>· نسخة موقّعة محفوظة</span>}
+          </div>
+        )}
+        {req && !signed && (
+          <>
+            <Def label="الطريقة">{req.provider_label}</Def>
+            {req.sent_at && <Def label="أُرسل">{when(req.sent_at)} {req.channel ? `عبر ${req.channel === 'email' ? 'البريد' : req.channel === 'whatsapp' ? 'واتساب' : req.channel}` : ''}</Def>}
+            {req.viewed_at && <Def label="اطّلع العميل">{when(req.viewed_at)}</Def>}
+            {req.expires_at && <Def label="ينتهي">{when(req.expires_at)}</Def>}
+            {req.status === 'rejected' && (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', color: 'var(--status-danger, #b91c1c)' }}>
+                <XCircle size={15} style={{ flexShrink: 0, marginTop: 2 }} />
+                <span>رفض العميل التوقيع{req.rejected_reason ? `: ${req.rejected_reason}` : '.'} عدّل العقد وأعد إرساله.</span>
+              </div>
+            )}
+            {(req.status === 'pending' || req.status === 'viewed') && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                {req.provider === 'sadq' && req.signing_url ? (
+                  <>
+                    <a className="fin-btn fin-btn--sm" href={req.signing_url} target="_blank" rel="noreferrer"><ExternalLink size={13} /> رابط التوقيع بنفاذ</a>
+                    <button type="button" className="fin-btn fin-btn--sm" onClick={() => copy(req.signing_url!)}><Copy size={13} /> نسخ الرابط</button>
+                  </>
+                ) : sig?.portal_link ? (
+                  <button type="button" className="fin-btn fin-btn--sm" onClick={() => copy(sig.portal_link)}><Copy size={13} /> نسخ رابط بوابة العميل</button>
+                ) : null}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 };
 

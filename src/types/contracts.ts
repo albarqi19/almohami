@@ -1,4 +1,5 @@
 // === أنواع العقود ===
+import type { ContractSignatureInfo } from '../services/signatureService';
 
 // نوع العقد
 export type ContractType = 'representation' | 'consultation' | 'retainer' | 'contingency' | 'other';
@@ -99,6 +100,10 @@ export interface Contract {
     phone?: string;
   };
   parties?: ContractParty[];
+  /** [2026-09-15] طريقة التوقيع وآخر طلب توقيع (يلحقه الباك في show). */
+  signature_method?: 'simple' | 'sadq' | 'manual' | null;
+  signed_file_hash?: string | null;
+  signature?: ContractSignatureInfo;
   payment_terms?: PaymentTerm[];
   invoices?: {
     id: number;

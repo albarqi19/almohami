@@ -102,11 +102,14 @@ export class ContractService {
   static async sendContract(
     id: number,
     method: 'email' | 'whatsapp',
-    message?: string
+    message?: string,
+    signatureMode: 'simple' | 'sadq' = 'simple',
   ): Promise<{ success: boolean; message: string }> {
     return apiClient.post<{ success: boolean; message: string }>(`/contracts/${id}/send`, {
       method,
       message,
+      // simple = رابط بوابة العميل (توقيع عادي) · sadq = توقيع موثّق بنفاذ عبر صادق
+      signature_mode: signatureMode,
     });
   }
 

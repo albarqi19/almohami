@@ -33,6 +33,7 @@ import {
   Smartphone,
   Megaphone,
   Percent,
+  PenLine,
 } from 'lucide-react';
 import NotificationSettings from '../components/NotificationSettings';
 import PhoneField from '../components/PhoneField';
@@ -54,6 +55,7 @@ import OfficeBroadcastSettings from '../components/settings/OfficeBroadcastSetti
 import AppReminderHoursSettings from '../components/settings/AppReminderHoursSettings';
 import CaseNamingSettings from '../components/settings/CaseNamingSettings';
 import VatRegistrationSettings from '../components/settings/VatRegistrationSettings';
+import ESignatureSettings from '../components/settings/ESignatureSettings';
 import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermission } from '../hooks/usePermission';
@@ -129,6 +131,8 @@ const Settings: React.FC = () => {
     // ‏[TAX-01] تبويب مستقل لا حقلٌ داخل «إعدادات الشركة»: الحالة الضريبية تغيّر
     // ‏ما يدفعه العميل في كل فاتورة قادمة، فلا تُحفظ ضمناً مع الاسم والعنوان.
     { id: 'vat_registration', label: 'التسجيل الضريبي', icon: Percent, scope: 'admin' },
+    // التوقيع الإلكتروني: العادي دائم، وصادق (نفاذ) يُفعَّل هنا إن أتاحته المنصّة.
+    { id: 'e_signature', label: 'التوقيع الإلكتروني', icon: PenLine, scope: 'admin' },
     { id: 'integrations', label: 'التكاملات', icon: Link, scope: 'staff' },
     { id: 'word_addin', label: 'إضافة Word', icon: FileText, scope: 'staff' },
     { id: 'mobile_app', label: 'تطبيق الجوال', icon: Smartphone, scope: 'staff' },
@@ -594,6 +598,9 @@ const Settings: React.FC = () => {
 
       case 'vat_registration':
         return <VatRegistrationSettings />;
+
+      case 'e_signature':
+        return <ESignatureSettings />;
 
       case 'najiz':
         return (
