@@ -318,7 +318,7 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
       <input
         ref={inputRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp"
+        accept="image/png,image/jpeg"
         style={{ display: 'none' }}
         onChange={(e) => {
           const file = e.target.files?.[0];
