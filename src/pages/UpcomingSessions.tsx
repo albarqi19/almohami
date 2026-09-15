@@ -197,9 +197,13 @@ const UpcomingSessions: React.FC = () => {
 		};
 	}, [showExportMenu]);
 
-	// Helper: get effective date (hijri or gregorian fallback)
+	// Helper: get effective date — session_date أولاً، وإن لم يكن تاريخاً قابلاً للتحليل
+	// (بعض صفوف ناجز تحمل نصاً هجرياً مثل «1447-03-02 هـ»؛ 548 صفاً في الإنتاج) نسقط
+	// إلى session_date_gregorian بدل «Invalid Date» و«بعد NaN أيام».
 	const getEffectiveDate = (session: Session): string | null => {
-		return session.session_date || session.session_date_gregorian || null;
+		const raw = session.session_date;
+		if (raw && !isNaN(new Date(raw).getTime())) return raw;
+		return session.session_date_gregorian || raw || null;
 	};
 
 	// Filter Logic
@@ -283,15 +287,26 @@ const UpcomingSessions: React.FC = () => {
 	});
 
 	// Helpers
+	// الميلادي بتقويم مصرَّح به (gregory) لا بافتراض المتصفح لـar-SA — يتباين بين الإصدارات.
 	const formatDate = (dateStr: string | null) => {
 		if (!dateStr) return 'غير محدد';
 		const date = new Date(dateStr);
-		return date.toLocaleDateString('ar-SA', {
-			weekday: 'long',
+		if (isNaN(date.getTime())) return 'غير محدد';
+		return date.toLocaleDateString('ar-SA-u-ca-gregory', {
 			year: 'numeric',
 			month: 'short',
 			day: 'numeric'
 		});
+	};
+	// السطر الأعلى في عمود التاريخ: اليوم + الهجري بأم القرى (بطلب المالك 2026-09-16)،
+	// ولو لم يدعم المتصفح التقويم نسقط للميلادي بدل رقم خاطئ.
+	const formatDateTop = (dateStr: string | null) => {
+		if (!dateStr) return 'غير محدد';
+		const date = new Date(dateStr);
+		if (isNaN(date.getTime())) return 'غير محدد';
+		const weekday = date.toLocaleDateString('ar-SA-u-ca-gregory', { weekday: 'long' });
+		const hijri = toHijri(date);
+		return hijri ? `${weekday} ${hijri}` : `${weekday} ${formatDate(dateStr)}`;
 	};
 
 	const getDaysUntil = (dateStr: string | null) => {
@@ -852,16 +867,17 @@ const UpcomingSessions: React.FC = () => {
 							<td>
 								<div className="session-date">
 									<CalendarIcon size={14} className="text-gray-400" />
-									<span>{formatDate(getEffectiveDate(session))}</span>
+									{/* الهجري فوق والميلادي تحته (قرار المالك 2026-09-16) */}
+									<span title="التاريخ الهجري (أم القرى)">{formatDateTop(getEffectiveDate(session))}</span>
 									{session.session_time && (
 										<span className="session-time">
 											<Clock size={12} className="ml-1" />
 											{session.session_time}
 										</span>
 									)}
-										{toHijri(getEffectiveDate(session)) && (
-											<span className="session-date-hijri" title="التاريخ الهجري (أم القرى)" style={{ fontSize: '11px', color: 'var(--color-text-secondary)', width: '100%', display: 'block' }}>
-												{toHijri(getEffectiveDate(session))}
+										{getEffectiveDate(session) && toHijri(getEffectiveDate(session)) && (
+											<span className="session-date-secondary" title="التاريخ الميلادي" style={{ fontSize: '11px', color: 'var(--color-text-secondary)', width: '100%', display: 'block' }}>
+												{formatDate(getEffectiveDate(session))}
 											</span>
 										)}
 								</div>

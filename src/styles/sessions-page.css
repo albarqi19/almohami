@@ -264,8 +264,8 @@
     color: var(--color-heading);
 }
 
-/* التاريخ الهجري ينزل سطراً كاملاً تحت الميلادي */
-.session-date-hijri {
+/* السطر الثاني في عمود التاريخ (الميلادي) ينزل سطراً كاملاً تحت الهجري */
+.session-date-secondary {
     flex-basis: 100%;
 }
 
