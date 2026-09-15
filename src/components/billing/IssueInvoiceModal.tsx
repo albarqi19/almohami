@@ -55,7 +55,7 @@ const IssueInvoiceModal: React.FC<Props> = ({ open, invoice, onClose, onIssued }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.7 }}>
-          بعد الإصدار تُقفل بيانات الفاتورة المالية وطرفاها وتواريخها.
+          بعد الإصدار تُقفل بيانات الفاتورة المالية وطرفاها وتواريخها. إن أردت تحصيل المبلغ قبل الإصدار فاطبع «مطالبة بالدفع» من المسودة وأصدر الفاتورة بعد السداد.
           {isVatRegistered
             ? ' تاريخ الفاتورة الضريبية سيكون اليوم، وأي تصحيح لاحق يكون بإشعار دائن أو مدين.'
             : ' للتصحيح لاحقاً: أصدر إشعاراً أو ألغِ الفاتورة وأصدر غيرها.'}

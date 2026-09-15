@@ -247,6 +247,7 @@ const InvoicesTab: React.FC = () => {
               { label: 'تسجيل دفعة', icon: CreditCard, onClick: () => navigate(`/finance/invoices/${inv.id}`), hidden: !canManage || !a.canRecordPayment },
               { label: 'إرسال (بريد)', icon: Send, onClick: () => sendMutation.mutate({ id: inv.id, method: 'email' }), hidden: !canManage || !a.canSend },
               { label: 'تحميل PDF', icon: Download, onClick: () => invoiceService.downloadPdf(inv.id, inv.invoice_number).catch(() => toast.error('تعذّر تحميل PDF')) },
+              { label: 'مطالبة بالدفع (PDF)', icon: Download, onClick: () => invoiceService.downloadPaymentRequestPdf(inv.id, inv.invoice_number).catch((e: Error) => toast.error(e.message || 'تعذّر تنزيل المطالبة')), hidden: !a.canIssue },
               { label: 'إلغاء', icon: XCircle, variant: 'danger', divider: true, onClick: () => setCancelTarget(inv), hidden: !canManage || !a.canCancel },
             ]}
           />

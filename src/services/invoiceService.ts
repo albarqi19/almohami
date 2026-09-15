@@ -223,6 +223,33 @@ export class InvoiceService {
   }
 
   /**
+   * [INV-PR] «مطالبة بالدفع» من المسودة (ليست فاتورة ضريبية) — ملف PDF يُحفظ.
+   */
+  static async downloadPaymentRequestPdf(id: number, invoiceNumber?: string): Promise<void> {
+    const token = localStorage.getItem('authToken');
+    const res = await fetch(`${API_BASE_URL}/case-invoices/${id}/payment-request-pdf`, {
+      headers: { Accept: 'application/pdf', 'ngrok-skip-browser-warning': '69420', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+    if (!res.ok) {
+      let message = 'تعذّر تنزيل المطالبة';
+      try {
+        const body = await res.clone().json();
+        if (body?.message) message = body.message;
+      } catch { /* ليس JSON */ }
+      throw new Error(message);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `payment-request-${invoiceNumber || id}.pdf`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
    * [INV-P6] أرشيف ZIP للفترة (PDF + XML الهيئة + فهرس) — ملف يُحفظ.
    */
   static async downloadArchive(from: string, to: string, kind: 'all' | 'invoices' | 'notes' = 'all'): Promise<void> {
@@ -295,6 +322,7 @@ export const invoiceService = {
   issueNote: InvoiceService.issueNote.bind(InvoiceService),
   getVatExemptionReasons: InvoiceService.getVatExemptionReasons.bind(InvoiceService),
   downloadArchive: InvoiceService.downloadArchive.bind(InvoiceService),
+  downloadPaymentRequestPdf: InvoiceService.downloadPaymentRequestPdf.bind(InvoiceService),
   getClientInvoices: InvoiceService.getClientInvoices.bind(InvoiceService),
   getCaseInvoices: InvoiceService.getCaseInvoices.bind(InvoiceService),
   getContractInvoices: InvoiceService.getContractInvoices.bind(InvoiceService),

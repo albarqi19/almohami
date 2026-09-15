@@ -186,6 +186,9 @@ const InvoiceDetailPage: React.FC = () => {
         </div>
         <div className="fin-detail-header__actions">
           <button type="button" className="fin-btn fin-btn--sm" onClick={() => invoiceService.downloadPdf(invoice.id, invoice.invoice_number).catch(() => toast.error('تعذّر تحميل PDF'))}><Download size={14} /> PDF</button>
+          {a.canIssue && (
+            <button type="button" className="fin-btn fin-btn--sm" title="مستند يُرسل للعميل قبل إصدار الفاتورة الضريبية — بلا QR ولا صفة ضريبية" onClick={() => invoiceService.downloadPaymentRequestPdf(invoice.id, invoice.invoice_number).catch((e: Error) => toast.error(e.message || 'تعذّر تنزيل المطالبة'))}><FileText size={14} /> مطالبة بالدفع</button>
+          )}
           {canManage && a.canIssue && (
             <button type="button" className="fin-btn fin-btn--primary fin-btn--sm" onClick={() => setShowIssue(true)}><CheckCircle size={14} /> إصدار الفاتورة</button>
           )}
