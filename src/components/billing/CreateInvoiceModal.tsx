@@ -16,6 +16,7 @@ import { UserService } from '../../services/UserService';
 import { CaseService } from '../../services/caseService';
 import { apiClient } from '../../utils/api';
 import { useBillingSettings } from '../../hooks/useBillingSettings';
+import BankAccountPicker from './BankAccountPicker';
 import type { User as UserType, Case } from '../../types';
 import { toDateInputValue } from '../../utils/dateAr';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
@@ -81,6 +82,8 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
   // [TAX-02][INV-P1] حالة التسجيل الضريبي + النسبة الافتراضية من المصدر المشترك (useBillingSettings)
   // — تُلغى بعد أي حفظ في «الفوترة والضريبة» فلا تبقى النافذة على قيمة قديمة.
   const { isVatRegistered, defaultVatRate, taxNumberUsable } = useBillingSettings(isOpen);
+  // [INV-P3] الحسابات البنكية المختارة للطباعة على الفاتورة
+  const [bankAccountIds, setBankAccountIds] = useState<number[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -172,6 +175,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
         vat_rate: vatRate,
         notes: formData.notes || undefined,
         status: formData.status,
+        bank_account_ids: bankAccountIds.length > 0 ? bankAccountIds : undefined,
         // [BILL-05] إرسال البنود عند وجودها (الباك يعيد حساب total خادمياً).
         line_items: hasLineItems
           ? lineItems
@@ -193,6 +197,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
         notes: '', status: 'draft',
       });
       setLineItems([]);
+      setBankAccountIds([]);
       setClientSearch('');
       onClose();
     } catch (err) {
@@ -404,6 +409,9 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
                 ))}
               </div>
             </div>
+
+            {/* [INV-P3] الحسابات البنكية على الفاتورة — يظهر فقط إن كان للمكتب حسابات */}
+            <BankAccountPicker value={bankAccountIds} onChange={setBankAccountIds} disabled={loading} />
 
             {/* Row 7: Notes (single line) */}
             <div className="asm-field">

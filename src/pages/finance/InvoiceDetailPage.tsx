@@ -258,6 +258,15 @@ const InvoiceDetailPage: React.FC = () => {
                     </button>
                   </Def>
                 )}
+                {invoice.bank_accounts_snapshot && invoice.bank_accounts_snapshot.length > 0 && (
+                  <Def label="التحويل البنكي">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {invoice.bank_accounts_snapshot.map((b) => (
+                        <span key={b.id} style={{ fontSize: 12 }}>{b.bank_name || 'بنك'} — <span dir="ltr" style={{ fontFamily: 'ui-monospace, monospace' }}>{b.iban_grouped}</span></span>
+                      ))}
+                    </div>
+                  </Def>
+                )}
                 <Def label="تاريخ الإصدار">{invoice.invoice_date?.split('T')[0] ?? '—'}</Def>
                 <Def label="الاستحقاق">
                   <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>

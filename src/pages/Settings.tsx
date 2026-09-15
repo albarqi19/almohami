@@ -54,6 +54,7 @@ import OfficeBroadcastSettings from '../components/settings/OfficeBroadcastSetti
 import AppReminderHoursSettings from '../components/settings/AppReminderHoursSettings';
 import CaseNamingSettings from '../components/settings/CaseNamingSettings';
 import TaxIdentitySettings from '../components/settings/TaxIdentitySettings';
+import BankAccountsSettings from '../components/settings/BankAccountsSettings';
 import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermission } from '../hooks/usePermission';
@@ -510,6 +511,30 @@ const Settings: React.FC = () => {
   };
 
   // Save Branding Settings
+  // [INV-P3] رفع الشعار ملفاً (png/jpg) — يُخزَّن محلياً ويُطبع على المستندات من القرص.
+  const [logoUploading, setLogoUploading] = useState(false);
+  const uploadLogo = async (file: File | null) => {
+    if (!file) return;
+    setLogoUploading(true);
+    setBrandingMessage('');
+    try {
+      const fd = new FormData();
+      fd.append('logo', file);
+      const res: any = await apiClient.postFormData('/tenant/logo', fd);
+      if (res?.success && res.data?.logo_url) {
+        setBranding(prev => ({ ...prev, logo_url: res.data.logo_url }));
+        setBrandingMessage('تم رفع الشعار');
+        setTimeout(() => setBrandingMessage(''), 3000);
+      } else {
+        setBrandingMessage('حدث خطأ أثناء رفع الشعار');
+      }
+    } catch (error) {
+      setBrandingMessage((error as Error)?.message ? `خطأ: ${(error as Error).message}` : 'حدث خطأ أثناء رفع الشعار');
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
   const saveBranding = async () => {
     try {
       setSavingBranding(true);
@@ -596,7 +621,12 @@ const Settings: React.FC = () => {
         return <CaseNamingSettings />;
 
       case 'billing_tax':
-        return <TaxIdentitySettings />;
+        return (
+          <>
+            <TaxIdentitySettings />
+            <BankAccountsSettings />
+          </>
+        );
 
       case 'najiz':
         return (
@@ -1689,6 +1719,14 @@ const Settings: React.FC = () => {
                         placeholder="https://example.com/logo.png"
                         style={{ fontSize: '13px' }}
                       />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+                      <label className="settings-btn settings-btn--secondary settings-btn--small" style={{ cursor: logoUploading ? 'default' : 'pointer' }}>
+                        <Upload size={13} /> {logoUploading ? 'جاري الرفع...' : 'رفع شعار (PNG أو JPG)'}
+                        <input type="file" accept="image/png,image/jpeg" style={{ display: 'none' }} disabled={logoUploading}
+                          onChange={(e) => { uploadLogo(e.target.files?.[0] ?? null); e.target.value = ''; }} />
+                      </label>
+                      <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>الملف المرفوع يُطبع على الفاتورة وسند القبض والعقود. حتى 2 ميجابايت.</span>
                     </div>
                   </div>
                 </div>

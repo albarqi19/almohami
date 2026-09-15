@@ -43,6 +43,9 @@ export interface CaseInvoice {
   vat_amount: number;
   // [TAX-01] الطبيعة الضريبية المُجمَّدة وقت الإصدار (تحكم التسمية/الأرقام الضريبية المطبوعة).
   is_tax_invoice?: boolean;
+  /** [INV-P3] الحسابات البنكية كما ثُبّتت عند الإصدار ([] = بلا حساب) */
+  bank_accounts_snapshot?: Array<{ id: number; bank_name: string | null; account_holder_name: string; iban: string; iban_grouped: string; swift_code: string | null }> | null;
+  metadata?: Record<string, unknown> | null;
   total_amount: number;
   paid_amount: number;
   remaining_amount: number;
@@ -419,6 +422,8 @@ export interface CreateInvoiceData {
   terms_and_conditions?: string;
   line_items?: InvoiceLineItem[];
   status?: 'draft' | 'sent' | 'pending';
+  /** [INV-P3] الحسابات البنكية التي تُطبع (حتى ثلاثة) — بلا اختيار تُطبع الافتراضية */
+  bank_account_ids?: number[];
 }
 
 // === تسجيل دفعة ===
