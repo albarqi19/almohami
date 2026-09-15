@@ -1,23 +1,25 @@
 // [P4·UX-04] صفحة فاتورة واحدة كثيفة (ERP) — النمط الضريبي (ملحق أ) + فصل «تفعيل» عن «إرسال» (INV-2.4)
 // + أزرار حسب الحالة المسموحة بالباك (INV-2.5) + ZATCA شرطي عند التفعيل فقط.
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import {
-  ArrowRight, Receipt, Download, Send, XCircle, CreditCard, CheckCircle, FileText, User, Calendar, X,
-  AlertTriangle, Trash2,
+  ArrowRight, Receipt, Download, Send, XCircle, CreditCard, CheckCircle, FileText, User,
+  AlertTriangle, Trash2, Lock, FileMinus, FilePlus,
 } from 'lucide-react';
 import { invoiceService } from '../../services/invoiceService';
 import { paymentService } from '../../services/paymentService';
 import { Modal, StatusBadge } from '../../components/erp';
 import { LoadingState, ErrorState } from '../../components/erp/States';
 import PaymentModal from '../../components/billing/PaymentModal';
+import IssueInvoiceModal from '../../components/billing/IssueInvoiceModal';
+import InvoiceNoteModal from '../../components/billing/InvoiceNoteModal';
 import { formatSAR, formatPercent, toNumber } from '../../utils/money';
 import { formatDueLabel } from '../../utils/dueDays';
 import { invalidateFinance } from '../../utils/financeCache';
 import { ToneBadge } from '../../components/erp/StatusBadge';
-import { invoiceActions, PAYMENT_METHOD_LABELS } from '../../config/financeStatusConfig';
+import { invoiceActions, PAYMENT_METHOD_LABELS, DOCUMENT_KIND_LABEL } from '../../config/financeStatusConfig';
 import { usePermissionContext } from '../../contexts/PermissionContext';
 import { FINANCE_PERMISSIONS } from '../../config/financeModule';
 import { useZatcaFeature } from '../../contexts/ZatcaStatusContext';
@@ -72,6 +74,9 @@ const InvoiceDetailPage: React.FC = () => {
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [showDelete, setShowDelete] = useState(false);
+  // [INV-P2] الإصدار والإشعارات
+  const [showIssue, setShowIssue] = useState(false);
+  const [noteKind, setNoteKind] = useState<null | 'credit' | 'debit'>(null);
 
   const invoiceId = Number(id);
   const { data, isLoading, isError, refetch } = useQuery({
@@ -88,11 +93,18 @@ const InvoiceDetailPage: React.FC = () => {
   const invoice = data?.data;
   const invalidate = () => invalidateFinance(queryClient);
 
-  const activateMutation = useMutation({
-    mutationFn: () => invoiceService.updateInvoice(invoiceId, { status: 'pending' }),
-    onSuccess: () => { toast.success('تم اعتماد الفاتورة — يمكنك الآن تسجيل المدفوعات'); invalidate(); },
-    onError: (e: Error) => toast.error(e.message || 'تعذّر اعتماد الفاتورة'),
-  });
+  // [INV-P2] الوصول من القائمة بزر «إصدار» يفتح نافذة الإصدار مباشرة.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const wantsIssue = searchParams.get('issue') === '1';
+  const invoiceStatus = invoice?.status;
+  useEffect(() => {
+    if (wantsIssue && invoiceStatus === 'draft') {
+      setShowIssue(true);
+      searchParams.delete('issue');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [wantsIssue, invoiceStatus, searchParams, setSearchParams]);
+
   const sendMutation = useMutation({
     mutationFn: (method: 'email' | 'whatsapp') => invoiceService.sendInvoice(invoiceId, method),
     onSuccess: (res) => { toast.success(res.message || 'تم إرسال الفاتورة'); invalidate(); setShowSend(false); },
@@ -129,9 +141,15 @@ const InvoiceDetailPage: React.FC = () => {
   if (isLoading) return <LoadingState />;
   if (isError || !invoice) return <ErrorState onRetry={() => refetch()} title="تعذّر تحميل الفاتورة" />;
 
-  const a = invoiceActions(invoice.status);
-  // النمط الضريبي (ملحق أ): العنوان حسب is_tax_invoice (الطبيعة الضريبية المُجمَّدة)، لا مثبّت.
-  const docTitle = invoice.is_tax_invoice ? 'فاتورة ضريبية' : 'فاتورة';
+  const a = invoiceActions(invoice.status, invoice);
+  // [INV-P2] العنوان حسب نوع المستند والطبيعة الضريبية المُجمَّدة ونوع الفاتورة الضريبية.
+  const kind = invoice.document_kind ?? 'invoice';
+  const isNote = kind !== 'invoice';
+  const docTitle = isNote
+    ? DOCUMENT_KIND_LABEL[kind]
+    : (invoice.is_tax_invoice ? (invoice.tax_invoice_subtype === 'simplified' ? 'فاتورة ضريبية مبسطة' : 'فاتورة ضريبية') : 'فاتورة');
+  const credited = toNumber(invoice.credited_amount ?? 0);
+  const relatedNotes = invoice.zatca_notes ?? [];
   const dueLabel = formatDueLabel(invoice.due_date);
   const hasVat = toNumber(invoice.vat_amount) > 0;
 
@@ -168,8 +186,14 @@ const InvoiceDetailPage: React.FC = () => {
         </div>
         <div className="fin-detail-header__actions">
           <button type="button" className="fin-btn fin-btn--sm" onClick={() => invoiceService.downloadPdf(invoice.id, invoice.invoice_number).catch(() => toast.error('تعذّر تحميل PDF'))}><Download size={14} /> PDF</button>
-          {canManage && a.canActivate && (
-            <button type="button" className="fin-btn fin-btn--sm" disabled={activateMutation.isPending} onClick={() => activateMutation.mutate()}><CheckCircle size={14} /> تفعيل/اعتماد</button>
+          {canManage && a.canIssue && (
+            <button type="button" className="fin-btn fin-btn--primary fin-btn--sm" onClick={() => setShowIssue(true)}><CheckCircle size={14} /> إصدار الفاتورة</button>
+          )}
+          {canManage && a.canCreditNote && (
+            <button type="button" className="fin-btn fin-btn--sm" onClick={() => setNoteKind('credit')}><FileMinus size={14} /> إشعار دائن</button>
+          )}
+          {canManage && a.canDebitNote && (
+            <button type="button" className="fin-btn fin-btn--sm" onClick={() => setNoteKind('debit')}><FilePlus size={14} /> إشعار مدين</button>
           )}
           {canManage && a.canSend && (
             <button type="button" className="fin-btn fin-btn--sm" onClick={() => setShowSend(true)}><Send size={14} /> إرسال</button>
@@ -186,12 +210,38 @@ const InvoiceDetailPage: React.FC = () => {
         </div>
       </div>
 
+      {/* [INV-P2] الفاتورة الصادرة مقفلة — رقاقة نصية مسطّحة */}
+      {a.isLocked && !isNote && invoice.status !== 'cancelled' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 6, fontSize: 12.5, color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)', background: 'var(--color-bg-secondary, transparent)' }}>
+          <Lock size={13} style={{ flexShrink: 0 }} />
+          <span>
+            {invoice.is_tax_invoice
+              ? 'الفاتورة الضريبية صادرة ومقفلة: لا تُعدَّل بياناتها المالية ولا تُلغى. التصحيح بإشعار دائن أو مدين.'
+              : 'الفاتورة صادرة ومقفلة: لا تُعدَّل بياناتها المالية. للتصحيح أصدر إشعاراً، أو ألغها وأصدر فاتورة جديدة.'}
+            {a.fullyCredited && ' هذه الفاتورة مغطاة بالكامل بإشعار دائن.'}
+          </span>
+        </div>
+      )}
+      {isNote && invoice.zatca_original_invoice && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 6, fontSize: 12.5, color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}>
+          <FileText size={13} style={{ flexShrink: 0 }} />
+          <span>
+            {DOCUMENT_KIND_LABEL[kind]} على الفاتورة{' '}
+            <button type="button" className="fin-btn fin-btn--ghost fin-btn--sm" style={{ padding: '0 4px' }} onClick={() => navigate(`/finance/invoices/${invoice.zatca_original_invoice?.id}`)}>
+              {invoice.zatca_original_invoice.invoice_number}
+            </button>
+            {invoice.zatca_note_reason && <> — السبب: {invoice.zatca_note_reason}</>}
+          </span>
+        </div>
+      )}
+
       {/* بطاقات مالية */}
       <div className="fin-cards">
         <div className="fin-card"><div className="fin-card__icon fin-card__icon--neutral"><Receipt size={18} /></div><div className="fin-card__body"><div className="fin-card__value">{formatSAR(invoice.total_amount)}</div><div className="fin-card__label">الإجمالي</div></div></div>
         <div className="fin-card"><div className="fin-card__icon fin-card__icon--success"><CheckCircle size={18} /></div><div className="fin-card__body"><div className="fin-card__value fin-card__value--success">{formatSAR(invoice.paid_amount)}</div><div className="fin-card__label">المدفوع</div></div></div>
         <div className="fin-card"><div className="fin-card__icon fin-card__icon--warning"><CreditCard size={18} /></div><div className="fin-card__body"><div className="fin-card__value fin-card__value--warning">{formatSAR(invoice.remaining_amount)}</div><div className="fin-card__label">المتبقّي</div></div></div>
         {hasVat && <div className="fin-card"><div className="fin-card__icon fin-card__icon--info"><FileText size={18} /></div><div className="fin-card__body"><div className="fin-card__value fin-card__value--info">{formatSAR(invoice.vat_amount)}</div><div className="fin-card__label">الضريبة ({formatPercent(invoice.vat_rate)})</div></div></div>}
+        {credited > 0 && <div className="fin-card"><div className="fin-card__icon fin-card__icon--neutral"><FileMinus size={18} /></div><div className="fin-card__body"><div className="fin-card__value">{formatSAR(credited)}</div><div className="fin-card__label">إشعارات دائنة</div></div></div>}
       </div>
 
       {/* تخطيط عمودين: رئيسي (الدفعات + ZATCA) + جانبي (معلومات الفاتورة) */}
@@ -215,6 +265,27 @@ const InvoiceDetailPage: React.FC = () => {
               )) : <div className="fin-cell-muted">لا توجد دفعات مسجّلة.</div>}
             </div>
           </div>
+
+          {/* [INV-P2] الإشعارات الصادرة على هذه الفاتورة */}
+          {!isNote && relatedNotes.length > 0 && (
+            <div className="fin-section">
+              <div className="fin-section__head"><span className="fin-section__title"><FileMinus size={15} /> الإشعارات ({relatedNotes.length})</span></div>
+              <div className="fin-section__body">
+                {relatedNotes.map((n) => (
+                  <div key={n.id} className="fin-line" style={{ cursor: 'pointer' }} onClick={() => navigate(`/finance/invoices/${n.id}`)}>
+                    <div className="fin-line__main">
+                      <span className="fin-docnum">{n.invoice_number}</span>
+                      <span className="fin-line__sub">{DOCUMENT_KIND_LABEL[n.document_kind ?? 'credit_note']} · {n.invoice_date?.split('T')[0]}{n.zatca_note_reason ? ` · ${n.zatca_note_reason}` : ''}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <StatusBadge kind="invoice" status={n.status} />
+                      <span className="fin-line__amount">{n.document_kind === 'credit_note' ? '−' : '+'}{formatSAR(n.total_amount)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ZATCA — يظهر فقط عند تفعيل الميزة (لا يغيّر الطبيعة الضريبية) */}
           {zatcaEnabled && invoice.zatca_status && (
@@ -268,6 +339,10 @@ const InvoiceDetailPage: React.FC = () => {
                   </Def>
                 )}
                 <Def label="تاريخ الإصدار">{invoice.invoice_date?.split('T')[0] ?? '—'}</Def>
+                {invoice.is_tax_invoice && invoice.supply_date && <Def label="تاريخ التوريد">{invoice.supply_date.split('T')[0]}</Def>}
+                {invoice.issued_at && <Def label="صدرت في">{invoice.issued_at.replace('T', ' ').slice(0, 16)}</Def>}
+                {invoice.is_tax_invoice && invoice.tax_invoice_subtype && <Def label="نوع الفاتورة الضريبية">{invoice.tax_invoice_subtype === 'standard' ? 'قياسية (منشأة)' : 'مبسطة (فرد)'}</Def>}
+                {invoice.is_tax_invoice && toNumber(invoice.vat_rate) === 0 && invoice.vat_exemption_reason && <Def label="سبب عدم احتساب الضريبة">{invoice.vat_exemption_reason}</Def>}
                 <Def label="الاستحقاق">
                   <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
                     {invoice.due_date?.split('T')[0]} {dueLabel && <ToneBadge tone={dueLabel.tone}>{dueLabel.text}</ToneBadge>}
@@ -306,6 +381,10 @@ const InvoiceDetailPage: React.FC = () => {
       {showPayment && (
         <PaymentModal isOpen={showPayment} invoice={invoice} onClose={() => setShowPayment(false)} onSubmit={handleSubmitPayment} />
       )}
+
+      {/* [INV-P2] الإصدار والإشعارات */}
+      {showIssue && <IssueInvoiceModal open={showIssue} invoice={invoice} onClose={() => setShowIssue(false)} />}
+      {noteKind && <InvoiceNoteModal open={!!noteKind} invoice={invoice} kind={noteKind} onClose={() => setNoteKind(null)} onIssued={(note) => navigate(`/finance/invoices/${note.id}`)} />}
 
       {/* مودال الإرسال */}
       <Modal

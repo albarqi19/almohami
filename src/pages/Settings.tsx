@@ -55,6 +55,7 @@ import AppReminderHoursSettings from '../components/settings/AppReminderHoursSet
 import CaseNamingSettings from '../components/settings/CaseNamingSettings';
 import TaxIdentitySettings from '../components/settings/TaxIdentitySettings';
 import BankAccountsSettings from '../components/settings/BankAccountsSettings';
+import BillingDocumentsSettings from '../components/settings/BillingDocumentsSettings';
 import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermission } from '../hooks/usePermission';
@@ -625,6 +626,7 @@ const Settings: React.FC = () => {
           <>
             <TaxIdentitySettings />
             <BankAccountsSettings />
+            <BillingDocumentsSettings />
           </>
         );
 

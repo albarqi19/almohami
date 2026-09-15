@@ -64,6 +64,8 @@ const TaxIdentitySettings: React.FC = () => {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [rateDraft, setRateDraft] = useState('15');
   const [periodDraft, setPeriodDraft] = useState<'monthly' | 'quarterly'>('quarterly');
+  // [INV-P6] موعد إلزام الربط مع الهيئة
+  const [dueDraft, setDueDraft] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +86,7 @@ const TaxIdentitySettings: React.FC = () => {
       setDraft(toDraft(p));
       setRateDraft(p.default_vat_rate || '15');
       setPeriodDraft(p.vat_filing_period || 'quarterly');
+      setDueDraft(p.zatca_integration_due_date ?? '');
       setError(null);
     } catch (e) {
       setError((e as ApiError)?.message || 'تعذّر جلب البيانات الضريبية');
@@ -112,8 +115,9 @@ const TaxIdentitySettings: React.FC = () => {
     }
     if (rateDraft !== (profile.default_vat_rate || '15')) out.default_vat_rate = rateDraft;
     if (periodDraft !== (profile.vat_filing_period || 'quarterly')) out.vat_filing_period = periodDraft;
+    if (dueDraft !== (profile.zatca_integration_due_date ?? '')) out.zatca_integration_due_date = dueDraft || null;
     return out;
-  }, [profile, draft, rateDraft, periodDraft]);
+  }, [profile, draft, rateDraft, periodDraft, dueDraft]);
 
   const dirty = Object.keys(changes).length > 0;
 
@@ -162,6 +166,7 @@ const TaxIdentitySettings: React.FC = () => {
       setDraft(toDraft(result.profile));
       setRateDraft(result.profile.default_vat_rate || '15');
       setPeriodDraft(result.profile.vat_filing_period || 'quarterly');
+      setDueDraft(result.profile.zatca_integration_due_date ?? '');
       setConfirming(false);
       setImpact(null);
       setApplyToDrafts(false);
@@ -350,6 +355,17 @@ const TaxIdentitySettings: React.FC = () => {
             </div>
           )}
 
+          {profile.zatca_integration_due_date && !profile.zatca.enabled && Math.ceil((new Date(profile.zatca_integration_due_date).getTime() - Date.now()) / 86400000) <= 60 && (
+            <div style={box('warn')}>
+              <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 2 }} />
+              <span>
+                {Math.ceil((new Date(profile.zatca_integration_due_date).getTime() - Date.now()) / 86400000) < 0
+                  ? `موعد إلزام الربط مع الهيئة (${profile.zatca_integration_due_date}) مضى والمكتب غير مربوط بعد. ابدأ الربط من «الفوترة الإلكترونية».`
+                  : `بقي ${Math.ceil((new Date(profile.zatca_integration_due_date).getTime() - Date.now()) / 86400000)} يوماً على موعد إلزام الربط مع الهيئة (${profile.zatca_integration_due_date}). ابدأ الربط من «الفوترة الإلكترونية».`}
+              </span>
+            </div>
+          )}
+
           {profile.zatca.enabled && !isRegistered && (
             <div style={box('warn')}>
               <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 2 }} />
@@ -430,6 +446,11 @@ const TaxIdentitySettings: React.FC = () => {
                   <option value="quarterly">ربع سنوية</option>
                   <option value="monthly">شهرية</option>
                 </select>
+              </div>
+              <div className="settings-field">
+                <span className="settings-field__label">موعد إلزام الربط مع الهيئة</span>
+                <input type="date" className="settings-field__input" style={{ width: 170 }} value={dueDraft} onChange={(e) => setDueDraft(e.target.value)} disabled={!canEdit || saving} />
+                <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)' }}>حسب موجة الفوترة الإلكترونية التي أُبلغ بها المكتب. يظهر تنبيه قبل الموعد بشهرين.</span>
               </div>
             </div>
           )}

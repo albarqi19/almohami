@@ -35,6 +35,8 @@ export interface TaxProfile {
   license_number_source: 'tenant' | 'sba' | null;
   address_source: 'sba' | null;
   zatca: { available: boolean; enabled: boolean; environment: string | null };
+  /** [INV-P6] موعد إلزام الربط مع الهيئة (Y-m-d) */
+  zatca_integration_due_date?: string | null;
 }
 
 export interface TaxProfileImpact {
@@ -69,6 +71,8 @@ export type TaxProfileUpdate = Partial<
 > & {
   confirm_registration_change?: boolean;
   apply_rate_to_drafts?: boolean;
+  /** [INV-P6] موعد إلزام الربط مع الهيئة */
+  zatca_integration_due_date?: string | null;
 };
 
 export interface TaxProfileUpdateResult {

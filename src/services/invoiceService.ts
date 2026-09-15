@@ -5,6 +5,9 @@ import type {
   InvoicesResponse,
   InvoiceResponse,
   CreateInvoiceData,
+  IssueInvoicePayload,
+  IssueNotePayload,
+  VatExemptionReason,
 } from '../types/billing';
 
 export class InvoiceService {
@@ -193,6 +196,67 @@ export class InvoiceService {
   }
 
   /**
+   * [INV-P2] إصدار المسودة (تثبيت التواريخ والنوع وQR ثم القفل).
+   */
+  static async issueInvoice(
+    id: number,
+    payload: IssueInvoicePayload = {}
+  ): Promise<{ success: boolean; message: string; data: CaseInvoice; warnings?: string[] }> {
+    return apiClient.post<{ success: boolean; message: string; data: CaseInvoice; warnings?: string[] }>(
+      `/case-invoices/${id}/issue`,
+      payload
+    );
+  }
+
+  /**
+   * [INV-P2] إشعار دائن/مدين على فاتورة صادرة.
+   */
+  static async issueNote(
+    id: number,
+    kind: 'credit' | 'debit',
+    payload: IssueNotePayload
+  ): Promise<{ success: boolean; message: string; data: CaseInvoice; original?: CaseInvoice }> {
+    return apiClient.post<{ success: boolean; message: string; data: CaseInvoice; original?: CaseInvoice }>(
+      `/case-invoices/${id}/${kind === 'credit' ? 'credit-note' : 'debit-note'}`,
+      payload
+    );
+  }
+
+  /**
+   * [INV-P6] أرشيف ZIP للفترة (PDF + XML الهيئة + فهرس) — ملف يُحفظ.
+   */
+  static async downloadArchive(from: string, to: string, kind: 'all' | 'invoices' | 'notes' = 'all'): Promise<void> {
+    const token = localStorage.getItem('authToken');
+    const res = await fetch(`${API_BASE_URL}/case-invoices/archive?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&kind=${kind}`, {
+      headers: { Accept: 'application/zip', 'ngrok-skip-browser-warning': '69420', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+    if (!res.ok) {
+      let message = 'تعذّر تجهيز الأرشيف';
+      try {
+        const body = await res.clone().json();
+        if (body?.message) message = body.message;
+      } catch { /* ليس JSON */ }
+      throw new Error(message);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `invoices-archive-${from}-${to}.zip`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * [INV-P2] أسباب عدم احتساب الضريبة (أكواد الهيئة).
+   */
+  static async getVatExemptionReasons(): Promise<{ success: boolean; data: { categories: Record<string, string>; reasons: VatExemptionReason[] } }> {
+    return apiClient.get<{ success: boolean; data: { categories: Record<string, string>; reasons: VatExemptionReason[] } }>('/case-invoices/vat-exemption-reasons');
+  }
+
+  /**
    * الحصول على فواتير عميل محدد
    */
   static async getClientInvoices(clientId: number): Promise<InvoicesResponse> {
@@ -227,6 +291,10 @@ export const invoiceService = {
   getOverdue: InvoiceService.getOverdue.bind(InvoiceService),
   getDue: InvoiceService.getDue.bind(InvoiceService),
   getStats: InvoiceService.getStats.bind(InvoiceService),
+  issueInvoice: InvoiceService.issueInvoice.bind(InvoiceService),
+  issueNote: InvoiceService.issueNote.bind(InvoiceService),
+  getVatExemptionReasons: InvoiceService.getVatExemptionReasons.bind(InvoiceService),
+  downloadArchive: InvoiceService.downloadArchive.bind(InvoiceService),
   getClientInvoices: InvoiceService.getClientInvoices.bind(InvoiceService),
   getCaseInvoices: InvoiceService.getCaseInvoices.bind(InvoiceService),
   getContractInvoices: InvoiceService.getContractInvoices.bind(InvoiceService),
