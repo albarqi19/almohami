@@ -25,6 +25,52 @@ export interface Subtask {
   order: number;
   created_at: string;
   updated_at: string;
+  // نافذة الفرعية: موعدها وعدّاداتها (تخص الفرعية وحدها، لا تصل To Do)
+  due_date?: string | null;
+  steps_total?: number;
+  steps_done?: number;
+  comments_count?: number;
+  documents_count?: number;
+}
+
+export interface SubtaskStep {
+  id: number;
+  subtask_id: number;
+  title: string;
+  is_completed: boolean;
+  completed_at: string | null;
+  completed_by_user?: { id: number; name: string } | null;
+  order: number;
+}
+
+export interface SubtaskComment {
+  id: number;
+  subtask_id: number;
+  user_id: number | null;
+  body: string;
+  mentions: number[] | null;
+  created_at: string;
+  user?: { id: number; name: string } | null;
+}
+
+export interface SubtaskDocument {
+  id: number | string;
+  title: string;
+  file_name?: string | null;
+  mime_type?: string | null;
+  file_size?: number | null;
+  external_url?: string | null;
+  created_at?: string;
+}
+
+export interface SubtaskDetail {
+  subtask: Subtask;
+  task: { id: number; title: string; status: string; project_id: number | null; case_id: number | null };
+  steps: SubtaskStep[];
+  steps_total: number;
+  steps_done: number;
+  comments: SubtaskComment[];
+  documents: SubtaskDocument[];
 }
 
 /** نتيجة إيقاف/استئناف/إنجاز فرعية — task_status لمزامنة حالة المهمة الأم (من الجهتين) */
@@ -50,6 +96,7 @@ export interface UpdateSubtaskData {
   title?: string;
   description?: string;
   assigned_to?: string | null;
+  due_date?: string | null;
 }
 
 export interface ReorderItem {
@@ -70,6 +117,50 @@ export class SubtaskService {
       return response.data;
     }
     throw new Error(response.message || 'فشل في جلب المهام الفرعية');
+  }
+
+  // ── نافذة الفرعية ──────────────────────────────────────────
+
+  static async getSubtask(subtaskId: string | number): Promise<SubtaskDetail> {
+    const response = await apiClient.get<ApiResponse<SubtaskDetail>>(`/subtasks/${subtaskId}`);
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'تعذر فتح المهمة الفرعية');
+  }
+
+  static async addStep(subtaskId: string | number, title: string): Promise<SubtaskStep> {
+    const response = await apiClient.post<ApiResponse<SubtaskStep>>(`/subtasks/${subtaskId}/steps`, { title });
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'تعذر إضافة الخطوة');
+  }
+
+  static async updateStep(subtaskId: string | number, stepId: number, data: { title?: string; is_completed?: boolean }): Promise<SubtaskStep> {
+    const response = await apiClient.patch<ApiResponse<SubtaskStep>>(`/subtasks/${subtaskId}/steps/${stepId}`, data);
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'تعذر تحديث الخطوة');
+  }
+
+  static async deleteStep(subtaskId: string | number, stepId: number): Promise<void> {
+    const response = await apiClient.delete<ApiResponse>(`/subtasks/${subtaskId}/steps/${stepId}`);
+    if (!response.success) throw new Error(response.message || 'تعذر حذف الخطوة');
+  }
+
+  static async addComment(subtaskId: string | number, body: string, mentions?: number[]): Promise<SubtaskComment> {
+    const response = await apiClient.post<ApiResponse<SubtaskComment>>(`/subtasks/${subtaskId}/comments`, { body, mentions });
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'تعذر إضافة التعليق');
+  }
+
+  static async deleteComment(subtaskId: string | number, commentId: number): Promise<void> {
+    const response = await apiClient.delete<ApiResponse>(`/subtasks/${subtaskId}/comments/${commentId}`);
+    if (!response.success) throw new Error(response.message || 'تعذر حذف التعليق');
+  }
+
+  static async uploadDocument(subtaskId: string | number, file: File): Promise<SubtaskDocument> {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await apiClient.post<ApiResponse<SubtaskDocument>>(`/subtasks/${subtaskId}/documents`, form);
+    if (response.success && response.data) return response.data;
+    throw new Error(response.message || 'تعذر رفع المرفق');
   }
 
   /**
