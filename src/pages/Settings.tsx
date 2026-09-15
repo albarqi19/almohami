@@ -53,7 +53,7 @@ import MobileAppSettings from '../components/settings/MobileAppSettings';
 import OfficeBroadcastSettings from '../components/settings/OfficeBroadcastSettings';
 import AppReminderHoursSettings from '../components/settings/AppReminderHoursSettings';
 import CaseNamingSettings from '../components/settings/CaseNamingSettings';
-import VatRegistrationSettings from '../components/settings/VatRegistrationSettings';
+import TaxIdentitySettings from '../components/settings/TaxIdentitySettings';
 import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermission } from '../hooks/usePermission';
@@ -92,7 +92,8 @@ const Settings: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const tabFromQuery = params.get('tab');
     if (tabFromQuery) {
-      setActiveTab(tabFromQuery);
+      // [INV-P1] التبويب القديم «التسجيل الضريبي» صار جزءاً من «الفوترة والضريبة»
+      setActiveTab(tabFromQuery === 'vat_registration' ? 'billing_tax' : tabFromQuery);
       return;
     }
 
@@ -128,7 +129,9 @@ const Settings: React.FC = () => {
     { id: 'company_policy', label: 'سياسة الشركة', icon: ShieldCheck, scope: 'admin' },
     // ‏[TAX-01] تبويب مستقل لا حقلٌ داخل «إعدادات الشركة»: الحالة الضريبية تغيّر
     // ‏ما يدفعه العميل في كل فاتورة قادمة، فلا تُحفظ ضمناً مع الاسم والعنوان.
-    { id: 'vat_registration', label: 'التسجيل الضريبي', icon: Percent, scope: 'admin' },
+    // [INV-P1] «الفوترة والضريبة»: الرقم الضريبي والاسم القانوني والسجل والعنوان الوطني
+    // وحالة التسجيل في قسم واحد (بلا ربط مع الهيئة). المعرّف القديم vat_registration يحوَّل إليه.
+    { id: 'billing_tax', label: 'الفوترة والضريبة', icon: Percent, scope: 'admin' },
     { id: 'integrations', label: 'التكاملات', icon: Link, scope: 'staff' },
     { id: 'word_addin', label: 'إضافة Word', icon: FileText, scope: 'staff' },
     { id: 'mobile_app', label: 'تطبيق الجوال', icon: Smartphone, scope: 'staff' },
@@ -592,8 +595,8 @@ const Settings: React.FC = () => {
       case 'case_naming':
         return <CaseNamingSettings />;
 
-      case 'vat_registration':
-        return <VatRegistrationSettings />;
+      case 'billing_tax':
+        return <TaxIdentitySettings />;
 
       case 'najiz':
         return (
@@ -2444,7 +2447,7 @@ const Settings: React.FC = () => {
                 {effectiveTab === 'company' && 'إعدادات الشركة'}
                 {effectiveTab === 'branding' && 'هوية الشركة'}
                 {effectiveTab === 'company_policy' && 'سياسة الشركة'}
-                {effectiveTab === 'vat_registration' && 'التسجيل الضريبي'}
+                {effectiveTab === 'billing_tax' && 'الفوترة والضريبة'}
                 {effectiveTab === 'subscription' && 'إدارة الاشتراك'}
                 {effectiveTab === 'invoices' && 'الفواتير'}
               </div>
@@ -2457,7 +2460,7 @@ const Settings: React.FC = () => {
                 {effectiveTab === 'company' && 'تحديث معلومات شركتك مثل الاسم والبريد والعنوان.'}
                 {effectiveTab === 'branding' && 'خصص مظهر صفحة تسجيل الدخول الخاصة بشركتك.'}
                 {effectiveTab === 'company_policy' && 'إدارة سياسة الشركة التي يجب على المستخدمين الموافقة عليها للوصول إلى النظام.'}
-                {effectiveTab === 'vat_registration' && 'تحديد ما إذا كان المكتب مسجّلاً في ضريبة القيمة المضافة، وضبط النسبة الافتراضية.'}
+                {effectiveTab === 'billing_tax' && 'الرقم الضريبي والاسم القانوني والسجل والعنوان الوطني، وحالة التسجيل في ضريبة القيمة المضافة.'}
                 {effectiveTab === 'subscription' && 'إدارة اشتراكك الحالي، الترقية للسنوي، أو الإلغاء.'}
                 {effectiveTab === 'invoices' && 'عرض وتحميل جميع الفواتير السابقة.'}
               </p>
@@ -2474,7 +2477,7 @@ const Settings: React.FC = () => {
                 {effectiveTab === 'company' && 'تحديث بيانات الشركة يظهر في الفواتير والتقارير'}
                 {effectiveTab === 'branding' && 'رابط شركتك المخصص: company-slug.alraedlaw.com'}
                 {effectiveTab === 'company_policy' && 'حدد فترة التجديد المناسبة لضمان التزام المستخدمين بالسياسة بشكل دوري'}
-                {effectiveTab === 'vat_registration' && 'التغيير يسري على الفواتير والعقود الجديدة فقط — الصادر قبله لا يتغيّر'}
+                {effectiveTab === 'billing_tax' && 'التغيير يسري على الفواتير والعقود الجديدة فقط — الصادر قبله لا يتغيّر'}
                 {effectiveTab === 'subscription' && 'الاشتراك السنوي يوفر لك شهرين مجاناً!'}
                 {effectiveTab === 'invoices' && 'يمكنك تحميل الفواتير بصيغة PDF للأرشفة'}
               </span>

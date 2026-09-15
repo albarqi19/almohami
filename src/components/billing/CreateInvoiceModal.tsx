@@ -15,6 +15,7 @@ import {
 import { UserService } from '../../services/UserService';
 import { CaseService } from '../../services/caseService';
 import { apiClient } from '../../utils/api';
+import { useBillingSettings } from '../../hooks/useBillingSettings';
 import type { User as UserType, Case } from '../../types';
 import { toDateInputValue } from '../../utils/dateAr';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
@@ -77,16 +78,21 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   // [BILL-05] محرّر بنود الفاتورة (اختياري؛ عند وجوده يُشتقّ subtotal منه).
   const [lineItems, setLineItems] = useState<LineItemRow[]>([]);
-  // [TAX-02] حالة التسجيل الضريبي للمستأجر + النسبة الافتراضية (بدل تثبيت 15).
-  const [isVatRegistered, setIsVatRegistered] = useState(true);
-  const [defaultVatRate, setDefaultVatRate] = useState('15');
+  // [TAX-02][INV-P1] حالة التسجيل الضريبي + النسبة الافتراضية من المصدر المشترك (useBillingSettings)
+  // — تُلغى بعد أي حفظ في «الفوترة والضريبة» فلا تبقى النافذة على قيمة قديمة.
+  const { isVatRegistered, defaultVatRate, taxNumberUsable } = useBillingSettings(isOpen);
 
   useEffect(() => {
     if (isOpen) {
       if (clients.length === 0) fetchClients();
-      fetchBillingSettings();
     }
   }, [isOpen]);
+
+  // النسبة الافتراضية للنموذج تتبع حالة التسجيل متى وصلت
+  useEffect(() => {
+    if (!isOpen) return;
+    setFormData(prev => ({ ...prev, vat_rate: isVatRegistered ? defaultVatRate : '0' }));
+  }, [isOpen, isVatRegistered, defaultVatRate]);
 
   const fetchClients = async () => {
     setClientsLoading(true);
@@ -95,21 +101,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
       setClients(data.map((c: any) => ({ id: c.id, name: c.name, phone: c.phone, nationalId: c.nationalId })));
     } catch { /* ignore */ }
     finally { setClientsLoading(false); }
-  };
-
-  // [TAX-02] جلب إعدادات الفوترة لتحديد النسبة الافتراضية وتعطيل الضريبة لغير المسجّلين.
-  const fetchBillingSettings = async () => {
-    try {
-      const res = await apiClient.get<{ data: { settings: Record<string, { value: unknown }> } }>(
-        '/tenant/advanced-settings/group/billing'
-      );
-      const settings = res?.data?.settings || {};
-      const registered = Boolean(settings.is_vat_registered?.value);
-      const rate = settings.default_vat_rate?.value != null ? String(settings.default_vat_rate.value) : '15';
-      setIsVatRegistered(registered);
-      setDefaultVatRate(rate);
-      setFormData(prev => ({ ...prev, vat_rate: registered ? rate : '0' }));
-    } catch { /* تجاهل — الباك يفرض النسبة الصحيحة على أي حال */ }
   };
 
   // [BILL-05] عمليات محرّر البنود.
@@ -358,6 +349,9 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
                   onChange={(e) => updateField('vat_rate', e.target.value)}
                   placeholder={defaultVatRate} disabled={!isVatRegistered}
                   title={!isVatRegistered ? 'الشركة غير مسجّلة في ضريبة القيمة المضافة' : ''} />
+                {isVatRegistered && !taxNumberUsable && (
+                  <span style={{ fontSize: 11, color: 'var(--status-orange, #D97706)', lineHeight: 1.5 }}>الرقم الضريبي للمكتب غير مُدخل أو غير صالح — أكمله من «الفوترة والضريبة»</span>
+                )}
               </div>
               <div className="asm-field" style={{ width: 80 }}>
                 <label>خصم %</label>

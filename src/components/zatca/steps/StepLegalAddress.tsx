@@ -1,6 +1,9 @@
 // === الخطوة 1: البيانات القانونية + العنوان الوطني + OTP → POST /zatca/onboard/start ===
-import React, { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import React, { useEffect, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { TaxProfileService, TAX_PROFILE_QUERY_KEY } from '../../../services/taxProfileService';
+import { isSampleVatNumber, normalizeDigits } from '../../../utils/saudiVat';
 import { AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { zatcaService } from '../../../services/zatcaService';
@@ -47,7 +50,9 @@ function validate(f: FormState): Partial<Record<keyof FormState, string>> {
   if (!f.otp.trim()) e.otp = 'رمز OTP مطلوب';
   if (!f.legal_name_ar.trim()) e.legal_name_ar = 'الاسم القانوني (عربي) مطلوب';
   if (!f.vat_number.trim()) e.vat_number = 'الرقم الضريبي مطلوب';
-  else if (!VAT_RE.test(f.vat_number.trim())) e.vat_number = 'الرقم الضريبي يجب أن يكون 15 رقماً يبدأ وينتهي بالرقم 3';
+  else if (!VAT_RE.test(normalizeDigits(f.vat_number))) e.vat_number = 'الرقم الضريبي يجب أن يكون 15 رقماً يبدأ وينتهي بالرقم 3';
+  // [INV-P1] السجل التجاري مطلوب للربط: معرّف البائع الإضافي في ملف الهيئة
+  if (!/^\d{10}$/.test(normalizeDigits(f.commercial_registration))) e.commercial_registration = 'السجل التجاري 10 أرقام';
   if (!/^\d{4}$/.test(f.building_number.trim())) e.building_number = 'رقم المبنى 4 أرقام';
   if (!f.street_name.trim()) e.street_name = 'اسم الشارع مطلوب';
   if (!f.district.trim()) e.district = 'الحي مطلوب';
@@ -61,6 +66,26 @@ const StepLegalAddress: React.FC<Props> = ({ onSuccess }) => {
   const [form, setForm] = useState<FormState>(INITIAL);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
+
+  // [INV-P1] البيانات تُقرأ من «الفوترة والضريبة» — المعالج كان يبدأ فارغاً فيكتب المكتب
+  // بياناته مرّتين، وقد تختلف النسختان.
+  const { data: taxProfile } = useQuery({ queryKey: TAX_PROFILE_QUERY_KEY, queryFn: () => TaxProfileService.get(), staleTime: 60_000 });
+  useEffect(() => {
+    if (!taxProfile) return;
+    setForm((prev) => ({
+      ...prev,
+      legal_name_ar: prev.legal_name_ar || taxProfile.legal_name_ar || taxProfile.name || '',
+      legal_name_en: prev.legal_name_en || taxProfile.legal_name_en || '',
+      vat_number: prev.vat_number || taxProfile.tax_number || '',
+      commercial_registration: prev.commercial_registration || taxProfile.commercial_registration || '',
+      building_number: prev.building_number || taxProfile.building_number || '',
+      street_name: prev.street_name || taxProfile.street_name || '',
+      district: prev.district || taxProfile.district || '',
+      city: prev.city || taxProfile.city || '',
+      postal_code: prev.postal_code || taxProfile.postal_code || '',
+      additional_number: prev.additional_number || taxProfile.additional_number || '',
+    }));
+  }, [taxProfile]);
 
   const set = <K extends keyof FormState>(k: K, v: string) => {
     setForm((p) => ({ ...p, [k]: v }));
@@ -140,7 +165,15 @@ const StepLegalAddress: React.FC<Props> = ({ onSuccess }) => {
       <h3 className="zatca-wizard__step-title">البيانات القانونية والعنوان الوطني</h3>
       <p className="zatca-wizard__step-desc">
         أدخل بيانات منشأتك القانونية والعنوان الوطني ورمز OTP المستخرج من بوابة فاتورة. تُستخدم لتوليد طلب شهادة الامتثال.
+        {' '}هذه البيانات من قسم <Link to="/settings?tab=billing_tax">الفوترة والضريبة</Link> وتُحفظ فيه بعد نجاح الربط.
       </p>
+
+      {taxProfile && !taxProfile.is_vat_registered ? (
+        <div className="zatca-form-error"><AlertCircle size={16} />المكتب غير مسجَّل في ضريبة القيمة المضافة. الربط خارج بيئة التجربة يحتاج تفعيل التسجيل من «الفوترة والضريبة» أولاً.</div>
+      ) : null}
+      {isSampleVatNumber(form.vat_number) ? (
+        <div className="zatca-form-error"><AlertCircle size={16} />الرقم الضريبي المدخل رقم تجريبي من بيئة اختبار الهيئة. يُقبل في بيئة التجربة فقط.</div>
+      ) : null}
 
       {serverError ? (
         <div className="zatca-form-error"><AlertCircle size={16} />{serverError}</div>
@@ -152,7 +185,7 @@ const StepLegalAddress: React.FC<Props> = ({ onSuccess }) => {
       </div>
       <div className="zatca-row">
         {field('vat_number', 'الرقم الضريبي (VAT)', { required: true, hint: '15 رقماً يبدأ وينتهي بـ 3', dir: 'ltr', placeholder: '3XXXXXXXXXXXXX3' })}
-        {field('commercial_registration', 'السجل التجاري', { dir: 'ltr' })}
+        {field('commercial_registration', 'السجل التجاري', { required: true, hint: '10 أرقام', dir: 'ltr' })}
       </div>
 
       <h4 className="zatca-wizard__step-title" style={{ fontSize: '13.5px', marginTop: '6px' }}>العنوان الوطني</h4>

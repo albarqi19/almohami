@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,6 +34,7 @@ import ContractPreview from '../../components/contracts/ContractPreview';
 import ContractVariableValuesModal from '../../components/contracts/ContractVariableValuesModal';
 import { useContractVariables } from '../../hooks/useContractVariables';
 import { apiClient } from '../../utils/api';
+import { useBillingSettings } from '../../hooks/useBillingSettings';
 import type {
   ContractTemplate,
   CreatePaymentTermData,
@@ -66,6 +67,8 @@ interface TenantInfo {
   phone?: string;
   address?: string;
   license_number?: string;
+  // [INV-P1] ترخيص المحامي المالك من هيئة المحامين — احتياطاً حين لا ترخيص للمكتب
+  sba_license_number?: string | null;
   // [ZATCA-AUDIT-P0] الباك يرجع العمود باسمه الحقيقي commercial_registration لا commercial_reg
   commercial_registration?: string;
   iban?: string;
@@ -227,19 +230,12 @@ const ContractBuilder: React.FC = () => {
 
   // [TAX-02] إعدادات الفوترة: مكتب غير مسجّل ضريبياً → الباك يفرض ضريبة 0 على
   // العقد، فنُطابق المعاينة والملخّص المالي هنا (نفس نمط CreateInvoiceModal).
-  const { data: billingSettings } = useQuery({
-    queryKey: ['billingSettings'],
-    queryFn: async () => {
-      const res = await apiClient.get<{ data: { settings: Record<string, { value: unknown }> } }>(
-        '/tenant/advanced-settings/group/billing'
-      );
-      const settings = res?.data?.settings || {};
-      return {
-        isVatRegistered: Boolean(settings.is_vat_registered?.value),
-        defaultVatRate: settings.default_vat_rate?.value != null ? Number(settings.default_vat_rate.value) : 15,
-      };
-    },
-  });
+  // [INV-P1] من المصدر المشترك (useBillingSettings) — يُلغى بعد أي حفظ في «الفوترة والضريبة».
+  const billing = useBillingSettings();
+  const billingSettings = useMemo(
+    () => (billing.profile ? { isVatRegistered: billing.isVatRegistered, defaultVatRate: Number(billing.defaultVatRate) } : undefined),
+    [billing.profile, billing.isVatRegistered, billing.defaultVatRate],
+  );
   const isVatRegistered = billingSettings?.isVatRegistered ?? true;
 
   useEffect(() => {
@@ -376,7 +372,7 @@ const ContractBuilder: React.FC = () => {
     if (tenantData) {
       values.firm_name = tenantData.name || '';
       values.firm_cr = tenantData.commercial_registration || '';
-      values.firm_license = tenantData.license_number || '';
+      values.firm_license = tenantData.license_number || tenantData.sba_license_number || '';
       values.firm_address = tenantData.address || '';
       values.firm_phone = tenantData.phone || '';
       values.firm_email = tenantData.email || '';
@@ -432,6 +428,8 @@ const ContractBuilder: React.FC = () => {
         entity_type: 'company',
         name: tenantData?.name || 'مكتب المحاماة',
         commercial_registration: tenantData?.commercial_registration,
+        // [INV-P1] رقم ترخيص المكتب (أو ترخيص المحامي المالك من هيئة المحامين) يصل للعقد
+        license_number: tenantData?.license_number || tenantData?.sba_license_number || undefined,
         phone: tenantData?.phone,
         email: tenantData?.email,
         address: tenantData?.address,
