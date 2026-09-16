@@ -34,6 +34,7 @@ import {
   ArchiveRestore,
 } from 'lucide-react';
 import { WekalatService } from '../services/wekalatService';
+import { toHijri } from '../utils/hijriDate';
 import { CaseWekalaService, type WekalaCaseItem, type MissingWekalaResponse } from '../services/caseWekalaService';
 import { AddWekalaModal } from '../components/AddWekalaModal';
 import { MissingWekalaCasesPanel } from '../components/MissingWekalaCasesPanel';
@@ -73,12 +74,13 @@ const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
 
 // ==================== Helper Functions ====================
 
+// الميلادي بتقويم مصرَّح به (gregory) — افتراض المتصفح لـar-SA يتباين بين الإصدارات
 const formatDate = (value?: string | null): string => {
   if (!value) return '-';
   try {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
-    return date.toLocaleDateString('ar-SA', {
+    return date.toLocaleDateString('ar-SA-u-ca-gregory', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -86,6 +88,18 @@ const formatDate = (value?: string | null): string => {
   } catch {
     return value;
   }
+};
+
+/**
+ * خلية تاريخ الوكالة. المستوردة من ناجز تحمل نصاً هجرياً جاهزاً (issue_date_hijri)، أما
+ * اليدوية فتحمل الميلادي وحده (issue_date_gregorian) — وكانت القائمة تقرأ حقلاً لا يرجعه
+ * الباك (issue_date) فتعرض شرطة رغم إدخال التاريخ. نعرض الهجري، والميلادي في التلميح.
+ */
+const wekalaDate = (hijri?: string | null, gregorian?: string | null): React.ReactNode => {
+  if (hijri) return hijri;
+  if (!gregorian) return '-';
+  const h = toHijri(gregorian);
+  return <span title={formatDate(gregorian)}>{h ?? formatDate(gregorian)}</span>;
 };
 
 const getStatusIcon = (status: string) => {
@@ -267,10 +281,10 @@ export const WekalaModal: React.FC<WekalaModalProps> = ({ wekala, isOpen, onClos
             <tbody>
               <tr>
                 <td className="wk-table__label">تاريخ الإصدار</td>
-                <td>{wekala.issue_date_hijri || formatDate((wekala as any).issue_date_gregorian || wekala.issue_date)}</td>
+                <td>{wekalaDate(wekala.issue_date_hijri, (wekala as any).issue_date_gregorian || wekala.issue_date)}</td>
                 <td className="wk-table__label">تاريخ الانتهاء</td>
                 <td>
-                  {wekala.expiry_date_hijri || formatDate((wekala as any).expiry_date_gregorian || wekala.expiry_date)}
+                  {wekalaDate(wekala.expiry_date_hijri, (wekala as any).expiry_date_gregorian || wekala.expiry_date)}
                 </td>
               </tr>
               {wekala.issue_location && (
@@ -777,10 +791,10 @@ const Wekalat: React.FC = () => {
                   </div>
                 </td>
                 <td className="wekala-date-cell">
-                  {w.issue_date_hijri || formatDate(w.issue_date)}
+                  {wekalaDate(w.issue_date_hijri, (w as any).issue_date_gregorian || w.issue_date)}
                 </td>
                 <td className="wekala-date-cell">
-                  {w.expiry_date_hijri || formatDate(w.expiry_date)}
+                  {wekalaDate(w.expiry_date_hijri, (w as any).expiry_date_gregorian || w.expiry_date)}
                 </td>
                 <td>
                   {(() => {
@@ -898,11 +912,11 @@ const Wekalat: React.FC = () => {
             <div className="wekala-card__footer">
               <span className="wekala-card__date">
                 <Calendar size={12} />
-                {w.issue_date_hijri || formatDate(w.issue_date)}
+                {wekalaDate(w.issue_date_hijri, (w as any).issue_date_gregorian || w.issue_date)}
               </span>
               <span className="wekala-card__date">
                 <Clock size={12} />
-                {w.expiry_date_hijri || formatDate(w.expiry_date)}
+                {wekalaDate(w.expiry_date_hijri, (w as any).expiry_date_gregorian || w.expiry_date)}
               </span>
               {(() => {
                 const rem = getRemainingDays(w);
