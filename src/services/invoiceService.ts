@@ -10,6 +10,22 @@ import type {
   VatExemptionReason,
 } from '../types/billing';
 
+// [INV-SEND] إرسال الفاتورة للعميل: واتساب المكتب و/أو بريد المكتب المربوط، بمرفق PDF ورقم صادر.
+export type SendInvoiceMethod = 'whatsapp' | 'email' | 'both';
+export interface SendInvoicePayload {
+  method: SendInvoiceMethod;
+  message?: string;
+  /** إرسال مرة أخرى رغم أنها أُرسلت بهذه الحالة من قبل */
+  resend?: boolean;
+}
+export interface SendInvoiceResult {
+  success: boolean;
+  message: string;
+  number?: string | null;
+  channels?: Record<string, string>;
+  data: CaseInvoice;
+}
+
 export class InvoiceService {
   private static buildQueryString(filters: InvoiceFilters): string {
     const params = new URLSearchParams();
@@ -65,15 +81,8 @@ export class InvoiceService {
   /**
    * إرسال الفاتورة للعميل
    */
-  static async sendInvoice(
-    id: number,
-    method: 'email' | 'whatsapp',
-    message?: string
-  ): Promise<{ success: boolean; message: string; data: CaseInvoice }> {
-    return apiClient.post<{ success: boolean; message: string; data: CaseInvoice }>(
-      `/case-invoices/${id}/send`,
-      { method, message }
-    );
+  static async sendInvoice(id: number, payload: SendInvoicePayload): Promise<SendInvoiceResult> {
+    return apiClient.post<SendInvoiceResult>(`/case-invoices/${id}/send`, payload);
   }
 
   /**

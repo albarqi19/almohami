@@ -8,7 +8,7 @@ import {
   ArrowRight, Receipt, Download, Send, XCircle, CreditCard, CheckCircle, FileText, User,
   AlertTriangle, Trash2, Lock, FileMinus, FilePlus,
 } from 'lucide-react';
-import { invoiceService } from '../../services/invoiceService';
+import { invoiceService, type SendInvoiceMethod } from '../../services/invoiceService';
 import { paymentService } from '../../services/paymentService';
 import { Modal, StatusBadge } from '../../components/erp';
 import { LoadingState, ErrorState } from '../../components/erp/States';
@@ -72,6 +72,10 @@ const InvoiceDetailPage: React.FC = () => {
 
   const [showPayment, setShowPayment] = useState(false);
   const [showSend, setShowSend] = useState(false);
+  // [INV-SEND] قناة الإرسال ورسالة اختيارية، ورسالة «سبق إرسالها» التي تحوّل الزر إلى إعادة إرسال
+  const [sendMethod, setSendMethod] = useState<SendInvoiceMethod>('whatsapp');
+  const [sendMessage, setSendMessage] = useState('');
+  const [sendAlready, setSendAlready] = useState<string | null>(null);
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [showDelete, setShowDelete] = useState(false);
@@ -105,11 +109,26 @@ const InvoiceDetailPage: React.FC = () => {
       setSearchParams(searchParams, { replace: true });
     }
   }, [wantsIssue, invoiceStatus, searchParams, setSearchParams]);
+  // [INV-SEND] الوصول من القائمة بزر «إرسال للعميل» يفتح نافذة الإرسال مباشرة.
+  const wantsSend = searchParams.get('send') === '1';
+  useEffect(() => {
+    if (wantsSend && invoiceStatus && invoiceStatus !== 'draft') {
+      setShowSend(true);
+      searchParams.delete('send');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [wantsSend, invoiceStatus, searchParams, setSearchParams]);
 
+  const closeSend = () => { setShowSend(false); setSendAlready(null); setSendMessage(''); };
   const sendMutation = useMutation({
-    mutationFn: (method: 'email' | 'whatsapp') => invoiceService.sendInvoice(invoiceId, method),
-    onSuccess: (res) => { toast.success(res.message || 'تم إرسال الفاتورة'); invalidate(); setShowSend(false); },
-    onError: (e: Error) => { toast.info(e.message || 'ميزة الإرسال قيد التطوير'); setShowSend(false); },
+    mutationFn: (resend: boolean) => invoiceService.sendInvoice(invoiceId, { method: sendMethod, message: sendMessage.trim() || undefined, resend }),
+    onSuccess: (res) => { toast.success(res.message || 'أُرسلت الفاتورة للعميل'); invalidate(); closeSend(); },
+    onError: (e: Error) => {
+      // سبق إرسالها بهذه الحالة عبر هذه القناة → نعرض السبب ويصير الزر «إعادة الإرسال»
+      const code = (e as Error & { errors?: Record<string, string[]> }).errors?.code?.[0];
+      if (code === 'already') { setSendAlready(e.message); return; }
+      toast.error(e.message || 'تعذّر إرسال الفاتورة');
+    },
   });
   const cancelMutation = useMutation({
     mutationFn: () => invoiceService.cancelInvoice(invoiceId, cancelReason),
@@ -318,6 +337,14 @@ const InvoiceDetailPage: React.FC = () => {
               <div className="fin-deflist">
                 <Def label="العنوان">{invoice.title}</Def>
                 <Def label="العميل"><span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}><User size={13} /> {invoice.client?.name ?? '—'}</span></Def>
+                {invoice.sent_at && (
+                  <Def label="أُرسلت للعميل">
+                    <span style={{ fontSize: 12 }}>
+                      {invoice.sent_at.slice(0, 10)}
+                      {invoice.sent_via ? ` · ${invoice.sent_via.split(',').map((c) => (c === 'whatsapp' ? 'واتساب' : c === 'email' ? 'بريد' : c)).join(' و')}` : ''}
+                    </span>
+                  </Def>
+                )}
                 {invoice.contract && (
                   <Def label="العقد">
                     <button type="button" className="fin-btn fin-btn--ghost fin-btn--sm" style={{ padding: '2px 6px' }} onClick={() => navigate(`/finance/contracts/${invoice.contract?.id}`)}>
@@ -395,22 +422,43 @@ const InvoiceDetailPage: React.FC = () => {
       {showIssue && <IssueInvoiceModal open={showIssue} invoice={invoice} onClose={() => setShowIssue(false)} />}
       {noteKind && <InvoiceNoteModal open={!!noteKind} invoice={invoice} kind={noteKind} onClose={() => setNoteKind(null)} onIssued={(note) => navigate(`/finance/invoices/${note.id}`)} />}
 
-      {/* مودال الإرسال */}
+      {/* [INV-SEND] مودال الإرسال — القناة + رسالة اختيارية + إعادة الإرسال عند التكرار */}
       <Modal
         open={showSend}
-        onClose={() => setShowSend(false)}
-        title="إرسال الفاتورة"
+        onClose={closeSend}
+        title={`إرسال ${DOCUMENT_KIND_LABEL[invoice.document_kind ?? 'invoice']} للعميل`}
         icon={Send}
         size="narrow"
         footer={(
           <>
-            <button type="button" className="fin-btn" onClick={() => setShowSend(false)}>إلغاء</button>
-            <button type="button" className="fin-btn fin-btn--primary" disabled={sendMutation.isPending} onClick={() => sendMutation.mutate('email')}><Send size={14} /> بريد إلكتروني</button>
-            <button type="button" className="fin-btn" disabled={sendMutation.isPending} onClick={() => sendMutation.mutate('whatsapp')}>واتساب</button>
+            <button type="button" className="fin-btn" onClick={closeSend}>إلغاء</button>
+            <button type="button" className="fin-btn fin-btn--primary" disabled={sendMutation.isPending} onClick={() => sendMutation.mutate(!!sendAlready)}>
+              <Send size={14} /> {sendMutation.isPending ? 'جارٍ الإرسال...' : sendAlready ? 'إعادة الإرسال' : 'إرسال'}
+            </button>
           </>
         )}
       >
-        <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>اختر قناة إرسال الفاتورة للعميل.</p>
+        <div className="fin-deflist" style={{ marginBottom: 12 }}>
+          <Def label="العميل">{invoice.client?.name ?? '—'}</Def>
+          <Def label="الجوال">{invoice.client?.phone ? <span dir="ltr">{invoice.client.phone}</span> : <span className="fin-cell-muted">غير مسجّل في حسابه</span>}</Def>
+          <Def label="البريد">{invoice.client?.email ? <span dir="ltr">{invoice.client.email}</span> : <span className="fin-cell-muted">غير مسجّل في حسابه</span>}</Def>
+        </div>
+        <div className="fin-field">
+          <label className="fin-field__label">القناة</label>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {([['whatsapp', 'واتساب المكتب'], ['email', 'بريد المكتب'], ['both', 'الاثنان معاً']] as const).map(([m, label]) => (
+              <button key={m} type="button" className={`fin-btn fin-btn--sm${sendMethod === m ? ' fin-btn--primary' : ''}`} onClick={() => { setSendMethod(m); setSendAlready(null); }}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <div className="fin-field">
+          <label className="fin-field__label">رسالة إضافية (اختياري)</label>
+          <textarea className="fin-textarea" rows={3} value={sendMessage} maxLength={500} onChange={(e) => setSendMessage(e.target.value)} placeholder="تُضاف إلى نص الواتساب والبريد" />
+        </div>
+        {sendAlready && <p style={{ fontSize: 13, color: 'var(--color-warning-text, #92400e)', margin: '0 0 8px' }}>{sendAlready}</p>}
+        <p className="fin-cell-muted" style={{ fontSize: 12, margin: 0 }}>
+          يُرفق ملف PDF بالمستند ويُخصَّص له رقم صادر ويُدوَّن الإرسال في سجل تواصل العميل. الواتساب يخرج من رقم المكتب المتصل، والبريد من بريد المكتب المربوط بحساب Microsoft.
+        </p>
       </Modal>
 
       {/* مودال الإلغاء */}

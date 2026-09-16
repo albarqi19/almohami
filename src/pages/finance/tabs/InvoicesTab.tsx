@@ -119,16 +119,6 @@ const InvoicesTab: React.FC = () => {
     onError: (e: Error) => toast.error(e.message || 'تعذّر إلغاء الفاتورة'),
   });
 
-  const sendMutation = useMutation({
-    mutationFn: ({ id, method }: { id: number; method: 'email' | 'whatsapp' }) => invoiceService.sendInvoice(id, method),
-    onSuccess: (res) => {
-      toast.success(res.message || 'تم إرسال الفاتورة');
-      invalidate();
-    },
-    // الباك يُرجع 501 (قيد التطوير) → apiClient يرمي رسالته؛ نعرضها كمعلومة لا خطأ.
-    onError: (e: Error) => toast.info(e.message || 'ميزة الإرسال قيد التطوير'),
-  });
-
   const handleCreate = async (payload: unknown) => {
     await invoiceService.createInvoice(payload as never);
     toast.success('تم إنشاء الفاتورة');
@@ -245,7 +235,7 @@ const InvoicesTab: React.FC = () => {
               { label: 'عرض التفاصيل', icon: Eye, onClick: () => navigate(`/finance/invoices/${inv.id}`) },
               { label: 'إصدار الفاتورة', icon: CheckCircle, onClick: () => navigate(`/finance/invoices/${inv.id}?issue=1`), hidden: !canManage || !a.canIssue },
               { label: 'تسجيل دفعة', icon: CreditCard, onClick: () => navigate(`/finance/invoices/${inv.id}`), hidden: !canManage || !a.canRecordPayment },
-              { label: 'إرسال (بريد)', icon: Send, onClick: () => sendMutation.mutate({ id: inv.id, method: 'email' }), hidden: !canManage || !a.canSend },
+              { label: 'إرسال للعميل', icon: Send, onClick: () => navigate(`/finance/invoices/${inv.id}?send=1`), hidden: !canManage || !a.canSend },
               { label: 'تحميل PDF', icon: Download, onClick: () => invoiceService.downloadPdf(inv.id, inv.invoice_number).catch(() => toast.error('تعذّر تحميل PDF')) },
               { label: 'مطالبة بالدفع (PDF)', icon: Download, onClick: () => invoiceService.downloadPaymentRequestPdf(inv.id, inv.invoice_number).catch((e: Error) => toast.error(e.message || 'تعذّر تنزيل المطالبة')), hidden: !a.canIssue },
               { label: 'إلغاء', icon: XCircle, variant: 'danger', divider: true, onClick: () => setCancelTarget(inv), hidden: !canManage || !a.canCancel },
@@ -255,7 +245,7 @@ const InvoicesTab: React.FC = () => {
       },
     });
     return cols;
-  }, [navigate, canManage, zatcaEnabled, sendMutation]);
+  }, [navigate, canManage, zatcaEnabled]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

@@ -150,7 +150,7 @@ export function invoiceActions(status?: InvoiceStatus | string | null, invoice?:
   return {
     canIssue: isDraft && !isNote, // draft → صادرة عبر نافذة الإصدار
     canActivate: isDraft && !isNote, // توافق قديم (نفس canIssue)
-    canSend: !isFinal && !isDraft && !isCredit,
+    canSend: !isDraft && s !== 'cancelled' && s !== 'refunded', // [INV-SEND] المدفوعة والإشعارات تُرسل أيضاً
     canRecordPayment: ['sent', 'pending', 'partial', 'overdue'].includes(s) && !isCredit && !fullyCredited,
     canEdit: isDraft, // الصادرة مقفلة
     canEditNotes: !isFinal, // الملاحظات وتاريخ الاستحقاق فقط بعد الإصدار
