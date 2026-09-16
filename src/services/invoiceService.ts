@@ -82,6 +82,7 @@ export class InvoiceService {
   static async downloadPdf(id: number, invoiceNumber?: string): Promise<void> {
     const token = localStorage.getItem('authToken');
     const res = await fetch(`${API_BASE_URL}/case-invoices/${id}/pdf`, {
+      cache: 'no-store',
       headers: {
         Accept: 'application/pdf',
         'ngrok-skip-browser-warning': '69420',
@@ -228,6 +229,7 @@ export class InvoiceService {
   static async downloadPaymentRequestPdf(id: number, invoiceNumber?: string): Promise<void> {
     const token = localStorage.getItem('authToken');
     const res = await fetch(`${API_BASE_URL}/case-invoices/${id}/payment-request-pdf`, {
+      cache: 'no-store',
       headers: { Accept: 'application/pdf', 'ngrok-skip-browser-warning': '69420', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     });
     if (!res.ok) {
@@ -255,6 +257,7 @@ export class InvoiceService {
   static async downloadArchive(from: string, to: string, kind: 'all' | 'invoices' | 'notes' = 'all'): Promise<void> {
     const token = localStorage.getItem('authToken');
     const res = await fetch(`${API_BASE_URL}/case-invoices/archive?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&kind=${kind}`, {
+      cache: 'no-store',
       headers: { Accept: 'application/zip', 'ngrok-skip-browser-warning': '69420', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     });
     if (!res.ok) {

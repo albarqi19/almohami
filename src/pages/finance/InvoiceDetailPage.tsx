@@ -15,6 +15,7 @@ import { LoadingState, ErrorState } from '../../components/erp/States';
 import PaymentModal from '../../components/billing/PaymentModal';
 import IssueInvoiceModal from '../../components/billing/IssueInvoiceModal';
 import InvoiceNoteModal from '../../components/billing/InvoiceNoteModal';
+import RebillableExpenses from '../../components/billing/RebillableExpenses';
 import { formatSAR, formatPercent, toNumber } from '../../utils/money';
 import { formatDueLabel } from '../../utils/dueDays';
 import { invalidateFinance } from '../../utils/financeCache';
@@ -250,6 +251,11 @@ const InvoiceDetailPage: React.FC = () => {
       {/* تخطيط عمودين: رئيسي (الدفعات + ZATCA) + جانبي (معلومات الفاتورة) */}
       <div className="fin-detail-grid">
         <div className="fin-detail-main">
+          {/* [EXP-REBILL] نثريات العميل القابلة للتحصيل — على المسودة فقط */}
+          {invoice.status === 'draft' && !isNote && invoice.client_id && (
+            <RebillableExpenses invoiceId={invoice.id} clientId={invoice.client_id} canManage={canManage} />
+          )}
+
           {/* الدفعات */}
           <div className="fin-section">
             <div className="fin-section__head"><span className="fin-section__title"><CreditCard size={15} /> الدفعات ({invoice.payments?.length ?? 0})</span></div>

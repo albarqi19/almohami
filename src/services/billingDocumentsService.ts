@@ -51,6 +51,7 @@ export class BillingDocumentsService {
   static async openPreview(doc: PreviewDoc): Promise<void> {
     const token = localStorage.getItem('authToken');
     const res = await fetch(`${API_BASE_URL}/tenant/billing-documents/preview?doc=${doc}`, {
+      cache: 'no-store',
       headers: { Accept: 'application/pdf', 'ngrok-skip-browser-warning': '69420', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     });
     if (!res.ok) {
