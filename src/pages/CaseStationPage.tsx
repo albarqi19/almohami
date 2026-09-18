@@ -597,7 +597,7 @@ const CaseStationPage: React.FC<Props> = ({ prefs, onPrefsChange, onSwitchToClas
         <div className="cst-chips">
           <span className={`cst-chip ${statusChip(c.najiz_status || caseData.status)}`}><span className="cst-chip__dot" />{c.najiz_status_arabic || c.status_arabic || caseData.status}</span>
           {caseData.outcome && (
-            <OutcomeBadge outcome={caseData.outcome as any} confidence={caseData.outcome_confidence} source={caseData.outcome_source} appealed={caseData.outcome_appealed} partial={caseData.outcome_is_partial} />
+            <OutcomeBadge outcome={caseData.outcome as any} confidence={caseData.outcome_confidence} source={caseData.outcome_source} appealed={caseData.outcome_appealed} partial={caseData.outcome_is_partial} final={caseData.outcome_is_final} />
           )}
           {(caseData.priority === 'urgent' || caseData.priority === 'high') && (
             <span className="cst-chip cst-chip--line-red">{c.priority_arabic || (caseData.priority === 'urgent' ? 'عاجلة' : 'عالية')}</span>
@@ -618,7 +618,7 @@ const CaseStationPage: React.FC<Props> = ({ prefs, onPrefsChange, onSwitchToClas
         {caseData.court && <span className="cst-fact"><Landmark size={14} /><b>{caseData.court}</b></span>}
         {(caseData.department || c.sub_circle) && <><span className="cst-sep" /><span className="cst-fact">{[caseData.department, c.sub_circle].filter(Boolean).join(' · ')}</span></>}
         <span className="cst-sep" />
-        <span className="cst-fact"><Calendar size={14} />قيد الدعوى <b>{gDate(caseData.filing_date || caseData.created_at)}</b>{toHijri(caseData.filing_date || caseData.created_at) && <> · {toHijri(caseData.filing_date || caseData.created_at)}</>}</span>
+        <span className="cst-fact"><Calendar size={14} />قيد الدعوى <b>{toHijri(caseData.filing_date || caseData.created_at) ?? gDate(caseData.filing_date || caseData.created_at)}</b>{toHijri(caseData.filing_date || caseData.created_at) && <> · {gDate(caseData.filing_date || caseData.created_at)}</>}</span>
         {clientRole && <><span className="cst-sep" /><span className="cst-fact"><Users size={14} />صفة الموكل <b>{clientRole}</b>{clientRoleSuggested && <span className="cst-tag cst-tag--gold" title="مستنتجة آلياً ولم يعتمدها المكتب بعد">مقترحة</span>}</span></>}
         {(c.ai_classification?.claim_amount || caseData.contract_value) ? (
           <><span className="cst-sep" /><span className="cst-fact"><DollarSign size={14} />{c.ai_classification?.claim_amount ? <>المطالبة <b>{money(c.ai_classification.claim_amount)} ر.س</b></> : <>قيمة العقد <b>{money(caseData.contract_value)} ر.س</b></>}</span></>
@@ -1180,7 +1180,7 @@ const FilingReader: React.FC<{ caseData: Case; station: CaseStation | null; onEd
         eyebrow={<>قيد الدعوى · {caseData.source === 'najiz' ? 'مستوردة من ناجز' : caseData.source === 'manual' ? 'قضية يدوية' : caseData.source || ''}</>}
         title={c.title_original || caseData.case_subject?.slice(0, 120) || caseData.title}
         meta={[
-          <><Calendar size={13} />{gDate(caseData.filing_date || caseData.created_at, { weekday: true })}{toHijri(caseData.filing_date || caseData.created_at) && <> · {toHijri(caseData.filing_date || caseData.created_at)}</>}</>,
+          <><Calendar size={13} />{toHijri(caseData.filing_date || caseData.created_at) ?? gDate(caseData.filing_date || caseData.created_at, { weekday: true })}{toHijri(caseData.filing_date || caseData.created_at) && <> · {gDate(caseData.filing_date || caseData.created_at, { weekday: true })}</>}</>,
           caseData.court && <><Landmark size={13} />{caseData.court}{caseData.department ? ` · ${caseData.department}` : ''}</>,
           c.client_role && <><Users size={13} />صفة الموكل <b>{c.client_role === 'plaintiff' ? 'مدعٍ' : c.client_role === 'defendant' ? 'مدعى عليه' : c.client_role === 'third_party' ? 'طرف ثالث' : 'غير محددة'}</b></>,
         ]}
@@ -1309,7 +1309,7 @@ const SessionReader: React.FC<SessionReaderProps> = ({ session, node, decision, 
         eyebrow={<>{number ? `الجلسة ${number} · ` : ''}{kindLabel}{session.method ? ` · ${session.method}` : ''} {ended ? <span className="cst-chip cst-chip--gray">منتهية</span> : <span className="cst-chip cst-chip--blue">قادمة</span>}{session.source === 'manual' && <span className="cst-chip cst-chip--gold">يدوية</span>}{briefChip}</>}
         title={ended ? (decision?.text ? kindLabel : kindLabel) : `الجلسة القادمة: ${kindLabel}`}
         meta={[
-          <><Calendar size={13} />{gDate(date, { weekday: true })}{toHijri(date) && <> · {toHijri(date)}</>}</>,
+          <><Calendar size={13} />{toHijri(date) ?? gDate(date, { weekday: true })}{toHijri(date) && <> · {gDate(date, { weekday: true })}</>}</>,
           session.session_time && <><Clock size={13} />{session.session_time}</>,
           (session.court || session.department) && <><Building size={13} />{[session.court, session.department].filter(Boolean).join(' · ')}</>,
           session.ended_by?.name && <><CheckCircle2 size={13} />أنهاها {session.ended_by.name}</>,
@@ -1510,8 +1510,8 @@ const JudgementReader: React.FC<JudgementReaderProps> = ({ judgement: j, analysi
         eyebrow={<>حكم قضائي{j.judgement_type ? ` · ${j.judgement_type}` : ''}{j.elimination_dispute_judgement_type_name ? ` · ${j.elimination_dispute_judgement_type_name}` : ''} {outcomeLabel && <span className={`cst-chip ${analysis?.detected_outcome === 'won' ? 'cst-chip--green' : analysis?.detected_outcome === 'lost' ? 'cst-chip--orange' : 'cst-chip--gray'}`}>{outcomeLabel}</span>}{isFinal && <span className="cst-chip cst-chip--gray">نهائي</span>}</>}
         title={`${j.judgement_description || 'الحكم القضائي'}${j.judgement_code ? ` — صك رقم ${j.judgement_code}` : ''}`}
         meta={[
-          j.sak_date && <><Calendar size={13} />تحرير الصك <b>{gDate(j.sak_date, { weekday: true })}</b></>,
-          j.delivery_date && <><Send size={13} />تبليغ الصك <b>{gDate(j.delivery_date)}</b></>,
+          j.sak_date && <><Calendar size={13} />تحرير الصك <b>{toHijri(j.sak_date) ?? gDate(j.sak_date, { weekday: true })}</b>{toHijri(j.sak_date) && <> · {gDate(j.sak_date, { weekday: true })}</>}</>,
+          j.delivery_date && <><Send size={13} />تبليغ الصك <b>{toHijri(j.delivery_date) ?? gDate(j.delivery_date)}</b>{toHijri(j.delivery_date) && <> · {gDate(j.delivery_date)}</>}</>,
           (j.court_name || j.circle_name) && <><Landmark size={13} />{[j.court_name, j.circle_name].filter(Boolean).join(' · ')}</>,
           canObject && <><AlarmClock size={13} />آخر يوم للاعتراض <b>{live === 0 ? 'اليوم' : `باقٍ ${live} ${live <= 10 ? 'أيام' : 'يوماً'}`}</b></>,
         ]}

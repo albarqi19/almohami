@@ -13,6 +13,8 @@ export interface CaseFilters {
   responsible_lawyer_id?: string | number;
   najiz_status?: string;
   is_bankruptcy?: string | number;
+  /** مصدر القضية (أزرار رأس القائمة): najiz | manual | moeen | taradhi | bankruptcy */
+  source?: string;
   search?: string;
   page?: number;
   limit?: number;
@@ -23,7 +25,13 @@ export interface CaseFilters {
 }
 
 /** paginator القضايا ومعه عدّاد المؤرشفة من جذر الردّ — للعرض «١٢٤ قضية · ٣١ مؤرشفة» */
-export type CasesPage = PaginatedResponse<Case> & { archived_count: number; grievance_rows?: number; grievance_disputes?: number };
+export type CasesPage = PaginatedResponse<Case> & {
+  archived_count: number;
+  grievance_rows?: number;
+  grievance_disputes?: number;
+  /** عدد القضايا خلف كل مصدر ضمن الفلاتر الحالية (عدا فلتر المصدر نفسه) — لأزرار الرأس */
+  source_counts?: Record<string, number>;
+};
 
 export class CaseService {
   static async getCases(filters: CaseFilters = {}): Promise<CasesPage> {
@@ -38,11 +46,17 @@ export class CaseService {
     const queryString = params.toString();
     const endpoint = queryString ? `/cases?${queryString}` : '/cases';
 
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<Case>> & { archived_count?: number; grievance_rows?: number; grievance_disputes?: number }>(endpoint);
+    const response = await apiClient.get<ApiResponse<PaginatedResponse<Case>> & { archived_count?: number; grievance_rows?: number; grievance_disputes?: number; source_counts?: Record<string, number> }>(endpoint);
 
     if (response.success && response.data) {
-      // archived_count يصل في جذر الردّ لا داخل الـpaginator
-      return { ...response.data, archived_count: response.archived_count ?? 0, grievance_rows: response.grievance_rows ?? 0, grievance_disputes: response.grievance_disputes ?? 0 };
+      // archived_count وsource_counts يصلان في جذر الردّ لا داخل الـpaginator
+      return {
+        ...response.data,
+        archived_count: response.archived_count ?? 0,
+        grievance_rows: response.grievance_rows ?? 0,
+        grievance_disputes: response.grievance_disputes ?? 0,
+        source_counts: response.source_counts ?? {},
+      };
     } else {
       throw new Error(response.message || 'فشل في جلب القضايا');
     }

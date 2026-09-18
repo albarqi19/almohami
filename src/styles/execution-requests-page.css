@@ -356,6 +356,58 @@
   color: var(--color-text-secondary);
 }
 
+/* ---------- ترقيم القائمة الرئيسية (exec-pager): شريط ثابت أسفل الصفحة كما في القضايا ----------
+   العدد وحجم الصفحة في البداية، والأرقام في وسط الشريط، وعمود فارغ ثالث يوازن.
+   الهوامش السالبة تمدّ الشريط إلى حافتَي الصفحة فوق حشو .exec-page (14px 18px 28px). */
+.exec-pager {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin: 12px -18px -28px;
+  padding: 10px 18px;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.exec-pager__info { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.exec-pager__info select {
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.exec-pager__controls { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.exec-pager__pages { display: flex; align-items: center; gap: 4px; }
+.exec-pager__page {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.exec-pager__page:hover { background: var(--color-accent-soft); }
+.exec-pager__page--active, .exec-pager__page--active:hover { background: var(--law-navy); color: #fff; }
+.exec-pager__ellipsis { width: 30px; text-align: center; color: var(--color-text-secondary); user-select: none; }
+@media (max-width: 768px) {
+  .exec-pager { grid-template-columns: 1fr; justify-items: center; gap: 8px; }
+}
+
 /* ---------- الحالات الفارغة ---------- */
 .exec-loading {
   display: flex;

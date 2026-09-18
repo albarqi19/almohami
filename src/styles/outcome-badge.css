@@ -134,3 +134,25 @@ body.dark .outcome-badge--appealed {
   opacity: 0.6;
   display: inline-block;
 }
+
+/* وسم نهائية الحكم داخل الشارة: «غير نهائي» يبرز لأنه تحذير من قراءة النتيجة حكماً
+   مبرماً، و«نهائي» هادئ. فلات بلا ظل، بحدّ من لون الشارة نفسه. */
+.outcome-badge__final-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 5px;
+  margin-inline-start: 2px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+  font-size: 0.82em;
+  font-weight: 600;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.outcome-badge__final-tag--no {
+  background: rgba(194, 87, 11, 0.12);
+  border-color: rgba(194, 87, 11, 0.45);
+  color: #c2570b;
+  opacity: 1;
+}

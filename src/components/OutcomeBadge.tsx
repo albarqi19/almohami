@@ -8,6 +8,12 @@ interface OutcomeBadgeProps {
   source?: 'manual' | 'ai' | null;
   appealed?: boolean;
   partial?: boolean;
+  /**
+   * هل النتيجة حكم نهائي؟ true = نهائي، false = غير نهائي (ابتدائي/معترض عليه)،
+   * null/undefined = لا نعرف فلا نزعم شيئاً. بلا هذا كانت الشارة تُقرأ حكماً نهائياً
+   * وهي قد تكون لحكم ابتدائي قابل للاعتراض.
+   */
+  final?: boolean | null;
   size?: 'sm' | 'md';
 }
 
@@ -31,9 +37,15 @@ const OutcomeBadge: React.FC<OutcomeBadgeProps> = ({
   appealed,
   partial,
   source,
+  final,
   size = 'md',
 }) => {
   if (!outcome) return null;
+  const finalTitle = final === true
+    ? 'حكم نهائي'
+    : final === false
+      ? 'حكم غير نهائي — قابل للاعتراض أو معترض عليه'
+      : undefined;
 
   const meta = OUTCOME_META[outcome] || {
     label: 'غير محددة',
@@ -45,13 +57,15 @@ const OutcomeBadge: React.FC<OutcomeBadgeProps> = ({
   return (
     <span
       className={`outcome-badge ${meta.className} outcome-badge--${size}`}
-      title={source === 'ai' ? 'حُدِّدت تلقائياً' : undefined}
+      title={[finalTitle, source === 'ai' ? 'حُدِّدت تلقائياً' : undefined].filter(Boolean).join(' · ') || undefined}
     >
       <Icon size={size === 'sm' ? 12 : 14} />
       <span>
         {meta.label}
         {partial && <span className="outcome-badge__partial"> (جزئي)</span>}
       </span>
+      {final === false && <span className="outcome-badge__final-tag outcome-badge__final-tag--no">غير نهائي</span>}
+      {final === true && <span className="outcome-badge__final-tag outcome-badge__final-tag--yes">نهائي</span>}
       {appealed && (
         <span className="outcome-badge__appealed-tag" title="القضية مستأنفة/مميَّزة">
           <Scale size={size === 'sm' ? 10 : 12} />

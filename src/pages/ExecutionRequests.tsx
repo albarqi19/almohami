@@ -46,6 +46,7 @@ import { TaskService } from '../services/taskService';
 import { fromDateInputValue, toDateInputValue } from '../utils/dateAr';
 import { Can } from '../components/Can';
 import { safeSetItem } from '../utils/safeStorage';
+import { pageRange } from '../utils/pageRange';
 import type {
   ArchivedFilter,
   ExecutionRequest,
@@ -174,6 +175,17 @@ const parseTx = (tx: Record<string, any>) => ({
 const CACHE_KEY = 'execution_requests_data';
 const CACHE_DURATION = 60 * 60 * 1000;
 const LAST_SEEN_PAYMENT_KEY = 'execution_payments_last_seen_id';
+
+// حجم الصفحة (خيار المستخدم) — نفس خيارات القضايا ويُحفظ في المتصفح
+const PAGE_SIZE_KEY = 'execution_requests_page_size';
+const PAGE_SIZE_OPTIONS = [15, 30, 50, 100];
+const DEFAULT_PAGE_SIZE = 15;
+const getSavedPageSize = (): number => {
+  try {
+    const v = parseInt(localStorage.getItem(PAGE_SIZE_KEY) || '', 10);
+    return PAGE_SIZE_OPTIONS.includes(v) ? v : DEFAULT_PAGE_SIZE;
+  } catch { return DEFAULT_PAGE_SIZE; }
+};
 
 // ==================== شارة الحالة ====================
 
@@ -903,6 +915,7 @@ const ExecutionRequests: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(getSavedPageSize);
   const [deletingId, setDeletingId] = useState<number | string | null>(null);
   const [requestToDelete, setRequestToDelete] = useState<ExecutionRequest | null>(null);
   const [archivingId, setArchivingId] = useState<number | string | null>(null);
@@ -930,7 +943,7 @@ const ExecutionRequests: React.FC = () => {
     return () => clearTimeout(t);
   }, [searchTerm]);
 
-  useEffect(() => { setCurrentPage(1); }, [statusFilter, roleFilter, clientFilter, sharedOnly, archivedFilter]);
+  useEffect(() => { setCurrentPage(1); }, [statusFilter, roleFilter, clientFilter, sharedOnly, archivedFilter, pageSize]);
 
   type ListPayload = {
     requests: ExecutionRequest[];
@@ -940,7 +953,7 @@ const ExecutionRequests: React.FC = () => {
 
   // مفتاح cache لكل تركيبة فلاتر — حالة الأرشيف جزء منه، وإلا ظهرت صفوف مؤرشفة داخل القائمة الحيّة
   const buildCacheKey = (page: number, search: string, status: string, role: string, client: string, shared: boolean, archived: ArchivedFilter) =>
-    `${CACHE_KEY}_${status}_${role}_${client}_${shared ? 's1' : 's0'}_a${archived}_${search || 'none'}_p${page}`;
+    `${CACHE_KEY}_${status}_${role}_${client}_${shared ? 's1' : 's0'}_a${archived}_${search || 'none'}_n${pageSize}_p${page}`;
 
   const readCachedPage = (page: number, search: string, status: string, role: string, client: string, shared: boolean, archived: ArchivedFilter):
     ListPayload | undefined => {
@@ -960,11 +973,11 @@ const ExecutionRequests: React.FC = () => {
     error: queryError,
     refetch,
   } = useQuery<ListPayload>({
-    queryKey: ['execution-requests', debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly, archivedFilter, currentPage],
+    queryKey: ['execution-requests', debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly, archivedFilter, pageSize, currentPage],
     queryFn: async () => {
       const requestsRes = await ExecutionRequestService.getRequests({
         page: currentPage,
-        limit: 15,
+        limit: pageSize,
         archived: archivedFilter,
         ...(debouncedSearch && { search: debouncedSearch }),
         ...(statusFilter !== 'all' && { status: statusFilter }),
@@ -1040,11 +1053,18 @@ const ExecutionRequests: React.FC = () => {
         JSON.stringify({ data: queryData, timestamp: Date.now() })
       );
     } catch { /* quota — ignore */ }
-  }, [queryData, currentPage, debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly, archivedFilter]);
+  }, [queryData, currentPage, debouncedSearch, statusFilter, roleFilter, clientFilter, sharedOnly, archivedFilter, pageSize]);
 
   const fetchData = (page?: number) => {
     if (page && page !== currentPage) setCurrentPage(page);
     else refetch();
+  };
+
+  // تغيير عدد الطلبات في الصفحة — يُحفظ في المتصفح، والصفحة تعود إلى الأولى (التأثير أعلاه)
+  const handlePageSizeChange = (size: number) => {
+    if (size === pageSize) return;
+    setPageSize(size);
+    try { localStorage.setItem(PAGE_SIZE_KEY, String(size)); } catch { /* لا شيء */ }
   };
 
   const handleViewRequest = (req: ExecutionRequest) => {
@@ -1474,23 +1494,56 @@ const ExecutionRequests: React.FC = () => {
             </table>
           </div>
 
-          {pagination.totalPages > 1 && (
-            <div className="exec-pagination">
-              <button
-                className="exec-btn"
-                disabled={pagination.currentPage <= 1}
-                onClick={() => fetchData(pagination.currentPage - 1)}
-              >
-                <ChevronRight size={13} /> السابق
-              </button>
-              <span>صفحة {pagination.currentPage} من {pagination.totalPages}</span>
-              <button
-                className="exec-btn"
-                disabled={pagination.currentPage >= pagination.totalPages}
-                onClick={() => fetchData(pagination.currentPage + 1)}
-              >
-                التالي <ChevronLeft size={13} />
-              </button>
+          {/* شريط الترقيم — ثابت أسفل الصفحة كما في القضايا: العدد وحجم الصفحة، والأرقام في الوسط */}
+          {requests.length > 0 && (
+            <div className="exec-pager">
+              <div className="exec-pager__info">
+                <span>{formatAmount(pagination.total)} طلب • صفحة {pagination.currentPage} من {pagination.totalPages}</span>
+                <label className="exec-pager__info">
+                  عرض
+                  <select
+                    value={pageSize}
+                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                    title="عدد الطلبات المعروضة في الصفحة"
+                  >
+                    {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                  في الصفحة
+                </label>
+              </div>
+              <div className="exec-pager__controls">
+                <button
+                  className="exec-btn"
+                  disabled={pagination.currentPage <= 1}
+                  onClick={() => fetchData(pagination.currentPage - 1)}
+                >
+                  <ChevronRight size={13} /> السابق
+                </button>
+                <div className="exec-pager__pages">
+                  {pageRange(pagination.currentPage, pagination.totalPages).map((p, i) => (
+                    typeof p === 'number' ? (
+                      <button
+                        key={p}
+                        type="button"
+                        className={`exec-pager__page${p === pagination.currentPage ? ' exec-pager__page--active' : ''}`}
+                        onClick={() => fetchData(p)}
+                        aria-current={p === pagination.currentPage ? 'page' : undefined}
+                      >
+                        {p}
+                      </button>
+                    ) : (
+                      <span key={`e${i}`} className="exec-pager__ellipsis">…</span>
+                    )
+                  ))}
+                </div>
+                <button
+                  className="exec-btn"
+                  disabled={pagination.currentPage >= pagination.totalPages}
+                  onClick={() => fetchData(pagination.currentPage + 1)}
+                >
+                  التالي <ChevronLeft size={13} />
+                </button>
+              </div>
             </div>
           )}
         </>

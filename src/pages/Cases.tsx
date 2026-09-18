@@ -27,7 +27,9 @@ import {
 	Download,
 	Archive,
 	ArchiveRestore,
-	Loader2
+	Loader2,
+	ArrowUp,
+	ArrowDown
 } from 'lucide-react';
 import type { ArchivedFilter, Case, CaseStatus, CaseType, Priority } from '../types';
 import { CaseService } from '../services';
@@ -44,6 +46,8 @@ import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { getPrimaryLawyerName } from '../utils/lawyerHelpers';
 import { resolveOpponent } from '../utils/partyHelpers';
 import { apiClient } from '../utils/api';
+import { pageRange } from '../utils/pageRange';
+import { toHijri } from '../utils/hijriDate';
 
 type ViewMode = 'grid' | 'table' | 'kanban';
 
@@ -77,12 +81,58 @@ const CASE_TYPE_LABELS: Record<CaseType, string> = {
 	other: 'أخرى'
 };
 
+// قائمة الحالات كاملة — كانت الواجهة تعرض 4 من 9 حالات يعرفها النظام
+const STATUS_OPTIONS: { key: CaseStatus; label: string }[] = [
+	{ key: 'draft', label: 'مسودة' },
+	{ key: 'preparation', label: 'جاري التجهيز' },
+	{ key: 'filed', label: 'تم الرفع' },
+	{ key: 'active', label: 'نشطة' },
+	{ key: 'pending', label: 'معلقة' },
+	{ key: 'appealed', label: 'مستأنفة' },
+	{ key: 'closed', label: 'مغلقة' },
+	{ key: 'settled', label: 'مصالحة' },
+	{ key: 'dismissed', label: 'مرفوضة' },
+];
+const isCaseStatus = (v: string | null): v is CaseStatus => !!v && STATUS_OPTIONS.some(s => s.key === v);
+const isCaseType = (v: string | null): v is CaseType => !!v && v in CASE_TYPE_LABELS;
+
+// مصدر القضية — أزرار الرأس بدل عدّادات نشطة/معلقة/مغلقة. الترتيب هو ترتيب الظهور،
+// والمفاتيح كما يفهمها الباك (CaseController::SOURCE_KINDS).
+type SourceKind = 'najiz' | 'moeen' | 'taradhi' | 'bankruptcy' | 'manual';
+const SOURCE_KINDS: { key: SourceKind; label: string; hint: string }[] = [
+	{ key: 'najiz', label: 'ناجز', hint: 'قضايا ناجز المستوردة أو المربوطة' },
+	{ key: 'moeen', label: 'معين', hint: 'دعاوى ديوان المظالم' },
+	{ key: 'taradhi', label: 'تراضي', hint: 'طلبات الصلح' },
+	{ key: 'bankruptcy', label: 'إفلاس', hint: 'طلبات الإفلاس' },
+	{ key: 'manual', label: 'يدوية', hint: 'قضايا أُضيفت يدوياً' },
+];
+const isSourceKind = (v: string | null): v is SourceKind => !!v && SOURCE_KINDS.some(s => s.key === v);
+
+// الترتيب — المفتاح «عمود:اتجاه» كما يُرسل للباك ويُكتب في الرابط. الافتراضي هو
+// افتراض الباك نفسه فلا يُرسل ولا يُكتب.
+const SORT_OPTIONS: { key: string; label: string }[] = [
+	{ key: 'filing_date:desc', label: 'الأحدث رفعاً' },
+	{ key: 'filing_date:asc', label: 'الأقدم رفعاً' },
+	{ key: 'next_hearing:asc', label: 'الأقرب جلسة' },
+	{ key: 'updated_at:desc', label: 'آخر تحديث' },
+	{ key: 'created_at:desc', label: 'الأحدث إضافة' },
+	{ key: 'file_number:asc', label: 'رقم الملف تصاعدياً' },
+	{ key: 'file_number:desc', label: 'رقم الملف تنازلياً' },
+];
+const DEFAULT_SORT = 'filing_date:desc';
+const isSortKey = (v: string | null): v is string => !!v && SORT_OPTIONS.some(s => s.key === v);
+
 const formatDate = (value?: Date | string | null): string => {
 	if (!value) return '-';
 	const date = new Date(value);
 	if (isNaN(date.getTime())) return '-';
 	return date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
 };
+
+// تواريخ القائمة هجرية (أم القرى) بطلب المالك، والميلادي في التلميح. المتصفحات الحديثة
+// تعرض ar-SA ميلادياً، فلا نعتمد على اللغة بل على toHijri؛ ولو لم يدعم المتصفح التقويم
+// نسقط للميلادي بدل عرض رقم خاطئ.
+const formatListDate = (value?: Date | string | null): string => toHijri(value) ?? formatDate(value);
 
 const getLawyerName = (caseObj: unknown): string => {
 	if (!caseObj || typeof caseObj !== 'object') return '-';
@@ -142,13 +192,16 @@ interface AdvancedFilters {
 	lawyer_id?: string;
 	responsible_lawyer_id?: string;
 	client_id?: string;
-	najiz_status?: string;
 }
 
 const loadAdvFilters = (): AdvancedFilters => {
 	try {
 		const raw = localStorage.getItem(ADV_FILTERS_KEY);
-		return raw ? JSON.parse(raw) : {};
+		if (!raw) return {};
+		// حالة ناجز خرجت من هذه اللوحة إلى شريط الأدوات والرابط — قيمة قديمة محفوظة تُهمَل
+		const { najiz_status: _legacy, ...rest } = JSON.parse(raw) as AdvancedFilters & { najiz_status?: string };
+		void _legacy;
+		return rest;
 	} catch { return {}; }
 };
 
@@ -220,8 +273,36 @@ const Cases: React.FC = () => {
 	});
 	const [error, setError] = useState<string | null>(null);
 	const [searchTerm, setSearchTerm] = useState('');
-	const [statusFilter, setStatusFilter] = useState<CaseStatus | 'all'>('all');
-	const [typeFilter, setTypeFilter] = useState<CaseType | 'all'>('all');
+	// الفلاتر والترتيب تُقرأ من الرابط أولاً: «قضايا معين النشطة مرتبة بالجلسة» رابطٌ
+	// يُرسل للزميل ويفتح على الحال نفسها. قيمة غير معروفة في الرابط = الافتراضي.
+	const [statusFilter, setStatusFilter] = useState<CaseStatus | 'all'>(() => {
+		const v = searchParams.get('status');
+		return isCaseStatus(v) ? v : 'all';
+	});
+	const [typeFilter, setTypeFilter] = useState<CaseType | 'all'>(() => {
+		const v = searchParams.get('type');
+		return isCaseType(v) ? v : 'all';
+	});
+	const [sourceFilter, setSourceFilter] = useState<SourceKind | 'all'>(() => {
+		const v = searchParams.get('source');
+		return isSourceKind(v) ? v : 'all';
+	});
+	const [najizStatusFilter, setNajizStatusFilter] = useState<string>(() => searchParams.get('najiz') || '');
+	const [sortKey, setSortKey] = useState<string>(() => {
+		const v = searchParams.get('sort');
+		return isSortKey(v) ? v : DEFAULT_SORT;
+	});
+	// عدد القضايا خلف كل مصدر — من ردّ الخادم مع كل قائمة (ويُقرأ من الكاش عند الفتح)
+	const [sourceCounts, setSourceCounts] = useState<Record<string, number>>(() => {
+		try {
+			const cached = localStorage.getItem(cacheKeyFor(DEFAULT_ARCHIVED));
+			if (cached) {
+				const { data, timestamp } = JSON.parse(cached);
+				if (Date.now() - timestamp < CACHE_DURATION) return data.sourceCounts ?? {};
+			}
+		} catch (e) { }
+		return {};
+	});
 	const [advFilters, setAdvFilters] = useState<AdvancedFilters>(loadAdvFilters);
 	const [showAdvancedPanel, setShowAdvancedPanel] = useState(false);
 	const [najizStatuses, setNajizStatuses] = useState<string[]>([]);
@@ -324,13 +405,9 @@ const Cases: React.FC = () => {
 		}
 	}, [searchParams, setSearchParams]);
 
-	// Stats
-	const stats = useMemo(() => ({
-		active: cases.filter(c => c.status === 'active').length,
-		pending: cases.filter(c => c.status === 'pending').length,
-		closed: cases.filter(c => c.status === 'closed').length,
-		total: pagination.total
-	}), [cases, pagination.total]);
+	// العدد الكلي من الخادم — عدّادات نشطة/معلقة/مغلقة (من الصفحة المعروضة وحدها)
+	// استُبدلت بأزرار المصدر في الرأس.
+	const stats = useMemo(() => ({ total: pagination.total }), [pagination.total]);
 
 	const [softRefreshing, setSoftRefreshing] = useState(false);
 
@@ -347,9 +424,14 @@ const Cases: React.FC = () => {
 			const limit = sizeOverride ?? pageSize;
 			const archived = archivedOverride ?? archivedFilter;
 			// Only use cache for first page without filters (and not forcing refresh)
-			const hasAdvFilters = !!(advFilters.lawyer_id || advFilters.responsible_lawyer_id || advFilters.client_id || advFilters.najiz_status);
+			const hasAdvFilters = !!(advFilters.lawyer_id || advFilters.responsible_lawyer_id || advFilters.client_id);
 			// وضع الأرشيف فلترٌ كسائر الفلاتر: أي وضع غير الافتراضي يمنع الكاش المشترك.
-			const hasFilters = !!(searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || hasAdvFilters || archived !== DEFAULT_ARCHIVED);
+			// والمصدر وحالة ناجز والترتيب غير الافتراضي كذلك — الكاش للقائمة الافتراضية وحدها.
+			const hasFilters = !!(
+				searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || sourceFilter !== 'all'
+				|| najizStatusFilter || sortKey !== DEFAULT_SORT || hasAdvFilters || archived !== DEFAULT_ARCHIVED
+			);
+			const [sortBy, sortOrder] = sortKey.split(':') as [string, 'asc' | 'desc'];
 			const shouldUseCache = !forceRefresh && page === 1 && !hasFilters;
 			const cacheKey = cacheKeyFor(archived);
 
@@ -383,10 +465,12 @@ const Cases: React.FC = () => {
 				...(searchTerm && { search: searchTerm }),
 				...(statusFilter !== 'all' && { status: statusFilter }),
 				...(typeFilter !== 'all' && { case_type: typeFilter }),
+				...(sourceFilter !== 'all' && { source: sourceFilter }),
+				...(sortKey !== DEFAULT_SORT && { sort_by: sortBy, sort_order: sortOrder }),
 				...(advFilters.lawyer_id && { lawyer_id: advFilters.lawyer_id }),
 				...(advFilters.responsible_lawyer_id && { responsible_lawyer_id: advFilters.responsible_lawyer_id }),
 				...(advFilters.client_id && { client_id: advFilters.client_id }),
-				...(advFilters.najiz_status && { najiz_status: advFilters.najiz_status }),
+				...(najizStatusFilter && { najiz_status: najizStatusFilter }),
 				// '0' هو افتراض الباك فلا داعي لإرساله؛ البحث يُظهر المؤرشف تلقائياً من جهة الباك.
 				...(archived !== DEFAULT_ARCHIVED && { archived }),
 			};
@@ -398,11 +482,13 @@ const Cases: React.FC = () => {
 				total: response.total ?? data.length
 			};
 			const archivedTotal = response.archived_count ?? 0;
+			const counts = response.source_counts ?? {};
 			setGrievanceCounts({ rows: response.grievance_rows ?? 0, disputes: response.grievance_disputes ?? 0 });
 
 			setCases(data);
 			setPagination(paginationData);
 			setArchivedCount(archivedTotal);
+			setSourceCounts(counts);
 
 			// Save to cache (only for first page without filters — أي وضع الأرشيف الافتراضي)
 			//
@@ -423,7 +509,7 @@ const Cases: React.FC = () => {
 			if (page === 1 && !hasFilters) {
 				try {
 					localStorage.setItem(cacheKey, JSON.stringify({
-						data: { cases: data, pagination: paginationData, archivedCount: archivedTotal },
+						data: { cases: data, pagination: paginationData, archivedCount: archivedTotal, sourceCounts: counts },
 						timestamp: Date.now(),
 						pageSize: limit
 					}));
@@ -453,7 +539,17 @@ const Cases: React.FC = () => {
 		}
 	};
 
+	// هل أيّ فلتر أو ترتيب غير افتراضي؟ (البحث والمحامي والعميل والمصدر وحالة ناجز والترتيب)
+	const anyFilterActive = !!(
+		searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || sourceFilter !== 'all'
+		|| najizStatusFilter || sortKey !== DEFAULT_SORT
+		|| advFilters.lawyer_id || advFilters.responsible_lawyer_id || advFilters.client_id
+	);
+
 	useEffect(() => {
+		fetchUsersData();
+		// فلاتر قادمة من الرابط أو من اللوحة المحفوظة؟ تأثير الفلاتر أدناه يجلبها فوراً — لا جلب مزدوج.
+		if (anyFilterActive) return;
 		// Only fetch if no cached data exists (الصفحة تبدأ على وضع الأرشيف الافتراضي)
 		const cached = localStorage.getItem(cacheKeyFor(DEFAULT_ARCHIVED));
 		if (cached) {
@@ -461,24 +557,51 @@ const Cases: React.FC = () => {
 				const { data, timestamp } = JSON.parse(cached);
 				if (Date.now() - timestamp < CACHE_DURATION && data.cases?.length > 0) {
 					// Cache is valid, data already loaded in initial state
-					fetchUsersData();
 					return;
 				}
 			} catch (e) { }
 		}
 		// No valid cache, fetch fresh data
 		fetchCases(1, true);
-		fetchUsersData();
 	}, []);
 
+	// إعادة الجلب عند تغيّر أي فلتر أو الترتيب — بما فيه العودة إلى الافتراضي (كان
+	// الشرط القديم يتجاهلها فتبقى القائمة مصفّاة بعد مسح الفلتر). أول تصيير: نجلب
+	// فقط إن كانت هناك فلاتر من الرابط، ومع الهيكل العظمي كي لا تظهر قائمة الكاش
+	// غير المصفّاة قبلها. البحث وحده يُمهَل 400ms لأنه يُكتب حرفاً حرفاً.
+	const filtersMountedRef = useRef(false);
+	const lastSearchRef = useRef(searchTerm);
 	useEffect(() => {
-		// Only refetch on filter changes if they actually changed (not initial render)
-		const hasAdv = !!(advFilters.lawyer_id || advFilters.responsible_lawyer_id || advFilters.client_id || advFilters.najiz_status);
-		if (searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || hasAdv) {
-			const timeout = setTimeout(() => fetchCases(1, true), 400);
-			return () => clearTimeout(timeout);
+		if (!filtersMountedRef.current) {
+			filtersMountedRef.current = true;
+			if (anyFilterActive) fetchCases(1, true, undefined, undefined, true);
+			return;
 		}
-	}, [searchTerm, statusFilter, typeFilter, advFilters]);
+		const searchChanged = lastSearchRef.current !== searchTerm;
+		lastSearchRef.current = searchTerm;
+		const timeout = setTimeout(() => fetchCases(1, true), searchChanged ? 400 : 0);
+		return () => clearTimeout(timeout);
+	}, [searchTerm, statusFilter, typeFilter, sourceFilter, najizStatusFilter, sortKey, advFilters]);
+
+	// الفلاتر في الرابط (بلا سجلّ تصفّح لكل نقرة): الرابط يُنسخ ويُرسل ويفتح على الحال نفسها.
+	useEffect(() => {
+		const next = new URLSearchParams(searchParams);
+		const put = (k: string, v: string | null) => { if (v) next.set(k, v); else next.delete(k); };
+		put('source', sourceFilter === 'all' ? null : sourceFilter);
+		put('status', statusFilter === 'all' ? null : statusFilter);
+		put('type', typeFilter === 'all' ? null : typeFilter);
+		put('najiz', najizStatusFilter || null);
+		put('sort', sortKey === DEFAULT_SORT ? null : sortKey);
+		if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
+	}, [sourceFilter, statusFilter, typeFilter, najizStatusFilter, sortKey, searchParams, setSearchParams]);
+
+	// اختيار مصدر من الرأس — النقر على المصدر النشط يلغيه. حالة ناجز تخصّ قضايا ناجز
+	// (معين وتراضي والإفلاس واليدوية لا تكتبها) فتُمسح عند الخروج من «الكل» و«ناجز».
+	const pickSource = (kind: SourceKind | 'all') => {
+		setSourceFilter(kind);
+		if (kind !== 'all' && kind !== 'najiz') setNajizStatusFilter('');
+	};
+	const najizStatusApplies = sourceFilter === 'all' || sourceFilter === 'najiz';
 
 	// Persist advanced filters across navigations
 	useEffect(() => { saveAdvFilters(advFilters); }, [advFilters]);
@@ -723,24 +846,36 @@ const Cases: React.FC = () => {
 		await fetchCases(emptiedPage ? pagination.currentPage - 1 : pagination.currentPage, true);
 	};
 
-	const advFilterCount = (advFilters.lawyer_id ? 1 : 0) + (advFilters.responsible_lawyer_id ? 1 : 0) + (advFilters.client_id ? 1 : 0) + (advFilters.najiz_status ? 1 : 0);
+	const advFilterCount = (advFilters.lawyer_id ? 1 : 0) + (advFilters.responsible_lawyer_id ? 1 : 0) + (advFilters.client_id ? 1 : 0);
 	// وضع الأرشيف فلترٌ كامل الأهلية هنا أيضاً — تجاهله يجعل «لا فلاتر» كذباً داخل الأرشيف.
-	const hasFilters = !!(searchTerm.trim() || statusFilter !== 'all' || typeFilter !== 'all' || advFilterCount || archivedFilter !== DEFAULT_ARCHIVED);
+	const hasFilters = !!(
+		searchTerm.trim() || statusFilter !== 'all' || typeFilter !== 'all' || sourceFilter !== 'all'
+		|| najizStatusFilter || advFilterCount || archivedFilter !== DEFAULT_ARCHIVED
+	);
 	const resetFilters = () => {
 		setSearchTerm('');
 		setStatusFilter('all');
 		setTypeFilter('all');
+		setSourceFilter('all');
+		setNajizStatusFilter('');
 		setAdvFilters({});
 	};
 
 	// ── Column Resize ──
-	const columns = [
+	// sortField: رأس العمود ينقر للترتيب به (تصاعدي/تنازلي)، والبقية عرض فقط
+	const columns: { key: string; label: string; defaultWidth: number; sortField?: 'filing_date' | 'file_number' }[] = [
 		{ key: 'case', label: 'القضية', defaultWidth: 44 },
 		{ key: 'parties', label: 'العميل / المحامي', defaultWidth: 18 },
-		{ key: 'dates', label: 'الإنشاء / الجلسة', defaultWidth: 17 },
+		{ key: 'dates', label: 'الإنشاء / الجلسة', defaultWidth: 17, sortField: 'filing_date' },
 		{ key: 'status', label: 'الحالة / حالة ناجز', defaultWidth: 12 },
-		{ key: 'file', label: 'رقم الملف', defaultWidth: 9 },
+		{ key: 'file', label: 'رقم الملف', defaultWidth: 9, sortField: 'file_number' },
 	];
+	const [activeSortField, activeSortDir] = sortKey.split(':');
+	// نقر رأس عمود: أول نقرة تنازلي (الأحدث/الأكبر أولاً)، والثانية تقلبه.
+	const toggleColumnSort = (field: 'filing_date' | 'file_number') => {
+		const dir = activeSortField === field && activeSortDir === 'desc' ? 'asc' : 'desc';
+		setSortKey(`${field}:${dir}`);
+	};
 
 	const [colWidths, setColWidths] = useState<number[]>(() => columns.map(c => c.defaultWidth));
 	const resizingRef = useRef<{ col: number; startX: number; startWidth: number } | null>(null);
@@ -798,12 +933,28 @@ const Cases: React.FC = () => {
 								/>
 							</th>
 						)}
-						{columns.map((col, i) => (
-							<th key={col.key} style={{ width: `${colWidths[i]}%`, position: 'relative' }}>
-								{col.label}
-								<span className="col-resize-handle" onMouseDown={e => handleResizeStart(e, i)} />
-							</th>
-						))}
+						{columns.map((col, i) => {
+							const sortedHere = !!col.sortField && activeSortField === col.sortField;
+							return (
+								<th
+									key={col.key}
+									style={{ width: `${colWidths[i]}%`, position: 'relative' }}
+									className={col.sortField ? `cases-th--sortable${sortedHere ? ' is-sorted' : ''}` : undefined}
+									onClick={col.sortField ? () => toggleColumnSort(col.sortField!) : undefined}
+									title={col.sortField ? 'ترتيب بهذا العمود' : undefined}
+									aria-sort={sortedHere ? (activeSortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+								>
+									{col.label}
+									{sortedHere && (activeSortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+									{/* مقبض التحجيم لا يرتّب: النقرة تُبتلع هنا كي لا تصل إلى رأس العمود */}
+									<span
+										className="col-resize-handle"
+										onClick={e => e.stopPropagation()}
+										onMouseDown={e => { e.stopPropagation(); handleResizeStart(e, i); }}
+									/>
+								</th>
+							);
+						})}
 					</tr>
 				</thead>
 				<tbody>
@@ -897,12 +1048,12 @@ const Cases: React.FC = () => {
 									<div className="erp-cell">
 										<div className="erp-cell__row">
 											<Clock size={12} className="erp-cell__icon" />
-											<span>{formatDate((c as any).filing_date || c.created_at)}</span>
+											<span title={formatDate((c as any).filing_date || c.created_at)}>{formatListDate((c as any).filing_date || c.created_at)}</span>
 										</div>
 										{c.next_hearing ? (
 											<div className="erp-cell__row erp-cell__row--highlight">
 												<Calendar size={11} className="erp-cell__icon" />
-												<span>{formatDate(c.next_hearing)}</span>
+												<span title={formatDate(c.next_hearing)}>{formatListDate(c.next_hearing)}</span>
 												{(c as any).next_hearing_time && <span className="erp-cell__time">{(c as any).next_hearing_time}</span>}
 											</div>
 										) : (
@@ -930,6 +1081,7 @@ const Cases: React.FC = () => {
 													source={(c as any).outcome_source}
 													appealed={(c as any).outcome_appealed}
 													partial={(c as any).outcome_is_partial}
+													final={(c as any).outcome_is_final}
 												/>
 											)}
 										</div>
@@ -1019,12 +1171,13 @@ const Cases: React.FC = () => {
 									source={(c as any).outcome_source}
 									appealed={(c as any).outcome_appealed}
 									partial={(c as any).outcome_is_partial}
+									final={(c as any).outcome_is_final}
 								/>
 							)}
 						</div>
 						<div className="case-card__footer">
 							<span><User size={12} /> {c.client_name || '-'}</span>
-							<span><Calendar size={12} /> {formatDate((c as any).filing_date)}</span>
+							<span title={formatDate((c as any).filing_date)}><Calendar size={12} /> {formatListDate((c as any).filing_date)}</span>
 						</div>
 					</div>
 				);
@@ -1064,7 +1217,7 @@ const Cases: React.FC = () => {
 										<div className="kanban-card__meta">
 											{isCaseArchived(c) && <span className="erp-cell__tag" title="قضية مؤرشفة — مخفيّة عن القائمة الحيّة">مؤرشفة</span>}
 											<span><User size={11} /> {c.client_name || '-'}</span>
-											<span><Calendar size={11} /> {formatDate((c as any).filing_date)}</span>
+											<span title={formatDate((c as any).filing_date)}><Calendar size={11} /> {formatListDate((c as any).filing_date)}</span>
 										</div>
 									</div>
 								))}
@@ -1107,19 +1260,28 @@ const Cases: React.FC = () => {
 							</span>
 						)}
 					</div>
-					<div className="cases-header-bar__stats" data-tour="cases-stats">
-						<span className="stat-pill stat-pill--active">
-							<span className="stat-pill__dot" />
-							{stats.active} نشطة
-						</span>
-						<span className="stat-pill stat-pill--pending">
-							<span className="stat-pill__dot" />
-							{stats.pending} معلقة
-						</span>
-						<span className="stat-pill stat-pill--closed">
-							<span className="stat-pill__dot" />
-							{stats.closed} مغلقة
-						</span>
+					{/* أزرار المصدر: كل مصدر بلونه الخفيف وعدده ضمن الفلاتر الحالية. النقر يصفّي،
+					    والنقر على النشط يلغيه. مصدرٌ عدده صفر لا يُعرض (إلا إن كان هو النشط). */}
+					<div className="cases-header-bar__sources" data-tour="cases-stats">
+						{SOURCE_KINDS.map(s => {
+							const n = sourceCounts[s.key] ?? 0;
+							const active = sourceFilter === s.key;
+							if (n === 0 && !active) return null;
+							return (
+								<button
+									key={s.key}
+									type="button"
+									className={`src-pill src-pill--${s.key}${active ? ' src-pill--active' : ''}`}
+									onClick={() => pickSource(active ? 'all' : s.key)}
+									title={active ? `إلغاء تصفية ${s.label}` : s.hint}
+									aria-pressed={active}
+								>
+									<span>{s.label}</span>
+									<b>{n}</b>
+									{active && <X size={12} />}
+								</button>
+							);
+						})}
 					</div>
 				</div>
 
@@ -1147,10 +1309,9 @@ const Cases: React.FC = () => {
 						onChange={(e) => setStatusFilter(e.target.value as any)}
 					>
 						<option value="all">كل الحالات</option>
-						<option value="active">نشطة</option>
-						<option value="pending">معلقة</option>
-						<option value="closed">مغلقة</option>
-						<option value="appealed">مستأنفة</option>
+						{STATUS_OPTIONS.map(s => (
+							<option key={s.key} value={s.key}>{s.label}</option>
+						))}
 					</select>
 
 					<select
@@ -1162,6 +1323,33 @@ const Cases: React.FC = () => {
 						<option value="all">كل الأنواع</option>
 						{Object.entries(CASE_TYPE_LABELS).map(([key, label]) => (
 							<option key={key} value={key}>{label}</option>
+						))}
+					</select>
+
+					{/* حالة ناجز — خرجت من لوحة الفلاتر المتقدمة إلى الشريط، وتظهر حين تعني شيئاً:
+					    «الكل» أو «ناجز» (بقية المصادر لا تكتبها) وحين للمكتب حالات أصلاً */}
+					{najizStatusApplies && najizStatuses.length > 0 && (
+						<select
+							className="filter-select"
+							data-tour="cases-filter-najiz"
+							value={najizStatusFilter}
+							onChange={(e) => setNajizStatusFilter(e.target.value)}
+							title="حالة القضية في ناجز"
+						>
+							<option value="">كل حالات ناجز</option>
+							{najizStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+						</select>
+					)}
+
+					<select
+						className={`filter-select${sortKey !== DEFAULT_SORT ? ' filter-select--set' : ''}`}
+						data-tour="cases-sort"
+						value={sortKey}
+						onChange={(e) => setSortKey(e.target.value)}
+						title="ترتيب القضايا"
+					>
+						{SORT_OPTIONS.map(s => (
+							<option key={s.key} value={s.key}>{s.label}</option>
 						))}
 					</select>
 
@@ -1321,21 +1509,6 @@ const Cases: React.FC = () => {
 						</select>
 					</div>
 
-					<div>
-						<label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>
-							حالة ناجز
-						</label>
-						<select
-							className="filter-select"
-							value={advFilters.najiz_status || ''}
-							onChange={(e) => setAdvFilters(f => ({ ...f, najiz_status: e.target.value || undefined }))}
-							style={{ width: '100%' }}
-						>
-							<option value="">كل الحالات</option>
-							{najizStatuses.map(s => <option key={s} value={s}>{s}</option>)}
-						</select>
-					</div>
-
 					{advFilterCount > 0 && (
 						<div>
 							<button
@@ -1476,56 +1649,20 @@ const Cases: React.FC = () => {
 								<ChevronRight size={14} /> السابق
 							</button>
 							<div className="pagination-pages">
-								{(() => {
-									const { currentPage, totalPages } = pagination;
-									const pages: (number | string)[] = [];
-									const maxVisible = 5;
-
-									if (totalPages <= maxVisible + 2) {
-										// إظهار كل الصفحات إذا كان العدد قليل
-										for (let i = 1; i <= totalPages; i++) pages.push(i);
-									} else {
-										// دائماً أظهر الصفحة الأولى
-										pages.push(1);
-
-										// حساب بداية ونهاية النطاق حول الصفحة الحالية
-										let start = Math.max(2, currentPage - 1);
-										let end = Math.min(totalPages - 1, currentPage + 1);
-
-										// تعديل النطاق إذا كنا قريبين من البداية أو النهاية
-										if (currentPage <= 3) {
-											end = Math.min(totalPages - 1, 4);
-										} else if (currentPage >= totalPages - 2) {
-											start = Math.max(2, totalPages - 3);
-										}
-
-										// إضافة ... قبل النطاق إذا لزم الأمر
-										if (start > 2) pages.push('...');
-
-										// إضافة الصفحات في النطاق
-										for (let i = start; i <= end; i++) pages.push(i);
-
-										// إضافة ... بعد النطاق إذا لزم الأمر
-										if (end < totalPages - 1) pages.push('...');
-
-										// دائماً أظهر الصفحة الأخيرة
-										if (totalPages > 1) pages.push(totalPages);
-									}
-
-									return pages.map((page, index) => (
-										typeof page === 'number' ? (
-											<button
-												key={page}
-												className={`pagination-page ${page === currentPage ? 'pagination-page--active' : ''}`}
-												onClick={() => fetchCases(page)}
-											>
-												{page}
-											</button>
-										) : (
-											<span key={`ellipsis-${index}`} className="pagination-ellipsis">...</span>
-										)
-									));
-								})()}
+								{pageRange(pagination.currentPage, pagination.totalPages).map((page, index) => (
+									typeof page === 'number' ? (
+										<button
+											key={page}
+											className={`pagination-page ${page === pagination.currentPage ? 'pagination-page--active' : ''}`}
+											onClick={() => fetchCases(page)}
+											aria-current={page === pagination.currentPage ? 'page' : undefined}
+										>
+											{page}
+										</button>
+									) : (
+										<span key={`ellipsis-${index}`} className="pagination-ellipsis">...</span>
+									)
+								))}
 							</div>
 							<button
 								className="pagination-btn"
