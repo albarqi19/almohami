@@ -27,9 +27,11 @@ const TenantThemedAuth: React.FC<Props> = ({ tenant, theme, children }) => {
     const formSide = theme.form_side ?? 'left';
     // logo_url فقط — العمودُ logo مسارُ تخزينٍ لا رابط، وكان يُحقن كـsrc نسبيٍّ فيكسر
     const logoUrl = tenant?.logo_url || null;
+    // شعارٌ للأسطح الداكنة: يُغني عن الصحن الأبيض، ويُستعمل حيث تكون الخلفيةُ صورةً معتمة
+    const darkLogoUrl = theme.logo_dark_url || null;
     const logoPosition = theme.logo_position ?? (layout === 'split' ? 'panel' : 'form');
     const logoSize = theme.logo_size ?? 'lg';
-    const logoPlate = theme.logo_plate ?? 'light';
+    const logoPlate = darkLogoUrl ? 'none' : (theme.logo_plate ?? 'light');
     const overlay = Math.min(Math.max(theme.background_overlay ?? 0.55, 0), 0.9);
 
     const style = {
@@ -38,9 +40,9 @@ const TenantThemedAuth: React.FC<Props> = ({ tenant, theme, children }) => {
         ...(theme.accent_color ? { '--theme-accent': theme.accent_color } : {}),
     } as React.CSSProperties;
 
-    const logo = logoUrl ? (
+    const renderLogo = (src: string | null) => src ? (
         <img
-            src={logoUrl}
+            src={src}
             alt={tenant?.name ?? ''}
             className={`auth-theme__logo auth-theme__logo--${logoSize}`}
         />
@@ -49,6 +51,9 @@ const TenantThemedAuth: React.FC<Props> = ({ tenant, theme, children }) => {
             <Scale size={26} />
         </div>
     );
+    // اللوحةُ داكنةٌ دائماً؛ والنموذجُ فاتحٌ في split وداكنٌ (فوق الصورة) في centered/cover
+    const panelLogo = renderLogo(darkLogoUrl || logoUrl);
+    const formLogo = renderLogo(layout === 'split' ? logoUrl : (darkLogoUrl || logoUrl));
 
     const showPanelLogo = layout === 'split' && (logoPosition === 'panel' || logoPosition === 'both');
     const showFormLogo =
@@ -74,7 +79,7 @@ const TenantThemedAuth: React.FC<Props> = ({ tenant, theme, children }) => {
                         className="auth-theme__visual-inner"
                     >
                         <div className={`auth-theme__visual-top${logoPlate === 'light' ? ' auth-theme__visual-top--plate' : ''}`}>
-                            {showPanelLogo && logo}
+                            {showPanelLogo && panelLogo}
                         </div>
                         {hasText && (
                             <div className="auth-theme__visual-text">
@@ -98,7 +103,7 @@ const TenantThemedAuth: React.FC<Props> = ({ tenant, theme, children }) => {
                 >
                     {showFormLogo && (
                         <div className={`auth-theme__form-logo${showPanelLogo ? ' auth-theme__form-logo--dup' : ''}`}>
-                            {logo}
+                            {formLogo}
                         </div>
                     )}
                     {layout !== 'split' && hasText && (
