@@ -5,20 +5,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Primary Meta Tags -->
+  <meta name="robots" content="index, follow">
+  <meta name="language" content="Arabic">
+  <meta name="revisit-after" content="7 days">
+
+  <!-- الخط الأساسي: تحميل مسبق للوزنين الأكثر استخداماً (المقطع العربي) -->
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/ibm-plex-arabic-400-arabic.woff2" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/ibm-plex-arabic-700-arabic.woff2" crossorigin>
+
+  <!-- PWA — محايد، لكل المضيفات -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+  <!-- brand:start -->
+  <!-- ═══ هويّة المنصّة ═══
+       كلُّ ما بين علامتَي brand هويّةُ المنصّة: العنوان والوصف والأيقونات واللون والمانيفست
+       وميتا المشاركة وSchema. على مضيف مكتبٍ (نطاقٌ خاصّ أو فرعيّ) تستبدله الدالّةُ
+       api/shell كاملاً بهويّة المكتب قبل أن يصل الملفُّ إلى أيّ طالب — متصفّحاً كان أو
+       جالبَ معاينةِ روابط. لا تضع وسماً يحمل اسم المنصّة أو أيقونتها خارج هذه المنطقة
+       (ولا حتى في تعليق: المصدرُ المخدوم على نطاق المكتب لا يذكر مزوّداً). -->
   <title>الرائد لإدارة المحاماة | نظام متكامل لإدارة مكاتب المحاماة</title>
   <meta name="title" content="الرائد لإدارة المحاماة | نظام متكامل لإدارة مكاتب المحاماة">
   <meta name="description" content="نظام الرائد لإدارة المحاماة - منصة سحابية متكاملة لإدارة القضايا والعملاء والجلسات والفواتير لمكاتب المحاماة في السعودية.">
   <meta name="keywords" content="نظام إدارة المحاماة, برنامج محاماة, إدارة القضايا, نظام قضايا, مكتب محاماة, السعودية, إدارة العملاء, الجلسات القضائية, الفواتير القانونية">
   <meta name="author" content="الرائد لإدارة المحاماة">
-  <meta name="robots" content="index, follow">
-  <meta name="language" content="Arabic">
-  <meta name="revisit-after" content="7 days">
   <link rel="canonical" href="https://alraedlaw.com/">
-
-  <!-- الخط الأساسي: تحميل مسبق للوزنين الأكثر استخداماً (المقطع العربي) -->
-  <link rel="preload" as="font" type="font/woff2" href="/fonts/ibm-plex-arabic-400-arabic.woff2" crossorigin>
-  <link rel="preload" as="font" type="font/woff2" href="/fonts/ibm-plex-arabic-700-arabic.woff2" crossorigin>
 
   <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="/favicon1.ico">
@@ -29,9 +41,6 @@
 
   <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#11233a" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="الرائد للمحاماة" />
 
   <!-- Microsoft Meta Tags -->
@@ -55,8 +64,6 @@
   <meta name="twitter:title" content="الرائد لإدارة المحاماة | نظام متكامل لإدارة مكاتب المحاماة">
   <meta name="twitter:description" content="نظام الرائد لإدارة المحاماة - منصة سحابية متكاملة لإدارة القضايا والعملاء والجلسات والفواتير.">
   <meta name="twitter:image" content="https://alraedlaw.com/og-image.png">
-
-  <!-- Note: Subdomains OG tags are handled by Cloudflare Worker -->
 
   <!-- WebSite Schema — يعتمد عليه قوقل لعرض اسم الموقع (Site Name) في نتائج البحث -->
   <script type="application/ld+json">
@@ -119,6 +126,7 @@
     "sameAs": []
   }
   </script>
+  <!-- brand:end -->
 
   <!-- منع ومضة المتصفح البيضاء عند التحديث في الوضع الداكن:
        يُضبط color-scheme وخلفية <html> هنا (سكربت حاجب في <head>) قبل أن يرسم المتصفح أول إطار.

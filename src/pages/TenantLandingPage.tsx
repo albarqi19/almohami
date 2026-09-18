@@ -28,7 +28,7 @@ const HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 const TenantLandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { tenant, isLoading, error, errorKind, subdomain, refetchTenant } = useTenant();
+  const { tenant, isLoading, error, errorKind, subdomain, refetchTenant, isWhiteLabel } = useTenant();
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   useEffect(() => {
@@ -180,11 +180,10 @@ const TenantLandingPage: React.FC = () => {
         </motion.div>
       </main>
 
-      {/* «مدعوم بواسطة الرائد» يُخفى عند تفعيل التبييض للشركة.
-          هذا هو الغرض الذي أُنشئ له العمود custom_branding_enabled في يناير
-          وبقي بلا مستهلك واحد — فكان التذييل يظهر على نطاق العميل الخاص بلا
-          أي علم يُخفيه. */}
-      {!tenant.custom_branding_enabled && (
+      {/* «مدعوم بواسطة الرائد» يُخفى للمكتب صاحب العلامة البيضاء: من فعّل التبييض
+          (العمود custom_branding_enabled) أو ربط نطاقه الخاصّ — فالنطاقُ الخاصّ
+          يُشترى ليكون النظامُ باسم المكتب، والتذييلُ كان يظهر عليه ما لم يُقلب العلم. */}
+      {!isWhiteLabel && (
         <footer style={styles.footer}>
           <span>
             مدعوم بواسطة{' '}
