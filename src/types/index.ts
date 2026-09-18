@@ -51,6 +51,10 @@ export interface User {
     draft_room_enabled?: boolean;
     /** علَمٌ ثانٍ منفصل: قراءةُ الصور بنموذج رؤية — قرارُ خصوصيّةٍ لا يُشتقّ من الأول. */
     draft_room_vision_enabled?: boolean;
+    /** التوقيع الموثّق عبر صادق: «متاح» من المنصّة، «مفعّل» من المكتب، والرصيد بالتوقيعات. */
+    sadq_available?: boolean;
+    sadq_enabled?: boolean;
+    sadq_credits?: number;
     [key: string]: any;
   };
 }

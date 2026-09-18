@@ -56,6 +56,8 @@ const LegalDeadlines = lazyWithRetry(() => import('./pages/LegalDeadlines'));
 const SessionPrep = lazyWithRetry(() => import('./pages/SessionPrep'));
 const SessionCopilot = lazyWithRetry(() => import('./pages/SessionCopilot'));
 const ClientCases = lazyWithRetry(() => import('./pages/ClientCases'));
+const ClientContracts = lazyWithRetry(() => import('./pages/ClientContracts'));
+const ClientContractDetail = lazyWithRetry(() => import('./pages/ClientContractDetail'));
 const ClientCaseDetail = lazyWithRetry(() => import('./pages/ClientCaseDetail'));
 const ClientDocumentsRequired = lazyWithRetry(() => import('./pages/ClientDocumentsRequired'));
 const Tasks = lazyWithRetry(() => import('./pages/Tasks'));
@@ -478,6 +480,17 @@ function App() {
                 </ProtectedRoute>
               } />
               {/* جلساتُ العميل — الخادم يفرض الملكية في /client/sessions (لا صلاحيات) */}
+              {/* عقود العميل — يراها ويوقّعها من بوابته (الخادم يفرض الملكية في /client/contracts) */}
+              <Route path="my-contracts" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientContracts />
+                </ProtectedRoute>
+              } />
+              <Route path="my-contracts/:id" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientContractDetail />
+                </ProtectedRoute>
+              } />
               <Route path="my-sessions" element={
                 <ProtectedRoute allowedRoles={['client']}>
                   <ClientSessions />

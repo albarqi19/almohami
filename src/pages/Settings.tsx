@@ -33,6 +33,7 @@ import {
   Smartphone,
   Megaphone,
   Percent,
+  PenLine,
 } from 'lucide-react';
 import NotificationSettings from '../components/NotificationSettings';
 import PhoneField from '../components/PhoneField';
@@ -56,6 +57,7 @@ import CaseNamingSettings from '../components/settings/CaseNamingSettings';
 import TaxIdentitySettings from '../components/settings/TaxIdentitySettings';
 import BankAccountsSettings from '../components/settings/BankAccountsSettings';
 import BillingDocumentsSettings from '../components/settings/BillingDocumentsSettings';
+import ESignatureSettings from '../components/settings/ESignatureSettings';
 import { apiClient, API_BASE_URL } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermission } from '../hooks/usePermission';
@@ -134,6 +136,8 @@ const Settings: React.FC = () => {
     // [INV-P1] «الفوترة والضريبة»: الرقم الضريبي والاسم القانوني والسجل والعنوان الوطني
     // وحالة التسجيل في قسم واحد (بلا ربط مع الهيئة). المعرّف القديم vat_registration يحوَّل إليه.
     { id: 'billing_tax', label: 'الفوترة والضريبة', icon: Percent, scope: 'admin' },
+    // التوقيع الإلكتروني: العادي دائم، وصادق (نفاذ) يُفعَّل هنا إن أتاحته المنصّة.
+    { id: 'e_signature', label: 'التوقيع الإلكتروني', icon: PenLine, scope: 'admin' },
     { id: 'integrations', label: 'التكاملات', icon: Link, scope: 'staff' },
     { id: 'word_addin', label: 'إضافة Word', icon: FileText, scope: 'staff' },
     { id: 'mobile_app', label: 'تطبيق الجوال', icon: Smartphone, scope: 'staff' },
@@ -629,6 +633,9 @@ const Settings: React.FC = () => {
             <BillingDocumentsSettings />
           </>
         );
+
+      case 'e_signature':
+        return <ESignatureSettings />;
 
       case 'najiz':
         return (
