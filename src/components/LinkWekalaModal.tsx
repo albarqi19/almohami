@@ -165,7 +165,8 @@ const LinkWekalaModal: React.FC<Props> = ({
                                                 {w.status}
                                             </span>
                                         </td>
-                                        <td>{formatDate(w.expiry_date)}</td>
+                                        {/* اليدوية تحمل الميلادي وحده — كان الحقل المقروء لا يرجعه الباك فتظهر شرطة */}
+                                        <td>{w.expiry_date_hijri || formatDate((w as any).expiry_date_gregorian || w.expiry_date)}</td>
                                     </tr>
                                 ))}
                             </tbody>
