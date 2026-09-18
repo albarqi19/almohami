@@ -24,6 +24,7 @@ import {
 import { LetterheadService } from '../services/letterheadService';
 import { ClientManagementService } from '../services/clientManagementService';
 import { useAuth } from '../contexts/AuthContext';
+import { useTenant } from '../contexts/TenantContext';
 import type { Letterhead } from '../types/letterhead';
 
 interface ClientOption { id: number; name: string; phone?: string | null; email?: string | null }
@@ -241,6 +242,7 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
   }, [letterheads, letterheadId]);
 
   const officeName = (authUser as any)?.tenant?.name || (authUser as any)?.tenant_name || '';
+  const { isWhiteLabel } = useTenant();
   // نفس أولوية الـPDF: لون الخطاب ← لون الكليشة ← كحلي النظام
   const pageAccent = accentColor || selectedLetterhead?.primary_color || '#1f3a5f';
   const isImageLetterhead = selectedLetterhead?.type === 'image' && !!selectedLetterhead.header_image_url;
@@ -390,8 +392,10 @@ const ComposeCorrespondenceModal: React.FC<ComposeCorrespondenceModalProps> = ({
       return <img className="clc-page__lhimg clc-page__lhimg--footer" src={lh.footer_image_url} alt="" style={{ height: mmToPx(lh.footer_height_mm || 25) }} />;
     }
     const contact = [lh?.footer_phone, lh?.footer_email, lh?.footer_website, lh?.footer_address].filter(Boolean).join(' | ');
+    // السطرُ الافتراضيّ يطابق ما يطبعه الباك (RendersLetterheadChrome): اسمُ المزوّد
+    // يسقط للمكتب صاحب العلامة البيضاء، فتصدق المعاينةُ على المستند الصادر.
     const line = [lh?.footer_text, contact].filter(Boolean).join(' — ')
-      || `${officeName || 'مكتب المحاماة'} — صدر عبر نظام الرائد لإدارة المحاماة`;
+      || `${officeName || 'مكتب المحاماة'}${isWhiteLabel ? '' : ' — صدر عبر نظام الرائد لإدارة المحاماة'}`;
     return <div className="clc-page__df">{line}</div>;
   };
 

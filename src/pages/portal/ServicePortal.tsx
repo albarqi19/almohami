@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../../utils/api';
+import { useTenant } from '../../contexts/TenantContext';
 
 interface TimelineStep {
   label: string;
@@ -89,6 +90,7 @@ const C = {
 
 const ServicePortal: React.FC = () => {
   const { token } = useParams<{ token: string }>();
+  const { isWhiteLabel } = useTenant();
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -590,7 +592,8 @@ const ServicePortal: React.FC = () => {
             </div>
           </div>
 
-          <div className="spv-sys">نظام الرائد · الديوان الرقمي</div>
+          {/* سطرُ المزوّد يسقط للمكتب صاحب العلامة البيضاء — البوابةُ تُفتح على نطاقه باسمه */}
+          {!isWhiteLabel && <div className="spv-sys">نظام الرائد · الديوان الرقمي</div>}
         </>
       ) : null}
     </div>
