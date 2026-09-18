@@ -6,7 +6,7 @@ import {
   classifyHost,
   lookupTenant,
   renderManifest,
-} from '../lib/tenant-brand';
+} from '../lib/tenant-brand.js';
 
 /**
  * [manifest] مانيفست PWA لمضيف مكتب — اسمُه وأيقونتُه ولونُه.

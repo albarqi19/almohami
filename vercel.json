@@ -1,4 +1,7 @@
 {
+  "functions": {
+    "api/shell.ts": { "includeFiles": "dist/index.html" }
+  },
   "rewrites": [
     {
       "source": "/guide/:path+",

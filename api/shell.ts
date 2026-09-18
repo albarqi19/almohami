@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
   BRAND_REGION_RE,
   NEUTRAL_BRAND,
@@ -8,7 +10,7 @@ import {
   lookupTenant,
   renderBrandHead,
   safePath,
-} from '../lib/tenant-brand';
+} from '../lib/tenant-brand.js';
 
 /**
  * [shell] صدفةُ التطبيق لمضيف مكتب — `index.html` نفسُه بهويّة المكتب في `<head>`.
@@ -29,6 +31,20 @@ let shellCache: { html: string; at: number } | null = null;
 async function loadShell(origin: string): Promise<string> {
   if (shellCache && Date.now() - shellCache.at < SHELL_TTL_MS) return shellCache.html;
 
+  // 1) من ملفات النشرة نفسها (vercel.json → functions.includeFiles: dist/index.html):
+  //    بلا شبكة، فلا يعلّقه Cloudflare ولا حمايةُ Vercel للمعاينات، والملفُّ هو المخدومُ
+  //    حرفياً فيحمل مسارات الأصول المبنيّة الصحيحة.
+  try {
+    const html = await readFile(join(process.cwd(), 'dist', 'index.html'), 'utf8');
+    if (BRAND_REGION_RE.test(html)) {
+      shellCache = { html, at: Date.now() };
+      return html;
+    }
+  } catch {
+    // ليس في الحزمة — نسقط إلى الجلب عبر الشبكة
+  }
+
+  // 2) احتياطاً: الجلب من الأصل نفسه (/index.html يتخطّى الـMiddleware لأنه بامتداد)
   let lastError: unknown = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
