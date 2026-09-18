@@ -23,6 +23,7 @@ import LegalAIToolbarButton from '../LegalAIToolbarButton';
 import { apiClient } from '../../utils/api';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
 import type { LegalService } from '../../types/legalServices';
 import type { TextAnnotation } from '../../types/textAnnotations';
 
@@ -54,6 +55,7 @@ const LETTERHEADS: Array<{ value: LetterheadMode; label: string; hint: string }>
 const SimpleLetterComposer: React.FC<Props> = ({ service, onClose, onChanged }) => {
   const { user: authUser } = useAuth();
   const officeName = (authUser as any)?.tenant?.name || (authUser as any)?.tenant_name || 'مكتب المحاماة';
+  const { isWhiteLabel } = useTenant();
   const comp: any = service.simple_service_detail?.composition ?? null;
 
   // ── الحقول: الموضوع افتراضياً من عنوان الخدمة، والتوقيع من المحامي المسؤول ──
@@ -312,7 +314,7 @@ const SimpleLetterComposer: React.FC<Props> = ({ service, onClose, onChanged }) 
                 </div>
 
                 {letterhead !== 'none' && (
-                  <div className="clc-page__df">{officeName} — صدر عبر نظام الرائد لإدارة المحاماة</div>
+                  <div className="clc-page__df">{officeName}{isWhiteLabel ? '' : ' — صدر عبر نظام الرائد لإدارة المحاماة'}</div>
                 )}
               </div>
             </div>
