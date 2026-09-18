@@ -761,6 +761,11 @@ body.dark .side-task-card {
     padding: 12px 16px 20px 16px;
 }
 
+/* قسم المشاريع يملأ اللوحة بلا حواف داخلية فتتصل حوافه بالإطار كبقية الأقسام */
+.middle-panel-content:has(> .prj-list) {
+    padding: 0;
+}
+
 /* In board mode: the page itself doesn't scroll vertically — each column scrolls internally */
 .middle-panel-content:has(.board-view) {
     display: flex;
@@ -1043,6 +1048,13 @@ body.dark .tcm-badge.active-timer {
     font-weight: 700;
     border-bottom: 1px solid var(--color-border);
 }
+
+/* صف المشروع في القائمة العامة: مهام المشروع المسندة لغيري مجموعة ومطوية افتراضياً */
+.tasks-project-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--prj-c, var(--law-navy)); flex: none; }
+.tasks-project-meta { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); }
+.tasks-project-open { font: inherit; font-size: 11px; font-weight: 600; color: var(--law-navy); background: var(--dashboard-card, #fff); border: 1px solid var(--color-border); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+.tasks-project-open:hover { border-color: var(--law-gold); }
+.tasks-header-select.is-active { border-color: var(--law-navy); color: var(--law-navy); }
 
 /* Status badges (task statuses) */
 .tasks-table .status-badge {

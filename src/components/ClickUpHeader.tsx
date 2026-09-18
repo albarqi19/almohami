@@ -256,7 +256,7 @@ const ClickUpHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
               <span className="clickup-header__breadcrumb-sep">/</span>
               <span className="clickup-header__breadcrumb-current">
                 {location.pathname.includes('/cases') && 'القضايا'}
-                {location.pathname.includes('/tasks') && 'المهام'}
+                {location.pathname.includes('/tasks') && 'المهام والمشاريع'}
                 {location.pathname.includes('/dashboard') && 'لوحة التحكم'}
                 {location.pathname.includes('/documents') && 'الوثائق'}
                 {location.pathname.includes('/sessions') && 'الجلسات'}

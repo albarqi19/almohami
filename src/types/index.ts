@@ -834,6 +834,16 @@ export interface Task {
   folder?: TaskFolder | null;
   // الأرشفة — معيار الإخفاء هو archived_at وحده لا status، وهو مستقل عن سلة المحذوفات
   archived_at?: string | null;
+  // المشروع القانوني الذي تتبعه المهمة (snake_case كما يرجعها الـ API) — شارة على الصف وفي مساحة المهمة
+  project_id?: number | null;
+  project_phase_id?: number | null;
+  project?: { id: number; code: string; name: string; color?: string | null; status?: string | null } | null;
+  project_phase?: { id: number; name: string } | null;
+  client_action?: boolean;
+  client_visible?: boolean;
+  planned_start?: string | null;
+  planned_due?: string | null;
+  role_hint?: string | null;
 }
 
 /** مجلد مهام — تنظيم ظاهري بحت (لا يمسّ التقارير أو التذكيرات) */

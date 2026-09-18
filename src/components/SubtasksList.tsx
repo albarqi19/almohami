@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Check, Trash2, GripVertical, ListChecks, AtSign, Pause, Play, PauseCircle, Search } from 'lucide-react';
 import { SubtaskService, type Subtask, type SubtasksResponse } from '../services/subtaskService';
+import SubtaskPanel from './SubtaskPanel';
 import { UserService } from '../services/UserService';
 
 interface SubtasksListProps {
@@ -30,6 +31,8 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
   const [showAddForm, setShowAddForm] = useState(false);
 
   // الإيقاف المؤقت بسبب إلزامي (#130): الفرعية التي يُكتب سببها الآن
+  // نافذة الفرعية: الضغط على عنوان الصف يفتحها (مربع الإنجاز يعمل مباشرة كما هو)
+  const [openId, setOpenId] = useState<string | null>(null);
   const [pausingId, setPausingId] = useState<string | null>(null);
   const [pauseReason, setPauseReason] = useState('');
   const [pauseBusy, setPauseBusy] = useState(false);
@@ -283,9 +286,23 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
                   {subtask.is_completed && <Check size={12} />}
                 </button>
 
-                <span className={`subtasks-list__text ${subtask.is_completed ? 'subtasks-list__text--completed' : ''}`}>
+                <span className={`subtasks-list__text subtasks-list__text--open ${subtask.is_completed ? 'subtasks-list__text--completed' : ''}`} title="افتح الفرعية" onClick={() => setOpenId(subtask.id)}>
                   {subtask.title}
                 </span>
+                {(() => {
+                  const stepsTotal = subtask.steps_total ?? 0;
+                  const today = new Date().toISOString().slice(0, 10);
+                  const late = !!subtask.due_date && !subtask.is_completed && subtask.due_date < today;
+                  const hasMeta = stepsTotal > 0 || (subtask.comments_count ?? 0) > 0 || (subtask.documents_count ?? 0) > 0 || !!subtask.due_date;
+                  return hasMeta ? (
+                    <span className="subtasks-list__meta" onClick={() => setOpenId(subtask.id)} style={{ cursor: 'pointer' }}>
+                      {stepsTotal > 0 && <span title="الخطوات المنجزة من الكل"><ListChecks size={11} /> {subtask.steps_done ?? 0}/{stepsTotal} <i className="bar"><b style={{ width: `${Math.round(((subtask.steps_done ?? 0) / stepsTotal) * 100)}%` }} /></i></span>}
+                      {(subtask.comments_count ?? 0) > 0 && <span title="تعليقات الفرعية">💬 {subtask.comments_count}</span>}
+                      {(subtask.documents_count ?? 0) > 0 && <span title="مرفقات الفرعية">📎 {subtask.documents_count}</span>}
+                      {subtask.due_date && <span className={late ? 'late' : ''} title={late ? 'فات موعدها' : 'الاستحقاق'}>{fmtDate(subtask.due_date)}</span>}
+                    </span>
+                  ) : null;
+                })()}
 
                 {/* شارة الإيقاف — السبب ظاهر دائماً على الفرعية الموقوفة (#130) */}
                 {subtask.paused_at && (
@@ -491,6 +508,8 @@ const SubtasksList: React.FC<SubtasksListProps> = ({ taskId, onProgressChange, o
           )}
         </div>
       )}
+
+      {openId !== null && <SubtaskPanel subtaskId={openId} onClose={() => setOpenId(null)} onChanged={() => { loadSubtasks(); onTaskChanged?.(); }} />}
 
       <style>{`
         .subtasks-list {

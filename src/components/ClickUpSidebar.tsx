@@ -154,6 +154,7 @@ const ClickUpSidebar: React.FC<SidebarProps> = ({
         '/my-sessions',
         '/my-execution-requests',
         '/my-services',
+        '/my-projects',
         '/my-appointments',
         '/my-establishment',
         '/my-documents-required',
