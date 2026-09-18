@@ -1,6 +1,5 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import { isPlatformHost } from '../contexts/TenantContext';
 
 interface Props {
   children: ReactNode;
@@ -313,24 +312,22 @@ class ErrorBoundary extends Component<Props, State> {
           )}
         </div>
 
-        {/* تذييل الهوية — على مضيف المنصّة وحده؛ على نطاق مكتبٍ لا اسمَ لمزوّدٍ آخر */}
-        {isPlatformHost(window.location.hostname.toLowerCase()) && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: '2rem',
-              left: 0,
-              right: 0,
-              textAlign: 'center',
-              fontSize: '12px',
-              letterSpacing: '0.2em',
-              color: 'rgba(197, 165, 114, 0.5)',
-              zIndex: 1,
-            }}
-          >
-            الرائد لإدارة المحاماة
-          </div>
-        )}
+        {/* تذييل الهوية */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '2rem',
+            left: 0,
+            right: 0,
+            textAlign: 'center',
+            fontSize: '12px',
+            letterSpacing: '0.2em',
+            color: 'rgba(197, 165, 114, 0.5)',
+            zIndex: 1,
+          }}
+        >
+          الرائد لإدارة المحاماة
+        </div>
       </div>
     );
   }

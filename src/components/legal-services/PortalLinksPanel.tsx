@@ -9,13 +9,7 @@ interface PortalLinksPanelProps {
   serviceId: number;
 }
 
-/**
- * الرابط الكامل من الخلفية (على نطاق المكتب). التركيب من window.location.origin
- * احتياطٌ فقط: المالك الداخل من جذر المنصة كان ينسخ رابطاً على alraedlaw.com
- * فتخرج بطاقته في واتساب العميل باسم «الرائد».
- */
-const fullUrl = (link: Pick<ServicePortalLinkItem, 'url' | 'path'>) =>
-  link.url || `${window.location.origin}${link.path}`;
+const fullUrl = (path: string) => `${window.location.origin}${path}`;
 
 /** تاريخ عربي مقروء (ميلادي بأرقام عربية) — لعرض تاريخ انتهاء الرابط */
 const formatArabicDate = (iso: string): string =>
@@ -73,7 +67,7 @@ const PortalLinksPanel: React.FC<PortalLinksPanelProps> = ({ serviceId }) => {
       if (!res?.success) throw new Error(res?.message || 'تعذّر إنشاء الرابط');
       const link = res.data;
       try {
-        await navigator.clipboard.writeText(fullUrl(link));
+        await navigator.clipboard.writeText(fullUrl(link.path));
         toast.success('تم إنشاء الرابط ونسخه إلى الحافظة');
       } catch {
         toast.success('تم إنشاء الرابط — انسخه من القائمة أدناه');
@@ -88,7 +82,7 @@ const PortalLinksPanel: React.FC<PortalLinksPanelProps> = ({ serviceId }) => {
 
   const handleCopy = async (link: ServicePortalLinkItem) => {
     try {
-      await navigator.clipboard.writeText(fullUrl(link));
+      await navigator.clipboard.writeText(fullUrl(link.path));
       setCopiedId(link.id);
       if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
       copiedTimerRef.current = setTimeout(() => setCopiedId(null), 2000);
@@ -183,7 +177,7 @@ const PortalLinksPanel: React.FC<PortalLinksPanelProps> = ({ serviceId }) => {
                     <CalendarClock size={12} />
                     <span>{expiryText(l)}</span>
                   </div>
-                  <div className="lsd-portal-item__url" dir="ltr">{fullUrl(l)}</div>
+                  <div className="lsd-portal-item__url" dir="ltr">{fullUrl(l.path)}</div>
                 </div>
                 <div className="lsd-portal-item__btns">
                   {l.is_valid && (

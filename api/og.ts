@@ -11,17 +11,6 @@ const DEFAULT_META = {
   themeColor: '#11233a',
 };
 
-// مضيفُ مكتبٍ تعذّر استبيانه (مهلة، 5xx، نطاق لم يُربط بعد): بطاقةٌ محايدة لا
-// هويةَ المنصة. واتساب يخبّئ البطاقة عند المرسل طويلاً، فبطاقةٌ باسم «الرائد»
-// على رابط مكتبٍ لا تُمحى بإصلاح الخادم بعدها.
-const TENANT_FALLBACK_META = {
-  title: 'مكتب محاماة',
-  description: '',
-  image: '',
-  siteName: 'مكتب محاماة',
-  themeColor: DEFAULT_META.themeColor,
-};
-
 const PLATFORM_APEX = 'alraedlaw.com';
 
 /** مضيف خارج مظلّة المنصة ⇒ نطاق عميل خاص، يُستبان بـby-domain لا بالـslug */
@@ -61,13 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // app.nuhaili-law.com دومين عميل شرعي.
   const shouldFetch = isCustomDomain || (subdomain && subdomain !== 'www' && subdomain !== 'app');
 
-  let cacheControl = 's-maxage=300, stale-while-revalidate';
-
   if (shouldFetch) {
-    // الفشلُ لا يُخبَّأ على الحافة: المشاركةُ التالية تعيد المحاولة
-    meta = { ...TENANT_FALLBACK_META };
-    cacheControl = 'no-store';
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
@@ -92,25 +75,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           meta = {
             title: `${tenantData.name} | مكتب محاماة`,
             description: tenantData.tagline || `${tenantData.name} - مكتب محاماة متخصص`,
-            // بلا شعار ⇒ بلا صورة. البديلُ القديم og-image.png وعليها
-            // «الرائد لإدارة المحاماة» بخطٍّ عريض — على بطاقة رابط المكتب.
-            image: tenantData.logo_url || '',
+            image: tenantData.logo_url || DEFAULT_META.image,
             siteName: tenantData.name,
             themeColor: HEX_RE.test(String(tenantData.primary_color ?? ''))
               ? tenantData.primary_color
               : DEFAULT_META.themeColor,
           };
-          cacheControl = 's-maxage=300, stale-while-revalidate';
         }
       }
-      // إذا response.ok = false، تبقى البطاقة المحايدة
+      // إذا response.ok = false، نبقي DEFAULT_META (fail silently)
     } catch (error) {
       clearTimeout(timeoutId);
-      console.error('Failed to fetch tenant (using neutral meta):', error);
+      console.error('Failed to fetch tenant (using defaults):', error);
+      // meta = DEFAULT_META (تم تعيينها بالأعلى)
     }
   }
-
-  const image = meta.image ? escapeHtml(meta.image) : '';
 
   const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -134,16 +113,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   <meta property="og:url" content="${escapeHtml(currentUrl)}">
   <meta property="og:title" content="${escapeHtml(meta.title)}">
   <meta property="og:description" content="${escapeHtml(meta.description)}">
-  ${image ? `<meta property="og:image" content="${image}">` : ''}
+  <meta property="og:image" content="${escapeHtml(meta.image)}">
   <meta property="og:locale" content="ar_SA">
   <meta property="og:site_name" content="${escapeHtml(meta.siteName)}">
 
   <!-- Twitter -->
-  <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="${escapeHtml(currentUrl)}">
   <meta name="twitter:title" content="${escapeHtml(meta.title)}">
   <meta name="twitter:description" content="${escapeHtml(meta.description)}">
-  ${image ? `<meta name="twitter:image" content="${image}">` : ''}
+  <meta name="twitter:image" content="${escapeHtml(meta.image)}">
 
   <!-- Schema.org -->
   <script type="application/ld+json">
@@ -152,8 +131,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     "@type": "LegalService",
     "name": "${escapeHtml(meta.siteName)}",
     "description": "${escapeHtml(meta.description)}",
-    "url": "${escapeHtml(currentUrl)}"${image ? `,
-    "logo": "${image}"` : ''}
+    "url": "${escapeHtml(currentUrl)}",
+    "logo": "${escapeHtml(meta.image)}"
   }
   </script>
 </head>
@@ -164,7 +143,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 </html>`;
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', cacheControl);
+  res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
   return res.status(200).send(html);
 }
 

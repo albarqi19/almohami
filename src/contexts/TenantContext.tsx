@@ -33,8 +33,6 @@ export interface Tenant {
   tagline: string | null;
   favicon_url: string | null;
   custom_branding_enabled: boolean;
-  /** يردّه الباك محسوباً (`Tenant::isWhiteLabel`) — قد يغيب في نشرةٍ أقدم */
-  white_label?: boolean;
   login_theme?: LoginTheme | null;
 }
 
@@ -50,15 +48,6 @@ interface TenantContextType {
   tenant: Tenant | null;
   isSubdomain: boolean;
   subdomain: string | null;
-  /** نطاقٌ خاصّ بالمكتب (portal.zubaidi.sa) لا نطاقٌ فرعيّ على المنصّة */
-  isCustomDomain: boolean;
-  /**
-   * علامةٌ بيضاء: لا اسمَ «الرائد» ولا شعارَه في أيّ سطحٍ يراه العميل.
-   * القاعدةُ نفسُها في الباك (`Tenant::isWhiteLabel`): مكتبٌ ربط نطاقه الخاصّ — وهو
-   * ما دفع ثمنَه ليكون النظامُ باسمه — أو فعّل التبييض صراحةً. يُقرأ من الـAPI
-   * (`white_label`) حين يردّه، وإلا من المضيف والعلم.
-   */
-  isWhiteLabel: boolean;
   isLoading: boolean;
   error: string | null;
   errorKind: TenantErrorKind | null;
@@ -77,7 +66,7 @@ const RESERVED_SUBDOMAINS = ['www', 'api', 'app', 'admin', 'dashboard'];
 // كنطاق مخصص لشركة (custom domain) ويُستبان عبر by-domain endpoint
 const PLATFORM_APEX = 'alraedlaw.com';
 
-export function isPlatformHost(host: string): boolean {
+function isPlatformHost(host: string): boolean {
   return (
     host === PLATFORM_APEX ||
     host.endsWith(`.${PLATFORM_APEX}`) ||
@@ -209,10 +198,6 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // على نجاح الجلب — وهذا ما يمنع ظهور هوية «الرائد» على نطاق العميل عند الفشل.
   const isTenantHost = isSubdomain;
 
-  const isWhiteLabel = tenant
-    ? (tenant.white_label ?? (isCustomDomain || !!tenant.custom_branding_enabled))
-    : isCustomDomain;
-
   const fetchTenant = useCallback(async () => {
     if (!isCustomDomain && !subdomainFromHost) {
       setIsLoading(false);
@@ -337,8 +322,6 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         tenant,
         isSubdomain,
         subdomain,
-        isCustomDomain,
-        isWhiteLabel,
         isLoading,
         error,
         errorKind,

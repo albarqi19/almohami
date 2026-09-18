@@ -332,8 +332,6 @@ export interface ServicePortalLinkItem {
   recipient_name: string | null;
   allow_upload: boolean;
   path: string;
-  /** الرابط الكامل على نطاق المكتب — يغيب في ردود الخلفية القديمة */
-  url?: string;
   is_valid: boolean;
   expires_at: string | null;
   revoked_at: string | null;

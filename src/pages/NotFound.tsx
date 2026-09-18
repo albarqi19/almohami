@@ -1,10 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { isPlatformHost } from '../contexts/TenantContext';
 
 const NotFound = () => {
   const navigate = useNavigate();
-  // ختمُ المنصّة أسفل الصفحة لا يظهر على نطاق مكتب — صفحةُ 404 تُفتح على أيّ مسارٍ خاطئ هناك
-  const showPlatformMark = isPlatformHost(window.location.hostname.toLowerCase());
 
   return (
     <div
@@ -209,23 +206,21 @@ const NotFound = () => {
       </div>
 
       {/* Footer brand */}
-      {showPlatformMark && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '2rem',
-            left: 0,
-            right: 0,
-            textAlign: 'center',
-            fontSize: '12px',
-            letterSpacing: '0.2em',
-            color: 'rgba(197, 165, 114, 0.5)',
-            zIndex: 1,
-          }}
-        >
-          الرائد لإدارة المحاماة
-        </div>
-      )}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '2rem',
+          left: 0,
+          right: 0,
+          textAlign: 'center',
+          fontSize: '12px',
+          letterSpacing: '0.2em',
+          color: 'rgba(197, 165, 114, 0.5)',
+          zIndex: 1,
+        }}
+      >
+        الرائد لإدارة المحاماة
+      </div>
     </div>
   );
 };
