@@ -190,6 +190,7 @@ const EVENT_LABELS: Record<string, string> = {
   welcome_message: 'ترحيب',
   session_report_message: 'تقرير الجلسة',
   case_report_message: 'تقرير القضية',
+  outgoing_letter_message: 'الصادر',
   login_notification: 'تسجيل دخول',
   task_assigned: 'مهمة جديدة',
   daily_report: 'تقرير يومي',
@@ -208,6 +209,7 @@ const NOTIFICATION_TITLES: Record<string, string> = {
   login_notification: 'إشعار تسجيل الدخول',
   session_report_message: 'رسالة تقرير الجلسة (مع ملف PDF)',
   case_report_message: 'رسالة تقرير القضية (مع ملف PDF)',
+  outgoing_letter_message: 'رسالة الصادر (مع ملف PDF)',
   task_assigned: 'مهمة جديدة',
   task_due_reminder: 'تذكير بمهمة',
   task_overdue: 'مهمة متأخرة',
@@ -252,6 +254,7 @@ const TEMPLATE_VARIABLES: Record<string, string[]> = {
   welcome_message: ['{client_name}', '{national_id}', '{pin}', '{company_name}', '{portal_section}'],
   session_report_message: ['{client_first_name}', '{client_name}', '{session_date}', '{session_type}', '{case_title}', '{case_number}', '{court}', '{company_name}'],
   case_report_message: ['{client_first_name}', '{client_name}', '{case_title}', '{case_number}', '{report_number}', '{company_name}'],
+  outgoing_letter_message: ['{recipient_first_name}', '{recipient_name}', '{document_label}', '{outgoing_number}', '{subject}', '{case_number}', '{case_title}', '{company_name}'],
   case_created: ['{client_name}', '{case_number}', '{case_title}'],
   case_updated: ['{client_name}', '{case_number}', '{case_title}'],
   case_procedure: ['{client_name}', '{case_number}', '{case_title}', '{procedure_title}'],
@@ -285,7 +288,12 @@ const replaceTemplatePlaceholders = (text: string) => {
     .replace(/{payment_amount}/g, '15,000 ر.س')
     .replace(/{due_date}/g, '2026-07-01')
     .replace(/{task_title}/g, 'مراجعة مذكرة الدفاع الأولى')
-    .replace(/{lawyer_name}/g, 'المحامي عبد العزيز الشهري');
+    .replace(/{lawyer_name}/g, 'المحامي عبد العزيز الشهري')
+    .replace(/{recipient_name}/g, 'أحمد العتيبي')
+    .replace(/{recipient_first_name}/g, 'أحمد')
+    .replace(/{document_label}/g, 'خطاب صادر')
+    .replace(/{outgoing_number}/g, 'OUT-2026-0042')
+    .replace(/{subject}/g, 'إشعار بموعد الجلسة القادمة');
 };
 
 // ── Main Component ──
@@ -2003,7 +2011,13 @@ const WhatsappSettings: React.FC = () => {
                                      v === '{payment_amount}' ? 'قيمة الدفعة' :
                                      v === '{due_date}' ? 'تاريخ الاستحقاق' :
                                      v === '{lawyer_name}' ? 'اسم المحامي' :
-                                     v === '{task_title}' ? 'اسم المهمة' : v}
+                                     v === '{task_title}' ? 'اسم المهمة' :
+                                     v === '{recipient_first_name}' ? 'الاسم الأول للمستلِم' :
+                                     v === '{recipient_name}' ? 'اسم المستلِم' :
+                                     v === '{document_label}' ? 'نوع المستند' :
+                                     v === '{outgoing_number}' ? 'رقم الصادر' :
+                                     v === '{subject}' ? 'موضوع الخطاب' :
+                                     v === '{company_name}' ? 'اسم المكتب' : v}
                                   </span>
                                 </button>
                               ))}
