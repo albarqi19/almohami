@@ -9,6 +9,18 @@ import './styles/tiptap.css'
 import './styles/erp.css'
 import App from './App.tsx'
 
+// قطعةٌ كسولة تغيّر اسمُها بعد نشرة (أو ردٌّ مسمومٌ في الخبيئة) ⇒ Vite يرفع vite:preloadError.
+// إعادةُ تحميلٍ واحدة تجلب index.html الجديد بأسمائه الصحيحة — بحارس زمني كي لا تدور حلقة.
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault()
+  const key = 'raed:preload-reload-at'
+  const last = Number(sessionStorage.getItem(key) || 0)
+  if (Date.now() - last > 60_000) {
+    sessionStorage.setItem(key, String(Date.now()))
+    window.location.reload()
+  }
+})
+
 // إعداد TanStack Query - مُصدَّر للاستخدام في AuthContext
 export const queryClient = new QueryClient({
   defaultOptions: {

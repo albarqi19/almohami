@@ -91,12 +91,17 @@ self.addEventListener('fetch', (event) => {
           //  ③ نوعُ الردّ: `opaque`/`error` يرمي «encountered a network error».
           // وضجيجُ هذه الأخطاء أسوأُ من فقدِ الكاش: يُغرق الطرفيةَ فيُخفي عطلاً حقيقياً.
           const req = event.request;
+          //  ④ سقوطُ SPA كان يعيد index.html بحالة 200 لأيّ مسار — حتى لقطعةِ JS اختفت بعد نشرة —
+          //     فيُخزَّن HTML تحت اسم سكربت ويُسمَّم التبويبُ إلى الأبد (وقع 2026-09-19).
+          //     لا يُخزَّن HTML إلا لطلبات المستند نفسها.
+          const ctype = (response.headers.get('content-type') || '').toLowerCase();
           const cacheable =
             req.method === 'GET' &&
             (req.url.startsWith('http:') || req.url.startsWith('https:')) &&
             response.status === 200 &&
             response.type !== 'opaque' &&
-            response.type !== 'error';
+            response.type !== 'error' &&
+            (req.destination === 'document' || !ctype.includes('text/html'));
 
           if (cacheable) {
             const responseClone = response.clone();

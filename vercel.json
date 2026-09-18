@@ -8,7 +8,7 @@
       "destination": "https://api.alraedlaw.com/guide/:path+"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|api/).*)",
       "has": [
         {
           "type": "header",
@@ -19,7 +19,7 @@
       "destination": "/api/og"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|api/).*)",
       "destination": "/index.html"
     }
   ],
