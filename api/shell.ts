@@ -8,7 +8,7 @@ import {
   lookupTenant,
   renderBrandHead,
   safePath,
-} from '../lib/tenant-brand';
+} from '../lib/tenant-brand.js';
 
 /**
  * [shell] صدفةُ التطبيق لمضيف مكتب — `index.html` نفسُه بهويّة المكتب في `<head>`.
