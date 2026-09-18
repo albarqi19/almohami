@@ -15,6 +15,10 @@ import {
 import { UserService } from '../../services/UserService';
 import { CaseService } from '../../services/caseService';
 import { apiClient } from '../../utils/api';
+import { useBillingSettings } from '../../hooks/useBillingSettings';
+import BankAccountPicker from './BankAccountPicker';
+import { invoiceService } from '../../services/invoiceService';
+import type { VatExemptionReason } from '../../types/billing';
 import type { User as UserType, Case } from '../../types';
 import { toDateInputValue } from '../../utils/dateAr';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
@@ -66,6 +70,9 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
     vat_rate: '15',
     notes: '',
     status: 'draft',
+    // [INV-P2] تاريخ التوريد وسبب عدم احتساب الضريبة
+    supply_date: '',
+    vat_exemption_reason_code: '',
   });
 
   const [clients, setClients] = useState<ClientOption[]>([]);
@@ -77,16 +84,31 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   // [BILL-05] محرّر بنود الفاتورة (اختياري؛ عند وجوده يُشتقّ subtotal منه).
   const [lineItems, setLineItems] = useState<LineItemRow[]>([]);
-  // [TAX-02] حالة التسجيل الضريبي للمستأجر + النسبة الافتراضية (بدل تثبيت 15).
-  const [isVatRegistered, setIsVatRegistered] = useState(true);
-  const [defaultVatRate, setDefaultVatRate] = useState('15');
+  // [TAX-02][INV-P1] حالة التسجيل الضريبي + النسبة الافتراضية من المصدر المشترك (useBillingSettings)
+  // — تُلغى بعد أي حفظ في «الفوترة والضريبة» فلا تبقى النافذة على قيمة قديمة.
+  const { isVatRegistered, defaultVatRate, taxNumberUsable } = useBillingSettings(isOpen);
+  // [INV-P3] الحسابات البنكية المختارة للطباعة على الفاتورة
+  const [bankAccountIds, setBankAccountIds] = useState<number[]>([]);
+  // [INV-P2] أسباب عدم احتساب الضريبة (تُجلب مرة للمكتب المسجَّل)
+  const [exemptionReasons, setExemptionReasons] = useState<VatExemptionReason[]>([]);
+  useEffect(() => {
+    if (!isOpen || !isVatRegistered || exemptionReasons.length > 0) return;
+    invoiceService.getVatExemptionReasons()
+      .then((res) => setExemptionReasons(res.data?.reasons ?? []))
+      .catch(() => { /* القائمة اختيارية */ });
+  }, [isOpen, isVatRegistered, exemptionReasons.length]);
 
   useEffect(() => {
     if (isOpen) {
       if (clients.length === 0) fetchClients();
-      fetchBillingSettings();
     }
   }, [isOpen]);
+
+  // النسبة الافتراضية للنموذج تتبع حالة التسجيل متى وصلت
+  useEffect(() => {
+    if (!isOpen) return;
+    setFormData(prev => ({ ...prev, vat_rate: isVatRegistered ? defaultVatRate : '0' }));
+  }, [isOpen, isVatRegistered, defaultVatRate]);
 
   const fetchClients = async () => {
     setClientsLoading(true);
@@ -95,21 +117,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
       setClients(data.map((c: any) => ({ id: c.id, name: c.name, phone: c.phone, nationalId: c.nationalId })));
     } catch { /* ignore */ }
     finally { setClientsLoading(false); }
-  };
-
-  // [TAX-02] جلب إعدادات الفوترة لتحديد النسبة الافتراضية وتعطيل الضريبة لغير المسجّلين.
-  const fetchBillingSettings = async () => {
-    try {
-      const res = await apiClient.get<{ data: { settings: Record<string, { value: unknown }> } }>(
-        '/tenant/advanced-settings/group/billing'
-      );
-      const settings = res?.data?.settings || {};
-      const registered = Boolean(settings.is_vat_registered?.value);
-      const rate = settings.default_vat_rate?.value != null ? String(settings.default_vat_rate.value) : '15';
-      setIsVatRegistered(registered);
-      setDefaultVatRate(rate);
-      setFormData(prev => ({ ...prev, vat_rate: registered ? rate : '0' }));
-    } catch { /* تجاهل — الباك يفرض النسبة الصحيحة على أي حال */ }
   };
 
   // [BILL-05] عمليات محرّر البنود.
@@ -181,6 +188,9 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
         vat_rate: vatRate,
         notes: formData.notes || undefined,
         status: formData.status,
+        bank_account_ids: bankAccountIds.length > 0 ? bankAccountIds : undefined,
+        supply_date: formData.supply_date || undefined,
+        vat_exemption_reason_code: isVatRegistered && vatRate === 0 && formData.vat_exemption_reason_code ? formData.vat_exemption_reason_code : undefined,
         // [BILL-05] إرسال البنود عند وجودها (الباك يعيد حساب total خادمياً).
         line_items: hasLineItems
           ? lineItems
@@ -200,8 +210,10 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
         subtotal: '', discount_percentage: '',
         vat_rate: isVatRegistered ? defaultVatRate : '0',
         notes: '', status: 'draft',
+        supply_date: '', vat_exemption_reason_code: '',
       });
       setLineItems([]);
+      setBankAccountIds([]);
       setClientSearch('');
       onClose();
     } catch (err) {
@@ -358,6 +370,9 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
                   onChange={(e) => updateField('vat_rate', e.target.value)}
                   placeholder={defaultVatRate} disabled={!isVatRegistered}
                   title={!isVatRegistered ? 'الشركة غير مسجّلة في ضريبة القيمة المضافة' : ''} />
+                {isVatRegistered && !taxNumberUsable && (
+                  <span style={{ fontSize: 11, color: 'var(--status-orange, #D97706)', lineHeight: 1.5 }}>الرقم الضريبي للمكتب غير مُدخل أو غير صالح — أكمله من «الفوترة والضريبة»</span>
+                )}
               </div>
               <div className="asm-field" style={{ width: 80 }}>
                 <label>خصم %</label>
@@ -366,6 +381,19 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
                   placeholder="0" min="0" max="100" />
               </div>
             </div>
+
+            {/* [INV-P2] المسجَّل بنسبة صفر يختار سبباً معتمداً يُطبع على الفاتورة ويُرسل للهيئة */}
+            {isVatRegistered && vatRate === 0 && (
+              <div className="asm-field">
+                <label>سبب عدم احتساب الضريبة</label>
+                <select value={formData.vat_exemption_reason_code} onChange={(e) => updateField('vat_exemption_reason_code', e.target.value)}>
+                  <option value="">— اختر السبب —</option>
+                  {exemptionReasons.map((r) => (
+                    <option key={r.code} value={r.code}>{r.category_label}: {r.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Total summary */}
             {subtotal > 0 && (
@@ -396,6 +424,14 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
                 <input type="date" value={formData.due_date}
                   onChange={(e) => updateField('due_date', e.target.value)} required />
               </div>
+              {isVatRegistered && (
+                <div className="asm-field asm-field--grow">
+                  <label><Calendar size={11} /> تاريخ التوريد</label>
+                  <input type="date" value={formData.supply_date}
+                    onChange={(e) => updateField('supply_date', e.target.value)}
+                    title="تاريخ تقديم الخدمة — يُطبع على الفاتورة الضريبية حين يختلف عن تاريخ الإصدار" />
+                </div>
+              )}
             </div>
 
             {/* Row 6: Status pills */}
@@ -409,7 +445,11 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
                   >{s.label}</button>
                 ))}
               </div>
+              <span style={{ fontSize: 11, color: 'var(--color-text-secondary, #6b7280)' }}>المسودة تُعدَّل لاحقاً. «مرسلة» أو «معلقة» تُصدَر فوراً وتُقفل بياناتها.</span>
             </div>
+
+            {/* [INV-P3] الحسابات البنكية على الفاتورة — يظهر فقط إن كان للمكتب حسابات */}
+            <BankAccountPicker value={bankAccountIds} onChange={setBankAccountIds} disabled={loading} />
 
             {/* Row 7: Notes (single line) */}
             <div className="asm-field">

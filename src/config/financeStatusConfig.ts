@@ -119,18 +119,57 @@ export function getStatusMeta(map: Record<string, StatusMeta>, status?: string |
 // ── اشتقاق توفّر الإجراءات من الحالة (متّسق مع حُرّاس الباك) ──
 
 /** أزرار الفاتورة المتاحة حسب الحالة (مطابقة لحُرّاس CaseInvoiceController). */
-export function invoiceActions(status?: InvoiceStatus | string | null) {
+// [INV-P2] ما تحتاجه قواعد الأزرار من الفاتورة (كلها اختيارية — بلا فاتورة تُشتق من الحالة وحدها).
+export interface InvoiceActionContext {
+  document_kind?: 'invoice' | 'credit_note' | 'debit_note';
+  is_tax_invoice?: boolean;
+  credited_amount?: number | string | null;
+  total_amount?: number | string | null;
+  zatca_status?: string | null;
+}
+
+/**
+ * الأزرار المتاحة حسب الحالة ونوع المستند — مطابقة لحُرّاس الباك:
+ *  - الصادرة مقفلة (لا تعديل مالي)، والضريبية الصادرة لا تُلغى (إشعار دائن بدلها).
+ *  - الإشعار الدائن لا يُحصَّل ولا يُلغى؛ والمغطاة بالكامل بإشعار لا دفعة عليها.
+ */
+export function invoiceActions(status?: InvoiceStatus | string | null, invoice?: InvoiceActionContext) {
   const s = status ?? '';
   const isFinal = s === 'paid' || s === 'cancelled' || s === 'refunded';
+  const isDraft = s === 'draft';
+  const kind = invoice?.document_kind ?? 'invoice';
+  const isNote = kind !== 'invoice';
+  const isCredit = kind === 'credit_note';
+  const credited = Number(invoice?.credited_amount ?? 0) || 0;
+  const total = Number(invoice?.total_amount ?? 0) || 0;
+  const fullyCredited = credited > 0 && credited >= total - 0.005;
+  const zatcaRejected = invoice?.zatca_status === 'rejected' || invoice?.zatca_status === 'build_failed';
+  const zatcaPendingFinal = !!invoice?.zatca_status && !['cleared', 'reported', 'rejected', 'build_failed'].includes(invoice.zatca_status);
+  const taxLocked = !!invoice?.is_tax_invoice && !isDraft && !zatcaRejected;
+  const noteAllowed = !isNote && !isDraft && s !== 'cancelled' && s !== 'refunded' && !zatcaPendingFinal && !(invoice?.zatca_status === 'rejected');
   return {
-    canActivate: s === 'draft', // draft → pending (تفعيل/اعتماد)
-    canSend: !isFinal, // الإرسال (الباك يُرجع 501 حالياً — نعالجه بلطف)
-    canRecordPayment: ['sent', 'pending', 'partial', 'overdue'].includes(s),
-    canEdit: !isFinal, // الباك يرفض تحديث paid/cancelled
-    canCancel: !isFinal, // الباك يرفض إلغاء paid/cancelled/refunded
-    canDelete: s === 'draft', // + شرط عدم وجود مدفوعات (يُفحص بالباك)
+    canIssue: isDraft && !isNote, // draft → صادرة عبر نافذة الإصدار
+    canActivate: isDraft && !isNote, // توافق قديم (نفس canIssue)
+    canSend: !isDraft && s !== 'cancelled' && s !== 'refunded', // [INV-SEND] المدفوعة والإشعارات تُرسل أيضاً
+    canRecordPayment: ['sent', 'pending', 'partial', 'overdue'].includes(s) && !isCredit && !fullyCredited,
+    canEdit: isDraft, // الصادرة مقفلة
+    canEditNotes: !isFinal, // الملاحظات وتاريخ الاستحقاق فقط بعد الإصدار
+    canCancel: !isFinal && !isNote && credited === 0 && !taxLocked,
+    canDelete: isDraft, // + شرط عدم وجود مدفوعات (يُفحص بالباك)
+    canCreditNote: noteAllowed && !fullyCredited,
+    canDebitNote: noteAllowed,
+    isLocked: !isDraft,
+    isNote,
+    fullyCredited,
   };
 }
+
+/** [INV-P2] تسمية نوع المستند */
+export const DOCUMENT_KIND_LABEL: Record<'invoice' | 'credit_note' | 'debit_note', string> = {
+  invoice: 'فاتورة',
+  credit_note: 'إشعار دائن',
+  debit_note: 'إشعار مدين',
+};
 
 /** أزرار الدفعة المتاحة حسب الحالة (مطابقة لحُرّاس PaymentController). */
 export function paymentActions(status?: PaymentStatus | string | null) {
@@ -156,7 +195,19 @@ export function collectionRisk(daysOverdue: number): { label: string; tone: Stat
 /** أزرار العقد المتاحة حسب الحالة (مطابقة لحُرّاس ContractController). */
 export function contractActions(status?: ContractStatus | string | null) {
   const s = status ?? '';
+  const lockMessage = s === 'pending_signature'
+    ? 'العقد مرسل للتوقيع: لا يُعدَّل نصه ولا قيمته. أعده إلى مسودة إن أردت تعديله.'
+    : s === 'active'
+      ? 'العقد موقّع: لا يُعدَّل نصه ولا قيمته ولا تواريخه. أي تغيير يكون بملحق عقد جديد.'
+      : s === 'completed' || s === 'cancelled'
+        ? 'العقد مغلق ولا يُعدَّل.'
+        : '';
   return {
+    // [CTR-LOCK] نص العقد وقيمته يُعدَّلان في المسودة فقط؛ الملاحظات وشروط الدفع كما كانت.
+    canEditContent: s === 'draft',
+    canRecallToDraft: s === 'pending_signature',
+    isLocked: s !== '' && s !== 'draft',
+    lockMessage,
     canEdit: s !== 'completed' && s !== 'cancelled',
     canSend: s === 'draft' || s === 'pending_signature', // إرسال للتوقيع
     canSign: s === 'pending_signature', // الباك يتطلّب pending_signature

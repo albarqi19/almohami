@@ -5,7 +5,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { Eye, Send, XCircle, CreditCard, Download, Receipt, Plus, Banknote, Wallet, Timer } from 'lucide-react';
+import { Eye, Send, XCircle, CreditCard, Download, Receipt, Plus, Banknote, Wallet, Timer, CheckCircle, Archive } from 'lucide-react';
 import { invoiceService } from '../../../services/invoiceService';
 import { DataTable, StatusBadge, FilterBar, ActionMenu, Pagination, Modal } from '../../../components/erp';
 import type { Column } from '../../../components/erp';
@@ -16,7 +16,7 @@ import { invalidateFinance } from '../../../utils/financeCache';
 import { formatSAR, formatPercent, toNumber } from '../../../utils/money';
 import { formatDueLabel } from '../../../utils/dueDays';
 import { ToneBadge } from '../../../components/erp/StatusBadge';
-import { invoiceActions, INVOICE_STATUS } from '../../../config/financeStatusConfig';
+import { invoiceActions, INVOICE_STATUS, DOCUMENT_KIND_LABEL } from '../../../config/financeStatusConfig';
 import { usePermissionContext } from '../../../contexts/PermissionContext';
 import { FINANCE_PERMISSIONS } from '../../../config/financeModule';
 import { useZatcaFeature } from '../../../contexts/ZatcaStatusContext';
@@ -35,6 +35,8 @@ const SUBTABS: SubTab[] = [
   { key: 'pending', label: 'المعلّقة', filter: { status: 'pending' } },
   { key: 'overdue', label: 'المتأخّرة', filter: { overdue_only: true } },
   { key: 'collection', label: 'التحصيل', filter: { overdue_only: true } },
+  // [INV-P2] الإشعارات الدائنة والمدينة
+  { key: 'notes', label: 'الإشعارات', filter: { kind: 'notes' } },
 ];
 
 const STATUS_OPTIONS = [
@@ -56,6 +58,24 @@ const InvoicesTab: React.FC = () => {
   const [cancelTarget, setCancelTarget] = useState<CaseInvoice | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [showCreate, setShowCreate] = useState(searchParams.get('new') === '1');
+  // [INV-P6] أرشيف ZIP للفترة
+  const [showArchive, setShowArchive] = useState(false);
+  const [archiveFrom, setArchiveFrom] = useState(() => `${new Date().getFullYear()}-01-01`);
+  const [archiveTo, setArchiveTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [archiveKind, setArchiveKind] = useState<'all' | 'invoices' | 'notes'>('all');
+  const [archiving, setArchiving] = useState(false);
+  const downloadArchive = async () => {
+    setArchiving(true);
+    try {
+      await invoiceService.downloadArchive(archiveFrom, archiveTo, archiveKind);
+      toast.success('تم تجهيز الأرشيف');
+      setShowArchive(false);
+    } catch (e) {
+      toast.error((e as Error).message || 'تعذّر تجهيز الأرشيف');
+    } finally {
+      setArchiving(false);
+    }
+  };
 
   const canManage = has(FINANCE_PERMISSIONS.invoicesManage);
   const canExport = has(FINANCE_PERMISSIONS.reportsExport);
@@ -97,16 +117,6 @@ const InvoicesTab: React.FC = () => {
       setCancelReason('');
     },
     onError: (e: Error) => toast.error(e.message || 'تعذّر إلغاء الفاتورة'),
-  });
-
-  const sendMutation = useMutation({
-    mutationFn: ({ id, method }: { id: number; method: 'email' | 'whatsapp' }) => invoiceService.sendInvoice(id, method),
-    onSuccess: (res) => {
-      toast.success(res.message || 'تم إرسال الفاتورة');
-      invalidate();
-    },
-    // الباك يُرجع 501 (قيد التطوير) → apiClient يرمي رسالته؛ نعرضها كمعلومة لا خطأ.
-    onError: (e: Error) => toast.info(e.message || 'ميزة الإرسال قيد التطوير'),
   });
 
   const handleCreate = async (payload: unknown) => {
@@ -155,6 +165,9 @@ const InvoicesTab: React.FC = () => {
         render: (inv) => (
           <div>
             <span className="fin-docnum">{inv.invoice_number}</span>
+            {inv.document_kind && inv.document_kind !== 'invoice' && (
+              <ToneBadge tone={inv.document_kind === 'credit_note' ? 'warning' : 'info'}>{DOCUMENT_KIND_LABEL[inv.document_kind]}</ToneBadge>
+            )}
             {inv.title && <div className="fin-cell-muted">{inv.title}</div>}
           </div>
         ),
@@ -215,14 +228,16 @@ const InvoicesTab: React.FC = () => {
       header: '',
       align: 'center',
       render: (inv) => {
-        const a = invoiceActions(inv.status);
+        const a = invoiceActions(inv.status, inv);
         return (
           <ActionMenu
             items={[
               { label: 'عرض التفاصيل', icon: Eye, onClick: () => navigate(`/finance/invoices/${inv.id}`) },
+              { label: 'إصدار الفاتورة', icon: CheckCircle, onClick: () => navigate(`/finance/invoices/${inv.id}?issue=1`), hidden: !canManage || !a.canIssue },
               { label: 'تسجيل دفعة', icon: CreditCard, onClick: () => navigate(`/finance/invoices/${inv.id}`), hidden: !canManage || !a.canRecordPayment },
-              { label: 'إرسال (بريد)', icon: Send, onClick: () => sendMutation.mutate({ id: inv.id, method: 'email' }), hidden: !canManage || !a.canSend },
+              { label: 'إرسال للعميل', icon: Send, onClick: () => navigate(`/finance/invoices/${inv.id}?send=1`), hidden: !canManage || !a.canSend },
               { label: 'تحميل PDF', icon: Download, onClick: () => invoiceService.downloadPdf(inv.id, inv.invoice_number).catch(() => toast.error('تعذّر تحميل PDF')) },
+              { label: 'مطالبة بالدفع (PDF)', icon: Download, onClick: () => invoiceService.downloadPaymentRequestPdf(inv.id, inv.invoice_number).catch((e: Error) => toast.error(e.message || 'تعذّر تنزيل المطالبة')), hidden: !a.canIssue },
               { label: 'إلغاء', icon: XCircle, variant: 'danger', divider: true, onClick: () => setCancelTarget(inv), hidden: !canManage || !a.canCancel },
             ]}
           />
@@ -230,7 +245,7 @@ const InvoicesTab: React.FC = () => {
       },
     });
     return cols;
-  }, [navigate, canManage, zatcaEnabled, sendMutation]);
+  }, [navigate, canManage, zatcaEnabled]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -270,9 +285,14 @@ const InvoicesTab: React.FC = () => {
         search={{ value: search, onChange: (v) => { setSearch(v); setPage(1); }, placeholder: 'بحث برقم الفاتورة أو العميل...' }}
         selects={subtab === 'all' ? [{ value: status, onChange: (v) => { setStatus(v); setPage(1); }, options: STATUS_OPTIONS, ariaLabel: 'فلترة الحالة' }] : undefined}
         actions={canExport ? (
-          <button type="button" className="fin-btn fin-btn--sm" onClick={() => handleExport(invoices)} disabled={invoices.length === 0}>
-            <Download size={14} /> تصدير
-          </button>
+          <>
+            <button type="button" className="fin-btn fin-btn--sm" onClick={() => handleExport(invoices)} disabled={invoices.length === 0}>
+              <Download size={14} /> تصدير
+            </button>
+            <button type="button" className="fin-btn fin-btn--sm" onClick={() => setShowArchive(true)} title="ملف ZIP بكل مستندات الفترة (PDF + XML الهيئة + فهرس)">
+              <Archive size={14} /> أرشيف الفترة
+            </button>
+          </>
         ) : undefined}
       />
 
@@ -321,6 +341,47 @@ const InvoicesTab: React.FC = () => {
 
       {/* مودال إنشاء فاتورة (مُعاد استخدامه) */}
       <CreateInvoiceModal isOpen={showCreate} onClose={closeCreate} onSave={handleCreate} />
+
+      {/* [INV-P6] أرشيف الفترة */}
+      <Modal
+        open={showArchive}
+        onClose={() => setShowArchive(false)}
+        title="أرشيف مستندات الفوترة"
+        icon={Archive}
+        size="narrow"
+        footer={(
+          <>
+            <button type="button" className="fin-btn" onClick={() => setShowArchive(false)}>إغلاق</button>
+            <button type="button" className="fin-btn fin-btn--primary" disabled={archiving || !archiveFrom || !archiveTo} onClick={downloadArchive}>
+              {archiving ? 'جارٍ التجهيز...' : 'تنزيل ZIP'}
+            </button>
+          </>
+        )}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>
+            ملف واحد فيه PDF كل فاتورة وإشعار صادر في الفترة، وملفات XML للمعتمد منها لدى الهيئة، وجدول فهرس CSV. حتى 500 مستند في الملف.
+          </p>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div className="fin-field" style={{ flex: 1 }}>
+              <label className="fin-field__label">من</label>
+              <input type="date" className="fin-input" value={archiveFrom} onChange={(e) => setArchiveFrom(e.target.value)} />
+            </div>
+            <div className="fin-field" style={{ flex: 1 }}>
+              <label className="fin-field__label">إلى</label>
+              <input type="date" className="fin-input" value={archiveTo} onChange={(e) => setArchiveTo(e.target.value)} />
+            </div>
+          </div>
+          <div className="fin-field">
+            <label className="fin-field__label">المحتوى</label>
+            <select className="fin-select" value={archiveKind} onChange={(e) => setArchiveKind(e.target.value as 'all' | 'invoices' | 'notes')}>
+              <option value="all">الفواتير والإشعارات</option>
+              <option value="invoices">الفواتير فقط</option>
+              <option value="notes">الإشعارات فقط</option>
+            </select>
+          </div>
+        </div>
+      </Modal>
 
       {/* مودال إلغاء */}
       <Modal

@@ -15,7 +15,14 @@ export function useClickOutside<T extends HTMLElement = HTMLDivElement>(
     if (!enabled) return;
     const listener = (event: MouseEvent | TouchEvent) => {
       const el = ref.current;
-      if (!el || el.contains(event.target as Node)) return;
+      const target = event.target as Node;
+      if (!el || el.contains(target)) return;
+      // [FIX] القوائم المنسدلة المعلّقة على body (createPortal) تعيش خارج شجرة المودال DOM،
+      // فكان اختيار عميل أو قضية من داخل نافذة المصروف يُغلق النافذة كأنه نقرة خارجها.
+      // العنصر المحذوف من الصفحة لحظة النقر (خيار اختفى بعد اختياره) لا يُعدّ خارجاً أيضاً.
+      const element = target instanceof Element ? target : (target as Node).parentElement;
+      if (element && !document.contains(element)) return;
+      if (element?.closest('.fin-menu__dropdown--floating, .zatca-menu, [data-floating-layer]')) return;
       handler();
     };
     document.addEventListener('mousedown', listener);

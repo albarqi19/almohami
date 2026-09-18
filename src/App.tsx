@@ -124,6 +124,7 @@ const SimpleServicePage = lazyWithRetry(() => import('./pages/legal-services/Sim
 const ContractTemplates = lazyWithRetry(() => import('./pages/contracts/ContractTemplates'));
 const ContractTemplateEditorPage = lazyWithRetry(() => import('./pages/contracts/ContractTemplateEditorPage'));
 const ContractBuilder = lazyWithRetry(() => import('./pages/contracts/ContractBuilder'));
+const ContractEditPage = lazyWithRetry(() => import('./pages/finance/ContractEditPage'));
 
 // [P4·UX-01] وحدة «العقود والمالية» الموحّدة + تبويباتها
 const ContractsFinanceModule = lazyWithRetry(() => import('./pages/finance/ContractsFinanceModule'));
@@ -701,6 +702,10 @@ function App() {
               {/* صفحة إنشاء العقد (Wizard) خارج حاوية التبويبات */}
               <Route path="finance/contracts/new" element={
                 <ProtectedRoute requiredPermission="contracts.create"><ContractBuilder /></ProtectedRoute>
+              } />
+              {/* [CTR-LOCK] تعديل مسودة العقد (النص والبيانات الأساسية) قبل الإرسال للتوقيع */}
+              <Route path="finance/contracts/:id/edit" element={
+                <ProtectedRoute requiredPermission="contracts.edit"><ContractEditPage /></ProtectedRoute>
               } />
 
               {/* [P4·UX-09] قوالب العقود ضمن الإعدادات */}

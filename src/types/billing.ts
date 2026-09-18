@@ -6,6 +6,9 @@ import type { ZatcaInvoiceState, ZatcaInvoiceType } from './zatca';
 // حالة الفاتورة
 export type InvoiceStatus = 'draft' | 'sent' | 'pending' | 'partial' | 'paid' | 'overdue' | 'cancelled' | 'refunded';
 
+// [INV-P2] نوع المستند: فاتورة أو إشعار دائن/مدين
+export type DocumentKind = 'invoice' | 'credit_note' | 'debit_note';
+
 // طريقة الدفع
 export type PaymentMethod = 'cash' | 'bank_transfer' | 'check' | 'card' | 'online' | 'mada' | 'apple_pay' | 'stc_pay' | 'other';
 
@@ -43,6 +46,22 @@ export interface CaseInvoice {
   vat_amount: number;
   // [TAX-01] الطبيعة الضريبية المُجمَّدة وقت الإصدار (تحكم التسمية/الأرقام الضريبية المطبوعة).
   is_tax_invoice?: boolean;
+  /** [INV-P3] الحسابات البنكية كما ثُبّتت عند الإصدار ([] = بلا حساب) */
+  bank_accounts_snapshot?: Array<{ id: number; bank_name: string | null; account_holder_name: string; iban: string; iban_grouped: string; swift_code: string | null }> | null;
+  metadata?: Record<string, unknown> | null;
+  /** [INV-P2] الإصدار والقفل والإشعارات */
+  issued_at?: string | null;
+  issued_by?: number | null;
+  supply_date?: string | null;
+  tax_invoice_subtype?: 'standard' | 'simplified' | null;
+  credited_amount?: number;
+  document_kind?: DocumentKind;
+  is_locked?: boolean;
+  vat_category?: string | null;
+  vat_exemption_reason_code?: string | null;
+  vat_exemption_reason?: string | null;
+  zatca_notes?: CaseInvoice[];
+  zatca_original_invoice?: Pick<CaseInvoice, 'id' | 'invoice_number' | 'invoice_date' | 'total_amount' | 'status'> | null;
   total_amount: number;
   paid_amount: number;
   remaining_amount: number;
@@ -333,6 +352,8 @@ export interface InvoiceFilters {
   date_from?: string;
   date_to?: string;
   overdue_only?: boolean;
+  /** [INV-P2] فواتير فقط أو إشعارات فقط */
+  kind?: 'invoices' | 'notes';
   due_this_week?: boolean;
   page?: number;
   per_page?: number;
@@ -419,6 +440,34 @@ export interface CreateInvoiceData {
   terms_and_conditions?: string;
   line_items?: InvoiceLineItem[];
   status?: 'draft' | 'sent' | 'pending';
+  /** [INV-P3] الحسابات البنكية التي تُطبع (حتى ثلاثة) — بلا اختيار تُطبع الافتراضية */
+  bank_account_ids?: number[];
+  /** [INV-P2] تاريخ التوريد وسبب عدم احتساب الضريبة (للمسجَّل بنسبة صفر) */
+  supply_date?: string;
+  vat_category?: 'S' | 'Z' | 'E' | 'O';
+  vat_exemption_reason_code?: string;
+  vat_exemption_reason?: string;
+}
+
+// [INV-P2] الإصدار
+export interface IssueInvoicePayload {
+  status?: 'sent' | 'pending';
+  supply_date?: string;
+}
+
+// [INV-P2] الإشعار الدائن/المدين
+export interface IssueNotePayload {
+  reason: string;
+  mode?: 'full' | 'amount' | 'items';
+  amount?: number;
+  line_items?: Array<{ description: string; quantity: number; unit_price: number }>;
+}
+
+export interface VatExemptionReason {
+  code: string;
+  category: 'S' | 'Z' | 'E' | 'O';
+  category_label: string;
+  label: string;
 }
 
 // === تسجيل دفعة ===
