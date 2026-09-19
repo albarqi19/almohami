@@ -27,6 +27,7 @@ import AnnouncementTicker from './announcements/AnnouncementTicker';
 import AnnouncementModal from './announcements/AnnouncementModal';
 import AnnouncementToast from './announcements/AnnouncementToast';
 import MobileBetaInviteModal from './MobileBetaInviteModal';
+import NationalDayOfferModal from './subscription/NationalDayOfferModal';
 import { useAuth } from '../contexts/AuthContext';
 import { usePolicyCheck } from '../hooks/usePolicyCheck';
 // 🏢 الوضع الحصري لبوابة المنشأة — قشرةٌ بديلةٌ لا تعرف عن هذا الملفّ شيئاً
@@ -214,6 +215,9 @@ const Layout: React.FC = () => {
           {/* Announcement modal + toast channels (portal-style overlays) */}
           <AnnouncementModal />
           <AnnouncementToast />
+
+          {/* عرض اليوم الوطني ٩٦ — نافذة لمالك المكتب وحده، تحرس أهليتها بنفسها ولا تعود بعد إغلاقها */}
+          <NationalDayOfferModal />
 
           {/* دعوة تجربة تطبيق الجوال — نافذة مستقلّة، تحرس أهليتها بنفسها */}
           <MobileBetaInviteModal />
