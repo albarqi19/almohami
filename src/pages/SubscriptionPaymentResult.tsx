@@ -200,7 +200,9 @@ const SubscriptionPaymentResult: React.FC = () => {
                         </div>
                         <h1 className="payment-result-title">تم الدفع بنجاح! 🎉</h1>
                         <p className="payment-result-message">
-                            شكراً لك! تم تفعيل اشتراكك بنجاح
+                            {invoice?.payment_details?.extends_subscription_id
+                                ? 'شكراً لك! تم تمديد اشتراكك سنة إضافية بعرض اليوم الوطني ٩٦'
+                                : 'شكراً لك! تم تفعيل اشتراكك بنجاح'}
                         </p>
 
                         {invoice && (
@@ -216,7 +218,9 @@ const SubscriptionPaymentResult: React.FC = () => {
                                 <div className="payment-result-detail">
                                     <span className="payment-result-detail__label">الباقة</span>
                                     <span className="payment-result-detail__value">
-                                        {invoice.subscription?.plan === 'yearly' ? 'سنوية' : 'شهرية'}
+                                        {invoice.payment_details?.offer === 'national_day_96'
+                                            ? `سنوية — عرض اليوم الوطني ٩٦${invoice.payment_details?.extends_subscription_id ? ' (سنة إضافية)' : ''}`
+                                            : invoice.subscription?.plan === 'yearly' ? 'سنوية' : 'شهرية'}
                                     </span>
                                 </div>
                             </div>

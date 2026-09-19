@@ -35,6 +35,7 @@ import {
   Percent,
   PenLine,
 } from 'lucide-react';
+import NationalDayOfferCard from '../components/subscription/NationalDayOfferCard';
 import NotificationSettings from '../components/NotificationSettings';
 import PhoneField from '../components/PhoneField';
 import TiptapEditor from '../components/TiptapEditor';
@@ -392,7 +393,7 @@ const Settings: React.FC = () => {
   }, []);
 
   // Handle Online Subscription Payment
-  const handleOnlineSubscribe = async (plan: 'monthly' | 'yearly') => {
+  const handleOnlineSubscribe = async (plan: 'monthly' | 'yearly' | 'national_day') => {
     try {
       setSubscribing(true);
       const response: any = await apiClient.post('/subscription/subscribe', {
@@ -2088,6 +2089,24 @@ const Settings: React.FC = () => {
                       </div>
                     ) : plansData ? (
                       <>
+                        {/* عرض اليوم الوطني ٩٦ — يظهر ما دام مشغَّلاً من الإدارة؛ وللمشترك السنوي
+                            الحالي يفتح سنةً إضافية واحدة فوق اشتراكه (الممنوعة في الباقة العادية) */}
+                        {plansData.plans.national_day && availableOptions?.can_subscribe_national_day && (
+                          <NationalDayOfferCard
+                            offer={plansData.plans.national_day}
+                            mode={availableOptions.national_day_mode === 'extend' ? 'extend' : availableOptions.national_day_mode === 'upgrade' ? 'upgrade' : 'new'}
+                            currentEndsAt={subscription?.renews_at ?? null}
+                            compareAt={plansData.plans.monthly.price * 12}
+                            subscribing={subscribing}
+                            onSubscribe={() => handleOnlineSubscribe('national_day')}
+                          />
+                        )}
+                        {plansData.plans.national_day && availableOptions?.national_day_mode === 'done' && (
+                          <div className="snd96-done">
+                            <b>عرض اليوم الوطني ٩٦:</b> تم تمديد اشتراككم سنة إضافية بهذا العرض — العرض سنة واحدة فقط.
+                          </div>
+                        )}
+
                         {/* رسالة إذا لا يمكن الاشتراك */}
                         {availableOptions && !availableOptions.can_subscribe && (
                           <div style={{

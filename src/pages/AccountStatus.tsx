@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Download, Calendar, CreditCard, Loader2, CheckCircle } from 'lucide-react';
 import { apiClient } from '../utils/api';
+import NationalDayOfferCard, { type NationalDayOfferPlan } from '../components/subscription/NationalDayOfferCard';
 import '../styles/account-status.css';
 
 interface PlanData {
@@ -16,11 +17,15 @@ interface PlansResponse {
     plans: {
         monthly: PlanData;
         yearly: PlanData;
+        /** عرض اليوم الوطني ٩٦ — null حين يكون مطفأً من الإدارة */
+        national_day?: NationalDayOfferPlan | null;
     };
     currency: string;
     tax_rate: number;
     tax_label: string;
 }
+
+type PlanKey = 'monthly' | 'yearly' | 'national_day';
 
 const AccountStatus: React.FC = () => {
     const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
@@ -44,11 +49,11 @@ const AccountStatus: React.FC = () => {
         fetchPlans();
     }, []);
 
-    const handleOnlineSubscribe = async () => {
+    const handleOnlineSubscribe = async (plan: PlanKey = selectedPlan) => {
         try {
             setSubscribing(true);
             const response: any = await apiClient.post('/subscription/subscribe', {
-                plan: selectedPlan,
+                plan,
                 payment_method: 'online',
                 payment_gateway: 'streampay'
             });
@@ -122,6 +127,17 @@ const AccountStatus: React.FC = () => {
                             <p>جاري تحميل الباقات...</p>
                         </div>
                     ) : plansData && (
+                        <>
+                        {/* عرض اليوم الوطني ٩٦ — مربعٌ مستقل بزرّه، فوق الباقتين المعتادتين */}
+                        {plansData.plans.national_day && (
+                            <NationalDayOfferCard
+                                offer={plansData.plans.national_day}
+                                mode="new"
+                                compareAt={plansData.plans.monthly.price * 12}
+                                subscribing={subscribing}
+                                onSubscribe={() => handleOnlineSubscribe('national_day')}
+                            />
+                        )}
                         <div className="account-status-pricing">
                             <div
                                 className={`account-status-pricing__option ${selectedPlan === 'monthly' ? 'account-status-pricing__option--selected' : ''}`}
@@ -153,12 +169,13 @@ const AccountStatus: React.FC = () => {
                                 )}
                             </div>
                         </div>
+                        </>
                     )}
 
                     <div className="account-status-actions">
                         <button
                             className="account-status-btn account-status-btn--primary"
-                            onClick={handleOnlineSubscribe}
+                            onClick={() => handleOnlineSubscribe()}
                             disabled={subscribing || loadingPlans}
                             style={{ minWidth: '200px' }}
                         >

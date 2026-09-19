@@ -1,0 +1,201 @@
+/* عرض اليوم الوطني ٩٦ — هويّة «عزّنا بطبعنا» (دليل الهويّة الرسمي)
+   خلفية #002528 · كتلة #031b20 · مربعات #00343a · أخضر #00894a · ليموني #6ab523
+   مسطّح بلا ظلال ولا توهّج، ولا يتأثّر بثيم الصفحة (الهويّة داكنة دائماً). */
+.snd96-card {
+  background: #002528;
+  border: 1px solid #00343a;
+  color: #e6efee;
+  margin-top: 12px;
+  overflow: hidden;
+  text-align: right;
+}
+
+.snd96-card__strip {
+  height: 6px;
+  background: linear-gradient(90deg, #00894a 0%, #6ab523 100%);
+}
+
+.snd96-card__strip--bottom {
+  background: linear-gradient(90deg, #6ab523 0%, #00894a 100%);
+}
+
+.snd96-card__inner {
+  padding: 18px 22px 20px;
+}
+
+.snd96-card__logo-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 14px;
+  border-bottom: 1px solid #00343a;
+  margin-bottom: 16px;
+}
+
+.snd96-card__logo {
+  width: 260px;
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.snd96-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.snd96-card__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.snd96-card__num {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  background: #00894a;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.snd96-card__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #00894a;
+  line-height: 1.3;
+}
+
+.snd96-card__sub {
+  font-size: 12px;
+  color: #6ab523;
+  letter-spacing: 1px;
+  direction: ltr;
+  text-align: right;
+}
+
+.snd96-card__price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.snd96-card__amount {
+  font-size: 40px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.snd96-card__amount b {
+  color: #00894a;
+  font-weight: 700;
+}
+
+.snd96-card__cur {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.snd96-card__per {
+  font-size: 13px;
+  color: #9fb8b5;
+}
+
+.snd96-card__was {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #9fb8b5;
+}
+
+.snd96-card__was s {
+  color: #7f9a97;
+}
+
+.snd96-card__was b {
+  color: #fff;
+  font-weight: 700;
+}
+
+.snd96-card__sep {
+  color: #3c6a67;
+  margin: 0 8px;
+}
+
+.snd96-card__mode {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #031b20;
+  border: 1px solid #00343a;
+  font-size: 13px;
+  color: #b9cbc9;
+  line-height: 1.8;
+}
+
+.snd96-card__mode b {
+  color: #fff;
+}
+
+.snd96-card__btn {
+  width: 100%;
+  margin-top: 14px;
+  padding: 13px 16px;
+  background: #00894a;
+  color: #fff;
+  border: 0;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.snd96-card__btn:hover:not(:disabled) {
+  background: #007a42;
+}
+
+.snd96-card__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.snd96-card__note {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12px;
+  color: #6ab523;
+}
+
+/* رسالة «مُدِّد من قبل» — العرض سنة واحدة فقط */
+.snd96-done {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: #002528;
+  border: 1px solid #00343a;
+  color: #b9cbc9;
+  font-size: 13px;
+  text-align: center;
+}
+
+.snd96-done b {
+  color: #6ab523;
+}
+
+@media (max-width: 640px) {
+  .snd96-card__inner {
+    padding: 14px 14px 16px;
+  }
+
+  .snd96-card__amount {
+    font-size: 32px;
+  }
+}
