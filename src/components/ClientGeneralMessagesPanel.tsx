@@ -3,7 +3,8 @@ import { MessageSquare, Send, User, Clock, CheckCheck, Check, Loader2, AlertCirc
 import { useAuth } from '../contexts/AuthContext';
 import { MessageService, type Message } from '../services/messageService';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
-// الستايل: بدائيّات messages-modal/message-bubble القائمة (case-messages-modal.css) داخل لوحةٍ مضمّنة
+// الستايل: أصناف cgm-* في client-detail.css — لوحة محادثة مضمّنة تملأ التبويب.
+// (كانت تستعير أصناف مودال الرسائل `messages-modal` وتُبطل تموضعه بستايل مضمّن، فخرج شكلها مكسوراً.)
 
 interface Props {
   clientId: number;
@@ -16,7 +17,8 @@ interface Props {
  */
 const ClientGeneralMessagesPanel: React.FC<Props> = ({ clientId, clientName }) => {
   const { user } = useAuth();
-  const endRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const lastCountRef = useRef(0);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -37,8 +39,13 @@ const ClientGeneralMessagesPanel: React.FC<Props> = ({ clientId, clientName }) =
 
   useEffect(() => { void load(); }, [load]);
 
+  // 🔴 لا `scrollIntoView`: يمرّر كل الحاويات الأم ومنها قشرة التطبيق فيصعد الهيدر — وكان يُستدعى مع كل
+  // تحديث دوري (كل 5 ثوانٍ). نمرّر منطقة الرسائل وحدها، وفقط حين يزيد عدد الرسائل.
   useEffect(() => {
-    setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    if (messages.length === lastCountRef.current) return;
+    lastCountRef.current = messages.length;
+    const body = bodyRef.current;
+    if (body) body.scrollTop = body.scrollHeight;
   }, [messages]);
 
   useAutoRefresh({
@@ -77,90 +84,84 @@ const ClientGeneralMessagesPanel: React.FC<Props> = ({ clientId, clientName }) =
     return date.toLocaleDateString('ar-SA-u-ca-gregory', { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
   };
 
-  return (
-    <div className="messages-modal" style={{ position: 'static', width: '100%', maxWidth: 'none', maxHeight: 'none', boxShadow: 'none', border: '1px solid var(--color-border)', transform: 'none' }}>
-      <div className="messages-modal__header">
-        <div className="messages-modal__title">
-          <div className="messages-modal__title-icon"><MessageSquare size={20} /></div>
-          <div className="messages-modal__title-text">
-            <h3>الرسائل العامة</h3>
-            <span>مراسلة {clientName} خارج ملفات القضايا — تصله في بوابته</span>
-          </div>
-        </div>
-        <div className="messages-modal__actions">
-          <button onClick={() => void load()} className="messages-modal__btn" disabled={loading} title="تحديث">
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-          </button>
-        </div>
-      </div>
+  const myId = user?.id ? Number(user.id) : undefined;
 
-      <div className="messages-modal__body" style={{ maxHeight: 420 }}>
+  return (
+    <section className="cgm" aria-label="الرسائل العامة">
+      <header className="cgm__head">
+        <span className="cgm__icon"><MessageSquare size={15} /></span>
+        <div className="cgm__title">
+          <h3>الرسائل العامة</h3>
+          <span>خارج ملفات القضايا — تصل {clientName} في بوابته</span>
+        </div>
+        <button type="button" className="cgm__refresh" onClick={() => void load()} disabled={loading} title="تحديث">
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+        </button>
+      </header>
+
+      <div className="cgm__body" ref={bodyRef}>
         {loading ? (
-          <div className="messages-modal__loading"><Loader2 size={28} className="animate-spin" /><span>جاري تحميل الرسائل...</span></div>
+          <div className="cgm__state"><Loader2 size={22} className="animate-spin" /><span>جاري تحميل الرسائل...</span></div>
         ) : messages.length === 0 ? (
-          <div className="messages-modal__empty">
-            <div className="messages-modal__empty-icon"><MessageSquare size={28} /></div>
-            <h4 className="messages-modal__empty-title">لا رسائل عامة بعد</h4>
-            <p className="messages-modal__empty-text">ما يُكتب هنا يصل العميل في صفحة «الرسائل» ببوابته</p>
+          <div className="cgm__state">
+            <MessageSquare size={26} />
+            <strong>لا رسائل عامة بعد</strong>
+            <span>ما يُكتب هنا يصل العميل في صفحة «الرسائل» ببوابته</span>
           </div>
         ) : (
-          <>
-            {messages.map((msg, index) => {
-              const isMine = msg.sender_id === (user?.id ? Number(user.id) : undefined);
-              const showAvatar = index === 0 || messages[index - 1].sender_id !== msg.sender_id;
-              return (
-                <div key={msg.id} className={`message-bubble ${isMine ? 'message-bubble--mine' : 'message-bubble--other'}`}>
-                  {!isMine && showAvatar && (
-                    <div className="message-bubble__avatar">
-                      {msg.sender?.avatar ? <img src={msg.sender.avatar} alt={msg.sender.name} /> : <User size={18} />}
-                    </div>
-                  )}
-                  <div className="message-bubble__content">
-                    {!isMine && showAvatar && <span className="message-bubble__sender">{msg.sender?.name}</span>}
-                    <div className="message-bubble__text">{msg.message}</div>
-                    <div className="message-bubble__meta">
-                      <Clock size={10} />
-                      <span>{formatTime(msg.created_at)}</span>
-                      {isMine && (
-                        <span className={`message-bubble__status ${msg.is_read ? 'message-bubble__status--read' : ''}`}>
-                          {msg.is_read ? <CheckCheck size={14} /> : <Check size={14} />}
-                        </span>
-                      )}
-                    </div>
+          messages.map((msg, index) => {
+            const isMine = msg.sender_id === myId;
+            const startsGroup = index === 0 || messages[index - 1].sender_id !== msg.sender_id;
+            return (
+              <div key={msg.id} className={`cgm-msg ${isMine ? 'cgm-msg--mine' : 'cgm-msg--other'} ${startsGroup ? 'is-first' : ''}`}>
+                {!isMine && (
+                  <div className="cgm-msg__avatar" aria-hidden="true">
+                    {startsGroup && (msg.sender?.avatar ? <img src={msg.sender.avatar} alt="" /> : <User size={14} />)}
+                  </div>
+                )}
+                <div className="cgm-msg__content">
+                  {!isMine && startsGroup && <span className="cgm-msg__sender">{msg.sender?.name}</span>}
+                  <div className="cgm-msg__text">{msg.message}</div>
+                  <div className="cgm-msg__meta">
+                    <Clock size={10} />
+                    <span>{formatTime(msg.created_at)}</span>
+                    {isMine && (
+                      <span className={`cgm-msg__status ${msg.is_read ? 'is-read' : ''}`} title={msg.is_read ? 'قُرئت' : 'أُرسلت'}>
+                        {msg.is_read ? <CheckCheck size={13} /> : <Check size={13} />}
+                      </span>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-            <div ref={endRef} />
-          </>
+              </div>
+            );
+          })
         )}
       </div>
 
       {error && (
-        <div className="messages-modal__error">
-          <AlertCircle size={16} />
+        <div className="cgm__error">
+          <AlertCircle size={14} />
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="messages-modal__error-close">×</button>
+          <button type="button" onClick={() => setError(null)} aria-label="إغلاق">×</button>
         </div>
       )}
 
-      <div className="messages-modal__input">
-        <div className="messages-modal__input-wrapper">
-          <textarea
-            className="messages-modal__textarea"
-            placeholder={`أرسل رسالة إلى ${clientName}...`}
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyPress={onKey}
-            rows={1}
-            disabled={sending}
-          />
-          <button className="messages-modal__send-btn" onClick={() => void send()} disabled={!text.trim() || sending}>
-            {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-          </button>
-        </div>
+      <div className="cgm__composer">
+        <textarea
+          className="cgm__input"
+          placeholder={`اكتب رسالة إلى ${clientName}…`}
+          value={text}
+          onChange={e => setText(e.target.value)}
+          onKeyDown={onKey}
+          rows={1}
+          disabled={sending}
+          data-dictate="whatsapp"
+        />
+        <button type="button" className="cgm__send" onClick={() => void send()} disabled={!text.trim() || sending} title="إرسال (Enter)">
+          {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+        </button>
       </div>
-    </div>
+    </section>
   );
 };
 

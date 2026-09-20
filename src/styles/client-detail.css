@@ -2023,13 +2023,19 @@
         padding: 7px 20px;
     }
 
+    /* ملتصق: لا هوامش ولا فجوة — العمودان متصلان بالحواف ويفصلهما خط واحد */
     .client-grid {
         flex: 1;
         min-height: 0;
         grid-template-columns: minmax(0, 1fr) 300px;
         grid-template-rows: minmax(0, 1fr);
-        gap: 12px;
-        padding: 12px 20px 14px;
+        gap: 0;
+        padding: 0;
+    }
+
+    .client-grid__main {
+        border: none;
+        border-radius: 0;
     }
 
     .client-grid--side-collapsed {
@@ -2067,6 +2073,27 @@
         max-height: none;
         overflow-y: auto;
         scrollbar-width: thin;
+        gap: 0;
+        background: var(--color-surface);
+        border-inline-start: 1px solid var(--color-border);
+    }
+
+    /* بطاقات مدمجة: بلا إطار ولا زوايا، يفصلها خط سفلي */
+    .client-grid__side .client-side-card {
+        border: none;
+        border-bottom: 1px solid var(--color-border);
+        border-radius: 0;
+    }
+
+    .client-grid__side .client-side__bar {
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-surface-subtle);
+    }
+
+    .client-grid__side .client-side__rail {
+        border: none;
+        border-radius: 0;
     }
 
     /* 🔴 البطاقات لا تنكمش: اللوحة عمود مرن بارتفاع محدود، والعنصر المرن ينكمش افتراضياً (flex-shrink: 1)
@@ -2167,4 +2194,295 @@
     .client-hero__session-case {
         display: none;
     }
+}
+
+/* =====================================================================
+ * الرسائل العامة (cgm-) — لوحة محادثة مضمّنة تملأ التبويب: رأس مضغوط، منطقة رسائل تتمرر وحدها، وحقل كتابة.
+ * رسائلي في جهة البداية (يمين) كحلية، ورسائل العميل في جهة النهاية — اتساقاً مع رسائل القضايا.
+ * ===================================================================== */
+.cgm {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 380px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-surface);
+    overflow: hidden;
+}
+
+.cgm__head {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+}
+
+.cgm__icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--law-navy, #1e3a5f);
+    color: #ffffff;
+}
+
+.cgm__title {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+}
+
+.cgm__title h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-heading);
+}
+
+.cgm__title span {
+    font-size: 11.5px;
+    color: var(--color-text-secondary);
+}
+
+.cgm__refresh {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.cgm__refresh:hover:not(:disabled) {
+    border-color: var(--law-gold, #b8860b);
+    color: var(--color-text);
+}
+
+.cgm__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px 16px;
+    background: var(--color-background, #fdfbf7);
+}
+
+.cgm__state {
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--color-text-secondary);
+}
+
+.cgm__state svg {
+    opacity: 0.5;
+}
+
+.cgm__state strong {
+    font-size: 13.5px;
+    color: var(--color-heading);
+}
+
+.cgm-msg {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: min(560px, 78%);
+}
+
+.cgm-msg.is-first {
+    margin-top: 9px;
+}
+
+.cgm-msg--mine {
+    align-self: flex-start;
+}
+
+.cgm-msg--other {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.cgm-msg__avatar {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
+}
+
+.cgm-msg.is-first .cgm-msg__avatar {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+}
+
+.cgm-msg__avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cgm-msg__content {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cgm-msg--other .cgm-msg__content {
+    align-items: flex-end;
+}
+
+.cgm-msg__sender {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    padding-inline: 4px;
+}
+
+.cgm-msg__text {
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.cgm-msg--mine .cgm-msg__text {
+    background: var(--law-navy, #1e3a5f);
+    color: #ffffff;
+    border-end-start-radius: 4px;
+}
+
+.cgm-msg--other .cgm-msg__text {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-end-end-radius: 4px;
+}
+
+.cgm-msg__meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding-inline: 4px;
+    font-size: 10.5px;
+    color: var(--color-text-secondary);
+}
+
+.cgm-msg__status.is-read {
+    color: #2f66a8;
+}
+
+.cgm__error {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-top: 1px solid var(--color-border);
+    background: color-mix(in srgb, #c0392f 8%, var(--color-surface));
+    font-size: 12px;
+    color: var(--color-text);
+}
+
+.cgm__error svg {
+    color: #c0392f;
+    flex-shrink: 0;
+}
+
+.cgm__error span {
+    flex: 1;
+}
+
+.cgm__error button {
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+}
+
+.cgm__composer {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+}
+
+.cgm__input {
+    flex: 1;
+    min-height: 38px;
+    max-height: 120px;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-background, #fdfbf7);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    field-sizing: content; /* يكبر مع النص حتى الحد الأقصى (متصفحات حديثة؛ البقية تبقى بسطر وتتمرر) */
+}
+
+.cgm__input:focus {
+    border-color: var(--law-gold, #b8860b);
+}
+
+.cgm__send {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: var(--law-navy, #1e3a5f);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.cgm__send svg {
+    transform: scaleX(-1); /* سهم الإرسال باتجاه القراءة العربية */
+}
+
+.cgm__send:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
