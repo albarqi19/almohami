@@ -60,6 +60,9 @@ const NationalDayOfferModal: React.FC = () => {
       try {
         const plans: any = await apiClient.get('/subscription/plans');
         const offer: NationalDayOfferPlan | null = plans?.data?.plans?.national_day ?? null;
+        // جوابٌ نهائيّ لهذه الجلسة (مطفأ / غير مؤهَّل / عُرضت): لا تُعاد الطلبات مع كل تنقّل.
+        // أمّا الفشل (429، انقطاع) فلا يُعلَّم — إعادةُ تحميل الصفحة تعيد المحاولة.
+        writeFlag(sessionStorage, SESSION_KEY);
         if (!offer) return; // العرض مطفأ
 
         const current: any = await apiClient.get('/subscription/current');
@@ -74,10 +77,7 @@ const NationalDayOfferModal: React.FC = () => {
           compareAt: Number(plans?.data?.plans?.monthly?.price ?? 0) * 12,
         });
       } catch {
-        // لا نافذةَ عند أي خلل — الصفحة لا تتأثّر
-      } finally {
-        // فُحصت هذه الجلسة: لا تُعاد الطلبات مع كل تنقّل
-        writeFlag(sessionStorage, SESSION_KEY);
+        // لا نافذةَ عند أي خلل — الصفحة لا تتأثّر، والمحاولة تعود مع التحميل التالي
       }
     }, SHOW_DELAY_MS);
 
