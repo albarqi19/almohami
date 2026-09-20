@@ -328,6 +328,31 @@ const Activities: React.FC = () => {
           </h1>
           <p>متابعة جميع الأنشطة والإجراءات</p>
         </div>
+
+        {/* الإحصائيات شرائح صغيرة في الهيدر — كانت صف بطاقات يأكل ارتفاع الأعمدة */}
+        <div className="activities-header__stats" aria-label="ملخص الأنشطة">
+          <span className="activities-chip">
+            <Layers size={13} className="activities-chip__icon activities-chip__icon--navy" />
+            <b>{stats.total}</b>
+            إجمالي
+          </span>
+          <span className="activities-chip">
+            <BarChart3 size={13} className="activities-chip__icon activities-chip__icon--green" />
+            <b>{stats.today}</b>
+            اليوم
+          </span>
+          <span className="activities-chip">
+            <CheckCircle size={13} className="activities-chip__icon activities-chip__icon--blue" />
+            <b>{stats.tasksCompleted}</b>
+            مهام مكتملة
+          </span>
+          <span className="activities-chip">
+            <Briefcase size={13} className="activities-chip__icon activities-chip__icon--orange" />
+            <b>{stats.hearings}</b>
+            جلسات
+          </span>
+        </div>
+
         <div className="activities-header__actions">
           <div className="activities-search">
             <Search size={14} className="activities-search__icon" />
@@ -377,49 +402,6 @@ const Activities: React.FC = () => {
 
       {/* Main Content */}
       <div className="activities-content">
-        {/* Stats */}
-        <div className="activities-stats-grid">
-          <motion.div className="activities-stat-card" whileHover={{ y: -2 }}>
-            <div className="activities-stat-card__icon activities-stat-card__icon--navy">
-              <Layers size={18} />
-            </div>
-            <div className="activities-stat-card__content">
-              <div className="activities-stat-card__value">{stats.total}</div>
-              <div className="activities-stat-card__label">إجمالي الأنشطة</div>
-            </div>
-          </motion.div>
-
-          <motion.div className="activities-stat-card" whileHover={{ y: -2 }}>
-            <div className="activities-stat-card__icon activities-stat-card__icon--green">
-              <BarChart3 size={18} />
-            </div>
-            <div className="activities-stat-card__content">
-              <div className="activities-stat-card__value">{stats.today}</div>
-              <div className="activities-stat-card__label">أنشطة اليوم</div>
-            </div>
-          </motion.div>
-
-          <motion.div className="activities-stat-card" whileHover={{ y: -2 }}>
-            <div className="activities-stat-card__icon activities-stat-card__icon--blue">
-              <CheckCircle size={18} />
-            </div>
-            <div className="activities-stat-card__content">
-              <div className="activities-stat-card__value">{stats.tasksCompleted}</div>
-              <div className="activities-stat-card__label">مهام مكتملة</div>
-            </div>
-          </motion.div>
-
-          <motion.div className="activities-stat-card" whileHover={{ y: -2 }}>
-            <div className="activities-stat-card__icon activities-stat-card__icon--orange">
-              <Briefcase size={18} />
-            </div>
-            <div className="activities-stat-card__content">
-              <div className="activities-stat-card__value">{stats.hearings}</div>
-              <div className="activities-stat-card__label">جلسات</div>
-            </div>
-          </motion.div>
-        </div>
-
         {/* Kanban Board */}
         <div className="activities-board">
           {renderColumn('اليوم', groupedActivities.today, <Clock size={14} />)}
