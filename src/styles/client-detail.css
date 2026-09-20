@@ -1964,3 +1964,197 @@
 .client-emails__add:disabled { opacity: 0.5; cursor: default; }
 .client-emails__error { margin: 0; font-size: 11px; color: #b42318; }
 .client-emails__hint { margin: 0; font-size: 10.5px; line-height: 1.5; color: var(--color-text-secondary, #6b7280); }
+
+/* =====================================================================
+ * ترتيب الصفحة (2026-09): لوحة تملأ منطقة المحتوى — النمط الملتصق.
+ * الصفحة لا تتمرر؛ محتوى التبويب واللوحة الجانبية يتمرر كلٌّ داخلياً. كانت `min-height: 100vh`
+ * مع رأس sticky ولوحة جانبية sticky بـ`max-height: calc(100vh - 120px)` ⟵ تمريران متداخلان،
+ * وعلى اللابتوب يأكل العمود الجانبي (320px) عرض الجداول فتتمرر أفقياً.
+ * تحت 1024px يعود كل شيء إلى التدفق العادي.
+ * ===================================================================== */
+
+@media (min-width: 1025px) {
+    .client-detail {
+        height: 100%;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .client-hero {
+        /* الحاوية المقاسة هي الرأس وحده لا الصفحة: container-type يفرض احتواء التخطيط فيصير العنصر مرجعاً
+           لكل position:fixed بداخله — ومودالات الصفحة (تعديل/تصدير/واتساب…) أبناء ‎.client-detail فكانت
+           ستنحصر داخل مساحة الصفحة بدل أن تغطي الشاشة. */
+        container-type: inline-size;
+        container-name: clienthero;
+        position: relative; /* لا sticky: الرأس خارج منطقة التمرير أصلاً */
+        flex-shrink: 0;
+        gap: 12px;
+        padding: 10px 20px;
+    }
+
+    .client-hero__avatar {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+        box-shadow: none;
+    }
+
+    .client-hero__session {
+        flex: 0 1 300px;
+        min-width: 0;
+    }
+
+    .client-hero__session-body,
+    .client-hero__session-meta {
+        min-width: 0;
+    }
+
+    .client-hero__session-case {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .client-workbar {
+        flex-shrink: 0;
+        margin-bottom: 0;
+        padding: 7px 20px;
+    }
+
+    .client-grid {
+        flex: 1;
+        min-height: 0;
+        grid-template-columns: minmax(0, 1fr) 300px;
+        grid-template-rows: minmax(0, 1fr);
+        gap: 12px;
+        padding: 12px 20px 14px;
+    }
+
+    .client-grid--side-collapsed {
+        grid-template-columns: minmax(0, 1fr) 46px;
+    }
+
+    .client-grid__main {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    /* 12 تبويباً: تلتف على سطرين بدل شريط تمرير أفقي يخفي نصفها */
+    .client-tabs {
+        flex-shrink: 0;
+        flex-wrap: wrap;
+        overflow: visible;
+    }
+
+    .client-tab {
+        padding: 8px 11px;
+    }
+
+    .client-tab-content {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        scrollbar-width: thin;
+    }
+
+    .client-grid__side {
+        position: static;
+        align-self: stretch;
+        min-height: 0;
+        max-height: none;
+        overflow-y: auto;
+        scrollbar-width: thin;
+    }
+
+    .client-grid__side.is-collapsed {
+        overflow: hidden;
+    }
+}
+
+/* رأس اللوحة الجانبية وزر طيّها */
+.client-side__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 2px 2px 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
+
+.client-side__bar button,
+.client-side__rail {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.client-side__bar button {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.client-side__bar button:hover,
+.client-side__rail:hover {
+    border-color: var(--law-gold, #b8860b);
+    color: var(--color-text);
+}
+
+/* مطوية: شريط ضيق بنص عمودي */
+.client-side__rail {
+    width: 100%;
+    height: 100%;
+    min-height: 160px;
+    padding: 10px 0;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.client-side__rail span {
+    writing-mode: vertical-rl;
+}
+
+/* الطي للشاشات الواسعة فقط — تحت 1024px اللوحة تحت المحتوى وتظهر كاملة */
+@media (max-width: 1024px) {
+    .client-side__bar button {
+        display: none;
+    }
+}
+
+/* لابتوب: أزرار الرأس بالأيقونة فقط، وبطاقة الجلسة القادمة بلا اسم القضية */
+@container clienthero (max-width: 1180px) {
+    .client-hero__label {
+        display: none;
+    }
+
+    .client-hero__btn,
+    .client-hero__back {
+        padding-inline: 8px;
+    }
+
+    .client-hero__session {
+        flex-basis: 210px;
+    }
+
+    .client-hero__session-sep,
+    .client-hero__session-case {
+        display: none;
+    }
+}
