@@ -1,13 +1,15 @@
 /**
  * Client Detail — Export Builder
  *
- * Multi-section HTML→Blob exporter for the redesigned ClientDetailPage.
- * Sections opt-in via ClientExportConfig. Excel (.xls) or Word (.doc).
- *
- * Pattern matches lawyerExportHelpers.ts.
+ * «ملف العميل» — يُبنى **نموذج تقرير** محايد مرة واحدة (أقسام: حقول / جدول / نص) من البيانات التي تعرضها
+ * صفحة العميل، ثم يخرج منه:
+ *   • PDF  — يُرسل النموذج للخادم (`POST reports/render-pdf`) فيُطبع على ورقة المكتب الرسمية. هو الافتراضي.
+ *   • Excel / Word — HTML من النموذج نفسه لمن يريد ملفاً يعدّل عليه.
+ * الأقسام اختيارية عبر ClientExportConfig.
  */
 
 import { getPrimaryLawyerName } from './lawyerHelpers';
+import { API_BASE_URL } from './api';
 import type { Client, ClientCommunication } from '../services/clientManagementService';
 
 // --- Types ----------------------------------------------------------------
@@ -142,7 +144,7 @@ export interface ClientExportConfig {
   documentsWekalat: { enabled: boolean };
   communicationsActivities: { enabled: boolean; limit: number };
   notes: { enabled: boolean };
-  format: 'excel' | 'word';
+  format: 'pdf' | 'excel' | 'word';
 }
 
 export const DEFAULT_CLIENT_EXPORT_CONFIG: ClientExportConfig = {
@@ -156,417 +158,285 @@ export const DEFAULT_CLIENT_EXPORT_CONFIG: ClientExportConfig = {
   documentsWekalat: { enabled: false },
   communicationsActivities: { enabled: false, limit: 30 },
   notes: { enabled: false },
-  format: 'excel',
+  // PDF على ورقة المكتب هو الافتراضي: التقرير يُرسل للعميل أو يُطبع. Excel/Word لمن يريد التعديل.
+  format: 'pdf',
 };
+
+// --- نموذج التقرير ---------------------------------------------------------
+
+/** قسم في التقرير — البنية نفسها التي يتحقق منها الخادم في ReportPdfController */
+export type ReportSection =
+  | { title: string; kind: 'fields'; note?: string; fields: Array<[string, string]> }
+  | { title: string; kind: 'table'; note?: string; columns: string[]; rows: string[][] }
+  | { title: string; kind: 'text'; note?: string; text: string };
+
+export interface ReportModel {
+  title: string;
+  subtitle?: string;
+  filename: string;
+  sections: ReportSection[];
+}
+
+/** حد الخادم لكل قسم — ما زاد يُقصّ مع تنبيه في القسم بدل رفض التقرير كله */
+const MAX_ROWS = 400;
 
 // --- Public API -----------------------------------------------------------
 
-export function buildClientReport(data: ClientReportData, config: ClientExportConfig): void {
-  const sections: string[] = [];
+export function buildClientReportModel(data: ClientReportData, config: ClientExportConfig): ReportModel {
+  const sections: ReportSection[] = [];
 
-  if (config.clientInfo.enabled) sections.push(renderClientInfoSection(data.client));
-  if (config.stats.enabled) sections.push(renderStatsSection(data));
-  if (config.cases.enabled) sections.push(renderCasesSection(data.cases, config.cases.scope));
-  if (config.upcomingSessions.enabled) sections.push(renderSessionsSection(data.upcoming_sessions, config.upcomingSessions.limit));
-  if (config.tasks.enabled) sections.push(renderTasksSection(data.tasks, config.tasks.scope));
-  if (config.legalServices.enabled) sections.push(renderServicesSection(data.services));
-  if (config.letters.enabled) sections.push(renderLettersSection(data.letters));
-  if (config.documentsWekalat.enabled) sections.push(renderDocumentsAndWekalatSection(data.documents, data.wekalat));
-  if (config.communicationsActivities.enabled) {
-    sections.push(renderCommunicationsSection(data.communications, config.communicationsActivities.limit));
-    sections.push(renderActivitiesSection(data.activities, config.communicationsActivities.limit));
+  if (config.clientInfo.enabled) sections.push(clientInfoSection(data.client));
+  if (config.stats.enabled) sections.push(statsSection(data));
+  if (config.cases.enabled) sections.push(casesSection(data.cases, config.cases.scope));
+  if (config.upcomingSessions.enabled) sections.push(sessionsSection(data.upcoming_sessions, config.upcomingSessions.limit));
+  if (config.tasks.enabled) sections.push(tasksSection(data.tasks, config.tasks.scope));
+  if (config.legalServices.enabled) sections.push(servicesSection(data.services));
+  if (config.letters.enabled) sections.push(lettersSection(data.letters));
+  if (config.documentsWekalat.enabled) {
+    sections.push(documentsSection(data.documents));
+    sections.push(wekalatSection(data.wekalat));
   }
-  if (config.notes.enabled) sections.push(renderNotesSection(data.internal_notes || ''));
+  if (config.communicationsActivities.enabled) {
+    sections.push(communicationsSection(data.communications, config.communicationsActivities.limit));
+    sections.push(activitiesSection(data.activities, config.communicationsActivities.limit));
+  }
+  if (config.notes.enabled) {
+    sections.push({ title: 'الملاحظات الداخلية', kind: 'text', text: (data.internal_notes || '').trim() || 'لا توجد ملاحظات.' });
+  }
 
-  const html = wrapDocument(data.client, sections.join('\n<br/><br/>\n'));
-  downloadBlob(html, data.client.name, config.format);
+  const safeName = data.client.name.replace(/[\\/:*?"<>|]/g, '_');
+  return {
+    title: `ملف العميل: ${data.client.name}`,
+    filename: `ملف_${safeName}_${new Date().toISOString().split('T')[0]}`,
+    sections: sections.map(capRows),
+  };
 }
 
-export function quickExportClientCases(data: ClientReportData): void {
-  buildClientReport(data, DEFAULT_CLIENT_EXPORT_CONFIG);
+/** PDF يمرّ بالخادم (غير متزامن)؛ Excel/Word يُبنيان محلياً. يرمي خطأً برسالة عربية عند الفشل. */
+export async function buildClientReport(data: ClientReportData, config: ClientExportConfig): Promise<void> {
+  const model = buildClientReportModel(data, config);
+  if (model.sections.length === 0) throw new Error('التقرير فارغ — اختر قسماً واحداً على الأقل');
+
+  if (config.format === 'pdf') {
+    await downloadPdf(model);
+    return;
+  }
+  downloadBlob(renderHtml(model), model.filename, config.format);
 }
 
-// --- Section renderers ----------------------------------------------------
+export function quickExportClientCases(data: ClientReportData): Promise<void> {
+  return buildClientReport(data, DEFAULT_CLIENT_EXPORT_CONFIG);
+}
 
-function renderClientInfoSection(c: Client): string {
-  const rows: [string, string][] = [
-    ['الاسم', esc(c.name)],
-    ['نوع العميل', esc(entityTypeLabel(c.entity_type ?? null))],
-    ['رقم الهوية / السجل', esc(c.national_id || '-')],
-    ['الجوال', esc(c.phone || '-')],
-    ['البريد الإلكتروني', esc(c.email || '-')],
+// --- بناة الأقسام ------------------------------------------------------------
+
+const dash = (v: string | number | null | undefined): string => {
+  const text = v == null ? '' : String(v).trim();
+  return text === '' ? '—' : text;
+};
+
+function capRows(section: ReportSection): ReportSection {
+  if (section.kind !== 'table' || section.rows.length <= MAX_ROWS) return section;
+  return {
+    ...section,
+    rows: section.rows.slice(0, MAX_ROWS),
+    note: `يعرض أول ${MAX_ROWS} من ${section.rows.length} سجل — ضيّق النطاق لعرض البقية.`,
+  };
+}
+
+function clientInfoSection(c: Client): ReportSection {
+  const fields: Array<[string, string]> = [
+    ['الاسم', dash(c.name)],
+    ['نوع العميل', entityTypeLabel(c.entity_type ?? null)],
+    ['رقم الهوية / السجل', dash(c.national_id)],
+    ['الجوال', dash(c.phone)],
+    ['البريد الإلكتروني', dash(c.email)],
   ];
 
   if (c.entity_type && c.entity_type !== 'individual') {
-    rows.push(
-      ['السجل التجاري', esc(c.commercial_registration || '-')],
-      ['الرقم الضريبي', esc(c.vat_number || '-')],
-      ['العنوان الوطني', esc(c.national_address || '-')],
-      ['الصناعة', esc(c.industry || '-')],
-      ['الممثل القانوني', esc(c.legal_representative || '-')],
+    fields.push(
+      ['السجل التجاري', dash(c.commercial_registration)],
+      ['الرقم الضريبي', dash(c.vat_number)],
+      ['العنوان الوطني', dash(c.national_address)],
+      ['الصناعة', dash(c.industry)],
+      ['الممثل القانوني', dash(c.legal_representative)],
     );
     if (c.point_of_contact_name || c.point_of_contact_phone || c.point_of_contact_email) {
-      rows.push(
-        ['جهة الاتصال', esc(c.point_of_contact_name || '-')],
-        ['جوال جهة الاتصال', esc(c.point_of_contact_phone || '-')],
-        ['بريد جهة الاتصال', esc(c.point_of_contact_email || '-')],
+      fields.push(
+        ['جهة الاتصال', dash(c.point_of_contact_name)],
+        ['جوال جهة الاتصال', dash(c.point_of_contact_phone)],
+        ['بريد جهة الاتصال', dash(c.point_of_contact_email)],
       );
     }
   }
 
-  if (c.relationship_manager) {
-    rows.push(['مدير الحساب', esc(c.relationship_manager.name)]);
-  }
+  if (c.relationship_manager) fields.push(['مدير الحساب', dash(c.relationship_manager.name)]);
 
-  const body = rows.map(([k, v]) => `
-    <tr>
-      <td style="${TH_STYLE}; width: 200px;">${k}</td>
-      <td style="${TD_STYLE}">${v}</td>
-    </tr>
-  `).join('');
-
-  return sectionWrap('معلومات العميل', `<table style="${TABLE_STYLE}"><tbody>${body}</tbody></table>`);
+  return { title: 'معلومات العميل', kind: 'fields', fields };
 }
 
-function renderStatsSection(data: ClientReportData): string {
-  const totalRevenue = data.cases.reduce((s, c) => s + (Number(c.contract_value) || 0), 0);
-  return sectionWrap('الإحصائيات', `
-    <table style="${TABLE_STYLE}">
-      <thead>
-        <tr>
-          <th style="${TH_STYLE}">إجمالي القضايا</th>
-          <th style="${TH_STYLE}">القضايا النشطة</th>
-          <th style="${TH_STYLE}">قيد النظر</th>
-          <th style="${TH_STYLE}">المغلقة</th>
-          <th style="${TH_STYLE}">إجمالي قيمة العقود (SAR)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td style="${TD_STYLE}">${data.stats.total_cases}</td>
-          <td style="${TD_STYLE}">${data.stats.active_cases}</td>
-          <td style="${TD_STYLE}">${data.stats.pending_cases}</td>
-          <td style="${TD_STYLE}">${data.stats.closed_cases}</td>
-          <td style="${TD_STYLE}">${formatNumber(totalRevenue)}</td>
-        </tr>
-      </tbody>
-    </table>
-  `);
+function statsSection(data: ClientReportData): ReportSection {
+  const totalRevenue = data.cases.reduce((sum, c) => sum + (Number(c.contract_value) || 0), 0);
+  return {
+    title: 'الإحصائيات',
+    kind: 'table',
+    columns: ['إجمالي القضايا', 'القضايا النشطة', 'قيد النظر', 'المغلقة', 'إجمالي قيمة العقود (ر.س)'],
+    rows: [[
+      String(data.stats.total_cases), String(data.stats.active_cases),
+      String(data.stats.pending_cases), String(data.stats.closed_cases), formatNumber(totalRevenue),
+    ]],
+  };
 }
 
-function renderCasesSection(cases: ClientCase[], scope: CaseScope): string {
+function casesSection(cases: ClientCase[], scope: CaseScope): ReportSection {
   const filtered = filterCasesByScope(cases, scope);
-  const scopeLabel = scope === 'active' ? 'القضايا النشطة'
-                    : scope === 'closed' ? 'القضايا المغلقة'
-                    : 'كل القضايا';
+  const title = scope === 'active' ? 'القضايا النشطة' : scope === 'closed' ? 'القضايا المغلقة' : 'كل القضايا';
+  const totalValue = filtered.reduce((sum, c) => sum + (Number(c.contract_value) || 0), 0);
 
-  if (filtered.length === 0) {
-    return sectionWrap(scopeLabel, `<p style="color:#64748b;">لا توجد قضايا ضمن هذا النطاق.</p>`);
-  }
-
-  const totalValue = filtered.reduce((s, c) => s + (Number(c.contract_value) || 0), 0);
-  const rows = filtered.map((c, i) => `
-    <tr>
-      <td style="${TD_STYLE}">${i + 1}</td>
-      <td style="${TD_STYLE}">${esc(c.file_number || c.case_number || '-')}</td>
-      <td style="${TD_STYLE}">${esc(c.title || '-')}</td>
-      <td style="${TD_STYLE}">${esc(getPrimaryLawyerName(c as never, '-'))}</td>
-      <td style="${TD_STYLE}">${esc(caseStatusLabel(c.status))}</td>
-      <td style="${TD_STYLE}">${esc(priorityLabel(c.priority))}</td>
-      <td style="${TD_STYLE}">${formatNumber(c.contract_value)}</td>
-      <td style="${TD_STYLE}">${formatDate(c.next_hearing)}</td>
-    </tr>
-  `).join('');
-
-  const summary = `
-    <tr style="background:#f8fafc; font-weight:bold;">
-      <td colspan="6" style="${TD_STYLE}">الإجمالي (${filtered.length} قضية)</td>
-      <td style="${TD_STYLE}">${formatNumber(totalValue)}</td>
-      <td style="${TD_STYLE}"></td>
-    </tr>
-  `;
-
-  return sectionWrap(scopeLabel, `
-    <table style="${TABLE_STYLE}">
-      <thead>
-        <tr>
-          <th style="${TH_STYLE}">#</th>
-          <th style="${TH_STYLE}">رقم الملف</th>
-          <th style="${TH_STYLE}">القضية</th>
-          <th style="${TH_STYLE}">المحامي المسؤول</th>
-          <th style="${TH_STYLE}">الحالة</th>
-          <th style="${TH_STYLE}">الأولوية</th>
-          <th style="${TH_STYLE}">القيمة (SAR)</th>
-          <th style="${TH_STYLE}">الجلسة القادمة</th>
-        </tr>
-      </thead>
-      <tbody>${rows}${summary}</tbody>
-    </table>
-  `);
+  return {
+    title,
+    kind: 'table',
+    note: filtered.length ? `${filtered.length} قضية · إجمالي القيمة ${formatNumber(totalValue)} ر.س` : undefined,
+    columns: ['#', 'رقم الملف', 'القضية', 'المحامي المسؤول', 'الحالة', 'الأولوية', 'القيمة (ر.س)', 'الجلسة القادمة'],
+    rows: filtered.map((c, i) => [
+      String(i + 1),
+      dash(c.file_number || c.case_number),
+      dash(c.title),
+      dash(getPrimaryLawyerName(c as never, '—')),
+      caseStatusLabel(c.status),
+      priorityLabel(c.priority),
+      formatNumber(c.contract_value),
+      formatDate(c.next_hearing),
+    ]),
+  };
 }
 
-function renderSessionsSection(sessions: ClientUpcomingSession[], limit: number): string {
-  const list = sessions.slice(0, limit);
-  if (list.length === 0) {
-    return sectionWrap('الجلسات القادمة', `<p style="color:#64748b;">لا توجد جلسات قادمة.</p>`);
-  }
-  const rows = list.map((s, i) => `
-    <tr>
-      <td style="${TD_STYLE}">${i + 1}</td>
-      <td style="${TD_STYLE}">${formatDate(s.session_date_gregorian || s.session_date)}</td>
-      <td style="${TD_STYLE}">${esc(s.session_time || '-')}</td>
-      <td style="${TD_STYLE}">${esc(s.case?.title || '-')} ${s.case?.file_number ? `· ${esc(s.case.file_number)}` : ''}</td>
-      <td style="${TD_STYLE}">${esc(s.court || '-')}</td>
-      <td style="${TD_STYLE}">${esc(getPrimaryLawyerName(s.case as never, '-'))}</td>
-    </tr>
-  `).join('');
-  return sectionWrap('الجلسات القادمة', `
-    <table style="${TABLE_STYLE}">
-      <thead>
-        <tr>
-          <th style="${TH_STYLE}">#</th>
-          <th style="${TH_STYLE}">التاريخ</th>
-          <th style="${TH_STYLE}">الوقت</th>
-          <th style="${TH_STYLE}">القضية</th>
-          <th style="${TH_STYLE}">المحكمة</th>
-          <th style="${TH_STYLE}">المحامي المسؤول</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `);
+function sessionsSection(sessions: ClientUpcomingSession[], limit: number): ReportSection {
+  return {
+    title: 'الجلسات القادمة',
+    kind: 'table',
+    columns: ['#', 'التاريخ', 'الوقت', 'القضية', 'المحكمة', 'المحامي المسؤول'],
+    rows: sessions.slice(0, limit).map((s, i) => [
+      String(i + 1),
+      formatDate(s.session_date_gregorian || s.session_date),
+      dash(s.session_time),
+      dash([s.case?.title, s.case?.file_number].filter(Boolean).join(' · ')),
+      dash(s.court),
+      dash(getPrimaryLawyerName(s.case as never, '—')),
+    ]),
+  };
 }
 
-function renderTasksSection(tasks: ClientTask[], scope: TaskScope): string {
-  const filtered = filterTasksByScope(tasks, scope);
-  const scopeLabel = scope === 'overdue' ? 'المهام المتأخرة'
-                    : scope === 'open' ? 'المهام المفتوحة'
-                    : scope === 'completed' ? 'المهام المنجَزة'
-                    : 'كل المهام';
-
-  if (filtered.length === 0) {
-    return sectionWrap(scopeLabel, `<p style="color:#64748b;">لا توجد مهام ضمن هذا النطاق.</p>`);
-  }
-
-  const rows = filtered.map((t, i) => `
-    <tr>
-      <td style="${TD_STYLE}">${i + 1}</td>
-      <td style="${TD_STYLE}">${esc(t.title || '-')}</td>
-      <td style="${TD_STYLE}">${t.case ? esc(`${t.case.file_number || ''} ${t.case.title || ''}`.trim()) : '-'}</td>
-      <td style="${TD_STYLE}">${esc(priorityLabel(t.priority))}</td>
-      <td style="${TD_STYLE}">${formatDate(t.due_date)}</td>
-      <td style="${TD_STYLE}">${esc(taskStatusLabel(t.status))}</td>
-    </tr>
-  `).join('');
-  return sectionWrap(scopeLabel, `
-    <table style="${TABLE_STYLE}">
-      <thead>
-        <tr>
-          <th style="${TH_STYLE}">#</th>
-          <th style="${TH_STYLE}">المهمة</th>
-          <th style="${TH_STYLE}">القضية المرتبطة</th>
-          <th style="${TH_STYLE}">الأولوية</th>
-          <th style="${TH_STYLE}">الموعد</th>
-          <th style="${TH_STYLE}">الحالة</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `);
+function tasksSection(tasks: ClientTask[], scope: TaskScope): ReportSection {
+  const title = scope === 'overdue' ? 'المهام المتأخرة'
+    : scope === 'open' ? 'المهام المفتوحة'
+    : scope === 'completed' ? 'المهام المنجزة'
+    : 'كل المهام';
+  return {
+    title,
+    kind: 'table',
+    columns: ['#', 'المهمة', 'القضية المرتبطة', 'الأولوية', 'الموعد', 'الحالة'],
+    rows: filterTasksByScope(tasks, scope).map((t, i) => [
+      String(i + 1),
+      dash(t.title),
+      t.case ? dash(`${t.case.file_number || ''} ${t.case.title || ''}`) : '—',
+      priorityLabel(t.priority),
+      formatDate(t.due_date),
+      taskStatusLabel(t.status),
+    ]),
+  };
 }
 
-function renderServicesSection(services: ClientService[]): string {
-  if (services.length === 0) {
-    return sectionWrap('الخدمات القانونية والاستشارات', `<p style="color:#64748b;">لا توجد خدمات أو استشارات.</p>`);
-  }
-  const rows = services.map((s, i) => `
-    <tr>
-      <td style="${TD_STYLE}">${i + 1}</td>
-      <td style="${TD_STYLE}">${esc(s.service_type_arabic || s.service_type || '-')}</td>
-      <td style="${TD_STYLE}">${esc(s.title || '-')}</td>
-      <td style="${TD_STYLE}">${esc(s.status_arabic || s.status || '-')}</td>
-      <td style="${TD_STYLE}">${s.case_model ? esc(s.case_model.file_number || '-') : 'غير مرتبطة بقضية'}</td>
-      <td style="${TD_STYLE}">${esc(s.assigned_lawyer?.name || '-')}</td>
-      <td style="${TD_STYLE}">${formatNumber(s.agreed_amount != null ? Number(s.agreed_amount) : null)}</td>
-    </tr>
-  `).join('');
-  return sectionWrap('الخدمات القانونية والاستشارات', `
-    <table style="${TABLE_STYLE}">
-      <thead>
-        <tr>
-          <th style="${TH_STYLE}">#</th>
-          <th style="${TH_STYLE}">النوع</th>
-          <th style="${TH_STYLE}">العنوان</th>
-          <th style="${TH_STYLE}">الحالة</th>
-          <th style="${TH_STYLE}">القضية المرتبطة</th>
-          <th style="${TH_STYLE}">المحامي المسؤول</th>
-          <th style="${TH_STYLE}">المبلغ (SAR)</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `);
+function servicesSection(services: ClientService[]): ReportSection {
+  return {
+    title: 'الخدمات القانونية والاستشارات',
+    kind: 'table',
+    columns: ['#', 'النوع', 'العنوان', 'الحالة', 'القضية المرتبطة', 'المحامي المسؤول', 'المبلغ (ر.س)'],
+    rows: services.map((s, i) => [
+      String(i + 1),
+      dash(s.service_type_arabic || s.service_type),
+      dash(s.title),
+      dash(s.status_arabic || s.status),
+      s.case_model ? dash(s.case_model.file_number) : 'غير مرتبطة بقضية',
+      dash(s.assigned_lawyer?.name),
+      formatNumber(s.agreed_amount != null ? Number(s.agreed_amount) : null),
+    ]),
+  };
 }
 
-function renderLettersSection(letters: ClientLetter[]): string {
-  if (letters.length === 0) {
-    return sectionWrap('الخطابات والمراسلات الصادرة', `<p style="color:#64748b;">لا توجد خطابات صادرة.</p>`);
-  }
-  const rows = letters.map((l, i) => `
-    <tr>
-      <td style="${TD_STYLE}">${i + 1}</td>
-      <td style="${TD_STYLE}">${esc(l.type_label || l.document_type || '-')}</td>
-      <td style="${TD_STYLE}">${esc(l.title || '-')}</td>
-      <td style="${TD_STYLE}">${esc(l.outgoing_number || '-')}</td>
-      <td style="${TD_STYLE}">${l.case_id ? esc(l.case?.file_number || 'قضية') : 'عام'}</td>
-      <td style="${TD_STYLE}">${esc(letterStatusLabel(l.status))}</td>
-      <td style="${TD_STYLE}">${formatDate(l.sent_at || l.created_at)}</td>
-    </tr>
-  `).join('');
-  return sectionWrap('الخطابات والمراسلات الصادرة', `
-    <table style="${TABLE_STYLE}">
-      <thead>
-        <tr>
-          <th style="${TH_STYLE}">#</th>
-          <th style="${TH_STYLE}">النوع</th>
-          <th style="${TH_STYLE}">العنوان</th>
-          <th style="${TH_STYLE}">رقم الصادر</th>
-          <th style="${TH_STYLE}">القضية</th>
-          <th style="${TH_STYLE}">الحالة</th>
-          <th style="${TH_STYLE}">التاريخ</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `);
+function lettersSection(letters: ClientLetter[]): ReportSection {
+  return {
+    title: 'الخطابات والمراسلات الصادرة',
+    kind: 'table',
+    columns: ['#', 'النوع', 'العنوان', 'رقم الصادر', 'القضية', 'الحالة', 'التاريخ'],
+    rows: letters.map((l, i) => [
+      String(i + 1),
+      dash(l.type_label || l.document_type),
+      dash(l.title),
+      dash(l.outgoing_number),
+      l.case_id ? dash(l.case?.file_number || 'قضية') : 'عام',
+      letterStatusLabel(l.status),
+      formatDate(l.sent_at || l.created_at),
+    ]),
+  };
 }
 
-function renderDocumentsAndWekalatSection(docs: ClientDocument[], wekalat: ClientWekala[]): string {
-  const docsTable = docs.length === 0
-    ? `<p style="color:#64748b;">لا توجد مستندات.</p>`
-    : `<table style="${TABLE_STYLE}">
-        <thead>
-          <tr>
-            <th style="${TH_STYLE}">#</th>
-            <th style="${TH_STYLE}">الاسم</th>
-            <th style="${TH_STYLE}">القضية المرتبطة</th>
-            <th style="${TH_STYLE}">تاريخ الرفع</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${docs.map((d, i) => `
-            <tr>
-              <td style="${TD_STYLE}">${i + 1}</td>
-              <td style="${TD_STYLE}">${esc(d.name || '-')}</td>
-              <td style="${TD_STYLE}">${d.case ? esc(`${d.case.file_number || ''} ${d.case.title || ''}`.trim()) : '-'}</td>
-              <td style="${TD_STYLE}">${formatDate(d.created_at)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>`;
-
-  const wekalatTable = wekalat.length === 0
-    ? `<p style="color:#64748b;">لا توجد وكالات.</p>`
-    : `<table style="${TABLE_STYLE}">
-        <thead>
-          <tr>
-            <th style="${TH_STYLE}">رقم الوكالة</th>
-            <th style="${TH_STYLE}">النوع</th>
-            <th style="${TH_STYLE}">الحالة</th>
-            <th style="${TH_STYLE}">تاريخ الإصدار</th>
-            <th style="${TH_STYLE}">تاريخ الانتهاء</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${wekalat.map(w => `
-            <tr>
-              <td style="${TD_STYLE}">${esc(w.number || '-')}</td>
-              <td style="${TD_STYLE}">${esc(w.type || '-')}</td>
-              <td style="${TD_STYLE}">${esc(w.status || '-')}</td>
-              <td style="${TD_STYLE}">${formatDate(w.issue_date_gregorian)}</td>
-              <td style="${TD_STYLE}">${formatDate(w.expiry_date_gregorian)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>`;
-
-  return sectionWrap('المستندات والوكالات', `
-    <h3 style="margin: 12px 0 6px; font-size:14px; color:#1E3A5F;">المستندات (${docs.length})</h3>
-    ${docsTable}
-    <h3 style="margin: 16px 0 6px; font-size:14px; color:#1E3A5F;">الوكالات (${wekalat.length})</h3>
-    ${wekalatTable}
-  `);
+function documentsSection(docs: ClientDocument[]): ReportSection {
+  return {
+    title: `المستندات (${docs.length})`,
+    kind: 'table',
+    columns: ['#', 'الاسم', 'القضية المرتبطة', 'تاريخ الرفع'],
+    rows: docs.map((d, i) => [
+      String(i + 1),
+      dash(d.name),
+      d.case ? dash(`${d.case.file_number || ''} ${d.case.title || ''}`) : '—',
+      formatDate(d.created_at),
+    ]),
+  };
 }
 
-function renderCommunicationsSection(list: ClientCommunication[], limit: number): string {
-  const items = list.slice(0, limit);
-  if (items.length === 0) {
-    return sectionWrap('سجل التواصل', `<p style="color:#64748b;">لا توجد سجلات تواصل.</p>`);
-  }
-  const rows = items.map((c, i) => `
-    <tr>
-      <td style="${TD_STYLE}">${i + 1}</td>
-      <td style="${TD_STYLE}">${formatDateTime(c.occurred_at)}</td>
-      <td style="${TD_STYLE}">${esc(communicationTypeLabel(c.type))}</td>
-      <td style="${TD_STYLE}">${esc(c.direction === 'inbound' ? 'وارد' : 'صادر')}</td>
-      <td style="${TD_STYLE}">${esc(c.subject || '-')}</td>
-      <td style="${TD_STYLE}">${esc(c.notes || '-')}</td>
-      <td style="${TD_STYLE}">${esc((c.loggedBy?.name || c.logged_by?.name) ?? '-')}</td>
-    </tr>
-  `).join('');
-  return sectionWrap('سجل التواصل', `
-    <table style="${TABLE_STYLE}">
-      <thead>
-        <tr>
-          <th style="${TH_STYLE}">#</th>
-          <th style="${TH_STYLE}">التاريخ</th>
-          <th style="${TH_STYLE}">النوع</th>
-          <th style="${TH_STYLE}">الاتجاه</th>
-          <th style="${TH_STYLE}">الموضوع</th>
-          <th style="${TH_STYLE}">الملاحظات</th>
-          <th style="${TH_STYLE}">المسجِّل</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `);
+function wekalatSection(wekalat: ClientWekala[]): ReportSection {
+  return {
+    title: `الوكالات (${wekalat.length})`,
+    kind: 'table',
+    columns: ['رقم الوكالة', 'النوع', 'الحالة', 'تاريخ الإصدار', 'تاريخ الانتهاء'],
+    rows: wekalat.map((w) => [
+      dash(w.number), dash(w.type), dash(w.status),
+      formatDate(w.issue_date_gregorian), formatDate(w.expiry_date_gregorian),
+    ]),
+  };
 }
 
-function renderActivitiesSection(list: ClientActivity[], limit: number): string {
-  const items = list.slice(0, limit);
-  if (items.length === 0) {
-    return sectionWrap('النشاطات', `<p style="color:#64748b;">لا توجد نشاطات.</p>`);
-  }
-  const rows = items.map((a, i) => `
-    <tr>
-      <td style="${TD_STYLE}">${i + 1}</td>
-      <td style="${TD_STYLE}">${formatDateTime(a.created_at)}</td>
-      <td style="${TD_STYLE}">${esc(a.description || '-')}</td>
-      <td style="${TD_STYLE}">${esc(a.performer?.name || '-')}</td>
-      <td style="${TD_STYLE}">${esc(a.case?.title || '-')}</td>
-    </tr>
-  `).join('');
-  return sectionWrap('النشاطات', `
-    <table style="${TABLE_STYLE}">
-      <thead>
-        <tr>
-          <th style="${TH_STYLE}">#</th>
-          <th style="${TH_STYLE}">التاريخ</th>
-          <th style="${TH_STYLE}">الوصف</th>
-          <th style="${TH_STYLE}">المنفّذ</th>
-          <th style="${TH_STYLE}">القضية</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `);
+function communicationsSection(list: ClientCommunication[], limit: number): ReportSection {
+  return {
+    title: 'سجل التواصل',
+    kind: 'table',
+    columns: ['#', 'التاريخ', 'النوع', 'الاتجاه', 'الموضوع', 'الملاحظات', 'المسجِّل'],
+    rows: list.slice(0, limit).map((c, i) => [
+      String(i + 1),
+      formatDateTime(c.occurred_at),
+      communicationTypeLabel(c.type),
+      c.direction === 'inbound' ? 'وارد' : 'صادر',
+      dash(c.subject),
+      dash(c.notes),
+      dash((c.loggedBy?.name || c.logged_by?.name) ?? null),
+    ]),
+  };
 }
 
-function renderNotesSection(notes: string): string {
-  if (!notes.trim()) {
-    return sectionWrap('الملاحظات الداخلية', `<p style="color:#64748b;">لا توجد ملاحظات.</p>`);
-  }
-  return sectionWrap('الملاحظات الداخلية', `<p style="white-space:pre-wrap; font-size:13px;">${esc(notes)}</p>`);
+function activitiesSection(list: ClientActivity[], limit: number): ReportSection {
+  return {
+    title: 'النشاطات',
+    kind: 'table',
+    columns: ['#', 'التاريخ', 'الوصف', 'المنفّذ', 'القضية'],
+    rows: list.slice(0, limit).map((a, i) => [
+      String(i + 1),
+      formatDateTime(a.created_at),
+      dash(a.description),
+      dash(a.performer?.name),
+      dash(a.case?.title),
+    ]),
+  };
 }
 
 // --- Filters --------------------------------------------------------------
@@ -584,48 +454,90 @@ export function filterTasksByScope(tasks: ClientTask[], scope: TaskScope): Clien
   return tasks.filter(t => t.status !== 'completed');
 }
 
-// --- Helpers --------------------------------------------------------------
+// --- الإخراج ---------------------------------------------------------------
 
-const TABLE_STYLE = 'width:100%; border-collapse:collapse; margin:8px 0; direction:rtl; font-family:Tahoma, Arial, sans-serif;';
-const TH_STYLE = 'background:#1E3A5F; color:white; padding:10px; text-align:right; border:1px solid #ddd; font-weight:bold;';
-const TD_STYLE = 'padding:8px 10px; border:1px solid #e2e8f0; text-align:right; font-size:12px;';
+// خط الهوية أولاً ثم بدائل متاحة في Office (الملف يُفتح خارج المتصفح فقد لا يكون الخط مثبّتاً)
+const FONT = "'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif";
+const TABLE_STYLE = `width:100%; border-collapse:collapse; margin:6px 0; direction:rtl; font-family:${FONT};`;
+const TH_STYLE = 'background:#1E3A5F; color:white; padding:8px 10px; text-align:right; border:1px solid #d4d8de; font-weight:bold; font-size:12px;';
+const TD_STYLE = 'padding:7px 10px; border:1px solid #e2e8f0; text-align:right; font-size:12px;';
+const KEY_STYLE = `${TD_STYLE} background:#f3f4f6; font-weight:bold; width:200px;`;
 
-function sectionWrap(title: string, body: string): string {
-  return `
-    <div style="margin-bottom:24px;">
-      <h2 style="background:#f1f5f9; padding:10px 14px; border-right:4px solid #1E3A5F; font-size:16px; color:#1E3A5F; margin:0 0 8px;">${esc(title)}</h2>
-      ${body}
-    </div>
-  `;
-}
+/** Excel/Word: HTML من النموذج نفسه. عنوان القسم بخط سفلي — لا شريط لوني جانبي (قاعدة الهوية). */
+function renderHtml(model: ReportModel): string {
+  const today = new Date().toLocaleDateString(DATE_LOCALE, { year: 'numeric', month: 'long', day: 'numeric' });
 
-function wrapDocument(client: Client, body: string): string {
-  const today = new Date();
-  const dateStr = today.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+  const body = model.sections.map((section) => {
+    let content: string;
+    if (section.kind === 'fields') {
+      content = `<table style="${TABLE_STYLE}"><tbody>${section.fields
+        .map(([k, v]) => `<tr><td style="${KEY_STYLE}">${esc(k)}</td><td style="${TD_STYLE}">${esc(v)}</td></tr>`)
+        .join('')}</tbody></table>`;
+    } else if (section.kind === 'table') {
+      content = section.rows.length === 0
+        ? '<p style="color:#64748b; font-size:12px;">لا توجد بيانات.</p>'
+        : `<table style="${TABLE_STYLE}"><thead><tr>${section.columns
+            .map((col) => `<th style="${TH_STYLE}">${esc(col)}</th>`)
+            .join('')}</tr></thead><tbody>${section.rows
+            .map((row) => `<tr>${row.map((cell) => `<td style="${TD_STYLE}">${esc(cell)}</td>`).join('')}</tr>`)
+            .join('')}</tbody></table>`;
+    } else {
+      content = `<p style="white-space:pre-wrap; font-size:13px; line-height:1.8;">${esc(section.text)}</p>`;
+    }
+
+    return `
+    <div style="margin-bottom:22px;">
+      <h2 style="margin:0 0 6px; padding:0 0 5px; border-bottom:2px solid #1E3A5F; font-size:15px; color:#1E3A5F;">${esc(section.title)}</h2>
+      ${section.note ? `<p style="margin:0 0 4px; color:#64748b; font-size:11px;">${esc(section.note)}</p>` : ''}
+      ${content}
+    </div>`;
+  }).join('\n');
+
   return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8"><title>تقرير ${esc(client.name)}</title></head>
-<body style="font-family:Tahoma, Arial, sans-serif; direction:rtl; padding:16px;">
-  <div style="text-align:center; margin-bottom:24px;">
-    <h1 style="color:#1E3A5F; margin:0; font-size:22px;">ملف العميل: ${esc(client.name)}</h1>
-    <p style="color:#64748b; margin:6px 0 0; font-size:13px;">تاريخ الإنشاء: ${esc(dateStr)}</p>
+<head><meta charset="utf-8"><title>${esc(model.title)}</title></head>
+<body style="font-family:${FONT}; direction:rtl; padding:16px;">
+  <div style="text-align:center; margin-bottom:22px;">
+    <h1 style="color:#1E3A5F; margin:0; font-size:21px;">${esc(model.title)}</h1>
+    <p style="color:#64748b; margin:6px 0 0; font-size:12px;">تاريخ الإصدار: ${esc(today)}</p>
   </div>
   ${body}
 </body></html>`;
 }
 
-function downloadBlob(html: string, clientName: string, format: 'excel' | 'word'): void {
-  const mime = format === 'excel' ? 'application/vnd.ms-excel' : 'application/msword';
-  const ext = format === 'excel' ? 'xls' : 'doc';
-  const blob = new Blob(['﻿', html], { type: mime });
-  const safeName = clientName.replace(/[\\/:*?"<>|]/g, '_');
-  const dateStr = new Date().toISOString().split('T')[0];
+function saveBlob(blob: Blob, filename: string): void {
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `ملف_${safeName}_${dateStr}.${ext}`;
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(link.href);
+  setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
+}
+
+function downloadBlob(html: string, filename: string, format: 'excel' | 'word'): void {
+  const mime = format === 'excel' ? 'application/vnd.ms-excel' : 'application/msword';
+  saveBlob(new Blob(['﻿', html], { type: mime }), `${filename}.${format === 'excel' ? 'xls' : 'doc'}`);
+}
+
+/** PDF على ورقة المكتب: الخادم يطبع النموذج بالكليشة الافتراضية (ترويسة/تذييل/ترقيم صفحات). */
+async function downloadPdf(model: ReportModel): Promise<void> {
+  const token = localStorage.getItem('authToken');
+  const response = await fetch(`${API_BASE_URL}/reports/render-pdf`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/pdf, application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(model),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new Error(payload?.message || (response.status === 429 ? 'طلبات كثيرة — انتظر لحظات ثم أعد المحاولة' : 'تعذّر توليد ملف PDF'));
+  }
+
+  saveBlob(await response.blob(), `${model.filename}.pdf`);
 }
 
 // --- Formatters & label maps ----------------------------------------------
@@ -642,18 +554,22 @@ function formatNumber(n: number | null | undefined): string {
   return num.toLocaleString('en-US');
 }
 
+// تقويم ميلادي وأرقام لاتينية صراحةً: `ar-SA` وحدها تعطي هجرياً وأرقاماً هندية في بعض المتصفحات،
+// فيخرج التقرير بتقويمين ونظامَي أرقام بحسب جهاز من صدّره.
+const DATE_LOCALE = 'ar-SA-u-ca-gregory-nu-latn';
+
 function formatDate(value: string | null | undefined): string {
-  if (!value) return '-';
+  if (!value) return '—';
   const d = new Date(value);
-  if (isNaN(d.getTime())) return '-';
-  return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString(DATE_LOCALE, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function formatDateTime(value: string | null | undefined): string {
-  if (!value) return '-';
+  if (!value) return '—';
   const d = new Date(value);
-  if (isNaN(d.getTime())) return '-';
-  return d.toLocaleString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleString(DATE_LOCALE, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function caseStatusLabel(s: string | null | undefined): string {

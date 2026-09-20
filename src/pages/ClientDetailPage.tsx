@@ -6,7 +6,7 @@ import {
   ArrowRight, Phone, Mail, Star, Edit2, Download, FileSpreadsheet,
   Briefcase, Calendar, ListTodo, FileSignature, MessageSquare,
   Activity, Building2, Hash, FileText, ExternalLink, Save, Receipt, Scale, Send,
-  ChevronsLeft, ChevronsRight,
+  ChevronsLeft, ChevronsRight, Loader2,
 } from 'lucide-react';
 import ClientFeeProposalsTab from '../components/ClientFeeProposalsTab';
 import ClientLettersTab from '../components/ClientLettersTab';
@@ -323,8 +323,18 @@ const ClientDetailPage: React.FC = () => {
     }
   };
 
-  const handleQuickExport = () => {
-    if (reportData) quickExportClientCases(reportData);
+  // التصدير السريع = PDF على ورقة المكتب (معلومات العميل + الإحصائيات + القضايا النشطة) — يمرّ بالخادم
+  const [quickExporting, setQuickExporting] = useState(false);
+  const handleQuickExport = async () => {
+    if (!reportData || quickExporting) return;
+    setQuickExporting(true);
+    try {
+      await quickExportClientCases(reportData);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'تعذّر تصدير التقرير');
+    } finally {
+      setQuickExporting(false);
+    }
   };
 
   const handleLogged = (entry: ClientCommunication) => {
@@ -446,8 +456,14 @@ const ClientDetailPage: React.FC = () => {
           <button className="client-hero__btn" onClick={() => setIsEditModalOpen(true)} title="تعديل بيانات العميل">
             <Edit2 size={13} /> <span className="client-hero__label">تعديل</span>
           </button>
-          <button className="client-hero__btn client-hero__btn--quick" onClick={handleQuickExport} title="تصدير القضايا النشطة فوراً">
-            <FileSpreadsheet size={13} /> <span className="client-hero__label">تصدير سريع</span>
+          <button
+            className="client-hero__btn client-hero__btn--quick"
+            onClick={handleQuickExport}
+            disabled={quickExporting}
+            title="PDF على ورقة المكتب: معلومات العميل والإحصائيات والقضايا النشطة"
+          >
+            {quickExporting ? <Loader2 size={13} className="spinning" /> : <FileSpreadsheet size={13} />}
+            <span className="client-hero__label">{quickExporting ? 'جاري التجهيز...' : 'تصدير سريع'}</span>
           </button>
           <button className="client-hero__btn client-hero__btn--primary" onClick={() => setIsExportModalOpen(true)} title="تخصيص التصدير">
             <Download size={13} /> <span className="client-hero__label">تخصيص...</span>

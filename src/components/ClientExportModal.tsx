@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Download, X, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
+import { Download, X, FileSpreadsheet, FileText, FileType2, Loader2, ShieldAlert } from 'lucide-react';
+import { toast } from 'react-toastify';
 import Modal from './Modal';
 import {
   buildClientReport,
@@ -40,11 +41,12 @@ const ClientExportModal: React.FC<ClientExportModalProps> = ({ isOpen, onClose, 
     if (!anyEnabled) return;
     setExporting(true);
     try {
-      buildClientReport(data, config);
+      // PDF يمرّ بالخادم (ورقة المكتب) فننتظره؛ Excel/Word فوريان
+      await buildClientReport(data, config);
       onClose();
     } catch (err) {
       console.error('Client export failed:', err);
-      alert('فشل تصدير التقرير');
+      toast.error(err instanceof Error ? err.message : 'فشل تصدير التقرير');
     } finally {
       setExporting(false);
     }
@@ -166,12 +168,23 @@ const ClientExportModal: React.FC<ClientExportModalProps> = ({ isOpen, onClose, 
           label="الملاحظات الداخلية"
         />
 
+        {config.notes.enabled && (
+          <p className="client-export-modal__warn" role="alert">
+            <ShieldAlert size={14} />
+            الملاحظات الداخلية خاصة بالمكتب — لا ترسل هذا التقرير للعميل وهي مضمّنة.
+          </p>
+        )}
+
         </div> {/* end client-export-modal__sections */}
 
         <div className="client-export-modal__divider" />
 
         <div className="client-export-modal__format">
           <span className="client-export-modal__format-label">صيغة الملف:</span>
+          <label className={`client-export-modal__format-pill ${config.format === 'pdf' ? 'is-active' : ''}`} title="على ورقة المكتب الرسمية — الأنسب للإرسال والطباعة">
+            <input type="radio" name="format" checked={config.format === 'pdf'} onChange={() => setConfig(c => ({ ...c, format: 'pdf' }))} />
+            <FileType2 size={14} /> PDF على ورقة المكتب
+          </label>
           <label className={`client-export-modal__format-pill ${config.format === 'excel' ? 'is-active' : ''}`}>
             <input type="radio" name="format" checked={config.format === 'excel'} onChange={() => setConfig(c => ({ ...c, format: 'excel' }))} />
             <FileSpreadsheet size={14} /> Excel (.xls)
@@ -194,7 +207,7 @@ const ClientExportModal: React.FC<ClientExportModalProps> = ({ isOpen, onClose, 
             title={!anyEnabled ? 'اختر قسم واحد على الأقل' : ''}
           >
             {exporting ? <Loader2 size={14} className="spinning" /> : <Download size={14} />}
-            {exporting ? 'جاري التصدير...' : 'تصدير'}
+            {exporting ? (config.format === 'pdf' ? 'جاري تجهيز PDF...' : 'جاري التصدير...') : 'تصدير'}
           </button>
         </div>
       </div>

@@ -2486,3 +2486,28 @@
     opacity: 0.45;
     cursor: not-allowed;
 }
+
+/* تنبيه تضمين الملاحظات الداخلية في تقرير قد يُرسل للعميل — أيقونة ونص، لا لون وحده */
+.client-export-modal__warn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 0;
+    padding: 7px 10px;
+    border: 1px solid color-mix(in srgb, #b45309 35%, var(--color-border));
+    border-radius: 8px;
+    background: color-mix(in srgb, #b45309 7%, var(--color-surface));
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-text);
+}
+
+.client-export-modal__warn svg {
+    flex-shrink: 0;
+    color: #b45309;
+}
+
+.client-hero__btn:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
