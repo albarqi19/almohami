@@ -54,7 +54,8 @@ function withLeadingSpace(text: string, before: string): string {
 }
 
 function insertIntoField(el: TextField, text: string, caret: SavedCaret): boolean {
-  el.focus();
+  // preventScroll: التركيز الافتراضي يمرّر كل الحاويات الأم — ومنها قشرة التطبيق — ليُظهر الحقل
+  el.focus({ preventScroll: true });
   if (caret?.kind === 'field') {
     try {
       el.setSelectionRange(caret.start, caret.end);
@@ -95,7 +96,8 @@ function insertIntoField(el: TextField, text: string, caret: SavedCaret): boolea
 }
 
 function insertIntoEditable(el: HTMLElement, text: string, caret: SavedCaret): boolean {
-  el.focus();
+  // preventScroll: التركيز الافتراضي يمرّر كل الحاويات الأم — ومنها قشرة التطبيق — ليُظهر الحقل
+  el.focus({ preventScroll: true });
 
   const selection = window.getSelection();
   if (caret?.kind === 'range' && selection) {
