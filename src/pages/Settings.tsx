@@ -346,6 +346,15 @@ const Settings: React.FC = () => {
         }
       } catch (error) {
         console.error('Error loading subscription:', error);
+        // تعذّر جلب الحالة (429/انقطاع): تُعرض الباقات كلّها بدل صفحةٍ بلا باقات —
+        // الباك يحرس الشراء بنفسه (2026-09-20: مكتبٌ «منتهٍ» لم يجد ما يشتريه)
+        setAvailableOptions((prev: any) => prev ?? {
+          can_subscribe: true,
+          can_subscribe_monthly: true,
+          can_subscribe_yearly: true,
+          can_upgrade: false,
+          message: null,
+        });
       } finally {
         setLoadingSubscription(false);
       }
