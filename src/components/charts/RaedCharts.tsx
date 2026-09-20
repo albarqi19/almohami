@@ -16,7 +16,10 @@ import React from 'react';
  * الألوان في styles/raed-charts.css — اجتازت فحص التباين وتمييز الألوان في الفاتح والداكن.
  */
 
-export type ChartTone = 'series1' | 'series2' | 'good' | 'critical' | 'warning' | 'neutral';
+export type ChartTone =
+  | 'series1' | 'series2' | 'good' | 'critical' | 'warning' | 'neutral'
+  // مقياس ترتيبي (تقادم الديون وأمثاله): لون واحد يتدرج مع الشدة — لا ألوان متعددة
+  | 'ord1' | 'ord2' | 'ord3' | 'ord4';
 
 const LATIN = 'en-US';
 
@@ -80,10 +83,12 @@ interface StatTileProps {
   status?: { tone: 'good' | 'critical' | 'warning'; text: string; icon: React.ReactNode };
   icon?: React.ReactNode;
   trend?: { values: number[]; ariaLabel: string };
+  /** مقياس نسبة تحت القيمة — للبطاقات التي رقمها نسبة مئوية */
+  meter?: { value: number; tone?: ChartTone; ariaLabel: string };
   onClick?: () => void;
 }
 
-export const StatTile: React.FC<StatTileProps> = ({ label, value, hint, status, icon, trend, onClick }) => {
+export const StatTile: React.FC<StatTileProps> = ({ label, value, hint, status, icon, trend, meter, onClick }) => {
   const body = (
     <>
       <div className="rc-tile__top">
@@ -101,6 +106,11 @@ export const StatTile: React.FC<StatTileProps> = ({ label, value, hint, status, 
           hint && <span className="rc-tile__hint">{hint}</span>
         )}
       </div>
+      {meter && (
+        <div className="rc-tile__meter">
+          <Meter value={meter.value} tone={meter.tone} ariaLabel={meter.ariaLabel} />
+        </div>
+      )}
       {trend && <Sparkline values={trend.values} ariaLabel={trend.ariaLabel} />}
     </>
   );
@@ -313,6 +323,88 @@ export const ColumnChart: React.FC<{
           ))}
         </tbody>
       </table>
+      </div>
+    </figure>
+  );
+};
+
+// ─── أعمدة زمنية لسلسلتين بوحدة واحدة (مُفوتَر مقابل محصَّل) — محور واحد ومفتاح حاضر ─────
+
+export interface GroupedDatum {
+  label: string;
+  /** قيمة لكل سلسلة بترتيب `series` */
+  values: [number, number];
+}
+
+export const GroupedColumnChart: React.FC<{
+  title: string;
+  /** وحدة القيم تُذكر في التلميح والجدول البديل */
+  unit: string;
+  series: [{ label: string; tone: 'series1' | 'series2' }, { label: string; tone: 'series1' | 'series2' }];
+  data: GroupedDatum[];
+}> = ({ title, unit, series, data }) => {
+  const max = Math.max(...data.flatMap((d) => d.values), 0);
+  const ceil = niceCeil(max);
+
+  return (
+    <figure className="rc-cols rc-cols--grouped">
+      <figcaption className="rc-sr-only">{title}</figcaption>
+
+      <div className="rc-cols__plot rc-cols__plot--wide" aria-hidden="true">
+        <div className="rc-cols__grid">
+          {[ceil, ceil / 2, 0].map((tick) => (
+            <span key={tick} className="rc-cols__tick">
+              <i>{formatCompact(tick)}</i>
+            </span>
+          ))}
+        </div>
+        <div className="rc-cols__bars">
+          {data.map((d, i) => (
+            <div key={`${d.label}-${i}`} className="rc-col" tabIndex={0}>
+              <span className="rc-tip" role="tooltip">
+                {d.label} · {series[0].label} {formatCount(d.values[0])} · {series[1].label} {formatCount(d.values[1])} {unit}
+              </span>
+              <span className="rc-col__slot rc-col__slot--pair">
+                {/* فاصل 2px بلون السطح بين العمودين المتجاورين — لا حدّ مرسوم */}
+                <span className="rc-col__bar" data-tone={series[0].tone} style={{ blockSize: `${ceil ? (d.values[0] / ceil) * 100 : 0}%` }} />
+                <span className="rc-col__bar" data-tone={series[1].tone} style={{ blockSize: `${ceil ? (d.values[1] / ceil) * 100 : 0}%` }} />
+              </span>
+              <span className="rc-col__x">{d.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* سلسلتان ⟵ المفتاح حاضر دائماً؛ الهوية لا تعتمد على اللون وحده */}
+      <ul className="rc-legend">
+        {series.map((sr) => (
+          <li key={sr.label} className="rc-legend__item">
+            <i className="rc-swatch" data-tone={sr.tone} aria-hidden="true" />
+            <span className="rc-legend__label">{sr.label}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="rc-sr-only">
+        <table>
+          <caption>{title}</caption>
+          <thead>
+            <tr>
+              <th>الشهر</th>
+              <th>{series[0].label} ({unit})</th>
+              <th>{series[1].label} ({unit})</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((d, i) => (
+              <tr key={`${d.label}-${i}`}>
+                <td>{d.label}</td>
+                <td>{d.values[0]}</td>
+                <td>{d.values[1]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </figure>
   );

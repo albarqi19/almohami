@@ -16,9 +16,19 @@
   --rc-critical: #c0392f;
   --rc-warning: #b45309;
   --rc-neutral: #94a3b8;
+
+  /* تدرّج ترتيبي بلون واحد (فاتح ⟵ داكن مع الشدة) — مفحوص بـ--ordinal؛ في الداكن ينعكس (الأشد هو الأفتح) */
+  --rc-ord-1: #8aaedd;
+  --rc-ord-2: #5b8ccb;
+  --rc-ord-3: #2f66a8;
+  --rc-ord-4: #1e3a5f;
 }
 
 body.dark .rc-scope {
+  --rc-ord-1: #2c4f7c;
+  --rc-ord-2: #3f6fae;
+  --rc-ord-3: #6f9ad0;
+  --rc-ord-4: #a9c3e6;
   --rc-series-1: #4a8ad8;
   --rc-series-2: #bb8a28;
   --rc-good: #2a9d68;
@@ -34,6 +44,10 @@ body.dark .rc-scope {
 .rc-scope [data-tone='critical'] { --rc-tone: var(--rc-critical); }
 .rc-scope [data-tone='warning'] { --rc-tone: var(--rc-warning); }
 .rc-scope [data-tone='neutral'] { --rc-tone: var(--rc-neutral); }
+.rc-scope [data-tone='ord1'] { --rc-tone: var(--rc-ord-1); }
+.rc-scope [data-tone='ord2'] { --rc-tone: var(--rc-ord-2); }
+.rc-scope [data-tone='ord3'] { --rc-tone: var(--rc-ord-3); }
+.rc-scope [data-tone='ord4'] { --rc-tone: var(--rc-ord-4); }
 
 /* مخفي بصرياً ومقروء لقارئات الشاشة. يُوضع على div لا على <table> (الجدول يتجاهل height/overflow)،
    وأبوه مُموضَع (‎.rc-cols) حتى لا يفلت من حاويات التمرير. */
@@ -529,6 +543,34 @@ body.dark .rc-scope {
   white-space: nowrap;
   font-size: 10.5px;
   color: var(--rc-ink-2);
+}
+
+/* مقياس داخل بطاقة الرقم */
+.rc-tile__meter {
+  margin-top: 4px;
+}
+
+/* أعمدة لسلسلتين: عمودان متجاوران بفاصل 2px، ومحور أرقام أعرض للمبالغ */
+.rc-cols__plot--wide {
+  padding-inline-start: 40px;
+}
+
+.rc-cols__plot--wide .rc-cols__grid {
+  inset-inline: 40px 0;
+}
+
+.rc-col__slot--pair {
+  gap: 2px;
+}
+
+.rc-col__slot--pair .rc-col__bar {
+  width: min(14px, 34%);
+  background: var(--rc-tone);
+}
+
+.rc-cols--grouped .rc-legend {
+  margin-top: 8px;
+  justify-content: center;
 }
 
 @keyframes rc-grow-x {

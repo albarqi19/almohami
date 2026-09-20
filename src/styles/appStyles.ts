@@ -170,3 +170,5 @@ import './smart-dictation.css';
 // «رسوم الرائد» (rc-) وواجهة الأداء (pfv-) — أصناف ببادئات خاصة، فلا تتعلّق بترتيب الحقن.
 import './raed-charts.css';
 import './performance-view.css';
+// لوحة تحكم المالية (fdb-) — أصناف ببادئة خاصة، فلا تتعلّق بترتيب الحقن.
+import './finance-dashboard.css';
