@@ -487,6 +487,11 @@
   flex-wrap: wrap;
 }
 
+/* شريط أقسام بلا هامش سفلي — الفجوة يتكفل بها gap الحاوية */
+.fct-toolbar--flush {
+  margin-bottom: 0;
+}
+
 .fct-toolbar__end {
   margin-inline-start: auto;
 }
