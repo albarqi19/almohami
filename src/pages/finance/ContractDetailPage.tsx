@@ -16,6 +16,7 @@ import { ToneBadge } from '../../components/erp/StatusBadge';
 import { LoadingState, ErrorState } from '../../components/erp/States';
 import ContractPreview from '../../components/contracts/ContractPreview';
 import PhoneField from '../../components/PhoneField';
+import { StatTile } from '../../components/charts/RaedCharts';
 import { formatSAR, formatPercent, toNumber } from '../../utils/money';
 import { invalidateFinance } from '../../utils/financeCache';
 import { contractActions } from '../../config/financeStatusConfig';
@@ -198,24 +199,27 @@ const ContractDetailPage: React.FC = () => {
 
       {/* [CTR-LOCK] العقد المرسل/الموقّع مقفل — رقاقة نصية مسطّحة */}
       {actions.isLocked && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 6, fontSize: 12.5, color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)', background: 'var(--color-bg-secondary, transparent)' }}>
-          <Lock size={13} style={{ flexShrink: 0 }} />
+        <div className="fin-detail-lock">
+          <Lock size={13} />
           <span>{actions.lockMessage} ما زال بالإمكان إضافة شروط دفع وملاحظات.</span>
         </div>
       )}
 
       {/* بطاقات الملخّص */}
-      <div className="fin-cards">
-        <div className="fin-card"><div className="fin-card__icon fin-card__icon--neutral"><Wallet size={18} /></div><div className="fin-card__body"><div className="fin-card__value">{formatSAR(value)}</div><div className="fin-card__label">قيمة العقد</div></div></div>
-        <div className="fin-card"><div className="fin-card__icon fin-card__icon--success"><CheckCircle size={18} /></div><div className="fin-card__body"><div className="fin-card__value fin-card__value--success">{formatSAR(paid)}</div><div className="fin-card__label">المدفوع</div></div></div>
-        <div className="fin-card"><div className="fin-card__icon fin-card__icon--warning"><Receipt size={18} /></div><div className="fin-card__body"><div className="fin-card__value fin-card__value--warning">{formatSAR(remaining)}</div><div className="fin-card__label">المتبقّي</div></div></div>
-        <div className="fin-card">
-          <div className="fin-card__body" style={{ width: '100%' }}>
-            <div className="fin-card__value">{progress}%</div>
-            <div className="fin-card__label">نسبة الإنجاز</div>
-            <div className="fin-progress" style={{ marginTop: 6 }}><div className="fin-progress__fill" style={{ width: `${progress}%` }} /></div>
-          </div>
-        </div>
+      <div className="fct-tiles fin-detail-tiles rc-scope">
+        <StatTile label="قيمة العقد" value={formatSAR(value)} icon={<Wallet size={15} />} hint="شاملة الضريبة" />
+        <StatTile label="المدفوع" value={formatSAR(paid)} icon={<CheckCircle size={15} />} hint={`${contract.invoices?.length ?? 0} فاتورة تابعة`} />
+        <StatTile
+          label="المتبقّي"
+          value={formatSAR(remaining)}
+          icon={<Receipt size={15} />}
+          hint={remaining > 0 ? 'لم يُحصَّل بعد' : 'مسدَّد بالكامل'}
+        />
+        <StatTile
+          label="نسبة التحصيل"
+          value={`${progress}%`}
+          meter={{ value: Number(progress) || 0, tone: Number(progress) >= 100 ? 'good' : 'series1', ariaLabel: 'نسبة ما حُصّل من قيمة العقد' }}
+        />
       </div>
 
       {/* التوقيع الإلكتروني — طريقته وآخر طلب (عادي من البوابة / موثّق عبر صادق / ورقي) */}
