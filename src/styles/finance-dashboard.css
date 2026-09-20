@@ -428,3 +428,120 @@
   .fdb .rc-status { font-size: 10.5px; }
   .fdb .rc-tile__meter { display: none; }
 }
+
+/* ═══════════ تبويب العقود (fct-) — مؤشرات ⟵ تبويبات الحالة والبحث ⟵ جدول يملأ الباقي ═══════════ */
+
+.fct {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fct-tiles {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.fct-tiles .rc-tile {
+  padding: 11px 14px 10px;
+  gap: 2px;
+}
+
+.fct-tiles .rc-tile__value {
+  font-size: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fct-table {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fct-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.fct-toolbar .fin-filterbar {
+  flex: 1;
+  min-width: 260px;
+  margin: 0;
+}
+
+.fct-status {
+  flex-wrap: wrap;
+}
+
+/* المحصّل: المبلغ ثم مقياس ونسبة */
+.fct-collect {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.fct-collect__bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 96px;
+}
+
+.fct-collect__bar .rc-meter {
+  flex: 1;
+  height: 5px;
+}
+
+.fct-collect__bar b {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.fct-term {
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+/* تنبيه قرب انتهاء المدة: أيقونة ملوّنة + نص بحبر الواجهة */
+.fct-term__alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.fct-term__alert svg {
+  color: var(--rc-warning, #b45309);
+}
+
+/* ضيّق (جوال): تدفق عادي — الصفحة تتمرر والجدول بارتفاع محتواه */
+@media (max-width: 900px) {
+  .fct {
+    height: auto;
+  }
+
+  .fct .fin-table-wrap--fill {
+    flex: none;
+  }
+
+  .fct .fin-table-wrap--fill .fin-table-scroll {
+    overflow-y: visible;
+  }
+}

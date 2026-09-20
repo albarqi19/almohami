@@ -43,6 +43,8 @@ interface DataTableProps<T> {
   emptyDesc?: string;
   /** فوتر (ترقيم مثلاً). */
   footer?: React.ReactNode;
+  /** يملأ ارتفاع حاويته: الصفوف تتمرر داخلياً برأس ثابت والفوتر مثبّت أسفله (النمط الملتصق). */
+  fill?: boolean;
 }
 
 function colAlignClass<T>(col: Column<T>): string {
@@ -55,7 +57,7 @@ function colAlignClass<T>(col: Column<T>): string {
 
 function DataTable<T>({
   columns, data, rowKey, isLoading, isError, onRetry, onRowClick, sort, selection,
-  emptyIcon, emptyTitle, emptyDesc, footer,
+  emptyIcon, emptyTitle, emptyDesc, footer, fill,
 }: DataTableProps<T>) {
   const rows = data ?? [];
   const allSelected = !!selection && rows.length > 0 && rows.every((r) => selection.selectedKeys.has(rowKey(r)));
@@ -67,7 +69,7 @@ function DataTable<T>({
   };
 
   return (
-    <div className="fin-table-wrap">
+    <div className={`fin-table-wrap${fill ? ' fin-table-wrap--fill' : ''}`}>
       <div className="fin-table-scroll">
         <table className="fin-table">
           <thead>

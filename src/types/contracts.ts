@@ -251,10 +251,14 @@ export interface ContractStatsResponse {
   data: {
     total: number;
     draft: number;
+    /** يُرجعه الخادم (ContractController::stats) وكان ساقطاً من النوع */
+    pending_signature: number;
     active: number;
     completed: number;
     cancelled: number;
+    /** قيمة العقود **النشطة** فقط */
     total_value: number;
+    /** المحصّل من فواتير العقود **النشطة** فقط */
     total_collected: number;
   };
 }
