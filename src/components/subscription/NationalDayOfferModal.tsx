@@ -20,7 +20,6 @@ import NationalDayOfferModalView from './NationalDayOfferModalView';
 const SHOW_DELAY_MS = 2000;
 const OFFER_KEY = 'national_day_96';
 const dismissKey = (userId: number | string) => `snd96_offer_modal_dismissed:${OFFER_KEY}:${userId}`;
-const SESSION_KEY = `snd96_offer_modal_checked:${OFFER_KEY}`;
 const QUIET_PATHS = ['/settings', '/subscription', '/account-status'];
 
 const readFlag = (storage: Storage, key: string): boolean => {
@@ -29,6 +28,16 @@ const readFlag = (storage: Storage, key: string): boolean => {
 const writeFlag = (storage: Storage, key: string) => {
   try { storage.setItem(key, '1'); } catch { /* ignore */ }
 };
+
+/**
+ * فُحصت في هذا التحميل: لا تُعاد الطلبات مع كل تنقّل داخل التطبيق. متغيّرٌ في الذاكرة
+ * لا sessionStorage عمداً — الأخير يبقى بعد F5 فكان يُسكت النافذة تبويباً كاملاً حين
+ * صادف الفحصُ عطلاً مؤقتاً (429 أثناء حادثة 09-20)؛ إعادةُ التحميل الآن تعيد المحاولة.
+ */
+let checkedThisLoad = false;
+
+/** سببُ عدم الظهور يُطبع في الطرفية — للتشخيص من لقطة المالك بلا تخمين */
+const skip = (reason: string) => console.info(`[snd96-modal] لا تُعرض: ${reason}`);
 
 interface OfferState {
   offer: NationalDayOfferPlan;
@@ -51,24 +60,29 @@ const NationalDayOfferModal: React.FC = () => {
   const quietPath = QUIET_PATHS.some((p) => location.pathname.startsWith(p));
 
   useEffect(() => {
-    if (!isOwner || !userId || quietPath) return;
-    if (readFlag(localStorage, dismissKey(userId))) return;
-    if (readFlag(sessionStorage, SESSION_KEY)) return;
+    if (!userId) return;
+    if (!isOwner) { skip('المستخدم ليس مالك المكتب (is_tenant_owner)'); return; }
+    if (quietPath) return; // صفحات الاشتراك والدفع: المربع هناك
+    if (checkedThisLoad) return;
+    if (readFlag(localStorage, dismissKey(userId))) { skip('أُغلقت من قبل على هذا المتصفح'); return; }
 
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       try {
         const plans: any = await apiClient.get('/subscription/plans');
         const offer: NationalDayOfferPlan | null = plans?.data?.plans?.national_day ?? null;
-        // جوابٌ نهائيّ لهذه الجلسة (مطفأ / غير مؤهَّل / عُرضت): لا تُعاد الطلبات مع كل تنقّل.
-        // أمّا الفشل (429، انقطاع) فلا يُعلَّم — إعادةُ تحميل الصفحة تعيد المحاولة.
-        writeFlag(sessionStorage, SESSION_KEY);
-        if (!offer) return; // العرض مطفأ
+        if (!offer) { checkedThisLoad = true; skip('العرض مطفأ من الإعدادات'); return; }
 
         const current: any = await apiClient.get('/subscription/current');
         const options = current?.data?.available_options;
         const mode = options?.national_day_mode as NationalDayOfferMode | 'done' | null | undefined;
-        if (cancelled || !options?.can_subscribe_national_day || !mode || mode === 'done') return;
+        if (cancelled) return;
+        // جوابٌ نهائيّ لهذا التحميل (غير مؤهَّل / عُرضت) — الفشلُ أدناه لا يُعلَّم
+        checkedThisLoad = true;
+        if (!options?.can_subscribe_national_day || !mode || mode === 'done') {
+          skip(`غير مؤهَّل: national_day_mode=${String(mode)} can_subscribe_national_day=${String(options?.can_subscribe_national_day)}`);
+          return;
+        }
 
         setState({
           offer,
@@ -76,8 +90,9 @@ const NationalDayOfferModal: React.FC = () => {
           currentEndsAt: current?.data?.subscription?.renews_at ?? null,
           compareAt: Number(plans?.data?.plans?.monthly?.price ?? 0) * 12,
         });
-      } catch {
+      } catch (e: any) {
         // لا نافذةَ عند أي خلل — الصفحة لا تتأثّر، والمحاولة تعود مع التحميل التالي
+        skip(`تعذّر الجلب: ${e?.message ?? e}`);
       }
     }, SHOW_DELAY_MS);
 
