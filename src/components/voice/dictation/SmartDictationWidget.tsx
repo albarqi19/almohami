@@ -39,6 +39,27 @@ const BAR_COUNT = 22;
 /** موضع الكبسولة فوق BottomActionBar — يطابق ‎.smart-dictation { bottom } في الستايل */
 const BASE_BOTTOM_PX = 42;
 /**
+ * الكبسولة تظهر بعد التركيز بمهلة لا معه: التركيز يقع غالباً في لحظة حركة دخول مودال (150–300ms)،
+ * وأي عمل متزامن فيها (رسم + قياس يجبر المتصفح على حساب تخطيط الصفحة كلها) يُسقط إطارات الحركة
+ * فيبدو «وميضاً» — قيس ~55ms في صفحة ثقيلة. Alt+M لا ينتظر المهلة (يقرأ الحقل النشط مباشرة).
+ */
+const SHOW_DELAY_MS = 260;
+/** قياس العوائق يمسح المستند كله — دوري متباعد وفي وقت فراغ المتصفح لا في لحظة التفاعل */
+const MEASURE_INTERVAL_MS = 1500;
+
+const whenIdle = (fn: () => void): (() => void) => {
+  const w = window as Window & {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    cancelIdleCallback?: (id: number) => void;
+  };
+  if (w.requestIdleCallback) {
+    const id = w.requestIdleCallback(fn, { timeout: 500 });
+    return () => w.cancelIdleCallback?.(id);
+  }
+  const id = window.setTimeout(fn, 60);
+  return () => window.clearTimeout(id);
+};
+/**
  * ودجتات تشغل أسفل الشاشة: «اسألني» في المذكرات والمفكرة (وسط الأسفل)، مهمة بالصوت، مجموعة الودجتات
  * العائمة، دردشة الفريق، شريط الرفع. الكبسولة ترتفع فوق ما يقع تحتها بدل أن تغطيه.
  * أي ودجت جديد يكفيه الوسم data-dictation-avoid.
@@ -112,6 +133,7 @@ const SmartDictationWidget: React.FC<SmartDictationWidgetProps> = ({ sidebarWidt
 
   const maxTimerRef = useRef<number | undefined>(undefined);
   const hideTimerRef = useRef<number | undefined>(undefined);
+  const showTimerRef = useRef<number | undefined>(undefined);
   const rafRef = useRef<number | undefined>(undefined);
   const barsRef = useRef<Array<HTMLSpanElement | null>>([]);
   const levelsRef = useRef<number[]>(new Array(BAR_COUNT).fill(0));
@@ -134,8 +156,16 @@ const SmartDictationWidget: React.FC<SmartDictationWidgetProps> = ({ sidebarWidt
     }
   };
 
+  const clearShowTimer = () => {
+    if (showTimerRef.current !== undefined) {
+      window.clearTimeout(showTimerRef.current);
+      showTimerRef.current = undefined;
+    }
+  };
+
   const scheduleHide = useCallback(() => {
     clearHideTimer();
+    clearShowTimer();
     hideTimerRef.current = window.setTimeout(() => {
       if (menuOpenRef.current) return;
       if (!resolveDictationTarget(document.activeElement)) setTarget(null);
@@ -149,7 +179,16 @@ const SmartDictationWidget: React.FC<SmartDictationWidgetProps> = ({ sidebarWidt
       const el = resolveDictationTarget(e.target);
       if (el) {
         clearHideTimer();
-        setTarget(el);
+        clearShowTimer();
+        // الكبسولة ظاهرة أصلاً (انتقال بين حقلين): حدّث فوراً. وإلا فبعد المهلة — انظر SHOW_DELAY_MS
+        if (targetRef.current) {
+          setTarget(el);
+        } else {
+          showTimerRef.current = window.setTimeout(() => {
+            showTimerRef.current = undefined;
+            if (el.isConnected && resolveDictationTarget(document.activeElement) === el) setTarget(el);
+          }, SHOW_DELAY_MS);
+        }
       } else {
         scheduleHide();
       }
@@ -175,6 +214,7 @@ const SmartDictationWidget: React.FC<SmartDictationWidgetProps> = ({ sidebarWidt
       document.removeEventListener('focusin', onFocusIn);
       document.removeEventListener('focusout', onFocusOut);
       clearHideTimer();
+      clearShowTimer();
     };
   }, [disabled, scheduleHide]);
 
@@ -240,12 +280,17 @@ const SmartDictationWidget: React.FC<SmartDictationWidgetProps> = ({ sidebarWidt
   const startRecording = useCallback(async () => {
     if (phaseRef.current !== 'idle' || startingRef.current) return;
 
-    const el = targetRef.current;
+    // الكبسولة تتأخر عن التركيز (SHOW_DELAY_MS) — الاختصار يقرأ الحقل النشط مباشرة فلا ينتظرها
+    const el = targetRef.current?.isConnected ? targetRef.current : resolveDictationTarget(document.activeElement);
     if (!el || !el.isConnected) {
       toast.info('ضع المؤشر في حقل كتابة ثم اضغط Alt + M');
       return;
     }
 
+    if (targetRef.current !== el) {
+      clearShowTimer();
+      setTarget(el);
+    }
     sessionTargetRef.current = el;
     caretRef.current = saveCaret(el);
     startingRef.current = true;
@@ -414,6 +459,7 @@ const SmartDictationWidget: React.FC<SmartDictationWidgetProps> = ({ sidebarWidt
       clearMaxTimer();
       stopMeter();
       clearHideTimer();
+      clearShowTimer();
       document.body.classList.remove('smart-dictation-visible');
     },
     [],
@@ -475,10 +521,16 @@ const SmartDictationWidget: React.FC<SmartDictationWidgetProps> = ({ sidebarWidt
       setLift((current) => (Math.abs(current - next) < 1 ? current : Math.round(next)));
     };
 
-    measure();
-    const id = window.setInterval(measure, 600);
+    // لا قياس متزامناً مع الظهور: القراءة تجبر المتصفح على حساب تخطيط الصفحة كلها في لحظة التفاعل
+    let cancelIdle = whenIdle(measure);
+    const id = window.setInterval(() => {
+      if (document.hidden) return;
+      cancelIdle();
+      cancelIdle = whenIdle(measure);
+    }, MEASURE_INTERVAL_MS);
     window.addEventListener('resize', measure);
     return () => {
+      cancelIdle();
       window.clearInterval(id);
       window.removeEventListener('resize', measure);
     };
