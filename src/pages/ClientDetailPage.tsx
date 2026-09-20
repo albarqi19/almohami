@@ -6,6 +6,7 @@ import {
   ArrowRight, Phone, Mail, Star, Edit2, Download, FileSpreadsheet,
   Briefcase, Calendar, ListTodo, FileSignature, MessageSquare,
   Activity, Building2, Hash, FileText, ExternalLink, Save, Receipt, Scale, Send,
+  ChevronsLeft, ChevronsRight, Loader2,
 } from 'lucide-react';
 import ClientFeeProposalsTab from '../components/ClientFeeProposalsTab';
 import ClientLettersTab from '../components/ClientLettersTab';
@@ -66,7 +67,20 @@ function initialTab(): TabKey {
  */
 const CLOSED_CASE_STATUSES = ['closed', 'settled', 'dismissed'];
 
+const SIDE_COLLAPSED_KEY = 'client_detail_side_collapsed';
+
 const ClientDetailPage: React.FC = () => {
+  // اللوحة الجانبية (معلومات العميل) قابلة للطي إلى شريط ضيق. بلا اختيار محفوظ: مطوية على شاشات
+  // اللابتوب (< 1400px) لأن عمودها 300px كان يترك للجداول نحو 700px فتتمرر أفقياً.
+  const [sideCollapsed, setSideCollapsed] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem(SIDE_COLLAPSED_KEY);
+      if (stored !== null) return stored === '1';
+    } catch {
+      /* تخزين محجوب */
+    }
+    return typeof window !== 'undefined' && window.innerWidth < 1400;
+  });
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -309,8 +323,18 @@ const ClientDetailPage: React.FC = () => {
     }
   };
 
-  const handleQuickExport = () => {
-    if (reportData) quickExportClientCases(reportData);
+  // التصدير السريع = PDF على ورقة المكتب (معلومات العميل + الإحصائيات + القضايا النشطة) — يمرّ بالخادم
+  const [quickExporting, setQuickExporting] = useState(false);
+  const handleQuickExport = async () => {
+    if (!reportData || quickExporting) return;
+    setQuickExporting(true);
+    try {
+      await quickExportClientCases(reportData);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'تعذّر تصدير التقرير');
+    } finally {
+      setQuickExporting(false);
+    }
   };
 
   const handleLogged = (entry: ClientCommunication) => {
@@ -349,12 +373,24 @@ const ClientDetailPage: React.FC = () => {
   const isCompany = client.entity_type === 'company' || client.entity_type === 'organization';
   const rating = (client as any).rating || 0;
 
+  // الطي لسطح المكتب فقط: تحت 1024px اللوحة تنزل تحت المحتوى فتُعرض كاملة دائماً
+  const sideIsCollapsed = sideCollapsed && typeof window !== 'undefined' && window.matchMedia('(min-width: 1025px)').matches;
+
+  const toggleSide = (collapsed: boolean) => {
+    setSideCollapsed(collapsed);
+    try {
+      localStorage.setItem(SIDE_COLLAPSED_KEY, collapsed ? '1' : '0');
+    } catch {
+      /* تخزين محجوب */
+    }
+  };
+
   return (
     <div className="client-detail">
       {/* === Hero === */}
       <header className="client-hero">
-        <button className="client-hero__back" onClick={() => navigate('/clients')}>
-          <ArrowRight size={14} /> العملاء
+        <button className="client-hero__back" onClick={() => navigate('/clients')} title="العودة إلى العملاء">
+          <ArrowRight size={14} /> <span className="client-hero__label">العملاء</span>
         </button>
 
         <div className="client-hero__avatar">{client.name?.charAt(0) || '؟'}</div>
@@ -417,14 +453,20 @@ const ClientDetailPage: React.FC = () => {
               </button>
             ))}
           </div>
-          <button className="client-hero__btn" onClick={() => setIsEditModalOpen(true)}>
-            <Edit2 size={13} /> تعديل
+          <button className="client-hero__btn" onClick={() => setIsEditModalOpen(true)} title="تعديل بيانات العميل">
+            <Edit2 size={13} /> <span className="client-hero__label">تعديل</span>
           </button>
-          <button className="client-hero__btn client-hero__btn--quick" onClick={handleQuickExport} title="تصدير القضايا النشطة فوراً">
-            <FileSpreadsheet size={13} /> تصدير سريع
+          <button
+            className="client-hero__btn client-hero__btn--quick"
+            onClick={handleQuickExport}
+            disabled={quickExporting}
+            title="PDF على ورقة المكتب: معلومات العميل والإحصائيات والقضايا النشطة"
+          >
+            {quickExporting ? <Loader2 size={13} className="spinning" /> : <FileSpreadsheet size={13} />}
+            <span className="client-hero__label">{quickExporting ? 'جاري التجهيز...' : 'تصدير سريع'}</span>
           </button>
-          <button className="client-hero__btn client-hero__btn--primary" onClick={() => setIsExportModalOpen(true)}>
-            <Download size={13} /> تخصيص...
+          <button className="client-hero__btn client-hero__btn--primary" onClick={() => setIsExportModalOpen(true)} title="تخصيص التصدير">
+            <Download size={13} /> <span className="client-hero__label">تخصيص...</span>
           </button>
         </div>
       </header>
@@ -448,7 +490,7 @@ const ClientDetailPage: React.FC = () => {
       />
 
       {/* === Main grid (right tabs + left side panel) === */}
-      <div className="client-grid">
+      <div className={`client-grid ${sideIsCollapsed ? 'client-grid--side-collapsed' : ''}`}>
         <div className="client-grid__main">
           <div className="client-tabs">
             <TabBtn active={activeTab === 'cases'} onClick={() => setActiveTab('cases')} icon={<Briefcase size={13} />}
@@ -536,8 +578,21 @@ const ClientDetailPage: React.FC = () => {
           </div>
         </div>
 
-        <aside className="client-grid__side">
-          <SideCard title="معلومات العميل" action={<button onClick={() => setIsEditModalOpen(true)}><Edit2 size={12} /></button>}>
+        <aside className={`client-grid__side ${sideIsCollapsed ? 'is-collapsed' : ''}`}>
+          {sideIsCollapsed ? (
+            <button type="button" className="client-side__rail" onClick={() => toggleSide(false)} title="إظهار معلومات العميل">
+              <ChevronsRight size={16} />
+              <span>معلومات العميل</span>
+            </button>
+          ) : (
+          <>
+          <div className="client-side__bar">
+            <span>معلومات العميل</span>
+            <button type="button" onClick={() => toggleSide(true)} title="طي اللوحة" aria-label="طي لوحة معلومات العميل">
+              <ChevronsLeft size={15} />
+            </button>
+          </div>
+          <SideCard title="البيانات الأساسية" action={<button onClick={() => setIsEditModalOpen(true)}><Edit2 size={12} /></button>}>
             <InfoRow label="الاسم" value={client.name} />
             <InfoRow label="النوع" value={entityTypeLabel(client.entity_type)} />
             <InfoRow label="الجوال" value={formatPhoneDisplay(client.phone)} dir="ltr" />
@@ -617,6 +672,8 @@ const ClientDetailPage: React.FC = () => {
               <Save size={11} /> {notesSaving ? 'جاري الحفظ...' : 'حفظ'}
             </button>
           </SideCard>
+          </>
+          )}
         </aside>
       </div>
 

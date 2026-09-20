@@ -13,8 +13,10 @@
     --text-secondary: #787774;
     --text-muted: #9b9a97;
     --border: #e9e9e7;
-    --accent: #2383e2;
-    --accent-bg: rgba(35, 131, 226, 0.08);
+    /* لون التمييز = كحلي الهوية (كان أزرق Notion). ‎--accent-solid للتعبئة الصلبة تحت نص أبيض */
+    --accent: var(--law-navy, #1e3a5f);
+    --accent-bg: rgba(30, 58, 95, 0.07);
+    --accent-solid: var(--law-navy, #1e3a5f);
 }
 
 /* Dark Theme */
@@ -27,8 +29,10 @@ body.dark .notebook-workspace {
     --text-secondary: #9b9b9b;
     --text-muted: #6b6b6b;
     --border: #2f2f2f;
-    --accent: #2383e2;
-    --accent-bg: rgba(35, 131, 226, 0.15);
+    /* الكحلي لا يُقرأ على الداكن — ذهبي هادئ للنص والحدود، وكحلي أفتح للتعبئة الصلبة */
+    --accent: #d2ad62;
+    --accent-bg: rgba(210, 173, 98, 0.12);
+    --accent-solid: #2b4f7e;
 }
 
 /* Diwan Theme → ورق + حبر + ذهب مطفأ */
@@ -62,11 +66,25 @@ body.classic .notebook-workspace {
 /* الحاوية الرئيسية */
 .notebook-workspace {
     display: flex;
+    /* يملأ منطقة المحتوى المتاحة لا «الشاشة ناقص الهيدر»: حساب المدير يظهر له شريط الحالة السفلي
+       (30px) فكانت الصفحة تنزل تحته ويلتصق به ودجت «اسألني». الاحتياط للمتصفحات التي لا تحلّ النسبة. */
     height: calc(100vh - 64px);
+    height: 100%;
+    min-height: 0;
     background: var(--bg);
     direction: rtl;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    /* خط الهوية (IBM Plex Sans Arabic) — كانت الصفحة تفرض خط النظام فتبدو من برنامج آخر */
+    font-family: var(--font-family-base, "IBM Plex Sans Arabic", sans-serif);
 }
+
+/* عناصر النماذج لا ترث الخط افتراضياً */
+.notebook-workspace input,
+.notebook-workspace button,
+.notebook-workspace select,
+.notebook-workspace textarea {
+    font-family: inherit;
+}
+
 .notebook-sidebar {
     width: 260px;
     min-width: 260px;
@@ -207,7 +225,7 @@ body.classic .notebook-workspace {
     gap: 6px;
     margin: 8px 10px;
     padding: 8px 12px;
-    background: var(--accent);
+    background: var(--accent-solid, var(--accent));
     color: #fff;
     border: none;
     border-radius: 4px;
@@ -476,7 +494,7 @@ body.diwan .notebook-workspace .new-note-btn svg {
 .linked-case-badge {
     font-size: 10px;
     padding: 2px 4px;
-    background: var(--accent);
+    background: var(--accent-solid, var(--accent));
     color: #fff;
     border-radius: 2px;
 }
@@ -552,36 +570,34 @@ body.diwan .notebook-workspace .new-note-btn svg {
     background: var(--bg-hover);
 }
 
-/* Notebook AI Assistant Widget */
+/* حاوية التمرير: السطح يملأ العرض من الحافة إلى الحافة، والحشوة الجانبية انتقلت إلى عمود الورقة */
 .notebook-workspace .editor-container {
-    /* Space for the floating widget */
-    padding-bottom: 120px;
+    padding: 0 0 120px; /* الأسفل: متّسع لودجت «اسألني» العائم */
 }
 
 /* Tiptap Editor في المفكرة */
 .notebook-workspace .tiptap-editor {
-    margin-top: 32px;
+    margin-top: 0;
     border: none;
     border-radius: 0;
 }
 
 .notebook-workspace .tiptap-toolbar {
     border-radius: 0;
-    border-top: 1px solid var(--border);
 }
 
 .notebook-ai-widget {
     position: absolute;
-    bottom: 18px;
+    bottom: 22px;
     /* Center within notebook-main, respecting the sidebar automatically */
     left: 16px;
     right: 16px;
     margin: 0 auto;
-    width: min(720px, 100%);
+    width: min(540px, 100%);
     z-index: 300;
 
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 10px;
 
     /* Glass-like feel (with fallbacks) */
     background: var(--bg-secondary);
@@ -589,23 +605,23 @@ body.diwan .notebook-workspace .new-note-btn svg {
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
 
-    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-    padding: 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+    padding: 5px;
 }
 
 .notebook-ai-widget-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
 }
 
 .notebook-ai-widget-input {
     flex: 1;
     border: 1px solid var(--border);
     background: var(--bg);
-    border-radius: 10px;
-    padding: 9px 11px;
-    font-size: 13px;
+    border-radius: 7px;
+    padding: 6px 10px;
+    font-size: 12.5px;
     color: var(--text);
     outline: none;
 }
@@ -623,8 +639,8 @@ body.diwan .notebook-workspace .new-note-btn svg {
     border: 1px solid var(--border);
     background: var(--bg);
     color: var(--text-secondary);
-    border-radius: 10px;
-    padding: 9px;
+    border-radius: 7px;
+    padding: 6px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -872,5 +888,303 @@ body.diwan .notebook-workspace .new-note-btn svg {
     .toolbar-left {
         width: 100%;
         flex-wrap: wrap;
+    }
+}
+
+/* ====================================================================
+   ترتيب الصفحة (2026-09): شريط تنسيق ملتصق + ورقة بعمود نص متوسط + عنوان في رأس الورقة
+   + قائمة ملاحظات مجمّعة بمقتطف. كل القواعد محصورة بـ ‎.notebook-workspace لأن أسماء الأصناف
+   في هذا الملف عامة (toolbar-btn, dropdown-menu…) ومعرّفة في ملفات أخرى.
+   ==================================================================== */
+
+/* شريط الصفحة فوق شريط التنسيق — قوائمه المنسدلة يجب أن تعلو عليه */
+.notebook-workspace .editor-toolbar {
+    position: relative;
+    z-index: 30;
+    flex-shrink: 0;
+    background: var(--bg);
+}
+
+/* ─── شريط التنسيق الملتصق: من الحافة إلى الحافة، خارج منطقة التمرير فلا يغيب ─── */
+.notebook-workspace .notebook-format-bar {
+    position: relative;
+    z-index: 20;
+    flex-shrink: 0;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+}
+
+.notebook-workspace .notebook-format-bar:empty {
+    display: none;
+}
+
+.notebook-workspace .notebook-format-bar .tiptap-toolbar {
+    position: static;
+    padding: 4px 16px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+/* الزر النشط بلون تمييز الصفحة لا أزرق المحرر العام */
+.notebook-workspace .notebook-format-bar .tiptap-menu-btn.active {
+    background: var(--accent-bg);
+    color: var(--accent);
+    border-color: transparent;
+}
+
+/* ─── الورقة: عمود متوسط بعرض مريح للقراءة، يملأ ارتفاع الحاوية ليكون كله قابلاً للنقر والكتابة ─── */
+.notebook-workspace .nbw-paper {
+    max-width: 860px;
+    min-height: 100%;
+    margin: 0 auto;
+    padding: 30px 40px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.notebook-workspace .nbw-paper .tiptap-editor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+}
+
+/* حلقة التركيز الزرقاء حول المحرر (توهّج عام في tiptap.css) لا مكان لها على ورقة — المؤشر يكفي */
+.notebook-workspace .nbw-paper .tiptap-editor:focus-within {
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.notebook-workspace .nbw-paper .tiptap-editor-area,
+.notebook-workspace .nbw-paper .tiptap-content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.notebook-workspace .nbw-paper .tiptap-content-wrapper {
+    padding: 10px 0 0; /* النص يحاذي حافة العنوان */
+}
+
+.notebook-workspace .nbw-paper .tiptap-content-wrapper .ProseMirror {
+    flex: 1;
+}
+
+/* ─── رأس الورقة: العنوان بخط كبير ثم سطر بيانات هادئ ─── */
+.notebook-workspace .nbw-paper-head {
+    flex-shrink: 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.notebook-workspace .nbw-paper-title {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.6;
+}
+
+.notebook-workspace .nbw-paper-title::placeholder {
+    color: var(--text-muted);
+    font-weight: 600;
+    opacity: 0.75;
+}
+
+.notebook-workspace .nbw-paper-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.notebook-workspace .nbw-paper-meta__case {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* ─── قائمة الملاحظات: مجموعات (المثبّتة ثم زمنياً) وسطر مقتطف ─── */
+.notebook-workspace .notes-list {
+    padding: 0 8px 12px;
+}
+
+.notebook-workspace .notes-group-label {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 8px 5px;
+    background: var(--bg-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.notebook-workspace .notes-group-label svg {
+    color: var(--law-gold, #b8860b);
+}
+
+.notebook-workspace .notes-group-label em {
+    font-style: normal;
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+.notebook-workspace .note-item {
+    padding: 8px 10px;
+    border-radius: 6px;
+}
+
+/* قاعدة الهوية: لا شريط تمييز لوني جانبي — التثبيت تحمله مجموعة «المثبّتة» وأيقونتها */
+.notebook-workspace .note-item.pinned {
+    border-right: none;
+}
+
+.notebook-workspace .note-item-header {
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 3px;
+}
+
+.notebook-workspace .note-item-title {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+}
+
+.notebook-workspace .note-item.selected .note-item-title {
+    color: var(--accent);
+}
+
+.notebook-workspace .note-item-date {
+    flex-shrink: 0;
+    font-size: 10.5px;
+    color: var(--text-muted);
+}
+
+.notebook-workspace .note-item-meta {
+    gap: 6px;
+    min-width: 0;
+}
+
+.notebook-workspace .note-item-category {
+    flex-shrink: 0;
+    font-size: 11px;
+}
+
+.notebook-workspace .note-item-snippet {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+}
+
+/* ─── القائمة مطوية: شريط ضيق 46px بزر الفتح (النمط الملتصق) — لا عرض صفر يبتلع زر الفتح ─── */
+.notebook-workspace.sidebar-collapsed .notebook-sidebar {
+    width: 46px;
+    min-width: 46px;
+    border-left: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.notebook-workspace .notebook-rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    padding: 10px 0;
+}
+
+.notebook-workspace .notebook-rail .sidebar-toggle,
+.notebook-workspace .notebook-rail__new {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.notebook-workspace .notebook-rail .sidebar-toggle:hover,
+.notebook-workspace .notebook-rail__new:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+}
+
+.notebook-workspace .notebook-rail__label {
+    margin-top: 6px;
+    padding: 6px 0;
+    border: none;
+    background: transparent;
+    writing-mode: vertical-rl;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.notebook-workspace .notebook-rail__label:hover {
+    color: var(--accent);
+}
+
+@media (max-width: 768px) {
+    .notebook-workspace .editor-container {
+        padding: 0 0 110px;
+    }
+
+    .notebook-workspace .nbw-paper {
+        padding: 18px 16px 0;
+    }
+
+    .notebook-workspace .nbw-paper-title {
+        font-size: 21px;
+    }
+
+    .notebook-workspace .notebook-format-bar .tiptap-toolbar {
+        padding: 4px 10px;
+    }
+
+    /* الجوال: القائمة فوق المحرر، فالشريط المطوي أفقي بعرض الصفحة */
+    .notebook-workspace.sidebar-collapsed .notebook-sidebar {
+        width: 100%;
+        min-width: 100%;
+        max-height: 48px;
+        border-left: none;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .notebook-workspace .notebook-rail {
+        flex-direction: row;
+        height: auto;
+        padding: 8px 12px;
+    }
+
+    .notebook-workspace .notebook-rail__label {
+        margin: 0 6px 0 0;
+        padding: 0;
+        writing-mode: horizontal-tb;
     }
 }

@@ -25,7 +25,7 @@ import { CaseService } from '../../../services/caseService';
 import { UserService } from '../../../services/UserService';
 import { DataTable, FilterBar, Pagination, Modal, EmptyState } from '../../../components/erp';
 import type { Column } from '../../../components/erp';
-import StatCard, { StatCardGrid } from '../../../components/erp/StatCard';
+import { StatTile } from '../../../components/charts/RaedCharts';
 import { ToneBadge } from '../../../components/erp/StatusBadge';
 import { formatSAR } from '../../../utils/money';
 import { todayLocal, toDayString } from '../../../utils/dayString';
@@ -706,7 +706,7 @@ const ExpensesTab: React.FC = () => {
     },
     {
       key: 'cost_center',
-      header: 'مركز التكلفة',
+      header: 'القضية أو العميل',
       render: (e) => {
         const invoiceId = e.rebilled_invoice_id;
 
@@ -722,7 +722,7 @@ const ExpensesTab: React.FC = () => {
                 <button
                   type="button"
                   className="fin-btn fin-btn--sm fin-btn--ghost"
-                  style={{ padding: '2px 6px', color: 'var(--status-green)' }}
+                  style={{ padding: '2px 6px' }}
                   title="فتح الفاتورة التي حُمِّلت عليها هذه النثرية"
                   onClick={(ev) => { ev.stopPropagation(); navigate(`/finance/invoices/${invoiceId}`); }}
                 >
@@ -733,14 +733,14 @@ const ExpensesTab: React.FC = () => {
                   {e.rebilled_invoice?.invoice_number ?? 'مفوترة'}
                 </button>
               ) : !e.is_billable ? (
-                <span className="fin-cell-muted">غير قابلة للتحصيل</span>
+                <span className="fin-cell-muted">على المكتب</span>
               ) : e.status === 'paid' ? (
                 <ToneBadge tone="warning">لم تُفوتَر بعد</ToneBadge>
               ) : e.status === 'draft' ? (
                 // شرطُ scopeRebillable الثالث: المسوّدة لم تُصرف ولا قيدَ لها، فتحميلُها
                 // على العميل تحصيلُ مالٍ لم يُنفَق. نقولها هنا كي لا يُسأل: لماذا لا
                 // أجدها في نافذة الضمّ للفاتورة؟
-                <span className="fin-cell-muted">قابلة — بعد الدفع</span>
+                <span className="fin-cell-muted">تُسترد بعد دفعها</span>
               ) : (
                 <span className="fin-cell-muted">—</span>
               )}
@@ -901,10 +901,13 @@ const ExpensesTab: React.FC = () => {
     );
   }
 
+  const draftCount = stats?.draft_count ?? 0;
+
   return (
-    <div>
+    <div className="fct rc-scope">
       {/* أقسام فرعية: المصروفات | الموردون | التصنيفات */}
-      <div className="fin-subtabs" role="tablist">
+      <div className="fct-toolbar fct-toolbar--flush">
+      <div className="fin-subtabs" role="tablist" aria-label="أقسام المصروفات">
         <button type="button" role="tab" aria-selected={section === 'expenses'}
           className={`fin-subtab${section === 'expenses' ? ' fin-subtab--active' : ''}`}
           onClick={() => setSection('expenses')}>
@@ -921,18 +924,45 @@ const ExpensesTab: React.FC = () => {
           <Tags size={14} /> التصنيفات
         </button>
       </div>
+      </div>
 
       {section === 'expenses' && (
         <>
           {stats && (
-            <StatCardGrid>
-              <StatCard icon={Wallet} value={formatSAR(stats.total)} label={`إجمالي مصروفات السنة (${stats.count})`} tone="info" />
-              <StatCard icon={ReceiptText} value={formatSAR(stats.net)} label="الصافي قبل الضريبة" tone="neutral" />
-              <StatCard icon={Landmark} value={formatSAR(stats.vat)} label="ضريبة مدفوعة (مدخلات)" tone="purple" />
-              <StatCard icon={FileWarning} value={stats.draft_count} label="مسودات غير مدفوعة" tone="warning" valueTone={stats.draft_count > 0 ? 'warning' : undefined} />
-            </StatCardGrid>
+            <div className="fct-tiles" aria-label="مؤشرات المصروفات">
+              <StatTile
+                label="مصروفات هذه السنة"
+                value={formatSAR(stats.total)}
+                hint={`${stats.count} مصروفاً شاملة الضريبة`}
+                icon={<Wallet size={15} />}
+              />
+              <StatTile
+                label="قبل الضريبة"
+                value={formatSAR(stats.net)}
+                hint="ما تحمّله المكتب فعلاً"
+                icon={<ReceiptText size={15} />}
+              />
+              <StatTile
+                label="ضريبة دفعناها"
+                value={formatSAR(stats.vat)}
+                hint="تُخصم من الضريبة المستحقة في الإقرار"
+                icon={<Landmark size={15} />}
+              />
+              <StatTile
+                label="لم تُدفع بعد"
+                value={String(draftCount)}
+                icon={<FileWarning size={15} />}
+                status={
+                  draftCount > 0
+                    ? { tone: 'warning', text: 'مسودات تنتظر الدفع', icon: <FileWarning size={13} /> }
+                    : { tone: 'good', text: 'لا مسودات معلّقة', icon: <CheckCircle2 size={13} /> }
+                }
+                onClick={() => { setBillableOnly(false); setStatus('draft'); setPage(1); }}
+              />
+            </div>
           )}
 
+          <div className="fct-table">
           <FilterBar
             search={{ value: search, onChange: (v) => { setSearch(v); setPage(1); }, placeholder: 'بحث برقم المصروف أو الوصف...' }}
             selects={[
@@ -968,10 +998,10 @@ const ExpensesTab: React.FC = () => {
                   setPage(1);
                 },
                 options: [
-                  { value: '', label: 'كل النثريات' },
-                  { value: '1', label: 'قابلة للتحصيل — لم تُفوتَر' },
+                  { value: '', label: 'كل المصروفات' },
+                  { value: '1', label: 'تُسترد من العميل — لم تُفوتَر' },
                 ],
-                ariaLabel: 'فلتر إعادة التحصيل',
+                ariaLabel: 'ما يُسترد من العميل',
               },
             ]}
             actions={canManage && (
@@ -982,6 +1012,7 @@ const ExpensesTab: React.FC = () => {
           />
 
           <DataTable
+            fill
             columns={columns}
             data={expenses}
             rowKey={(e) => e.id}
@@ -989,17 +1020,18 @@ const ExpensesTab: React.FC = () => {
             isError={isError}
             onRetry={refetch}
             emptyIcon={Wallet}
-            emptyTitle={billableOnly ? 'لا نثريات بانتظار التحصيل' : 'لا مصروفات بعد'}
+            emptyTitle={billableOnly ? 'لا مصروفات تنتظر إضافتها إلى فاتورة' : 'لا مصروفات بعد'}
             emptyDesc={billableOnly
-              ? 'الشرط ثلاثيّ: النثرية موسومة «قابلة لإعادة التحصيل»، ومدفوعة فعلاً، ولم تُضَف لفاتورةٍ بعد.'
+              ? 'يظهر هنا المصروف المعلَّم «يُسترد من العميل» بعد دفعه وقبل إضافته إلى فاتورة.'
               : 'سجّل أول مصروف — رسوم حكومية، إيجار، اشتراكات...'}
             footer={<Pagination page={page} lastPage={lastPage} total={total} onChange={setPage} />}
           />
+          </div>
         </>
       )}
 
       {section === 'vendors' && (
-        <>
+        <div className="fct-table">
           <FilterBar
             actions={canManage && (
               <button type="button" className="fin-btn fin-btn--primary" onClick={() => setVendorForm({ is_active: true })}>
@@ -1008,6 +1040,7 @@ const ExpensesTab: React.FC = () => {
             )}
           />
           <DataTable
+            fill
             columns={vendorColumns}
             data={vendors}
             rowKey={(v) => v.id}
@@ -1018,11 +1051,11 @@ const ExpensesTab: React.FC = () => {
             emptyTitle="لا موردون بعد"
             emptyDesc="أضف الموردين الذين تتعامل معهم (مكاتب خبرة، مترجمون، مؤجّر المكتب...)"
           />
-        </>
+        </div>
       )}
 
       {section === 'categories' && (
-        <>
+        <div className="fct-table">
           {canManage && (
             <div className="fin-filterbar">
               <input
@@ -1040,12 +1073,13 @@ const ExpensesTab: React.FC = () => {
             </div>
           )}
           <DataTable
+            fill
             columns={categoryColumns}
             data={categories}
             rowKey={(c) => c.id}
             emptyTitle="لا تصنيفات"
           />
-        </>
+        </div>
       )}
 
       {/* ── مودال إنشاء/تعديل مصروف ── */}
@@ -1170,7 +1204,7 @@ const ExpensesTab: React.FC = () => {
             style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginTop: 2 }}
           >
             <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--color-heading)', marginBottom: 8 }}>
-              مركز التكلفة وإعادة التحصيل
+              على أي قضية أو عميل؟ وهل يُسترد منه؟
             </div>
 
             <div className="fin-grid fin-grid--2">
@@ -1245,15 +1279,15 @@ const ExpensesTab: React.FC = () => {
               >
                 <input className="fin-checkbox" type="checkbox" checked={form.is_billable}
                   onChange={(e) => setForm({ ...form, is_billable: e.target.checked })} />
-                قابلة لإعادة التحصيل من العميل
+                تُسترد من العميل (تُضاف إلى فاتورته)
               </label>
 
               {form.is_billable && (
                 <div className="fin-grid__full fin-cell-muted" style={{ lineHeight: 1.7 }}>
                   تُضاف إلى فاتورة العميل بمبلغ <strong>{formatSAR(rebillableAmount)}</strong>
                   {form.has_tax_invoice
-                    ? ' — الصافي قبل الضريبة، لأنّ ضريبة المدخلات تُخصم أمام الهيئة فلم يتحمّلها المكتب.'
-                    : ' — الإجمالي بالضريبة، لأنّه بلا فاتورة ضريبية فالضريبة كلفةٌ فعلية على المكتب.'}
+                    ? ' — المبلغ قبل الضريبة، لأن ضريبته تُخصم في الإقرار فلم يتحمّلها المكتب.'
+                    : ' — المبلغ كاملاً بالضريبة، لأنه بلا فاتورة ضريبية فتحمّل المكتب ضريبته.'}
                   <br />
                   ولا تظهر في نافذة الضمّ للفاتورة إلا بعد تعليمها مدفوعة.
                   {!form.case_id && !form.client_id && (

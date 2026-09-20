@@ -5,11 +5,11 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { Eye, Send, XCircle, CreditCard, Download, Receipt, Plus, Banknote, Wallet, Timer, CheckCircle, Archive } from 'lucide-react';
+import { Eye, Send, XCircle, CreditCard, Download, Receipt, Plus, Banknote, Wallet, Clock, CheckCircle, CheckCircle2, AlertTriangle, Archive } from 'lucide-react';
 import { invoiceService } from '../../../services/invoiceService';
 import { DataTable, StatusBadge, FilterBar, ActionMenu, Pagination, Modal } from '../../../components/erp';
 import type { Column } from '../../../components/erp';
-import StatCard, { StatCardGrid } from '../../../components/erp/StatCard';
+import { StatTile } from '../../../components/charts/RaedCharts';
 import { useRowSelection } from '../../../hooks/useRowSelection';
 import { exportToCsv } from '../../../utils/exportCsv';
 import { invalidateFinance } from '../../../utils/financeCache';
@@ -28,13 +28,15 @@ interface SubTab {
   key: string;
   label: string;
   filter: Partial<InvoiceFilters>;
+  /** مفتاح العدّاد في /case-invoices/stats إن وُجد */
+  countKey?: 'total' | 'pending' | 'overdue';
 }
 
+// كان هنا تبويب فرعي رابع «التحصيل» بالمرشّح نفسه `overdue_only` — نسخة مطابقة لـ«المتأخّرة»، وللتحصيل تبويب علوي مستقل.
 const SUBTABS: SubTab[] = [
-  { key: 'all', label: 'الكل', filter: {} },
-  { key: 'pending', label: 'المعلّقة', filter: { status: 'pending' } },
-  { key: 'overdue', label: 'المتأخّرة', filter: { overdue_only: true } },
-  { key: 'collection', label: 'التحصيل', filter: { overdue_only: true } },
+  { key: 'all', label: 'الكل', filter: {}, countKey: 'total' },
+  { key: 'pending', label: 'بانتظار الدفع', filter: { status: 'pending' }, countKey: 'pending' },
+  { key: 'overdue', label: 'المتأخّرة', filter: { overdue_only: true }, countKey: 'overdue' },
   // [INV-P2] الإشعارات الدائنة والمدينة
   { key: 'notes', label: 'الإشعارات', filter: { kind: 'notes' } },
 ];
@@ -247,35 +249,67 @@ const InvoicesTab: React.FC = () => {
     return cols;
   }, [navigate, canManage, zatcaEnabled]);
 
+  const paidTotal = toNumber(stats?.total_paid);
+  const remainingTotal = toNumber(stats?.total_remaining);
+  const collectionRate = paidTotal + remainingTotal > 0 ? (paidTotal / (paidTotal + remainingTotal)) * 100 : 0;
+  const overdueCount = stats?.overdue ?? 0;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* كروت إحصائية علوية سريعة للفواتير */}
-      {stats && (
-        <StatCardGrid>
-          <StatCard icon={Receipt} tone="neutral" value={`${stats.total} فواتير`} label={`معلّقة: ${stats.pending} • متأخّرة: ${stats.overdue}`} />
-          <StatCard icon={Banknote} tone="success" value={formatSAR(stats.total_paid)} label="المبالغ المحصلة" />
-          <StatCard icon={Wallet} tone="warning" value={formatSAR(stats.total_remaining)} label="المتبقي غير المحصل" />
-          <StatCard icon={Timer} tone="info" value={formatPercent(toNumber(stats.total_paid) + toNumber(stats.total_remaining) > 0 ? (toNumber(stats.total_paid) / (toNumber(stats.total_paid) + toNumber(stats.total_remaining))) * 100 : 0)} label="معدل التحصيل المالي" />
-        </StatCardGrid>
-      )}
+    <div className="fct rc-scope">
+      {/* المؤشرات */}
+      <div className="fct-tiles" aria-label="مؤشرات الفواتير">
+        <StatTile
+          label="إجمالي المُفوتَر"
+          value={formatSAR(stats?.total_invoiced)}
+          hint={`${stats?.total ?? 0} فاتورة`}
+          icon={<Receipt size={15} />}
+        />
+        <StatTile
+          label="المحصّل"
+          value={formatSAR(paidTotal)}
+          icon={<Banknote size={15} />}
+          hint={`${formatPercent(collectionRate)} من المُفوتَر`}
+          meter={{ value: collectionRate, tone: collectionRate < 60 ? 'warning' : 'good', ariaLabel: 'نسبة التحصيل' }}
+        />
+        <StatTile
+          label="المتبقي للتحصيل"
+          value={formatSAR(remainingTotal)}
+          hint={`${stats?.pending ?? 0} فاتورة بانتظار الدفع`}
+          icon={<Wallet size={15} />}
+          onClick={() => { setSubtab('pending'); setPage(1); }}
+        />
+        <StatTile
+          label="المتأخّرة"
+          value={String(overdueCount)}
+          icon={<Clock size={15} />}
+          status={
+            overdueCount > 0
+              ? { tone: 'critical', text: 'فواتير تجاوزت موعدها', icon: <AlertTriangle size={13} /> }
+              : { tone: 'good', text: 'لا متأخرات', icon: <CheckCircle2 size={13} /> }
+          }
+          onClick={() => { setSubtab('overdue'); setPage(1); }}
+        />
+      </div>
 
-      <div>
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
-        <div className="fin-subtabs">
-          {SUBTABS.map((s) => (
+      <div className="fct-table">
+      <div className="fct-toolbar">
+        <div className="fin-subtabs fct-status" role="tablist" aria-label="تصنيف الفواتير">
+          {SUBTABS.map((tab) => (
             <button
-              key={s.key}
+              key={tab.key}
               type="button"
-              className={`fin-subtab${subtab === s.key ? ' fin-subtab--active' : ''}`}
-              onClick={() => { setSubtab(s.key); setPage(1); }}
+              role="tab"
+              aria-selected={subtab === tab.key}
+              className={`fin-subtab${subtab === tab.key ? ' fin-subtab--active' : ''}`}
+              onClick={() => { setSubtab(tab.key); setPage(1); }}
             >
-              {s.label}
+              {tab.label}
+              {tab.countKey && stats?.[tab.countKey] != null && <span className="fin-subtab__count">{stats[tab.countKey]}</span>}
             </button>
           ))}
         </div>
         {canManage && (
-          <button type="button" className="fin-btn fin-btn--primary fin-btn--sm" onClick={() => setShowCreate(true)}>
+          <button type="button" className="fin-btn fin-btn--primary fin-btn--sm fct-toolbar__end" onClick={() => setShowCreate(true)}>
             <Plus size={14} /> فاتورة جديدة
           </button>
         )}
@@ -321,6 +355,7 @@ const InvoicesTab: React.FC = () => {
       )}
 
       <DataTable<CaseInvoice>
+        fill
         columns={columns}
         data={invoices}
         rowKey={(inv) => inv.id}

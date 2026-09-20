@@ -14,6 +14,7 @@ import CaseLawNotesWidget from './CaseLawNotesWidget';
 import TeamChatWidget from './chat/TeamChatWidget';
 import RealtimeNotifications from './RealtimeNotifications';
 import UploadDock from './upload/UploadDock';
+import SmartDictationWidget from './voice/dictation/SmartDictationWidget';
 // 🧪📌 الودجتس المثبتة من مختبر اللوحة — حارس خفيف لا يجلب أي كود إضافي ما لم يثبّت المستخدم شيئاً
 import PinnedWidgetsGate from './dashboard/lab/PinnedWidgetsGate';
 import ClickUpHeader from './ClickUpHeader';
@@ -276,6 +277,10 @@ const Layout: React.FC = () => {
               داخل الصفحات، فيبقى حيّاً عبر التنقّل والرفع مستمرّ. يظهر لكل
               الأدوار (العميل يرفع مستنداته أيضاً) ويختفي تلقائياً بلا رفعات. */}
           {user && <UploadDock />}
+
+          {/* 🎙️ «الإملاء الذكي» — تحدّث لا تكتب: كبسولة تظهر مع أي حقل كتابة في أي صفحة أو مودال،
+              والصياغة تتبع نوع الحقل. لمستخدمي المكتب فقط (الخادم يحرسها بـ internal.user). */}
+          {user && user.role !== 'client' && <SmartDictationWidget sidebarWidth={sidebarWidth} />}
 
           {/* 📌 الودجتس المثبتة من مختبر اللوحة — تطفو فوق كل الصفحات الداخلية */}
           {user && user.role !== 'client' && <PinnedWidgetsGate />}

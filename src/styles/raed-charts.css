@@ -1,0 +1,590 @@
+/* «رسوم الرائد» — ستايل مجموعة الرسوم (بادئة rc-). هوية فلات: ألوان صلبة، خطوط شعرية، بلا تدرّج ولا توهّج.
+   اللوحة اجتازت فحص نطاق الإضاءة وحدّ التشبّع وتمييز الألوان (CVD) والتباين على أسطح التطبيق الفعلية:
+   الفاتح #ffffff و«ديوان» #FDFAF1، والداكن #161d2a. لا تُبدَّل قيمة هنا بلا إعادة الفحص. */
+
+.rc-scope {
+  --rc-surface: var(--color-surface, #ffffff);
+  --rc-ink: var(--color-heading, #0a192f);
+  --rc-ink-2: var(--color-text-secondary, #5a5a5a);
+  --rc-line: var(--color-border, #e0e0e0);
+  --rc-subtle: var(--color-surface-subtle, #f7f5f0);
+
+  /* كحلي الهوية مرفوعاً درجة ليُقرأ كلون سلسلة (الكحلي الأصلي #1E3A5F يُقرأ رمادياً في الرسم) */
+  --rc-series-1: #2f66a8;
+  --rc-series-2: #b8860b;
+  --rc-good: #15803d;
+  --rc-critical: #c0392f;
+  --rc-warning: #b45309;
+  --rc-neutral: #94a3b8;
+
+  /* تدرّج ترتيبي بلون واحد (فاتح ⟵ داكن مع الشدة) — مفحوص بـ--ordinal؛ في الداكن ينعكس (الأشد هو الأفتح) */
+  --rc-ord-1: #8aaedd;
+  --rc-ord-2: #5b8ccb;
+  --rc-ord-3: #2f66a8;
+  --rc-ord-4: #1e3a5f;
+}
+
+body.dark .rc-scope {
+  --rc-ord-1: #2c4f7c;
+  --rc-ord-2: #3f6fae;
+  --rc-ord-3: #6f9ad0;
+  --rc-ord-4: #a9c3e6;
+  --rc-series-1: #4a8ad8;
+  --rc-series-2: #bb8a28;
+  --rc-good: #2a9d68;
+  --rc-critical: #d9605d;
+  --rc-warning: #d08a3c;
+  --rc-neutral: #64748b;
+}
+
+/* لون العلامة من النبرة — يُستعمل للتعبئة فقط، أما النص فبحبر الواجهة */
+.rc-scope [data-tone='series1'] { --rc-tone: var(--rc-series-1); }
+.rc-scope [data-tone='series2'] { --rc-tone: var(--rc-series-2); }
+.rc-scope [data-tone='good'] { --rc-tone: var(--rc-good); }
+.rc-scope [data-tone='critical'] { --rc-tone: var(--rc-critical); }
+.rc-scope [data-tone='warning'] { --rc-tone: var(--rc-warning); }
+.rc-scope [data-tone='neutral'] { --rc-tone: var(--rc-neutral); }
+.rc-scope [data-tone='ord1'] { --rc-tone: var(--rc-ord-1); }
+.rc-scope [data-tone='ord2'] { --rc-tone: var(--rc-ord-2); }
+.rc-scope [data-tone='ord3'] { --rc-tone: var(--rc-ord-3); }
+.rc-scope [data-tone='ord4'] { --rc-tone: var(--rc-ord-4); }
+
+/* مخفي بصرياً ومقروء لقارئات الشاشة. يُوضع على div لا على <table> (الجدول يتجاهل height/overflow)،
+   وأبوه مُموضَع (‎.rc-cols) حتى لا يفلت من حاويات التمرير. */
+.rc-sr-only {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── التلميح: يظهر بالمرور وبالتركيز معاً ─── */
+
+.rc-tip {
+  position: absolute;
+  inset-block-end: calc(100% + 8px);
+  inset-inline-start: 50%;
+  transform: translateX(50%);
+  z-index: 5;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: var(--rc-ink);
+  color: var(--rc-surface);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  /* display لا opacity: العنصر المخفي بالشفافية يبقى محسوباً في مساحة التمرير فيُحدث شريطاً أفقياً داخل الحاويات المتمررة */
+  display: none;
+}
+
+[dir='ltr'] .rc-tip {
+  transform: translateX(-50%);
+}
+
+:hover > .rc-tip,
+:focus-visible > .rc-tip {
+  display: block;
+}
+
+/* ─── بطاقة رقم ─── */
+
+.rc-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--rc-line);
+  border-radius: 12px;
+  background: var(--rc-surface);
+  color: var(--rc-ink);
+  font-family: inherit;
+  text-align: start;
+  overflow: hidden;
+}
+
+.rc-tile--action {
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.rc-tile--action:hover,
+.rc-tile--action:focus-visible {
+  border-color: var(--law-gold, #b8860b);
+  outline: none;
+}
+
+.rc-tile__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rc-tile__label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rc-ink-2);
+}
+
+.rc-tile__icon {
+  display: inline-flex;
+  color: var(--rc-ink-2);
+  opacity: 0.7;
+}
+
+/* أرقام متناسبة العرض: tabular-nums يباعد بين خانات الرقم الكبير */
+.rc-tile__value {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--rc-ink);
+}
+
+.rc-tile__foot {
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.rc-tile__hint {
+  font-size: 12px;
+  color: var(--rc-ink-2);
+}
+
+.rc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rc-ink);
+}
+
+.rc-status svg {
+  flex-shrink: 0;
+}
+
+.rc-status[data-tone='good'] svg { color: var(--rc-good); }
+.rc-status[data-tone='critical'] svg { color: var(--rc-critical); }
+.rc-status[data-tone='warning'] svg { color: var(--rc-warning); }
+
+/* ─── خط الاتجاه ─── */
+
+.rc-spark {
+  position: relative;
+  height: 32px;
+  margin: 6px -16px -12px; /* يمتد إلى حواف البطاقة */
+}
+
+.rc-spark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.rc-spark__line {
+  fill: none;
+  stroke: var(--rc-series-1);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rc-spark__area {
+  fill: var(--rc-series-1);
+  opacity: 0.1;
+}
+
+.rc-spark__dot {
+  position: absolute;
+  inset-inline-end: calc(100% - 9px); /* الأحدث يساراً */
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--rc-series-1);
+  box-shadow: 0 0 0 2px var(--rc-surface); /* حلقة بلون السطح */
+}
+
+/* ─── مقياس ─── */
+
+.rc-meter {
+  height: 8px;
+  border-radius: 4px;
+  /* المسار درجة أفتح من اللون نفسه — الحالة تُقرأ على الشريط كله */
+  background: color-mix(in srgb, var(--rc-tone) 16%, transparent);
+  overflow: hidden;
+}
+
+.rc-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--rc-tone);
+  transform-origin: right center;
+  animation: rc-grow-x 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+[dir='ltr'] .rc-meter > span {
+  transform-origin: left center;
+}
+
+/* ─── شريط مجزّأ ─── */
+
+.rc-seg__bar {
+  display: flex;
+  gap: 2px; /* الفاصل فراغ بلون السطح لا حدّ مرسوم */
+  height: 12px;
+}
+
+.rc-seg__part {
+  position: relative;
+  min-width: 4px;
+  background: var(--rc-tone);
+  outline: none;
+  transition: opacity 0.12s ease;
+}
+
+.rc-seg__part:first-child {
+  border-start-start-radius: 4px;
+  border-end-start-radius: 4px;
+}
+
+.rc-seg__part:last-child {
+  border-start-end-radius: 4px;
+  border-end-end-radius: 4px;
+}
+
+.rc-seg__bar:hover .rc-seg__part:not(:hover) {
+  opacity: 0.45;
+}
+
+.rc-seg__part:focus-visible {
+  box-shadow: 0 0 0 2px var(--rc-surface), 0 0 0 4px var(--rc-ink);
+}
+
+.rc-seg__empty {
+  height: 12px;
+  border-radius: 4px;
+  background: var(--rc-subtle);
+  font-size: 0;
+}
+
+.rc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rc-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--rc-ink-2);
+}
+
+.rc-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--rc-tone);
+  flex-shrink: 0;
+}
+
+.rc-legend__icon {
+  display: inline-flex;
+  color: var(--rc-ink-2);
+}
+
+.rc-legend__value {
+  font-weight: 700;
+  color: var(--rc-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── قائمة أشرطة ─── */
+
+.rc-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rc-bars__row {
+  display: grid;
+  grid-template-columns: minmax(92px, auto) 1fr 32px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  margin: 0 -8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: start;
+  box-sizing: content-box;
+}
+
+.rc-bars__row--action {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.rc-bars__row--action:hover,
+.rc-bars__row--action:focus-visible {
+  background: var(--rc-subtle);
+  outline: none;
+}
+
+.rc-bars__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rc-ink);
+  white-space: nowrap;
+}
+
+.rc-bars__icon {
+  display: inline-flex;
+  color: var(--rc-ink-2);
+}
+
+.rc-bars__track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--rc-subtle);
+  overflow: hidden;
+}
+
+.rc-bars__fill {
+  display: block;
+  height: 100%;
+  min-inline-size: 2px;
+  border-radius: 4px;
+  background: var(--rc-series-1);
+  transform-origin: right center;
+  animation: rc-grow-x 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+[dir='ltr'] .rc-bars__fill {
+  transform-origin: left center;
+}
+
+.rc-bars__value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rc-ink);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── أعمدة زمنية ─── */
+
+.rc-cols {
+  /* 🔴 لازم: جدول قارئات الشاشة داخله position:absolute. بلا أب مُموضَع يصير مرجعه <body> فيفلت من كل
+     حاويات التمرير ويمدّد ارتفاع المستند — فيتمرر التطبيق كله ويصعد هيدره وشريطه السفلي عن الشاشة. */
+  position: relative;
+  margin: 0;
+  min-width: 0;
+}
+
+.rc-cols__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rc-cols__title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--rc-ink);
+}
+
+.rc-cols__total {
+  font-size: 11.5px;
+  color: var(--rc-ink-2);
+}
+
+.rc-cols__total b {
+  color: var(--rc-ink);
+  font-weight: 700;
+}
+
+.rc-cols__plot {
+  position: relative;
+  padding-inline-start: 26px; /* شريط أرقام المحور */
+}
+
+/* الشبكة: ثلاثة خطوط شعرية متصلة فوق منطقة الأعمدة فقط (الارتفاع = منطقة الرسم دون شريط الأشهر) */
+.rc-cols__grid {
+  position: absolute;
+  inset-inline: 26px 0;
+  inset-block-start: 0;
+  height: var(--rc-plot-h, 120px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.rc-cols__tick {
+  position: relative;
+  height: 0;
+  border-top: 1px solid var(--rc-line);
+}
+
+.rc-cols__tick i {
+  position: absolute;
+  inset-inline-end: calc(100% + 6px);
+  top: -7px;
+  font-size: 10px;
+  font-style: normal;
+  line-height: 14px;
+  color: var(--rc-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-cols__bars {
+  position: relative;
+  display: flex;
+  gap: 4px;
+}
+
+.rc-col {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  outline: none;
+  border-radius: 6px;
+}
+
+.rc-col:hover,
+.rc-col:focus-visible {
+  background: color-mix(in srgb, var(--rc-ink) 5%, transparent);
+}
+
+.rc-col .rc-tip {
+  inset-block-end: auto;
+  inset-block-start: -6px;
+  transform: translate(50%, -100%);
+}
+
+[dir='ltr'] .rc-col .rc-tip {
+  transform: translate(-50%, -100%);
+}
+
+.rc-col__slot {
+  position: relative;
+  width: 100%;
+  height: var(--rc-plot-h, 120px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.rc-col__bar {
+  width: min(24px, 62%); /* عمود رفيع — الباقي هواء */
+  min-height: 2px;
+  border-radius: 4px 4px 0 0; /* رأس مدوّر وقاعدة مستوية على خط الأساس */
+  background: var(--rc-tone, var(--rc-series-1));
+  transform-origin: center bottom;
+  animation: rc-grow-y 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.rc-cols[data-tone='series2'] .rc-col__bar {
+  background: var(--rc-series-2);
+}
+
+.rc-col__cap {
+  position: absolute;
+  inset-inline: 0;
+  margin-block-end: 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--rc-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-col__x {
+  margin-top: 6px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  color: var(--rc-ink-2);
+}
+
+/* مقياس داخل بطاقة الرقم */
+.rc-tile__meter {
+  margin-top: 4px;
+}
+
+/* أعمدة لسلسلتين: عمودان متجاوران بفاصل 2px، ومحور أرقام أعرض للمبالغ */
+.rc-cols__plot--wide {
+  padding-inline-start: 40px;
+}
+
+.rc-cols__plot--wide .rc-cols__grid {
+  inset-inline: 40px 0;
+}
+
+.rc-col__slot--pair {
+  gap: 2px;
+}
+
+.rc-col__slot--pair .rc-col__bar {
+  width: min(14px, 34%);
+  background: var(--rc-tone);
+}
+
+.rc-cols--grouped .rc-legend {
+  margin-top: 8px;
+  justify-content: center;
+}
+
+@keyframes rc-grow-x {
+  from { transform: scaleX(0); }
+}
+
+@keyframes rc-grow-y {
+  from { transform: scaleY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-meter > span,
+  .rc-bars__fill,
+  .rc-col__bar {
+    animation: none;
+  }
+}

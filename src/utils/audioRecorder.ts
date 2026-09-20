@@ -11,6 +11,36 @@ export interface AudioRecording {
   stop: () => Promise<Blob>;
   /** يوقف ويتجاهل التسجيل (بلا تحويل) */
   cancel: () => void;
+  /** شدّة الصوت اللحظية 0..1 (RMS مضخَّم) — لرسم موجة حيّة تُري المستخدم أن المايك يلتقط */
+  getLevel: () => number;
+}
+
+/** محلّل شدّة خفيف على مجرى المايك — فشله لا يمنع التسجيل (getLevel يعود 0) */
+function createLevelMeter(stream: MediaStream): { getLevel: () => number; dispose: () => void } {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    const ctx: AudioContext = new AudioCtx();
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    ctx.createMediaStreamSource(stream).connect(analyser);
+    const data = new Uint8Array(analyser.fftSize);
+
+    return {
+      getLevel: () => {
+        analyser.getByteTimeDomainData(data);
+        let sumSquares = 0;
+        for (let i = 0; i < data.length; i++) {
+          const v = (data[i] - 128) / 128;
+          sumSquares += v * v;
+        }
+        // كلام عادي RMS ≈ 0.05–0.2 — نضخّمه ليملأ المدى البصري
+        return Math.min(1, Math.sqrt(sumSquares / data.length) * 4.5);
+      },
+      dispose: () => void ctx.close().catch(() => {}),
+    };
+  } catch {
+    return { getLevel: () => 0, dispose: () => {} };
+  }
 }
 
 export async function startAudioRecording(): Promise<AudioRecording> {
@@ -28,9 +58,14 @@ export async function startAudioRecording(): Promise<AudioRecording> {
   };
   recorder.start();
 
-  const releaseStream = () => stream.getTracks().forEach((t) => t.stop());
+  const meter = createLevelMeter(stream);
+  const releaseStream = () => {
+    meter.dispose();
+    stream.getTracks().forEach((t) => t.stop());
+  };
 
   return {
+    getLevel: meter.getLevel,
     stop: () =>
       new Promise<Blob>((resolve, reject) => {
         recorder.onstop = async () => {

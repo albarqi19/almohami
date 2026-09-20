@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
     BookOpen, Plus, Search, Pin, Trash2, ArrowUpRight,
     Bell, Briefcase, Clock, PanelLeftClose, PanelLeft,
@@ -21,6 +21,20 @@ interface CaseOption {
     title: string;
 }
 
+/** سطر مقتطف لقائمة الملاحظات: نص المحتوى بلا وسوم (يدعم محتوى Yoopta القديم) */
+const noteSnippet = (content: string | null | undefined): string => {
+    if (!content) return '';
+    try {
+        const html = detectContentType(content) === 'yoopta' ? convertToHTML(content) : content;
+        const text = new DOMParser().parseFromString(html, 'text/html').body.textContent || '';
+        return text.replace(/\s+/g, ' ').trim().slice(0, 90);
+    } catch {
+        return '';
+    }
+};
+
+const startOfDay = (d: Date): number => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
 const NotebookWorkspace: React.FC = () => {
     // State
     const [notes, setNotes] = useState<PersonalNote[]>([]);
@@ -32,7 +46,14 @@ const NotebookWorkspace: React.FC = () => {
     const [activeCategory, setActiveCategory] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedNoteId, setSelectedNoteId] = useState<number | null>(null);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    // حالة الطي محفوظة — من يطوي القائمة ليكتب لا يريدها أن تعود مع كل زيارة
+    const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+        try {
+            return localStorage.getItem('notebook_sidebar_collapsed') === '1';
+        } catch {
+            return false;
+        }
+    });
     const [showActionsMenu, setShowActionsMenu] = useState(false);
     const [showCaseSelector, setShowCaseSelector] = useState(false);
     const [showReminderPicker, setShowReminderPicker] = useState(false);
@@ -69,6 +90,8 @@ const NotebookWorkspace: React.FC = () => {
 
     const editorRef = useRef<TiptapEditorRef>(null);
     const actionsMenuRef = useRef<HTMLDivElement>(null);
+    // شريط التنسيق يُرسم خارج منطقة التمرير (portal) — ثابت وملتصق تحت شريط الصفحة من الحافة إلى الحافة
+    const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
 
     const categories = [
         { value: 'all', icon: '📝', name: 'الكل' },
@@ -129,6 +152,14 @@ const NotebookWorkspace: React.FC = () => {
     useEffect(() => {
         fetchNotes();
     }, [fetchNotes]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('notebook_sidebar_collapsed', sidebarCollapsed ? '1' : '0');
+        } catch {
+            /* تخزين محجوب */
+        }
+    }, [sidebarCollapsed]);
 
     // Keep refs in sync with state for auto-save
     useEffect(() => { noteTitleRef.current = noteTitle; }, [noteTitle]);
@@ -253,12 +284,10 @@ const NotebookWorkspace: React.FC = () => {
         let htmlContent = '';
         try {
             const contentType = detectContentType(note.content);
-            console.log('[NotebookWorkspace] Content type detected:', contentType);
 
             if (contentType === 'yoopta') {
                 // تحويل من Yoopta إلى HTML
                 htmlContent = convertToHTML(note.content);
-                console.log('[NotebookWorkspace] Converted from Yoopta to HTML');
             } else if (contentType === 'html') {
                 // المحتوى HTML بالفعل
                 htmlContent = note.content;
@@ -425,6 +454,35 @@ const NotebookWorkspace: React.FC = () => {
         return cases.find(c => c.id === noteCaseId);
     };
 
+    // القائمة مجمّعة: المثبّتة أولاً ثم زمنياً بآخر تعديل — محلياً، فيتحرك العنصر فور التثبيت/الحفظ بلا انتظار الخادم
+    const noteGroups = useMemo(() => {
+        const today = startOfDay(new Date());
+        const weekAgo = today - 6 * 86_400_000;
+        const stamp = (n: PersonalNote) => new Date(n.updated_at || n.created_at).getTime();
+        const sorted = [...notes].sort((a, b) => stamp(b) - stamp(a));
+
+        const groups: Array<{ key: string; label: string; items: PersonalNote[] }> = [
+            { key: 'pinned', label: 'المثبّتة', items: [] },
+            { key: 'today', label: 'اليوم', items: [] },
+            { key: 'week', label: 'هذا الأسبوع', items: [] },
+            { key: 'older', label: 'أقدم', items: [] },
+        ];
+        for (const note of sorted) {
+            const at = stamp(note);
+            const index = note.is_pinned ? 0 : at >= today ? 1 : at >= weekAgo ? 2 : 3;
+            groups[index].items.push(note);
+        }
+        return groups.filter((g) => g.items.length > 0);
+    }, [notes]);
+
+    const snippets = useMemo(() => {
+        const map = new Map<number, string>();
+        for (const note of notes) map.set(note.id, noteSnippet(note.content));
+        return map;
+    }, [notes]);
+
+    const activeCategoryName = categories.find((c) => c.value === noteCategory)?.name ?? '';
+
     const formatLastSaved = () => {
         if (!lastSaved) return '';
         return lastSaved.toLocaleTimeString('ar-SA', {
@@ -437,22 +495,52 @@ const NotebookWorkspace: React.FC = () => {
         <div className={`notebook-workspace ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             {/* Sidebar */}
             <aside className="notebook-sidebar">
-                <div className="sidebar-header">
-                    <div className="sidebar-title">
-                        <BookOpen size={24} />
-                        {!sidebarCollapsed && <span>المفكرة الشخصية</span>}
+                {/* مطوية: شريط ضيق يبقى فيه زر الفتح — كانت تُطوى إلى عرض صفر فيختفي زر الفتح معها ولا سبيل لإعادتها */}
+                {sidebarCollapsed && (
+                    <div className="notebook-rail">
+                        <button
+                            className="sidebar-toggle"
+                            onClick={() => setSidebarCollapsed(false)}
+                            title="فتح قائمة الملاحظات"
+                            aria-label="فتح قائمة الملاحظات"
+                        >
+                            <PanelLeft size={18} />
+                        </button>
+                        <button
+                            className="notebook-rail__new"
+                            onClick={startNewNote}
+                            title="ملاحظة جديدة"
+                            aria-label="ملاحظة جديدة"
+                        >
+                            <Plus size={16} />
+                        </button>
+                        <button
+                            className="notebook-rail__label"
+                            onClick={() => setSidebarCollapsed(false)}
+                            title="فتح قائمة الملاحظات"
+                        >
+                            المفكرة الشخصية
+                        </button>
                     </div>
-                    <button
-                        className="sidebar-toggle"
-                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        title={sidebarCollapsed ? 'توسيع' : 'طي'}
-                    >
-                        {sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
-                    </button>
-                </div>
+                )}
 
                 {!sidebarCollapsed && (
                     <>
+                        <div className="sidebar-header">
+                            <div className="sidebar-title">
+                                <BookOpen size={20} />
+                                <span>المفكرة الشخصية</span>
+                            </div>
+                            <button
+                                className="sidebar-toggle"
+                                onClick={() => setSidebarCollapsed(true)}
+                                title="طي القائمة"
+                                aria-label="طي القائمة"
+                            >
+                                <PanelLeftClose size={18} />
+                            </button>
+                        </div>
+
                         {/* Search */}
                         <div className="sidebar-search">
                             <Search size={16} />
@@ -496,27 +584,38 @@ const NotebookWorkspace: React.FC = () => {
                                     <p>لا توجد ملاحظات</p>
                                 </div>
                             ) : (
-                                notes.map(note => (
-                                    <div
-                                        key={note.id}
-                                        className={`note-item ${selectedNoteId === note.id ? 'selected' : ''} ${note.is_pinned ? 'pinned' : ''}`}
-                                        onClick={() => selectNote(note)}
-                                    >
-                                        <div className="note-item-header">
-                                            {note.is_pinned && <Pin size={12} className="pin-icon" />}
-                                            <span className="note-item-title">
-                                                {note.title || 'بدون عنوان'}
-                                            </span>
+                                noteGroups.map(group => (
+                                    <div key={group.key} className="notes-group">
+                                        <div className="notes-group-label">
+                                            {group.key === 'pinned' && <Pin size={11} />}
+                                            <span>{group.label}</span>
+                                            <em>{group.items.length}</em>
                                         </div>
-                                        <div className="note-item-meta">
-                                            <span className="note-item-category">
-                                                {notebookService.getCategoryIcon(note.category)}
-                                            </span>
-                                            <span className="note-item-date">
-                                                <Clock size={10} />
-                                                {formatDate(note.created_at)}
-                                            </span>
-                                        </div>
+                                        {group.items.map(note => (
+                                            <div
+                                                key={note.id}
+                                                className={`note-item ${selectedNoteId === note.id ? 'selected' : ''}`}
+                                                onClick={() => selectNote(note)}
+                                            >
+                                                <div className="note-item-header">
+                                                    <span className="note-item-title">
+                                                        {note.title || 'بدون عنوان'}
+                                                    </span>
+                                                    <span className="note-item-date">
+                                                        <Clock size={10} />
+                                                        {formatDate(note.updated_at || note.created_at)}
+                                                    </span>
+                                                </div>
+                                                <div className="note-item-meta">
+                                                    <span className="note-item-category">
+                                                        {notebookService.getCategoryIcon(note.category)}
+                                                    </span>
+                                                    <span className="note-item-snippet">
+                                                        {snippets.get(note.id) || 'ملاحظة فارغة'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 ))
                             )}
@@ -532,14 +631,6 @@ const NotebookWorkspace: React.FC = () => {
                         {/* Top Action Bar */}
                         <div className="editor-toolbar">
                             <div className="toolbar-right">
-                                <input
-                                    type="text"
-                                    className="note-title-input"
-                                    placeholder="عنوان الملاحظة..."
-                                    value={noteTitle}
-                                    onChange={e => handleTitleChange(e.target.value)}
-                                />
-
                                 {/* Category Selector */}
                                 <select
                                     className="category-select"
@@ -575,7 +666,6 @@ const NotebookWorkspace: React.FC = () => {
                                             editorRef.current?.replaceAllText?.(newText);
                                         }}
                                         onSetTextAnnotations={(annotations) => {
-                                            console.log('[NotebookWorkspace] Setting text annotations:', annotations);
                                             setTextAnnotations(annotations);
                                         }}
                                         source="notebook"
@@ -729,8 +819,39 @@ const NotebookWorkspace: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Editor - TiptapEditor بدلاً من YooptaNotebookEditor */}
+                        {/* شريط التنسيق — ملتصق تحت شريط الصفحة، خارج منطقة التمرير (TiptapEditor يرسمه هنا عبر portal) */}
+                        <div className="notebook-format-bar" ref={setToolbarHost} />
+
+                        {/* الورقة: السطح يملأ العرض، والنص عمود متوسط بعرض مريح للقراءة */}
                         <div className="editor-container">
+                            <div className="nbw-paper">
+                                <div className="nbw-paper-head">
+                                    <input
+                                        type="text"
+                                        className="nbw-paper-title"
+                                        placeholder="عنوان الملاحظة"
+                                        value={noteTitle}
+                                        onChange={e => handleTitleChange(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                editorRef.current?.focus();
+                                            }
+                                        }}
+                                    />
+                                    <div className="nbw-paper-meta">
+                                        <span>{activeCategoryName}</span>
+                                        {selectedNote && (
+                                            <span>آخر تعديل {formatDate(selectedNote.updated_at || selectedNote.created_at)}</span>
+                                        )}
+                                        {getSelectedCase() && (
+                                            <span className="nbw-paper-meta__case">
+                                                <Briefcase size={11} />
+                                                {getSelectedCase()?.file_number}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
                             <TiptapEditor
                                 key={editorKey}
                                 ref={editorRef}
@@ -738,13 +859,15 @@ const NotebookWorkspace: React.FC = () => {
                                 onChange={handleContentChange}
                                 placeholder="اكتب ملاحظتك هنا..."
                                 autoFocus={true}
-                                minHeight="calc(100vh - 200px)"
+                                minHeight="240px"
+                                toolbarPortalEl={toolbarHost}
                                 textAnnotations={textAnnotations}
                                 onApplyAnnotation={(annotationId) => {
                                     // إزالة التعليق المطبق من القائمة
                                     setTextAnnotations(prev => prev.filter(a => a.id !== annotationId));
                                 }}
                             />
+                            </div>
                         </div>
 
                         <NotebookAssistantWidget
@@ -752,7 +875,6 @@ const NotebookWorkspace: React.FC = () => {
                             getDocumentText={() => editorRef.current?.getAllText?.() || null}
                             getDocumentBlocksJson={() => editorRef.current?.getContent?.() || null}
                             onSetTextAnnotations={(annotations) => {
-                                console.log('[NotebookWorkspace] Widget setting annotations:', annotations);
                                 setTextAnnotations(annotations);
                             }}
                             onRequestClose={() => setIsAssistantVisible(false)}

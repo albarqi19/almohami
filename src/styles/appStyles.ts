@@ -165,3 +165,10 @@ import './client-appointments.css';
 // وحدَها فوق هيكل `ssp2-*`، بلا إعادةِ تعريفِ أيّ صنفٍ قائم، فلا تتعلّق بترتيب الحقن.
 import './projects.css';
 import './subtask-panel.css';
+// «الإملاء الذكي» — كبسولة عالمية بأصناف `smart-dictation*` وحدها، فلا تتعلّق بترتيب الحقن.
+import './smart-dictation.css';
+// «رسوم الرائد» (rc-) وواجهة الأداء (pfv-) — أصناف ببادئات خاصة، فلا تتعلّق بترتيب الحقن.
+import './raed-charts.css';
+import './performance-view.css';
+// لوحة تحكم المالية (fdb-) — أصناف ببادئة خاصة، فلا تتعلّق بترتيب الحقن.
+import './finance-dashboard.css';

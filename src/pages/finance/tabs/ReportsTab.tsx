@@ -7,7 +7,7 @@ import { billingService } from '../../../services/billingService';
 import { DataTable } from '../../../components/erp';
 import type { Column } from '../../../components/erp';
 import { LoadingState, EmptyState } from '../../../components/erp/States';
-import CollectionChart from '../../../components/billing/CollectionChart';
+import { GroupedColumnChart, Meter, SegmentBar, StatTile } from '../../../components/charts/RaedCharts';
 import { formatSAR, toNumber } from '../../../utils/money';
 import { exportToCsv } from '../../../utils/exportCsv';
 import { PAYMENT_METHOD_LABELS } from '../../../config/financeStatusConfig';
@@ -46,89 +46,6 @@ function firstOfCurrentYear(): string {
 }
 
 /* بطاقة مؤشر مصغّرة مطوّرة */
-function KpiCard({
-  label,
-  value,
-  percentage,
-  tone = 'neutral',
-  icon: Icon,
-  tooltip,
-}: {
-  label: string;
-  value: string;
-  percentage?: number;
-  tone?: 'success' | 'info' | 'warning' | 'danger' | 'neutral' | 'purple';
-  icon?: React.ComponentType<{ size?: number; className?: string; color?: string }>;
-  tooltip?: string;
-}) {
-  const tokenMap: Record<string, string> = {
-    success: 'var(--status-green,#059669)',
-    info:    'var(--status-blue,#0284C7)',
-    warning: 'var(--status-orange,#D97706)',
-    danger:  'var(--status-red,#DC2626)',
-    purple:  'var(--status-purple,#7c3aed)',
-    neutral: 'var(--color-text-secondary,#5a5a5a)',
-  };
-  const color = tokenMap[tone];
-
-  return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12,
-      padding: '16px',
-      background: 'var(--color-surface, #fff)',
-      border: '1px solid var(--color-border)',
-      borderRadius: 8,
-      flex: '1 1 180px',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      {/* أيقونة دلالية شفافة في الخلفية */}
-      {Icon && (
-        <div style={{
-          position: 'absolute',
-          bottom: -16,
-          left: -12,
-          opacity: 0.07,
-          color: color,
-          pointerEvents: 'none',
-        }}>
-          <Icon size={72} />
-        </div>
-      )}
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1 }}>
-        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          {label}
-          {tooltip && (
-            <span style={{ cursor: 'help', display: 'inline-flex', alignItems: 'center' }} title={tooltip}>
-              <HelpCircle size={13} style={{ color: 'var(--color-text-secondary)', opacity: 0.6 }} />
-            </span>
-          )}
-        </span>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, zIndex: 1 }}>
-        <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-heading)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
-          {value}
-        </span>
-        {percentage !== undefined && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-text-secondary)' }}>
-              <span>النسبة:</span>
-              <span style={{ fontWeight: 600, color }}>{percentage.toFixed(1)}%</span>
-            </div>
-            <div style={{ width: '100%', height: 4, background: 'var(--color-border)', borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{ width: `${Math.min(percentage, 100)}%`, height: '100%', background: color, borderRadius: 2 }} />
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 const ReportsTab: React.FC = () => {
   const { has } = usePermissionContext();
   const canExport = has(FINANCE_PERMISSIONS.reportsExport);
@@ -198,7 +115,7 @@ const ReportsTab: React.FC = () => {
     { key: 'name',      header: 'العميل',  render: (c) => <span className="fin-cell-strong">{c.name}</span> },
     { key: 'invoiced',  header: 'المُفوتَر', numeric: true, align: 'end', render: (c) => formatSAR(c.total_invoiced) },
     { key: 'paid',      header: 'المحصّل',  numeric: true, align: 'end',
-      render: (c) => <span className="fin-cell-strong" style={{ color: 'var(--status-green)' }}>{formatSAR(c.total_paid)}</span> },
+      render: (c) => <span className="fin-cell-strong">{formatSAR(c.total_paid)}</span> },
     { 
       key: 'collection_rate', 
       header: 'نسبة التحصيل', 
@@ -207,16 +124,11 @@ const ReportsTab: React.FC = () => {
         const invoiced = toNumber(c.total_invoiced);
         const paid = toNumber(c.total_paid);
         const rate = invoiced > 0 ? (paid / invoiced) * 100 : 0;
-        let color = 'var(--status-red)';
-        if (rate >= 80) color = 'var(--status-green)';
-        else if (rate >= 50) color = 'var(--status-orange)';
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', minWidth: 120 }}>
-            <div style={{ flex: 1, height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ width: `${Math.min(rate, 100)}%`, height: '100%', background: color, borderRadius: 3 }} />
-            </div>
-            <span style={{ fontSize: 12, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{rate.toFixed(0)}%</span>
-          </div>
+          <span className="fdb-progress rc-scope">
+            <Meter value={rate} tone={rate >= 80 ? 'good' : rate >= 50 ? 'warning' : 'critical'} ariaLabel={`نسبة التحصيل ${rate.toFixed(0)}%`} />
+            <b>{rate.toFixed(0)}%</b>
+          </span>
         );
       }
     },
@@ -249,32 +161,32 @@ const ReportsTab: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* ١. تقادم الديون — شريط KPI أفقي */}
-      <div className="fin-section">
+      {/* ١. منذ متى والمبالغ المتبقية لم تُحصَّل؟ — مقياس ترتيبي بلون واحد يتدرج مع العمر */}
+      <div className="fin-section rc-scope">
         <div className="fin-section__head">
-          <span className="fin-section__title"><Layers size={15} /> تقادم الديون ومستحقات العملاء (Aging)</span>
+          <span className="fin-section__title"><Layers size={15} /> منذ متى والمبالغ المتبقية لم تُحصَّل؟</span>
           {dso > 0 && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              fontSize: 12, color: 'var(--status-purple)',
-              background: 'color-mix(in srgb, var(--status-purple,#7c3aed) 10%, var(--color-surface,#fff))',
-              border: '1px solid color-mix(in srgb, var(--status-purple,#7c3aed) 20%, transparent)',
-              borderRadius: 20, padding: '3px 10px',
-              cursor: 'help',
-            }} title="متوسط فترة التحصيل بالأيام (Days Sales Outstanding) - يقيس سرعة تحصيل المبيعات الآجلة. النطاق المفضل أقل من 45 يومًا.">
-              <Timer size={13} />
-              DSO: <strong>{dso} يوم</strong>
+            <span className="fdb-dso" title="متوسط عدد الأيام بين إصدار الفاتورة وتحصيلها (آخر 90 يوماً) — الأفضل أقل من 45 يوماً">
+              <Timer size={13} /> متوسط أيام التحصيل <b>{dso}</b>
             </span>
           )}
         </div>
         <div className="fin-section__body">
           {agingLoading ? <LoadingState /> : (
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <KpiCard tone="purple" label="إجمالي الديون المعلقة" value={formatSAR(totalOutstanding)} tooltip="مجموع المبالغ الفواتير الصادرة للعملاء ولم يتم سدادها بعد" icon={Layers} />
-              <KpiCard tone="success" label="0 – 30 يوم"       value={formatSAR(agingData?.aging.current_0_30)} percentage={totalOutstanding > 0 ? (toNumber(agingData?.aging.current_0_30) / totalOutstanding) * 100 : 0} icon={Timer} />
-              <KpiCard tone="info"    label="31 – 60 يوم"      value={formatSAR(agingData?.aging.days_31_60)} percentage={totalOutstanding > 0 ? (toNumber(agingData?.aging.days_31_60) / totalOutstanding) * 100 : 0} icon={Timer} />
-              <KpiCard tone="warning" label="61 – 90 يوم"      value={formatSAR(agingData?.aging.days_61_90)} percentage={totalOutstanding > 0 ? (toNumber(agingData?.aging.days_61_90) / totalOutstanding) * 100 : 0} icon={AlertCircle} />
-              <KpiCard tone="danger"  label="أكثر من 90 يوم"  value={formatSAR(agingData?.aging.days_90_plus)} percentage={totalOutstanding > 0 ? (toNumber(agingData?.aging.days_90_plus) / totalOutstanding) * 100 : 0} icon={AlertCircle} />
+            <div className="frp-aging">
+              <StatTile label="إجمالي المتبقي للتحصيل" value={formatSAR(totalOutstanding)} hint="فواتير صدرت ولم تُسدَّد بالكامل" icon={<Layers size={15} />} />
+              <div className="frp-aging__bar">
+                <SegmentBar
+                  ariaLabel="المبالغ المتبقية بحسب عمر الفاتورة"
+                  emptyText="لا مبالغ متبقية"
+                  segments={[
+                    { key: 'a1', label: 'أقل من شهر', value: toNumber(agingData?.aging.current_0_30), valueLabel: formatSAR(agingData?.aging.current_0_30), tone: 'ord1' },
+                    { key: 'a2', label: 'شهر إلى شهرين', value: toNumber(agingData?.aging.days_31_60), valueLabel: formatSAR(agingData?.aging.days_31_60), tone: 'ord2' },
+                    { key: 'a3', label: 'شهران إلى ثلاثة', value: toNumber(agingData?.aging.days_61_90), valueLabel: formatSAR(agingData?.aging.days_61_90), tone: 'ord3' },
+                    { key: 'a4', label: 'أكثر من 3 أشهر', value: toNumber(agingData?.aging.days_90_plus), valueLabel: formatSAR(agingData?.aging.days_90_plus), tone: 'ord4' },
+                  ]}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -286,15 +198,22 @@ const ReportsTab: React.FC = () => {
         {/* الإيرادات الشهرية */}
         <div className="fin-section" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="fin-section__head">
-            <span className="fin-section__title"><BarChart3 size={15} /> الإيرادات الشهرية والتحصيل</span>
+            <span className="fin-section__title"><BarChart3 size={15} /> المُفوتَر والمحصَّل شهرياً</span>
             <select className="fin-select" value={year} onChange={(e) => setYear(Number(e.target.value))} aria-label="السنة">
               {[currentYear, currentYear - 1, currentYear - 2].map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
           <div className="fin-section__body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {chartData.length > 0
-              ? <CollectionChart data={chartData} title="" height={240} flat={true} />
-              : <EmptyState title="لا توجد بيانات شهرية" />}
+            {chartData.length > 0 ? (
+              <div className="rc-scope frp-trend">
+                <GroupedColumnChart
+                  title={`المُفوتَر والمحصَّل شهرياً ${year}`}
+                  unit="ر.س"
+                  series={[{ label: 'المُفوتَر', tone: 'series1' }, { label: 'المحصَّل', tone: 'series2' }]}
+                  data={chartData.slice().sort((a, b) => a.month - b.month).map((m) => ({ label: m.month_name, values: [toNumber(m.invoiced), toNumber(m.collected)] as [number, number] }))}
+                />
+              </div>
+            ) : <EmptyState title="لا توجد بيانات شهرية" />}
           </div>
         </div>
 

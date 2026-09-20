@@ -3,11 +3,11 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { Eye, CheckCircle, XCircle, RefreshCw, ExternalLink, CreditCard, Banknote, Wallet, Timer } from 'lucide-react';
+import { Eye, CheckCircle, CheckCircle2, XCircle, RefreshCw, ExternalLink, CreditCard, Banknote, Hourglass } from 'lucide-react';
 import { paymentService } from '../../../services/paymentService';
 import { DataTable, StatusBadge, FilterBar, ActionMenu, Pagination, Modal } from '../../../components/erp';
 import type { Column } from '../../../components/erp';
-import StatCard, { StatCardGrid } from '../../../components/erp/StatCard';
+import { StatTile } from '../../../components/charts/RaedCharts';
 import PaymentDetailModal from '../../../components/finance/PaymentDetailModal';
 import { formatSAR, toNumber } from '../../../utils/money';
 import { paymentActions, PAYMENT_STATUS, PAYMENT_METHOD_LABELS } from '../../../config/financeStatusConfig';
@@ -126,19 +126,46 @@ const PaymentsTab: React.FC = () => {
     },
   ], [navigate, confirmMutation]);
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* كروت إحصائية علوية سريعة للمدفوعات */}
-      {stats && (
-        <StatCardGrid>
-          <StatCard icon={CreditCard} tone="neutral" value={`${stats.total_count} دفعات`} label="إجمالي الدفعات المسجلة" />
-          <StatCard icon={Banknote} tone="success" value={formatSAR(stats.total_confirmed)} label="المبالغ المؤكدة" />
-          <StatCard icon={CheckCircle} tone="info" value={`${stats.confirmed_count} دفعة`} label="دفعات تم تأكيدها" />
-          <StatCard icon={Timer} tone="warning" value={`${stats.pending_count} دفعات`} label="دفعات معلّقة للمراجعة" />
-        </StatCardGrid>
-      )}
+  const pendingCount = stats?.pending_count ?? 0;
 
-      <div>
+  return (
+    <div className="fct rc-scope">
+      {/* المؤشرات */}
+      <div className="fct-tiles" aria-label="مؤشرات المدفوعات">
+        <StatTile
+          label="المبالغ المؤكدة"
+          value={formatSAR(stats?.total_confirmed)}
+          hint={`${stats?.confirmed_count ?? 0} دفعة مؤكدة`}
+          icon={<Banknote size={15} />}
+        />
+        <StatTile
+          label="تنتظر التأكيد"
+          value={formatSAR(stats?.total_pending)}
+          icon={<Hourglass size={15} />}
+          status={
+            pendingCount > 0
+              ? { tone: 'warning', text: `${pendingCount} دفعة تحتاج مراجعة`, icon: <Hourglass size={13} /> }
+              : { tone: 'good', text: 'لا دفعات معلّقة', icon: <CheckCircle2 size={13} /> }
+          }
+          onClick={() => { setStatus('pending'); setPage(1); }}
+        />
+        <StatTile
+          label="المرفوضة"
+          value={String(stats?.rejected_count ?? 0)}
+          hint="دفعات رُفضت بعد المراجعة"
+          icon={<XCircle size={15} />}
+          onClick={() => { setStatus('rejected'); setPage(1); }}
+        />
+        <StatTile
+          label="كل الدفعات"
+          value={String(stats?.total_count ?? 0)}
+          hint="المسجّلة في النظام"
+          icon={<CreditCard size={15} />}
+          onClick={() => { setStatus(''); setPage(1); }}
+        />
+      </div>
+
+      <div className="fct-table">
 
       <FilterBar
         search={{ value: search, onChange: (v) => { setSearch(v); setPage(1); }, placeholder: 'بحث برقم الدفعة أو المرجع...' }}
@@ -149,6 +176,7 @@ const PaymentsTab: React.FC = () => {
       />
 
       <DataTable<Payment>
+        fill
         columns={columns}
         data={payments}
         rowKey={(p) => p.id}
