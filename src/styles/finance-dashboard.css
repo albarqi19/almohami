@@ -139,6 +139,9 @@
 }
 
 .fdb-dso {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 11.5px;
   color: var(--fdb-ink-2);
   white-space: nowrap;
@@ -623,5 +626,29 @@
 
   .fct .fin-table-wrap--fill .fin-table-scroll {
     overflow-y: visible;
+  }
+}
+
+/* ═══════════ تبويب التقارير (frp-) — صفحة تحليلية تتمرر داخل fin-content ═══════════ */
+
+.frp-aging {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px 24px;
+}
+
+.frp-aging__bar .rc-seg__bar {
+  height: 16px;
+}
+
+.frp-trend {
+  padding-top: 14px;
+  --rc-plot-h: 190px;
+}
+
+@media (max-width: 800px) {
+  .frp-aging {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
