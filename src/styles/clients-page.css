@@ -713,6 +713,57 @@ body.dark .client-id-badge {
     justify-self: center;
 }
 
+.clients-pagination__controls {
+    align-items: center;
+}
+
+/* أرقام الصفحات بين السابق والتالي */
+.clients-pages {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    /* اتجاه الواجهة (RTL): الصفحة 1 بجوار «السابق» يميناً والأخيرة بجوار «التالي» يساراً */
+}
+
+.clients-page-num {
+    min-width: 30px;
+    height: 30px;
+    padding: 0 6px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: border-color 0.12s ease, color 0.12s ease;
+}
+
+.clients-page-num:hover:not(:disabled):not(.is-active) {
+    border-color: var(--color-border);
+    color: var(--color-heading);
+}
+
+.clients-page-num.is-active {
+    border-color: var(--law-navy, #1e3a5f);
+    background: var(--law-navy, #1e3a5f);
+    color: #ffffff;
+    cursor: default;
+}
+
+.clients-page-num:disabled:not(.is-active) {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.clients-pages__gap {
+    min-width: 18px;
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
 .clients-pagination__info b {
     color: var(--color-heading);
     font-weight: 700;

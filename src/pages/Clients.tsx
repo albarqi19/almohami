@@ -48,6 +48,44 @@ type SortKey = 'name' | 'created_at' | 'cases_count' | 'entity_type' | 'phone';
 type SortOrder = 'asc' | 'desc';
 type TabKey = 'clients' | 'prospects' | 'opponents';
 
+/** 1 … 4 5 6 … 20 — الأولى والأخيرة دائماً، وجارتا الحالية، والباقي نقاط */
+const pageWindow = (current: number, total: number): Array<number | 'gap'> => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const keep = new Set([1, total, current - 1, current, current + 1].filter((n) => n >= 1 && n <= total));
+    if (current <= 3) [2, 3, 4].forEach((n) => keep.add(n));
+    if (current >= total - 2) [total - 1, total - 2, total - 3].forEach((n) => keep.add(n));
+    const pages = [...keep].sort((a, b) => a - b);
+    const out: Array<number | 'gap'> = [];
+    pages.forEach((n, i) => {
+        if (i > 0 && n - pages[i - 1] > 1) out.push('gap');
+        out.push(n);
+    });
+    return out;
+};
+
+const PageNumbers: React.FC<{ current: number; total: number; disabled?: boolean; onSelect: (page: number) => void }> = ({
+    current, total, disabled, onSelect,
+}) => (
+    <div className="clients-pages" role="group" aria-label="أرقام الصفحات">
+        {pageWindow(current, total).map((item, i) =>
+            item === 'gap' ? (
+                <span key={`gap-${i}`} className="clients-pages__gap" aria-hidden="true">…</span>
+            ) : (
+                <button
+                    key={item}
+                    type="button"
+                    className={`clients-page-num ${item === current ? 'is-active' : ''}`}
+                    aria-current={item === current ? 'page' : undefined}
+                    disabled={disabled}
+                    onClick={() => item !== current && onSelect(item)}
+                >
+                    {item}
+                </button>
+            ),
+        )}
+    </div>
+);
+
 const Clients: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -547,6 +585,7 @@ const Clients: React.FC = () => {
                                         <button className="pagination-btn" onClick={() => setOppPage((p) => Math.max(1, p - 1))} disabled={oppPage === 1 || opponentsFetching}>
                                             <ChevronRight size={16} /> السابق
                                         </button>
+                                        <PageNumbers current={oppPage} total={opponentsTotalPages} disabled={opponentsFetching} onSelect={setOppPage} />
                                         <button className="pagination-btn" onClick={() => setOppPage((p) => Math.min(opponentsTotalPages, p + 1))} disabled={oppPage === opponentsTotalPages || opponentsFetching}>
                                             التالي <ChevronLeft size={16} />
                                         </button>
@@ -708,6 +747,7 @@ const Clients: React.FC = () => {
                                         <ChevronRight size={16} />
                                         السابق
                                     </button>
+                                    <PageNumbers current={currentPage} total={totalPages} disabled={isFetching} onSelect={setCurrentPage} />
                                     <button
                                         className="pagination-btn"
                                         onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
