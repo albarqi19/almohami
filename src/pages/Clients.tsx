@@ -336,45 +336,25 @@ const Clients: React.FC = () => {
             ? [{ key: 'opponents' as TabKey, label: 'الخصوم', count: activeTab === 'opponents' && opponentsTotal ? opponentsTotal : stats.opponents }]
             : []),
     ];
-    const tabBtnStyle = (active: boolean): React.CSSProperties => ({
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '8px 16px', fontSize: 13, fontWeight: 600,
-        border: '1px solid var(--quiet-gray-200, #e5e7eb)',
-        borderBottom: active ? '2px solid var(--law-navy, #1E3A5F)' : '1px solid var(--quiet-gray-200, #e5e7eb)',
-        borderRadius: '8px 8px 0 0',
-        background: active ? 'var(--dashboard-card, #fff)' : 'transparent',
-        color: active ? 'var(--law-navy, #1E3A5F)' : 'var(--color-text-secondary, #64748b)',
-        cursor: 'pointer', whiteSpace: 'nowrap',
-    });
-
     return (
         <div className="clients-page">
-            {/* Tabs — العملاء / المحتملون / الخصوم */}
-            <div className="clients-tabs" style={{ display: 'flex', gap: 4, padding: '12px 16px 0', flexWrap: 'wrap', borderBottom: '1px solid var(--quiet-gray-200, #e5e7eb)' }}>
-                {tabs.map(t => (
-                    <button key={t.key} type="button" onClick={() => setActiveTab(t.key)} style={tabBtnStyle(activeTab === t.key)}>
-                        {t.label}
-                        {t.count != null && (
-                            <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: activeTab === t.key ? 'var(--law-navy, #1E3A5F)' : 'var(--quiet-gray-100, #f1f5f9)', color: activeTab === t.key ? '#fff' : 'var(--color-text-secondary, #64748b)' }}>
-                                {t.count}
-                            </span>
-                        )}
-                    </button>
-                ))}
-            </div>
-
-            {/* Header Bar — title + search + filter pills + refresh */}
+            {/* شريط واحد: التبويبات (هي العنوان) + البحث + المرشحات + الأفعال.
+                كانت التبويبات شريطاً مستقلاً فوق عنوان يكرر اسم التبويب وعدده. */}
             <div className="clients-header-bar">
-                <div className="clients-header-bar__start">
-                    <div className="clients-header-bar__title">
-                        <Users size={20} />
-                        {activeTab === 'prospects' ? 'العملاء المحتملون' : activeTab === 'opponents' ? 'الخصوم' : 'العملاء'}
-                    </div>
-                    <span className="clients-header-bar__count">
-                        {activeTab === 'opponents'
-                            ? `${opponentsTotal} خصم`
-                            : `${totalClients} ${activeTab === 'prospects' ? 'محتمل' : 'عميل'}`}
-                    </span>
+                <div className="clients-tabs" role="tablist" aria-label="أقسام العملاء">
+                    {tabs.map(t => (
+                        <button
+                            key={t.key}
+                            type="button"
+                            role="tab"
+                            aria-selected={activeTab === t.key}
+                            className={`clients-tab ${activeTab === t.key ? 'is-active' : ''}`}
+                            onClick={() => setActiveTab(t.key)}
+                        >
+                            {t.label}
+                            {t.count != null && <span className="clients-tab__count">{t.count}</span>}
+                        </button>
+                    ))}
                 </div>
 
                 <div className="search-box">
@@ -421,26 +401,9 @@ const Clients: React.FC = () => {
                 </div>
                 )}
 
-                <div className="clients-header-bar__end" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div className="clients-header-bar__end">
                     {activeTab !== 'opponents' && (
-                    <button
-                        type="button"
-                        onClick={() => setShowAddModal(true)}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '7px 14px',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color: 'white',
-                            backgroundColor: 'var(--color-primary)',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                        }}
-                    >
+                    <button type="button" className="clients-add-btn" onClick={() => setShowAddModal(true)}>
                         <UserPlus size={14} />
                         {activeTab === 'prospects' ? 'إضافة محتمل' : 'إضافة عميل'}
                     </button>
@@ -562,14 +525,9 @@ const Clients: React.FC = () => {
                                                 <td style={{ textAlign: 'center' }}>
                                                     <button
                                                         type="button"
+                                                        className="clients-row-btn"
                                                         onClick={(e) => { e.stopPropagation(); setSelectedOpponent(o); }}
                                                         title="تحليل الخصم"
-                                                        style={{
-                                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                                            width: 28, height: 28, padding: 0, borderRadius: 6,
-                                                            border: '1px solid var(--quiet-gray-200, #e5e7eb)',
-                                                            background: 'var(--dashboard-card, #fff)', color: 'var(--law-navy, #1E3A5F)', cursor: 'pointer',
-                                                        }}
                                                     >
                                                         <Swords size={13} />
                                                     </button>
@@ -580,9 +538,11 @@ const Clients: React.FC = () => {
                                 </table>
                             </div>
 
-                            {opponentsTotalPages > 1 && (
-                                <div className="clients-pagination">
-                                    <div className="clients-pagination__info">صفحة {oppPage} من {opponentsTotalPages}</div>
+                            <div className="clients-pagination">
+                                <div className="clients-pagination__info">
+                                    <b>{opponentsTotal}</b> خصم{opponentsTotalPages > 1 && ` · صفحة ${oppPage} من ${opponentsTotalPages}`}
+                                </div>
+                                {opponentsTotalPages > 1 && (
                                     <div className="clients-pagination__controls">
                                         <button className="pagination-btn" onClick={() => setOppPage((p) => Math.max(1, p - 1))} disabled={oppPage === 1 || opponentsFetching}>
                                             <ChevronRight size={16} /> السابق
@@ -591,8 +551,8 @@ const Clients: React.FC = () => {
                                             التالي <ChevronLeft size={16} />
                                         </button>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </>
                     )
                 ) : loading ? (
@@ -694,23 +654,14 @@ const Clients: React.FC = () => {
                                                 </td>
                                                 {showActions && (
                                                     <td style={{ textAlign: 'center' }}>
-                                                      <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center', justifyContent: 'center' }}>
+                                                      <div className="clients-row-actions">
                                                         {activeTab === 'prospects' && canConvert && (
                                                             <button
                                                                 type="button"
                                                                 onClick={(e) => handleConvert(client, e)}
                                                                 disabled={convertingId === client.id}
                                                                 title="تحويل إلى عميل فعلي"
-                                                                style={{
-                                                                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                                                                    height: 28, padding: '0 9px',
-                                                                    border: '1px solid var(--quiet-gray-200, #e5e7eb)',
-                                                                    background: 'var(--color-primary-soft, #eff6ff)',
-                                                                    color: 'var(--color-primary, #2563eb)',
-                                                                    borderRadius: 6, fontSize: 11, fontWeight: 600,
-                                                                    cursor: convertingId === client.id ? 'not-allowed' : 'pointer',
-                                                                    opacity: convertingId === client.id ? 0.5 : 1,
-                                                                }}
+                                                                className="clients-row-btn clients-row-btn--text"
                                                             >
                                                                 {convertingId === client.id
                                                                     ? <Loader2 size={12} className="spinning" />
@@ -724,31 +675,7 @@ const Clients: React.FC = () => {
                                                             onClick={(e) => handleDeleteClient(client, e)}
                                                             disabled={deletingClientId === client.id}
                                                             title="أرشفة العميل"
-                                                            style={{
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                width: 28,
-                                                                height: 28,
-                                                                padding: 0,
-                                                                border: '1px solid var(--status-red-soft-border, #fee2e2)',
-                                                                background: 'var(--dashboard-card, #fff)',
-                                                                color: 'var(--status-red, #dc2626)',
-                                                                borderRadius: 6,
-                                                                cursor: deletingClientId === client.id ? 'not-allowed' : 'pointer',
-                                                                opacity: deletingClientId === client.id ? 0.5 : 1,
-                                                                transition: 'background 0.15s, border-color 0.15s',
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                if (deletingClientId !== client.id) {
-                                                                    e.currentTarget.style.background = 'var(--status-red-soft, #fef2f2)';
-                                                                    e.currentTarget.style.borderColor = 'var(--status-red, #fca5a5)';
-                                                                }
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                e.currentTarget.style.background = 'var(--dashboard-card, #fff)';
-                                                                e.currentTarget.style.borderColor = 'var(--status-red-soft-border, #fee2e2)';
-                                                            }}
+                                                            className="clients-row-btn clients-row-btn--danger"
                                                         >
                                                             {deletingClientId === client.id
                                                                 ? <Loader2 size={13} className="spinning" />
@@ -765,12 +692,13 @@ const Clients: React.FC = () => {
                             </table>
                         </div>
 
-                        {/* Pagination */}
-                        {totalPages > 1 && (
-                            <div className="clients-pagination">
-                                <div className="clients-pagination__info">
-                                    صفحة {currentPage} من {totalPages}
-                                </div>
+                        {/* التذييل: عدد النتائج دائماً + التنقل إن تعددت الصفحات */}
+                        <div className="clients-pagination">
+                            <div className="clients-pagination__info">
+                                <b>{totalClients}</b> {activeTab === 'prospects' ? 'محتمل' : 'عميل'}
+                                {totalPages > 1 && ` · صفحة ${currentPage} من ${totalPages}`}
+                            </div>
+                            {totalPages > 1 && (
                                 <div className="clients-pagination__controls">
                                     <button
                                         className="pagination-btn"
@@ -789,8 +717,8 @@ const Clients: React.FC = () => {
                                         <ChevronLeft size={16} />
                                     </button>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </>
                 )}
             </div>

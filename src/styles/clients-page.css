@@ -4,7 +4,13 @@
 
 .clients-page {
     background: var(--dashboard-bg);
-    min-height: 100vh;
+    /* لوحة تملأ منطقة المحتوى (النمط الملتصق): الصفحة لا تتمرر — الجدول وحده يتمرر ورأسه ثابت.
+       لا `100vh`: كانت أطول من المساحة فتتمرر تحت الهيدر، وشريط المدير السفلي يأكل 30px. */
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 /* === Compact Header Bar (title + search + pills + actions) === */
@@ -16,9 +22,151 @@
     background: var(--dashboard-card);
     border-bottom: 1px solid var(--color-border);
     flex-wrap: wrap;
-    position: sticky;
-    top: 0;
+    flex-shrink: 0;
+    position: relative;
     z-index: 30;
+}
+
+/* التبويبات هي عنوان الصفحة: عنصر تحكم مجزّأ داخل شريط الرأس */
+.clients-tabs {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 9px;
+    background: var(--quiet-gray-100, #f1f5f9);
+    flex-shrink: 0;
+}
+
+.clients-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.12s ease, background 0.12s ease;
+}
+
+.clients-tab:hover {
+    color: var(--color-heading);
+}
+
+.clients-tab.is-active {
+    border-color: var(--color-border);
+    background: var(--dashboard-card);
+    color: var(--color-heading);
+}
+
+.clients-tab__count {
+    min-width: 20px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--dashboard-card);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.5;
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.clients-tab.is-active .clients-tab__count {
+    background: var(--law-navy, #1e3a5f);
+    color: #ffffff;
+}
+
+.clients-header-bar__end {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-inline-start: auto;
+}
+
+.clients-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px;
+    border: 1px solid var(--law-navy, #1e3a5f);
+    border-radius: 7px;
+    background: var(--law-navy, #1e3a5f);
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.clients-add-btn:hover {
+    border-color: var(--law-gold, #b8860b);
+}
+
+/* أزرار الصف */
+.clients-row-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.clients-row-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--dashboard-card);
+    color: var(--law-navy, #1e3a5f);
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+body.dark .clients-row-btn {
+    color: var(--color-text);
+}
+
+.clients-row-btn:hover:not(:disabled) {
+    border-color: var(--law-gold, #b8860b);
+}
+
+.clients-row-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.clients-row-btn--text {
+    width: auto;
+    padding: 0 9px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.clients-row-btn--danger {
+    color: var(--status-red, #dc2626);
+}
+
+.clients-row-btn--danger:hover:not(:disabled) {
+    border-color: var(--status-red, #dc2626);
+    background: var(--status-red-soft, #fef2f2);
+}
+
+body.dark .clients-row-btn--danger:hover:not(:disabled) {
+    background: rgba(220, 38, 38, 0.12);
 }
 
 .clients-header-bar__start {
@@ -198,7 +346,13 @@
 }
 
 /* === Content === */
-.clients-content { padding: 0; }
+.clients-content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
 
 /* === Loading skeleton === */
 .clients-loading {
@@ -260,21 +414,31 @@
 
 /* === Table (matches Cases page styling) === */
 .clients-table-wrapper {
-    overflow-x: auto;
+    /* يملأ ما تبقى ويتمرر داخلياً — ملتصق بالحواف بلا هوامش ولا زوايا */
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: thin;
     background: var(--dashboard-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    margin: 16px 20px;
     position: relative;
+}
+
+/* رأس الجدول ثابت أعلى منطقة التمرير */
+.clients-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--quiet-gray-50);
+}
+
+body.dark .clients-table thead th {
+    background: var(--quiet-gray-100);
 }
 
 .clients-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .clients-table thead {
@@ -525,20 +689,33 @@ body.dark .client-id-badge {
     white-space: nowrap;
 }
 
-/* === Pagination (sticky bottom) === */
+/* === التذييل: عدد النتائج + التنقل — صف واحد ثابت أسفل اللوحة === */
 .clients-pagination {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    flex-shrink: 0;
+    /* ثلاثة أعمدة: العدد في البداية، أزرار التنقل في الوسط تماماً، والثالث فارغ يوازن */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    gap: 6px;
-    padding: 10px 20px;
+    gap: 12px;
+    min-height: 44px;
+    padding: 6px 20px;
     background: var(--dashboard-card);
     border-top: 1px solid var(--color-border);
-    position: sticky;
-    bottom: 0;
-    z-index: 20;
-    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.clients-pagination__info {
+    grid-column: 1;
+    justify-self: start;
+}
+
+.clients-pagination__controls {
+    grid-column: 2;
+    justify-self: center;
+}
+
+.clients-pagination__info b {
+    color: var(--color-heading);
+    font-weight: 700;
 }
 
 .clients-pagination__info {
@@ -602,6 +779,28 @@ body.dark .table-loading-overlay {
 
 /* === Responsive === */
 @media (max-width: 768px) {
+    /* الجوال: تدفق عادي — الصفحة تتمرر والجدول بارتفاع محتواه */
+    .clients-page {
+        height: auto;
+        min-height: 100%;
+        overflow: visible;
+    }
+
+    .clients-content {
+        display: block;
+    }
+
+    .clients-table-wrapper {
+        overflow-x: auto;
+        overflow-y: visible;
+    }
+
+    .clients-tabs {
+        width: 100%;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
     .clients-header-bar {
         padding: 8px 14px;
     }
@@ -612,10 +811,6 @@ body.dark .table-loading-overlay {
 
     .clients-toolbar {
         padding: 8px 14px;
-    }
-
-    .clients-table-wrapper {
-        margin: 12px 14px;
     }
 
     .clients-table th {
@@ -654,10 +849,6 @@ body.dark .table-loading-overlay {
  * ===================================================================== */
 .clients-table tr.opponent-row--client td {
     background: color-mix(in srgb, var(--law-gold, #d4a574) 7%, var(--dashboard-card, #fff));
-}
-
-.clients-table tr.opponent-row--client td:first-child {
-    border-inline-start: 2px solid var(--law-gold, #d4a574);
 }
 
 .opponent-client-badge {
