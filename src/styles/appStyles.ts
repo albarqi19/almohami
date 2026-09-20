@@ -167,3 +167,6 @@ import './projects.css';
 import './subtask-panel.css';
 // «الإملاء الذكي» — كبسولة عالمية بأصناف `smart-dictation*` وحدها، فلا تتعلّق بترتيب الحقن.
 import './smart-dictation.css';
+// «رسوم الرائد» (rc-) وواجهة الأداء (pfv-) — أصناف ببادئات خاصة، فلا تتعلّق بترتيب الحقن.
+import './raed-charts.css';
+import './performance-view.css';

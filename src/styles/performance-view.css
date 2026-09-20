@@ -1,0 +1,1064 @@
+/* واجهة الأداء (بادئة pfv-) — «أدائي» ونافذة تفاصيل المحامي.
+   هوية فلات: أسطح صلبة، حدود شعرية، بلا تدرّج ولا توهّج ولا شريط لوني جانبي.
+   التخطيط يتبع عرض الحاوية (container queries) فيصحّ في الصفحة الكاملة وفي النافذة. */
+
+.pfv {
+  --pfv-gap: 12px;
+  --pfv-ink: var(--color-heading, #0a192f);
+  --pfv-ink-2: var(--color-text-secondary, #5a5a5a);
+  --pfv-line: var(--color-border, #e0e0e0);
+  --pfv-surface: var(--color-surface, #ffffff);
+  --pfv-subtle: var(--color-surface-subtle, #f7f5f0);
+  --pfv-accent: var(--law-navy, #1e3a5f);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--pfv-gap);
+  min-width: 0;
+  font-family: var(--font-family-base, 'IBM Plex Sans Arabic', sans-serif);
+  color: var(--pfv-ink);
+}
+
+body.dark .pfv {
+  --pfv-accent: #7fa7d9; /* الكحلي لا يُقرأ على الداكن */
+}
+
+.pfv button,
+.pfv input {
+  font-family: inherit;
+}
+
+/* ─── شريط الهوية ─── */
+
+.pfv-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--pfv-line);
+  border-radius: 12px;
+  background: var(--pfv-surface);
+}
+
+/* عنوان الصفحة داخل شريط الهوية (وضع fit) */
+.pfv-id__page {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-inline-end: 14px;
+  margin-inline-end: 2px;
+  border-inline-end: 1px solid var(--pfv-line);
+  color: var(--law-gold, #b8860b);
+}
+
+.pfv-id__page h1 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--pfv-ink);
+}
+
+.pfv-id__avatar {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pfv-accent);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+body.dark .pfv-id__avatar {
+  color: #0f1b2d;
+}
+
+.pfv-id__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pfv-id__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pfv-id__name {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--pfv-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pfv-id__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  font-size: 12.5px;
+  color: var(--pfv-ink-2);
+}
+
+.pfv-id__email {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  direction: ltr;
+}
+
+.pfv-id__side {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ─── أزرار ─── */
+
+.pfv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--pfv-line);
+  border-radius: 8px;
+  background: var(--pfv-surface);
+  color: var(--pfv-ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pfv-btn:hover,
+.pfv-btn:focus-visible {
+  border-color: var(--law-gold, #b8860b);
+  outline: none;
+}
+
+.pfv-btn--primary {
+  border-color: var(--law-navy, #1e3a5f);
+  background: var(--law-navy, #1e3a5f);
+  color: #ffffff;
+}
+
+.pfv-btn--primary:hover,
+.pfv-btn--primary:focus-visible {
+  border-color: var(--law-gold, #b8860b);
+}
+
+.pfv-link {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--pfv-ink-2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.pfv-link:hover,
+.pfv-link:focus-visible {
+  color: var(--pfv-ink);
+  text-decoration-color: var(--law-gold, #b8860b);
+  outline: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   التخطيط
+   pfv-body  = الحاوية المقاسة (عرضاً، وارتفاعاً في وضع fit) ومنطقة التمرير الاحتياطية.
+   pfv-dash  = الشبكة. pfv-rail غلاف اللوحات الخمس: «contents» حين تتوزع على الشبكة،
+               وعمود يتمرر داخلياً حين يضيق الارتفاع.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.pfv-body {
+  container-type: inline-size;
+  container-name: pfv;
+  min-width: 0;
+}
+
+.pfv-dash {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--pfv-gap);
+}
+
+.pfv-tiles {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--pfv-gap);
+}
+
+.pfv-rail {
+  display: contents;
+}
+
+.pfv-rail > *,
+.pfv-work {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+/* ─── تدفق عادي (نافذة المدير، والجوال): يتوزع بحسب العرض ويتمرر مع حاويته ─── */
+
+@container pfv (min-width: 720px) {
+  .pfv-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pfv-p--outcomes { grid-column: span 6; }
+  .pfv-p--buckets { grid-column: span 6; }
+}
+
+@container pfv (min-width: 1000px) {
+  .pfv-p--tasks { grid-column: span 5; }
+  .pfv-p--outcomes { grid-column: span 4; }
+  .pfv-p--buckets { grid-column: span 3; }
+  .pfv-p--hearings { grid-column: span 6; }
+  .pfv-p--trend { grid-column: span 6; }
+}
+
+/* ─── وضع fit: لوحة تملأ المساحة — الصفحة لا تتمرر، والتمرير داخل الجدول والقوائم فقط ─── */
+
+.pfv[data-layout='fit'] {
+  height: 100%;
+  gap: 0;
+}
+
+.pfv[data-layout='fit'] .pfv-id {
+  flex-shrink: 0;
+  border: none;
+  border-bottom: 1px solid var(--pfv-line);
+  border-radius: 0;
+  padding: 10px 20px;
+}
+
+.pfv[data-layout='fit'] .pfv-body {
+  container-type: size; /* نقيس الارتفاع أيضاً لنختار بين التوزيع الكامل والعمود الجانبي */
+  flex: 1;
+  min-height: 0;
+  overflow: auto; /* احتياط: لا يظهر تمرير ما دامت الشبكة على قدّ الحاوية */
+}
+
+.pfv[data-layout='fit'] .pfv-dash {
+  padding: 12px 20px 14px;
+}
+
+/* مشترك بين وضعَي fit: الشبكة على قدّ الحاوية، ومساحة العمل تتمرر داخلياً */
+@container pfv (min-width: 1000px) and (min-height: 430px) {
+  .pfv[data-layout='fit'] .pfv-dash {
+    height: 100%;
+  }
+
+  .pfv[data-layout='fit'] .pfv-work {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .pfv[data-layout='fit'] .pfv-pane {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .pfv[data-layout='fit'] .pfv-table-wrap {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    overflow: auto;
+  }
+
+  .pfv[data-layout='fit'] .pfv-p--hearings {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .pfv[data-layout='fit'] .pfv-hearings {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    padding-inline: 8px;
+    margin-inline: -8px;
+  }
+
+  .pfv[data-layout='fit'] .pfv-trend {
+    --rc-plot-h: 92px;
+  }
+
+  /* بطاقات أرشق: الارتفاع يذهب للجدول وقائمة الجلسات */
+  .pfv[data-layout='fit'] .rc-tile {
+    padding: 11px 14px 9px;
+    gap: 2px;
+  }
+
+  .pfv[data-layout='fit'] .rc-tile__value {
+    font-size: 26px;
+  }
+
+  .pfv[data-layout='fit'] .rc-spark {
+    height: 24px;
+    margin: 4px -14px -9px;
+  }
+
+  .pfv[data-layout='fit'] .pfv-panel {
+    padding: 12px 14px 14px;
+  }
+
+  .pfv[data-layout='fit'] .pfv-panel__head {
+    margin-bottom: 10px;
+  }
+
+  .pfv[data-layout='fit'] .pfv-hero__value {
+    font-size: 48px;
+  }
+}
+
+/* شاشة طويلة: كل شيء ظاهر دفعة واحدة
+     بطاقات ×4
+     إنجاز المهام | نتائج القضايا | قضاياي بحسب دوري
+     الجلسات (تتمرر) ┐
+     الاتجاه         ┘ | مساحة العمل (الجدول يتمرر) */
+@container pfv (min-width: 1000px) and (min-height: 700px) {
+  .pfv[data-layout='fit'] .pfv-dash {
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+
+  .pfv[data-layout='fit'] .pfv-tiles { grid-row: 1; }
+  .pfv[data-layout='fit'] .pfv-p--tasks { grid-row: 2; grid-column: 1 / span 5; }
+  .pfv[data-layout='fit'] .pfv-p--outcomes { grid-row: 2; grid-column: 6 / span 4; }
+  .pfv[data-layout='fit'] .pfv-p--buckets { grid-row: 2; grid-column: 10 / span 3; }
+  .pfv[data-layout='fit'] .pfv-p--hearings { grid-row: 3; grid-column: 1 / span 3; }
+  .pfv[data-layout='fit'] .pfv-p--trend { grid-row: 4; grid-column: 1 / span 3; }
+  .pfv[data-layout='fit'] .pfv-work { grid-row: 3 / span 2; grid-column: 4 / -1; }
+}
+
+/* شاشة قصيرة (لابتوب): اللوحات في عمود جانبي يتمرر داخلياً، فيبقى الجدول كبيراً */
+@container pfv (min-width: 1000px) and (min-height: 430px) and (max-height: 699.98px) {
+  .pfv[data-layout='fit'] .pfv-dash {
+    grid-template-columns: 320px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .pfv[data-layout='fit'] .pfv-rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pfv-gap);
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    padding-inline-end: 4px;
+  }
+
+  .pfv[data-layout='fit'] .pfv-rail > * {
+    flex-shrink: 0;
+  }
+
+  /* في العمود الجانبي لا حاجة لتمرير داخل تمرير */
+  .pfv[data-layout='fit'] .pfv-p--hearings {
+    min-height: auto;
+  }
+
+  .pfv[data-layout='fit'] .pfv-hearings {
+    overflow: visible;
+  }
+
+  .pfv[data-layout='fit'] .pfv-tiles { grid-column: 2; grid-row: 1; }
+  .pfv[data-layout='fit'] .pfv-work { grid-column: 2; grid-row: 2; }
+
+  /* بطاقات مضغوطة: الرقم والعنوان فقط */
+  .pfv[data-layout='fit'] .rc-tile {
+    padding: 9px 12px;
+    gap: 0;
+  }
+
+  .pfv[data-layout='fit'] .rc-tile__value { font-size: 22px; }
+  .pfv[data-layout='fit'] .rc-tile__foot { min-height: 0; }
+  .pfv[data-layout='fit'] .rc-spark { display: none; }
+}
+
+/* مساحة العمل حاوية بذاتها: حين تضيق تُخفى الأعمدة الثانوية بدل تمرير أفقي */
+.pfv-work {
+  container-type: inline-size;
+  container-name: pfvwork;
+}
+
+@container pfvwork (max-width: 760px) {
+  .pfv-col-opt {
+    display: none;
+  }
+}
+
+/* ─── اللوحة ─── */
+
+.pfv-panel {
+  padding: 14px 16px 16px;
+  border: 1px solid var(--pfv-line);
+  border-radius: 12px;
+  background: var(--pfv-surface);
+}
+
+.pfv-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.pfv-panel__head h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--pfv-ink);
+}
+
+.pfv-panel__icon {
+  display: inline-flex;
+  color: var(--law-gold, #b8860b);
+}
+
+.pfv-panel__gap {
+  height: 16px;
+}
+
+.pfv-panel__empty {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--pfv-ink-2);
+}
+
+/* الرقم القائد: واحد فقط في الصفحة، بالخط نفسه وبأرقام متناسبة */
+.pfv-hero {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+
+.pfv-hero__value {
+  font-size: 52px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--pfv-ink);
+}
+
+.pfv-hero__value small,
+.pfv-figure__value small {
+  font-size: 0.45em;
+  font-weight: 600;
+  color: var(--pfv-ink-2);
+  margin-inline-start: 2px;
+}
+
+.pfv-hero__note,
+.pfv-figure__note {
+  font-size: 12.5px;
+  color: var(--pfv-ink-2);
+}
+
+.pfv-figure {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 14px;
+}
+
+.pfv-figure__value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--pfv-ink);
+}
+
+/* ─── الجلسات القادمة ─── */
+
+.pfv-hearings {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pfv-hearing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% + 16px);
+  margin: 0 -8px;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.pfv-hearing:hover,
+.pfv-hearing:focus-visible {
+  background: var(--pfv-subtle);
+  outline: none;
+}
+
+.pfv-hearing__date {
+  flex-shrink: 0;
+  width: 42px;
+  padding: 4px 0;
+  border: 1px solid var(--pfv-line);
+  border-radius: 8px;
+  background: var(--pfv-surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.25;
+}
+
+.pfv-hearing__date b {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--pfv-ink);
+}
+
+.pfv-hearing__date i {
+  font-size: 10px;
+  font-style: normal;
+  color: var(--pfv-ink-2);
+}
+
+.pfv-hearing__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pfv-hearing__title,
+.pfv-hearing__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pfv-hearing__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pfv-ink);
+}
+
+.pfv-hearing__meta {
+  font-size: 11.5px;
+  color: var(--pfv-ink-2);
+}
+
+.pfv-hearing__when {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--pfv-ink-2);
+}
+
+/* ─── الاتجاه ─── */
+
+.pfv-trend {
+  padding-top: 14px; /* متّسع لتلميح العمود الأعلى */
+}
+
+.pfv-trend__foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--pfv-line);
+  font-size: 12px;
+  color: var(--pfv-ink-2);
+}
+
+.pfv-trend__foot b {
+  color: var(--pfv-ink);
+  font-weight: 700;
+}
+
+/* ─── مساحة العمل ─── */
+
+.pfv-work {
+  border: 1px solid var(--pfv-line);
+  border-radius: 12px;
+  background: var(--pfv-surface);
+  overflow: hidden;
+  scroll-margin-top: 12px;
+}
+
+.pfv-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px 0;
+  border-bottom: 1px solid var(--pfv-line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pfv-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 10px;
+  border: none;
+  background: transparent;
+  color: var(--pfv-ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.pfv-tab:hover,
+.pfv-tab:focus-visible {
+  color: var(--pfv-ink);
+  outline: none;
+}
+
+.pfv-tab.is-active {
+  color: var(--pfv-ink);
+}
+
+.pfv-tab.is-active::after {
+  content: '';
+  position: absolute;
+  inset-inline: 10px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--law-gold, #b8860b);
+}
+
+.pfv-tab__count,
+.pfv-seg__count {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--pfv-subtle);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--pfv-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.pfv-pane {
+  display: flex;
+  flex-direction: column;
+}
+
+.pfv-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--pfv-line);
+}
+
+.pfv-toolbar__end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+/* عنصر تحكم مجزّأ */
+.pfv-segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--pfv-subtle);
+}
+
+.pfv-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--pfv-ink-2);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.pfv-seg:hover,
+.pfv-seg:focus-visible {
+  color: var(--pfv-ink);
+  outline: none;
+}
+
+.pfv-seg.is-active {
+  border-color: var(--pfv-line);
+  background: var(--pfv-surface);
+  color: var(--pfv-ink);
+}
+
+.pfv-seg.is-active .pfv-seg__count {
+  background: var(--law-navy, #1e3a5f);
+  color: #ffffff;
+}
+
+.pfv-segmented--mini .pfv-seg {
+  height: 22px;
+  padding: 0 9px;
+  font-size: 11.5px;
+}
+
+.pfv-segmented--quiet {
+  background: transparent;
+  padding: 0;
+  gap: 2px;
+}
+
+.pfv-segmented--quiet .pfv-seg.is-active {
+  background: var(--pfv-subtle);
+  border-color: transparent;
+}
+
+.pfv-search,
+.pfv-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--pfv-line);
+  border-radius: 8px;
+  background: var(--pfv-surface);
+  color: var(--pfv-ink-2);
+  transition: border-color 0.15s ease;
+}
+
+.pfv-search:focus-within,
+.pfv-date:focus-within {
+  border-color: var(--law-gold, #b8860b);
+}
+
+.pfv-search input,
+.pfv-date input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--pfv-ink);
+  font-size: 12.5px;
+}
+
+.pfv-search input {
+  width: 170px;
+}
+
+/* ─── الجدول ─── */
+
+.pfv-table-wrap {
+  overflow-x: auto;
+  max-height: 560px;
+}
+
+.pfv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.pfv-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 9px 12px;
+  background: var(--pfv-subtle);
+  border-bottom: 1px solid var(--pfv-line);
+  color: var(--pfv-ink-2);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: start;
+  white-space: nowrap;
+}
+
+.pfv-table tbody td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--pfv-line);
+  vertical-align: middle;
+  color: var(--pfv-ink);
+}
+
+.pfv-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.pfv-table tbody tr {
+  cursor: pointer;
+  outline: none;
+  transition: background 0.1s ease;
+}
+
+.pfv-table tbody tr:hover,
+.pfv-table tbody tr:focus-visible {
+  background: var(--pfv-subtle);
+}
+
+.pfv-col-num {
+  width: 36px;
+  color: var(--pfv-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.pfv-table tbody .pfv-col-num {
+  color: var(--pfv-ink-2);
+}
+
+.pfv-col-end {
+  text-align: end !important;
+}
+
+.pfv-cell-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  min-width: 180px;
+}
+
+.pfv-cell-star {
+  flex-shrink: 0;
+  color: var(--law-gold, #b8860b);
+  fill: var(--law-gold, #b8860b);
+}
+
+.pfv-cell-sub {
+  display: block;
+  margin-top: 1px;
+  font-size: 11.5px;
+  color: var(--pfv-ink-2);
+}
+
+.pfv-cell-mono {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  direction: ltr;
+  text-align: end;
+}
+
+.pfv-cell-date {
+  white-space: nowrap;
+  color: var(--pfv-ink-2);
+}
+
+.pfv-cell-muted {
+  color: var(--pfv-ink-2);
+  opacity: 0.6;
+}
+
+/* الحالة: نقطة ملوّنة + نص بحبر الواجهة */
+.pfv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--pfv-ink);
+}
+
+.pfv-chip i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--rc-neutral);
+  flex-shrink: 0;
+}
+
+.pfv-chip[data-tone='good'] i { background: var(--rc-good); }
+.pfv-chip[data-tone='critical'] i { background: var(--rc-critical); }
+.pfv-chip[data-tone='warning'] i { background: var(--rc-warning); }
+.pfv-chip[data-tone='info'] i { background: var(--rc-series-1); }
+
+/* ─── حالات فارغة وتحميل ─── */
+
+.pfv-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 44px 16px;
+  color: var(--pfv-ink-2);
+  text-align: center;
+}
+
+.pfv-empty svg {
+  opacity: 0.45;
+}
+
+.pfv-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.pfv-attendance {
+  padding: 16px;
+  max-width: 560px;
+}
+
+.pfv-skeleton {
+  border-radius: 12px;
+  background: var(--pfv-subtle);
+  animation: pfv-pulse 1.4s ease-in-out infinite;
+}
+
+.pfv-skeleton--line { width: 220px; height: 22px; border-radius: 6px; }
+.pfv-skeleton--tile { min-height: 96px; }
+.pfv-skeleton--panel { min-height: 150px; }
+.pfv-skeleton--work { min-height: 240px; border: none; }
+.pfv-skeleton--block { height: 120px; margin: 16px; }
+
+@keyframes pfv-pulse {
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pfv-skeleton {
+    animation: none;
+  }
+}
+
+/* ─── ضيق: شريط الهوية يلتف ─── */
+
+@container pfv (max-width: 560px) {
+  .pfv-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pfv-id__side {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .pfv-hero__value {
+    font-size: 42px;
+  }
+
+  .pfv-toolbar__end {
+    margin-inline-start: 0;
+    width: 100%;
+  }
+
+  .pfv-search {
+    flex: 1;
+  }
+
+  .pfv-search input {
+    width: 100%;
+  }
+}
+
+/* ─── صفحة «أدائي»: إطار بارتفاع المنطقة المتاحة (النمط الملتصق) — لا `100vh - 64px`:
+       شريط المدير السفلي يأكل 30px من الارتفاع عند المدير وحده ─── */
+
+.pfv-page {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background, #fdfbf7);
+  font-family: var(--font-family-base, 'IBM Plex Sans Arabic', sans-serif);
+}
+
+.pfv-page > .pfv {
+  flex: 1;
+  min-height: 0;
+}
+
+.pfv-page .pfv-id {
+  background: var(--color-surface, #ffffff);
+}
+
+.pfv-page__state {
+  margin: 24px;
+}
+
+.pfv-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--pfv-line, #e0e0e0);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--pfv-ink-2, #5a5a5a);
+}
+
+.pfv-live i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--rc-good, #15803d);
+}
+
+.pfv-live[data-state='updating'] i {
+  background: var(--law-gold, #b8860b);
+}
+
+/* شريط الهوية يلتف حين يضيق (جوال) — قياس شاشة لأن الشريط خارج الحاوية المقاسة */
+@media (max-width: 760px) {
+  .pfv-id {
+    flex-wrap: wrap;
+  }
+
+  .pfv-id__side {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .pfv[data-layout='fit'] .pfv-id,
+  .pfv[data-layout='fit'] .pfv-dash {
+    padding-inline: 12px;
+  }
+}
