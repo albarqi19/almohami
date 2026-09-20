@@ -2069,8 +2069,18 @@
         scrollbar-width: thin;
     }
 
+    /* 🔴 البطاقات لا تنكمش: اللوحة عمود مرن بارتفاع محدود، والعنصر المرن ينكمش افتراضياً (flex-shrink: 1)
+       ليلائم الحاوية — وبطاقاتها `overflow: hidden` فكان محتواها ينقصّ داخل مربعه بدل أن تتمرر اللوحة. */
+    .client-grid__side > * {
+        flex-shrink: 0;
+    }
+
     .client-grid__side.is-collapsed {
         overflow: hidden;
+    }
+
+    .client-grid__side.is-collapsed > * {
+        flex-shrink: 1;
     }
 }
 
