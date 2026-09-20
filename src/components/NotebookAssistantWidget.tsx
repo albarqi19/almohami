@@ -122,7 +122,7 @@ const NotebookAssistantWidget: React.FC<NotebookAssistantWidgetProps> = ({
               disabled={!canSend}
               title="إرسال"
             >
-              {loading ? <Loader2 size={16} className="notebook-ai-widget-spin" /> : <Send size={16} />}
+              {loading ? <Loader2 size={14} className="notebook-ai-widget-spin" /> : <Send size={14} />}
             </button>
 
             <button
@@ -132,7 +132,7 @@ const NotebookAssistantWidget: React.FC<NotebookAssistantWidgetProps> = ({
               disabled={loading}
               title="إغلاق"
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           </div>
 
