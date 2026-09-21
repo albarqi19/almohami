@@ -174,3 +174,5 @@ import './performance-view.css';
 import './finance-dashboard.css';
 // مساحة صياغة العقد (cdw-) — أصناف ببادئة خاصة، فلا تتعلّق بترتيب الحقن.
 import './contract-drafting-workspace.css';
+// بطاقة مراجعة «مهمة بالصوت» (vtr-) — أصناف ببادئة خاصة، فلا تتعلّق بترتيب الحقن.
+import './voice-task-review.css';
