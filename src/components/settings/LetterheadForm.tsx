@@ -33,6 +33,7 @@ import {
   A4_WIDTH_MM,
   A4_HEIGHT_MM,
   FULL_PAGE_RECOMMENDED_PX,
+  TEXT_SCALES,
 } from '../../types/letterhead';
 
 interface LetterheadFormProps {
@@ -90,6 +91,7 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
     secondary_color: letterhead?.secondary_color || DEFAULT_LETTERHEAD.secondary_color,
     text_color: letterhead?.text_color || DEFAULT_LETTERHEAD.text_color,
     body_font: letterhead?.body_font ?? DEFAULT_LETTERHEAD.body_font,
+    body_text_scale: letterhead?.body_text_scale ?? DEFAULT_LETTERHEAD.body_text_scale,
     // Margins
     margin_top_mm: letterhead?.margin_top_mm || DEFAULT_LETTERHEAD.margin_top_mm,
     margin_bottom_mm: letterhead?.margin_bottom_mm || DEFAULT_LETTERHEAD.margin_bottom_mm,
@@ -594,6 +596,32 @@ const LetterheadForm: React.FC<LetterheadFormProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* حجم خط المتن — نسبةً لا قياساً بالبكسل */}
+                <div style={{ marginTop: 24 }}>
+                  <label className="letterhead-field__label">حجم خط المتن</label>
+                  <p className="letterhead-helper" style={{ marginBottom: 10 }}>
+                    يكبّر نصّ المستند كلَّه بنسبةٍ واحدة فيبقى تناسب العناوين والمتن —
+                    ولا يغيّر الجداول ولا الصور ولا ترويسة الكليشة.
+                  </p>
+                  <div className="letterhead-scale-row">
+                    {TEXT_SCALES.map((scale) => (
+                      <button
+                        key={scale}
+                        type="button"
+                        onClick={() => setFormData((prev) => ({ ...prev, body_text_scale: scale }))}
+                        className={`letterhead-scale-option ${
+                          (formData.body_text_scale ?? 100) === scale ? 'letterhead-scale-option--active' : ''
+                        }`}
+                      >
+                        <span style={{ fontSize: Math.round(13 * (scale / 100)) }}>نصّ</span>
+                        <span className="letterhead-scale-option__pct">
+                          {scale === 100 ? 'عادي' : `${scale}٪`}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 

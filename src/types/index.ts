@@ -713,6 +713,8 @@ export const CaseType = {
   ADMINISTRATIVE: 'administrative',
   REAL_ESTATE: 'real_estate',
   INTELLECTUAL_PROPERTY: 'intellectual_property',
+  PUBLIC_PROSECUTION: 'public_prosecution',
+  POLICE: 'police',
   OTHER: 'other',
 } as const;
 

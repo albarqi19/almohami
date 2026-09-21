@@ -11,6 +11,7 @@ import {
   Edit2,
   Trash2,
   XCircle,
+  CheckCircle2,
   FileText,
   CalendarClock,
   CalendarDays,
@@ -84,6 +85,13 @@ interface Group {
   hint?: string;
 }
 
+/** هل وُثِّق الاجتماع؟ الملخص العام أو أي نقطة أو قرار أو مهمة — لا الملخص العام وحده. */
+const hasMinutes = (m: InternalMeeting): boolean =>
+  Boolean(m.summary?.trim())
+  || (m.summary_points?.length ?? 0) > 0
+  || (m.summary_decisions?.length ?? 0) > 0
+  || (m.summary_tasks?.length ?? 0) > 0;
+
 const groupMeetings = (meetings: InternalMeeting[]): Group[] => {
   const now = new Date();
   const today = startOfDay(now);
@@ -98,12 +106,23 @@ const groupMeetings = (meetings: InternalMeeting[]): Group[] => {
 
   for (const m of meetings) {
     const at = new Date(m.scheduled_at);
-    if (m.status === 'in_progress') g.live.push(m);
-    else if (m.status === 'completed' && !m.summary) g.needs_summary.push(m);
+    const endAt = new Date(at.getTime() + (m.duration_minutes || 60) * 60000);
+    const documented = hasMinutes(m);
+
+    if (m.status === 'in_progress') {
+      // «جارٍ الآن» حتى نهاية وقته ومهلة ما بعده. لا أحد يضغط «إنهاء» دائماً،
+      // فكان الاجتماع يبقى «جارياً» أياماً بعد انفضاضه.
+      const liveUntil = new Date(endAt.getTime() + (m.join_button_minutes_after ?? 30) * 60000);
+      if (liveUntil >= now) g.live.push(m);
+      else if (documented) g.past.push(m);
+      else g.needs_summary.push(m);
+    }
+    else if (m.status === 'completed' && !documented) g.needs_summary.push(m);
     else if (m.status === 'completed' || m.status === 'cancelled') g.past.push(m);
     else if (m.status === 'scheduled') {
-      const endAt = new Date(at.getTime() + (m.duration_minutes || 60) * 60000);
-      if (endAt < now) g.missed.push(m);            // مجدول فات وقته ولم يُعقد
+      // مضى وقته وحالته «مجدول»: النظام لا يعلم أنه لم ينعقد — يعلم فقط أن أحداً لم
+      // يضغط «دخول» من هذه الصفحة (والحضوري لا زرّ بدء له أصلاً). من وُثِّق فقد انعقد.
+      if (endAt < now) (documented ? g.past : g.missed).push(m);
       else if (at < tomorrow) g.today.push(m);
       else if (at < dayAfter) g.tomorrow.push(m);
       else if (at < weekEnd) g.week.push(m);
@@ -124,8 +143,8 @@ const groupMeetings = (meetings: InternalMeeting[]): Group[] => {
     { key: 'week', title: 'هذا الأسبوع', icon: <CalendarDays size={13} />, meetings: g.week },
     { key: 'later', title: 'لاحقاً', icon: <CalendarDays size={13} />, meetings: g.later },
     {
-      key: 'missed', title: 'فائتة دون انعقاد', icon: <AlertTriangle size={13} />, meetings: g.missed, tone: 'warn',
-      hint: 'مضى وقتها ولم تُبدأ — ابدأها متأخرة أو ألغِها أو أعد جدولتها',
+      key: 'missed', title: 'مضى وقتها — هل انعقدت؟', icon: <AlertTriangle size={13} />, meetings: g.missed, tone: 'warn',
+      hint: 'لم يُسجَّل بدؤها. إن انعقدت فاضغط «انعقد» أو اكتب ملخصها، وإلا ألغِها أو أعد جدولتها',
     },
     {
       key: 'needs_summary', title: 'بانتظار الملخص', icon: <FileText size={13} />, meetings: g.needs_summary, tone: 'warn',
@@ -271,6 +290,14 @@ const InternalMeetings: React.FC = () => {
     } catch (err) { console.error('Error starting meeting:', err); }
   };
 
+  // «انعقد» / «إنهاء»: الواجهة لم يكن فيها أي طريق إلى حالة «مكتمل» إطلاقاً
+  const handleCompleteMeeting = async (meeting: InternalMeeting) => {
+    try {
+      await internalMeetingService.complete(meeting.id);
+      fetchMeetings(true);
+    } catch (err) { console.error('Error completing meeting:', err); }
+  };
+
   const handleCancelMeeting = async (meeting: InternalMeeting) => {
     const reason = prompt('سبب الإلغاء:');
     if (reason) {
@@ -300,7 +327,7 @@ const InternalMeetings: React.FC = () => {
     if (meeting.status === 'completed') {
       return (
         <button className="im-smart im-smart--view" onClick={() => handleOpenSummary(meeting)}>
-          <FileText size={13} /> {meeting.summary ? 'عرض الملخص' : 'كتابة الملخص'}
+          <FileText size={13} /> {hasMinutes(meeting) ? 'عرض الملخص' : 'كتابة الملخص'}
         </button>
       );
     }
@@ -349,8 +376,16 @@ const InternalMeetings: React.FC = () => {
 
   const renderRowMenu = (meeting: InternalMeeting) => {
     const may = meeting.can;
-    if (meeting.status !== 'scheduled') return null;
-    if (may && !may.update && !may.delete) return null;
+    const isScheduled = meeting.status === 'scheduled';
+    const isLive = meeting.status === 'in_progress';
+    if (!isScheduled && !isLive) return null;
+
+    // «انعقد» لما بدأ وقته فقط — لا يُنهى اجتماع لم يحن موعده
+    const started = new Date(meeting.scheduled_at) <= new Date();
+    const canFinish = (!may || may.manage_state) && (isLive || started);
+    const canEdit = isScheduled && (!may || may.update);
+    const canDelete = isScheduled && (!may || may.delete);
+    if (!canFinish && !canEdit && !canDelete) return null;
 
     return (
       <div className="im-dropdown">
@@ -364,7 +399,12 @@ const InternalMeetings: React.FC = () => {
         </button>
         {activeMenu === meeting.id && (
           <div className={`im-dropdown__menu${menuUp ? ' im-dropdown__menu--up' : ''}`}>
-            {(!may || may.update) && (
+            {canFinish && (
+              <button onClick={() => { handleCompleteMeeting(meeting); setActiveMenu(null); }}>
+                <CheckCircle2 size={13} /> {isLive ? 'إنهاء الاجتماع' : 'انعقد'}
+              </button>
+            )}
+            {canEdit && (
               <>
                 <button onClick={() => { setSelectedMeeting(meeting); setShowCreateModal(true); setActiveMenu(null); }}>
                   <Edit2 size={13} /> تعديل
@@ -374,7 +414,7 @@ const InternalMeetings: React.FC = () => {
                 </button>
               </>
             )}
-            {(!may || may.delete) && (
+            {canDelete && (
               <button className="im-danger" onClick={() => { handleDeleteMeeting(meeting); setActiveMenu(null); }}>
                 <Trash2 size={13} /> حذف
               </button>
@@ -408,7 +448,7 @@ const InternalMeetings: React.FC = () => {
               </span>
             )}
             <span className="im-row__name">{meeting.title}</span>
-            {meeting.status === 'completed' && !meeting.summary && (
+            {meeting.status === 'completed' && !hasMinutes(meeting) && (
               <span className="im-chip im-chip--warn"><AlertTriangle size={10} /> بلا ملخص</span>
             )}
           </div>

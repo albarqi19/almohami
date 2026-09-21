@@ -78,6 +78,8 @@ const CASE_TYPE_LABELS: Record<CaseType, string> = {
 	administrative: 'إدارية',
 	real_estate: 'عقارية',
 	intellectual_property: 'ملكية فكرية',
+	public_prosecution: 'نيابة عامة',
+	police: 'شرطة',
 	other: 'أخرى'
 };
 

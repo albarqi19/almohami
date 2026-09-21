@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Download, X, Loader2, Eraser } from 'lucide-react';
 import Modal from './Modal';
 import type { User as UserType } from '../services/UserService';
-import { API_BASE_URL } from '../utils/api';
+import { downloadXlsx } from '../utils/exportXlsx';
 
 // فلاتر تصدير القضايا — تُرسل كما هي إلى POST /cases/export (المفاتيح الفارغة لا تُرسل)
 interface ExportFilters {
@@ -47,6 +47,8 @@ const TYPE_OPTIONS: { value: string; label: string }[] = [
 	{ value: 'administrative', label: 'إدارية' },
 	{ value: 'real_estate', label: 'عقارية' },
 	{ value: 'intellectual_property', label: 'ملكية فكرية' },
+	{ value: 'public_prosecution', label: 'نيابة عامة' },
+	{ value: 'police', label: 'شرطة' },
 	{ value: 'other', label: 'أخرى' },
 ];
 
@@ -86,7 +88,6 @@ const CasesExportModal: React.FC<CasesExportModalProps> = ({ isOpen, onClose, la
 	const handleExport = async () => {
 		setExporting(true);
 		setError(null);
-		const token = localStorage.getItem('authToken');
 
 		// نرسل الفلاتر المحددة فقط — الباك يفلتر على المفاتيح الموجودة
 		const body: Record<string, string> = {};
@@ -103,38 +104,7 @@ const CasesExportModal: React.FC<CasesExportModalProps> = ({ isOpen, onClose, la
 		}
 
 		try {
-			const res = await fetch(`${API_BASE_URL}/cases/export`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-					'ngrok-skip-browser-warning': '69420',
-					...(token ? { Authorization: `Bearer ${token}` } : {}),
-				},
-				body: JSON.stringify(body),
-			});
-
-			if (!res.ok) {
-				let message = 'تعذّر إنشاء ملف التصدير';
-				try {
-					const payload = await res.clone().json();
-					if (payload?.message) message = payload.message;
-				} catch {
-					/* الرد ليس JSON — نُبقي الرسالة الافتراضية */
-				}
-				throw new Error(message);
-			}
-
-			const blob = await res.blob();
-			const url = URL.createObjectURL(blob);
-			const anchor = document.createElement('a');
-			anchor.href = url;
-			const dateStr = new Date().toISOString().slice(0, 10);
-			anchor.download = `القضايا_${dateStr}.xlsx`;
-			document.body.appendChild(anchor);
-			anchor.click();
-			anchor.remove();
-			URL.revokeObjectURL(url);
+			await downloadXlsx('/cases/export', body, 'القضايا');
 			onClose();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'حدث خطأ أثناء التصدير');

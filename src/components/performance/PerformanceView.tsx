@@ -810,7 +810,7 @@ function caseTypeLabel(type: string | null): string {
   const map: Record<string, string> = {
     civil: 'مدنية', criminal: 'جنائية', commercial: 'تجارية', family: 'أسرية',
     labor: 'عمالية', administrative: 'إدارية', real_estate: 'عقارية',
-    intellectual_property: 'ملكية فكرية', other: 'أخرى',
+    intellectual_property: 'ملكية فكرية', public_prosecution: 'نيابة عامة', police: 'شرطة', other: 'أخرى',
   };
   return map[type] || type;
 }

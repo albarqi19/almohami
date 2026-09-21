@@ -45,10 +45,11 @@ const MeetingSummaryModal: React.FC<Props> = ({ meeting, onClose, onSave }) => {
 
   // State
   const [summary, setSummary] = useState(meeting.summary || '');
-  const [points, setPoints] = useState<string[]>(meeting.summary_points || ['']);
-  const [decisions, setDecisions] = useState<string[]>(meeting.summary_decisions || ['']);
+  // length لا ||: المصفوفة الفارغة [] صادقة، فكان التبويب يفتح بلا أي خانة كتابة
+  const [points, setPoints] = useState<string[]>(meeting.summary_points?.length ? meeting.summary_points : ['']);
+  const [decisions, setDecisions] = useState<string[]>(meeting.summary_decisions?.length ? meeting.summary_decisions : ['']);
   const [tasks, setTasks] = useState<SummaryTask[]>(
-    meeting.summary_tasks || [{ title: '', assignee_id: undefined, due_date: '' }]
+    meeting.summary_tasks?.length ? meeting.summary_tasks : [{ title: '', assignee_id: undefined, due_date: '' }]
   );
 
   const [loading, setLoading] = useState(false);
@@ -126,11 +127,13 @@ const MeetingSummaryModal: React.FC<Props> = ({ meeting, onClose, onSave }) => {
 
     try {
       setLoading(true);
+      // القيم تُرسل صريحةً دائماً ([] و null) لا undefined: المفتاح الغائب عند الخادم
+      // يعني «لم يُلمس»، فمن مسح نقاطه كلها يجب أن يصل مسحُه.
       const data: SaveSummaryData = {
-        summary: summary || undefined,
-        summary_points: filteredPoints.length > 0 ? filteredPoints : undefined,
-        summary_decisions: filteredDecisions.length > 0 ? filteredDecisions : undefined,
-        summary_tasks: filteredTasks.length > 0 ? filteredTasks : undefined,
+        summary: summary.trim() || null,
+        summary_points: filteredPoints,
+        summary_decisions: filteredDecisions,
+        summary_tasks: filteredTasks,
       };
 
       await internalMeetingService.saveSummary(meeting.id, data);

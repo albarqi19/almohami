@@ -32,11 +32,13 @@ import {
   FileWarning,
   Archive,
   ArchiveRestore,
+  Download,
 } from 'lucide-react';
 import { WekalatService } from '../services/wekalatService';
 import { toHijri } from '../utils/hijriDate';
 import { CaseWekalaService, type WekalaCaseItem, type MissingWekalaResponse } from '../services/caseWekalaService';
 import { AddWekalaModal } from '../components/AddWekalaModal';
+import WekalatExportModal from '../components/WekalatExportModal';
 import { MissingWekalaCasesPanel } from '../components/MissingWekalaCasesPanel';
 import { Can } from '../components/Can';
 import { useAuth } from '../contexts/AuthContext';
@@ -60,6 +62,18 @@ interface WekalatQueryData {
   /** ‏هل قد تحوي الصفحة المعروضة مؤرشفاً (يصير true تلقائياً مع البحث) */
   archivedIncluded: boolean;
 }
+
+/**
+ * ‏اسم الموكِّل كما تعرضه قائمة ناجز (`raw_data.principal_name`) حين يختلف عن أسماء
+ * ‏الموكّلين في الأطراف. وكالة الشركة طرفُها في التفاصيل هو المدير بشخصه وهويته،
+ * ‏فلا يظهر اسم الشركة في أي عمود — هذا الحقل هو موضعه الوحيد. يُعرض بجانب المدير
+ * ‏لا بدله، ولا يُعرض إن طابق اسمَ أحد الأطراف (وكالة فرد).
+ */
+const najizPrincipalLabel = (w: Wekala, principals: WekalaParty[]): string => {
+  const label = String(w.raw_data?.principal_name ?? '').trim();
+  if (!label) return '';
+  return principals.some(p => (p.name ?? '').trim() === label) ? '' : label;
+};
 
 // ==================== Status Configuration ====================
 
@@ -305,13 +319,21 @@ export const WekalaModal: React.FC<WekalaModalProps> = ({ wekala, isOpen, onClos
                 <span className="wk-badge">{clients.length}</span>
               </div>
               <div className="wk-panel__body">
+                {najizPrincipalLabel(wekala, clients) && (
+                  <div className="wk-row" title="اسم الموكِّل كما يظهر في ناجز">
+                    <Building size={12} />
+                    <span className="wk-row__name">{najizPrincipalLabel(wekala, clients)}</span>
+                  </div>
+                )}
                 {clients.length === 0 ? (
                   <div className="wk-panel__empty">-</div>
                 ) : clients.map((c, i) => (
                   <div key={i} className="wk-row">
                     <span className="wk-dot wk-dot--blue" />
                     <span className="wk-row__name">{c.name}</span>
-                    {(c as any).national_id && <span className="wk-row__sub">{(c as any).national_id}</span>}
+                    {/* كان يقرأ national_id — حقل لا يرجعه الخادم (الحقل id_number) فلا يظهر الرقم أبداً */}
+                    {c.id_number && <span className="wk-row__sub">{c.id_number}</span>}
+                    {c.adjective && <span className="wk-row__sub">{c.adjective}</span>}
                   </div>
                 ))}
               </div>
@@ -452,6 +474,7 @@ const Wekalat: React.FC = () => {
   const [selectedWekala, setSelectedWekala] = useState<Wekala | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Debounce search input so we don't refetch on every keystroke
@@ -767,6 +790,11 @@ const Wekalat: React.FC = () => {
                   )}
                 </td>
                 <td>
+                  {najizPrincipalLabel(w, clients) && (
+                    <div className="wekala-entity" title="اسم الموكِّل كما يظهر في ناجز">
+                      <Building size={11} /> {najizPrincipalLabel(w, clients)}
+                    </div>
+                  )}
                   <div className="wekala-parties">
                     {clients.slice(0, 2).map((c, idx) => (
                       <span key={idx} className="wekala-party-tag wekala-party-tag--client">
@@ -1089,6 +1117,13 @@ const Wekalat: React.FC = () => {
           </button>
           <button
             className="wekalat-icon-btn"
+            onClick={() => setIsExportModalOpen(true)}
+            title="تصدير الوكالات (Excel)"
+          >
+            <Download size={16} />
+          </button>
+          <button
+            className="wekalat-icon-btn"
             onClick={() => setIsAddModalOpen(true)}
             title="إضافة وكالة يدوياً"
           >
@@ -1252,6 +1287,19 @@ const Wekalat: React.FC = () => {
           setSelectedWekala(null);
         }}
       />
+
+      {/* تصدير الوكالات — يبدأ بفلاتر الصفحة المعروضة */}
+      {isExportModalOpen && (
+        <WekalatExportModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          defaults={{
+            status: statusFilter === 'all' ? '' : statusFilter,
+            search: searchTerm,
+            archived: mainTab === 'archived' ? '1' : '0',
+          }}
+        />
+      )}
 
       {/* Add Wekala Modal */}
       <AddWekalaModal

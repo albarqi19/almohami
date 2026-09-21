@@ -1,4 +1,5 @@
 import type { Letterhead, WatermarkPosition, WatermarkType } from '../types/letterhead';
+import { letterheadGeometry } from './letterheadGeometry';
 
 /**
  * Generate print-ready HTML with letterhead
@@ -36,10 +37,6 @@ export function generateLetterheadHTML(
     primary_color = '#C5A059',
     secondary_color = '#1a1a1a',
     text_color = '#333333',
-    margin_top_mm = 25,
-    margin_bottom_mm = 20,
-    margin_right_mm = 20,
-    margin_left_mm = 20,
     // Watermark settings
     watermark_enabled = false,
     watermark_type = 'text' as WatermarkType,
@@ -71,9 +68,24 @@ export function generateLetterheadHTML(
    */
   const isFullPage = type === 'full_page';
 
-  // Calculate content margins based on header/footer
-  const contentMarginTop = isFullPage ? 0 : type === 'image' ? header_height_mm + 5 : 45;
-  const contentMarginBottom = isFullPage ? 0 : type === 'image' ? footer_height_mm + 5 : 35;
+  /**
+   * منطقة الكتابة من المرجع المشترك لا بأرقامٍ مكتوبة هنا.
+   *
+   * كانت المعاينة تحسبها بنفسها (`header_height_mm + 5` / ثابت 45مم) **فوق** هوامش
+   * @page، فتُضاف الهوامش مرتين: كليشةٌ ديناميكية بهامش ٢٥مم تبدأ في المعاينة عند
+   * ٧٠مم وفي الملف عند ٣٠ — أربعة سنتيمترات من الفراغ الوهمي في كل صفحة، وتجاهلٌ تامّ
+   * لعلم `margins_are_absolute`. الآن تُقرأ من `letterheadGeometry` — مرآة حساب الباك
+   * نفسه، وهي مَن يستعملها معاينة العقد أصلاً.
+   */
+  const geo = letterheadGeometry(letterhead as Letterhead);
+  const padTop = geo.contentTopMM;
+  const padBottom = geo.contentBottomMM;
+  const padRight = geo.contentRightMM;
+  const padLeft = geo.contentLeftMM;
+
+  /** نسبة حجم خط المتن كما في الملف (يضربها الباك في كل font-size). */
+  const textScale = Math.max(50, Math.min(200, letterhead.body_text_scale ?? 100)) / 100;
+  const px = (n: number) => `${Math.round(n * textScale * 100) / 100}px`;
 
   const paperBackgroundHTML = isFullPage && background_image_url
     ? `<div class="letterhead-paper-bg"><img src="${background_image_url}" alt="" /></div>`
@@ -251,7 +263,7 @@ export function generateLetterheadHTML(
         /* ترتيب اختصار margin هو: أعلى · يمين · أسفل · يسار */
         @page {
           size: A4;
-          margin: ${margin_top_mm}mm ${margin_right_mm}mm ${margin_bottom_mm}mm ${margin_left_mm}mm;
+          margin: ${padTop}mm ${padRight}mm ${padBottom}mm ${padLeft}mm;
         }
 
         ${pageNumberCSS}
@@ -273,7 +285,7 @@ export function generateLetterheadHTML(
           font-family: ${bodyFontStack};
           direction: rtl;
           color: ${text_color};
-          font-size: 14px;
+          font-size: ${px(14)};
           line-height: 1.8;
           background: white;
         }
@@ -294,7 +306,7 @@ export function generateLetterheadHTML(
             min-height: 297mm;
             height: auto;
             margin: 0 auto;
-            padding: ${margin_top_mm}mm ${margin_right_mm}mm ${margin_bottom_mm}mm ${margin_left_mm}mm;
+            padding: ${padTop}mm ${padRight}mm ${padBottom}mm ${padLeft}mm;
             position: relative;
             overflow: hidden;
             box-shadow: 0 1px 6px rgba(0, 0, 0, 0.14);
@@ -306,13 +318,34 @@ export function generateLetterheadHTML(
           .watermark-container {
             position: absolute !important;
           }
+          /*
+           * الإزاحات السالبة تصحّ في الطباعة وحدها: هناك العنصر fixed فتُسند إلى
+           * منطقة الصفحة، فيرتفع إلى شريط الهامش. أمّا على الشاشة فهو absolute
+           * وحاويته صندوقُ حشو الورقة — فالسالب يُخرجه من الورقة، وقصُّ الورقة
+           * يقصّه. النتيجة: **ترويسة الكليشة وتذييلها لا يظهران في المعاينة إطلاقاً**،
+           * فيعاين المكتب ورقةً بيضاء ويطبع ورقةً مترئسة. هنا تُصفَّر الإزاحات.
+           */
+          .letterhead-paper-bg {
+            top: 0 !important;
+            right: 0 !important;
+          }
+          .letterhead-header {
+            top: 0 !important;
+            right: 0 !important;
+            left: auto !important;
+          }
+          .letterhead-footer {
+            bottom: 0 !important;
+            right: 0 !important;
+            left: auto !important;
+          }
         }
 
         /* الورق الرسمي كاملاً: ثابت ⇒ يكرّره Chrome على كل صفحة مطبوعة، وخلف المتن */
         .letterhead-paper-bg {
           position: fixed;
-          top: -${margin_top_mm}mm;
-          right: -${margin_right_mm}mm;
+          top: -${padTop}mm;
+          right: -${padRight}mm;
           width: 210mm;
           height: 297mm;
           z-index: 0;
@@ -328,38 +361,36 @@ export function generateLetterheadHTML(
           display: block;
         }
 
+        /*
+         * ارتفاع الكروم من الهندسة المشتركة لا من رقمٍ مكتوب هنا (كان 40/25مم).
+         * ارتفاع أدنى لا ثابت: هذا هو ما **يحجزه** الملف للترويسة، فإن كان
+         * محتواها أطول تجاوزته هنا كما يتجاوزه في المطبوع — والقصّ كان سيُخفي
+         * أسطراً يراها المكتب في ورقته.
+         */
         .letterhead-header {
           position: fixed;
-          top: -${margin_top_mm}mm;
-          left: -${margin_left_mm}mm;
-          right: -${margin_right_mm}mm;
+          top: -${padTop}mm;
+          left: -${padLeft}mm;
+          right: -${padRight}mm;
           width: 210mm;
-          height: ${type === 'image' ? header_height_mm : 40}mm;
+          min-height: ${geo.headerHeightMM}mm;
           z-index: 100;
         }
 
         .letterhead-footer {
           position: fixed;
-          bottom: -${margin_bottom_mm}mm;
-          left: -${margin_left_mm}mm;
-          right: -${margin_right_mm}mm;
+          bottom: -${padBottom}mm;
+          left: -${padLeft}mm;
+          right: -${padRight}mm;
           width: 210mm;
-          height: ${type === 'image' ? footer_height_mm : 25}mm;
+          min-height: ${geo.footerHeightMM}mm;
           z-index: 100;
         }
 
+        /* لا حشو هنا: منطقة الكتابة كلها في هوامش @page/الورقة أعلاه */
         .content {
-          padding-top: ${contentMarginTop}mm;
-          padding-bottom: ${contentMarginBottom}mm;
-          ${isFullPage
-            ? /* هوامش @page هي منطقة الكتابة — لا حشو ولا سحب جانبي */ `
           position: relative;
-          z-index: 1;`
-            : `
-          padding-right: ${margin_right_mm}mm;
-          padding-left: ${margin_left_mm}mm;
-          margin-right: -${margin_right_mm}mm;
-          margin-left: -${margin_left_mm}mm;`}
+          z-index: 1;
         }
 
         /* Content styles */
@@ -368,9 +399,9 @@ export function generateLetterheadHTML(
           font-weight: bold;
           color: ${secondary_color};
         }
-        h1 { font-size: 22px; }
-        h2 { font-size: 18px; margin-top: 24px; }
-        h3 { font-size: 16px; margin-top: 20px; }
+        h1 { font-size: ${px(22)}; }
+        h2 { font-size: ${px(18)}; margin-top: 24px; }
+        h3 { font-size: ${px(16)}; margin-top: 20px; }
 
         p {
           margin-bottom: 12px;

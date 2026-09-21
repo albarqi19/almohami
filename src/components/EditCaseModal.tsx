@@ -328,6 +328,9 @@ const EditCaseModal: React.FC<EditCaseModalProps> = ({
                     <option value="family">أحوال شخصية</option>
                     <option value="labor">عمالية</option>
                     <option value="real_estate">عقارية</option>
+                    <option value="intellectual_property">ملكية فكرية</option>
+                    <option value="public_prosecution">نيابة عامة</option>
+                    <option value="police">شرطة</option>
                     <option value="other">أخرى</option>
                   </select>
                 </div>

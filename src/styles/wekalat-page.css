@@ -389,6 +389,17 @@ body.dark .wekalat-table thead {
     gap: 4px;
 }
 
+/* اسم الشركة الموكِّلة فوق مديرها — وكالة الشركة طرفُها المدير بشخصه */
+.wekala-entity {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
 .wekala-party-tag {
     display: inline-flex;
     align-items: center;

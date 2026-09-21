@@ -373,6 +373,50 @@ body.dark .letterhead-type-selection {
     gap: 10px;
 }
 
+/* ---- حجم خط المتن: شريط نسبٍ، كل نسبة تعرض نفسها بحجمها ---- */
+
+.letterhead-scale-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.letterhead-scale-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 72px;
+    min-height: 58px;
+    padding: 8px 12px;
+    background: var(--dashboard-card);
+    border: 2px solid var(--color-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+    font-family: inherit;
+    color: var(--color-text-primary);
+}
+
+.letterhead-scale-option:hover {
+    border-color: var(--law-navy-light);
+}
+
+.letterhead-scale-option--active {
+    border-color: var(--law-navy);
+}
+
+.letterhead-scale-option__pct {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.letterhead-scale-option--active .letterhead-scale-option__pct {
+    color: var(--law-navy);
+}
+
 .letterhead-font-option {
     display: flex;
     flex-direction: column;

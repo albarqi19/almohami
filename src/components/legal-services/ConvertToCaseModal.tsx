@@ -25,6 +25,9 @@ const CASE_TYPE_OPTIONS = [
   { value: 'administrative', label: 'إدارية' },
   { value: 'labor', label: 'عمالية' },
   { value: 'real_estate', label: 'عقارية' },
+  { value: 'intellectual_property', label: 'ملكية فكرية' },
+  { value: 'public_prosecution', label: 'نيابة عامة' },
+  { value: 'police', label: 'شرطة' },
   { value: 'other', label: 'أخرى' },
 ];
 

@@ -340,12 +340,16 @@ const AddCaseModal: React.FC<AddCaseModalProps> = ({
     { value: 'criminal', label: 'قضايا جنائية' },
     { value: 'administrative', label: 'قضايا إدارية' },
     { value: 'intellectual_property', label: 'الملكية الفكرية' },
+    { value: 'public_prosecution', label: 'النيابة العامة' },
+    { value: 'police', label: 'الشرطة' },
     { value: 'other', label: 'أخرى' }
   ];
 
   const courts = [
     'المحكمة العامة',
     'المحكمة الجزائية',
+    'النيابة العامة',
+    'الشرطة',
     'محكمة الاستئناف',
     'المحكمة التجارية',
     'محكمة العمل',

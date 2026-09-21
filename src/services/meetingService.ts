@@ -206,6 +206,12 @@ export interface CreateInternalMeetingData {
 }
 
 export interface AttendeeInput {
+  /**
+   * ‏معرّف صفّ الحضور القائم — يُعاد كما استُلم عند التعديل فيُطابَق الشخص به.
+   * ‏القائمة لا تُرجع بريد الضيف الخارجي ولا جواله (خصوصية)، فبدون المعرّف يُحسب
+   * ‏الشخص من اسمه فيُعامَل جديداً ويُحذف صفّه ببريده وجواله وردّه.
+   */
+  id?: number | null;
   type: AttendeeType;
   user_id?: number | null;
   /** إلزامي للطرف الخارجي وحده */
@@ -235,7 +241,7 @@ export interface UpdateInternalMeetingData {
 }
 
 export interface SaveSummaryData {
-  summary?: string;
+  summary?: string | null;
   summary_points?: string[];
   summary_decisions?: string[];
   summary_tasks?: SummaryTask[];
@@ -378,9 +384,24 @@ export const internalMeetingService = {
 
   // حفظ الملخص
   async saveSummary(id: number, data: SaveSummaryData): Promise<InternalMeeting> {
+    // الخادم يتحقق بالأسماء المجرّدة (points/decisions/tasks). كانت الحمولة تُرسل
+    // بأسماء الأعمدة summary_* فيُسقطها التحقق كلها ويُحفظ الملخص فارغاً بردّ 200 —
+    // «حفظتُ الملاحظات ولم تُحفظ». المفتاح غير المعرَّف لا يُرسل (= لم يُلمس).
+    const payload: Record<string, unknown> = {};
+    if (data.summary !== undefined) payload.summary = data.summary;
+    if (data.summary_points !== undefined) payload.points = data.summary_points;
+    if (data.summary_decisions !== undefined) payload.decisions = data.summary_decisions;
+    if (data.summary_tasks !== undefined) {
+      payload.tasks = data.summary_tasks.map((t) => ({
+        title: t.title,
+        assignee_id: t.assignee_id ?? null,
+        due_date: t.due_date || null,
+      }));
+    }
+
     const response = await apiClient.post<{ success: boolean; data: InternalMeeting }>(
       `/meetings/internal/${id}/summary`,
-      data
+      payload
     );
     return response.data;
   },

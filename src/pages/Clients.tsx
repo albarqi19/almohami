@@ -22,13 +22,15 @@ import {
     UserPlus,
     Trash2,
     Loader2,
-    Swords
+    Swords,
+    Download
 } from 'lucide-react';
 import ClientManagementService from '../services/clientManagementService';
 import type { Client, OpponentRow } from '../services/clientManagementService';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermission } from '../hooks/usePermission';
 import AddClientModal from '../components/AddClientModal';
+import ClientsExportModal from '../components/ClientsExportModal';
 import OpponentAnalysisModal from '../components/OpponentAnalysisModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ConvertProspectModal from '../components/ConvertProspectModal';
@@ -101,6 +103,7 @@ const Clients: React.FC = () => {
     const [sortBy, setSortBy] = useState<SortKey>('created_at');
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showExportModal, setShowExportModal] = useState(false);
     const [deletingClientId, setDeletingClientId] = useState<number | string | null>(null);
     // تأكيد داخل الموقع (بديل window.confirm) للحذف/التحويل
     const [confirmAction, setConfirmAction] = useState<{ type: 'delete' | 'convert'; client: Client } | null>(null);
@@ -454,6 +457,16 @@ const Clients: React.FC = () => {
                     >
                         <RefreshCw size={16} />
                     </button>
+                    {/* الخصوم تُحسب من أطراف القضايا لا من جدول العملاء، فلا تُصدَّر من هنا */}
+                    {activeTab !== 'opponents' && (
+                    <button
+                        className="icon-btn"
+                        onClick={() => setShowExportModal(true)}
+                        title="تصدير العملاء (Excel)"
+                    >
+                        <Download size={16} />
+                    </button>
+                    )}
                 </div>
             </div>
 
@@ -464,6 +477,20 @@ const Clients: React.FC = () => {
                 onCreated={() => { refetch(); queryClient.invalidateQueries({ queryKey: ['clients-stats'] }); }}
                 defaultStatus={activeTab === 'prospects' ? 'prospect' : 'client'}
             />
+
+            {/* تصدير العملاء — يبدأ بفلاتر الصفحة المعروضة */}
+            {showExportModal && (
+                <ClientsExportModal
+                    isOpen={showExportModal}
+                    onClose={() => setShowExportModal(false)}
+                    defaults={{
+                        status: activeTab === 'prospects' ? 'prospect' : 'client',
+                        preset: filterPreset === 'with_cases' || filterPreset === 'vip' ? filterPreset : '',
+                        without_phone: filterPreset === 'no_phone',
+                        search: searchQuery,
+                    }}
+                />
+            )}
 
             {/* بطاقة تحليل الخصم */}
             <OpponentAnalysisModal opponent={selectedOpponent} onClose={() => setSelectedOpponent(null)} />

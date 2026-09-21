@@ -106,6 +106,8 @@ export interface Letterhead {
 
   /** خط متن المستند (مفتاح من LetterheadFont) — null = الخط الموحّد. */
   body_font: string | null;
+  /** حجم خط المتن نسبةً مئوية (١٠٠ = كما ضُبط القالب). */
+  body_text_scale: number;
 
   // Margins (in mm)
   margin_top_mm: number;
@@ -194,6 +196,7 @@ export interface LetterheadFormData {
   secondary_color?: string;
   text_color?: string;
   body_font?: string | null;
+  body_text_scale?: number;
 
   // Margins
   margin_top_mm?: number;
@@ -257,6 +260,9 @@ export interface ImageUploadResponse {
 }
 
 // Default values for new letterhead
+/** نسب حجم خط المتن المتاحة — مرآة Letterhead::TEXT_SCALES في الباك. */
+export const TEXT_SCALES = [85, 90, 100, 110, 120, 130] as const;
+
 export const DEFAULT_LETTERHEAD: Partial<LetterheadFormData> = {
   name: '',
   type: 'dynamic',
@@ -273,6 +279,7 @@ export const DEFAULT_LETTERHEAD: Partial<LetterheadFormData> = {
   secondary_color: '#1a1a1a',
   text_color: '#333333',
   body_font: null,
+  body_text_scale: 100,
   header_height_mm: 30,
   footer_height_mm: 25,
   margin_top_mm: 25,

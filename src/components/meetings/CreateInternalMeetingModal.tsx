@@ -83,6 +83,7 @@ const CreateInternalMeetingModal: React.FC<Props> = ({
   );
   const [guests, setGuests] = useState<AttendeeInput[]>(
     meeting?.attendees?.filter((a) => a.attendee_type === 'external').map((a) => ({
+      id: a.id,
       type: 'external' as const,
       name: a.display_name ?? '',
       email: a.email ?? '',
@@ -309,6 +310,15 @@ const CreateInternalMeetingModal: React.FC<Props> = ({
 
   const fieldError = (key: string) => fieldErrors[key]?.[0];
 
+  // الحقول التي تُعرض أخطاؤها تحتها مباشرة. ما عداها (الحضور، المدة، التصنيف،
+  // الربط…) كان يذوب في «البيانات المدخلة غير صحيحة» بلا أي إشارة لموضع العطب.
+  const INLINE_ERROR_KEYS = ['title', 'scheduled_at', 'video_meeting_url'];
+  const otherErrors = Array.from(new Set(
+    Object.entries(fieldErrors)
+      .filter(([key]) => !INLINE_ERROR_KEYS.includes(key))
+      .flatMap(([, messages]) => messages)
+  ));
+
   return (
     <Modal
       open
@@ -326,7 +336,16 @@ const CreateInternalMeetingModal: React.FC<Props> = ({
         </>
       }
     >
-      {error && <div className="fin-state fin-state--error">{error}</div>}
+      {error && (
+        <div className="fin-state fin-state--error">
+          {error}
+          {otherErrors.length > 0 && (
+            <ul className="mfm-error-list">
+              {otherErrors.map((message) => <li key={message}>{message}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* عمودان: «ماذا ومتى» يميناً و«من ومع أي ملف» يساراً.
           الشريط الطولي الواحد كان يضع تسع كتل فوق بعضها فيصير الحفظ بعد
