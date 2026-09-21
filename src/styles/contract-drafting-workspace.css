@@ -1,0 +1,1046 @@
+/* مساحة صياغة العقد (بادئة cdw-) — ورقة كتابة في الوسط ولوحات العقد بجوارها.
+   لغة «أدائي» ولوحة المالية: لوحات بحدود شعرية وزوايا 12px وفواصل 12px تملأ المساحة المتاحة،
+   فلات بلا تدرّج ولا توهّج ولا شريط لوني جانبي. الورقة نفسها على نمط المفكرة:
+   شريط تنسيق ثابت خارج التمرير، وعمود نص بعرض مريح وسط سطح يملأ العرض. */
+
+.cdw {
+  --cdw-gap: 12px;
+  --cdw-ink: var(--color-heading, #0a192f);
+  --cdw-ink-2: var(--color-text-secondary, #5a5a5a);
+  --cdw-line: var(--color-border, #e0e0e0);
+  --cdw-surface: var(--color-surface, #ffffff);
+  --cdw-subtle: var(--color-surface-subtle, #f7f5f0);
+  --cdw-accent: var(--law-navy, #1e3a5f);
+  --cdw-gold: var(--law-gold, #b8860b);
+  --cdw-ok: #15803d;
+  --cdw-warn: #b45309;
+  --cdw-bad: #c0392f;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 348px;
+  gap: var(--cdw-gap);
+  height: 100%;
+  min-height: 0;
+  font-family: var(--font-family-base, 'IBM Plex Sans Arabic', sans-serif);
+  color: var(--cdw-ink);
+}
+
+body.dark .cdw {
+  --cdw-accent: #7fa7d9; /* الكحلي لا يُقرأ على الداكن */
+  --cdw-gold: #d2ad62;
+  --cdw-ok: #2a9d68;
+  --cdw-warn: #e0a149;
+  --cdw-bad: #d9605d;
+}
+
+.cdw button,
+.cdw input,
+.cdw select,
+.cdw textarea {
+  font-family: inherit;
+}
+
+.cdw--focus {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cdw--focus .cdw-side {
+  display: none;
+}
+
+/* ─── الورقة ─── */
+
+.cdw-doc {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--cdw-line);
+  border-radius: 12px;
+  background: var(--cdw-surface);
+  overflow: hidden;
+}
+
+.cdw-doc__bar {
+  position: relative;
+  z-index: 30; /* قوائمه تعلو شريط التنسيق */
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cdw-line);
+}
+
+.cdw-doc__actions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cdw-version-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--cdw-subtle);
+  color: var(--cdw-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cdw-version-chip svg {
+  color: var(--cdw-gold);
+}
+
+.cdw-version-chip em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--cdw-ink-2);
+}
+
+.cdw-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--cdw-ink-2);
+  white-space: nowrap;
+}
+
+.cdw-save--ok { color: var(--cdw-ok); }
+.cdw-save--warn { color: var(--cdw-warn); }
+.cdw-save--bad { color: var(--cdw-bad); font-weight: 600; }
+
+.cdw-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.cdw-spin {
+  animation: cdw-spin 0.9s linear infinite;
+}
+
+@keyframes cdw-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* شريط التنسيق: من الحافة إلى الحافة وخارج منطقة التمرير */
+.cdw-doc__format {
+  position: relative;
+  z-index: 20;
+  flex-shrink: 0;
+  background: var(--cdw-subtle);
+  border-bottom: 1px solid var(--cdw-line);
+}
+
+.cdw-doc__format:empty,
+.cdw-doc__format[hidden] {
+  display: none;
+}
+
+.cdw-doc__format .tiptap-toolbar {
+  position: static;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.cdw-doc__format .tiptap-menu-btn.active {
+  background: color-mix(in srgb, var(--cdw-accent) 12%, transparent);
+  color: var(--cdw-accent);
+  border-color: transparent;
+}
+
+.cdw-doc__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--cdw-subtle);
+  padding: 20px 16px 28px;
+}
+
+.cdw-paper {
+  max-width: 860px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 34px 48px 40px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--cdw-line);
+  border-radius: 4px;
+  background: var(--cdw-surface);
+}
+
+/* المحرر على الورقة: بلا إطار ولا حلقة تركيز — المؤشر يكفي */
+.cdw-paper .tiptap-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: none;
+  background: transparent;
+}
+
+.cdw-paper .tiptap-editor:focus-within {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.cdw-paper .tiptap-editor-area,
+.cdw-paper .tiptap-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.cdw-paper .tiptap-content-wrapper {
+  padding: 10px 0 0;
+}
+
+.cdw-paper .tiptap-content-wrapper .ProseMirror {
+  flex: 1;
+  font-size: 15px;
+  line-height: 2;
+}
+
+.cdw-paper .lsd-rich-text,
+.cdw-paper .legal-rich-text {
+  font-size: 15px;
+  line-height: 2;
+}
+
+.cdw-doc__foot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 14px;
+  border-top: 1px solid var(--cdw-line);
+  font-size: 11.5px;
+  color: var(--cdw-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.cdw-doc__hint {
+  margin-inline-start: auto;
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+
+/* ─── أشرطة التنبيه داخل الورقة ─── */
+
+.cdw-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 10px 0 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--cdw-line);
+  border-radius: 8px;
+  background: var(--cdw-subtle);
+  font-size: 12.5px;
+  color: var(--cdw-ink-2);
+}
+
+.cdw-banner > svg {
+  flex-shrink: 0;
+  color: var(--cdw-gold);
+}
+
+.cdw-banner > span {
+  flex: 1;
+  min-width: 200px;
+}
+
+.cdw-banner b {
+  color: var(--cdw-ink);
+}
+
+.cdw-doc > .cdw-banner {
+  margin: 0;
+  border-width: 0 0 1px;
+  border-radius: 0;
+}
+
+.cdw-banner--bad {
+  background: color-mix(in srgb, var(--cdw-bad) 8%, var(--cdw-surface));
+  border-color: color-mix(in srgb, var(--cdw-bad) 30%, var(--cdw-line));
+  color: var(--cdw-ink);
+}
+
+.cdw-banner--bad > svg {
+  color: var(--cdw-bad);
+}
+
+.cdw-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--cdw-accent);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cdw-link:hover { color: var(--cdw-gold); }
+.cdw-link:disabled { opacity: 0.5; cursor: default; }
+
+/* ─── المقارنة ─── */
+
+.cdw-compare-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--cdw-line);
+  font-size: 12.5px;
+  color: var(--cdw-ink-2);
+}
+
+.cdw-compare-head > svg {
+  color: var(--cdw-gold);
+}
+
+.cdw-compare-head select {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--cdw-line);
+  border-radius: 8px;
+  background: var(--cdw-surface);
+  color: var(--cdw-ink);
+  font-size: 12.5px;
+}
+
+.cdw-compare-head__stats {
+  margin-inline-start: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.cdw-compare-head__stats ins,
+.cdw-diff ins {
+  text-decoration: none;
+  color: var(--cdw-ok);
+  background: color-mix(in srgb, var(--cdw-ok) 12%, transparent);
+}
+
+.cdw-compare-head__stats del,
+.cdw-diff del {
+  color: var(--cdw-bad);
+  background: color-mix(in srgb, var(--cdw-bad) 10%, transparent);
+}
+
+.cdw-diff {
+  font-size: 15px;
+  line-height: 2.1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ─── الأزرار ─── */
+
+.cdw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--cdw-line);
+  border-radius: 8px;
+  background: var(--cdw-surface);
+  color: var(--cdw-ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.cdw-btn:hover:not(:disabled) {
+  border-color: var(--cdw-accent);
+}
+
+.cdw-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.cdw-btn--primary {
+  border-color: var(--law-navy, #1e3a5f);
+  background: var(--law-navy, #1e3a5f);
+  color: #ffffff;
+}
+
+.cdw-btn--primary:hover:not(:disabled) {
+  background: var(--law-navy-dark, #152a45);
+}
+
+.cdw-btn--sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.cdw-btn--icon {
+  width: 32px;
+  padding: 0;
+}
+
+.cdw-btn--block {
+  width: 100%;
+}
+
+.cdw-icon-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--cdw-ink-2);
+  cursor: pointer;
+}
+
+.cdw-icon-btn:hover:not(:disabled) {
+  border-color: var(--cdw-line);
+  color: var(--cdw-ink);
+}
+
+.cdw-icon-btn[aria-pressed='true'] {
+  color: var(--cdw-accent);
+  background: color-mix(in srgb, var(--cdw-accent) 10%, transparent);
+}
+
+.cdw-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ─── القوائم المنبثقة ─── */
+
+.cdw-menu-wrap {
+  position: relative;
+}
+
+.cdw-menu,
+.cdw-pop {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  border: 1px solid var(--cdw-line);
+  border-radius: 10px;
+  background: var(--cdw-surface);
+  box-shadow: 0 8px 24px rgba(9, 30, 66, 0.12);
+}
+
+.cdw-menu {
+  min-width: 190px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cdw-menu button {
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--cdw-ink);
+  font-size: 12.5px;
+  text-align: start;
+  cursor: pointer;
+}
+
+.cdw-menu button:hover {
+  background: var(--cdw-subtle);
+}
+
+.cdw-pop {
+  width: 320px;
+  padding: 12px;
+}
+
+.cdw-pop label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.cdw-pop label span {
+  font-weight: 400;
+  color: var(--cdw-ink-2);
+}
+
+.cdw-pop input,
+.cdw-inline-form input,
+.cdw-feedback textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--cdw-line);
+  border-radius: 8px;
+  background: var(--cdw-surface);
+  color: var(--cdw-ink);
+  font-size: 12.5px;
+}
+
+.cdw-pop input:focus,
+.cdw-inline-form input:focus,
+.cdw-feedback textarea:focus {
+  outline: none;
+  border-color: var(--cdw-accent);
+}
+
+.cdw-pop p {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--cdw-ink-2);
+}
+
+.cdw-pop__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* ─── اللوحات الجانبية ─── */
+
+.cdw-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cdw-gap);
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.cdw-panel {
+  flex-shrink: 0;
+  border: 1px solid var(--cdw-line);
+  border-radius: 12px;
+  background: var(--cdw-surface);
+}
+
+.cdw-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px 6px 10px;
+}
+
+.cdw-panel__toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 4px;
+  border: none;
+  background: none;
+  color: var(--cdw-ink);
+  cursor: pointer;
+  text-align: start;
+}
+
+.cdw-panel__toggle h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cdw-panel__icon {
+  display: inline-flex;
+  color: var(--cdw-gold);
+}
+
+.cdw-panel__chev {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  color: var(--cdw-ink-2);
+  transition: transform 0.15s;
+}
+
+.cdw-panel--collapsed .cdw-panel__chev {
+  transform: rotate(90deg);
+}
+
+.cdw-panel__body {
+  padding: 2px 14px 14px;
+}
+
+.cdw-count {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--cdw-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.cdw-muted {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--cdw-ink-2);
+}
+
+.cdw-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* بيانات العقد */
+.cdw-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 7px 14px;
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.cdw-facts dt {
+  color: var(--cdw-ink-2);
+  white-space: nowrap;
+}
+
+.cdw-facts dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: end;
+}
+
+.cdw-parties {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px dashed var(--cdw-line);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+}
+
+.cdw-parties li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cdw-parties span {
+  color: var(--cdw-ink-2);
+}
+
+.cdw-official {
+  margin-top: 12px;
+}
+
+.cdw-official__linked {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--cdw-ok);
+}
+
+/* قائمة الفحص */
+.cdw-checklist {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cdw-checklist li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--cdw-line);
+}
+
+.cdw-checklist li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.cdw-checklist label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+.cdw-checklist input {
+  margin-top: 4px;
+  accent-color: var(--law-navy, #1e3a5f);
+}
+
+.cdw-checklist li.is-done span {
+  color: var(--cdw-ink-2);
+  text-decoration: line-through;
+}
+
+.cdw-checklist small {
+  display: block;
+  margin-inline-start: 22px;
+  font-size: 11.5px;
+  color: var(--cdw-ink-2);
+}
+
+/* الإصدارات */
+.cdw-versions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cdw-version {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: var(--cdw-ink);
+  text-align: start;
+  cursor: pointer;
+}
+
+.cdw-version:hover {
+  background: var(--cdw-subtle);
+}
+
+.cdw-version.is-active {
+  border-color: var(--cdw-line);
+  background: var(--cdw-subtle);
+}
+
+.cdw-version__n {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cdw-line);
+  background: var(--cdw-surface);
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cdw-version.is-active .cdw-version__n {
+  border-color: var(--cdw-accent);
+  color: var(--cdw-accent);
+}
+
+.cdw-version__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cdw-version__body b {
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cdw-version__body small {
+  font-size: 11px;
+  color: var(--cdw-ink-2);
+}
+
+/* الشارات */
+.cdw-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--cdw-subtle);
+  color: var(--cdw-ink-2);
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cdw-chip--draft { color: var(--cdw-accent); background: color-mix(in srgb, var(--cdw-accent) 10%, transparent); }
+.cdw-chip--review { color: var(--cdw-warn); background: color-mix(in srgb, var(--cdw-warn) 12%, transparent); }
+.cdw-chip--approved { color: var(--cdw-ok); background: color-mix(in srgb, var(--cdw-ok) 12%, transparent); }
+.cdw-chip--rejected { color: var(--cdw-bad); background: color-mix(in srgb, var(--cdw-bad) 10%, transparent); }
+
+.cdw-chip--risk-low,
+.cdw-chip--sev-low { color: var(--cdw-accent); background: color-mix(in srgb, var(--cdw-accent) 10%, transparent); }
+.cdw-chip--risk-medium,
+.cdw-chip--sev-medium { color: var(--cdw-warn); background: color-mix(in srgb, var(--cdw-warn) 12%, transparent); }
+.cdw-chip--risk-high,
+.cdw-chip--sev-high { color: var(--cdw-bad); background: color-mix(in srgb, var(--cdw-bad) 10%, transparent); }
+
+/* التدقيق */
+.cdw-audit__meta {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  color: var(--cdw-ink-2);
+}
+
+.cdw-audit__meta b {
+  color: var(--cdw-warn);
+  font-weight: 600;
+}
+
+.cdw-audit__warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--cdw-warn);
+}
+
+.cdw-audit__warn svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.cdw-audit__summary {
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: var(--cdw-subtle);
+  font-size: 12.5px;
+  line-height: 1.85;
+}
+
+.cdw-audit__h,
+.cdw-audit__missing h4,
+.cdw-feedback h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--cdw-ink);
+}
+
+.cdw-audit__missing ul {
+  margin: 0;
+  padding-inline-start: 18px;
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--cdw-warn);
+}
+
+.cdw-findings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cdw-findings li {
+  padding: 9px 11px;
+  border: 1px solid var(--cdw-line);
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.75;
+}
+
+.cdw-findings li.is-handled {
+  opacity: 0.6;
+}
+
+.cdw-finding__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.cdw-finding__ref {
+  font-size: 11px;
+  color: var(--cdw-ink-2);
+}
+
+.cdw-finding__done {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--cdw-ok);
+}
+
+.cdw-findings q {
+  display: block;
+  color: var(--cdw-ink-2);
+  quotes: '«' '»';
+}
+
+.cdw-findings p {
+  margin: 3px 0 0;
+}
+
+.cdw-finding__suggest {
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--cdw-ok) 9%, transparent);
+}
+
+.cdw-findings small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--cdw-ink-2);
+}
+
+/* الملاحظات */
+.cdw-comments {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cdw-comments li {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--cdw-line);
+}
+
+.cdw-comments small {
+  font-size: 11px;
+  color: var(--cdw-ink-2);
+}
+
+.cdw-comments p,
+.cdw-feedback p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.cdw-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cdw-feedback {
+  margin-top: 12px;
+  padding-top: 2px;
+  border-top: 1px dashed var(--cdw-line);
+}
+
+.cdw-feedback textarea {
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.cdw-feedback .cdw-link {
+  margin-top: 4px;
+}
+
+/* خدمة بلا بيانات عقد */
+.cdw-missing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 16px;
+  color: var(--color-text-secondary, #5a5a5a);
+  font-size: 13px;
+}
+
+/* ─── التجاوب: تحت 1100px تنزل اللوحات تحت الورقة وتعود الصفحة للتمرير الطبيعي ─── */
+
+@media (max-width: 1100px) {
+  .cdw {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+
+  .cdw-doc {
+    min-height: 70vh;
+  }
+
+  .cdw-doc__scroll {
+    overflow-y: visible;
+  }
+
+  .cdw-side {
+    overflow-y: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .cdw-doc__bar {
+    flex-wrap: wrap;
+  }
+
+  .cdw-doc__actions {
+    margin-inline-start: 0;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .cdw-btn span {
+    display: none;
+  }
+
+  .cdw-paper {
+    padding: 22px 18px 28px;
+    border-inline: none;
+    border-radius: 0;
+  }
+
+  .cdw-doc__scroll {
+    padding: 0;
+  }
+
+  .cdw-pop {
+    width: min(320px, calc(100vw - 48px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cdw-spin { animation-duration: 2s; }
+  .cdw-panel__chev { transition: none; }
+}

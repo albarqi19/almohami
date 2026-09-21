@@ -141,6 +141,15 @@ export class LegalServiceService {
     return apiClient.post(`/legal-services/${id}/contract-drafting/versions`, data);
   }
 
+  /** الحفظ التلقائي: يحدّث أحدث إصدار وهو مسودة في مكانه — `expected_updated_at` بصمة آخر نسخة رآها المحرر. */
+  static async updateVersion(
+    id: number,
+    versionId: number,
+    data: { content: string; change_summary?: string | null; expected_updated_at?: string | null },
+  ): Promise<{ success: boolean; data: ContractDraftingVersion; message?: string }> {
+    return apiClient.put(`/legal-services/${id}/contract-drafting/versions/${versionId}`, data);
+  }
+
   static async getVersion(id: number, versionId: number): Promise<{ success: boolean; data: ContractDraftingVersion }> {
     return apiClient.get(`/legal-services/${id}/contract-drafting/versions/${versionId}`);
   }
