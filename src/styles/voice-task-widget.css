@@ -111,6 +111,42 @@ body.dark .voice-task-widget[data-phase='recording'] .voice-task-widget__caption
   color: var(--color-text-secondary, #64748b);
 }
 
+/* مفتاح الوضع: «مراجعة» (افتراضي) أو «سريع» — صغيرٌ تحت التسمية لا يزاحم الزر */
+.voice-task-widget__mode {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--dashboard-card, #ffffff);
+}
+
+.voice-task-widget__mode button {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary, #64748b);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.voice-task-widget__mode button.is-on {
+  background: var(--law-navy, #1e3a5f);
+  color: #ffffff;
+}
+
+.voice-task-widget__mode button.is-on svg {
+  color: var(--law-gold, #b8860b);
+}
+
 /* ─── نافذة التعريف بالميزة (تظهر مرة واحدة) ─── */
 
 .voice-task-intro-overlay {

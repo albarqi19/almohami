@@ -185,7 +185,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         due_date: formData.due_date,
         // `null` صراحةً لا `undefined`: مسحُ البداية يجب أن يصل الخادمَ فيمحوها
         start_date: formData.start_date || null,
-        auto_start: Boolean(formData.start_date) && formData.auto_start,
+        // تاريخُ البداية نفسُه هو الإعلان — لا خانةَ فوقه (انظر الحقل أعلاه)
+        auto_start: Boolean(formData.start_date),
         estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : undefined,
         actual_hours: formData.actual_hours ? parseFloat(formData.actual_hours) : undefined,
         assigned_to: responsibleId || formData.assigned_to,
@@ -319,22 +320,12 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                     max={formData.due_date || undefined}
                     onChange={(e) => updateField('start_date', e.target.value)}
                   />
-                  {/* لا يظهر الخيارُ بلا بداية — والباك يفرض القاعدةَ نفسها.
-                      والنصُّ قصيرٌ عمداً: الخليّةُ ضيّقة والشرحُ في الـtooltip. */}
-                  {formData.start_date && (
-                    <label
-                      className={`task-req-chip task-autostart-chip${formData.auto_start ? ' is-on' : ''}`}
-                      title="تتحوّل المهمة من «لم تبدأ» إلى «قيد التنفيذ» عند حلول هذا الوقت. لا تُلمَس إن كنتَ قد بدأتَها أو أوقفتَها بنفسك."
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.auto_start}
-                        onChange={(e) => updateField('auto_start', e.target.checked)}
-                      />
-                      <PlayCircle size={12} />
-                      بدء تلقائي
-                    </label>
-                  )}
+                  {/* 🩸 حُذفت خانة «بدء تلقائي» كما في نافذة الإضافة: تاريخُ البداية
+                      نفسُه هو الإعلان. المهمّة التي حلّ موعدُ بدايتها وهي «لم تبدأ»
+                      يحوّلها `tasks:start-due` بلا خانةٍ فوقه. */}
+                  <span className="task-start-hint">
+                    {formData.start_date ? 'تبدأ في موعدها' : 'بدأت'}
+                  </span>
                 </div>
               </div>
 
@@ -365,7 +356,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                     value={formData.status}
                     onChange={(e) => updateField('status', e.target.value)}
                   >
-                    <option value="todo">قيد الانتظار</option>
+                    <option value="todo">لم تبدأ</option>
                     <option value="in_progress">قيد التنفيذ</option>
                     <option value="review">قيد المراجعة</option>
                     {/* on_hold تُعرض فقط (الدخول إليها عبر زر الإيقاف بسبب إلزامي — #130) */}

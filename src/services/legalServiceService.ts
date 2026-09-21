@@ -13,6 +13,7 @@ import type {
   ServiceActivityItem,
   ChecklistItem,
   LegalReference,
+  OpinionLetterOptions,
   LegalOpinion,
   CaseInvoiceItem,
   ServiceDeliverableItem,
@@ -115,8 +116,13 @@ export class LegalServiceService {
     return apiClient.put(`/legal-services/${id}/consultation/details`, data);
   }
 
-  static async updateOpinion(id: number, data: { legal_opinion?: string; finalize?: boolean }): Promise<{ success: boolean; data: ConsultationDetail }> {
+  static async updateOpinion(id: number, data: { legal_opinion?: string; finalize?: boolean; autosave?: boolean }): Promise<{ success: boolean; data: ConsultationDetail }> {
     return apiClient.put(`/legal-services/${id}/consultation/opinion`, data);
+  }
+
+  /** يعيد فتح رأيٍ معتمد للتعديل — يرفضه الخادم بعد التسليم */
+  static async reopenOpinion(id: number): Promise<{ success: boolean; data: ConsultationDetail; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/consultation/opinion/reopen`);
   }
 
   static async addReference(id: number, reference: LegalReference): Promise<{ success: boolean; data: ConsultationDetail }> {
@@ -139,6 +145,20 @@ export class LegalServiceService {
 
   static async createVersion(id: number, data: { content: string; change_summary?: string; status?: string }): Promise<{ success: boolean; data: ContractDraftingVersion }> {
     return apiClient.post(`/legal-services/${id}/contract-drafting/versions`, data);
+  }
+
+  /** الحفظ التلقائي: يحدّث أحدث إصدار وهو مسودة في مكانه — `expected_updated_at` بصمة آخر نسخة رآها المحرر. */
+  /** يُنشئ صفّ التفاصيل النوعية الغائب فتُفتح مساحة عمل النوع (خدمات قديمة/مستوردة) */
+  static async createTypeDetail(id: number): Promise<LegalServiceResponse> {
+    return apiClient.post(`/legal-services/${id}/type-detail`);
+  }
+
+  static async updateVersion(
+    id: number,
+    versionId: number,
+    data: { content: string; change_summary?: string | null; expected_updated_at?: string | null },
+  ): Promise<{ success: boolean; data: ContractDraftingVersion; message?: string }> {
+    return apiClient.put(`/legal-services/${id}/contract-drafting/versions/${versionId}`, data);
   }
 
   static async getVersion(id: number, versionId: number): Promise<{ success: boolean; data: ContractDraftingVersion }> {
@@ -581,8 +601,24 @@ export class LegalServiceService {
     return apiClient.get(`/legal-services/${id}/deliverables`);
   }
 
-  static async generateDeliverable(id: number, type: string): Promise<{ success: boolean; data: ServiceDeliverableItem; message?: string }> {
-    return apiClient.post(`/legal-services/${id}/deliverables/generate`, { type });
+  static async generateDeliverable(
+    id: number,
+    type: string,
+    options?: Partial<OpinionLetterOptions>,
+  ): Promise<{ success: boolean; data: ServiceDeliverableItem; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/deliverables/generate`, options ? { type, options } : { type });
+  }
+
+  /** شكل خطاب الرأي: افتراض المكتب + الفعّال لهذه الخدمة + النص المدمج */
+  static async getOpinionLetterSettings(serviceId?: number): Promise<{
+    success: boolean;
+    data: { office: OpinionLetterOptions; effective: OpinionLetterOptions; builtin: OpinionLetterOptions };
+  }> {
+    return apiClient.get(`/legal-services/opinion-letter-settings${serviceId ? `?service_id=${serviceId}` : ''}`);
+  }
+
+  static async updateOpinionLetterSettings(options: OpinionLetterOptions): Promise<{ success: boolean; data: OpinionLetterOptions }> {
+    return apiClient.put('/legal-services/opinion-letter-settings', { options });
   }
 
   static async deleteDeliverable(id: number, deliverableId: number): Promise<{ success: boolean; message: string }> {

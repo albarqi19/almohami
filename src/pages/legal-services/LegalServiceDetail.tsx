@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -26,7 +26,6 @@ import {
   Eye,
   Upload,
   ExternalLink,
-  BookOpen,
   ChevronDown,
   Check,
   AlertTriangle,
@@ -36,16 +35,12 @@ import {
   Link,
   CheckCircle,
   FileCheck,
-  Tag,
   Info,
   Layers,
   AlignLeft,
   StickyNote,
-  BarChart2,
-  GitCompare,
+  MoreHorizontal,
   ArrowLeft,
-  Sparkles,
-  Copy,
   Lock,
   Compass,
   Pencil,
@@ -66,39 +61,66 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import AddExternalLinkModal from '../../components/AddExternalLinkModal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { safeExternalHref, externalLinkHost, type ExternalLinkPayload } from '../../types';
-import TiptapEditor from '../../components/TiptapEditor';
 import LegalRichEditorField from '../../components/legal-services/LegalRichEditorField';
-import LegalRichText from '../../components/legal-services/LegalRichText';
 import DeliverablesPanel from '../../components/legal-services/DeliverablesPanel';
 import PortalLinksPanel from '../../components/legal-services/PortalLinksPanel';
-import ContractAuditPanel from '../../components/legal-services/ContractAuditPanel';
 import EditServiceModal from '../../components/legal-services/EditServiceModal';
-import { diffWords, stripHtml, diffSummary } from '../../utils/legalDiff';
 import type {
   LegalService,
   ServiceTimeEntryItem,
   StatusFlowItem,
-  ChecklistItem,
-  LegalReference,
-  ContractDraftingVersion,
   ServiceDeletionImpact,
 } from '../../types/legalServices';
 import {
   SERVICE_TYPE_LABELS,
   PRIORITY_LABELS,
   BILLING_TYPE_LABELS,
-  CLASSIFICATION_LABELS,
-  URGENCY_LABELS,
-  DELIVERY_METHOD_LABELS,
-  CONTRACT_TYPE_LABELS,
-  CONTRACT_LANGUAGE_LABELS,
   CONVERTIBLE_SERVICE_TYPES,
 } from '../../types/legalServices';
-import { WorkspaceRegistry } from '../../components/legal-services/workspaces';
+import { WorkspaceRegistry, SkeletonCard } from '../../components/legal-services/workspaces';
 import { usePermission } from '../../hooks/usePermission';
+import { StatTile } from '../../components/charts/RaedCharts';
+import { lazyWithRetry } from '../../utils/lazyWithRetry';
+import { flowView, sortTransitions, transitionKind, type FlowView } from '../../utils/serviceFlow';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
+// مساحة صياغة العقد (ورقة الكتابة + لوحاتها) — تُحمَّل عند فتح تبويبها فقط
+const ContractDraftingWorkspace = lazyWithRetry(
+  () => import('../../components/legal-services/contract/ContractDraftingWorkspace'),
+);
+
+// مساحة الاستشارة (ورقة الرأي + ما يُبنى عليه) — تُحمَّل عند فتح تبويبها فقط
+const ConsultationWorkspace = lazyWithRetry(
+  () => import('../../components/legal-services/consultation/ConsultationWorkspace'),
+);
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** مفتاح حمولة التفاصيل النوعية لكل نوع — مرآة LegalServiceManager::TYPE_DETAIL_RELATIONS */
+const TYPE_DETAIL_KEYS: Record<string, keyof LegalService> = {
+  consultation: 'consultation_detail',
+  contract_drafting: 'contract_drafting_detail',
+  company_formation: 'company_formation_detail',
+  licenses: 'license_procedure_detail',
+  arbitration: 'arbitration_detail',
+  compliance: 'compliance_detail',
+  labor: 'labor_detail',
+  real_estate: 'real_estate_detail',
+  due_diligence: 'due_diligence_detail',
+  ip: 'ip_detail',
+  legal_notices: 'legal_notice_detail',
+  training: 'training_detail',
+};
+
+/** مفتاح تبويب العمل لكل نوع — مرآة `SERVICE_TYPE_TAB_MAP` داخل المكوّن */
+function defaultTabFor(serviceType: string): string {
+  if (serviceType === 'consultation') return 'consultation';
+  if (serviceType === 'contract_drafting') return 'contract';
+  return serviceType === 'simple' ? 'info' : 'type_detail';
+}
+
+// خط سير الحالات ثابت لكل نوع خدمة — يكفي جلبه مرة واحدة في الجلسة
+const statusFlowCache = new Map<string, StatusFlowItem[]>();
 
 const STATUS_LABELS: Record<string, string> = {
   // عام
@@ -333,6 +355,38 @@ function formatDate(dateStr: string | null | undefined): string {
   return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+/** «يوم / يومين / ٣ أيام / ١١ يوماً» — العدد العربي لا يُلصق به تمييز واحد */
+function daysPhrase(n: number): string {
+  if (n === 1) return 'يوم';
+  if (n === 2) return 'يومين';
+  const num = n.toLocaleString('ar-SA');
+  return n >= 3 && n <= 10 ? `${num} أيام` : `${num} يوماً`;
+}
+
+/** كم بقي على الاستحقاق؟ — لا يُعرض لخدمةٍ انتهت دورتها */
+function dueChipFor(
+  service: Pick<LegalService, 'due_date' | 'status'>,
+): { text: string; tone: 'ok' | 'warn' | 'bad' } | null {
+  const DONE = ['closed', 'cancelled', 'archived', 'completed'];
+  if (!service.due_date || DONE.includes(service.status)) return null;
+  const due = new Date(service.due_date);
+  if (Number.isNaN(due.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  const days = Math.round((due.getTime() - today.getTime()) / 86400000);
+  if (days < 0) return { text: `متأخرة ${daysPhrase(Math.abs(days))}`, tone: 'bad' };
+  if (days === 0) return { text: 'تُستحق اليوم', tone: 'warn' };
+  return { text: `بعد ${daysPhrase(days)}`, tone: days <= 3 ? 'warn' : 'ok' };
+}
+
+function invoicesPhrase(n: number): string {
+  if (n === 1) return 'فاتورة واحدة';
+  if (n === 2) return 'فاتورتان';
+  const num = n.toLocaleString('ar-SA');
+  return n >= 3 && n <= 10 ? `${num} فواتير` : `${num} فاتورة`;
+}
+
 function formatDateTime(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
@@ -392,6 +446,19 @@ function getDocumentEmoji(
   return '📎';
 }
 
+/**
+ * سطر النشاط كما يُقرأ. أسطر تغيير الحالة القديمة خُزّنت بمفاتيحها الخام
+ * («تم تغيير الحالة من drafting إلى internal_review») — نعيد صياغتها من `metadata` بأسمائها العربية.
+ */
+function activityTitle(activity: { type: string; title: string; metadata: Record<string, unknown> | null }): string {
+  const from = activity.metadata?.old_status;
+  const to = activity.metadata?.new_status;
+  if (activity.type === 'status_changed' && typeof from === 'string' && typeof to === 'string') {
+    return `انتقلت من «${getStatusLabel(from)}» إلى «${getStatusLabel(to)}»`;
+  }
+  return activity.title;
+}
+
 function getActivityMarkerClass(type: string): string {
   switch (type) {
     case 'service_created': return 'lsd-timeline__marker--blue';
@@ -448,24 +515,30 @@ const tabVariants = {
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 interface StatusPipelineProps {
-  steps: StatusFlowItem[];
-  currentStatus: string;
+  view: FlowView;
+  /** الخطوات في الطريق — نحجز ارتفاع الشريط كي لا يقفز المحتوى تحته حين تصل. */
+  pending?: boolean;
 }
 
-const StatusPipeline: React.FC<StatusPipelineProps> = ({ steps, currentStatus }) => {
-  if (!steps.length) return null;
-
-  const currentIndex = steps.findIndex((s) => s.status === currentStatus);
+/**
+ * يرسم **المحطات الرئيسية** وحدها (انظر utils/serviceFlow). الفرع («تعديل»، «مرفوض»…) لا يُرسم
+ * محطةً على الخط بل يُعلَّم على المحطة التي تفرّع منها، و«ملغاة» ليست محطةً في مسار أحد.
+ */
+const StatusPipeline: React.FC<StatusPipelineProps> = ({ view, pending = false }) => {
+  const steps = view.path;
+  if (!steps.length) {
+    return pending ? <div className="lsd-status-pipeline lsd-status-pipeline--pending" aria-hidden="true" /> : null;
+  }
 
   return (
-    <div className="lsd-status-pipeline">
+    <div className={`lsd-status-pipeline${view.cancelled ? ' lsd-status-pipeline--cancelled' : ''}`}>
       {steps.map((step, idx) => {
-        const isCompleted = idx < currentIndex;
-        const isActive = idx === currentIndex;
+        const isCompleted = !view.cancelled && idx < view.index;
+        const isActive = !view.cancelled && idx === view.index;
         const stepClass = isCompleted
           ? 'lsd-pipeline-step--completed'
           : isActive
-          ? 'lsd-pipeline-step--active'
+          ? `lsd-pipeline-step--active${view.branch ? ' lsd-pipeline-step--branch' : ''}`
           : 'lsd-pipeline-step--pending';
 
         return (
@@ -473,7 +546,7 @@ const StatusPipeline: React.FC<StatusPipelineProps> = ({ steps, currentStatus })
             <div className={`lsd-pipeline-step ${stepClass}`}>
               <div className="lsd-pipeline-step__content">
                 <div className="lsd-pipeline-step__dot">
-                  {isCompleted ? <Check size={12} /> : isActive ? idx + 1 : idx + 1}
+                  {isCompleted ? <Check size={12} /> : idx + 1}
                 </div>
                 <span className="lsd-pipeline-step__label">{step.label}</span>
               </div>
@@ -721,112 +794,7 @@ const ManualTimeForm: React.FC<ManualTimeFormProps> = ({ onSave, onCancel, loadi
   );
 };
 
-// ── Add Reference Form ────────────────────────────────────────────────────────
-
-interface AddReferenceFormProps {
-  onSave: (ref: LegalReference) => void;
-  onCancel: () => void;
-  loading: boolean;
-}
-
-const AddReferenceForm: React.FC<AddReferenceFormProps> = ({ onSave, onCancel, loading }) => {
-  const [title, setTitle] = useState('');
-  const [source, setSource] = useState('');
-  const [url, setUrl] = useState('');
-
-  return (
-    <div className="lsd-inline-form">
-      <div className="lsd-form-group">
-        <label className="lsd-form-label">العنوان *</label>
-        <input
-          className="lsd-form-input"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="مثال: المادة 123 من نظام العمل"
-        />
-      </div>
-      <div className="lsd-form-group">
-        <label className="lsd-form-label">المصدر</label>
-        <input
-          className="lsd-form-input"
-          value={source}
-          onChange={(e) => setSource(e.target.value)}
-          placeholder="مثال: نظام العمل السعودي"
-        />
-      </div>
-      <div className="lsd-form-group">
-        <label className="lsd-form-label">الرابط</label>
-        <input
-          className="lsd-form-input"
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://..."
-        />
-      </div>
-      <div className="lsd-inline-form__actions">
-        <button className="lsd-header-btn" onClick={onCancel}>
-          إلغاء
-        </button>
-        <button
-          className="lsd-header-btn lsd-header-btn--primary"
-          onClick={() => onSave({ title, source, url })}
-          disabled={loading || !title.trim()}
-        >
-          {loading ? 'جارٍ الإضافة...' : 'إضافة'}
-        </button>
-      </div>
-    </div>
-  );
-};
-
 // ── New Version Form ──────────────────────────────────────────────────────────
-
-interface NewVersionFormProps {
-  onSave: (content: string, summary: string) => void;
-  onCancel: () => void;
-  loading: boolean;
-}
-
-const NewVersionForm: React.FC<NewVersionFormProps> = ({ onSave, onCancel, loading }) => {
-  const [content, setContent] = useState('');
-  const [summary, setSummary] = useState('');
-
-  return (
-    <div className="lsd-inline-form">
-      <div className="lsd-form-group">
-        <label className="lsd-form-label">محتوى المسودة *</label>
-        <TiptapEditor
-          content={content}
-          onChange={setContent}
-          placeholder="أدخل نص المسودة..."
-          minHeight="280px"
-        />
-      </div>
-      <div className="lsd-form-group">
-        <label className="lsd-form-label">ملخص التغييرات</label>
-        <input
-          className="lsd-form-input"
-          value={summary}
-          onChange={(e) => setSummary(e.target.value)}
-          placeholder="مثال: تعديل بند الضمانات"
-        />
-      </div>
-      <div className="lsd-inline-form__actions">
-        <button className="lsd-header-btn" onClick={onCancel}>
-          إلغاء
-        </button>
-        <button
-          className="lsd-header-btn lsd-header-btn--primary"
-          onClick={() => onSave(content, summary)}
-          disabled={loading || !content.trim()}
-        >
-          {loading ? 'جارٍ الحفظ...' : 'إصدار مسودة جديدة'}
-        </button>
-      </div>
-    </div>
-  );
-};
 
 /**
  * حذف الخدمة بنداءٍ مباشر لا عبر apiClient — عمداً لا سهواً:
@@ -884,6 +852,7 @@ const LegalServiceDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('info');
   const [statusFlow, setStatusFlow] = useState<StatusFlowItem[]>([]);
+  const [statusFlowPending, setStatusFlowPending] = useState(false);
 
   // ── Action state ──
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -904,9 +873,6 @@ const LegalServiceDetail: React.FC = () => {
    *    لا يقبله، بينما تبويبُ الاستشارة يقول «أضِفه من تعديل الخدمة» — أي يدلّ على
    *    بابٍ مغلق. فكلُّ استشارةٍ وُلدت بلا سؤالٍ بقيت بلا سؤالٍ إلى الأبد.
    */
-  const [editingQuestion, setEditingQuestion] = useState(false);
-  const [questionDraft, setQuestionDraft] = useState('');
-  const [savingQuestion, setSavingQuestion] = useState(false);
 
   /**
    * فتحُ مستندٍ مرفوعٍ على الخدمة.
@@ -1015,20 +981,13 @@ const LegalServiceDetail: React.FC = () => {
   } | null>(null);
 
   // ── Consultation state ──
-  const [showAddReference, setShowAddReference] = useState(false);
-  const [addRefLoading, setAddRefLoading] = useState(false);
-  const [deliverLoading, setDeliverLoading] = useState(false);
   // مسودة الرأي المقترحة بالذكاء (تُعرض في صندوق قابل للنسخ — لا تُحفظ تلقائياً)
-  const [aiDraftLoading, setAiDraftLoading] = useState(false);
-  const [aiDraft, setAiDraft] = useState<string | null>(null);
 
   // ── Contract state ──
-  const [showNewVersionForm, setShowNewVersionForm] = useState(false);
-  const [newVersionLoading, setNewVersionLoading] = useState(false);
-  const [checklistLoading, setChecklistLoading] = useState(false);
-  const [showCompare, setShowCompare] = useState(false);
-  const [compareA, setCompareA] = useState<number | null>(null);
-  const [compareB, setCompareB] = useState<number | null>(null);
+  // وضع التركيز في مساحة صياغة العقد: يُخفي شريط الحالة واللوحات لتأخذ الورقة المساحة كلها
+  const [contractFocus, setContractFocus] = useState(false);
+  // خدمة بلا صفّ تفاصيل نوعية — تُجهَّز مساحتها بنقرة
+  const [preparingDetail, setPreparingDetail] = useState(false);
 
   // ── Documents state ──
   const [docLoading, setDocLoading] = useState(false);
@@ -1038,6 +997,10 @@ const LegalServiceDetail: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  // انتقالٌ ينتظر التأكيد — ما له أثر (قفل/فاتورة/إشعار عميل) أو ما ينقصه شيء لا يقع بنقرة واحدة
+  const [pendingTransition, setPendingTransition] = useState<string | null>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
   // ── Timer interval ──
   useEffect(() => {
@@ -1054,63 +1017,113 @@ const LegalServiceDetail: React.FC = () => {
       if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
         setShowStatusDropdown(false);
       }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
+      }
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
   // ── Fetch service ──
+  // آخر `id` رُسمت خدمته فعلاً، ورقم آخر طلب — يحميان من ردٍّ متأخر لخدمةٍ غادرها المستخدم.
+  const loadedIdRef = useRef<string | null>(null);
+  const fetchSeqRef = useRef(0);
+
+  /**
+   * البيانات الثانوية (خط سير الحالات/ملخص الوقت/مهام التكليف/المؤقت النشط).
+   *
+   * كانت تُجلب **واحداً بعد الآخر** قبل رسم أي شيء — خمس رحلات متتالية إلى الخادم
+   * والصفحة على دوّامة التحميل، بينما الخدمة المبسطة ترسم بعد رحلةٍ واحدة. الآن
+   * تنطلق معاً بعد وصول الخدمة ولا تحجب الرسم، وكلٌّ منها يملأ مكانه حين يصل.
+   * فشلها لا يعطّل الصفحة، فلا نُغرق المستخدم بـ toasts — نكتفي بتسجيلها للمطوّر.
+   */
+  const loadSecondary = useCallback((serviceId: number, serviceType: string, seq: number) => {
+    const isCurrent = () => fetchSeqRef.current === seq;
+
+    // خط سير الحالات ثابت لكل نوع — يُجلب مرة واحدة في الجلسة
+    if (!statusFlowCache.has(serviceType)) {
+      setStatusFlowPending(true);
+      LegalServiceService.getStatusFlow(serviceType)
+        .then((flowRes) => {
+          if (!flowRes.success) return;
+          statusFlowCache.set(serviceType, flowRes.data);
+          if (isCurrent()) setStatusFlow(flowRes.data);
+        })
+        .catch((err) => console.warn('status-flow:', getApiErrorMessage(err)))
+        .finally(() => {
+          if (isCurrent()) setStatusFlowPending(false);
+        });
+    }
+
+    LegalServiceService.getTimeSummary(serviceId)
+      .then((summaryRes) => {
+        if (summaryRes.success && isCurrent()) setTimeSummary(summaryRes.data);
+      })
+      .catch((err) => console.warn('time-summary:', getApiErrorMessage(err)));
+
+    // مهام التكليف المرتبطة بالخدمة — تُغذّي بطاقة «جاهزة للعميل» بعد الاعتماد
+    TaskService.getTasks({ legal_service_id: serviceId, per_page: 50 })
+      .then((tasksRes) => {
+        if (isCurrent()) setServiceTasks(Array.isArray(tasksRes?.data) ? tasksRes.data : []);
+      })
+      .catch((err) => console.warn('service-tasks:', getApiErrorMessage(err)));
+
+    LegalServiceService.getActiveTimer()
+      .then((activeRes) => {
+        if (!isCurrent() || !activeRes.success || !activeRes.data) return;
+        setActiveTimerEntry(activeRes.data);
+        setTimerRunning(true);
+        const started = new Date(activeRes.data.started_at).getTime();
+        setTimerSeconds(Math.floor((Date.now() - started) / 1000));
+      })
+      .catch((err) => console.warn('active-timer:', getApiErrorMessage(err)));
+  }, []);
+
+  /**
+   * دوّامة التحميل للفتح الأول فقط (أو عند الانتقال إلى خدمةٍ أخرى).
+   *
+   * كل إجراء في الصفحة ومساحات العمل (تأشير بند، حفظ إصدار، رفع مستند…) يُنادي
+   * `fetchService` ليُحدّث البيانات — وكانت تُشعل `loading` في كل مرة، فتُستبدل
+   * الصفحة كلها بالدوّامة ثم تُبنى من جديد: يضيع موضع التمرير وحالة المحرر وما فُتح
+   * من نماذج. بعد الفتح الأول يصير التحديث صامتاً في مكانه.
+   */
   const fetchService = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
-    setError(null);
+    const seq = ++fetchSeqRef.current;
+    const firstLoad = loadedIdRef.current !== id;
+    if (firstLoad) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const res = await LegalServiceService.getService(Number(id));
+      if (fetchSeqRef.current !== seq) return;
       if (res.success) {
+        const cachedFlow = statusFlowCache.get(res.data.service_type);
+        if (cachedFlow) setStatusFlow(cachedFlow);
+        else if (firstLoad) setStatusFlow([]);
         setService(res.data);
-        // بيانات ثانوية (خط سير الحالات/ملخص الوقت/المؤقت النشط): فشلها لا يعطّل
-        // الصفحة، فلا نُغرق المستخدم بـ toasts عند التحميل — نكتفي بتسجيلها للمطوّر.
-        try {
-          const flowRes = await LegalServiceService.getStatusFlow(res.data.service_type);
-          if (flowRes.success) setStatusFlow(flowRes.data);
-        } catch (err) {
-          console.warn('status-flow:', getApiErrorMessage(err));
-        }
-        // Fetch time summary
-        try {
-          const summaryRes = await LegalServiceService.getTimeSummary(Number(id));
-          if (summaryRes.success) setTimeSummary(summaryRes.data);
-        } catch (err) {
-          console.warn('time-summary:', getApiErrorMessage(err));
-        }
-        // مهام التكليف المرتبطة بالخدمة — تُغذّي بطاقة «جاهزة للعميل» بعد الاعتماد
-        try {
-          const tasksRes = await TaskService.getTasks({ legal_service_id: Number(id), per_page: 50 });
-          setServiceTasks(Array.isArray(tasksRes?.data) ? tasksRes.data : []);
-        } catch (err) {
-          console.warn('service-tasks:', getApiErrorMessage(err));
-        }
-        // Check active timer
-        try {
-          const activeRes = await LegalServiceService.getActiveTimer();
-          if (activeRes.success && activeRes.data) {
-            setActiveTimerEntry(activeRes.data);
-            setTimerRunning(true);
-            const started = new Date(activeRes.data.started_at).getTime();
-            setTimerSeconds(Math.floor((Date.now() - started) / 1000));
-          }
-        } catch (err) {
-          console.warn('active-timer:', getApiErrorMessage(err));
-        }
-      } else {
+        // الخدمة تُفتح على تبويب عملها (ورقة العقد/الاستشارة/مساحة النوع) — من يفتحها جاء ليعمل،
+        // لا ليقرأ بطاقة معلومات. المبسطة لها صفحتها، وما لا مساحة له يُفتح على «نظرة عامة».
+        if (firstLoad) setActiveTab(defaultTabFor(res.data.service_type));
+        loadedIdRef.current = id;
+        loadSecondary(Number(id), res.data.service_type, seq);
+      } else if (firstLoad) {
         setError('تعذّر تحميل بيانات الخدمة');
       }
     } catch (err) {
-      // نعرض رسالة الخادم الفعلية (404/403...) بدل نص عام
-      setError(getApiErrorMessage(err, 'حدث خطأ في الاتصال بالخادم'));
+      if (fetchSeqRef.current !== seq) return;
+      if (firstLoad) {
+        // نعرض رسالة الخادم الفعلية (404/403...) بدل نص عام
+        setError(getApiErrorMessage(err, 'حدث خطأ في الاتصال بالخادم'));
+      } else {
+        // التحديث الصامت يلي إجراءً نجح فعلاً — فشله لا يُبلَّغ كفشلٍ للإجراء
+        console.warn('service-refresh:', getApiErrorMessage(err));
+      }
     }
-    setLoading(false);
-  }, [id]);
+    if (firstLoad) setLoading(false);
+  }, [id, loadSecondary]);
 
   /**
    * إعادة تحميلٍ صامتة: تحدّث بيانات الخدمة **بلا** إشعال `loading` العام.
@@ -1135,6 +1148,72 @@ const LegalServiceDetail: React.FC = () => {
   useEffect(() => {
     fetchService();
   }, [fetchService]);
+
+  // موضع الخدمة على المسار الرئيسي (انظر utils/serviceFlow)
+  const flow = useMemo(() => flowView(statusFlow, service?.status ?? ''), [statusFlow, service?.status]);
+
+  /**
+   * الانتقال لا يقع بنقرة واحدة إن كان له أثر لا يُسترد (قفل المحتوى، فاتورة، إشعار يصل العميل،
+   * إلغاء) أو كان ينقصه شيء (لا مسودة، رأي فارغ). كان أي نقرٍ في القائمة ينفَّذ فوراً —
+   * ونقرةٌ خاطئة على «معتمد» تقفل العقد وتُشعر العميل ولا رجوع منها في المسار.
+   */
+  const transitionConcerns = (target: string): { effects: string[]; warnings: string[] } => {
+    if (!service) return { effects: [], warnings: [] };
+    const effects: string[] = [];
+    const warnings: string[] = [];
+    const type = service.service_type;
+    const billing = BILLING_TRIGGER_STATUSES[type] ?? ['completed'];
+    const locked = LOCKED_STATUSES[type] ?? ['completed'];
+
+    if (target === 'cancelled') effects.push('تنتهي دورة العمل على الخدمة، ولا عودة من الإلغاء.');
+    if (locked.includes(target) || ['closed', 'archived', 'cancelled'].includes(target)) {
+      effects.push('يُقفل المحتوى ضد التعديل.');
+    }
+    if (billing.includes(target)) {
+      effects.push('تُنشأ فاتورة مسودة تلقائياً إن لم تكن للخدمة فاتورة وكان لها مبلغ.');
+    }
+    if (
+      (type === 'consultation' && (target === 'draft_ready' || target === 'delivered')) ||
+      (type !== 'consultation' && billing.includes(target))
+    ) {
+      effects.push('يصل العميلَ إشعار (واتساب/بريد) ببلوغ هذه المرحلة.');
+    }
+    // هل من رجوع؟ — المحطة التي لا تعيدك إلى ما قبلها تستحق أن تُذكر
+    const targetItem = statusFlow.find((f) => f.status === target);
+    const canComeBack = !!targetItem && targetItem.transitions.some((t) => transitionKind(flow, t) === 'back' || t === service.status);
+    if (target !== 'cancelled' && targetItem && targetItem.transitions.length > 0 && !canComeBack && effects.length > 0) {
+      effects.push('لا رجوع من هذه المحطة إلى ما قبلها.');
+    }
+
+    if (transitionKind(flow, target) === 'forward') {
+      if (type === 'contract_drafting' && target !== 'drafting') {
+        const versions = service.contract_drafting_detail?.versions ?? [];
+        const latest = [...versions].sort((a, b) => b.version_number - a.version_number)[0];
+        const hasText = !!latest && latest.content.replace(/<[^>]*>/g, '').trim() !== '';
+        if (!hasText) warnings.push('لا نص مكتوب للعقد بعد.');
+        const checklist = service.contract_drafting_detail?.checklist ?? [];
+        const left = checklist.filter((i) => !i.checked).length;
+        if (left > 0 && ['client_review', 'approved', 'signed'].includes(target)) {
+          warnings.push(`بقي في قائمة الفحص ${left.toLocaleString('ar-SA')} بلا تأشير.`);
+        }
+      }
+      if (type === 'consultation' && ['draft_ready', 'internal_review', 'delivered'].includes(target)) {
+        const opinion = service.consultation_detail?.legal_opinion ?? '';
+        if (String(opinion).replace(/<[^>]*>/g, '').trim() === '') warnings.push('الرأي القانوني لم يُكتب بعد.');
+      }
+    }
+    return { effects, warnings };
+  };
+
+  const requestTransition = (target: string) => {
+    setShowStatusDropdown(false);
+    const { effects, warnings } = transitionConcerns(target);
+    if (effects.length === 0 && warnings.length === 0) {
+      void handleStatusChange(target);
+      return;
+    }
+    setPendingTransition(target);
+  };
 
   // ── Status change ──
   const handleStatusChange = async (newStatus: string) => {
@@ -1341,135 +1420,23 @@ const LegalServiceDetail: React.FC = () => {
     setManualTimeLoading(false);
   };
 
-  // ── Consultation actions ──
-  const handleSaveOpinion = async (html: string) => {
+  /**
+   * خدمةٌ بلا صفّ تفاصيل نوعية (بيانات قديمة/مستوردة) كانت تعرض «لا توجد تفاصيل» بلا أيّ
+   * مخرج — والحفظ من الخادم كان يسقط بـ500. الآن يُنشأ الصفّ بنقرة فتُفتح مساحة العمل.
+   */
+  const handlePrepareTypeDetail = async () => {
     if (!service) return;
-    const res = await LegalServiceService.updateOpinion(service.id, {
-      legal_opinion: html,
-    });
-    if (!res?.success) throw new Error('تعذّر حفظ الرأي القانوني');
-    await fetchService();
-  };
-
-  /** حفظ سؤال العميل من تبويب «المعلومات» — يُنشئ صفَّ التفاصيل إن لم يكن. */
-  const handleSaveClientQuestion = async () => {
-    if (!service) return;
-    setSavingQuestion(true);
+    setPreparingDetail(true);
     try {
-      await LegalServiceService.updateConsultationDetails(service.id, {
-        client_question: questionDraft.trim() || null,
-      });
-      setEditingQuestion(false);
-      toast.success('حُفظ سؤال العميل');
-      await fetchService();
+      const res = await LegalServiceService.createTypeDetail(service.id);
+      if (!res.success) throw new Error('تعذّر تجهيز مساحة العمل');
+      setService(res.data);
+      toast.success('جُهّزت مساحة العمل — ابدأ تعبئة البيانات');
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'تعذّر حفظ سؤال العميل'));
+      toast.error(getApiErrorMessage(err, 'تعذّر تجهيز مساحة العمل'));
     } finally {
-      setSavingQuestion(false);
+      setPreparingDetail(false);
     }
-  };
-
-  const handleAddReference = async (ref: LegalReference) => {
-    if (!service) return;
-    setAddRefLoading(true);
-    try {
-      await LegalServiceService.addReference(service.id, ref);
-      setShowAddReference(false);
-      toast.success('تم إضافة المرجع القانوني');
-      fetchService();
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'تعذّر إضافة المرجع القانوني'));
-    }
-    setAddRefLoading(false);
-  };
-
-  const handleRemoveReference = async (index: number) => {
-    if (!service) return;
-    try {
-      await LegalServiceService.removeReference(service.id, index);
-      fetchService();
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'تعذّر حذف المرجع القانوني'));
-    }
-  };
-
-  const handleMarkDelivered = async () => {
-    if (!service) return;
-    setDeliverLoading(true);
-    try {
-      const res = await LegalServiceService.markDelivered(service.id);
-      if (res.success) {
-        setService(res.data);
-        toast.success('تم تسليم الاستشارة بنجاح');
-      } else {
-        toast.error('تعذّر تسليم الاستشارة');
-      }
-    } catch (err) {
-      // رسالة الباك (مثلاً: الرأي غير معتمد بعد / انتقال غير مسموح) تظهر كما هي
-      toast.error(getApiErrorMessage(err, 'تعذّر تسليم الاستشارة'));
-    }
-    setDeliverLoading(false);
-  };
-
-  // اقتراح مسودة الرأي القانوني بالذكاء — تُعرض للنسخ فقط ولا تُحفظ تلقائياً
-  const handleAiDraft = async () => {
-    if (!service) return;
-    setAiDraftLoading(true);
-    try {
-      const res = await apiClient.post<{
-        success?: boolean;
-        data?: { draft_html?: string; draft?: string; disclaimers?: string[] } | string;
-        draft?: string;
-      }>(`/legal-services/${service.id}/consultation/ai-draft`);
-      // الشكل الرسمي: data.draft_html (+ أشكال احتياطية تحسّباً)
-      const draft =
-        (typeof res?.data === 'object' && (res.data?.draft_html || res.data?.draft)) ||
-        res?.draft ||
-        (typeof res?.data === 'string' ? res.data : null);
-      if (draft && draft.trim()) {
-        setAiDraft(draft);
-      } else {
-        toast.error('لم يُرجِع الخادم مسودة — حاول مجدداً أو اكتب الرأي يدوياً');
-      }
-    } catch (err) {
-      // 503 = خدمة الذكاء غير مهيأة للمكتب — رسالة الخادم توضّح ذلك
-      toast.error(getApiErrorMessage(err, 'تعذّر توليد المسودة الآلية'));
-    }
-    setAiDraftLoading(false);
-  };
-
-  // ── Contract actions ──
-  const handleToggleChecklistItem = async (index: number) => {
-    if (!service?.contract_drafting_detail?.checklist) return;
-    const updated: ChecklistItem[] = service.contract_drafting_detail.checklist.map((item, i) =>
-      i === index ? { ...item, checked: !item.checked } : item
-    );
-    setChecklistLoading(true);
-    try {
-      await LegalServiceService.updateChecklist(service.id, updated);
-      fetchService();
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'تعذّر تحديث قائمة الفحص'));
-    }
-    setChecklistLoading(false);
-  };
-
-  const handleCreateVersion = async (content: string, summary: string) => {
-    if (!service) return;
-    setNewVersionLoading(true);
-    try {
-      await LegalServiceService.createVersion(service.id, {
-        content,
-        change_summary: summary,
-      });
-      setShowNewVersionForm(false);
-      toast.success('تم إصدار مسودة جديدة بنجاح');
-      fetchService();
-    } catch (err) {
-      // بعد الاعتماد/التوقيع يرفض الباك التعديل بـ422 برسالة واضحة — نعرضها
-      toast.error(getApiErrorMessage(err, 'تعذّر إصدار المسودة الجديدة'));
-    }
-    setNewVersionLoading(false);
   };
 
   // ── Document actions ──
@@ -1549,291 +1516,63 @@ const LegalServiceDetail: React.FC = () => {
 
   // ── Tab: Info ─────────────────────────────────────────────────────────────
 
+  // «نظرة عامة»: كانت بطاقتا «معلومات أساسية» و«المعلومات المالية» تكرّران ما في ترويسة الصفحة
+  // حرفاً بحرف، و«الأنشطة» في تبويب مستقل لا يُفتح. الآن: ما يُقرأ (الوصف/السؤال/المنشأ/الملاحظات)
+  // في العمود الرئيسي، وبجواره ما لا تحمله الترويسة + آخر ما جرى على الخدمة.
   const renderInfoTab = () => {
     if (!service) return null;
+    const hasReadable =
+      !!service.description ||
+      !!service.intake_request ||
+      !!service.notes ||
+      !!service.internal_notes ||
+      !!service.case_model;
+    const team = (service.assignees ?? []).map((a) => a.name).filter(Boolean);
+    const sourceLabel =
+      service.source === 'manual'
+        ? 'يدوي'
+        : service.source === 'client_portal'
+        ? 'بوابة العميل'
+        : service.source === 'converted_from_case'
+        ? 'محوّل من قضية'
+        : service.source;
     return (
-      <div className="lsd-info-cards-grid">
-        {/* Card 1: معلومات أساسية */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <Info size={15} />
-              معلومات أساسية
-            </div>
-          </div>
-          <div className="lsd-card__content">
-            <div className="lsd-info-grid">
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <User size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">العميل</div>
-                  <div className="lsd-info-item__value">
-                    {service.client?.name ?? <span className="lsd-info-item__value--muted">—</span>}
-                  </div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <Scale size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">المحامون المسؤولون</div>
-                  <div className="lsd-info-item__value">
-                    {service.assigned_lawyer?.name ?? (
-                      <span className="lsd-info-item__value--muted">غير محدد</span>
-                    )}
-                    {(service.assignees?.length ?? 0) > 1 && (
-                      <span className="lsd-info-item__value--muted"> +{service.assignees!.length - 1}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <Calendar size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">تاريخ الإنشاء</div>
-                  <div className="lsd-info-item__value">{formatDate(service.created_at)}</div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <Calendar size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">تاريخ البدء</div>
-                  <div className="lsd-info-item__value">
-                    {service.start_date ? (
-                      formatDate(service.start_date)
-                    ) : (
-                      <span className="lsd-info-item__value--muted">—</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <AlertTriangle size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">تاريخ الاستحقاق</div>
-                  <div className="lsd-info-item__value">
-                    {service.due_date ? (
-                      formatDate(service.due_date)
-                    ) : (
-                      <span className="lsd-info-item__value--muted">—</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <Tag size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">المصدر</div>
-                  <div className="lsd-info-item__value">
-                    {service.source === 'manual'
-                      ? 'يدوي'
-                      : service.source === 'client_portal'
-                      ? 'بوابة العميل'
-                      : service.source === 'converted_from_case'
-                      ? 'محوّل من قضية'
-                      : service.source}
-                  </div>
-                </div>
+      <div className="lsd2-overview">
+      <div className="lsd2-overview__main">
+        {(statusFlow.length > 0 || statusFlowPending) && (
+          <div className="lsd-card">
+            <div className="lsd-card__header">
+              <div className="lsd-card__title">
+                <Compass size={15} />
+                مسار الخدمة
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Card 2: معلومات مالية */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <DollarSign size={15} />
-              المعلومات المالية
-            </div>
-          </div>
-          <div className="lsd-card__content">
-            <div className="lsd-info-grid">
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <Receipt size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">نوع الفوترة</div>
-                  <div className="lsd-info-item__value">
-                    {BILLING_TYPE_LABELS[service.billing_type] ?? service.billing_type}
-                  </div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <DollarSign size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">المبلغ المتفق عليه</div>
-                  <div className="lsd-info-item__value">
-                    {service.agreed_amount ? (
-                      `${parseFloat(service.agreed_amount).toLocaleString('ar-SA')} ريال`
-                    ) : (
-                      <span className="lsd-info-item__value--muted">—</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {service.billing_type === 'hourly' && (
-                <div className="lsd-info-item">
-                  <div className="lsd-info-item__icon">
-                    <Clock size={14} />
-                  </div>
-                  <div className="lsd-info-item__body">
-                    <div className="lsd-info-item__label">سعر الساعة</div>
-                    <div className="lsd-info-item__value">
-                      {service.hourly_rate ? (
-                        `${parseFloat(service.hourly_rate).toLocaleString('ar-SA')} ريال`
-                      ) : (
-                        <span className="lsd-info-item__value--muted">—</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            <div className="lsd-card__content lsd2-flowcard">
+              <StatusPipeline view={flow} pending={statusFlowPending} />
+              {flow.branch && flow.index >= 0 && (
+                <p className="lsd2-flowcard__branch">
+                  الخدمة الآن في «{flow.branch.label}» — محطة جانبية تفرّعت من «{flow.path[flow.index].label}» وتعود منها إلى المسار.
+                </p>
               )}
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <BarChart2 size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">نسبة الضريبة</div>
-                  <div className="lsd-info-item__value">{service.vat_rate}%</div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <CheckCircle size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">إجمالي المفوتر</div>
-                  <div className="lsd-info-item__value">
-                    {service.total_billed !== undefined ? (
-                      `${Number(service.total_billed).toLocaleString('ar-SA')} ريال`
-                    ) : (
-                      <span className="lsd-info-item__value--muted">—</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <Clock size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">إجمالي الوقت</div>
-                  <div className="lsd-info-item__value">
-                    {service.total_time_seconds != null ? (
-                      formatSeconds(service.total_time_seconds)
-                    ) : (
-                      <span className="lsd-info-item__value--muted">—</span>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <p className="lsd2-muted">
+                {STATUS_EXPLANATIONS[service.status] ??
+                  'حالة مخصّصة — راجع آخر ما جرى لمعرفة ما تم على الخدمة.'}
+              </p>
             </div>
           </div>
-        </div>
-
-        {/* Card 2.5: سؤال العميل — للاستشارات وحدها، وهو **مكانُ إضافته** لا عرضِه فقط.
-            🔴 كان الحقلُ بلا مسارِ تحريرٍ في المنصّة كلّها: نافذةُ التعديل لا تحمله
-               والباك لا يقبله، وتبويبُ الاستشارة يقول «أضِفه من تعديل الخدمة» —
-               بابٌ مغلق. فما وُلد بلا سؤالٍ بقي بلا سؤالٍ أبداً، وعليه وحده تُبنى
-               مسودةُ الرأي بالذكاء. */}
-        {service.service_type === 'consultation' && (() => {
-          const question = service.consultation_detail?.client_question ?? '';
-          // القفلُ مرآةُ حارس الباك (`isContentLocked`): استشارةٌ سُلّمت أو أُغلقت لا تُحرَّر
-          const isLocked = isServiceContentLocked(service);
-          const canEdit = canManageService && !isLocked;
-
-          return (
-            <div className="lsd-card lsd-card--full">
-              <div className="lsd-card__header">
-                <div className="lsd-card__title">
-                  <MessageSquareText size={15} />
-                  سؤال العميل
-                </div>
-                {canEdit && !editingQuestion && (
-                  <button
-                    className="lsd-card__action"
-                    onClick={() => {
-                      setQuestionDraft(question);
-                      setEditingQuestion(true);
-                    }}
-                  >
-                    <Pencil size={13} />
-                    {question ? 'تعديل' : 'إضافة'}
-                  </button>
-                )}
-              </div>
-              <div className="lsd-card__content">
-                {editingQuestion ? (
-                  <>
-                    <textarea
-                      className="lsd-form-input"
-                      rows={4}
-                      autoFocus
-                      value={questionDraft}
-                      onChange={(e) => setQuestionDraft(e.target.value)}
-                      maxLength={10000}
-                      placeholder="ما الذي يسأل عنه العميل تحديداً؟ عليه تُبنى مسودة الرأي."
-                    />
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                      <button
-                        className="lsd-card__action"
-                        onClick={() => void handleSaveClientQuestion()}
-                        disabled={savingQuestion}
-                      >
-                        <Check size={13} />
-                        {savingQuestion ? 'جارٍ الحفظ…' : 'حفظ'}
-                      </button>
-                      <button
-                        className="lsd-card__action"
-                        onClick={() => setEditingQuestion(false)}
-                        disabled={savingQuestion}
-                      >
-                        <X size={13} />
-                        إلغاء
-                      </button>
-                    </div>
-                  </>
-                ) : question ? (
-                  <p className="lsd-description-text">{question}</p>
-                ) : (
-                  <p className="lsd-description-text lsd-description-text--empty">
-                    {canEdit
-                      ? 'لم يُسجَّل سؤال العميل — أضِفه من هنا، وعليه تُبنى مسودة الرأي.'
-                      : isLocked
-                        ? 'لم يُسجَّل سؤال العميل، والاستشارة مقفلة عن التعديل في حالتها الحالية.'
-                        : 'لم يُسجَّل سؤال العميل.'}
-                  </p>
-                )}
-              </div>
+        )}
+        {!hasReadable && (
+          <div className="lsd-card">
+            <div className="lsd-card__content lsd2-blank">
+              <AlignLeft size={22} />
+              <p>لا وصف ولا ملاحظات لهذه الخدمة بعد.</p>
+              <button className="lsd-card__action" onClick={() => setShowEditModal(true)}>
+                <Pencil size={13} />
+                أضفها من «تعديل البيانات»
+              </button>
             </div>
-          );
-        })()}
-
+          </div>
+        )}
         {/* Card 3: الوصف */}
         {service.description && (
           <div className="lsd-card lsd-card--full">
@@ -1974,6 +1713,67 @@ const LegalServiceDetail: React.FC = () => {
           </div>
         )}
       </div>
+
+      <aside className="lsd2-overview__side">
+        <div className="lsd-card">
+          <div className="lsd-card__header">
+            <div className="lsd-card__title">
+              <Info size={15} />
+              تفاصيل
+            </div>
+          </div>
+          <div className="lsd-card__content">
+            <dl className="lsd2-dl">
+              <dt>العميل</dt>
+              <dd>{service.client?.name ?? '—'}</dd>
+              <dt>المحامي المسؤول</dt>
+              <dd>{service.assigned_lawyer?.name ?? 'غير محدد'}</dd>
+              <dt>البدء</dt>
+              <dd>{formatDate(service.start_date)}</dd>
+              <dt>الاستحقاق</dt>
+              <dd>{formatDate(service.due_date)}</dd>
+              {service.agreed_amount && (
+                <><dt>الأتعاب</dt><dd>{parseFloat(service.agreed_amount).toLocaleString('ar-SA')} ريال</dd></>
+              )}
+              <dt>المفوتر</dt>
+              <dd>{Number(service.total_billed ?? 0).toLocaleString('ar-SA')} ريال</dd>
+              <dt>أُنشئت</dt>
+              <dd>{formatDate(service.created_at)}</dd>
+              {sourceLabel && (<><dt>المصدر</dt><dd>{sourceLabel}</dd></>)}
+              {team.length > 1 && (<><dt>فريق العمل</dt><dd>{team.join('، ')}</dd></>)}
+              <dt>نوع الفوترة</dt>
+              <dd>{BILLING_TYPE_LABELS[service.billing_type] ?? service.billing_type}</dd>
+              {service.billing_type === 'hourly' && service.hourly_rate && (
+                <><dt>سعر الساعة</dt><dd>{parseFloat(service.hourly_rate).toLocaleString('ar-SA')} ريال</dd></>
+              )}
+              <dt>الضريبة</dt>
+              <dd>{service.vat_rate}%</dd>
+              {service.total_time_seconds != null && (
+                <><dt>الوقت المسجَّل</dt><dd>{formatSeconds(service.total_time_seconds)}</dd></>
+              )}
+            </dl>
+          </div>
+        </div>
+
+        {(service.service_activities?.length ?? 0) > 0 ? (
+          renderActivitiesTab()
+        ) : (
+          <div className="lsd-card">
+            <div className="lsd-card__header">
+              <div className="lsd-card__title">
+                <Clock size={15} />
+                آخر ما جرى
+              </div>
+            </div>
+            <div className="lsd-card__content">
+              <p className="lsd2-muted">
+                يسجّل النظام هنا تلقائياً كل ما يجري على الخدمة: تغيّر الحالة، المستندات، الوقت، والفواتير.
+              </p>
+            </div>
+          </div>
+        )}
+      </aside>
+      </div>
     );
   };
 
@@ -1981,311 +1781,19 @@ const LegalServiceDetail: React.FC = () => {
 
   const renderConsultationTab = () => {
     if (!service) return null;
-    const detail = service.consultation_detail;
-    if (!detail) {
-      return (
-        <div className="lsd-empty-tab">
-          <MessageSquareText size={32} />
-          <p>لا توجد تفاصيل استشارة</p>
-          <span className="lsd-empty-tab__hint">
-            لم تُسجَّل بيانات الاستشارة عند الإنشاء — عدّل الخدمة لإضافة سؤال العميل ونطاق الاستشارة.
-          </span>
-        </div>
-      );
-    }
-
-    const references = detail.legal_references ?? [];
-    // «تسليم الاستشارة» متاح فقط حين يسمح مسار الحالات بذلك (وإلا نعطّل الزر مع شرح)
-    const allowedTransitions = service.allowed_transitions ?? [];
-    const canDeliver =
-      service.status === 'internal_review' || allowedTransitions.includes('delivered');
-    const deliverDisabledReason =
-      service.status === 'delivered'
-        ? 'سُلّمت الاستشارة مسبقاً'
-        : 'التسليم متاح بعد المراجعة الداخلية — غيّر الحالة من بطاقة «الخطوة التالية» أولاً';
-
+    // مساحة الاستشارة مكوّن مستقل يُحمَّل عند الطلب — الانتظار محصور هنا كي لا تومض الصفحة كلها
     return (
-      <div className="lsd-tab-content-stack">
-        {/* Consultation details card */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <MessageSquareText size={15} />
-              تفاصيل الاستشارة
-            </div>
-          </div>
-          <div className="lsd-card__content">
-            <div className="lsd-info-grid">
-              {detail.classification && (
-                <div className="lsd-info-item">
-                  <div className="lsd-info-item__icon">
-                    <Tag size={14} />
-                  </div>
-                  <div className="lsd-info-item__body">
-                    <div className="lsd-info-item__label">التصنيف</div>
-                    <div className="lsd-info-item__value">
-                      {CLASSIFICATION_LABELS[detail.classification]}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <AlertTriangle size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">الاستعجال</div>
-                  <div className="lsd-info-item__value">
-                    {URGENCY_LABELS[detail.urgency]}
-                  </div>
-                </div>
-              </div>
-
-              {detail.delivery_method && (
-                <div className="lsd-info-item">
-                  <div className="lsd-info-item__icon">
-                    <ArrowRightLeft size={14} />
-                  </div>
-                  <div className="lsd-info-item__body">
-                    <div className="lsd-info-item__label">طريقة التسليم</div>
-                    <div className="lsd-info-item__value">
-                      {DELIVERY_METHOD_LABELS[detail.delivery_method]}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {detail.delivered_at && (
-                <div className="lsd-info-item">
-                  <div className="lsd-info-item__icon">
-                    <CheckCircle size={14} />
-                  </div>
-                  <div className="lsd-info-item__body">
-                    <div className="lsd-info-item__label">تاريخ التسليم</div>
-                    <div className="lsd-info-item__value">{formatDate(detail.delivered_at)}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {detail.scope_definition && (
-              <div className="lsd-notes-section" style={{ marginTop: 12 }}>
-                <div className="lsd-notes-section__label">نطاق الاستشارة</div>
-                <p className="lsd-description-text">{detail.scope_definition}</p>
-              </div>
-            )}
-
-            {/* 🔴 كان الشرطُ `detail.client_question &&` فيختفي القسمُ كلُّه حين
-                يكون فارغاً — فلا يرى المستخدمُ أن ثمّة حقلاً ناقصاً أصلاً، ثم
-                يضغط «توليد المسودة» فيُردّ بـ«لا يمكن التوليد بدون سؤال العميل».
-                والحقلُ اختياريٌّ في نافذة الإنشاء (‏لا تحقّق على الخطوة الثالثة)،
-                فـ**31 استشارةً من 49 على الإنتاج بلا سؤال**. الغيابُ يُعرَض الآن.
-
-                🔴 والرسالةُ كانت تدلّ على بابٍ مغلق: «أضِفه من تعديل الخدمة» —
-                   ونافذةُ التعديل لا تحمل الحقل، والباك لا يقبله. صار للسؤال
-                   مكانٌ حقيقيٌّ يُضاف منه: بطاقتُه في تبويب «المعلومات». */}
-            <div className="lsd-notes-section" style={{ marginTop: 12 }}>
-              <div className="lsd-notes-section__label">سؤال العميل</div>
-              {detail.client_question ? (
-                <p className="lsd-description-text">{detail.client_question}</p>
-              ) : (
-                <p className="lsd-description-text lsd-description-text--empty">
-                  لم يُسجَّل سؤال العميل — أضِفه من تبويب «المعلومات»، وعليه تُبنى مسودةُ الرأي.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Legal opinion (rich editor) */}
-        <LegalRichEditorField
-          label="الرأي القانوني"
-          icon={FileText}
-          value={detail.legal_opinion}
-          onSave={handleSaveOpinion}
-          readOnly={!!detail.opinion_finalized_at || !!detail.delivered_at}
-          hint={detail.opinion_finalized_at
-            ? `🔒 الرأي معتمد بتاريخ ${new Date(detail.opinion_finalized_at).toLocaleDateString('ar-SA')} — مقفل ضد التعديل`
-            : undefined}
-          minHeight="320px"
-          placeholder="اكتب الرأي القانوني هنا..."
-          emptyText="لم يُضف الرأي القانوني بعد — اضغط «تعديل» لبدء الكتابة"
-          successMessage="تم حفظ الرأي القانوني"
+      <Suspense fallback={<SkeletonCard lines={8} />}>
+        <ConsultationWorkspace
+          service={service}
+          refreshService={fetchService}
+          locked={isServiceContentLocked(service)}
+          canManage={canManageService}
+          onRequestTransition={requestTransition}
+          focusMode={contractFocus}
+          onToggleFocus={() => setContractFocus((v) => !v)}
         />
-
-        {/* اقتراح مسودة الرأي بالذكاء — للنسخ فقط، لا تُحفظ تلقائياً */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <Sparkles size={15} />
-              اقتراح مسودة الرأي بالذكاء
-            </div>
-            {/* الزرُّ يعرف شرطَه قبل الضغط: كان مفعَّلاً دائماً ثم يردّ 422 عن حقلٍ
-                لم يُعرَض للمستخدم أصلاً. والتعطيلُ مع سببٍ أصدقُ من فشلٍ بعد النقر. */}
-            <button
-              className="lsd-card__action"
-              onClick={handleAiDraft}
-              disabled={aiDraftLoading || !detail.client_question}
-              title={!detail.client_question
-                ? 'أضف سؤال العميل من تبويب «المعلومات» أولاً — المسودة تُبنى عليه'
-                : 'يولّد مسودة أولية للرأي القانوني اعتماداً على سؤال العميل ونطاق الاستشارة'}
-            >
-              {aiDraftLoading ? (
-                <>
-                  <span className="lsd-ai-spinner" />
-                  جارٍ التوليد...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={13} />
-                  {aiDraft ? 'إعادة التوليد' : 'اقتراح مسودة'}
-                </>
-              )}
-            </button>
-          </div>
-          <div className="lsd-card__content">
-            {aiDraft ? (
-              <div className="lsd-ai-draft">
-                <div className="lsd-ai-draft__disclaimer">
-                  <AlertTriangle size={13} />
-                  مسودة آلية — تُراجَع قبل الاعتماد
-                  <button
-                    className="lsd-ai-draft__copy"
-                    onClick={() => {
-                      navigator.clipboard
-                        .writeText(aiDraft)
-                        .then(() => toast.success('نُسخت المسودة — الصقها في محرّر الرأي القانوني'))
-                        .catch(() => toast.error('تعذّر النسخ إلى الحافظة'));
-                    }}
-                  >
-                    <Copy size={12} />
-                    نسخ المسودة
-                  </button>
-                </div>
-                <div className="lsd-ai-draft__text" dir="rtl">
-                  {aiDraft}
-                </div>
-              </div>
-            ) : aiDraftLoading ? (
-              <div className="lsd-empty-state-small">
-                <span className="lsd-ai-spinner lsd-ai-spinner--lg" />
-                <span>جارٍ توليد المسودة... قد يستغرق ذلك لحظات</span>
-              </div>
-            ) : (
-              <div className="lsd-empty-state-small">
-                <Sparkles size={22} />
-                <span>
-                  اضغط «اقتراح مسودة» ليقترح الذكاء نقطة بداية للرأي القانوني — ثم انسخها وعدّلها في المحرّر أعلاه.
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* References */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <Layers size={15} />
-              المراجع القانونية
-              {references.length > 0 && (
-                <span className="lsd-tab__count">{references.length}</span>
-              )}
-            </div>
-            <button
-              className="lsd-card__action"
-              onClick={() => setShowAddReference(true)}
-            >
-              <Plus size={13} />
-              إضافة مرجع
-            </button>
-          </div>
-          <div className="lsd-card__content">
-            <AnimatePresence>
-              {showAddReference && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  style={{ overflow: 'hidden', marginBottom: 12 }}
-                >
-                  <AddReferenceForm
-                    onSave={handleAddReference}
-                    onCancel={() => setShowAddReference(false)}
-                    loading={addRefLoading}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {references.length > 0 ? (
-              <div className="lsd-references-list">
-                {references.map((ref, idx) => (
-                  <div key={idx} className="lsd-reference-item">
-                    <div className="lsd-reference-item__icon">
-                      <BookOpen size={15} />
-                    </div>
-                    <div className="lsd-reference-item__body">
-                      <div className="lsd-reference-item__title">{ref.title}</div>
-                      {ref.source && (
-                        <div className="lsd-reference-item__source">{ref.source}</div>
-                      )}
-                      {ref.url && (
-                        <a
-                          href={ref.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="lsd-reference-item__link"
-                        >
-                          <ExternalLink size={11} />
-                          فتح الرابط
-                        </a>
-                      )}
-                    </div>
-                    <button
-                      className="lsd-doc-action-btn"
-                      title="حذف المرجع"
-                      onClick={() => handleRemoveReference(idx)}
-                    >
-                      <X size={13} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              !showAddReference && (
-                <div className="lsd-empty-state-small">
-                  <BookOpen size={22} />
-                  <span>لا توجد مراجع قانونية</span>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-
-        {/* Consultation actions */}
-        <div className="lsd-consultation-actions">
-          <button
-            className="lsd-header-btn lsd-header-btn--primary"
-            onClick={handleMarkDelivered}
-            disabled={deliverLoading || !canDeliver}
-            title={!canDeliver ? deliverDisabledReason : 'يسلّم الرأي للعميل ويقفل المحتوى ضد التعديل'}
-          >
-            <CheckCircle size={15} />
-            {deliverLoading ? 'جارٍ...' : 'تسليم الاستشارة'}
-          </button>
-          {!canDeliver && (
-            <span className="lsd-action-hint">
-              <Info size={12} />
-              {deliverDisabledReason}
-            </span>
-          )}
-        </div>
-        <p className="lsd-info-item__value--muted" style={{ fontSize: 12, marginTop: 4 }}>
-          لتوليد خطاب الرأي القانوني الرسمي (PDF) انتقل إلى تبويب «المخرجات».
-        </p>
-      </div>
+      </Suspense>
     );
   };
 
@@ -2293,424 +1801,20 @@ const LegalServiceDetail: React.FC = () => {
 
   const renderContractTab = () => {
     if (!service) return null;
-    const detail = service.contract_drafting_detail;
-    if (!detail) {
-      return (
-        <div className="lsd-empty-tab">
-          <FileEdit size={32} />
-          <p>لا توجد تفاصيل صياغة عقود</p>
-          <span className="lsd-empty-tab__hint">
-            لم تُسجَّل بيانات العقد عند الإنشاء — عدّل الخدمة لتحديد نوع العقد ولغته وقيمته.
-          </span>
-        </div>
-      );
-    }
-
-    const checklist = detail.checklist ?? [];
-    const completedCount = checklist.filter((i) => i.checked).length;
-    const progressPct = checklist.length > 0 ? Math.round((completedCount / checklist.length) * 100) : 0;
-    const versions = detail.versions ?? [];
-
-    // إصدارات مرتّبة تنازلياً حسب رقم الإصدار (الأحدث أولاً) — بشكل متين
-    const versionsDesc: ContractDraftingVersion[] = [...versions].sort(
-      (a, b) => b.version_number - a.version_number
-    );
-    const latestVersion = versionsDesc[0] ?? null;
-
-    // اختيار افتراضي للمقارنة: A = الإصدار السابق، B = الأحدث
-    const defaultB = versionsDesc[0]?.version_number ?? null;
-    const defaultA = versionsDesc[1]?.version_number ?? null;
-    const selA = compareA ?? defaultA;
-    const selB = compareB ?? defaultB;
-    const vA = versionsDesc.find((v) => v.version_number === selA) ?? null;
-    const vB = versionsDesc.find((v) => v.version_number === selB) ?? null;
-    const diffParts =
-      vA && vB ? diffWords(stripHtml(vA.content), stripHtml(vB.content)) : [];
-    const diffStats = diffSummary(diffParts);
-
+    // مساحة الكتابة مكوّن مستقل يُحمَّل عند الطلب — الانتظار محصور هنا كي لا تومض الصفحة كلها
     return (
-      <div className="lsd-tab-content-stack">
-        {/* Contract details */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <FileEdit size={15} />
-              تفاصيل العقد
-            </div>
-          </div>
-          <div className="lsd-card__content">
-            <div className="lsd-info-grid">
-              {detail.contract_type && (
-                <div className="lsd-info-item">
-                  <div className="lsd-info-item__icon">
-                    <FileText size={14} />
-                  </div>
-                  <div className="lsd-info-item__body">
-                    <div className="lsd-info-item__label">نوع العقد</div>
-                    <div className="lsd-info-item__value">
-                      {detail.contract_type === 'other' && detail.contract_type_other
-                        ? detail.contract_type_other
-                        : CONTRACT_TYPE_LABELS[detail.contract_type]}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <AlignLeft size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">لغة العقد</div>
-                  <div className="lsd-info-item__value">
-                    {CONTRACT_LANGUAGE_LABELS[detail.contract_language]}
-                  </div>
-                </div>
-              </div>
-
-              {detail.contract_value && (
-                <div className="lsd-info-item">
-                  <div className="lsd-info-item__icon">
-                    <DollarSign size={14} />
-                  </div>
-                  <div className="lsd-info-item__body">
-                    <div className="lsd-info-item__label">قيمة العقد</div>
-                    <div className="lsd-info-item__value">
-                      {parseFloat(detail.contract_value).toLocaleString('ar-SA')}{' '}
-                      {detail.contract_currency}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {detail.contract_start_date && (
-                <div className="lsd-info-item">
-                  <div className="lsd-info-item__icon">
-                    <Calendar size={14} />
-                  </div>
-                  <div className="lsd-info-item__body">
-                    <div className="lsd-info-item__label">تاريخ بدء العقد</div>
-                    <div className="lsd-info-item__value">
-                      {formatDate(detail.contract_start_date)}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {detail.contract_end_date && (
-                <div className="lsd-info-item">
-                  <div className="lsd-info-item__icon">
-                    <Calendar size={14} />
-                  </div>
-                  <div className="lsd-info-item__body">
-                    <div className="lsd-info-item__label">تاريخ انتهاء العقد</div>
-                    <div className="lsd-info-item__value">
-                      {formatDate(detail.contract_end_date)}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <CheckCircle size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">التجديد التلقائي</div>
-                  <div className="lsd-info-item__value">
-                    {detail.auto_renewal ? 'نعم' : 'لا'}
-                    {detail.auto_renewal && detail.renewal_notice_days ? (
-                      <span className="lsd-info-item__value--muted" style={{ marginRight: 6, fontSize: 12 }}>
-                        (إشعار قبل {detail.renewal_notice_days} يوم)
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Checklist */}
-        {checklist.length > 0 && (
-          <div className="lsd-card">
-            <div className="lsd-card__header">
-              <div className="lsd-card__title">
-                <CheckCircle size={15} />
-                قائمة الفحص
-              </div>
-            </div>
-            <div className="lsd-card__content">
-              <div className="lsd-checklist">
-                <div className="lsd-checklist__progress">
-                  <div className="lsd-checklist__progress-bar">
-                    <div
-                      className="lsd-checklist__progress-fill"
-                      style={{ width: `${progressPct}%` }}
-                    />
-                  </div>
-                  <span className="lsd-checklist__progress-label">
-                    {completedCount}/{checklist.length} ({progressPct}%)
-                  </span>
-                </div>
-                {checklist.map((item, idx) => (
-                  <div
-                    key={item.key}
-                    className={`lsd-checklist-item${item.checked ? ' lsd-checklist-item--checked' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={item.checked}
-                      onChange={() => handleToggleChecklistItem(idx)}
-                      disabled={checklistLoading}
-                    />
-                    <span className="lsd-checklist-item__text">{item.label}</span>
-                    {item.notes && (
-                      <span className="lsd-checklist-item__assignee">{item.notes}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* العقد الحالي — أحدث إصدار */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <FileCheck size={15} />
-              العقد الحالي
-              {latestVersion && (
-                <span className="lsd-tab__count">v{latestVersion.version_number}</span>
-              )}
-            </div>
-            {/* [P3.3] الصياغة المعتمدة تتحوّل لعقد رسمي في وحدة العقود (مرة واحدة) */}
-            {latestVersion && !service.contract_id && (
-              <button
-                className="lsd-card__action"
-                onClick={handleConvertToContract}
-                disabled={convertingToContract}
-                title="ينشئ عقداً رسمياً في وحدة العقود من أحدث إصدار للصياغة، ويربطه بهذه الخدمة"
-              >
-                {convertingToContract ? 'جارٍ التحويل...' : '⚖️ تحويل إلى عقد رسمي'}
-              </button>
-            )}
-            {service.contract_id && (
-              <span className="lsd-tab__count" title="لهذه الخدمة عقد رسمي مرتبط">
-                ✓ مرتبطة بعقد رسمي{service.contract?.contract_number ? ` (${service.contract.contract_number})` : ''}
-              </span>
-            )}
-          </div>
-          <div className="lsd-card__content">
-            <LegalRichText
-              html={latestVersion?.content}
-              emptyText="لا توجد مسودة بعد"
-            />
-          </div>
-        </div>
-
-        {/* التدقيق الآلي للعقد (AI) */}
-        <ContractAuditPanel
-          serviceId={service.id}
-          versionContent={latestVersion?.content}
-          existingAudit={detail.ai_audit ?? null}
+      <Suspense fallback={<SkeletonCard lines={8} />}>
+        <ContractDraftingWorkspace
+          service={service}
+          refreshService={fetchService}
+          locked={isServiceContentLocked(service)}
+          onEditDetails={() => setShowEditModal(true)}
+          onConvertToContract={handleConvertToContract}
+          convertingToContract={convertingToContract}
+          focusMode={contractFocus}
+          onToggleFocus={() => setContractFocus((v) => !v)}
         />
-
-        {/* مقارنة الإصدارات (redline) */}
-        {versions.length >= 2 && (
-          <div className="lsd-card">
-            {/* ستايل .lsd-diff انتقل إلى legal-service-detail.css بمتغيّرات الثيم */}
-            <div className="lsd-card__header">
-              <div className="lsd-card__title">
-                <GitCompare size={15} />
-                مقارنة الإصدارات
-              </div>
-              <button
-                className="lsd-card__action"
-                onClick={() => setShowCompare((v) => !v)}
-              >
-                {showCompare ? 'إخفاء' : 'عرض'}
-              </button>
-            </div>
-            <AnimatePresence>
-              {showCompare && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  style={{ overflow: 'hidden' }}
-                >
-                  <div className="lsd-card__content">
-                    <div className="lsd-form-row" dir="rtl">
-                      <div className="lsd-form-group">
-                        <label className="lsd-form-label">الإصدار الأقدم</label>
-                        <select
-                          className="lsd-form-input"
-                          value={selA ?? ''}
-                          onChange={(e) => setCompareA(Number(e.target.value))}
-                        >
-                          {versionsDesc.map((v) => (
-                            <option key={v.id} value={v.version_number}>
-                              v{v.version_number}
-                              {v.change_summary ? ` — ${v.change_summary}` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="lsd-form-group">
-                        <label className="lsd-form-label">الإصدار الأحدث</label>
-                        <select
-                          className="lsd-form-input"
-                          value={selB ?? ''}
-                          onChange={(e) => setCompareB(Number(e.target.value))}
-                        >
-                          {versionsDesc.map((v) => (
-                            <option key={v.id} value={v.version_number}>
-                              v{v.version_number}
-                              {v.change_summary ? ` — ${v.change_summary}` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {vA && vB && (
-                      <>
-                        <div
-                          className="lsd-version-item__meta"
-                          style={{ marginBottom: 8 }}
-                        >
-                          +{diffStats.added} / -{diffStats.removed} كلمة
-                        </div>
-                        <div className="lsd-diff" dir="rtl">
-                          {diffParts.map((part, idx) => {
-                            if (part.type === 'add') return <ins key={idx}>{part.text}</ins>;
-                            if (part.type === 'del') return <del key={idx}>{part.text}</del>;
-                            return <span key={idx}>{part.text}</span>;
-                          })}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* Versions */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <Layers size={15} />
-              إصدارات المسودة
-              {versions.length > 0 && (
-                <span className="lsd-tab__count">{versions.length}</span>
-              )}
-            </div>
-            <button
-              className="lsd-card__action"
-              onClick={() => setShowNewVersionForm(true)}
-            >
-              <Plus size={13} />
-              إصدار جديد
-            </button>
-          </div>
-          <div className="lsd-card__content">
-            <AnimatePresence>
-              {showNewVersionForm && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  style={{ overflow: 'hidden', marginBottom: 12 }}
-                >
-                  <NewVersionForm
-                    onSave={handleCreateVersion}
-                    onCancel={() => setShowNewVersionForm(false)}
-                    loading={newVersionLoading}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {versions.length > 0 ? (
-              <div className="lsd-versions-list">
-                {versions.map((ver) => {
-                  const isCurrent = ver.version_number === detail.current_version;
-                  return (
-                    <div
-                      key={ver.id}
-                      className={`lsd-version-item lsd-version-item--block${isCurrent ? ' lsd-version-item--current' : ''}`}
-                    >
-                      <div className="lsd-version-item__row">
-                        <div className="lsd-version-item__badge">v{ver.version_number}</div>
-                        <div className="lsd-version-item__info">
-                          <div className="lsd-version-item__name">
-                            {ver.change_summary ?? `مسودة الإصدار ${ver.version_number}`}
-                          </div>
-                          <div className="lsd-version-item__meta">
-                            {ver.creator?.name ?? '—'} · {formatDate(ver.created_at)}
-                          </div>
-                        </div>
-                        <span className={`ls-status-badge ls-status-badge--${ver.status === 'approved' ? 'completed' : ver.status === 'rejected' ? 'cancelled' : 'in_progress'}`}>
-                          <span className="ls-status-badge__dot" />
-                          {ver.status === 'draft'
-                            ? 'مسودة'
-                            : ver.status === 'review'
-                            ? 'مراجعة'
-                            : ver.status === 'approved'
-                            ? 'معتمد'
-                            : 'مرفوض'}
-                        </span>
-                      </div>
-                      {ver.content && (
-                        <div className="lsd-version-item__content">
-                          <LegalRichText html={ver.content} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              !showNewVersionForm && (
-                <div className="lsd-empty-state-small">
-                  <Layers size={22} />
-                  <span>لا توجد إصدارات بعد</span>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-
-        {/* Review comments & client feedback */}
-        {(detail.review_comments || detail.client_feedback) && (
-          <div className="lsd-card">
-            <div className="lsd-card__header">
-              <div className="lsd-card__title">
-                <StickyNote size={15} />
-                الملاحظات والتغذية الراجعة
-              </div>
-            </div>
-            <div className="lsd-card__content">
-              {detail.review_comments && (
-                <div className="lsd-notes-section">
-                  <div className="lsd-notes-section__label">ملاحظات المراجعة</div>
-                  <p className="lsd-description-text">{detail.review_comments}</p>
-                </div>
-              )}
-              {detail.client_feedback && (
-                <div className="lsd-notes-section">
-                  <div className="lsd-notes-section__label">ملاحظات العميل</div>
-                  <p className="lsd-description-text">{detail.client_feedback}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+      </Suspense>
     );
   };
 
@@ -2721,8 +1825,20 @@ const LegalServiceDetail: React.FC = () => {
 
     // التحقق من وجود workspace مسجّل لهذا النوع
     const Workspace = WorkspaceRegistry[service.service_type];
+
+    // صفّ التفاصيل غائب: مخرجٌ واحد يخدم الأنواع كلها بدل «لا توجد تفاصيل» في كل مساحة
+    const detailKey = TYPE_DETAIL_KEYS[service.service_type];
+    if (Workspace && detailKey && !service[detailKey]) {
+      return renderMissingDetail();
+    }
+
     if (Workspace) {
-      return <Workspace service={service} refreshService={fetchService} />;
+      // المساحة تُحمَّل عند الطلب — الانتظار محصور هنا كي لا تومض الصفحة كلها
+      return (
+        <Suspense fallback={<SkeletonCard lines={5} />}>
+          <Workspace service={service} refreshService={fetchService} />
+        </Suspense>
+      );
     }
 
     return (
@@ -2737,6 +1853,30 @@ const LegalServiceDetail: React.FC = () => {
   };
 
   // ── Tab: Documents ────────────────────────────────────────────────────────
+
+  /** مساحةُ نوعٍ بلا صفّ تفاصيل — بابٌ يُفتح، لا رسالةُ نهاية */
+  const renderMissingDetail = () => (
+    <div className="lsd-card">
+      <div className="lsd-card__content lsd2-blank">
+        <Layers size={22} />
+        <p>
+          لم تُجهَّز بيانات «{SERVICE_TYPE_LABELS[service!.service_type] ?? service!.service_type}» لهذه الخدمة بعد.
+        </p>
+        {canManageService ? (
+          <button
+            className="lsd-header-btn lsd-header-btn--primary"
+            onClick={handlePrepareTypeDetail}
+            disabled={preparingDetail}
+          >
+            {preparingDetail ? <span className="lsd-nextstep__spinner" /> : <Plus size={14} />}
+            {preparingDetail ? 'جارٍ التجهيز…' : 'جهّز مساحة العمل'}
+          </button>
+        ) : (
+          <span className="lsd2-muted">اطلب من المدير تجهيزها.</span>
+        )}
+      </div>
+    </div>
+  );
 
   const renderDocumentsTab = () => {
     if (!service) return null;
@@ -3047,24 +2187,6 @@ const LegalServiceDetail: React.FC = () => {
             </button>
           </div>
 
-          {timeSummary && (
-            <div className="lsd-timer-widget__summary">
-              <div className="lsd-timer-summary-item">
-                <div className="lsd-timer-summary-item__value">{timeSummary.total_formatted}</div>
-                <div className="lsd-timer-summary-item__label">إجمالي الوقت</div>
-              </div>
-              <div className="lsd-timer-summary-item">
-                <div className="lsd-timer-summary-item__value">{timeSummary.billable_formatted}</div>
-                <div className="lsd-timer-summary-item__label">الوقت القابل للفوترة</div>
-              </div>
-              <div className="lsd-timer-summary-item">
-                <div className="lsd-timer-summary-item__value">
-                  {Number(timeSummary.total_amount).toLocaleString('ar-SA')}
-                </div>
-                <div className="lsd-timer-summary-item__label">المبلغ (ريال)</div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Manual entry form */}
@@ -3160,7 +2282,8 @@ const LegalServiceDetail: React.FC = () => {
 
   const renderActivitiesTab = () => {
     if (!service) return null;
-    const activities = [...(service.service_activities ?? [])].reverse();
+    // الخادم يرسل أحدث عشرين — والأحدث أولاً هو ما يُقرأ في عمود «آخر ما جرى»
+    const activities = service.service_activities ?? [];
 
     if (activities.length === 0) {
       return (
@@ -3180,7 +2303,7 @@ const LegalServiceDetail: React.FC = () => {
           <div className="lsd-card__header">
             <div className="lsd-card__title">
               <Clock size={15} />
-              سجل الأنشطة
+              آخر ما جرى
               <span className="lsd-tab__count">{activities.length}</span>
             </div>
           </div>
@@ -3204,7 +2327,7 @@ const LegalServiceDetail: React.FC = () => {
                           {formatDateTime(activity.created_at)}
                         </div>
                       </div>
-                      <div className="lsd-timeline__text">{activity.title}</div>
+                      <div className="lsd-timeline__text">{activityTitle(activity)}</div>
                       {activity.description && (
                         <div className="lsd-timeline__note">{activity.description}</div>
                       )}
@@ -3306,6 +2429,65 @@ const LegalServiceDetail: React.FC = () => {
     );
   };
 
+  // ── «الملفات»: ما رُفع للخدمة وما أصدرناه منها في مكان واحد (كانا تبويبين) ──
+  const renderFilesTab = () => {
+    if (!service) return null;
+    return (
+      <div className="lsd2-split">
+        <div className="lsd2-split__col">{renderDocumentsTab()}</div>
+        <div className="lsd2-split__col">
+          <DeliverablesPanel serviceId={service.id} serviceType={service.service_type} />
+        </div>
+      </div>
+    );
+  };
+
+  // ── «الوقت والفواتير»: العمل المسجَّل وما فُوتر منه متجاوران (كانا تبويبين) ──
+  const renderBillingTab = () => {
+    if (!service) return null;
+    const invoices = service.invoices ?? [];
+    const paid = invoices.reduce((sum, inv) => sum + (Number(inv.paid_amount) || 0), 0);
+    const billed = Number(service.total_billed) || 0;
+    const agreed = service.agreed_amount ? parseFloat(service.agreed_amount) : null;
+    const money = (n: number) => `${n.toLocaleString('ar-SA')} ريال`;
+    return (
+      <div className="lsd2-billing rc-scope">
+        <div className="lsd2-tiles">
+          <StatTile
+            label="الوقت المسجَّل"
+            value={timeSummary?.total_formatted ?? formatSeconds(service.total_time_seconds ?? 0)}
+            hint={timeSummary ? `منه ${timeSummary.billable_formatted} يُفوتر` : undefined}
+            icon={<Clock size={15} />}
+          />
+          <StatTile
+            label="الأتعاب المتفق عليها"
+            value={agreed != null ? money(agreed) : '—'}
+            hint={BILLING_TYPE_LABELS[service.billing_type] ?? service.billing_type}
+            icon={<DollarSign size={15} />}
+          />
+          <StatTile
+            label="المفوتر"
+            value={money(billed)}
+            hint={invoices.length > 0 ? invoicesPhrase(invoices.length) : 'لم تصدر فاتورة بعد'}
+            icon={<Receipt size={15} />}
+            meter={agreed ? { value: Math.round((billed / agreed) * 100), ariaLabel: 'نسبة المفوتر من الأتعاب' } : undefined}
+          />
+          <StatTile
+            label="المحصَّل"
+            value={money(paid)}
+            hint={billed > 0 ? `المتبقي ${money(Math.max(0, billed - paid))}` : undefined}
+            icon={<CheckCircle size={15} />}
+            meter={billed > 0 ? { value: Math.round((paid / billed) * 100), tone: 'good', ariaLabel: 'نسبة المحصَّل من المفوتر' } : undefined}
+          />
+        </div>
+        <div className="lsd2-split">
+          <div className="lsd2-split__col">{renderTimeTab()}</div>
+          <div className="lsd2-split__col">{renderInvoicesTab()}</div>
+        </div>
+      </div>
+    );
+  };
+
   // ── Tab: Notes (التدوين) — shared across all service types ─────────────────
 
   const renderNotesTab = () => {
@@ -3331,126 +2513,6 @@ const LegalServiceDetail: React.FC = () => {
   };
 
   // ── Side summary (ERP snapshot aside) ──────────────────────────────────────
-
-  const renderAside = () => {
-    if (!service) return null;
-    const billingLabel = BILLING_TYPE_LABELS[service.billing_type] ?? service.billing_type;
-    const agreed = service.agreed_amount
-      ? `${parseFloat(service.agreed_amount).toLocaleString('ar-SA')} ريال`
-      : null;
-    const hourly = service.hourly_rate
-      ? `${parseFloat(service.hourly_rate).toLocaleString('ar-SA')} ريال/س`
-      : null;
-    const totalBilled =
-      service.total_billed !== undefined && service.total_billed !== null
-        ? `${Number(service.total_billed).toLocaleString('ar-SA')} ريال`
-        : '—';
-
-    return (
-      <aside className="lsd-aside">
-        {/* Snapshot card */}
-        <div className="lsd-aside-card">
-          <div className="lsd-aside-card__header">
-            <Info size={14} />
-            ملخّص سريع
-          </div>
-          <div className="lsd-aside-card__body">
-            <div className="lsd-aside-row">
-              <span className="lsd-aside-row__label">
-                <User size={13} /> العميل
-              </span>
-              <span className="lsd-aside-row__value">{service.client?.name ?? '—'}</span>
-            </div>
-            <div className="lsd-aside-row">
-              <span className="lsd-aside-row__label">
-                <Scale size={13} /> المحامي
-              </span>
-              <span className="lsd-aside-row__value">
-                {service.assigned_lawyer?.name ?? 'غير محدد'}
-                {(service.assignees?.length ?? 0) > 1 && ` +${service.assignees!.length - 1}`}
-              </span>
-            </div>
-            <div className="lsd-aside-row">
-              <span className="lsd-aside-row__label">الحالة</span>
-              <span className="lsd-aside-row__value">{renderStatusBadge(service.status)}</span>
-            </div>
-            <div className="lsd-aside-row">
-              <span className="lsd-aside-row__label">الأولوية</span>
-              <span className="lsd-aside-row__value">{renderPriorityBadge(service.priority)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Financial snapshot */}
-        <div className="lsd-aside-card">
-          <div className="lsd-aside-card__header">
-            <DollarSign size={14} />
-            المالية
-          </div>
-          <div className="lsd-aside-card__body">
-            <div className="lsd-aside-row">
-              <span className="lsd-aside-row__label">نوع الفوترة</span>
-              <span className="lsd-aside-row__value">{billingLabel}</span>
-            </div>
-            {agreed && (
-              <div className="lsd-aside-row">
-                <span className="lsd-aside-row__label">المبلغ المتفق</span>
-                <span className="lsd-aside-row__value">{agreed}</span>
-              </div>
-            )}
-            {service.billing_type === 'hourly' && hourly && (
-              <div className="lsd-aside-row">
-                <span className="lsd-aside-row__label">سعر الساعة</span>
-                <span className="lsd-aside-row__value">{hourly}</span>
-              </div>
-            )}
-            <div className="lsd-aside-row">
-              <span className="lsd-aside-row__label">إجمالي المفوتر</span>
-              <span className="lsd-aside-row__value">{totalBilled}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Key dates */}
-        <div className="lsd-aside-card">
-          <div className="lsd-aside-card__header">
-            <Calendar size={14} />
-            تواريخ مهمة
-          </div>
-          <div className="lsd-aside-card__body">
-            <div className="lsd-aside-row">
-              <span className="lsd-aside-row__label">البدء</span>
-              <span className="lsd-aside-row__value">{formatDate(service.start_date)}</span>
-            </div>
-            <div className="lsd-aside-row">
-              <span className="lsd-aside-row__label">الاستحقاق</span>
-              <span className="lsd-aside-row__value">{formatDate(service.due_date)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick actions */}
-        <div className="lsd-aside-actions">
-          {!service.case_id && CONVERTIBLE_SERVICE_TYPES.includes(service.service_type) && (
-            <button
-              className="lsd-aside-action-btn"
-              onClick={() => setShowConvertModal(true)}
-            >
-              <ArrowRightLeft size={14} />
-              تحويل لقضية
-            </button>
-          )}
-          <button
-            className="lsd-aside-action-btn lsd-aside-action-btn--primary"
-            onClick={() => setShowInvoiceModal(true)}
-          >
-            <Receipt size={14} />
-            إنشاء فاتورة
-          </button>
-        </div>
-      </aside>
-    );
-  };
 
   // ── بطاقة حالة التكليف ─────────────────────────────────────────────────
   // تصل الرحلة القادمة من صندوق البريد إلى آخرها: المهمة أُنجزت واعتمدها المدير
@@ -3516,7 +2578,7 @@ const LegalServiceDetail: React.FC = () => {
               </button>
               <button
                 className="lsd-assign__btn lsd-assign__btn--ghost"
-                onClick={() => setActiveTab('documents')}
+                onClick={() => setActiveTab('files')}
               >
                 <Link size={13} />
                 رابط بوابة العميل
@@ -3528,93 +2590,157 @@ const LegalServiceDetail: React.FC = () => {
     );
   };
 
-  // ── بطاقة «الخطوة التالية» — أوضح عنصر في الصفحة ──────────────────────────
-  // تجيب فوراً: أين نحن الآن؟ ماذا تعني هذه الحالة عملياً؟ وما الخطوات المتاحة؟
+  // ── «الخطوة التالية» — قائمة في الترويسة ─────────────────────────────────
+  // كانت الحالة تُعرض أربع مرات (شارة الترويسة + شريط المراحل + بطاقة «الخطوة التالية» +
+  // العمود الجانبي) ولها زرّان يفعلان الشيء نفسه («تغيير الحالة» والبطاقة). الآن شارة واحدة
+  // وزرّ واحد بجوارها يجيب: أين نحن؟ ماذا تعني هذه الحالة؟ وما الخطوات المتاحة وأثر كلٍّ منها؟
 
-  const renderNextStepCard = () => {
+  const renderNextStepMenu = () => {
     if (!service) return null;
     const transitions = service.allowed_transitions;
     const transitionsLoaded = Array.isArray(transitions);
     const explanation =
       STATUS_EXPLANATIONS[service.status] ??
-      'حالة مخصّصة — راجع سجل الأنشطة لمعرفة آخر ما جرى على الخدمة.';
+      'حالة مخصّصة — راجع آخر ما جرى لمعرفة ما تم على الخدمة.';
     // «نهائية» تُعلَن فقط عندما تكون الحالة نهائية فعلاً — مصفوفة فارغة على حالة
     // غير نهائية تعني سجلاً قديماً خارج مسار النوع، لا قفلاً (كانت تكذب «نهائية»).
     const TERMINAL = ['closed', 'cancelled', 'archived', 'completed'];
     const isTerminal = transitionsLoaded && transitions.length === 0 && TERMINAL.includes(service.status);
     const isOffTrack = transitionsLoaded && transitions.length === 0 && !TERMINAL.includes(service.status);
+    const sorted = transitionsLoaded ? sortTransitions(flow, transitions) : [];
+    // الخطوة الأمامية الأولى هي ما يفعله الزر مباشرة — لا قائمة تُفتح لتُكتشف منها طريقة الانتقال
+    // خدمة حالتها من خارج مسار نوعها: لا «تالٍ» لها — تُعاد إلى المحطة التي وصل إليها العمل فعلاً
+    const forward = flow.offFlow ? null : sorted.find((t) => transitionKind(flow, t) === 'forward') ?? null;
 
     return (
-      <div className="lsd-nextstep-wrap">
-        <div className="lsd-nextstep">
-          {/* الحالة الحالية */}
-          <div className="lsd-nextstep__current">
-            <div className="lsd-nextstep__eyebrow">
-              <Compass size={12} />
-              الحالة الحالية
-            </div>
-            <div className="lsd-nextstep__status-row">
-              {renderStatusBadge(service.status)}
-              <p className="lsd-nextstep__explanation">{explanation}</p>
-            </div>
-          </div>
-
-          {/* الخطوة التالية */}
-          <div className="lsd-nextstep__actions">
-            <div className="lsd-nextstep__eyebrow">
-              <ArrowLeft size={12} />
-              الخطوة التالية
-            </div>
-
-            {statusLoading ? (
-              <p className="lsd-nextstep__note">
-                <span className="lsd-nextstep__spinner" />
-                جارٍ تطبيق الانتقال...
-              </p>
-            ) : !transitionsLoaded ? (
-              // حمولة ناقصة (باك أقدم/كاش) — لا نكذب «نهائية»؛ fetchService دفاعي سيكملها
-              <p className="lsd-nextstep__note">
-                <span className="lsd-nextstep__spinner" />
-                جارٍ تحميل الخطوات المتاحة...
-              </p>
-            ) : isTerminal ? (
-              <p className={`lsd-nextstep__note${service.status === 'cancelled' ? '' : ' lsd-nextstep__note--done'}`}>
-                {service.status === 'cancelled' ? <Lock size={13} /> : <CheckCircle size={13} />}
-                {service.status === 'cancelled'
-                  ? 'الخدمة ملغاة — دورة العمل عليها منتهية.'
-                  : 'اكتملت دورة هذه الخدمة — لا خطوات متبقية.'}
-              </p>
-            ) : isOffTrack ? (
-              <p className="lsd-nextstep__note">
-                <Info size={13} />
-                هذه الحالة من سجل سابق خارج مسار النوع الحالي — لا انتقالات آلية منها، وبقية التبويبات متاحة.
-              </p>
-            ) : (
-              <div className="lsd-nextstep__buttons">
-                {transitions.map((transition) => {
-                  const hint = getTransitionHint(service.service_type, transition);
-                  return (
-                    <button
-                      key={transition}
-                      className={`lsd-nextstep-btn${
-                        transition === 'cancelled' ? ' lsd-nextstep-btn--danger' : ''
-                      }`}
-                      onClick={() => handleStatusChange(transition)}
-                      disabled={statusLoading}
-                      title={hint ? `عند الانتقال: ${hint}` : `الانتقال إلى «${getStatusLabel(transition)}»`}
-                    >
-                      <span className="lsd-nextstep-btn__label">
-                        <ArrowLeft size={12} />
-                        {getStatusLabel(transition)}
-                      </span>
-                      {hint && <span className="lsd-nextstep-btn__hint">{hint}</span>}
-                    </button>
-                  );
-                })}
+      <div className="lsd-dropdown-wrapper lsd2-nextbtn" ref={statusDropdownRef}>
+        <button
+          className="lsd-header-btn lsd-header-btn--primary lsd2-nextbtn__main"
+          onClick={() => (forward ? requestTransition(forward) : setShowStatusDropdown((v) => !v))}
+          disabled={statusLoading || (transitionsLoaded && !forward && sorted.length === 0)}
+          title={
+            forward
+              ? getTransitionHint(service.service_type, forward) ?? `انقل الخدمة إلى «${getStatusLabel(forward)}»`
+              : undefined
+          }
+        >
+          {statusLoading ? <span className="lsd-nextstep__spinner" /> : <ArrowLeft size={14} />}
+          <span>
+            {statusLoading
+              ? 'جارٍ الانتقال...'
+              : forward
+              ? `التالي: ${getStatusLabel(forward)}`
+              : flow.offFlow
+              ? 'أعدها إلى المسار'
+              : isTerminal
+              ? 'اكتملت الدورة'
+              : 'غيّر الحالة'}
+          </span>
+        </button>
+        <button
+          className="lsd-header-btn lsd-header-btn--primary lsd2-nextbtn__caret"
+          onClick={() => setShowStatusDropdown((v) => !v)}
+          disabled={statusLoading}
+          aria-expanded={showStatusDropdown}
+          aria-label="مسار الخدمة وكل الانتقالات المتاحة"
+          title="مسار الخدمة وكل الانتقالات المتاحة"
+        >
+          <ChevronDown size={14} />
+        </button>
+        <AnimatePresence>
+          {showStatusDropdown && (
+            <motion.div
+              className="lsd-dropdown lsd2-next"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              {/* المسار الرئيسي — كان شريطاً أفقياً دائماً يأكل من ارتفاع كل التبويبات */}
+              {flow.path.length > 0 && (
+                <ol className="lsd2-next__flow">
+                  {flow.path.map((step, idx) => {
+                    const state = flow.cancelled ? 'todo' : idx < flow.index ? 'done' : idx === flow.index ? 'now' : 'todo';
+                    return (
+                      <li key={step.status} className={`lsd2-next__stage lsd2-next__stage--${state}`}>
+                        <span className="lsd2-next__stage-dot">{state === 'done' ? <Check size={10} /> : idx + 1}</span>
+                        {step.label}
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+              <div className="lsd2-next__now">
+                <div className="lsd2-next__eyebrow">
+                  <Compass size={12} />
+                  الحالة الآن
+                  {renderStatusBadge(service.status)}
+                </div>
+                <p>
+                  {flow.offFlow
+                    ? `«${getStatusLabel(service.status)}» ليست من محطات هذا النوع من الخدمات — سُجّلت بها الخدمة قديماً. اختر المحطة التي وصل إليها العمل فعلاً لتعود إلى المسار.`
+                    : explanation}
+                </p>
+                {flow.branch && flow.index >= 0 && (
+                  <p className="lsd2-next__branch">
+                    محطة جانبية تفرّعت من «{flow.path[flow.index].label}» — تعود منها إلى المسار.
+                  </p>
+                )}
               </div>
-            )}
-          </div>
-        </div>
+
+              {!transitionsLoaded ? (
+                // حمولة ناقصة (باك أقدم/كاش) — لا نكذب «نهائية»؛ fetchService دفاعي سيكملها
+                <p className="lsd2-next__note">
+                  <span className="lsd-nextstep__spinner" />
+                  جارٍ تحميل الخطوات المتاحة...
+                </p>
+              ) : isTerminal ? (
+                <p className="lsd2-next__note">
+                  {service.status === 'cancelled' ? <Lock size={13} /> : <CheckCircle size={13} />}
+                  {service.status === 'cancelled'
+                    ? 'الخدمة ملغاة — دورة العمل عليها منتهية.'
+                    : 'اكتملت دورة هذه الخدمة — لا خطوات متبقية.'}
+                </p>
+              ) : isOffTrack ? (
+                <p className="lsd2-next__note">
+                  <Info size={13} />
+                  هذه الحالة من سجل سابق خارج مسار النوع الحالي — لا انتقالات آلية منها، وبقية التبويبات متاحة.
+                </p>
+              ) : (
+                <div className="lsd2-next__list">
+                  {(flow.offFlow
+                    ? // المحطات بترتيب المسار، ثم الفروع، والإلغاء آخراً
+                      [
+                        ...flow.path.map((f) => f.status).filter((st) => transitions.includes(st)),
+                        ...transitions.filter((t) => t !== 'cancelled' && !flow.path.some((f) => f.status === t)),
+                        ...transitions.filter((t) => t === 'cancelled'),
+                      ]
+                    : sorted
+                  ).map((transition) => {
+                    const kind = flow.offFlow && transition !== 'cancelled' ? 'branch' : transitionKind(flow, transition);
+                    const hint = getTransitionHint(service.service_type, transition);
+                    const verb = flow.offFlow
+                      ? 'العمل الآن في'
+                      : kind === 'forward' ? 'تقدّم إلى' : kind === 'back' ? 'أعدها إلى' : kind === 'cancel' ? '' : 'حوّلها إلى';
+                    return (
+                      <button
+                        key={transition}
+                        className={`lsd2-next__item lsd2-next__item--${kind}`}
+                        onClick={() => requestTransition(transition)}
+                        disabled={statusLoading}
+                      >
+                        <span className="lsd2-next__label">
+                          {kind === 'back' ? <ChevronRight size={13} /> : kind === 'cancel' ? <X size={13} /> : <ArrowLeft size={12} />}
+                          {kind === 'cancel' ? 'ألغِ الخدمة' : `${verb} «${getStatusLabel(transition)}»`}
+                        </span>
+                        {hint && <span className="lsd2-next__hint">{hint}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   };
@@ -3669,106 +2795,108 @@ const LegalServiceDetail: React.FC = () => {
 
   const typeTab = SERVICE_TYPE_TAB_MAP[service.service_type];
 
+  // خمسة تبويبات بدل ثمانية، والعمل أولاً: من يفتح الخدمة جاء ليعمل عليها.
   const tabs: { key: string; label: string; icon: any; count?: number }[] = [
-    { key: 'info', label: 'المعلومات', icon: Info },
     ...(typeTab ? [typeTab] : []),
+    { key: 'info', label: 'نظرة عامة', icon: Info },
     { key: 'notes', label: 'التدوين', icon: StickyNote },
-    // عدّاد المخرجات/الفواتير يظهر متى توفّرت البيانات — يوجّه العين لما أُنجز
-    { key: 'deliverables', label: 'المخرجات', icon: FileCheck, count: service.deliverables?.length },
-    { key: 'documents', label: 'المستندات', icon: FileText, count: service.service_documents?.length },
-    { key: 'time', label: 'تتبع الوقت', icon: Clock, count: service.time_entries?.length },
-    { key: 'activities', label: 'الأنشطة', icon: Clock, count: service.service_activities?.length },
-    { key: 'invoices', label: 'الفواتير', icon: Receipt, count: service.invoices?.length },
+    {
+      key: 'files',
+      label: 'الملفات',
+      icon: FileText,
+      count: (service.service_documents?.length ?? 0) + (service.deliverables?.length ?? 0),
+    },
+    { key: 'billing', label: 'الوقت والفواتير', icon: Receipt, count: service.invoices?.length },
   ];
 
   const ServiceIcon = SERVICE_TYPE_ICONS[service.service_type] ?? FileText;
 
+  // تبويب العقد مساحة عمل تملأ الارتفاع المتاح: الصفحة لا تتمرر، والتمرير داخل الورقة واللوحات
+  const fitContract =
+    (activeTab === 'contract' && service.service_type === 'contract_drafting') ||
+    (activeTab === 'consultation' && service.service_type === 'consultation');
+  const dueChip = dueChipFor(service);
+
   // ── Main render ───────────────────────────────────────────────────────────
 
   return (
-    <div className="lsd-page" dir="rtl">
+    <div className={`lsd-page${fitContract ? ' lsd-page--fit' : ''}`} dir="rtl">
       {/* ── Header ── */}
-      <header className="lsd-header">
-        <div className="lsd-header__top">
-          {/* Back button */}
+      <header className="lsd-header lsd2-header">
+        <div className="lsd2-header__row">
           <button
-            className="lsd-back-btn"
+            className="lsd2-back"
             onClick={() => navigate('/legal-services')}
+            title="الخدمات القانونية"
+            aria-label="العودة إلى الخدمات القانونية"
           >
-            <ChevronRight size={16} />
-            الخدمات القانونية
+            <ChevronRight size={18} />
           </button>
 
-          <span className="lsd-breadcrumb__sep">/</span>
+          <span className="lsd2-header__icon">
+            <ServiceIcon size={18} />
+          </span>
 
-          {/* Title section */}
-          <div className="lsd-header__title-section">
-            <div className="lsd-header__title">
-              <ServiceIcon size={20} />
-              <span>{service.title}</span>
-            </div>
-            <div className="lsd-header__subtitle">
+          <div className="lsd2-header__titles">
+            <h1 className="lsd2-header__title">{service.title}</h1>
+            <div className="lsd2-header__sub">
               <span className="lsd-header__number">{service.service_number}</span>
+              {renderTypePill(service.service_type)}
+              {service.priority !== 'medium' && renderPriorityBadge(service.priority)}
+              {service.client?.name && (
+                <span className="lsd2-header__meta"><User size={12} />{service.client.name}</span>
+              )}
+              <span className="lsd2-header__meta">
+                <Scale size={12} />
+                {service.assigned_lawyer?.name ?? 'بلا محامٍ مسؤول'}
+                {(service.assignees?.length ?? 0) > 1 && ` +${service.assignees!.length - 1}`}
+              </span>
+              {service.due_date && (
+                <span className="lsd2-header__meta">
+                  <Calendar size={12} />
+                  {formatDate(service.due_date)}
+                  {dueChip && <span className={`lsd2-fact__chip lsd2-fact__chip--${dueChip.tone}`}>{dueChip.text}</span>}
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Badges */}
-          <div className="lsd-header__badges">
-            {renderTypePill(service.service_type)}
-            {renderStatusBadge(service.status)}
-            {renderPriorityBadge(service.priority)}
-          </div>
-
-          {/* Actions */}
-          <div className="lsd-header__actions">
-            {/* Status change dropdown */}
-            <div className="lsd-dropdown-wrapper" ref={statusDropdownRef}>
-              <button
-                className="lsd-header-btn"
-                onClick={() => setShowStatusDropdown((v) => !v)}
-                disabled={statusLoading}
+          <div className="lsd2-header__actions">
+            {/* الحالة تُعرض هنا مرة واحدة — مؤشر مراحل مصغّر — وبجوارها ما يُفعل بها */}
+            {flow.path.length > 0 && (flow.index >= 0 || flow.cancelled) ? (
+              <div
+                className={`lsd2-stepper${flow.branch ? ' lsd2-stepper--branch' : ''}${flow.cancelled ? ' lsd2-stepper--cancelled' : ''}`}
+                title={STATUS_EXPLANATIONS[service.status]}
+                role="img"
+                aria-label={
+                  flow.cancelled
+                    ? 'الخدمة ملغاة'
+                    : `${getStatusLabel(service.status)} — المحطة ${flow.index + 1} من ${flow.path.length}`
+                }
               >
-                <ChevronDown size={14} />
-                <span>تغيير الحالة</span>
-              </button>
-              <AnimatePresence>
-                {showStatusDropdown && service.allowed_transitions && service.allowed_transitions.length > 0 && (
-                  <motion.div
-                    className="lsd-dropdown"
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                  >
-                    {service.allowed_transitions.map((transition) => (
-                      <button
-                        key={transition}
-                        className="lsd-dropdown__item"
-                        onClick={() => handleStatusChange(transition)}
-                      >
-                        <span
-                          className={`ls-status-badge ls-status-badge--${transition}`}
-                          style={{ padding: '1px 6px', fontSize: 11 }}
-                        >
-                          <span className="ls-status-badge__dot" />
-                          {getStatusLabel(transition)}
-                        </span>
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Convert to case (only if convertible type and not already converted) */}
-            {!service.case_id && CONVERTIBLE_SERVICE_TYPES.includes(service.service_type) && (
-              <button
-                className="lsd-header-btn"
-                onClick={() => setShowConvertModal(true)}
-              >
-                <ArrowRightLeft size={15} />
-                <span>تحويل لقضية</span>
-              </button>
+                <span className="lsd2-stepper__label">
+                  <b>{getStatusLabel(service.status)}</b>
+                  <small>
+                    {flow.cancelled
+                      ? 'توقّف المسار'
+                      : flow.branch
+                      ? `من «${flow.path[flow.index].label}»`
+                      : `${(flow.index + 1).toLocaleString('ar-SA')} من ${flow.path.length.toLocaleString('ar-SA')}`}
+                  </small>
+                </span>
+                <span className="lsd2-stepper__bar" aria-hidden="true">
+                  {flow.path.map((step, idx) => (
+                    <i
+                      key={step.status}
+                      className={flow.cancelled ? '' : idx < flow.index ? 'is-done' : idx === flow.index ? 'is-now' : ''}
+                    />
+                  ))}
+                </span>
+              </div>
+            ) : (
+              <span title={STATUS_EXPLANATIONS[service.status]}>{renderStatusBadge(service.status)}</span>
             )}
+            {renderNextStepMenu()}
 
             {/*
               تعديل بيانات الخدمة (العنوان/الأولوية/التسعير/التواريخ/المكلَّفين).
@@ -3792,47 +2920,65 @@ const LegalServiceDetail: React.FC = () => {
               <span>تعديل البيانات</span>
             </button>
 
-            {/* Create invoice */}
-            <button
-              className="lsd-header-btn lsd-header-btn--primary"
-              onClick={() => setShowInvoiceModal(true)}
-            >
-              <Receipt size={15} />
-              <span>إنشاء فاتورة</span>
-            </button>
-
-            {/*
-              الحذف متاح في كل الحالات: الصلاحية مفروضة في الباك على المسار
-              (legal-services.manage)، ولا توجد صلاحية legal-services.delete في المشروع.
-              حصرُه سابقاً بحالتَي new/cancelled كان قيداً واجهياً بلا سندٍ في الباك.
-            */}
-            {/* 🔴 كان الزرُّ يُعرض للجميع بلا أيّ ترشيحٍ بالصلاحية، فمن لا يملك
-                `legal-services.manage` يضغطه فيُردّ **403 صامتاً** — وهذا بعينه
-                ما وصفه العميل بأن الزرَّ «معطّل» (#159). الحارسُ في الباك سليم؛
-                الناقصُ كان أن تعكسه الواجهة. */}
-            {canManageService && (
+            {/* الإجراءات الأقل تكراراً في قائمة واحدة بدل صفّ أزرار يزاحم العنوان */}
+            <div className="lsd-dropdown-wrapper" ref={moreMenuRef}>
               <button
-                className="lsd-header-btn lsd-header-btn--danger"
-                onClick={handleDelete}
-                disabled={deleteLoading}
-                title="حذف الخدمة"
+                className="lsd-header-btn lsd-header-btn--icon"
+                onClick={() => setShowMoreMenu((v) => !v)}
+                title="إجراءات أخرى"
+                aria-label="إجراءات أخرى"
+                aria-expanded={showMoreMenu}
               >
-                <Trash2 size={15} />
-                <span>{deleteLoading ? 'جارٍ الحذف...' : 'حذف'}</span>
+                <MoreHorizontal size={16} />
               </button>
-            )}
+              {showMoreMenu && (
+                <div className="lsd-dropdown lsd2-more">
+                  <button
+                    className="lsd-dropdown__item"
+                    onClick={() => { setShowMoreMenu(false); setShowInvoiceModal(true); }}
+                  >
+                    <Receipt size={14} />
+                    إنشاء فاتورة
+                  </button>
+                  {/* Convert to case (only if convertible type and not already converted) */}
+                  {!service.case_id && CONVERTIBLE_SERVICE_TYPES.includes(service.service_type) && (
+                    <button
+                      className="lsd-dropdown__item"
+                      onClick={() => { setShowMoreMenu(false); setShowConvertModal(true); }}
+                    >
+                      <ArrowRightLeft size={14} />
+                      تحويل لقضية
+                    </button>
+                  )}
+                  {/*
+                    الحذف متاح في كل الحالات: الصلاحية مفروضة في الباك على المسار
+                    (legal-services.manage)، ولا توجد صلاحية legal-services.delete في المشروع.
+                    حصرُه سابقاً بحالتَي new/cancelled كان قيداً واجهياً بلا سندٍ في الباك.
+                  */}
+                  {/* 🔴 كان الزرُّ يُعرض للجميع بلا أيّ ترشيحٍ بالصلاحية، فمن لا يملك
+                      `legal-services.manage` يضغطه فيُردّ **403 صامتاً** — وهذا بعينه
+                      ما وصفه العميل بأن الزرَّ «معطّل» (#159). الحارسُ في الباك سليم؛
+                      الناقصُ كان أن تعكسه الواجهة. */}
+                  {canManageService && (
+                    <button
+                      className="lsd-dropdown__item lsd2-more__danger"
+                      onClick={() => { setShowMoreMenu(false); handleDelete(); }}
+                      disabled={deleteLoading}
+                    >
+                      <Trash2 size={14} />
+                      {deleteLoading ? 'جارٍ الحذف...' : 'حذف الخدمة'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </header>
 
-      {/* ── Status Pipeline ── */}
-      <StatusPipeline steps={statusFlow} currentStatus={service.status} />
+      </header>
 
       {/* ── حالة التكليف: بانتظار الاعتماد أو جاهزة للعميل ── */}
       {renderAssignmentCard()}
-
-      {/* ── بطاقة «الخطوة التالية» — أعلى المحتوى ── */}
-      {renderNextStepCard()}
 
       {/* ── Tabs ── */}
       <nav className="lsd-tabs">
@@ -3855,33 +3001,26 @@ const LegalServiceDetail: React.FC = () => {
       </nav>
 
       {/* ── Tab Content ── */}
-      <div className="lsd-layout">
-        <div className="lsd-workarea">
-          <div className="lsd-main">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                variants={tabVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-              >
-                {activeTab === 'info' && renderInfoTab()}
-                {activeTab === 'consultation' && renderConsultationTab()}
-                {activeTab === 'contract' && renderContractTab()}
-                {activeTab === 'type_detail' && renderTypeDetailTab()}
-                {activeTab === 'notes' && renderNotesTab()}
-                {activeTab === 'deliverables' && (
-                  <DeliverablesPanel serviceId={service.id} serviceType={service.service_type} />
-                )}
-                {activeTab === 'documents' && renderDocumentsTab()}
-                {activeTab === 'time' && renderTimeTab()}
-                {activeTab === 'activities' && renderActivitiesTab()}
-                {activeTab === 'invoices' && renderInvoicesTab()}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-          {renderAside()}
+      <div className={`lsd-layout${fitContract ? ' lsd-layout--fit' : ''}`}>
+        <div className="lsd-main">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              className="lsd-tabpane"
+              variants={tabVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              {activeTab === 'info' && renderInfoTab()}
+              {activeTab === 'consultation' && renderConsultationTab()}
+              {activeTab === 'contract' && renderContractTab()}
+              {activeTab === 'type_detail' && renderTypeDetailTab()}
+              {activeTab === 'notes' && renderNotesTab()}
+              {activeTab === 'files' && renderFilesTab()}
+              {activeTab === 'billing' && renderBillingTab()}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 
@@ -3903,6 +3042,46 @@ const LegalServiceDetail: React.FC = () => {
           />
         )}
       </AnimatePresence>
+
+      {(() => {
+        const target = pendingTransition;
+        if (!target) return null;
+        const { effects, warnings } = transitionConcerns(target);
+        return (
+          <ConfirmDialog
+            isOpen
+            variant={target === 'cancelled' ? 'danger' : 'primary'}
+            loading={statusLoading}
+            onClose={() => setPendingTransition(null)}
+            onConfirm={() => {
+              setPendingTransition(null);
+              void handleStatusChange(target);
+            }}
+            confirmLabel={target === 'cancelled' ? 'ألغِ الخدمة' : `انقلها إلى «${getStatusLabel(target)}»`}
+            title={
+              target === 'cancelled'
+                ? 'إلغاء الخدمة'
+                : `من «${getStatusLabel(service.status)}» إلى «${getStatusLabel(target)}»`
+            }
+            message={
+              <div className="lsd2-confirm">
+                {warnings.length > 0 && (
+                  <div className="lsd2-confirm__warn">
+                    <b><AlertTriangle size={13} /> قبل أن تنقلها</b>
+                    <ul>{warnings.map((w) => <li key={w}>{w}</li>)}</ul>
+                  </div>
+                )}
+                {effects.length > 0 && (
+                  <>
+                    <b>ما الذي يحدث عند الانتقال؟</b>
+                    <ul>{effects.map((e) => <li key={e}>{e}</li>)}</ul>
+                  </>
+                )}
+              </div>
+            }
+          />
+        );
+      })()}
 
       <AddExternalLinkModal
         isOpen={showLinkModal}

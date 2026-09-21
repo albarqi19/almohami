@@ -561,3 +561,13 @@ body.dark .task-req-chip {
     white-space: nowrap;
     margin-top: 2px;
 }
+
+/* بديلُ خانة «بدء تلقائي» المحذوفة: سطرٌ يقول ماذا يعني الحقلُ الآن —
+   «تبدأ الآن» بلا تاريخ، و«تبدأ في موعدها» مع تاريخٍ مستقبليّ. */
+.task-start-hint {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    margin-top: 3px;
+    font-size: 10.5px;
+    color: var(--color-text-secondary, #64748b);
+}

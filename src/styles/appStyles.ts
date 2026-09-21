@@ -172,3 +172,7 @@ import './raed-charts.css';
 import './performance-view.css';
 // لوحة تحكم المالية (fdb-) — أصناف ببادئة خاصة، فلا تتعلّق بترتيب الحقن.
 import './finance-dashboard.css';
+// مساحة صياغة العقد (cdw-) — أصناف ببادئة خاصة، فلا تتعلّق بترتيب الحقن.
+import './contract-drafting-workspace.css';
+// بطاقة مراجعة «مهمة بالصوت» (vtr-) — أصناف ببادئة خاصة، فلا تتعلّق بترتيب الحقن.
+import './voice-task-review.css';

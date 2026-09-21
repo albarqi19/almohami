@@ -3,6 +3,65 @@ import { toApiDatetime } from '../utils/dateAr';
 import type { ApiResponse, PaginatedResponse } from '../utils/api';
 import type { ArchivedFilter, Task, CreateTaskForm, ExternalLinkPayload, Document } from '../types';
 
+/** أولوية مهمة كما يقبلها الخادم */
+export type VoiceTaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+/** مسوّدة مهمة في بطاقة المراجعة — قابلة للتعديل قبل الاعتماد، وليست مهمة بعد */
+export interface VoiceTaskDraft {
+  key: string;
+  title: string;
+  description: string;
+  priority: VoiceTaskPriority;
+  /** YYYY-MM-DD */
+  dueDate: string;
+  /** لم يُذكر موعد في التسجيل فوُضع الافتراضي — تقوله البطاقة صراحةً */
+  dueDateDefaulted: boolean;
+  assigneeUserId: number | null;
+  assigneeName: string;
+  /** لم يُذكر مكلَّف (أو لم يُطابَق) فوقع على المُسجِّل نفسه */
+  assigneeDefaulted: boolean;
+  subtasks: string[];
+}
+
+export interface VoiceAssignableUser {
+  id: number;
+  name: string;
+}
+
+export interface VoiceTaskPreview {
+  transcript: string;
+  tasks: VoiceTaskDraft[];
+  assignableUsers: VoiceAssignableUser[];
+  /** عناصر أسقطها الخادم (تجاوزُ السقف أو مسوّدة بلا عنوان) — تُذكر ولا تُبتلع */
+  dropped: number;
+}
+
+export interface VoiceTaskFailure {
+  index: number;
+  title: string;
+  message: string;
+}
+
+interface VoiceTaskPreviewResponse {
+  success: boolean;
+  message?: string;
+  transcript?: string;
+  dropped?: number;
+  assignable_users?: VoiceAssignableUser[];
+  tasks?: Array<{
+    key: string;
+    title: string;
+    description: string | null;
+    priority: VoiceTaskPriority;
+    due_date: string;
+    due_date_defaulted?: boolean;
+    assignee_user_id: number | null;
+    assignee_name: string;
+    assignee_defaulted?: boolean;
+    subtasks?: string[];
+  }>;
+}
+
 export interface TaskFilters {
   status?: string;
   priority?: string;
@@ -215,17 +274,94 @@ export class TaskService {
     }
   }
 
-  /** إنشاء مهمة من تسجيل صوتي — الذكاء يستخرج العنوان/الفرعية/المُسنَد إليه/الاستحقاق */
-  static async createTaskFromVoice(audio: Blob): Promise<{ task: Task & { id: number | string }; transcript?: string }> {
+  /**
+   * إنشاء مهمة من تسجيل صوتي **فوراً** — «الوضع السريع»: بلا بطاقة مراجعة.
+   * يُنشئ كل ما استُخرج من التسجيل ويعيد الأولى في `task` والعدد في `createdCount`.
+   */
+  static async createTaskFromVoice(
+    audio: Blob,
+  ): Promise<{ task: Task & { id: number | string }; transcript?: string; createdCount: number }> {
     const formData = new FormData();
     formData.append('audio', audio, 'voice-task.wav');
 
-    const response = await apiClient.post<ApiResponse<any> & { transcript?: string }>('/tasks/voice', formData);
+    const response = await apiClient.post<
+      ApiResponse<Task & { id: number | string }> & { transcript?: string; created_count?: number }
+    >('/tasks/voice', formData);
 
     if (response.success && response.data) {
-      return { task: response.data, transcript: response.transcript };
+      return {
+        task: response.data,
+        transcript: response.transcript,
+        createdCount: response.created_count ?? 1,
+      };
     }
     throw new Error(response.message || 'فشل في إنشاء المهمة من التسجيل');
+  }
+
+  /**
+   * **معاينة** مهام التسجيل — لا يُكتب في القاعدة شيء. مدخل بطاقة المراجعة.
+   * التصحيحات المُعلَّمة (`dueDateDefaulted` / `assigneeDefaulted`) تُعرض للمستخدم
+   * كي لا يقرأ تاريخاً أو اسماً كأنه مسموع وهو افتراضٌ من الخادم.
+   */
+  static async previewVoiceTasks(audio: Blob): Promise<VoiceTaskPreview> {
+    const formData = new FormData();
+    formData.append('audio', audio, 'voice-task.wav');
+
+    const response = await apiClient.post<VoiceTaskPreviewResponse>('/tasks/voice/preview', formData);
+
+    if (!response.success || !Array.isArray(response.tasks)) {
+      throw new Error(response.message || 'تعذّر فهم التسجيل');
+    }
+
+    return {
+      transcript: response.transcript || '',
+      dropped: response.dropped ?? 0,
+      assignableUsers: response.assignable_users ?? [],
+      tasks: response.tasks.map((t) => ({
+        key: t.key,
+        title: t.title,
+        description: t.description ?? '',
+        priority: t.priority,
+        dueDate: t.due_date,
+        dueDateDefaulted: Boolean(t.due_date_defaulted),
+        assigneeUserId: t.assignee_user_id,
+        assigneeName: t.assignee_name,
+        assigneeDefaulted: Boolean(t.assignee_defaulted),
+        subtasks: t.subtasks ?? [],
+      })),
+    };
+  }
+
+  /** اعتماد الدفعة بعد مراجعتها بصرياً — إنشاءٌ حقيقي بلا نموذج ذكاء */
+  static async createVoiceTasksBatch(
+    tasks: VoiceTaskDraft[],
+    transcript?: string,
+  ): Promise<{ tasks: Array<Task & { id: number | string }>; createdCount: number; failed: VoiceTaskFailure[] }> {
+    const response = await apiClient.post<
+      ApiResponse<Array<Task & { id: number | string }>> & {
+        created_count?: number;
+        failed?: VoiceTaskFailure[];
+      }
+    >('/tasks/voice/batch', {
+      transcript,
+      tasks: tasks.map((t) => ({
+        title: t.title.trim(),
+        description: t.description?.trim() || null,
+        priority: t.priority,
+        due_date: t.dueDate,
+        assignee_user_id: t.assigneeUserId,
+        subtasks: t.subtasks.map((s) => s.trim()).filter(Boolean),
+      })),
+    });
+
+    if (response.success && Array.isArray(response.data)) {
+      return {
+        tasks: response.data,
+        createdCount: response.created_count ?? response.data.length,
+        failed: response.failed ?? [],
+      };
+    }
+    throw new Error(response.message || 'فشل اعتماد المهام');
   }
 
   /** يستقبل الحقول بصيغة snake_case كما يتوقعها الـ API (مثل actual_hours وdue_date) */

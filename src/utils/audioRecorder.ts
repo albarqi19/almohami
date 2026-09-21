@@ -95,6 +95,107 @@ export async function startAudioRecording(): Promise<AudioRecording> {
   };
 }
 
+/** نتيجة التقاط أمر قصير — `null` تعني «لم يُنطق شيء» لا عطلاً */
+export interface CommandCapture {
+  /** يوقف الالتقاط فوراً ويعيد ما سُجّل (أو null إن لم يُسمع كلام) */
+  finish: () => Promise<Blob | null>;
+  /** يوقف ويتجاهل */
+  cancel: () => void;
+  getLevel: () => number;
+}
+
+interface CommandCaptureOptions {
+  /** يُستدعى حين يُغلَق التسجيل تلقائياً بالصمت — القيمة null تعني أنه لم يُسمع كلام أصلاً */
+  onAutoStop: (wav: Blob | null) => void;
+  /** أقصى مدة انتظار قبل أن يُغلق بلا كلام (افتراضي 6 ثوانٍ) */
+  maxIdleMs?: number;
+  /** أقصى مدة للأمر نفسه بعد بدء الكلام (افتراضي 8 ثوانٍ) */
+  maxSpeechMs?: number;
+}
+
+/** فوقها = كلام، وتحتها = صمت. `getLevel` مضخَّم ×4.5 فكلام المكتب العادي ≈ 0.25–0.8 */
+const SPEECH_LEVEL = 0.12;
+/** صمتٌ بهذا الطول بعد كلامٍ سُمع = انتهى الأمر */
+const TRAILING_SILENCE_MS = 850;
+
+/**
+ * التقاط **أمر قصير** («اعتمد»، «التالي») بإغلاقٍ تلقائيّ عند الصمت.
+ *
+ * 🔑 لماذا لا يكفي `startAudioRecording`؟ لأن المستخدم هنا لا يضغط زراً ولا يُفلته: المايك
+ * يُفتح من تلقائه بعد ظهور البطاقة، فلا بدّ لشيءٍ أن **يقرّر متى انتهى الكلام**. فنراقب
+ * شدّة الصوت: ننتظر أن يرتفع فوق عتبة الكلام، ثم نُغلق بعد ٨٥٠ms من الصمت الذي يليه.
+ * وإن لم يُسمع كلامٌ أصلاً خلال ٦ ثوانٍ أُغلق المايك بلا إرسال — لا نُنفق نداءَ نموذجٍ
+ * على غرفةٍ صامتة، ولا نترك المايكَ مفتوحاً على مكتبٍ فيه محادثة.
+ */
+export async function startCommandCapture(options: CommandCaptureOptions): Promise<CommandCapture> {
+  const { onAutoStop, maxIdleMs = 6000, maxSpeechMs = 8000 } = options;
+  const recording = await startAudioRecording();
+
+  let heardSpeech = false;
+  let silenceSince = 0;
+  let settled = false;
+  let raf: number | undefined;
+  const startedAt = Date.now();
+
+  const stopWatching = () => {
+    if (raf !== undefined) {
+      cancelAnimationFrame(raf);
+      raf = undefined;
+    }
+  };
+
+  /** يُنهي الالتقاط مرة واحدة فقط — تسابق المؤقّت مع الإنهاء اليدوي وارد */
+  const settle = async (deliver: boolean): Promise<Blob | null> => {
+    if (settled) return null;
+    settled = true;
+    stopWatching();
+
+    if (!deliver || !heardSpeech) {
+      recording.cancel();
+      return null;
+    }
+
+    try {
+      return await recording.stop();
+    } catch {
+      // حارس الصمت في التحويل قد يرفض تسجيلاً حدّيّاً — ليس عطلاً يُعرض
+      return null;
+    }
+  };
+
+  const tick = () => {
+    const level = recording.getLevel();
+    const now = Date.now();
+
+    if (level >= SPEECH_LEVEL) {
+      heardSpeech = true;
+      silenceSince = 0;
+    } else if (heardSpeech && silenceSince === 0) {
+      silenceSince = now;
+    }
+
+    const done =
+      (heardSpeech && silenceSince > 0 && now - silenceSince >= TRAILING_SILENCE_MS) ||
+      (heardSpeech && now - startedAt >= maxSpeechMs) ||
+      (!heardSpeech && now - startedAt >= maxIdleMs);
+
+    if (done) {
+      void settle(true).then(onAutoStop);
+      return;
+    }
+
+    raf = requestAnimationFrame(tick);
+  };
+
+  raf = requestAnimationFrame(tick);
+
+  return {
+    finish: () => settle(true),
+    cancel: () => void settle(false),
+    getLevel: recording.getLevel,
+  };
+}
+
 async function encodeWav16kMono(blob: Blob): Promise<Blob> {
   const arrayBuffer = await blob.arrayBuffer();
 

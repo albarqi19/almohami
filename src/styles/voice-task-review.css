@@ -1,0 +1,568 @@
+/* بطاقة مراجعة «مهمة بالصوت» (vtr-) — كثيفة بنمط ERP، فلات بلا توهّج ولا تدرّجات */
+
+.vtr-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300; /* فوق المودالات العادية — هذه خطوةُ تأكيدٍ تعلو ما تحتها */
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.vtr {
+  width: 560px;
+  max-width: 100%;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--dashboard-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.22);
+  text-align: right;
+  overflow: hidden;
+}
+
+/* ─── الترويسة ─── */
+
+.vtr__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  background: var(--quiet-gray-50, #f8fafc);
+  flex-shrink: 0;
+}
+
+.vtr__head-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--law-navy, #1e3a5f);
+  flex: 1;
+  min-width: 0;
+}
+
+.vtr__head-title svg {
+  color: var(--law-gold, #b8860b);
+  flex-shrink: 0;
+}
+
+body.dark .vtr__head-title {
+  color: var(--color-text, #f1f5f9);
+}
+
+.vtr__counter {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--dashboard-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.vtr__close {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary, #64748b);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 5px;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.vtr__close:hover {
+  background: var(--quiet-gray-100, #f1f5f9);
+  color: var(--color-text, #1e293b);
+}
+
+/* ─── ما سُمع ─── */
+
+.vtr__transcript {
+  margin: 0;
+  padding: 7px 12px;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--color-text-secondary, #64748b);
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  background: var(--quiet-gray-50, #f8fafc);
+  /* سطران ثم قصّ — والنصّ كاملٌ في الـtooltip */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.vtr__transcript span {
+  font-weight: 700;
+  color: var(--law-gold, #b8860b);
+}
+
+.vtr__warn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  color: #92400e;
+  background: #fffbeb;
+  border-bottom: 1px solid #fde68a;
+  flex-shrink: 0;
+}
+
+body.dark .vtr__warn {
+  color: #fcd34d;
+  background: rgba(146, 64, 14, 0.18);
+  border-bottom-color: rgba(252, 211, 77, 0.35);
+}
+
+/* ─── جسم البطاقة ─── */
+
+.vtr__body {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.vtr__title {
+  width: 100%;
+  border: 1px solid transparent;
+  border-bottom-color: var(--color-border, #e2e8f0);
+  background: transparent;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text, #1e293b);
+  padding: 4px 2px 7px;
+  margin-bottom: 12px;
+  font-family: inherit;
+}
+
+.vtr__title:focus {
+  outline: none;
+  border-color: var(--law-gold, #b8860b);
+  border-radius: 6px;
+  padding-inline: 8px;
+}
+
+.vtr__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 560px) {
+  .vtr__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vtr__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.vtr__label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.vtr__label svg {
+  color: var(--law-gold, #b8860b);
+  flex-shrink: 0;
+}
+
+.vtr__field select,
+.vtr__field input {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--dashboard-card, #ffffff);
+  color: var(--color-text, #1e293b);
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.vtr__field select:focus,
+.vtr__field input:focus,
+.vtr__desc:focus,
+.vtr__subtask input:focus {
+  outline: none;
+  border-color: var(--law-gold, #b8860b);
+}
+
+/* ملاحظة «هذا افتراضٌ لا مسموع» — تُقرأ ولا تُزاحم */
+.vtr__note {
+  font-size: 10.5px;
+  font-style: normal;
+  color: #b45309;
+}
+
+body.dark .vtr__note {
+  color: #fcd34d;
+}
+
+.vtr__desc {
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--dashboard-card, #ffffff);
+  color: var(--color-text, #1e293b);
+  font-size: 12px;
+  line-height: 1.7;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+/* ─── الخطوات الفرعية ─── */
+
+.vtr__subtasks {
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.vtr__subtasks-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 9px;
+  background: var(--quiet-gray-50, #f8fafc);
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.vtr__subtasks-head button {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--dashboard-card, #ffffff);
+  color: var(--law-navy, #1e3a5f);
+  border-radius: 5px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+body.dark .vtr__subtasks-head button {
+  color: var(--color-text, #f1f5f9);
+}
+
+.vtr__empty {
+  margin: 0;
+  padding: 9px;
+  font-size: 11.5px;
+  color: var(--color-text-secondary, #64748b);
+  text-align: center;
+}
+
+.vtr__subtask {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.vtr__subtask:last-child {
+  border-bottom: none;
+}
+
+.vtr__subtask-num {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: var(--quiet-gray-100, #f1f5f9);
+  /* 🩸 في الوضع الليلي ‎--quiet-gray-100 يساوي لون البطاقة نفسه، فالرقم يختفي بلا حدّ */
+  border: 1px solid var(--color-border, #e2e8f0);
+  color: var(--color-text-secondary, #64748b);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.vtr__subtask input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 4px 6px;
+  border-radius: 5px;
+  font-size: 12px;
+  color: var(--color-text, #1e293b);
+  font-family: inherit;
+}
+
+.vtr__subtask button {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary, #64748b);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.vtr__subtask button:hover {
+  color: #dc2626;
+  background: var(--quiet-gray-100, #f1f5f9);
+}
+
+.vtr__drop {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: transparent;
+  color: var(--color-text-secondary, #64748b);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 11.5px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.vtr__drop:hover {
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+/* ─── نقاط البطاقات ─── */
+
+.vtr__dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.vtr__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border, #cbd5e1);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* المرئيّة تُملأ — فيُقرأ «ما الذي راجعتَه» من صفٍّ واحد */
+.vtr__dot.is-seen {
+  background: var(--color-border, #cbd5e1);
+}
+
+.vtr__dot.is-current {
+  border-color: var(--law-gold, #b8860b);
+  background: var(--law-gold, #b8860b);
+  transform: scale(1.25);
+}
+
+/* ─── شريط الصوت والأزرار ─── */
+
+.vtr__foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 12px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+  background: var(--quiet-gray-50, #f8fafc);
+  flex-shrink: 0;
+}
+
+.vtr__mic-strip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 170px;
+}
+
+.vtr__mic {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--dashboard-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  cursor: pointer;
+}
+
+.vtr__mic-strip.is-on .vtr__mic {
+  border-color: var(--law-gold, #b8860b);
+  color: var(--law-gold, #b8860b);
+}
+
+.vtr__mic:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.vtr__listen-label {
+  font-size: 11.5px;
+  color: var(--color-text-secondary, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* الكلمات كما تُسمع الآن — دليلٌ حيّ أن المايك يعمل، وهو أصدق من مؤشّر شدّة */
+.vtr__listen-label.is-interim {
+  color: var(--law-gold, #b8860b);
+  font-weight: 600;
+  font-style: italic;
+}
+
+.vtr__mic-strip.is-on .vtr__listen-label {
+  color: var(--law-navy, #1e3a5f);
+  font-weight: 600;
+}
+
+body.dark .vtr__mic-strip.is-on .vtr__listen-label {
+  color: var(--color-text, #f1f5f9);
+}
+
+/* مؤشّر الشدّة — دليلٌ مرئيّ أن المايك يلتقط فعلاً */
+.vtr__level {
+  flex: 1;
+  min-width: 28px;
+  max-width: 90px;
+  height: 3px;
+  border-radius: 2px;
+  /* ‎--quiet-gray-200 لا ‎-100: الأخير يساوي لون البطاقة ليلاً فيختفي مجرى المؤشّر */
+  background: var(--quiet-gray-200, #e2e8f0);
+  overflow: hidden;
+}
+
+.vtr__level i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--law-gold, #b8860b);
+  transform-origin: right center;
+}
+
+.vtr__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-start: auto;
+}
+
+.vtr__nav {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--dashboard-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.vtr__nav:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.vtr__btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.vtr__btn--ghost {
+  border-color: var(--color-border, #e2e8f0);
+  background: var(--dashboard-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+}
+
+.vtr__btn--primary {
+  background: var(--law-navy, #1e3a5f);
+  color: #ffffff;
+}
+
+.vtr__btn--primary:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.vtr__feedback {
+  margin: 0;
+  padding: 7px 12px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+  font-size: 11.5px;
+  color: var(--color-text-secondary, #64748b);
+  flex-shrink: 0;
+}
+
+.vtr__heard {
+  font-weight: 700;
+  color: var(--law-navy, #1e3a5f);
+  margin-inline-end: 6px;
+}
+
+body.dark .vtr__heard {
+  color: var(--color-text, #f1f5f9);
+}
+
+.vtr__spin {
+  animation: vtr-spin 1s linear infinite;
+}
+
+@keyframes vtr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

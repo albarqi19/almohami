@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, ExternalLink, FileText, Layers, Loader2, MessageSquare } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -101,7 +101,7 @@ const ServicePanel: React.FC<{ serviceId: number; onTitle: (title: string) => vo
           </>
         )}
         {tab === 'work' && (Workspace
-          ? <div style={{ padding: '8px 14px' }}><Workspace service={service} refreshService={load} /></div>
+          ? <div style={{ padding: '8px 14px' }}><Suspense fallback={<div className="prj-empty"><Loader2 size={14} className="ssp2-spin" /> جارٍ فتح مساحة العمل…</div>}><Workspace service={service} refreshService={load} /></Suspense></div>
           : <div className="prj-empty">مساحة عمل «{typeLabel}» تُفتح من صفحة الخدمة. <button type="button" className="prj-link" onClick={() => navigate(`/legal-services/${serviceId}`)}>افتح صفحة الخدمة</button></div>)}
         {tab === 'deliv' && <div style={{ padding: '8px 14px' }}><DeliverablesPanel serviceId={service.id} serviceType={service.service_type} /></div>}
         {tab === 'time' && <div style={{ padding: '8px 14px' }}><ServiceTimerWidget serviceId={service.id} /></div>}

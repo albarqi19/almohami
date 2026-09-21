@@ -60,7 +60,8 @@ const CaseTasks: React.FC<CaseTasksProps> = ({
 
   const getStatusText = (status: string): string => {
     switch (status) {
-      case 'todo': return 'قيد الانتظار';
+      // «لم تبدأ» كما تسمّيها لوحة المهام والخادم — لا اسمان لحالة واحدة
+      case 'todo': return 'لم تبدأ';
       case 'in_progress': return 'قيد التنفيذ';
       case 'review': return 'قيد المراجعة';
       case 'on_hold': return 'موقوفة مؤقتاً';
@@ -73,7 +74,10 @@ const CaseTasks: React.FC<CaseTasksProps> = ({
 
   const filteredTasks = tasks.filter(task => {
     if (filter === 'all') return true;
-    if (filter === 'in_progress') return task.status === 'in_progress' || task.status === 'todo';
+    // كان المرشّح يضمّ `todo` مع `in_progress` لأن المهمّة كانت تولد «لم تبدأ» وهي عاملة،
+    // فكان الضمُّ تصحيحاً للواقع. وبعد أن صارت تولد «قيد التنفيذ» صار الضمُّ يخلط
+    // العاملَ بالمنتظِر موعدَه — وهما شيئان.
+    if (filter === 'in_progress') return task.status === 'in_progress';
     if (filter === 'completed') return task.status === 'completed';
     return true;
   });

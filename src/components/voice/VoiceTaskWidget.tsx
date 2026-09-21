@@ -1,27 +1,38 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Mic, UserRound, CalendarClock, ListTodo, Keyboard } from 'lucide-react';
+import { Mic, UserRound, CalendarClock, ListTodo, Keyboard, ClipboardCheck, Zap } from 'lucide-react';
 import PersonaHalo from './PersonaHalo';
 import type { PersonaState } from './PersonaHalo';
+import VoiceTaskReview from './VoiceTaskReview';
 import { startAudioRecording } from '../../utils/audioRecorder';
 import type { AudioRecording } from '../../utils/audioRecorder';
 import { TaskService } from '../../services/taskService';
+import type { VoiceTaskPreview } from '../../services/taskService';
 
 /**
  * ويدجت «مهمة بالصوت» — يثبت أسفل وسط صفحة المهام.
  *
  * نقرة = بدء/إيقاف التسجيل، أو إبقاء زر M مضغوطاً للتسجيل والإفلات للتحويل.
- * الذكاء يفرّغ الكلام ويستخرج المهمة ومهامها الفرعية والمُسنَد إليه وتاريخ الاستحقاق،
- * وعند النجاح: «تم إنشاء المهمة» ثم فتحها.
+ * الذكاء يفرّغ الكلام ويستخرج المهمة (أو المهام) ومهامَّها الفرعية والمُسنَد إليه والاستحقاق.
+ *
+ * ثم **وضعان يختارهما المستخدم**:
+ *  - «مراجعة» (الافتراضي): تُعرض بطاقةٌ بما فُهم، يعتمدها بصوته («اعتمد») أو بيده بعد تعديلها.
+ *  - «سريع»: تُنشأ فوراً بلا بطاقة — لمن يثق بالتسجيل ويريد السرعة.
+ *
+ * والافتراضُ مراجعةٌ لا سرعة: كلمةٌ أُسيء سماعُها في الوضع السريع تصير مهمّةً في قائمة
+ * المكتب وتكليفاً لشخصٍ خطأ وإشعاراً وصل فعلاً — والسرعةُ اختيارٌ واعٍ لا مفاجأة.
  */
 
 type WidgetPhase = 'idle' | 'recording' | 'processing' | 'success';
+type VoiceMode = 'review' | 'fast';
 
 const MAX_RECORDING_MS = 120_000; // دقيقتان
 const MIN_RECORDING_MS = 600;
-// نافذة التعريف بالميزة — تُعرض مرة واحدة فقط (localStorage، بلا باك)
-const INTRO_SEEN_KEY = 'voice_task_intro_seen';
+// نافذة التعريف بالميزة — تُعرض مرة واحدة فقط (localStorage، بلا باك).
+// v2: تغيّر المسلك (مراجعة قبل الاعتماد + عدّة مهام) فيُعاد التعريف مرّةً لمن رأى القديم.
+const INTRO_SEEN_KEY = 'voice_task_intro_seen_v2';
+const MODE_KEY = 'voice_task_mode';
 
 const hasSeenIntro = (): boolean => {
   try {
@@ -39,6 +50,22 @@ const markIntroSeen = (): void => {
   }
 };
 
+const readMode = (): VoiceMode => {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'fast' ? 'fast' : 'review';
+  } catch {
+    return 'review';
+  }
+};
+
+const writeMode = (mode: VoiceMode): void => {
+  try {
+    localStorage.setItem(MODE_KEY, mode);
+  } catch {
+    /* تخزين محجوب */
+  }
+};
+
 const PHASE_TO_PERSONA: Record<WidgetPhase, PersonaState> = {
   idle: 'idle',
   recording: 'listening',
@@ -48,9 +75,9 @@ const PHASE_TO_PERSONA: Record<WidgetPhase, PersonaState> = {
 
 const PHASE_LABEL: Record<WidgetPhase, string> = {
   idle: 'سجّل مهمة',
-  recording: 'يستمع… أفلت أو انقر للإنشاء',
-  processing: 'جارٍ إنشاء المهمة…',
-  success: 'تم إنشاء المهمة ✓',
+  recording: 'يستمع… أفلت أو انقر للإنهاء',
+  processing: 'جارٍ فهم التسجيل…',
+  success: 'تم ✓',
 };
 
 interface VoiceTaskWidgetProps {
@@ -76,18 +103,25 @@ const VoiceTaskIntro: React.FC<{ onDismiss: () => void }> = ({ onDismiss }) => (
         <PersonaHalo state="listening" className="voice-task-intro__bg-canvas" />
       </div>
 
-      <h3 className="voice-task-intro__title">جديد — أنشئ مهمة بصوتك</h3>
+      <h3 className="voice-task-intro__title">أنشئ مهامك بصوتك — وراجعها قبل اعتمادها</h3>
       <p className="voice-task-intro__lead">
-        اضغط الزر الدائري أسفل الصفحة (أو اضغط باستمرار على حرف <kbd>M</kbd>)، قل المهمة بكلامك
-        العادي، ثم أفلت — والنظام يحوّلها لمهمة كاملة ويفتحها لك مباشرة.
+        اضغط الزر الدائري أسفل الصفحة (أو اضغط باستمرار على حرف <kbd>M</kbd>)، قل ما تريد بكلامك
+        العادي، ثم أفلت — تظهر لك بطاقة بما فُهم، تعدّلها إن شئت، وتقول <strong>«اعتمد»</strong> فتُنشأ.
       </p>
 
       <div className="voice-task-intro__tips">
         <div className="voice-task-intro__tip">
-          <Mic size={14} />
+          <ClipboardCheck size={14} />
           <div>
-            <strong>قل المطلوب بوضوح</strong>
-            <span>«جهّز مذكرة الرد على دعوى شركة النور»</span>
+            <strong>لا تُنشأ مهمة قبل أن تراها</strong>
+            <span>المايك يُفتح تلقائياً بعد البطاقة — قل «اعتمد» أو «ألغِ»</span>
+          </div>
+        </div>
+        <div className="voice-task-intro__tip">
+          <ListTodo size={14} />
+          <div>
+            <strong>عدّة مهام في تسجيل واحد</strong>
+            <span>«المهمة الأولى… والثانية…» — تُعرض بطاقات، وقل «التالي» بينها</span>
           </div>
         </div>
         <div className="voice-task-intro__tip">
@@ -105,17 +139,17 @@ const VoiceTaskIntro: React.FC<{ onDismiss: () => void }> = ({ onDismiss }) => (
           </div>
         </div>
         <div className="voice-task-intro__tip">
-          <ListTodo size={14} />
+          <Zap size={14} />
           <div>
-            <strong>للمهام الفرعية: عدّد الخطوات</strong>
-            <span>«أول شيء مراجعة العقد، بعدها صياغة الدفوع، وأخيراً الرفع»</span>
+            <strong>تريد السرعة؟ بدّل الوضع</strong>
+            <span>«سريع» يُنشئ فوراً بلا بطاقة — والمفتاح تحت الزر</span>
           </div>
         </div>
         <div className="voice-task-intro__tip">
           <Keyboard size={14} />
           <div>
             <strong>الأسرع: زر M</strong>
-            <span>اضغطه باستمرار وأنت تتكلم، وأفلته لتُنشأ المهمة فوراً</span>
+            <span>اضغطه باستمرار وأنت تتكلم، وأفلته عند انتهائك</span>
           </div>
         </div>
       </div>
@@ -132,14 +166,22 @@ const VoiceTaskWidget: React.FC<VoiceTaskWidgetProps> = ({ onTaskCreated }) => {
   const [phase, setPhase] = useState<WidgetPhase>('idle');
   const [elapsed, setElapsed] = useState(0);
   const [showIntro, setShowIntro] = useState(() => !hasSeenIntro());
+  const [mode, setMode] = useState<VoiceMode>(readMode);
+  const [preview, setPreview] = useState<VoiceTaskPreview | null>(null);
 
   const dismissIntro = useCallback(() => {
     markIntroSeen();
     setShowIntro(false);
   }, []);
 
+  const chooseMode = useCallback((next: VoiceMode) => {
+    writeMode(next);
+    setMode(next);
+  }, []);
+
   const recordingRef = useRef<AudioRecording | null>(null);
   const phaseRef = useRef<WidgetPhase>('idle');
+  const modeRef = useRef<VoiceMode>(mode);
   const startedAtRef = useRef(0);
   const startedByKeyRef = useRef(false);
   const maxTimerRef = useRef<number | undefined>(undefined);
@@ -147,6 +189,7 @@ const VoiceTaskWidget: React.FC<VoiceTaskWidgetProps> = ({ onTaskCreated }) => {
   const finishRef = useRef<() => void>(() => {});
 
   phaseRef.current = phase;
+  modeRef.current = mode;
 
   const clearMaxTimer = () => {
     if (maxTimerRef.current !== undefined) {
@@ -188,23 +231,33 @@ const VoiceTaskWidget: React.FC<VoiceTaskWidgetProps> = ({ onTaskCreated }) => {
     setPhase('processing');
     try {
       const wav = await recording.stop();
-      const { task } = await TaskService.createTaskFromVoice(wav);
+
+      if (modeRef.current === 'review') {
+        // لا شيء يُكتب بعد: البطاقة تتولّى الاعتماد
+        const result = await TaskService.previewVoiceTasks(wav);
+        setPhase('idle');
+        setPreview(result);
+        return;
+      }
+
+      const { task, createdCount } = await TaskService.createTaskFromVoice(wav);
 
       setPhase('success');
-      const subtasksCount = Array.isArray((task as any).subtasks) ? (task as any).subtasks.length : 0;
       toast.success(
-        `تم إنشاء المهمة «${(task as any).title}»${subtasksCount ? ` مع ${subtasksCount} مهام فرعية` : ''}`,
+        createdCount > 1
+          ? `تم إنشاء ${createdCount} مهام من التسجيل`
+          : `تم إنشاء المهمة «${(task as { title?: string }).title ?? ''}»`,
       );
       onTaskCreated?.();
 
-      // لحظة نجاح قصيرة ثم فتح المهمة
+      // لحظة نجاح قصيرة ثم فتح المهمة — والدفعة لا تُفتح
       window.setTimeout(() => {
         setPhase('idle');
-        navigate(`/tasks/${(task as any).id}`);
+        if (createdCount === 1) navigate(`/tasks/${(task as { id: number | string }).id}`);
       }, 900);
     } catch (err) {
       setPhase('idle');
-      toast.error(err instanceof Error ? err.message : 'تعذّر إنشاء المهمة من التسجيل');
+      toast.error(err instanceof Error ? err.message : 'تعذّر فهم التسجيل');
     }
   }, [navigate, onTaskCreated]);
 
@@ -223,9 +276,20 @@ const VoiceTaskWidget: React.FC<VoiceTaskWidgetProps> = ({ onTaskCreated }) => {
     else if (phaseRef.current === 'recording') void finishRecording();
   };
 
-  // زر M: اضغط باستمرار للتسجيل، أفلت للتحويل — Escape يلغي (معطّل أثناء نافذة التعريف)
+  const handleApproved = useCallback(
+    ({ createdCount, openTaskId }: { createdCount: number; openTaskId: number | string | null }) => {
+      setPreview(null);
+      onTaskCreated?.();
+      // مهمة واحدة تُفتح؛ والدفعة تبقى في القائمة بلا فتح أيٍّ منها
+      if (createdCount === 1 && openTaskId != null) navigate(`/tasks/${openTaskId}`);
+    },
+    [navigate, onTaskCreated],
+  );
+
+  // زر M: اضغط باستمرار للتسجيل، أفلت للتحويل — Escape يلغي.
+  // معطّل أثناء نافذة التعريف وأثناء بطاقة المراجعة (لها مفاتيحها وتملك Escape).
   useEffect(() => {
-    if (showIntro) return;
+    if (showIntro || preview) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'KeyM' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !isTypingTarget(e.target)) {
         e.preventDefault();
@@ -248,7 +312,7 @@ const VoiceTaskWidget: React.FC<VoiceTaskWidgetProps> = ({ onTaskCreated }) => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
     };
-  }, [startRecording, finishRecording, cancelRecording, showIntro]);
+  }, [startRecording, finishRecording, cancelRecording, showIntro, preview]);
 
   // عدّاد المدة أثناء التسجيل
   useEffect(() => {
@@ -268,28 +332,65 @@ const VoiceTaskWidget: React.FC<VoiceTaskWidgetProps> = ({ onTaskCreated }) => {
 
   return (
     <>
-    {showIntro && <VoiceTaskIntro onDismiss={dismissIntro} />}
-    <div className="voice-task-widget" data-phase={phase}>
-      <button
-        type="button"
-        className="voice-task-widget__button"
-        onClick={handleClick}
-        disabled={phase === 'processing' || phase === 'success'}
-        aria-label={PHASE_LABEL[phase]}
-        title={`${PHASE_LABEL[phase]} — زر M`}
-      >
-        <PersonaHalo state={PHASE_TO_PERSONA[phase]} className="voice-task-widget__halo" />
-        {phase === 'idle' && <Mic size={16} className="voice-task-widget__mic" />}
-      </button>
+      {showIntro && <VoiceTaskIntro onDismiss={dismissIntro} />}
 
-      <div className="voice-task-widget__caption">
-        <span className="voice-task-widget__label">{PHASE_LABEL[phase]}</span>
-        {phase === 'recording' && (
-          <span className="voice-task-widget__timer">{minutes}:{seconds}</span>
+      {preview && (
+        <VoiceTaskReview
+          preview={preview}
+          onCancel={() => setPreview(null)}
+          onApproved={handleApproved}
+        />
+      )}
+
+      <div className="voice-task-widget" data-phase={phase}>
+        <button
+          type="button"
+          className="voice-task-widget__button"
+          onClick={handleClick}
+          disabled={phase === 'processing' || phase === 'success' || !!preview}
+          aria-label={PHASE_LABEL[phase]}
+          title={`${PHASE_LABEL[phase]} — زر M`}
+        >
+          <PersonaHalo state={PHASE_TO_PERSONA[phase]} className="voice-task-widget__halo" />
+          {phase === 'idle' && <Mic size={16} className="voice-task-widget__mic" />}
+        </button>
+
+        <div className="voice-task-widget__caption">
+          <span className="voice-task-widget__label">{PHASE_LABEL[phase]}</span>
+          {phase === 'recording' && (
+            <span className="voice-task-widget__timer">{minutes}:{seconds}</span>
+          )}
+          {phase === 'idle' && <kbd className="voice-task-widget__kbd">M</kbd>}
+        </div>
+
+        {/* الوضع: مراجعة قبل الاعتماد (افتراضي) أو إنشاء فوري */}
+        {phase === 'idle' && !preview && (
+          <div className="voice-task-widget__mode" role="radiogroup" aria-label="وضع إنشاء المهمة">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={mode === 'review'}
+              className={mode === 'review' ? 'is-on' : undefined}
+              onClick={() => chooseMode('review')}
+              title="تظهر بطاقة بما فُهم، تعدّلها وتعتمدها بصوتك"
+            >
+              <ClipboardCheck size={11} />
+              مراجعة
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={mode === 'fast'}
+              className={mode === 'fast' ? 'is-on' : undefined}
+              onClick={() => chooseMode('fast')}
+              title="تُنشأ المهمة فور انتهاء التسجيل بلا اعتماد"
+            >
+              <Zap size={11} />
+              سريع
+            </button>
+          </div>
         )}
-        {phase === 'idle' && <kbd className="voice-task-widget__kbd">M</kbd>}
       </div>
-    </div>
     </>
   );
 };
