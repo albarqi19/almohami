@@ -34,6 +34,7 @@ import ContractPreview from '../../components/contracts/ContractPreview';
 import ContractVariableValuesModal from '../../components/contracts/ContractVariableValuesModal';
 import { useContractVariables } from '../../hooks/useContractVariables';
 import { apiClient } from '../../utils/api';
+import { feeProposalService, type FeeProposal } from '../../services/feeProposalService';
 import { useBillingSettings } from '../../hooks/useBillingSettings';
 import type {
   ContractTemplate,
@@ -192,6 +193,9 @@ const ContractBuilder: React.FC = () => {
   const [clientSearch, setClientSearch] = useState('');
   const [caseSearch, setCaseSearch] = useState('');
 
+  // عرض الأتعاب المقبول الذي يُبنى عليه العقد (إن جاء المستخدم من زر «عقد» في العرض)
+  const [sourceProposal, setSourceProposal] = useState<FeeProposal | null>(null);
+
   // هل تم التحميل من صفحة القضية؟
   const [isFromCase, setIsFromCase] = useState(false);
   const [isLoadingCaseData, setIsLoadingCaseData] = useState(false);
@@ -301,6 +305,34 @@ const ContractBuilder: React.FC = () => {
     }
   }, [searchParams]);
 
+  // عقد من عرض أتعاب مقبول (?fee_proposal_id=): العميل والقضية وقيمة العقد ونسبة الضريبة من
+  // العرض الذي قبله العميل — فلا يُعاد إدخالها ولا يخرج العقد بمبلغ غير الذي وافق عليه.
+  useEffect(() => {
+    const proposalId = searchParams.get('fee_proposal_id');
+    if (!proposalId || sourceProposal) return;
+
+    feeProposalService.get(Number(proposalId)).then(async (res) => {
+      const p = res.data;
+      if (!p) return;
+      if (p.status !== 'accepted') {
+        toast.error('العقد يُبنى على العرض المقبول — سجّل قبول العميل للعرض أولاً');
+        return;
+      }
+      setSourceProposal(p);
+      // قيمة العقد قبل الضريبة = مجموع بنود العرض بعد الخصم
+      setTotalAmount(Math.max(0, Number(p.subtotal) - Number(p.discount_amount)));
+      setVatRate(Number(p.vat_rate));
+      if (p.case) {
+        setSelectedCase({ id: p.case.id, file_number: p.case.file_number, title: p.case.title, case_number: p.case.file_number });
+      }
+      if (p.client_id) {
+        // بيانات العميل كاملة (الهوية/العنوان) تملأ متغيّرات القالب — العرض يحمل الاسم والجوال فقط
+        const full = await apiClient.get<{ data: Client }>(`/users/${p.client_id}`).catch(() => null);
+        setSelectedClient(full?.data ?? (p.client ? { id: p.client.id, name: p.client.name, phone: p.client.phone, email: p.client.email } as Client : null));
+      }
+    }).catch((e: Error) => toast.error(e.message || 'تعذّر تحميل عرض الأتعاب'));
+  }, [searchParams]);
+
   // تطبيق القالب على حالة النموذج
   const applyTemplate = (template: ContractTemplate) => {
     setSelectedTemplate(template);
@@ -309,7 +341,8 @@ const ContractBuilder: React.FC = () => {
     setContractTitle(template.name);
     setScopeType(template.scope_type);
     // [TAX-02] غير المسجّل ضريبياً يبقى على 0 مهما كانت نسبة القالب.
-    setVatRate(isVatRegistered ? template.default_vat_rate : 0);
+    // ونسبة العرض المقبول تغلب نسبة القالب: هي ما وافق عليه العميل.
+    setVatRate(sourceProposal ? Number(sourceProposal.vat_rate) : isVatRegistered ? template.default_vat_rate : 0);
     if (template.default_payment_terms) {
       setPaymentTerms(template.default_payment_terms);
     }
@@ -412,6 +445,8 @@ const ContractBuilder: React.FC = () => {
       template_id: selectedTemplate?.id,
       client_id: selectedClient!.id,
       case_id: selectedCase?.id,
+      // العقد مبني على عرض أتعاب مقبول — يُحفظ الرابط فيظهر العقد على العرض والعكس
+      ...(sourceProposal ? { fee_proposal_id: sourceProposal.id } : {}),
       title: contractTitle, // إضافة العنوان المطلوب
       content: contractContent,
       // [CTR-09] الباك إند يدعم 'both' الآن — لا تحويل قسري (لا فقدان للقيمة).
@@ -509,6 +544,16 @@ const ContractBuilder: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {sourceProposal && (
+        <div className="builder-source-note">
+          <FileText size={15} />
+          <span>
+            عقد مبني على {sourceProposal.type_label || 'عرض الأتعاب'} <bdi>{sourceProposal.proposal_number}</bdi> المقبول —
+            العميل وقيمة العقد ونسبة الضريبة مأخوذة من العرض.
+          </span>
+        </div>
+      )}
 
       {/* مؤشر الخطوات */}
       <div className="steps-indicator">

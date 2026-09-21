@@ -315,6 +315,13 @@ const ContractDetailPage: React.FC = () => {
                 <Def label="نوع النطاق">{SCOPE_LABELS[contract.scope_type] ?? contract.scope_type}</Def>
                 {contract.template?.name && <Def label="القالب">{contract.template.name}</Def>}
                 {(contract.case_model ?? contract.case)?.file_number && <Def label="القضية">{(contract.case_model ?? contract.case)?.file_number}</Def>}
+                {contract.fee_proposal && (
+                  <Def label={contract.fee_proposal.type_label || 'عرض الأتعاب'}>
+                    <button type="button" className="fin-linklike" onClick={() => navigate(`/clients/${contract.client_id}?tab=fee_proposals`)} title="فتح عروض العميل">
+                      <bdi>{contract.fee_proposal.proposal_number}</bdi>
+                    </button>
+                  </Def>
+                )}
                 <Def label="تاريخ البداية">{contract.start_date?.split('T')[0] ?? '—'}</Def>
                 <Def label="تاريخ النهاية">{contract.end_date?.split('T')[0] ?? '—'}</Def>
                 <Def label="الضريبة">{formatPercent(contract.vat_rate)} · {formatSAR(contract.vat_amount)}</Def>

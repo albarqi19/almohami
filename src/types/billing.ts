@@ -106,6 +106,9 @@ export interface CaseInvoice {
   } | null;
   // لقطة نصّية تُكتب لحظة الحذف النهائي (حين يصير legal_service_id فارغاً ولا علاقة تُحمَّل).
   deleted_service_label?: string | null;
+  // عرض الأتعاب المقبول الذي نشأت عنه الفاتورة (زر «فاتورة» في العرض)
+  fee_proposal_id?: number | null;
+  fee_proposal?: import('../services/feeProposalService').FeeProposalRef | null;
   client?: {
     id: number;
     name: string;

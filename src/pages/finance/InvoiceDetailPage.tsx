@@ -384,7 +384,15 @@ const InvoiceDetailPage: React.FC = () => {
                     {invoice.due_date?.split('T')[0]} {dueLabel && <ToneBadge tone={dueLabel.tone}>{dueLabel.text}</ToneBadge>}
                   </span>
                 </Def>
-                {invoice.reference && <Def label="المرجع">{invoice.reference}</Def>}
+                {/* فاتورة من عرض أتعاب: مرجعها رقم العرض نفسه فيُعرض مرة واحدة برابط إلى العرض */}
+                {invoice.fee_proposal && (
+                  <Def label={invoice.fee_proposal.type_label || 'عرض الأتعاب'}>
+                    <button type="button" className="fin-linklike" onClick={() => navigate(`/clients/${invoice.client_id}?tab=fee_proposals`)} title="فتح عروض العميل">
+                      <bdi>{invoice.fee_proposal.proposal_number}</bdi>
+                    </button>
+                  </Def>
+                )}
+                {invoice.reference && invoice.reference !== invoice.fee_proposal?.proposal_number && <Def label="المرجع">{invoice.reference}</Def>}
                 <Def label="قبل الضريبة">{formatSAR(invoice.subtotal)}</Def>
                 {toNumber(invoice.discount) > 0 && <Def label="الخصم">{formatSAR(invoice.discount)}</Def>}
               </div>

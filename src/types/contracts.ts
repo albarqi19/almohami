@@ -54,6 +54,9 @@ export interface Contract {
   contract_number: string;
   template_id?: number;
   case_id?: number;
+  /** عرض الأتعاب المقبول الذي بُني عليه العقد */
+  fee_proposal_id?: number | null;
+  fee_proposal?: import('../services/feeProposalService').FeeProposalRef | null;
   client_id: number;
   scope_type: ScopeType;
   title?: string;
@@ -268,6 +271,8 @@ export interface CreateContractData {
   template_id?: number;
   client_id: number;
   case_id?: number;
+  /** عرض الأتعاب المقبول الذي بُني عليه العقد (الباك يرفض غير المقبول) */
+  fee_proposal_id?: number;
   title: string; // العنوان مطلوب
   scope_type: ScopeType; // [CTR-09] الباك إند يقبل plaintiff/defendant/both
   content: string;
