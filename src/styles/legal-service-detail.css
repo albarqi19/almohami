@@ -3333,3 +3333,124 @@ body.dark .lsd2-stepper__bar i.is-now {
 .lsd2-flowcard .lsd-pipeline-step__content {
     padding: 3px 4px;
 }
+
+/* ─── «التالي: …» زرّ مقسوم: النقرة تنقل الخدمة خطوة للأمام، والسهم يفتح المسار وكل الانتقالات ─── */
+.lsd2-nextbtn {
+    display: inline-flex;
+    align-items: stretch;
+}
+
+.lsd2-nextbtn__main {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+    max-width: 260px;
+}
+
+.lsd2-nextbtn__main span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lsd2-nextbtn__caret {
+    padding: 7px 8px;
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+    border-inline-start: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.lsd2-nextbtn .lsd-header-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.lsd2-next__item--forward .lsd2-next__label {
+    color: var(--law-navy);
+}
+
+body.dark .lsd2-next__item--forward .lsd2-next__label {
+    color: #7fa7d9;
+}
+
+.lsd2-next__item--back .lsd2-next__label,
+.lsd2-next__item--back .lsd2-next__label svg {
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.lsd2-next__item--cancel {
+    margin-top: 4px;
+    border-top: 1px solid var(--color-border);
+    border-radius: 0 0 6px 6px;
+}
+
+.lsd2-next__item--cancel .lsd2-next__label,
+.lsd2-next__item--cancel .lsd2-next__label svg {
+    color: var(--status-red);
+}
+
+.lsd2-next__branch,
+.lsd2-flowcard__branch {
+    margin: 6px 0 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--status-orange);
+}
+
+/* الفرع الجانبي والإلغاء على المؤشر والشريط */
+.lsd2-stepper--branch .lsd2-stepper__label b,
+body.dark .lsd2-stepper--branch .lsd2-stepper__label b {
+    color: var(--status-orange);
+}
+
+.lsd2-stepper--branch .lsd2-stepper__bar i.is-now,
+body.dark .lsd2-stepper--branch .lsd2-stepper__bar i.is-now {
+    background: var(--status-orange);
+}
+
+.lsd2-stepper--cancelled .lsd2-stepper__label b,
+body.dark .lsd2-stepper--cancelled .lsd2-stepper__label b {
+    color: var(--status-red);
+}
+
+.lsd-pipeline-step--branch .lsd-pipeline-step__dot {
+    background: var(--status-orange);
+    border-color: var(--status-orange);
+}
+
+.lsd-pipeline-step--branch .lsd-pipeline-step__label {
+    color: var(--status-orange);
+}
+
+.lsd-status-pipeline--cancelled {
+    opacity: 0.55;
+}
+
+/* نافذة تأكيد الانتقال */
+.lsd2-confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+    line-height: 1.8;
+    text-align: start;
+}
+
+.lsd2-confirm b {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+}
+
+.lsd2-confirm ul {
+    margin: 0;
+    padding-inline-start: 18px;
+}
+
+.lsd2-confirm__warn {
+    padding: 8px 12px;
+    border: 1px solid var(--status-orange);
+    border-radius: 8px;
+    background: var(--status-orange-light);
+    color: var(--status-orange);
+}

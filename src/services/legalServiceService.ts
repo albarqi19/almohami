@@ -115,8 +115,13 @@ export class LegalServiceService {
     return apiClient.put(`/legal-services/${id}/consultation/details`, data);
   }
 
-  static async updateOpinion(id: number, data: { legal_opinion?: string; finalize?: boolean }): Promise<{ success: boolean; data: ConsultationDetail }> {
+  static async updateOpinion(id: number, data: { legal_opinion?: string; finalize?: boolean; autosave?: boolean }): Promise<{ success: boolean; data: ConsultationDetail }> {
     return apiClient.put(`/legal-services/${id}/consultation/opinion`, data);
+  }
+
+  /** يعيد فتح رأيٍ معتمد للتعديل — يرفضه الخادم بعد التسليم */
+  static async reopenOpinion(id: number): Promise<{ success: boolean; data: ConsultationDetail; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/consultation/opinion/reopen`);
   }
 
   static async addReference(id: number, reference: LegalReference): Promise<{ success: boolean; data: ConsultationDetail }> {

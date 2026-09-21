@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import TiptapEditor, { type TiptapEditorRef } from '../../TiptapEditor';
 import LegalRichText from '../LegalRichText';
+import { SidePanel } from '../workspace/SidePanel';
 import { Meter } from '../../charts/RaedCharts';
 import { LegalServiceService } from '../../../services/legalServiceService';
 import { getApiErrorMessage } from '../../../utils/apiError';
@@ -116,34 +117,6 @@ const readSections = (): Record<string, boolean> => {
     return {};
   }
 };
-
-// ── لوحة جانبية قابلة للطي ────────────────────────────────────────────────────
-
-interface SidePanelProps {
-  id: string;
-  title: string;
-  icon: React.ReactNode;
-  badge?: React.ReactNode;
-  action?: React.ReactNode;
-  collapsed: boolean;
-  onToggle: (id: string) => void;
-  children: React.ReactNode;
-}
-
-const SidePanel: React.FC<SidePanelProps> = ({ id, title, icon, badge, action, collapsed, onToggle, children }) => (
-  <section className={`cdw-panel${collapsed ? ' cdw-panel--collapsed' : ''}`} data-panel={id}>
-    <div className="cdw-panel__head">
-      <button type="button" className="cdw-panel__toggle" onClick={() => onToggle(id)} aria-expanded={!collapsed}>
-        <span className="cdw-panel__icon">{icon}</span>
-        <h3>{title}</h3>
-        {badge}
-        <ChevronDown size={14} className="cdw-panel__chev" />
-      </button>
-      {action}
-    </div>
-    {!collapsed && <div className="cdw-panel__body">{children}</div>}
-  </section>
-);
 
 // ── المكوّن ───────────────────────────────────────────────────────────────────
 

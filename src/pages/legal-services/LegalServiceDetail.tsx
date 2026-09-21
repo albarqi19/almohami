@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useEffect, useCallback, useRef } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -26,7 +26,6 @@ import {
   Eye,
   Upload,
   ExternalLink,
-  BookOpen,
   ChevronDown,
   Check,
   AlertTriangle,
@@ -36,15 +35,12 @@ import {
   Link,
   CheckCircle,
   FileCheck,
-  Tag,
   Info,
   Layers,
   AlignLeft,
   StickyNote,
   MoreHorizontal,
   ArrowLeft,
-  Sparkles,
-  Copy,
   Lock,
   Compass,
   Pencil,
@@ -73,27 +69,29 @@ import type {
   LegalService,
   ServiceTimeEntryItem,
   StatusFlowItem,
-  LegalReference,
   ServiceDeletionImpact,
 } from '../../types/legalServices';
 import {
   SERVICE_TYPE_LABELS,
   PRIORITY_LABELS,
   BILLING_TYPE_LABELS,
-  CLASSIFICATION_LABELS,
-  URGENCY_LABELS,
-  DELIVERY_METHOD_LABELS,
   CONVERTIBLE_SERVICE_TYPES,
 } from '../../types/legalServices';
 import { WorkspaceRegistry, SkeletonCard } from '../../components/legal-services/workspaces';
 import { usePermission } from '../../hooks/usePermission';
 import { StatTile } from '../../components/charts/RaedCharts';
 import { lazyWithRetry } from '../../utils/lazyWithRetry';
+import { flowView, sortTransitions, transitionKind, type FlowView } from '../../utils/serviceFlow';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // مساحة صياغة العقد (ورقة الكتابة + لوحاتها) — تُحمَّل عند فتح تبويبها فقط
 const ContractDraftingWorkspace = lazyWithRetry(
   () => import('../../components/legal-services/contract/ContractDraftingWorkspace'),
+);
+
+// مساحة الاستشارة (ورقة الرأي + ما يُبنى عليه) — تُحمَّل عند فتح تبويبها فقط
+const ConsultationWorkspace = lazyWithRetry(
+  () => import('../../components/legal-services/consultation/ConsultationWorkspace'),
 );
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -432,6 +430,19 @@ function getDocumentEmoji(
   return '📎';
 }
 
+/**
+ * سطر النشاط كما يُقرأ. أسطر تغيير الحالة القديمة خُزّنت بمفاتيحها الخام
+ * («تم تغيير الحالة من drafting إلى internal_review») — نعيد صياغتها من `metadata` بأسمائها العربية.
+ */
+function activityTitle(activity: { type: string; title: string; metadata: Record<string, unknown> | null }): string {
+  const from = activity.metadata?.old_status;
+  const to = activity.metadata?.new_status;
+  if (activity.type === 'status_changed' && typeof from === 'string' && typeof to === 'string') {
+    return `انتقلت من «${getStatusLabel(from)}» إلى «${getStatusLabel(to)}»`;
+  }
+  return activity.title;
+}
+
 function getActivityMarkerClass(type: string): string {
   switch (type) {
     case 'service_created': return 'lsd-timeline__marker--blue';
@@ -488,28 +499,30 @@ const tabVariants = {
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 interface StatusPipelineProps {
-  steps: StatusFlowItem[];
-  currentStatus: string;
+  view: FlowView;
   /** الخطوات في الطريق — نحجز ارتفاع الشريط كي لا يقفز المحتوى تحته حين تصل. */
   pending?: boolean;
 }
 
-const StatusPipeline: React.FC<StatusPipelineProps> = ({ steps, currentStatus, pending = false }) => {
+/**
+ * يرسم **المحطات الرئيسية** وحدها (انظر utils/serviceFlow). الفرع («تعديل»، «مرفوض»…) لا يُرسم
+ * محطةً على الخط بل يُعلَّم على المحطة التي تفرّع منها، و«ملغاة» ليست محطةً في مسار أحد.
+ */
+const StatusPipeline: React.FC<StatusPipelineProps> = ({ view, pending = false }) => {
+  const steps = view.path;
   if (!steps.length) {
     return pending ? <div className="lsd-status-pipeline lsd-status-pipeline--pending" aria-hidden="true" /> : null;
   }
 
-  const currentIndex = steps.findIndex((s) => s.status === currentStatus);
-
   return (
-    <div className="lsd-status-pipeline">
+    <div className={`lsd-status-pipeline${view.cancelled ? ' lsd-status-pipeline--cancelled' : ''}`}>
       {steps.map((step, idx) => {
-        const isCompleted = idx < currentIndex;
-        const isActive = idx === currentIndex;
+        const isCompleted = !view.cancelled && idx < view.index;
+        const isActive = !view.cancelled && idx === view.index;
         const stepClass = isCompleted
           ? 'lsd-pipeline-step--completed'
           : isActive
-          ? 'lsd-pipeline-step--active'
+          ? `lsd-pipeline-step--active${view.branch ? ' lsd-pipeline-step--branch' : ''}`
           : 'lsd-pipeline-step--pending';
 
         return (
@@ -517,7 +530,7 @@ const StatusPipeline: React.FC<StatusPipelineProps> = ({ steps, currentStatus, p
             <div className={`lsd-pipeline-step ${stepClass}`}>
               <div className="lsd-pipeline-step__content">
                 <div className="lsd-pipeline-step__dot">
-                  {isCompleted ? <Check size={12} /> : isActive ? idx + 1 : idx + 1}
+                  {isCompleted ? <Check size={12} /> : idx + 1}
                 </div>
                 <span className="lsd-pipeline-step__label">{step.label}</span>
               </div>
@@ -765,65 +778,6 @@ const ManualTimeForm: React.FC<ManualTimeFormProps> = ({ onSave, onCancel, loadi
   );
 };
 
-// ── Add Reference Form ────────────────────────────────────────────────────────
-
-interface AddReferenceFormProps {
-  onSave: (ref: LegalReference) => void;
-  onCancel: () => void;
-  loading: boolean;
-}
-
-const AddReferenceForm: React.FC<AddReferenceFormProps> = ({ onSave, onCancel, loading }) => {
-  const [title, setTitle] = useState('');
-  const [source, setSource] = useState('');
-  const [url, setUrl] = useState('');
-
-  return (
-    <div className="lsd-inline-form">
-      <div className="lsd-form-group">
-        <label className="lsd-form-label">العنوان *</label>
-        <input
-          className="lsd-form-input"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="مثال: المادة 123 من نظام العمل"
-        />
-      </div>
-      <div className="lsd-form-group">
-        <label className="lsd-form-label">المصدر</label>
-        <input
-          className="lsd-form-input"
-          value={source}
-          onChange={(e) => setSource(e.target.value)}
-          placeholder="مثال: نظام العمل السعودي"
-        />
-      </div>
-      <div className="lsd-form-group">
-        <label className="lsd-form-label">الرابط</label>
-        <input
-          className="lsd-form-input"
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://..."
-        />
-      </div>
-      <div className="lsd-inline-form__actions">
-        <button className="lsd-header-btn" onClick={onCancel}>
-          إلغاء
-        </button>
-        <button
-          className="lsd-header-btn lsd-header-btn--primary"
-          onClick={() => onSave({ title, source, url })}
-          disabled={loading || !title.trim()}
-        >
-          {loading ? 'جارٍ الإضافة...' : 'إضافة'}
-        </button>
-      </div>
-    </div>
-  );
-};
-
 // ── New Version Form ──────────────────────────────────────────────────────────
 
 /**
@@ -903,9 +857,6 @@ const LegalServiceDetail: React.FC = () => {
    *    لا يقبله، بينما تبويبُ الاستشارة يقول «أضِفه من تعديل الخدمة» — أي يدلّ على
    *    بابٍ مغلق. فكلُّ استشارةٍ وُلدت بلا سؤالٍ بقيت بلا سؤالٍ إلى الأبد.
    */
-  const [editingQuestion, setEditingQuestion] = useState(false);
-  const [questionDraft, setQuestionDraft] = useState('');
-  const [savingQuestion, setSavingQuestion] = useState(false);
 
   /**
    * فتحُ مستندٍ مرفوعٍ على الخدمة.
@@ -1014,12 +965,7 @@ const LegalServiceDetail: React.FC = () => {
   } | null>(null);
 
   // ── Consultation state ──
-  const [showAddReference, setShowAddReference] = useState(false);
-  const [addRefLoading, setAddRefLoading] = useState(false);
-  const [deliverLoading, setDeliverLoading] = useState(false);
   // مسودة الرأي المقترحة بالذكاء (تُعرض في صندوق قابل للنسخ — لا تُحفظ تلقائياً)
-  const [aiDraftLoading, setAiDraftLoading] = useState(false);
-  const [aiDraft, setAiDraft] = useState<string | null>(null);
 
   // ── Contract state ──
   // وضع التركيز في مساحة صياغة العقد: يُخفي شريط الحالة واللوحات لتأخذ الورقة المساحة كلها
@@ -1034,6 +980,8 @@ const LegalServiceDetail: React.FC = () => {
 
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  // انتقالٌ ينتظر التأكيد — ما له أثر (قفل/فاتورة/إشعار عميل) أو ما ينقصه شيء لا يقع بنقرة واحدة
+  const [pendingTransition, setPendingTransition] = useState<string | null>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
   // ── Timer interval ──
@@ -1182,6 +1130,72 @@ const LegalServiceDetail: React.FC = () => {
   useEffect(() => {
     fetchService();
   }, [fetchService]);
+
+  // موضع الخدمة على المسار الرئيسي (انظر utils/serviceFlow)
+  const flow = useMemo(() => flowView(statusFlow, service?.status ?? ''), [statusFlow, service?.status]);
+
+  /**
+   * الانتقال لا يقع بنقرة واحدة إن كان له أثر لا يُسترد (قفل المحتوى، فاتورة، إشعار يصل العميل،
+   * إلغاء) أو كان ينقصه شيء (لا مسودة، رأي فارغ). كان أي نقرٍ في القائمة ينفَّذ فوراً —
+   * ونقرةٌ خاطئة على «معتمد» تقفل العقد وتُشعر العميل ولا رجوع منها في المسار.
+   */
+  const transitionConcerns = (target: string): { effects: string[]; warnings: string[] } => {
+    if (!service) return { effects: [], warnings: [] };
+    const effects: string[] = [];
+    const warnings: string[] = [];
+    const type = service.service_type;
+    const billing = BILLING_TRIGGER_STATUSES[type] ?? ['completed'];
+    const locked = LOCKED_STATUSES[type] ?? ['completed'];
+
+    if (target === 'cancelled') effects.push('تنتهي دورة العمل على الخدمة، ولا عودة من الإلغاء.');
+    if (locked.includes(target) || ['closed', 'archived', 'cancelled'].includes(target)) {
+      effects.push('يُقفل المحتوى ضد التعديل.');
+    }
+    if (billing.includes(target)) {
+      effects.push('تُنشأ فاتورة مسودة تلقائياً إن لم تكن للخدمة فاتورة وكان لها مبلغ.');
+    }
+    if (
+      (type === 'consultation' && (target === 'draft_ready' || target === 'delivered')) ||
+      (type !== 'consultation' && billing.includes(target))
+    ) {
+      effects.push('يصل العميلَ إشعار (واتساب/بريد) ببلوغ هذه المرحلة.');
+    }
+    // هل من رجوع؟ — المحطة التي لا تعيدك إلى ما قبلها تستحق أن تُذكر
+    const targetItem = statusFlow.find((f) => f.status === target);
+    const canComeBack = !!targetItem && targetItem.transitions.some((t) => transitionKind(flow, t) === 'back' || t === service.status);
+    if (target !== 'cancelled' && targetItem && targetItem.transitions.length > 0 && !canComeBack && effects.length > 0) {
+      effects.push('لا رجوع من هذه المحطة إلى ما قبلها.');
+    }
+
+    if (transitionKind(flow, target) === 'forward') {
+      if (type === 'contract_drafting' && target !== 'drafting') {
+        const versions = service.contract_drafting_detail?.versions ?? [];
+        const latest = [...versions].sort((a, b) => b.version_number - a.version_number)[0];
+        const hasText = !!latest && latest.content.replace(/<[^>]*>/g, '').trim() !== '';
+        if (!hasText) warnings.push('لا نص مكتوب للعقد بعد.');
+        const checklist = service.contract_drafting_detail?.checklist ?? [];
+        const left = checklist.filter((i) => !i.checked).length;
+        if (left > 0 && ['client_review', 'approved', 'signed'].includes(target)) {
+          warnings.push(`بقي في قائمة الفحص ${left.toLocaleString('ar-SA')} بلا تأشير.`);
+        }
+      }
+      if (type === 'consultation' && ['draft_ready', 'internal_review', 'delivered'].includes(target)) {
+        const opinion = service.consultation_detail?.legal_opinion ?? '';
+        if (String(opinion).replace(/<[^>]*>/g, '').trim() === '') warnings.push('الرأي القانوني لم يُكتب بعد.');
+      }
+    }
+    return { effects, warnings };
+  };
+
+  const requestTransition = (target: string) => {
+    setShowStatusDropdown(false);
+    const { effects, warnings } = transitionConcerns(target);
+    if (effects.length === 0 && warnings.length === 0) {
+      void handleStatusChange(target);
+      return;
+    }
+    setPendingTransition(target);
+  };
 
   // ── Status change ──
   const handleStatusChange = async (newStatus: string) => {
@@ -1388,103 +1402,6 @@ const LegalServiceDetail: React.FC = () => {
     setManualTimeLoading(false);
   };
 
-  // ── Consultation actions ──
-  const handleSaveOpinion = async (html: string) => {
-    if (!service) return;
-    const res = await LegalServiceService.updateOpinion(service.id, {
-      legal_opinion: html,
-    });
-    if (!res?.success) throw new Error('تعذّر حفظ الرأي القانوني');
-    await fetchService();
-  };
-
-  /** حفظ سؤال العميل من تبويب «المعلومات» — يُنشئ صفَّ التفاصيل إن لم يكن. */
-  const handleSaveClientQuestion = async () => {
-    if (!service) return;
-    setSavingQuestion(true);
-    try {
-      await LegalServiceService.updateConsultationDetails(service.id, {
-        client_question: questionDraft.trim() || null,
-      });
-      setEditingQuestion(false);
-      toast.success('حُفظ سؤال العميل');
-      await fetchService();
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'تعذّر حفظ سؤال العميل'));
-    } finally {
-      setSavingQuestion(false);
-    }
-  };
-
-  const handleAddReference = async (ref: LegalReference) => {
-    if (!service) return;
-    setAddRefLoading(true);
-    try {
-      await LegalServiceService.addReference(service.id, ref);
-      setShowAddReference(false);
-      toast.success('تم إضافة المرجع القانوني');
-      fetchService();
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'تعذّر إضافة المرجع القانوني'));
-    }
-    setAddRefLoading(false);
-  };
-
-  const handleRemoveReference = async (index: number) => {
-    if (!service) return;
-    try {
-      await LegalServiceService.removeReference(service.id, index);
-      fetchService();
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'تعذّر حذف المرجع القانوني'));
-    }
-  };
-
-  const handleMarkDelivered = async () => {
-    if (!service) return;
-    setDeliverLoading(true);
-    try {
-      const res = await LegalServiceService.markDelivered(service.id);
-      if (res.success) {
-        setService(res.data);
-        toast.success('تم تسليم الاستشارة بنجاح');
-      } else {
-        toast.error('تعذّر تسليم الاستشارة');
-      }
-    } catch (err) {
-      // رسالة الباك (مثلاً: الرأي غير معتمد بعد / انتقال غير مسموح) تظهر كما هي
-      toast.error(getApiErrorMessage(err, 'تعذّر تسليم الاستشارة'));
-    }
-    setDeliverLoading(false);
-  };
-
-  // اقتراح مسودة الرأي القانوني بالذكاء — تُعرض للنسخ فقط ولا تُحفظ تلقائياً
-  const handleAiDraft = async () => {
-    if (!service) return;
-    setAiDraftLoading(true);
-    try {
-      const res = await apiClient.post<{
-        success?: boolean;
-        data?: { draft_html?: string; draft?: string; disclaimers?: string[] } | string;
-        draft?: string;
-      }>(`/legal-services/${service.id}/consultation/ai-draft`);
-      // الشكل الرسمي: data.draft_html (+ أشكال احتياطية تحسّباً)
-      const draft =
-        (typeof res?.data === 'object' && (res.data?.draft_html || res.data?.draft)) ||
-        res?.draft ||
-        (typeof res?.data === 'string' ? res.data : null);
-      if (draft && draft.trim()) {
-        setAiDraft(draft);
-      } else {
-        toast.error('لم يُرجِع الخادم مسودة — حاول مجدداً أو اكتب الرأي يدوياً');
-      }
-    } catch (err) {
-      // 503 = خدمة الذكاء غير مهيأة للمكتب — رسالة الخادم توضّح ذلك
-      toast.error(getApiErrorMessage(err, 'تعذّر توليد المسودة الآلية'));
-    }
-    setAiDraftLoading(false);
-  };
-
   // ── Document actions ──
   const handleUploadDocument = async (file: File) => {
     if (!service) return;
@@ -1568,7 +1485,6 @@ const LegalServiceDetail: React.FC = () => {
   const renderInfoTab = () => {
     if (!service) return null;
     const hasReadable =
-      service.service_type === 'consultation' ||
       !!service.description ||
       !!service.intake_request ||
       !!service.notes ||
@@ -1595,7 +1511,12 @@ const LegalServiceDetail: React.FC = () => {
               </div>
             </div>
             <div className="lsd-card__content lsd2-flowcard">
-              <StatusPipeline steps={statusFlow} currentStatus={service.status} pending={statusFlowPending} />
+              <StatusPipeline view={flow} pending={statusFlowPending} />
+              {flow.branch && flow.index >= 0 && (
+                <p className="lsd2-flowcard__branch">
+                  الخدمة الآن في «{flow.branch.label}» — محطة جانبية تفرّعت من «{flow.path[flow.index].label}» وتعود منها إلى المسار.
+                </p>
+              )}
               <p className="lsd2-muted">
                 {STATUS_EXPLANATIONS[service.status] ??
                   'حالة مخصّصة — راجع آخر ما جرى لمعرفة ما تم على الخدمة.'}
@@ -1615,84 +1536,6 @@ const LegalServiceDetail: React.FC = () => {
             </div>
           </div>
         )}
-        {/* Card 2.5: سؤال العميل — للاستشارات وحدها، وهو **مكانُ إضافته** لا عرضِه فقط.
-            🔴 كان الحقلُ بلا مسارِ تحريرٍ في المنصّة كلّها: نافذةُ التعديل لا تحمله
-               والباك لا يقبله، وتبويبُ الاستشارة يقول «أضِفه من تعديل الخدمة» —
-               بابٌ مغلق. فما وُلد بلا سؤالٍ بقي بلا سؤالٍ أبداً، وعليه وحده تُبنى
-               مسودةُ الرأي بالذكاء. */}
-        {service.service_type === 'consultation' && (() => {
-          const question = service.consultation_detail?.client_question ?? '';
-          // القفلُ مرآةُ حارس الباك (`isContentLocked`): استشارةٌ سُلّمت أو أُغلقت لا تُحرَّر
-          const isLocked = isServiceContentLocked(service);
-          const canEdit = canManageService && !isLocked;
-
-          return (
-            <div className="lsd-card lsd-card--full">
-              <div className="lsd-card__header">
-                <div className="lsd-card__title">
-                  <MessageSquareText size={15} />
-                  سؤال العميل
-                </div>
-                {canEdit && !editingQuestion && (
-                  <button
-                    className="lsd-card__action"
-                    onClick={() => {
-                      setQuestionDraft(question);
-                      setEditingQuestion(true);
-                    }}
-                  >
-                    <Pencil size={13} />
-                    {question ? 'تعديل' : 'إضافة'}
-                  </button>
-                )}
-              </div>
-              <div className="lsd-card__content">
-                {editingQuestion ? (
-                  <>
-                    <textarea
-                      className="lsd-form-input"
-                      rows={4}
-                      autoFocus
-                      value={questionDraft}
-                      onChange={(e) => setQuestionDraft(e.target.value)}
-                      maxLength={10000}
-                      placeholder="ما الذي يسأل عنه العميل تحديداً؟ عليه تُبنى مسودة الرأي."
-                    />
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                      <button
-                        className="lsd-card__action"
-                        onClick={() => void handleSaveClientQuestion()}
-                        disabled={savingQuestion}
-                      >
-                        <Check size={13} />
-                        {savingQuestion ? 'جارٍ الحفظ…' : 'حفظ'}
-                      </button>
-                      <button
-                        className="lsd-card__action"
-                        onClick={() => setEditingQuestion(false)}
-                        disabled={savingQuestion}
-                      >
-                        <X size={13} />
-                        إلغاء
-                      </button>
-                    </div>
-                  </>
-                ) : question ? (
-                  <p className="lsd-description-text">{question}</p>
-                ) : (
-                  <p className="lsd-description-text lsd-description-text--empty">
-                    {canEdit
-                      ? 'لم يُسجَّل سؤال العميل — أضِفه من هنا، وعليه تُبنى مسودة الرأي.'
-                      : isLocked
-                        ? 'لم يُسجَّل سؤال العميل، والاستشارة مقفلة عن التعديل في حالتها الحالية.'
-                        : 'لم يُسجَّل سؤال العميل.'}
-                  </p>
-                )}
-              </div>
-            </div>
-          );
-        })()}
-
         {/* Card 3: الوصف */}
         {service.description && (
           <div className="lsd-card lsd-card--full">
@@ -1901,311 +1744,19 @@ const LegalServiceDetail: React.FC = () => {
 
   const renderConsultationTab = () => {
     if (!service) return null;
-    const detail = service.consultation_detail;
-    if (!detail) {
-      return (
-        <div className="lsd-empty-tab">
-          <MessageSquareText size={32} />
-          <p>لا توجد تفاصيل استشارة</p>
-          <span className="lsd-empty-tab__hint">
-            لم تُسجَّل بيانات الاستشارة عند الإنشاء — عدّل الخدمة لإضافة سؤال العميل ونطاق الاستشارة.
-          </span>
-        </div>
-      );
-    }
-
-    const references = detail.legal_references ?? [];
-    // «تسليم الاستشارة» متاح فقط حين يسمح مسار الحالات بذلك (وإلا نعطّل الزر مع شرح)
-    const allowedTransitions = service.allowed_transitions ?? [];
-    const canDeliver =
-      service.status === 'internal_review' || allowedTransitions.includes('delivered');
-    const deliverDisabledReason =
-      service.status === 'delivered'
-        ? 'سُلّمت الاستشارة مسبقاً'
-        : 'التسليم متاح بعد المراجعة الداخلية — غيّر الحالة من بطاقة «الخطوة التالية» أولاً';
-
+    // مساحة الاستشارة مكوّن مستقل يُحمَّل عند الطلب — الانتظار محصور هنا كي لا تومض الصفحة كلها
     return (
-      <div className="lsd-tab-content-stack">
-        {/* Consultation details card */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <MessageSquareText size={15} />
-              تفاصيل الاستشارة
-            </div>
-          </div>
-          <div className="lsd-card__content">
-            <div className="lsd-info-grid">
-              {detail.classification && (
-                <div className="lsd-info-item">
-                  <div className="lsd-info-item__icon">
-                    <Tag size={14} />
-                  </div>
-                  <div className="lsd-info-item__body">
-                    <div className="lsd-info-item__label">التصنيف</div>
-                    <div className="lsd-info-item__value">
-                      {CLASSIFICATION_LABELS[detail.classification]}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <AlertTriangle size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">الاستعجال</div>
-                  <div className="lsd-info-item__value">
-                    {URGENCY_LABELS[detail.urgency]}
-                  </div>
-                </div>
-              </div>
-
-              {detail.delivery_method && (
-                <div className="lsd-info-item">
-                  <div className="lsd-info-item__icon">
-                    <ArrowRightLeft size={14} />
-                  </div>
-                  <div className="lsd-info-item__body">
-                    <div className="lsd-info-item__label">طريقة التسليم</div>
-                    <div className="lsd-info-item__value">
-                      {DELIVERY_METHOD_LABELS[detail.delivery_method]}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {detail.delivered_at && (
-                <div className="lsd-info-item">
-                  <div className="lsd-info-item__icon">
-                    <CheckCircle size={14} />
-                  </div>
-                  <div className="lsd-info-item__body">
-                    <div className="lsd-info-item__label">تاريخ التسليم</div>
-                    <div className="lsd-info-item__value">{formatDate(detail.delivered_at)}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {detail.scope_definition && (
-              <div className="lsd-notes-section" style={{ marginTop: 12 }}>
-                <div className="lsd-notes-section__label">نطاق الاستشارة</div>
-                <p className="lsd-description-text">{detail.scope_definition}</p>
-              </div>
-            )}
-
-            {/* 🔴 كان الشرطُ `detail.client_question &&` فيختفي القسمُ كلُّه حين
-                يكون فارغاً — فلا يرى المستخدمُ أن ثمّة حقلاً ناقصاً أصلاً، ثم
-                يضغط «توليد المسودة» فيُردّ بـ«لا يمكن التوليد بدون سؤال العميل».
-                والحقلُ اختياريٌّ في نافذة الإنشاء (‏لا تحقّق على الخطوة الثالثة)،
-                فـ**31 استشارةً من 49 على الإنتاج بلا سؤال**. الغيابُ يُعرَض الآن.
-
-                🔴 والرسالةُ كانت تدلّ على بابٍ مغلق: «أضِفه من تعديل الخدمة» —
-                   ونافذةُ التعديل لا تحمل الحقل، والباك لا يقبله. صار للسؤال
-                   مكانٌ حقيقيٌّ يُضاف منه: بطاقتُه في تبويب «المعلومات». */}
-            <div className="lsd-notes-section" style={{ marginTop: 12 }}>
-              <div className="lsd-notes-section__label">سؤال العميل</div>
-              {detail.client_question ? (
-                <p className="lsd-description-text">{detail.client_question}</p>
-              ) : (
-                <p className="lsd-description-text lsd-description-text--empty">
-                  لم يُسجَّل سؤال العميل — أضِفه من تبويب «المعلومات»، وعليه تُبنى مسودةُ الرأي.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Legal opinion (rich editor) */}
-        <LegalRichEditorField
-          label="الرأي القانوني"
-          icon={FileText}
-          value={detail.legal_opinion}
-          onSave={handleSaveOpinion}
-          readOnly={!!detail.opinion_finalized_at || !!detail.delivered_at}
-          hint={detail.opinion_finalized_at
-            ? `🔒 الرأي معتمد بتاريخ ${new Date(detail.opinion_finalized_at).toLocaleDateString('ar-SA')} — مقفل ضد التعديل`
-            : undefined}
-          minHeight="320px"
-          placeholder="اكتب الرأي القانوني هنا..."
-          emptyText="لم يُضف الرأي القانوني بعد — اضغط «تعديل» لبدء الكتابة"
-          successMessage="تم حفظ الرأي القانوني"
+      <Suspense fallback={<SkeletonCard lines={8} />}>
+        <ConsultationWorkspace
+          service={service}
+          refreshService={fetchService}
+          locked={isServiceContentLocked(service)}
+          canManage={canManageService}
+          onRequestTransition={requestTransition}
+          focusMode={contractFocus}
+          onToggleFocus={() => setContractFocus((v) => !v)}
         />
-
-        {/* اقتراح مسودة الرأي بالذكاء — للنسخ فقط، لا تُحفظ تلقائياً */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <Sparkles size={15} />
-              اقتراح مسودة الرأي بالذكاء
-            </div>
-            {/* الزرُّ يعرف شرطَه قبل الضغط: كان مفعَّلاً دائماً ثم يردّ 422 عن حقلٍ
-                لم يُعرَض للمستخدم أصلاً. والتعطيلُ مع سببٍ أصدقُ من فشلٍ بعد النقر. */}
-            <button
-              className="lsd-card__action"
-              onClick={handleAiDraft}
-              disabled={aiDraftLoading || !detail.client_question}
-              title={!detail.client_question
-                ? 'أضف سؤال العميل من تبويب «المعلومات» أولاً — المسودة تُبنى عليه'
-                : 'يولّد مسودة أولية للرأي القانوني اعتماداً على سؤال العميل ونطاق الاستشارة'}
-            >
-              {aiDraftLoading ? (
-                <>
-                  <span className="lsd-ai-spinner" />
-                  جارٍ التوليد...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={13} />
-                  {aiDraft ? 'إعادة التوليد' : 'اقتراح مسودة'}
-                </>
-              )}
-            </button>
-          </div>
-          <div className="lsd-card__content">
-            {aiDraft ? (
-              <div className="lsd-ai-draft">
-                <div className="lsd-ai-draft__disclaimer">
-                  <AlertTriangle size={13} />
-                  مسودة آلية — تُراجَع قبل الاعتماد
-                  <button
-                    className="lsd-ai-draft__copy"
-                    onClick={() => {
-                      navigator.clipboard
-                        .writeText(aiDraft)
-                        .then(() => toast.success('نُسخت المسودة — الصقها في محرّر الرأي القانوني'))
-                        .catch(() => toast.error('تعذّر النسخ إلى الحافظة'));
-                    }}
-                  >
-                    <Copy size={12} />
-                    نسخ المسودة
-                  </button>
-                </div>
-                <div className="lsd-ai-draft__text" dir="rtl">
-                  {aiDraft}
-                </div>
-              </div>
-            ) : aiDraftLoading ? (
-              <div className="lsd-empty-state-small">
-                <span className="lsd-ai-spinner lsd-ai-spinner--lg" />
-                <span>جارٍ توليد المسودة... قد يستغرق ذلك لحظات</span>
-              </div>
-            ) : (
-              <div className="lsd-empty-state-small">
-                <Sparkles size={22} />
-                <span>
-                  اضغط «اقتراح مسودة» ليقترح الذكاء نقطة بداية للرأي القانوني — ثم انسخها وعدّلها في المحرّر أعلاه.
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* References */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <Layers size={15} />
-              المراجع القانونية
-              {references.length > 0 && (
-                <span className="lsd-tab__count">{references.length}</span>
-              )}
-            </div>
-            <button
-              className="lsd-card__action"
-              onClick={() => setShowAddReference(true)}
-            >
-              <Plus size={13} />
-              إضافة مرجع
-            </button>
-          </div>
-          <div className="lsd-card__content">
-            <AnimatePresence>
-              {showAddReference && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  style={{ overflow: 'hidden', marginBottom: 12 }}
-                >
-                  <AddReferenceForm
-                    onSave={handleAddReference}
-                    onCancel={() => setShowAddReference(false)}
-                    loading={addRefLoading}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {references.length > 0 ? (
-              <div className="lsd-references-list">
-                {references.map((ref, idx) => (
-                  <div key={idx} className="lsd-reference-item">
-                    <div className="lsd-reference-item__icon">
-                      <BookOpen size={15} />
-                    </div>
-                    <div className="lsd-reference-item__body">
-                      <div className="lsd-reference-item__title">{ref.title}</div>
-                      {ref.source && (
-                        <div className="lsd-reference-item__source">{ref.source}</div>
-                      )}
-                      {ref.url && (
-                        <a
-                          href={ref.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="lsd-reference-item__link"
-                        >
-                          <ExternalLink size={11} />
-                          فتح الرابط
-                        </a>
-                      )}
-                    </div>
-                    <button
-                      className="lsd-doc-action-btn"
-                      title="حذف المرجع"
-                      onClick={() => handleRemoveReference(idx)}
-                    >
-                      <X size={13} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              !showAddReference && (
-                <div className="lsd-empty-state-small">
-                  <BookOpen size={22} />
-                  <span>لا توجد مراجع قانونية</span>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-
-        {/* Consultation actions */}
-        <div className="lsd-consultation-actions">
-          <button
-            className="lsd-header-btn lsd-header-btn--primary"
-            onClick={handleMarkDelivered}
-            disabled={deliverLoading || !canDeliver}
-            title={!canDeliver ? deliverDisabledReason : 'يسلّم الرأي للعميل ويقفل المحتوى ضد التعديل'}
-          >
-            <CheckCircle size={15} />
-            {deliverLoading ? 'جارٍ...' : 'تسليم الاستشارة'}
-          </button>
-          {!canDeliver && (
-            <span className="lsd-action-hint">
-              <Info size={12} />
-              {deliverDisabledReason}
-            </span>
-          )}
-        </div>
-        <p className="lsd-info-item__value--muted" style={{ fontSize: 12, marginTop: 4 }}>
-          لتوليد خطاب الرأي القانوني الرسمي (PDF) انتقل إلى تبويب «المخرجات».
-        </p>
-      </div>
+      </Suspense>
     );
   };
 
@@ -2708,7 +2259,7 @@ const LegalServiceDetail: React.FC = () => {
                           {formatDateTime(activity.created_at)}
                         </div>
                       </div>
-                      <div className="lsd-timeline__text">{activity.title}</div>
+                      <div className="lsd-timeline__text">{activityTitle(activity)}</div>
                       {activity.description && (
                         <div className="lsd-timeline__note">{activity.description}</div>
                       )}
@@ -2982,24 +2533,51 @@ const LegalServiceDetail: React.FC = () => {
     const transitionsLoaded = Array.isArray(transitions);
     const explanation =
       STATUS_EXPLANATIONS[service.status] ??
-      'حالة مخصّصة — راجع سجل الأنشطة لمعرفة آخر ما جرى على الخدمة.';
+      'حالة مخصّصة — راجع آخر ما جرى لمعرفة ما تم على الخدمة.';
     // «نهائية» تُعلَن فقط عندما تكون الحالة نهائية فعلاً — مصفوفة فارغة على حالة
     // غير نهائية تعني سجلاً قديماً خارج مسار النوع، لا قفلاً (كانت تكذب «نهائية»).
     const TERMINAL = ['closed', 'cancelled', 'archived', 'completed'];
     const isTerminal = transitionsLoaded && transitions.length === 0 && TERMINAL.includes(service.status);
     const isOffTrack = transitionsLoaded && transitions.length === 0 && !TERMINAL.includes(service.status);
+    const sorted = transitionsLoaded ? sortTransitions(flow, transitions) : [];
+    // الخطوة الأمامية الأولى هي ما يفعله الزر مباشرة — لا قائمة تُفتح لتُكتشف منها طريقة الانتقال
+    // خدمة حالتها من خارج مسار نوعها: لا «تالٍ» لها — تُعاد إلى المحطة التي وصل إليها العمل فعلاً
+    const forward = flow.offFlow ? null : sorted.find((t) => transitionKind(flow, t) === 'forward') ?? null;
 
     return (
-      <div className="lsd-dropdown-wrapper" ref={statusDropdownRef}>
+      <div className="lsd-dropdown-wrapper lsd2-nextbtn" ref={statusDropdownRef}>
         <button
-          className="lsd-header-btn lsd-header-btn--primary"
+          className="lsd-header-btn lsd-header-btn--primary lsd2-nextbtn__main"
+          onClick={() => (forward ? requestTransition(forward) : setShowStatusDropdown((v) => !v))}
+          disabled={statusLoading || (transitionsLoaded && !forward && sorted.length === 0)}
+          title={
+            forward
+              ? getTransitionHint(service.service_type, forward) ?? `انقل الخدمة إلى «${getStatusLabel(forward)}»`
+              : undefined
+          }
+        >
+          {statusLoading ? <span className="lsd-nextstep__spinner" /> : <ArrowLeft size={14} />}
+          <span>
+            {statusLoading
+              ? 'جارٍ الانتقال...'
+              : forward
+              ? `التالي: ${getStatusLabel(forward)}`
+              : flow.offFlow
+              ? 'أعدها إلى المسار'
+              : isTerminal
+              ? 'اكتملت الدورة'
+              : 'غيّر الحالة'}
+          </span>
+        </button>
+        <button
+          className="lsd-header-btn lsd-header-btn--primary lsd2-nextbtn__caret"
           onClick={() => setShowStatusDropdown((v) => !v)}
           disabled={statusLoading}
           aria-expanded={showStatusDropdown}
+          aria-label="مسار الخدمة وكل الانتقالات المتاحة"
+          title="مسار الخدمة وكل الانتقالات المتاحة"
         >
-          {statusLoading ? <span className="lsd-nextstep__spinner" /> : <ArrowLeft size={14} />}
-          <span>{statusLoading ? 'جارٍ الانتقال...' : 'الخطوة التالية'}</span>
-          <ChevronDown size={13} />
+          <ChevronDown size={14} />
         </button>
         <AnimatePresence>
           {showStatusDropdown && (
@@ -3009,12 +2587,11 @@ const LegalServiceDetail: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
             >
-              {/* مسار المراحل كاملاً — كان شريطاً أفقياً دائماً يأكل من ارتفاع كل التبويبات */}
-              {statusFlow.length > 0 && (
+              {/* المسار الرئيسي — كان شريطاً أفقياً دائماً يأكل من ارتفاع كل التبويبات */}
+              {flow.path.length > 0 && (
                 <ol className="lsd2-next__flow">
-                  {statusFlow.map((step, idx) => {
-                    const currentIdx = statusFlow.findIndex((f) => f.status === service.status);
-                    const state = idx < currentIdx ? 'done' : idx === currentIdx ? 'now' : 'todo';
+                  {flow.path.map((step, idx) => {
+                    const state = flow.cancelled ? 'todo' : idx < flow.index ? 'done' : idx === flow.index ? 'now' : 'todo';
                     return (
                       <li key={step.status} className={`lsd2-next__stage lsd2-next__stage--${state}`}>
                         <span className="lsd2-next__stage-dot">{state === 'done' ? <Check size={10} /> : idx + 1}</span>
@@ -3030,7 +2607,16 @@ const LegalServiceDetail: React.FC = () => {
                   الحالة الآن
                   {renderStatusBadge(service.status)}
                 </div>
-                <p>{explanation}</p>
+                <p>
+                  {flow.offFlow
+                    ? `«${getStatusLabel(service.status)}» ليست من محطات هذا النوع من الخدمات — سُجّلت بها الخدمة قديماً. اختر المحطة التي وصل إليها العمل فعلاً لتعود إلى المسار.`
+                    : explanation}
+                </p>
+                {flow.branch && flow.index >= 0 && (
+                  <p className="lsd2-next__branch">
+                    محطة جانبية تفرّعت من «{flow.path[flow.index].label}» — تعود منها إلى المسار.
+                  </p>
+                )}
               </div>
 
               {!transitionsLoaded ? (
@@ -3053,19 +2639,30 @@ const LegalServiceDetail: React.FC = () => {
                 </p>
               ) : (
                 <div className="lsd2-next__list">
-                  <div className="lsd2-next__eyebrow">انقلها إلى</div>
-                  {transitions.map((transition) => {
+                  {(flow.offFlow
+                    ? // المحطات بترتيب المسار، ثم الفروع، والإلغاء آخراً
+                      [
+                        ...flow.path.map((f) => f.status).filter((st) => transitions.includes(st)),
+                        ...transitions.filter((t) => t !== 'cancelled' && !flow.path.some((f) => f.status === t)),
+                        ...transitions.filter((t) => t === 'cancelled'),
+                      ]
+                    : sorted
+                  ).map((transition) => {
+                    const kind = flow.offFlow && transition !== 'cancelled' ? 'branch' : transitionKind(flow, transition);
                     const hint = getTransitionHint(service.service_type, transition);
+                    const verb = flow.offFlow
+                      ? 'العمل الآن في'
+                      : kind === 'forward' ? 'تقدّم إلى' : kind === 'back' ? 'أعدها إلى' : kind === 'cancel' ? '' : 'حوّلها إلى';
                     return (
                       <button
                         key={transition}
-                        className={`lsd2-next__item${transition === 'cancelled' ? ' lsd2-next__item--danger' : ''}`}
-                        onClick={() => handleStatusChange(transition)}
+                        className={`lsd2-next__item lsd2-next__item--${kind}`}
+                        onClick={() => requestTransition(transition)}
                         disabled={statusLoading}
                       >
                         <span className="lsd2-next__label">
-                          <ArrowLeft size={12} />
-                          {getStatusLabel(transition)}
+                          {kind === 'back' ? <ChevronRight size={13} /> : kind === 'cancel' ? <X size={13} /> : <ArrowLeft size={12} />}
+                          {kind === 'cancel' ? 'ألغِ الخدمة' : `${verb} «${getStatusLabel(transition)}»`}
                         </span>
                         {hint && <span className="lsd2-next__hint">{hint}</span>}
                       </button>
@@ -3147,8 +2744,9 @@ const LegalServiceDetail: React.FC = () => {
   const ServiceIcon = SERVICE_TYPE_ICONS[service.service_type] ?? FileText;
 
   // تبويب العقد مساحة عمل تملأ الارتفاع المتاح: الصفحة لا تتمرر، والتمرير داخل الورقة واللوحات
-  const fitContract = activeTab === 'contract' && service.service_type === 'contract_drafting';
-  const stageIndex = statusFlow.findIndex((f) => f.status === service.status);
+  const fitContract =
+    (activeTab === 'contract' && service.service_type === 'contract_drafting') ||
+    (activeTab === 'consultation' && service.service_type === 'consultation');
   const dueChip = dueChipFor(service);
 
   // ── Main render ───────────────────────────────────────────────────────────
@@ -3197,20 +2795,33 @@ const LegalServiceDetail: React.FC = () => {
 
           <div className="lsd2-header__actions">
             {/* الحالة تُعرض هنا مرة واحدة — مؤشر مراحل مصغّر — وبجوارها ما يُفعل بها */}
-            {stageIndex >= 0 ? (
+            {flow.path.length > 0 && (flow.index >= 0 || flow.cancelled) ? (
               <div
-                className="lsd2-stepper"
+                className={`lsd2-stepper${flow.branch ? ' lsd2-stepper--branch' : ''}${flow.cancelled ? ' lsd2-stepper--cancelled' : ''}`}
                 title={STATUS_EXPLANATIONS[service.status]}
                 role="img"
-                aria-label={`المرحلة ${stageIndex + 1} من ${statusFlow.length}: ${getStatusLabel(service.status)}`}
+                aria-label={
+                  flow.cancelled
+                    ? 'الخدمة ملغاة'
+                    : `${getStatusLabel(service.status)} — المحطة ${flow.index + 1} من ${flow.path.length}`
+                }
               >
                 <span className="lsd2-stepper__label">
                   <b>{getStatusLabel(service.status)}</b>
-                  <small>{(stageIndex + 1).toLocaleString('ar-SA')} من {statusFlow.length.toLocaleString('ar-SA')}</small>
+                  <small>
+                    {flow.cancelled
+                      ? 'توقّف المسار'
+                      : flow.branch
+                      ? `من «${flow.path[flow.index].label}»`
+                      : `${(flow.index + 1).toLocaleString('ar-SA')} من ${flow.path.length.toLocaleString('ar-SA')}`}
+                  </small>
                 </span>
                 <span className="lsd2-stepper__bar" aria-hidden="true">
-                  {statusFlow.map((step, idx) => (
-                    <i key={step.status} className={idx < stageIndex ? 'is-done' : idx === stageIndex ? 'is-now' : ''} />
+                  {flow.path.map((step, idx) => (
+                    <i
+                      key={step.status}
+                      className={flow.cancelled ? '' : idx < flow.index ? 'is-done' : idx === flow.index ? 'is-now' : ''}
+                    />
                   ))}
                 </span>
               </div>
@@ -3363,6 +2974,46 @@ const LegalServiceDetail: React.FC = () => {
           />
         )}
       </AnimatePresence>
+
+      {(() => {
+        const target = pendingTransition;
+        if (!target) return null;
+        const { effects, warnings } = transitionConcerns(target);
+        return (
+          <ConfirmDialog
+            isOpen
+            variant={target === 'cancelled' ? 'danger' : 'primary'}
+            loading={statusLoading}
+            onClose={() => setPendingTransition(null)}
+            onConfirm={() => {
+              setPendingTransition(null);
+              void handleStatusChange(target);
+            }}
+            confirmLabel={target === 'cancelled' ? 'ألغِ الخدمة' : `انقلها إلى «${getStatusLabel(target)}»`}
+            title={
+              target === 'cancelled'
+                ? 'إلغاء الخدمة'
+                : `من «${getStatusLabel(service.status)}» إلى «${getStatusLabel(target)}»`
+            }
+            message={
+              <div className="lsd2-confirm">
+                {warnings.length > 0 && (
+                  <div className="lsd2-confirm__warn">
+                    <b><AlertTriangle size={13} /> قبل أن تنقلها</b>
+                    <ul>{warnings.map((w) => <li key={w}>{w}</li>)}</ul>
+                  </div>
+                )}
+                {effects.length > 0 && (
+                  <>
+                    <b>ما الذي يحدث عند الانتقال؟</b>
+                    <ul>{effects.map((e) => <li key={e}>{e}</li>)}</ul>
+                  </>
+                )}
+              </div>
+            }
+          />
+        );
+      })()}
 
       <AddExternalLinkModal
         isOpen={showLinkModal}
