@@ -112,8 +112,21 @@ input.num { text-align: left; }
 .fpl-badge--draft { background: #6b728022; color: #6b7280; }
 .fpl-badge--sent { background: #2563eb22; color: #2563eb; }
 .fpl-badge--accepted { background: #16a34a22; color: #16a34a; }
-.fpl-badge--rejected, .fpl-badge--expired, .fpl-badge--cancelled { background: #dc262622; color: #dc2626; }
+.fpl-badge--rejected, .fpl-badge--cancelled { background: #dc262622; color: #dc2626; }
+/* «منتهي» ليس رفضاً — كهرماني يميّزه عن الأحمر */
+.fpl-badge--expired { background: #d9770622; color: #b45309; }
 .fpl-total { font-size: 13px; font-weight: 700; color: var(--color-heading); white-space: nowrap; }
+/* أزرار الصف تلتفّ تحت بعضها في العرض الضيق بدل أن تدفع العنوان */
+.fpl-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+/* ما نشأ عن العرض: عقد/فاتورة — رابط نصّي هادئ لا زرّ */
+.fpl-links { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+.fpl-link { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 500; font-family: inherit; border: 1px solid var(--color-border); border-radius: 5px; background: transparent; color: var(--color-text-secondary); cursor: pointer; }
+.fpl-link:hover { color: var(--law-navy, var(--color-primary)); border-color: var(--law-navy, var(--color-primary)); }
+@media (max-width: 640px) {
+  .fpl-row { flex-wrap: wrap; }
+  .fpl-row__main { flex-basis: calc(100% - 30px); }
+  .fpl-actions { flex-basis: 100%; justify-content: flex-start; }
+}
 .fpl-empty { padding: 18px; text-align: center; color: var(--color-text-secondary); font-size: 12.5px; }
 
 /* سجل الصادر/الوارد: انتقلت أنماطه إلى correspondence-page.css (إعادة تصميم مثيّم بالكامل) */

@@ -743,6 +743,9 @@ body.dark .fin-badge--purple { background: color-mix(in srgb, var(--status-purpl
 
 /* [P4] قائمة تعريفات مضغوطة (label ↔ value) — تقضي على الفراغ في العمود الجانبي. */
 .fin-deflist { display: flex; flex-direction: column; }
+/* قيمة في قائمة التعريفات تقود إلى مستند آخر (عرض الأتعاب مصدر العقد/الفاتورة) — رابط نصّي لا زرّ */
+.fin-linklike { padding: 0; border: 0; background: none; font: inherit; color: var(--law-navy, var(--color-primary)); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.fin-linklike:hover { text-decoration-thickness: 2px; }
 .fin-defrow {
   display: flex;
   align-items: baseline;

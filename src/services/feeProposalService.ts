@@ -44,7 +44,46 @@ export interface FeeProposal {
   case?: { id: number; title: string; file_number: string };
   items_count?: number;
   created_at?: string;
+  /** العقود والفواتير الناشئة عن العرض — مصفوفة فارغة لمن لا يملك رؤية العقود/الفواتير */
+  contracts?: FeeProposalLinkedContract[];
+  invoices?: FeeProposalLinkedInvoice[];
 }
+
+export interface FeeProposalLinkedContract {
+  id: number;
+  contract_number: string;
+  title: string | null;
+  status: string;
+  grand_total: string;
+}
+
+export interface FeeProposalLinkedInvoice {
+  id: number;
+  invoice_number: string;
+  title: string | null;
+  status: string;
+  total_amount: string;
+}
+
+/** شارة «من عرض أتعاب» كما تصل مع العقد والفاتورة */
+export interface FeeProposalRef {
+  id: number;
+  proposal_number: string | null;
+  title: string | null;
+  type: FeeProposalType;
+  type_label?: string;
+  status: FeeProposalStatus;
+}
+
+/**
+ * الحالة كما تُعرض: «منتهي» حالة محسوبة (مُرسَل فات تاريخ صلاحيته) لا قيمة مخزّنة —
+ * كانت القائمة تعرض «مُرسَل» لعرضٍ انتهت صلاحيته.
+ */
+export const feeProposalDisplayStatus = (p: Pick<FeeProposal, 'status' | 'is_expired'>): FeeProposalStatus =>
+  p.status === 'sent' && p.is_expired ? 'expired' : p.status;
+
+/** مستند قائم = غير ملغى */
+export const isLiveDocument = (d: { status: string }): boolean => d.status !== 'cancelled';
 
 export interface FeeProposalTemplate {
   id: number;
@@ -111,8 +150,21 @@ export const feeProposalService = {
 
   send: (id: number) => apiClient.post<SendResponse>(`/fee-proposals/${id}/send`),
 
+  /** إعادة إرسال عرض مُرسَل — صادر جديد برقم جديد (السجل الأول يبقى مستند إثبات) */
+  resend: (id: number) => apiClient.post<SendResponse>(`/fee-proposals/${id}/resend`),
+
+  /** نسخة جديدة كمسودة برقم جديد — طريق تعديل عرضٍ أُرسل أو انتهى أو رُفض */
+  duplicate: (id: number) => apiClient.post<ItemResponse>(`/fee-proposals/${id}/duplicate`),
+
+  /** accepted/rejected/cancelled، أو sent للتراجع عن قبول/رفض أُدخل خطأً */
   setStatus: (id: number, status: FeeProposalStatus) =>
     apiClient.post<ItemResponse>(`/fee-proposals/${id}/status`, { status }),
+
+  /** مسودة فاتورة من العرض المقبول — confirm لفاتورة إضافية على عرضٍ له فاتورة قائمة */
+  createInvoice: (id: number, opts?: { confirm?: boolean; due_date?: string }) =>
+    apiClient.post<{ success: boolean; message: string; data: { id: number; invoice_number: string } }>(
+      `/fee-proposals/${id}/create-invoice`, opts ?? {},
+    ),
 
   async openPreview(id: number): Promise<void> {
     return openPdfBlob(`${API_BASE_URL}/fee-proposals/${id}/preview`);

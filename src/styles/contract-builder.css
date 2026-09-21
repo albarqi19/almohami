@@ -31,6 +31,21 @@
   margin: 4px 0 0;
 }
 
+/* === عقد مبني على عرض أتعاب مقبول — سطر تنبيه هادئ تحت الهيدر === */
+.builder-source-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--color-text, #374151);
+  background: var(--color-surface-alt, #f8fafc);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+}
+.builder-source-note svg { flex-shrink: 0; color: var(--law-navy, var(--color-primary)); }
+
 /* === مؤشر الخطوات === */
 .steps-indicator {
   display: flex;
