@@ -733,7 +733,7 @@ const ContractDraftingWorkspace: React.FC<ContractDraftingWorkspaceProps> = ({
               type="button"
               className="cdw-btn cdw-btn--icon"
               onClick={onToggleFocus}
-              title={focusMode ? 'إظهار شريط الحالة واللوحات' : 'وسّع الورقة'}
+              title={focusMode ? 'أظهر لوحات العقد' : 'وسّع الورقة وأخفِ اللوحات'}
               aria-pressed={focusMode}
             >
               {focusMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}

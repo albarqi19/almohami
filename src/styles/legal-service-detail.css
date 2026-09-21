@@ -2751,48 +2751,7 @@ body.dark .lsd-nextstep-btn__label {
     gap: 8px;
 }
 
-/* صفّ الحقائق */
-.lsd2-facts {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 0;
-    padding: 8px 0;
-    border-top: 1px solid var(--color-border);
-    font-size: 12.5px;
-}
-
-.lsd2-fact {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding-inline-end: 16px;
-    margin-inline-end: 16px;
-    border-inline-end: 1px solid var(--color-border);
-    white-space: nowrap;
-}
-
-.lsd2-fact:last-child {
-    border-inline-end: none;
-    margin-inline-end: 0;
-    padding-inline-end: 0;
-}
-
-.lsd2-fact svg {
-    flex-shrink: 0;
-    color: var(--law-gold, #b8860b);
-}
-
-.lsd2-fact__k {
-    color: var(--color-text-secondary);
-}
-
-.lsd2-fact b {
-    font-weight: 600;
-    color: var(--color-text);
-    font-variant-numeric: tabular-nums;
-}
-
+/* شارة «كم بقي على الاستحقاق» */
 .lsd2-fact__chip {
     display: inline-flex;
     align-items: center;
@@ -3054,4 +3013,323 @@ body.dark .lsd2-next__item:hover:not(:disabled) {
         right: 0;
         max-width: calc(100vw - 40px);
     }
+}
+
+/* ======================================================
+   ترتيب الصفحة كلها (lsd2-): خمسة تبويبات بدل ثمانية، وبطاقات بلغة «أدائي» —
+   زوايا 12px وعنوان بأيقونة ذهبية بلا شريط رمادي — تسري على كل مساحات العمل لأنها تستعمل .lsd-card.
+   ====================================================== */
+.lsd-card {
+    border-radius: 12px;
+}
+
+.lsd-card__header {
+    padding: 13px 16px 2px;
+    background: transparent;
+    border-bottom: none;
+}
+
+body.dark .lsd-card__header {
+    background: transparent;
+}
+
+.lsd-card__title {
+    font-size: 13.5px;
+    font-weight: 700;
+}
+
+.lsd-card__title svg {
+    color: var(--law-gold, #b8860b);
+}
+
+.lsd-card__content {
+    padding: 10px 16px 16px;
+}
+
+.lsd-info-item__label {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 11.5px;
+}
+
+/* «نظرة عامة»: ما يُقرأ + عمود تفاصيل وآخر الأنشطة */
+.lsd2-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 14px;
+    align-items: start;
+}
+
+.lsd2-overview__main,
+.lsd2-overview__side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
+.lsd2-overview__side .lsd-tab-content-stack {
+    gap: 14px;
+}
+
+.lsd2-dl {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 9px 16px;
+    margin: 0;
+    font-size: 13px;
+}
+
+.lsd2-dl dt {
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.lsd2-dl dd {
+    margin: 0;
+    font-weight: 600;
+    color: var(--color-text);
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+}
+
+.lsd2-muted {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.8;
+    color: var(--color-text-secondary);
+}
+
+.lsd2-blank {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 36px 16px;
+    color: var(--color-text-secondary);
+    text-align: center;
+}
+
+.lsd2-blank p {
+    margin: 0;
+    font-size: 13px;
+}
+
+/* تبويبان مدموجان: عمودان متجاوران */
+.lsd2-split {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+}
+
+.lsd2-split__col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
+.lsd2-billing {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.lsd2-tiles {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+@media (max-width: 1100px) {
+    .lsd2-overview,
+    .lsd2-split {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .lsd2-tiles {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .lsd2-tiles {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* الملاحظة الداخلية: سطح هادئ بلا شريط لوني جانبي */
+.lsd-description-text--internal {
+    border-right: none;
+    border: 1px dashed var(--color-border);
+    border-radius: 8px;
+}
+
+/* ─── ترويسة واحدة بدل أربعة أشرطة: العميل والمحامي والاستحقاق في السطر الفرعي،
+       ومؤشر المراحل مصغّراً بجوار «الخطوة التالية» (المسار الكامل داخل قائمتها وفي «نظرة عامة») ─── */
+.lsd2-header__sub {
+    gap: 4px 12px;
+}
+
+.lsd2-header__meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.lsd2-header__meta svg {
+    flex-shrink: 0;
+    color: var(--law-gold, #b8860b);
+}
+
+.lsd2-stepper {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 132px;
+    padding-inline-end: 4px;
+}
+
+.lsd2-stepper__label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    line-height: 1.2;
+}
+
+.lsd2-stepper__label b {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--law-navy);
+    white-space: nowrap;
+}
+
+body.dark .lsd2-stepper__label b {
+    color: #7fa7d9;
+}
+
+.lsd2-stepper__label small {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.lsd2-stepper__bar {
+    display: flex;
+    gap: 2px;
+}
+
+.lsd2-stepper__bar i {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-border);
+}
+
+.lsd2-stepper__bar i.is-done {
+    background: var(--status-green);
+}
+
+.lsd2-stepper__bar i.is-now {
+    background: var(--law-navy);
+}
+
+body.dark .lsd2-stepper__bar i.is-now {
+    background: #7fa7d9;
+}
+
+/* مسار المراحل داخل قائمة «الخطوة التالية» */
+.lsd2-next__flow {
+    list-style: none;
+    margin: 0;
+    padding: 10px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 4px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.lsd2-next__stage {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px 2px 4px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.lsd2-next__stage-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--color-border);
+    font-size: 9.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.lsd2-next__stage--done .lsd2-next__stage-dot {
+    border-color: var(--status-green);
+    background: var(--status-green);
+    color: #fff;
+}
+
+.lsd2-next__stage--now {
+    background: var(--law-navy-light);
+    color: var(--law-navy);
+    font-weight: 700;
+}
+
+.lsd2-next__stage--now .lsd2-next__stage-dot {
+    border-color: var(--law-navy);
+    background: var(--law-navy);
+    color: #fff;
+}
+
+.lsd-dropdown.lsd2-next {
+    width: 380px;
+}
+
+/* مسار الخدمة داخل بطاقة «نظرة عامة»: الشريط بلا سطحه الخاص */
+.lsd2-flowcard .lsd-status-pipeline {
+    padding: 4px 0 10px;
+    background: transparent;
+    border-bottom: none;
+}
+
+.lsd2-flowcard .lsd-status-pipeline--pending {
+    min-height: 40px;
+}
+
+@media (max-width: 900px) {
+    .lsd2-stepper {
+        min-width: 0;
+        flex: 1;
+    }
+}
+
+/* ثماني مراحل لا تتسع في عمود «نظرة عامة» — تلتفّ بدل أن تُقصّ */
+.lsd2-flowcard .lsd-status-pipeline {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    overflow: visible;
+}
+
+.lsd2-flowcard .lsd-pipeline-connector {
+    min-width: 10px;
+    max-width: 28px;
+}
+
+.lsd2-flowcard .lsd-pipeline-step__content {
+    padding: 3px 4px;
 }

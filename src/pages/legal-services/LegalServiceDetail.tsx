@@ -41,7 +41,6 @@ import {
   Layers,
   AlignLeft,
   StickyNote,
-  BarChart2,
   MoreHorizontal,
   ArrowLeft,
   Sparkles,
@@ -88,6 +87,7 @@ import {
 } from '../../types/legalServices';
 import { WorkspaceRegistry, SkeletonCard } from '../../components/legal-services/workspaces';
 import { usePermission } from '../../hooks/usePermission';
+import { StatTile } from '../../components/charts/RaedCharts';
 import { lazyWithRetry } from '../../utils/lazyWithRetry';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
@@ -97,6 +97,13 @@ const ContractDraftingWorkspace = lazyWithRetry(
 );
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** مفتاح تبويب العمل لكل نوع — مرآة `SERVICE_TYPE_TAB_MAP` داخل المكوّن */
+function defaultTabFor(serviceType: string): string {
+  if (serviceType === 'consultation') return 'consultation';
+  if (serviceType === 'contract_drafting') return 'contract';
+  return serviceType === 'simple' ? 'info' : 'type_detail';
+}
 
 // خط سير الحالات ثابت لكل نوع خدمة — يكفي جلبه مرة واحدة في الجلسة
 const statusFlowCache = new Map<string, StatusFlowItem[]>();
@@ -340,6 +347,30 @@ function daysPhrase(n: number): string {
   if (n === 2) return 'يومين';
   const num = n.toLocaleString('ar-SA');
   return n >= 3 && n <= 10 ? `${num} أيام` : `${num} يوماً`;
+}
+
+/** كم بقي على الاستحقاق؟ — لا يُعرض لخدمةٍ انتهت دورتها */
+function dueChipFor(
+  service: Pick<LegalService, 'due_date' | 'status'>,
+): { text: string; tone: 'ok' | 'warn' | 'bad' } | null {
+  const DONE = ['closed', 'cancelled', 'archived', 'completed'];
+  if (!service.due_date || DONE.includes(service.status)) return null;
+  const due = new Date(service.due_date);
+  if (Number.isNaN(due.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  const days = Math.round((due.getTime() - today.getTime()) / 86400000);
+  if (days < 0) return { text: `متأخرة ${daysPhrase(Math.abs(days))}`, tone: 'bad' };
+  if (days === 0) return { text: 'تُستحق اليوم', tone: 'warn' };
+  return { text: `بعد ${daysPhrase(days)}`, tone: days <= 3 ? 'warn' : 'ok' };
+}
+
+function invoicesPhrase(n: number): string {
+  if (n === 1) return 'فاتورة واحدة';
+  if (n === 2) return 'فاتورتان';
+  const num = n.toLocaleString('ar-SA');
+  return n >= 3 && n <= 10 ? `${num} فواتير` : `${num} فاتورة`;
 }
 
 function formatDateTime(dateStr: string | null | undefined): string {
@@ -1107,8 +1138,9 @@ const LegalServiceDetail: React.FC = () => {
         if (cachedFlow) setStatusFlow(cachedFlow);
         else if (firstLoad) setStatusFlow([]);
         setService(res.data);
-        // خدمة صياغة العقود تُفتح على ورقة العقد مباشرة — من يفتحها جاء ليكتب، لا ليقرأ بطاقة معلومات
-        if (firstLoad) setActiveTab(res.data.service_type === 'contract_drafting' ? 'contract' : 'info');
+        // الخدمة تُفتح على تبويب عملها (ورقة العقد/الاستشارة/مساحة النوع) — من يفتحها جاء ليعمل،
+        // لا ليقرأ بطاقة معلومات. المبسطة لها صفحتها، وما لا مساحة له يُفتح على «نظرة عامة».
+        if (firstLoad) setActiveTab(defaultTabFor(res.data.service_type));
         loadedIdRef.current = id;
         loadSecondary(Number(id), res.data.service_type, seq);
       } else if (firstLoad) {
@@ -1530,213 +1562,59 @@ const LegalServiceDetail: React.FC = () => {
 
   // ── Tab: Info ─────────────────────────────────────────────────────────────
 
+  // «نظرة عامة»: كانت بطاقتا «معلومات أساسية» و«المعلومات المالية» تكرّران ما في ترويسة الصفحة
+  // حرفاً بحرف، و«الأنشطة» في تبويب مستقل لا يُفتح. الآن: ما يُقرأ (الوصف/السؤال/المنشأ/الملاحظات)
+  // في العمود الرئيسي، وبجواره ما لا تحمله الترويسة + آخر ما جرى على الخدمة.
   const renderInfoTab = () => {
     if (!service) return null;
+    const hasReadable =
+      service.service_type === 'consultation' ||
+      !!service.description ||
+      !!service.intake_request ||
+      !!service.notes ||
+      !!service.internal_notes ||
+      !!service.case_model;
+    const team = (service.assignees ?? []).map((a) => a.name).filter(Boolean);
+    const sourceLabel =
+      service.source === 'manual'
+        ? 'يدوي'
+        : service.source === 'client_portal'
+        ? 'بوابة العميل'
+        : service.source === 'converted_from_case'
+        ? 'محوّل من قضية'
+        : service.source;
     return (
-      <div className="lsd-info-cards-grid">
-        {/* Card 1: معلومات أساسية */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <Info size={15} />
-              معلومات أساسية
-            </div>
-          </div>
-          <div className="lsd-card__content">
-            <div className="lsd-info-grid">
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <User size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">العميل</div>
-                  <div className="lsd-info-item__value">
-                    {service.client?.name ?? <span className="lsd-info-item__value--muted">—</span>}
-                  </div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <Scale size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">المحامون المسؤولون</div>
-                  <div className="lsd-info-item__value">
-                    {service.assigned_lawyer?.name ?? (
-                      <span className="lsd-info-item__value--muted">غير محدد</span>
-                    )}
-                    {(service.assignees?.length ?? 0) > 1 && (
-                      <span className="lsd-info-item__value--muted"> +{service.assignees!.length - 1}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <Calendar size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">تاريخ الإنشاء</div>
-                  <div className="lsd-info-item__value">{formatDate(service.created_at)}</div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <Calendar size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">تاريخ البدء</div>
-                  <div className="lsd-info-item__value">
-                    {service.start_date ? (
-                      formatDate(service.start_date)
-                    ) : (
-                      <span className="lsd-info-item__value--muted">—</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <AlertTriangle size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">تاريخ الاستحقاق</div>
-                  <div className="lsd-info-item__value">
-                    {service.due_date ? (
-                      formatDate(service.due_date)
-                    ) : (
-                      <span className="lsd-info-item__value--muted">—</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <Tag size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">المصدر</div>
-                  <div className="lsd-info-item__value">
-                    {service.source === 'manual'
-                      ? 'يدوي'
-                      : service.source === 'client_portal'
-                      ? 'بوابة العميل'
-                      : service.source === 'converted_from_case'
-                      ? 'محوّل من قضية'
-                      : service.source}
-                  </div>
-                </div>
+      <div className="lsd2-overview">
+      <div className="lsd2-overview__main">
+        {(statusFlow.length > 0 || statusFlowPending) && (
+          <div className="lsd-card">
+            <div className="lsd-card__header">
+              <div className="lsd-card__title">
+                <Compass size={15} />
+                مسار الخدمة
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Card 2: معلومات مالية */}
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title">
-              <DollarSign size={15} />
-              المعلومات المالية
+            <div className="lsd-card__content lsd2-flowcard">
+              <StatusPipeline steps={statusFlow} currentStatus={service.status} pending={statusFlowPending} />
+              <p className="lsd2-muted">
+                {STATUS_EXPLANATIONS[service.status] ??
+                  'حالة مخصّصة — راجع آخر ما جرى لمعرفة ما تم على الخدمة.'}
+              </p>
             </div>
           </div>
-          <div className="lsd-card__content">
-            <div className="lsd-info-grid">
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <Receipt size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">نوع الفوترة</div>
-                  <div className="lsd-info-item__value">
-                    {BILLING_TYPE_LABELS[service.billing_type] ?? service.billing_type}
-                  </div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <DollarSign size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">المبلغ المتفق عليه</div>
-                  <div className="lsd-info-item__value">
-                    {service.agreed_amount ? (
-                      `${parseFloat(service.agreed_amount).toLocaleString('ar-SA')} ريال`
-                    ) : (
-                      <span className="lsd-info-item__value--muted">—</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {service.billing_type === 'hourly' && (
-                <div className="lsd-info-item">
-                  <div className="lsd-info-item__icon">
-                    <Clock size={14} />
-                  </div>
-                  <div className="lsd-info-item__body">
-                    <div className="lsd-info-item__label">سعر الساعة</div>
-                    <div className="lsd-info-item__value">
-                      {service.hourly_rate ? (
-                        `${parseFloat(service.hourly_rate).toLocaleString('ar-SA')} ريال`
-                      ) : (
-                        <span className="lsd-info-item__value--muted">—</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <BarChart2 size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">نسبة الضريبة</div>
-                  <div className="lsd-info-item__value">{service.vat_rate}%</div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <CheckCircle size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">إجمالي المفوتر</div>
-                  <div className="lsd-info-item__value">
-                    {service.total_billed !== undefined ? (
-                      `${Number(service.total_billed).toLocaleString('ar-SA')} ريال`
-                    ) : (
-                      <span className="lsd-info-item__value--muted">—</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="lsd-info-item">
-                <div className="lsd-info-item__icon">
-                  <Clock size={14} />
-                </div>
-                <div className="lsd-info-item__body">
-                  <div className="lsd-info-item__label">إجمالي الوقت</div>
-                  <div className="lsd-info-item__value">
-                    {service.total_time_seconds != null ? (
-                      formatSeconds(service.total_time_seconds)
-                    ) : (
-                      <span className="lsd-info-item__value--muted">—</span>
-                    )}
-                  </div>
-                </div>
-              </div>
+        )}
+        {!hasReadable && (
+          <div className="lsd-card">
+            <div className="lsd-card__content lsd2-blank">
+              <AlignLeft size={22} />
+              <p>لا وصف ولا ملاحظات لهذه الخدمة بعد.</p>
+              <button className="lsd-card__action" onClick={() => setShowEditModal(true)}>
+                <Pencil size={13} />
+                أضفها من «تعديل البيانات»
+              </button>
             </div>
           </div>
-        </div>
-
+        )}
         {/* Card 2.5: سؤال العميل — للاستشارات وحدها، وهو **مكانُ إضافته** لا عرضِه فقط.
             🔴 كان الحقلُ بلا مسارِ تحريرٍ في المنصّة كلّها: نافذةُ التعديل لا تحمله
                والباك لا يقبله، وتبويبُ الاستشارة يقول «أضِفه من تعديل الخدمة» —
@@ -1954,6 +1832,67 @@ const LegalServiceDetail: React.FC = () => {
             </div>
           </div>
         )}
+      </div>
+
+      <aside className="lsd2-overview__side">
+        <div className="lsd-card">
+          <div className="lsd-card__header">
+            <div className="lsd-card__title">
+              <Info size={15} />
+              تفاصيل
+            </div>
+          </div>
+          <div className="lsd-card__content">
+            <dl className="lsd2-dl">
+              <dt>العميل</dt>
+              <dd>{service.client?.name ?? '—'}</dd>
+              <dt>المحامي المسؤول</dt>
+              <dd>{service.assigned_lawyer?.name ?? 'غير محدد'}</dd>
+              <dt>البدء</dt>
+              <dd>{formatDate(service.start_date)}</dd>
+              <dt>الاستحقاق</dt>
+              <dd>{formatDate(service.due_date)}</dd>
+              {service.agreed_amount && (
+                <><dt>الأتعاب</dt><dd>{parseFloat(service.agreed_amount).toLocaleString('ar-SA')} ريال</dd></>
+              )}
+              <dt>المفوتر</dt>
+              <dd>{Number(service.total_billed ?? 0).toLocaleString('ar-SA')} ريال</dd>
+              <dt>أُنشئت</dt>
+              <dd>{formatDate(service.created_at)}</dd>
+              {sourceLabel && (<><dt>المصدر</dt><dd>{sourceLabel}</dd></>)}
+              {team.length > 1 && (<><dt>فريق العمل</dt><dd>{team.join('، ')}</dd></>)}
+              <dt>نوع الفوترة</dt>
+              <dd>{BILLING_TYPE_LABELS[service.billing_type] ?? service.billing_type}</dd>
+              {service.billing_type === 'hourly' && service.hourly_rate && (
+                <><dt>سعر الساعة</dt><dd>{parseFloat(service.hourly_rate).toLocaleString('ar-SA')} ريال</dd></>
+              )}
+              <dt>الضريبة</dt>
+              <dd>{service.vat_rate}%</dd>
+              {service.total_time_seconds != null && (
+                <><dt>الوقت المسجَّل</dt><dd>{formatSeconds(service.total_time_seconds)}</dd></>
+              )}
+            </dl>
+          </div>
+        </div>
+
+        {(service.service_activities?.length ?? 0) > 0 ? (
+          renderActivitiesTab()
+        ) : (
+          <div className="lsd-card">
+            <div className="lsd-card__header">
+              <div className="lsd-card__title">
+                <Clock size={15} />
+                آخر ما جرى
+              </div>
+            </div>
+            <div className="lsd-card__content">
+              <p className="lsd2-muted">
+                يسجّل النظام هنا تلقائياً كل ما يجري على الخدمة: تغيّر الحالة، المستندات، الوقت، والفواتير.
+              </p>
+            </div>
+          </div>
+        )}
+      </aside>
       </div>
     );
   };
@@ -2629,24 +2568,6 @@ const LegalServiceDetail: React.FC = () => {
             </button>
           </div>
 
-          {timeSummary && (
-            <div className="lsd-timer-widget__summary">
-              <div className="lsd-timer-summary-item">
-                <div className="lsd-timer-summary-item__value">{timeSummary.total_formatted}</div>
-                <div className="lsd-timer-summary-item__label">إجمالي الوقت</div>
-              </div>
-              <div className="lsd-timer-summary-item">
-                <div className="lsd-timer-summary-item__value">{timeSummary.billable_formatted}</div>
-                <div className="lsd-timer-summary-item__label">الوقت القابل للفوترة</div>
-              </div>
-              <div className="lsd-timer-summary-item">
-                <div className="lsd-timer-summary-item__value">
-                  {Number(timeSummary.total_amount).toLocaleString('ar-SA')}
-                </div>
-                <div className="lsd-timer-summary-item__label">المبلغ (ريال)</div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Manual entry form */}
@@ -2742,7 +2663,8 @@ const LegalServiceDetail: React.FC = () => {
 
   const renderActivitiesTab = () => {
     if (!service) return null;
-    const activities = [...(service.service_activities ?? [])].reverse();
+    // الخادم يرسل أحدث عشرين — والأحدث أولاً هو ما يُقرأ في عمود «آخر ما جرى»
+    const activities = service.service_activities ?? [];
 
     if (activities.length === 0) {
       return (
@@ -2762,7 +2684,7 @@ const LegalServiceDetail: React.FC = () => {
           <div className="lsd-card__header">
             <div className="lsd-card__title">
               <Clock size={15} />
-              سجل الأنشطة
+              آخر ما جرى
               <span className="lsd-tab__count">{activities.length}</span>
             </div>
           </div>
@@ -2888,6 +2810,65 @@ const LegalServiceDetail: React.FC = () => {
     );
   };
 
+  // ── «الملفات»: ما رُفع للخدمة وما أصدرناه منها في مكان واحد (كانا تبويبين) ──
+  const renderFilesTab = () => {
+    if (!service) return null;
+    return (
+      <div className="lsd2-split">
+        <div className="lsd2-split__col">{renderDocumentsTab()}</div>
+        <div className="lsd2-split__col">
+          <DeliverablesPanel serviceId={service.id} serviceType={service.service_type} />
+        </div>
+      </div>
+    );
+  };
+
+  // ── «الوقت والفواتير»: العمل المسجَّل وما فُوتر منه متجاوران (كانا تبويبين) ──
+  const renderBillingTab = () => {
+    if (!service) return null;
+    const invoices = service.invoices ?? [];
+    const paid = invoices.reduce((sum, inv) => sum + (Number(inv.paid_amount) || 0), 0);
+    const billed = Number(service.total_billed) || 0;
+    const agreed = service.agreed_amount ? parseFloat(service.agreed_amount) : null;
+    const money = (n: number) => `${n.toLocaleString('ar-SA')} ريال`;
+    return (
+      <div className="lsd2-billing rc-scope">
+        <div className="lsd2-tiles">
+          <StatTile
+            label="الوقت المسجَّل"
+            value={timeSummary?.total_formatted ?? formatSeconds(service.total_time_seconds ?? 0)}
+            hint={timeSummary ? `منه ${timeSummary.billable_formatted} يُفوتر` : undefined}
+            icon={<Clock size={15} />}
+          />
+          <StatTile
+            label="الأتعاب المتفق عليها"
+            value={agreed != null ? money(agreed) : '—'}
+            hint={BILLING_TYPE_LABELS[service.billing_type] ?? service.billing_type}
+            icon={<DollarSign size={15} />}
+          />
+          <StatTile
+            label="المفوتر"
+            value={money(billed)}
+            hint={invoices.length > 0 ? invoicesPhrase(invoices.length) : 'لم تصدر فاتورة بعد'}
+            icon={<Receipt size={15} />}
+            meter={agreed ? { value: Math.round((billed / agreed) * 100), ariaLabel: 'نسبة المفوتر من الأتعاب' } : undefined}
+          />
+          <StatTile
+            label="المحصَّل"
+            value={money(paid)}
+            hint={billed > 0 ? `المتبقي ${money(Math.max(0, billed - paid))}` : undefined}
+            icon={<CheckCircle size={15} />}
+            meter={billed > 0 ? { value: Math.round((paid / billed) * 100), tone: 'good', ariaLabel: 'نسبة المحصَّل من المفوتر' } : undefined}
+          />
+        </div>
+        <div className="lsd2-split">
+          <div className="lsd2-split__col">{renderTimeTab()}</div>
+          <div className="lsd2-split__col">{renderInvoicesTab()}</div>
+        </div>
+      </div>
+    );
+  };
+
   // ── Tab: Notes (التدوين) — shared across all service types ─────────────────
 
   const renderNotesTab = () => {
@@ -2978,7 +2959,7 @@ const LegalServiceDetail: React.FC = () => {
               </button>
               <button
                 className="lsd-assign__btn lsd-assign__btn--ghost"
-                onClick={() => setActiveTab('documents')}
+                onClick={() => setActiveTab('files')}
               >
                 <Link size={13} />
                 رابط بوابة العميل
@@ -3028,6 +3009,21 @@ const LegalServiceDetail: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
             >
+              {/* مسار المراحل كاملاً — كان شريطاً أفقياً دائماً يأكل من ارتفاع كل التبويبات */}
+              {statusFlow.length > 0 && (
+                <ol className="lsd2-next__flow">
+                  {statusFlow.map((step, idx) => {
+                    const currentIdx = statusFlow.findIndex((f) => f.status === service.status);
+                    const state = idx < currentIdx ? 'done' : idx === currentIdx ? 'now' : 'todo';
+                    return (
+                      <li key={step.status} className={`lsd2-next__stage lsd2-next__stage--${state}`}>
+                        <span className="lsd2-next__stage-dot">{state === 'done' ? <Check size={10} /> : idx + 1}</span>
+                        {step.label}
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
               <div className="lsd2-next__now">
                 <div className="lsd2-next__eyebrow">
                   <Compass size={12} />
@@ -3084,79 +3080,6 @@ const LegalServiceDetail: React.FC = () => {
     );
   };
 
-  // صفّ الحقائق تحت العنوان — يحلّ محلّ بطاقات العمود الجانبي الثلاث (كلها مكرّرة من تبويب «المعلومات»)
-  const renderFacts = () => {
-    if (!service) return null;
-    const fee = service.agreed_amount
-      ? `${parseFloat(service.agreed_amount).toLocaleString('ar-SA')} ريال`
-      : service.billing_type === 'hourly' && service.hourly_rate
-      ? `${parseFloat(service.hourly_rate).toLocaleString('ar-SA')} ريال/س`
-      : null;
-    const billed =
-      service.total_billed !== undefined && service.total_billed !== null
-        ? `${Number(service.total_billed).toLocaleString('ar-SA')} ريال`
-        : null;
-
-    // كم بقي على الاستحقاق؟ — لا يُعرض لخدمةٍ انتهت دورتها
-    let dueChip: { text: string; tone: 'ok' | 'warn' | 'bad' } | null = null;
-    const DONE = ['closed', 'cancelled', 'archived', 'completed'];
-    if (service.due_date && !DONE.includes(service.status)) {
-      const due = new Date(service.due_date);
-      if (!Number.isNaN(due.getTime())) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        due.setHours(0, 0, 0, 0);
-        const days = Math.round((due.getTime() - today.getTime()) / 86400000);
-        if (days < 0) dueChip = { text: `متأخرة ${daysPhrase(Math.abs(days))}`, tone: 'bad' };
-        else if (days === 0) dueChip = { text: 'اليوم', tone: 'warn' };
-        else dueChip = { text: `بعد ${daysPhrase(days)}`, tone: days <= 3 ? 'warn' : 'ok' };
-      }
-    }
-
-    return (
-      <div className="lsd2-facts">
-        <div className="lsd2-fact">
-          <User size={13} />
-          <span className="lsd2-fact__k">العميل</span>
-          <b>{service.client?.name ?? '—'}</b>
-        </div>
-        <div className="lsd2-fact">
-          <Scale size={13} />
-          <span className="lsd2-fact__k">المحامي</span>
-          <b>
-            {service.assigned_lawyer?.name ?? 'غير محدد'}
-            {(service.assignees?.length ?? 0) > 1 && ` +${service.assignees!.length - 1}`}
-          </b>
-        </div>
-        <div className="lsd2-fact">
-          <Calendar size={13} />
-          <span className="lsd2-fact__k">البدء</span>
-          <b>{formatDate(service.start_date)}</b>
-        </div>
-        <div className="lsd2-fact">
-          <Calendar size={13} />
-          <span className="lsd2-fact__k">الاستحقاق</span>
-          <b>{formatDate(service.due_date)}</b>
-          {dueChip && <span className={`lsd2-fact__chip lsd2-fact__chip--${dueChip.tone}`}>{dueChip.text}</span>}
-        </div>
-        {fee && (
-          <div className="lsd2-fact">
-            <DollarSign size={13} />
-            <span className="lsd2-fact__k">الأتعاب</span>
-            <b>{fee}</b>
-          </div>
-        )}
-        {billed && (
-          <div className="lsd2-fact">
-            <Receipt size={13} />
-            <span className="lsd2-fact__k">المفوتر</span>
-            <b>{billed}</b>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   // ── Loading & Error states ────────────────────────────────────────────────
 
   if (loading) {
@@ -3207,23 +3130,26 @@ const LegalServiceDetail: React.FC = () => {
 
   const typeTab = SERVICE_TYPE_TAB_MAP[service.service_type];
 
+  // خمسة تبويبات بدل ثمانية، والعمل أولاً: من يفتح الخدمة جاء ليعمل عليها.
   const tabs: { key: string; label: string; icon: any; count?: number }[] = [
-    { key: 'info', label: 'المعلومات', icon: Info },
     ...(typeTab ? [typeTab] : []),
+    { key: 'info', label: 'نظرة عامة', icon: Info },
     { key: 'notes', label: 'التدوين', icon: StickyNote },
-    // عدّاد المخرجات/الفواتير يظهر متى توفّرت البيانات — يوجّه العين لما أُنجز
-    { key: 'deliverables', label: 'المخرجات', icon: FileCheck, count: service.deliverables?.length },
-    { key: 'documents', label: 'المستندات', icon: FileText, count: service.service_documents?.length },
-    { key: 'time', label: 'تتبع الوقت', icon: Clock, count: service.time_entries?.length },
-    { key: 'activities', label: 'الأنشطة', icon: Clock, count: service.service_activities?.length },
-    { key: 'invoices', label: 'الفواتير', icon: Receipt, count: service.invoices?.length },
+    {
+      key: 'files',
+      label: 'الملفات',
+      icon: FileText,
+      count: (service.service_documents?.length ?? 0) + (service.deliverables?.length ?? 0),
+    },
+    { key: 'billing', label: 'الوقت والفواتير', icon: Receipt, count: service.invoices?.length },
   ];
 
   const ServiceIcon = SERVICE_TYPE_ICONS[service.service_type] ?? FileText;
 
   // تبويب العقد مساحة عمل تملأ الارتفاع المتاح: الصفحة لا تتمرر، والتمرير داخل الورقة واللوحات
   const fitContract = activeTab === 'contract' && service.service_type === 'contract_drafting';
-  const hideChrome = fitContract && contractFocus;
+  const stageIndex = statusFlow.findIndex((f) => f.status === service.status);
+  const dueChip = dueChipFor(service);
 
   // ── Main render ───────────────────────────────────────────────────────────
 
@@ -3251,12 +3177,46 @@ const LegalServiceDetail: React.FC = () => {
               <span className="lsd-header__number">{service.service_number}</span>
               {renderTypePill(service.service_type)}
               {service.priority !== 'medium' && renderPriorityBadge(service.priority)}
+              {service.client?.name && (
+                <span className="lsd2-header__meta"><User size={12} />{service.client.name}</span>
+              )}
+              <span className="lsd2-header__meta">
+                <Scale size={12} />
+                {service.assigned_lawyer?.name ?? 'بلا محامٍ مسؤول'}
+                {(service.assignees?.length ?? 0) > 1 && ` +${service.assignees!.length - 1}`}
+              </span>
+              {service.due_date && (
+                <span className="lsd2-header__meta">
+                  <Calendar size={12} />
+                  {formatDate(service.due_date)}
+                  {dueChip && <span className={`lsd2-fact__chip lsd2-fact__chip--${dueChip.tone}`}>{dueChip.text}</span>}
+                </span>
+              )}
             </div>
           </div>
 
           <div className="lsd2-header__actions">
-            {/* الحالة تُعرض هنا مرة واحدة، وبجوارها ما يُفعل بها */}
-            <span title={STATUS_EXPLANATIONS[service.status]}>{renderStatusBadge(service.status)}</span>
+            {/* الحالة تُعرض هنا مرة واحدة — مؤشر مراحل مصغّر — وبجوارها ما يُفعل بها */}
+            {stageIndex >= 0 ? (
+              <div
+                className="lsd2-stepper"
+                title={STATUS_EXPLANATIONS[service.status]}
+                role="img"
+                aria-label={`المرحلة ${stageIndex + 1} من ${statusFlow.length}: ${getStatusLabel(service.status)}`}
+              >
+                <span className="lsd2-stepper__label">
+                  <b>{getStatusLabel(service.status)}</b>
+                  <small>{(stageIndex + 1).toLocaleString('ar-SA')} من {statusFlow.length.toLocaleString('ar-SA')}</small>
+                </span>
+                <span className="lsd2-stepper__bar" aria-hidden="true">
+                  {statusFlow.map((step, idx) => (
+                    <i key={step.status} className={idx < stageIndex ? 'is-done' : idx === stageIndex ? 'is-now' : ''} />
+                  ))}
+                </span>
+              </div>
+            ) : (
+              <span title={STATUS_EXPLANATIONS[service.status]}>{renderStatusBadge(service.status)}</span>
+            )}
             {renderNextStepMenu()}
 
             {/*
@@ -3336,16 +3296,10 @@ const LegalServiceDetail: React.FC = () => {
           </div>
         </div>
 
-        {!hideChrome && renderFacts()}
       </header>
 
-      {/* ── Status Pipeline ── */}
-      {!hideChrome && (
-        <StatusPipeline steps={statusFlow} currentStatus={service.status} pending={statusFlowPending} />
-      )}
-
       {/* ── حالة التكليف: بانتظار الاعتماد أو جاهزة للعميل ── */}
-      {!hideChrome && renderAssignmentCard()}
+      {renderAssignmentCard()}
 
       {/* ── Tabs ── */}
       <nav className="lsd-tabs">
@@ -3384,13 +3338,8 @@ const LegalServiceDetail: React.FC = () => {
               {activeTab === 'contract' && renderContractTab()}
               {activeTab === 'type_detail' && renderTypeDetailTab()}
               {activeTab === 'notes' && renderNotesTab()}
-              {activeTab === 'deliverables' && (
-                <DeliverablesPanel serviceId={service.id} serviceType={service.service_type} />
-              )}
-              {activeTab === 'documents' && renderDocumentsTab()}
-              {activeTab === 'time' && renderTimeTab()}
-              {activeTab === 'activities' && renderActivitiesTab()}
-              {activeTab === 'invoices' && renderInvoicesTab()}
+              {activeTab === 'files' && renderFilesTab()}
+              {activeTab === 'billing' && renderBillingTab()}
             </motion.div>
           </AnimatePresence>
         </div>
