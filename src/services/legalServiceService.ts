@@ -148,6 +148,11 @@ export class LegalServiceService {
   }
 
   /** الحفظ التلقائي: يحدّث أحدث إصدار وهو مسودة في مكانه — `expected_updated_at` بصمة آخر نسخة رآها المحرر. */
+  /** يُنشئ صفّ التفاصيل النوعية الغائب فتُفتح مساحة عمل النوع (خدمات قديمة/مستوردة) */
+  static async createTypeDetail(id: number): Promise<LegalServiceResponse> {
+    return apiClient.post(`/legal-services/${id}/type-detail`);
+  }
+
   static async updateVersion(
     id: number,
     versionId: number,

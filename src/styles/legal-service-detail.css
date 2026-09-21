@@ -3454,3 +3454,59 @@ body.dark .lsd2-stepper--cancelled .lsd2-stepper__label b {
     background: var(--status-orange-light);
     color: var(--status-orange);
 }
+
+/* ─── تأسيس الشركة (cfw-): حصص الشركاء وقائمة المستندات ─── */
+.cfw-share {
+    margin-inline-start: auto;
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--quiet-gray-100);
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.cfw-share--done {
+    background: var(--status-green-light);
+    color: var(--status-green);
+}
+
+.cfw-share--over {
+    background: var(--status-red-light);
+    color: var(--status-red);
+}
+
+.cfw-doc {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+}
+
+.cfw-doc .lsd-doc-action-btn {
+    opacity: 0;
+    transition: opacity 0.12s;
+}
+
+.cfw-doc:hover .lsd-doc-action-btn,
+.cfw-doc:focus-within .lsd-doc-action-btn {
+    opacity: 1;
+}
+
+.cfw-addrow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--color-border);
+}
+
+.cfw-addrow .lsd-form-input {
+    flex: 1;
+    min-width: 0;
+}

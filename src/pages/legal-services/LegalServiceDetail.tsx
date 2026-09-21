@@ -96,6 +96,22 @@ const ConsultationWorkspace = lazyWithRetry(
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+/** مفتاح حمولة التفاصيل النوعية لكل نوع — مرآة LegalServiceManager::TYPE_DETAIL_RELATIONS */
+const TYPE_DETAIL_KEYS: Record<string, keyof LegalService> = {
+  consultation: 'consultation_detail',
+  contract_drafting: 'contract_drafting_detail',
+  company_formation: 'company_formation_detail',
+  licenses: 'license_procedure_detail',
+  arbitration: 'arbitration_detail',
+  compliance: 'compliance_detail',
+  labor: 'labor_detail',
+  real_estate: 'real_estate_detail',
+  due_diligence: 'due_diligence_detail',
+  ip: 'ip_detail',
+  legal_notices: 'legal_notice_detail',
+  training: 'training_detail',
+};
+
 /** مفتاح تبويب العمل لكل نوع — مرآة `SERVICE_TYPE_TAB_MAP` داخل المكوّن */
 function defaultTabFor(serviceType: string): string {
   if (serviceType === 'consultation') return 'consultation';
@@ -970,6 +986,8 @@ const LegalServiceDetail: React.FC = () => {
   // ── Contract state ──
   // وضع التركيز في مساحة صياغة العقد: يُخفي شريط الحالة واللوحات لتأخذ الورقة المساحة كلها
   const [contractFocus, setContractFocus] = useState(false);
+  // خدمة بلا صفّ تفاصيل نوعية — تُجهَّز مساحتها بنقرة
+  const [preparingDetail, setPreparingDetail] = useState(false);
 
   // ── Documents state ──
   const [docLoading, setDocLoading] = useState(false);
@@ -1402,6 +1420,25 @@ const LegalServiceDetail: React.FC = () => {
     setManualTimeLoading(false);
   };
 
+  /**
+   * خدمةٌ بلا صفّ تفاصيل نوعية (بيانات قديمة/مستوردة) كانت تعرض «لا توجد تفاصيل» بلا أيّ
+   * مخرج — والحفظ من الخادم كان يسقط بـ500. الآن يُنشأ الصفّ بنقرة فتُفتح مساحة العمل.
+   */
+  const handlePrepareTypeDetail = async () => {
+    if (!service) return;
+    setPreparingDetail(true);
+    try {
+      const res = await LegalServiceService.createTypeDetail(service.id);
+      if (!res.success) throw new Error('تعذّر تجهيز مساحة العمل');
+      setService(res.data);
+      toast.success('جُهّزت مساحة العمل — ابدأ تعبئة البيانات');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'تعذّر تجهيز مساحة العمل'));
+    } finally {
+      setPreparingDetail(false);
+    }
+  };
+
   // ── Document actions ──
   const handleUploadDocument = async (file: File) => {
     if (!service) return;
@@ -1788,6 +1825,13 @@ const LegalServiceDetail: React.FC = () => {
 
     // التحقق من وجود workspace مسجّل لهذا النوع
     const Workspace = WorkspaceRegistry[service.service_type];
+
+    // صفّ التفاصيل غائب: مخرجٌ واحد يخدم الأنواع كلها بدل «لا توجد تفاصيل» في كل مساحة
+    const detailKey = TYPE_DETAIL_KEYS[service.service_type];
+    if (Workspace && detailKey && !service[detailKey]) {
+      return renderMissingDetail();
+    }
+
     if (Workspace) {
       // المساحة تُحمَّل عند الطلب — الانتظار محصور هنا كي لا تومض الصفحة كلها
       return (
@@ -1809,6 +1853,30 @@ const LegalServiceDetail: React.FC = () => {
   };
 
   // ── Tab: Documents ────────────────────────────────────────────────────────
+
+  /** مساحةُ نوعٍ بلا صفّ تفاصيل — بابٌ يُفتح، لا رسالةُ نهاية */
+  const renderMissingDetail = () => (
+    <div className="lsd-card">
+      <div className="lsd-card__content lsd2-blank">
+        <Layers size={22} />
+        <p>
+          لم تُجهَّز بيانات «{SERVICE_TYPE_LABELS[service!.service_type] ?? service!.service_type}» لهذه الخدمة بعد.
+        </p>
+        {canManageService ? (
+          <button
+            className="lsd-header-btn lsd-header-btn--primary"
+            onClick={handlePrepareTypeDetail}
+            disabled={preparingDetail}
+          >
+            {preparingDetail ? <span className="lsd-nextstep__spinner" /> : <Plus size={14} />}
+            {preparingDetail ? 'جارٍ التجهيز…' : 'جهّز مساحة العمل'}
+          </button>
+        ) : (
+          <span className="lsd2-muted">اطلب من المدير تجهيزها.</span>
+        )}
+      </div>
+    </div>
+  );
 
   const renderDocumentsTab = () => {
     if (!service) return null;

@@ -30,6 +30,22 @@ const DEFAULT_AUTHORITIES = [
   'التنازل عن الحقوق', 'إصدار الكفالات',
 ];
 
+/**
+ * 🔴 `document_checklist` لم يكن يُزرع من أيّ مكان في المنصّة كلّها — لا عند إنشاء الخدمة
+ *    ولا من الواجهة — والبطاقةُ كانت مخفيّةً كلّياً حين تفرغ. فميزةُ «قائمة المستندات»
+ *    كانت غيرَ مرئيّةٍ ولا مستعملةٍ أبداً، ومعها قسمُ المستندات في ملفّ التأسيس يخرج فارغاً.
+ */
+const DEFAULT_DOCUMENTS = [
+  'هويات الشركاء (أو جوازات غير السعوديين)',
+  'شهادة حجز الاسم التجاري',
+  'عقد التأسيس الموثّق',
+  'قرار الشركاء بالتأسيس وتعيين المدير',
+  'السجل التجاري للشريك الاعتباري',
+  'عقد إيجار المقر أو العنوان الوطني',
+  'تفويض/وكالة مباشرة الإجراءات',
+  'إثبات إيداع رأس المال (إن لزم)',
+];
+
 function formatDate(d: string | null | undefined): string {
   if (!d) return '—';
   try { return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }); } catch { return d; }
@@ -61,6 +77,7 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
   const [postCrLoading, setPostCrLoading] = useState(false);
 
   const [checklistLoading, setChecklistLoading] = useState(false);
+  const [newDocLabel, setNewDocLabel] = useState('');
 
   const [progress, setProgress] = useState<{ completion_percentage: number } | null>(null);
 
@@ -169,33 +186,48 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
     finally { setChecklistLoading(false); }
   };
 
+  const saveChecklist = async (updated: DocumentChecklistItem[], done?: string) => {
+    setChecklistLoading(true);
+    try {
+      await LegalServiceService.updateFormationChecklist(service.id, updated);
+      if (done) toast.success(done);
+      await refreshService();
+    } catch (err) { toast.error(getApiErrorMessage(err, 'تعذّر تحديث قائمة المستندات')); }
+    finally { setChecklistLoading(false); }
+  };
+
+  const handleSeedChecklist = () =>
+    saveChecklist(
+      DEFAULT_DOCUMENTS.map((label, i) => ({ key: `doc_${i + 1}`, label, collected: false })),
+      'جُهّزت قائمة المستندات المعتادة — عدّلها كما يناسب الحالة',
+    );
+
+  const handleAddDoc = () => {
+    const label = newDocLabel.trim();
+    if (!label) return;
+    setNewDocLabel('');
+    void saveChecklist([...checklist, { key: `doc_${Date.now()}`, label, collected: false }]);
+  };
+
+  const handleRemoveDoc = (idx: number) => saveChecklist(checklist.filter((_, i) => i !== idx));
+
   const completedChecklist = checklist.filter(i => i.collected).length;
   const postCrCount = [detail.zatca_registered, detail.gosi_registered, detail.qiwa_registered, detail.municipality_license].filter(Boolean).length;
+  // الخادم يرفض مجموعاً يتجاوز 100% — فليره المستخدم قبل أن يُدخل لا بعد أن يُردّ
+  const totalShare = partners.reduce((sum, p) => sum + (Number(p.share_percentage) || 0), 0);
+  const remainingShare = Math.round((100 - totalShare) * 100) / 100;
 
   return (
-    <div className="lsd-tab-content-stack">
+    <div className="lsd2-overview">
+      <div className="lsd2-overview__main">
 
-      {/* ── شريط المؤشرات ── */}
+      {/* شريط المؤشرات — نسبة الإنجاز فيه، فلا شريطَ تقدّمٍ ثانٍ تحته يقول الرقم نفسه */}
       <MicroStatsBar items={[
         ...(progress ? [{ label: 'نسبة الإنجاز', value: `${progress.completion_percentage}%`, icon: BarChart2 as any, color: (progress.completion_percentage >= 80 ? 'green' : progress.completion_percentage >= 50 ? 'amber' : 'blue') as MicroStatItem['color'] }] : []),
         { label: 'الشركاء', value: `${partners.length}`, icon: Users, color: 'purple' as const },
         { label: 'الجهات الحكومية', value: `${postCrCount}/4`, icon: ShieldCheck, color: postCrCount === 4 ? 'green' as const : 'amber' as const },
         { label: 'المستندات', value: checklist.length > 0 ? `${completedChecklist}/${checklist.length}` : '—', icon: FileText, color: 'blue' as const },
       ]} />
-
-      {/* ── شريط التقدم ── */}
-      {progress && (
-        <div className="lsd-card" style={{ marginBottom: 0 }}>
-          <div className="lsd-card__content" style={{ padding: '10px 14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ flex: 1, background: 'var(--quiet-gray-100, #f3f4f6)', borderRadius: 6, height: 8, overflow: 'hidden' }}>
-                <div style={{ width: `${progress.completion_percentage}%`, height: '100%', background: progress.completion_percentage >= 80 ? 'var(--status-green)' : progress.completion_percentage >= 50 ? 'var(--status-orange)' : 'var(--status-blue)', borderRadius: 6, transition: 'width 0.3s' }} />
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--quiet-gray-700)' }}>{progress.completion_percentage}%</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── بطاقة بيانات الشركة ── */}
       <div className="lsd-card">
@@ -270,7 +302,18 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
       {/* ── بطاقة الشركاء ── */}
       <div className="lsd-card">
         <div className="lsd-card__header">
-          <div className="lsd-card__title"><Users size={15} /> الشركاء {partners.length > 0 && <span className="lsd-tab__count">{partners.length}</span>}</div>
+          <div className="lsd-card__title">
+            <Users size={15} /> الشركاء {partners.length > 0 && <span className="lsd-tab__count">{partners.length}</span>}
+            {partners.length > 0 && (
+              <span className={`cfw-share${remainingShare < 0 ? ' cfw-share--over' : remainingShare === 0 ? ' cfw-share--done' : ''}`}>
+                {remainingShare < 0
+                  ? `تجاوز الحصص بـ${Math.abs(remainingShare)}%`
+                  : remainingShare === 0
+                  ? 'اكتملت الحصص 100%'
+                  : `المتبقي ${remainingShare}%`}
+              </span>
+            )}
+          </div>
           <button className="lsd-card__action" onClick={() => setShowAddPartner(true)}><Plus size={13} /> إضافة شريك</button>
         </div>
         <div className="lsd-card__content">
@@ -284,7 +327,7 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
                     <div className="lsd-form-group"><label className="lsd-form-label">رقم الهوية</label><input className="lsd-form-input" value={newPartner.national_id || ''} onChange={e => setNewPartner({ ...newPartner, national_id: e.target.value })} dir="ltr" /></div>
                     <div className="lsd-form-group"><label className="lsd-form-label">الجنسية</label><input className="lsd-form-input" value={newPartner.nationality || ''} onChange={e => setNewPartner({ ...newPartner, nationality: e.target.value })} /></div>
                     {/* الحقول الرقمية اختيارية: القيمة الفارغة تبقى undefined ولا تُرسَل (parseFloat('') = NaN كان يكسر التحقق) */}
-                    <div className="lsd-form-group"><label className="lsd-form-label">النسبة %</label><input className="lsd-form-input" type="number" min={0} max={100} value={newPartner.share_percentage ?? ''} onChange={e => setNewPartner({ ...newPartner, share_percentage: e.target.value === '' ? undefined : parseFloat(e.target.value) })} dir="ltr" /></div>
+                    <div className="lsd-form-group"><label className="lsd-form-label">النسبة %{remainingShare > 0 && <span style={{ fontWeight: 400, color: 'var(--color-text-secondary)' }}> — المتبقي {remainingShare}%</span>}</label><input className="lsd-form-input" type="number" min={0} max={100} value={newPartner.share_percentage ?? ''} onChange={e => setNewPartner({ ...newPartner, share_percentage: e.target.value === '' ? undefined : parseFloat(e.target.value) })} dir="ltr" /></div>
                     <div className="lsd-form-group"><label className="lsd-form-label">المبلغ</label><input className="lsd-form-input" type="number" min={0} value={newPartner.share_amount ?? ''} onChange={e => setNewPartner({ ...newPartner, share_amount: e.target.value === '' ? undefined : parseFloat(e.target.value) })} dir="ltr" /></div>
                     <div className="lsd-form-group"><label className="lsd-form-label">نوع الشريك</label><select className="lsd-form-input" value={newPartner.partner_type || ''} onChange={e => setNewPartner({ ...newPartner, partner_type: e.target.value as any })}><option value="">اختر</option>{Object.entries(PARTNER_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
                   </div>
@@ -419,6 +462,9 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
         </div>
       </div>
 
+      </div>
+
+      <aside className="lsd2-overview__side">
       {/* ── بطاقة ما بعد السجل التجاري ── */}
       <div className="lsd-card">
         <div className="lsd-card__header">
@@ -477,29 +523,55 @@ const CompanyFormationWorkspace: React.FC<WorkspaceProps> = ({ service, refreshS
       </div>
 
       {/* ── بطاقة قائمة المستندات ── */}
-      {checklist.length > 0 && (
-        <div className="lsd-card">
-          <div className="lsd-card__header">
-            <div className="lsd-card__title"><FileText size={15} /> قائمة المستندات <span className="lsd-tab__count">{completedChecklist}/{checklist.length}</span></div>
-          </div>
-          <div className="lsd-card__content">
-            {/* شريط التقدم */}
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ background: 'var(--quiet-gray-100)', borderRadius: 6, height: 6, overflow: 'hidden' }}>
-                <div style={{ width: `${(completedChecklist / checklist.length) * 100}%`, height: '100%', background: 'var(--status-green)', borderRadius: 6, transition: 'width 0.3s' }} />
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {checklist.map((item, idx) => (
-                <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: checklistLoading ? 'wait' : 'pointer', opacity: checklistLoading ? 0.6 : 1 }}>
-                  <input type="checkbox" checked={item.collected} onChange={() => handleToggleChecklist(idx)} disabled={checklistLoading} />
-                  <span style={{ textDecoration: item.collected ? 'line-through' : 'none', color: item.collected ? 'var(--quiet-gray-400)' : 'var(--quiet-gray-900)' }}>{item.label}</span>
-                </label>
-              ))}
-            </div>
+      <div className="lsd-card">
+        <div className="lsd-card__header">
+          <div className="lsd-card__title">
+            <FileText size={15} /> قائمة المستندات
+            {checklist.length > 0 && <span className="lsd-tab__count">{completedChecklist}/{checklist.length}</span>}
           </div>
         </div>
-      )}
+        <div className="lsd-card__content">
+          {checklist.length === 0 ? (
+            <div className="lsd-empty-state-small">
+              <FileText size={22} />
+              <span>لم تُجهَّز قائمة المستندات — ابدأ بالقائمة المعتادة ثم عدّلها.</span>
+              <button className="lsd-header-btn lsd-header-btn--primary" style={{ marginTop: 8 }} onClick={handleSeedChecklist} disabled={checklistLoading}>
+                <Plus size={13} /> {checklistLoading ? 'جارٍ...' : 'ابدأ بالقائمة المعتادة'}
+              </button>
+            </div>
+          ) : (
+            <>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ background: 'var(--quiet-gray-100)', borderRadius: 6, height: 6, overflow: 'hidden' }}>
+                  <div style={{ width: `${(completedChecklist / checklist.length) * 100}%`, height: '100%', background: 'var(--status-green)', borderRadius: 6, transition: 'width 0.3s' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {checklist.map((item, idx) => (
+                  <div key={item.key ?? idx} className="cfw-doc">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, flex: 1, minWidth: 0, cursor: checklistLoading ? 'wait' : 'pointer' }}>
+                      <input type="checkbox" checked={item.collected} onChange={() => handleToggleChecklist(idx)} disabled={checklistLoading} />
+                      <span style={{ textDecoration: item.collected ? 'line-through' : 'none', color: item.collected ? 'var(--quiet-gray-400)' : 'var(--quiet-gray-900)' }}>{item.label}</span>
+                    </label>
+                    <button className="lsd-doc-action-btn" title="حذف من القائمة" onClick={() => handleRemoveDoc(idx)} disabled={checklistLoading}><X size={13} /></button>
+                  </div>
+                ))}
+              </div>
+              <div className="cfw-addrow">
+                <input
+                  className="lsd-form-input"
+                  value={newDocLabel}
+                  onChange={e => setNewDocLabel(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddDoc(); }}
+                  placeholder="أضف مستنداً آخر…"
+                />
+                <button className="lsd-header-btn" onClick={handleAddDoc} disabled={!newDocLabel.trim() || checklistLoading}><Plus size={13} /></button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      </aside>
     </div>
   );
 };
