@@ -1186,3 +1186,121 @@ body.dark .cdw {
 .cdw-ready li.is-ok svg {
   color: var(--cdw-ok);
 }
+
+/* ─── حوار «خطاب الرأي القانوني»: ما يظهر في الملف ونص إخلاء المسؤولية ─── */
+.cdw-letter {
+  width: min(560px, calc(100vw - 32px));
+  font-family: var(--font-family-base, 'IBM Plex Sans Arabic', sans-serif);
+}
+
+.cdw-letter .lsd-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: min(58vh, 560px);
+  overflow-y: auto;
+}
+
+.cdw-letter__field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+}
+
+.cdw-letter__field > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.cdw-letter__field em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+.cdw-letter__field input,
+.cdw-letter__field textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface, #fff);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.8;
+  resize: vertical;
+}
+
+.cdw-letter__field input:focus,
+.cdw-letter__field textarea:focus {
+  outline: none;
+  border-color: var(--law-navy);
+}
+
+.cdw-letter__group {
+  margin: 0;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cdw-letter__group legend {
+  padding: 0 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.cdw-letter__group legend label,
+.cdw-letter__checks label,
+.cdw-letter__default {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.cdw-letter__checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+}
+
+.cdw-letter input[type='checkbox'] {
+  accent-color: var(--law-navy, #1e3a5f);
+}
+
+.cdw-letter .cdw-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.cdw-letter .cdw-muted,
+.cdw-letter .cdw-audit__warn {
+  margin: 0;
+}
+
+.cdw-letter__default {
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
+  color: var(--color-text);
+}
+
+@media (max-width: 520px) {
+  .cdw-letter__checks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

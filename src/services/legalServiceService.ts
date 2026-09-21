@@ -13,6 +13,7 @@ import type {
   ServiceActivityItem,
   ChecklistItem,
   LegalReference,
+  OpinionLetterOptions,
   LegalOpinion,
   CaseInvoiceItem,
   ServiceDeliverableItem,
@@ -595,8 +596,24 @@ export class LegalServiceService {
     return apiClient.get(`/legal-services/${id}/deliverables`);
   }
 
-  static async generateDeliverable(id: number, type: string): Promise<{ success: boolean; data: ServiceDeliverableItem; message?: string }> {
-    return apiClient.post(`/legal-services/${id}/deliverables/generate`, { type });
+  static async generateDeliverable(
+    id: number,
+    type: string,
+    options?: Partial<OpinionLetterOptions>,
+  ): Promise<{ success: boolean; data: ServiceDeliverableItem; message?: string }> {
+    return apiClient.post(`/legal-services/${id}/deliverables/generate`, options ? { type, options } : { type });
+  }
+
+  /** شكل خطاب الرأي: افتراض المكتب + الفعّال لهذه الخدمة + النص المدمج */
+  static async getOpinionLetterSettings(serviceId?: number): Promise<{
+    success: boolean;
+    data: { office: OpinionLetterOptions; effective: OpinionLetterOptions; builtin: OpinionLetterOptions };
+  }> {
+    return apiClient.get(`/legal-services/opinion-letter-settings${serviceId ? `?service_id=${serviceId}` : ''}`);
+  }
+
+  static async updateOpinionLetterSettings(options: OpinionLetterOptions): Promise<{ success: boolean; data: OpinionLetterOptions }> {
+    return apiClient.put('/legal-services/opinion-letter-settings', { options });
   }
 
   static async deleteDeliverable(id: number, deliverableId: number): Promise<{ success: boolean; message: string }> {

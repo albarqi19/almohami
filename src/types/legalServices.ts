@@ -362,6 +362,20 @@ export interface ConsultationDetail {
   letterhead_id: number | null;
 }
 
+/** ما يظهر في «خطاب الرأي القانوني» — مرآة App\Support\OpinionLetterOptions */
+export interface OpinionLetterOptions {
+  show_classification: boolean;
+  show_finalized_date: boolean;
+  show_question: boolean;
+  show_scope: boolean;
+  show_references: boolean;
+  show_disclaimer: boolean;
+  heading: string;
+  disclaimer_title: string;
+  disclaimer_text: string;
+  closing_text: string;
+}
+
 export interface LegalReference {
   title: string;
   source?: string;

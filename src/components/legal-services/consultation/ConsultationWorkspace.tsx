@@ -26,13 +26,14 @@ import {
 import TiptapEditor from '../../TiptapEditor';
 import LegalRichText from '../LegalRichText';
 import ConfirmDialog from '../../ConfirmDialog';
+import OpinionLetterDialog from './OpinionLetterDialog';
 import { SidePanel } from '../workspace/SidePanel';
 import { usePanelSections } from '../workspace/usePanelSections';
 import { LegalServiceService } from '../../../services/legalServiceService';
 import { apiClient } from '../../../utils/api';
 import { getApiErrorMessage } from '../../../utils/apiError';
 import { stripHtml } from '../../../utils/legalDiff';
-import type { LegalReference, LegalService } from '../../../types/legalServices';
+import type { LegalReference, LegalService, OpinionLetterOptions } from '../../../types/legalServices';
 import { CLASSIFICATION_LABELS, DELIVERY_METHOD_LABELS, URGENCY_LABELS } from '../../../types/legalServices';
 
 /**
@@ -111,8 +112,8 @@ const ConsultationWorkspace: React.FC<ConsultationWorkspaceProps> = ({
   const [aiDraft, setAiDraft] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
-  // الاعتماد: `then` = ما يلي الاعتماد مباشرة (توليد الخطاب حين جاء الطلب من زرّه)
-  const [finalizeAsk, setFinalizeAsk] = useState<{ then: 'none' | 'export' } | null>(null);
+  const [finalizeAsk, setFinalizeAsk] = useState(false);
+  const [letterOpen, setLetterOpen] = useState(false);
 
   const [addingRef, setAddingRef] = useState(false);
   const [refDraft, setRefDraft] = useState<LegalReference>({ title: '', source: '', url: '' });
@@ -335,7 +336,7 @@ const ConsultationWorkspace: React.FC<ConsultationWorkspaceProps> = ({
   // ── الاعتماد وإعادة الفتح ──
   // الخادم لا يولّد خطاب الرأي إلا من رأيٍ معتمد، ويدعم الاعتماد منذ البداية — لكن الواجهة لم يكن
   // فيها زرٌّ يرسله قط، فكان توليد الخطاب يُردّ «اعتمد الرأي أولاً» ولا مكان يُعتمد منه.
-  const finalizeOpinion = async (then: 'none' | 'export') => {
+  const finalizeOpinion = async (): Promise<boolean> => {
     setBusy('finalize');
     try {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -344,12 +345,12 @@ const ConsultationWorkspace: React.FC<ConsultationWorkspaceProps> = ({
       if (!res?.success) throw new Error('تعذّر اعتماد الرأي');
       savedRef.current = html;
       setSaveState('idle');
-      setFinalizeAsk(null);
-      toast.success('اعتُمد الرأي — يمكنك الآن توليد الخطاب الرسمي');
+      setFinalizeAsk(false);
       await refreshService();
-      if (then === 'export') await exportOpinion(true);
+      return true;
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'تعذّر اعتماد الرأي'));
+      return false;
     } finally {
       setBusy(null);
     }
@@ -370,22 +371,22 @@ const ConsultationWorkspace: React.FC<ConsultationWorkspaceProps> = ({
   };
 
   // ── خطاب الرأي PDF ──
-  const exportOpinion = async (justFinalized = false) => {
-    if (!justFinalized && !detail?.opinion_finalized_at) {
-      setFinalizeAsk({ then: 'export' });
-      return;
-    }
+  // الحوار يعرض ما سيظهر في الملف (الأقسام، نص إخلاء المسؤولية، الخاتمة) — ثم: اعتماد إن لزم فتوليد.
+  const generateLetter = async (options: OpinionLetterOptions) => {
+    if (!detail?.opinion_finalized_at && !(await finalizeOpinion())) return;
     setBusy('export');
     try {
-      if (!(await flush())) throw new Error('تعذّر حفظ الرأي قبل التصدير');
-      const res = await LegalServiceService.generateDeliverable(serviceId, 'consultation_opinion');
-      if (!res.success) throw new Error(res.message || 'تعذّر التصدير');
-      const url = (res.data as { download_url?: string }).download_url;
+      if (!(await flush())) throw new Error('تعذّر حفظ الرأي قبل التوليد');
+      const res = await LegalServiceService.generateDeliverable(serviceId, 'consultation_opinion', options);
+      if (!res.success) throw new Error(res.message || 'تعذّر توليد الخطاب');
+      const url = (res.data as { view_url?: string; download_url?: string }).view_url
+        ?? (res.data as { download_url?: string }).download_url;
       if (url) window.open(url, '_blank', 'noopener');
+      setLetterOpen(false);
       toast.success('جُهّز خطاب الرأي — تجده أيضاً في تبويب «الملفات»');
       void refreshService();
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'تعذّر تصدير خطاب الرأي'));
+      toast.error(getApiErrorMessage(err, 'تعذّر توليد خطاب الرأي'));
     } finally {
       setBusy(null);
     }
@@ -499,7 +500,7 @@ const ConsultationWorkspace: React.FC<ConsultationWorkspaceProps> = ({
               <button
                 type="button"
                 className="cdw-btn cdw-btn--primary"
-                onClick={() => setFinalizeAsk({ then: 'none' })}
+                onClick={() => setFinalizeAsk(true)}
                 disabled={!hasOpinion || busy === 'finalize'}
                 title={hasOpinion ? 'يثبّت الرأي ويقفله ضد التعديل — شرطٌ لتوليد الخطاب الرسمي' : 'اكتب الرأي أولاً'}
               >
@@ -510,13 +511,9 @@ const ConsultationWorkspace: React.FC<ConsultationWorkspaceProps> = ({
             <button
               type="button"
               className="cdw-btn"
-              onClick={() => void exportOpinion()}
+              onClick={() => setLetterOpen(true)}
               disabled={!hasOpinion || busy === 'export' || busy === 'finalize'}
-              title={
-                isFinalized
-                  ? 'خطاب الرأي القانوني PDF على ورقة المكتب'
-                  : 'الخطاب يُولَّد من رأيٍ معتمد — سيُطلب منك اعتماده أولاً'
-              }
+              title="خطاب الرأي PDF على ورقة المكتب — تختار ما يظهر فيه وتحرّر نص إخلاء المسؤولية"
             >
               {busy === 'export' ? <Loader2 size={14} className="cdw-spin" /> : <Download size={14} />}
               <span>خطاب الرأي PDF</span>
@@ -775,20 +772,27 @@ const ConsultationWorkspace: React.FC<ConsultationWorkspaceProps> = ({
       </aside>
 
       <ConfirmDialog
-        isOpen={!!finalizeAsk}
+        isOpen={finalizeAsk}
         variant="primary"
         loading={busy === 'finalize'}
-        onClose={() => setFinalizeAsk(null)}
-        onConfirm={() => void finalizeOpinion(finalizeAsk?.then ?? 'none')}
-        confirmLabel={finalizeAsk?.then === 'export' ? 'اعتمد وولّد الخطاب' : 'اعتمد الرأي'}
+        onClose={() => setFinalizeAsk(false)}
+        onConfirm={() => void finalizeOpinion().then((ok) => ok && toast.success('اعتُمد الرأي — يمكنك الآن توليد الخطاب الرسمي'))}
+        confirmLabel="اعتمد الرأي"
         title="اعتماد الرأي القانوني"
-        message={
-          finalizeAsk?.then === 'export'
-            ? 'الخطاب الرسمي يُولَّد من رأيٍ معتمد. باعتماده يُثبَّت النص ويُقفل ضد التعديل، ثم يُولَّد الخطاب على ورقة المكتب.'
-            : 'باعتماد الرأي يُثبَّت النص ويُقفل ضد التعديل هو ومراجعه، ويصير جاهزاً لتوليد الخطاب الرسمي.'
-        }
+        message="باعتماد الرأي يُثبَّت النص ويُقفل ضد التعديل هو ومراجعه، ويصير جاهزاً لتوليد الخطاب الرسمي."
         note="إن احتجت تعديله لاحقاً فأعد فتحه من أعلى الورقة — ما دام لم يُسلَّم للعميل."
       />
+
+      {letterOpen && (
+        <OpinionLetterDialog
+          serviceId={serviceId}
+          needsFinalize={!isFinalized}
+          busy={busy === 'export' || busy === 'finalize'}
+          canSaveOfficeDefault={canManage}
+          onClose={() => setLetterOpen(false)}
+          onGenerate={(options) => void generateLetter(options)}
+        />
+      )}
     </div>
   );
 };
