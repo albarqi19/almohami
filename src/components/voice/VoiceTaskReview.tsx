@@ -24,9 +24,11 @@ import type {
   VoiceTaskPriority,
 } from '../../services/taskService';
 import { interpretVoiceCommand } from '../../services/voiceCommandService';
-import type { VoiceIntent } from '../../services/voiceCommandService';
 import { startCommandCapture } from '../../utils/audioRecorder';
 import type { CommandCapture } from '../../utils/audioRecorder';
+import { isSpeechCommandSupported, startSpeechCommandListener } from '../../utils/speechCommands';
+import type { SpeechCommandListener } from '../../utils/speechCommands';
+import type { VoiceIntent } from '../../utils/voiceIntent';
 
 /**
  * بطاقة مراجعة «مهمة بالصوت» — ما فُهم من التسجيل **قبل** أن يصير مهمة.
@@ -36,6 +38,11 @@ import type { CommandCapture } from '../../utils/audioRecorder';
  *
  * والاعتماد **صوتيّ أولاً**: المايك يُفتح من تلقائه بعد ظهور البطاقة، فيقول المستخدم
  * «اعتمد» وقد قرأ ما أمامه. والأزرار موجودة كاملةً — الصوت طريقٌ أسرع لا طريقٌ وحيد.
+ *
+ * 🔑 و«اعتمد» و«التالي» **لا تمرّان على نموذج ذكاء**: كلمةٌ واحدة لا تستحقّ رفعَ ملفٍ
+ * صوتيّ وانتظارَ ردّ. التعرّفُ يقع في المتصفح والتصنيفُ بقواعد نصّية، فيُنفَّذ الأمرُ في
+ * اللحظة التي يُنطق فيها. والمسارُ القديم (تسجيل ⟵ الخادم) باقٍ احتياطاً للمتصفحات
+ * التي لا تدعم التعرّف على الكلام — الميزةُ تعمل عند الجميع، وتكون فوريّةً عند الأكثرين.
  *
  * ومهمّتان في تسجيل واحد تُعرضان بطاقتين متتابعتين: «اعتمد الكل» لا يُفتح إلا بعد رؤية
  * كلّ بطاقة، ثم تُنشأ الدفعة ولا تُفتح أيّ مهمة — لأن فتح واحدةٍ من ثلاثٍ اختيارٌ أعمى.
@@ -49,8 +56,10 @@ interface VoiceTaskReviewProps {
 }
 
 type ListenPhase = 'off' | 'listening' | 'interpreting';
+/** `speech` = تعرّف المتصفح (فوريّ) · `audio` = تسجيل ثم الخادم (احتياطيّ) */
+type Engine = 'speech' | 'audio';
 
-/** سقف دورات الاستماع المتتالية بلا كلام — مايكٌ مفتوحٌ بلا نهاية ليس خياراً */
+/** سقف دورات الاستماع المتتالية بلا كلام في المسار الاحتياطي وحده */
 const MAX_IDLE_CYCLES = 6;
 const IDLE_MS = 10_000;
 
@@ -61,34 +70,38 @@ const PRIORITY_LABELS: Record<VoiceTaskPriority, string> = {
   urgent: 'عاجلة',
 };
 
-const HINT_BY_INTENT: Partial<Record<VoiceIntent, string>> = {
-  unknown: 'لم أفهم الأمر — قل «اعتمد» أو «التالي» أو «ألغِ»',
-};
-
 const VoiceTaskReview: React.FC<VoiceTaskReviewProps> = ({ preview, onCancel, onApproved }) => {
   const [drafts, setDrafts] = useState<VoiceTaskDraft[]>(preview.tasks);
   const [index, setIndex] = useState(0);
   const [seen, setSeen] = useState<Set<string>>(() => new Set(preview.tasks.slice(0, 1).map((t) => t.key)));
   const [listen, setListen] = useState<ListenPhase>('off');
+  const [engine, setEngine] = useState<Engine>(() => (isSpeechCommandSupported() ? 'speech' : 'audio'));
+  const [interim, setInterim] = useState<string | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [level, setLevel] = useState(0);
 
+  const speechRef = useRef<SpeechCommandListener | null>(null);
   const captureRef = useRef<CommandCapture | null>(null);
   const idleCyclesRef = useRef(0);
   const listenRef = useRef<ListenPhase>('off');
+  const engineRef = useRef<Engine>(engine);
   const savingRef = useRef(false);
   const rafRef = useRef<number | undefined>(undefined);
-  /** مرجع حيّ: الالتقاط التلقائي ينتهي خارج دورة العرض فلا يرى الحالة الجديدة */
+  /** مراجع حيّة: هذه النداءات تقع خارج دورة العرض فلا ترى الحالة الجديدة */
   const handleAudioRef = useRef<(wav: Blob | null) => void>(() => {});
+  const handleIntentRef = useRef<(intent: VoiceIntent, text: string) => void>(() => {});
+  const startListeningRef = useRef<() => void>(() => {});
+
+  engineRef.current = engine;
 
   /**
    * 🩸 المرجعُ يُكتب **مع** الحالة لا عند العرض.
    *
-   * دورةُ الاستماع تُغلق ثم تفتح في النَّفَس نفسِه (`setListenPhase('off')` ثم `startListening()`),
-   * وReact لا يعيد العرض بينهما — فمرجعٌ يُسنَد عند العرض يبقى `'listening'` لحظةَ الفتح،
-   * فيرتدّ الحارسُ ويُغلق المايك إلى الأبد بلا خطأٍ ظاهر. والإسنادُ الصريح يزيل السباق.
+   * دورةُ الاستماع تُغلق ثم تفتح في النَّفَس نفسِه، وReact لا يعيد العرض بينهما — فمرجعٌ
+   * يُسنَد عند العرض يبقى `'listening'` لحظةَ الفتح، فيرتدّ الحارسُ ويُغلق المايك إلى
+   * الأبد بلا خطأٍ ظاهر. والإسنادُ الصريح يزيل السباق.
    */
   const setListenPhase = useCallback((next: ListenPhase) => {
     listenRef.current = next;
@@ -151,17 +164,54 @@ const VoiceTaskReview: React.FC<VoiceTaskReviewProps> = ({ preview, onCancel, on
   };
 
   const stopListening = useCallback(() => {
+    speechRef.current?.stop();
+    speechRef.current = null;
     captureRef.current?.cancel();
     captureRef.current = null;
     stopMeter();
+    setInterim(null);
     setListenPhase('off');
   }, [setListenPhase]);
 
-  const startListening = useCallback(
-    async (resetCycles = true) => {
-      if (listenRef.current !== 'off' || savingRef.current) return;
-      if (resetCycles) idleCyclesRef.current = 0;
+  /** المسار الفوريّ: تعرّف المتصفح — بلا رفعٍ ولا انتظار */
+  const startSpeech = useCallback(() => {
+    const listener = startSpeechCommandListener({
+      onCommand: (intent, text) => handleIntentRef.current(intent, text),
+      onInterim: (text) => setInterim(text),
+      onUnrecognized: (text) => {
+        setInterim(null);
+        setHeard(text);
+        setHint('لم أفهم — قل «اعتمد» أو «التالي» أو «ألغِ»');
+      },
+      onFailure: (reason) => {
+        speechRef.current = null;
+        setListenPhase('off');
+        if (reason === 'denied') {
+          setHint('المايك محجوب — استخدم الأزرار للاعتماد');
+          return;
+        }
+        // المحرّك لا يعمل هنا: ننتقل للمسار الاحتياطي بدل أن نترك المستخدم بلا صوت
+        setEngine('audio');
+        engineRef.current = 'audio';
+        startListeningRef.current();
+      },
+    });
 
+    if (!listener) {
+      setEngine('audio');
+      engineRef.current = 'audio';
+      startListeningRef.current();
+      return;
+    }
+
+    speechRef.current = listener;
+    setListenPhase('listening');
+  }, [setListenPhase]);
+
+  /** المسار الاحتياطي: تسجيلٌ قصير يُغلق بالصمت ثم يُفهَم في الخادم */
+  const startCapture = useCallback(
+    async (resetCycles: boolean) => {
+      if (resetCycles) idleCyclesRef.current = 0;
       setListenPhase('listening');
       setHeard(null);
       try {
@@ -186,6 +236,17 @@ const VoiceTaskReview: React.FC<VoiceTaskReviewProps> = ({ preview, onCancel, on
     },
     [setListenPhase],
   );
+
+  const startListening = useCallback(
+    (resetCycles = true) => {
+      if (listenRef.current !== 'off' || savingRef.current) return;
+      if (engineRef.current === 'speech') startSpeech();
+      else void startCapture(resetCycles);
+    },
+    [startSpeech, startCapture],
+  );
+
+  startListeningRef.current = () => startListening();
 
   // ─── الاعتماد ───
 
@@ -232,12 +293,25 @@ const VoiceTaskReview: React.FC<VoiceTaskReviewProps> = ({ preview, onCancel, on
       setSavingFlag(false);
       toast.error(err instanceof Error ? err.message : 'تعذّر اعتماد المهام');
     }
-  }, [drafts, multi, allSeen, seen, unseenCount, goTo, preview.transcript, onApproved, stopListening, setSavingFlag]);
+  }, [
+    drafts,
+    multi,
+    allSeen,
+    seen,
+    unseenCount,
+    goTo,
+    preview.transcript,
+    onApproved,
+    stopListening,
+    setSavingFlag,
+  ]);
 
-  // ─── تنفيذ النيّة المسموعة ───
+  // ─── تنفيذ النيّة ───
 
+  /** @returns true حين تنتهي جلسة الاستماع بهذه النيّة */
   const applyIntent = useCallback(
-    (intent: VoiceIntent, transcript: string) => {
+    (intent: VoiceIntent, transcript: string): boolean => {
+      setInterim(null);
       setHeard(transcript || null);
 
       switch (intent) {
@@ -265,14 +339,21 @@ const VoiceTaskReview: React.FC<VoiceTaskReviewProps> = ({ preview, onCancel, on
           setHint('عدّل ما تشاء ثم اضغط «اعتمد» — أو اضغط المايك لتعود للأمر الصوتي');
           return true;
         default:
-          setHint(HINT_BY_INTENT.unknown ?? null);
+          setHint('لم أفهم — قل «اعتمد» أو «التالي» أو «ألغِ»');
           return false;
       }
     },
     [approve, drafts.length, goTo, index, multi, onCancel, stopListening],
   );
 
-  // الالتقاط انتهى: إمّا كلامٌ يُفسَّر، وإمّا صمتٌ يُعاد الاستماع بعده ضمن السقف
+  // المسار الفوريّ: التعرّف مستمرّ، فلا يُعاد تشغيله إلا إذا أنهت النيّةُ الجلسة
+  handleIntentRef.current = (intent, text) => {
+    if (applyIntent(intent, text) && intent !== 'approve' && intent !== 'cancel') {
+      stopListening();
+    }
+  };
+
+  // المسار الاحتياطي: صمتٌ يُعاد الاستماع بعده ضمن السقف، وكلامٌ يُرسَل ليُفهَم
   handleAudioRef.current = (wav: Blob | null) => {
     captureRef.current = null;
     stopMeter();
@@ -281,7 +362,7 @@ const VoiceTaskReview: React.FC<VoiceTaskReviewProps> = ({ preview, onCancel, on
       idleCyclesRef.current += 1;
       setListenPhase('off');
       if (idleCyclesRef.current < MAX_IDLE_CYCLES) {
-        void startListening(false);
+        void startCapture(false);
       } else {
         setHint('أُغلق المايك — اضغطه لتقول «اعتمد» أو استخدم الأزرار');
       }
@@ -295,7 +376,7 @@ const VoiceTaskReview: React.FC<VoiceTaskReviewProps> = ({ preview, onCancel, on
       .then(({ intent, transcript }) => {
         const terminal = applyIntent(intent, transcript);
         setListenPhase('off');
-        if (!terminal) void startListening(false);
+        if (!terminal) void startCapture(false);
       })
       .catch(() => {
         setListenPhase('off');
@@ -305,14 +386,15 @@ const VoiceTaskReview: React.FC<VoiceTaskReviewProps> = ({ preview, onCancel, on
 
   // فتح المايك تلقائياً عند ظهور البطاقة
   useEffect(() => {
-    void startListening();
+    startListeningRef.current();
     return () => {
+      speechRef.current?.stop();
+      speechRef.current = null;
       captureRef.current?.cancel();
       captureRef.current = null;
       if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current);
     };
-    // مرة واحدة عند التركيب — إعادة الاستماع تُدار من handleAudioRef
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // مرة واحدة عند التركيب — إعادة الاستماع تُدار من المراجع الحيّة
   }, []);
 
   // 🩸 الكتابة في حقلٍ تُغلق المايك: المستخدم يعدّل لا يعتمد، ولولا ذلك لعمل مسجّلان
@@ -337,10 +419,11 @@ const VoiceTaskReview: React.FC<VoiceTaskReviewProps> = ({ preview, onCancel, on
 
   const listenLabel = useMemo(() => {
     if (saving) return 'جارٍ الإنشاء…';
+    if (interim) return interim;
     if (listen === 'interpreting') return 'أفهم الأمر…';
     if (listen === 'listening') return multi && !allSeen ? 'قل «التالي» أو «اعتمد»' : 'قل «اعتمد»';
     return 'اضغط المايك لتأمر بصوتك';
-  }, [listen, saving, multi, allSeen]);
+  }, [listen, saving, multi, allSeen, interim]);
 
   if (!current) return null;
 
@@ -519,7 +602,7 @@ const VoiceTaskReview: React.FC<VoiceTaskReviewProps> = ({ preview, onCancel, on
             <button
               type="button"
               className="vtr__mic"
-              onClick={() => (listen === 'off' ? void startListening() : stopListening())}
+              onClick={() => (listen === 'off' ? startListening() : stopListening())}
               disabled={saving || listen === 'interpreting'}
               aria-label={listen === 'off' ? 'تشغيل الأمر الصوتي' : 'إيقاف المايك'}
             >
@@ -531,8 +614,11 @@ const VoiceTaskReview: React.FC<VoiceTaskReviewProps> = ({ preview, onCancel, on
                 <MicOff size={14} />
               )}
             </button>
-            <span className="vtr__listen-label">{listenLabel}</span>
-            {listen === 'listening' && (
+            <span className={`vtr__listen-label${interim ? ' is-interim' : ''}`} aria-live="polite">
+              {listenLabel}
+            </span>
+            {/* مؤشّر الشدّة للمسار الاحتياطي وحده — الفوريّ يعرض الكلمات نفسها */}
+            {listen === 'listening' && engine === 'audio' && (
               <span className="vtr__level" aria-hidden="true">
                 <i style={{ transform: `scaleX(${(0.08 + level * 0.92).toFixed(3)})` }} />
               </span>

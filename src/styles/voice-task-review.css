@@ -442,6 +442,16 @@ body.dark .vtr__subtasks-head button {
   font-size: 11.5px;
   color: var(--color-text-secondary, #64748b);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* الكلمات كما تُسمع الآن — دليلٌ حيّ أن المايك يعمل، وهو أصدق من مؤشّر شدّة */
+.vtr__listen-label.is-interim {
+  color: var(--law-gold, #b8860b);
+  font-weight: 600;
+  font-style: italic;
 }
 
 .vtr__mic-strip.is-on .vtr__listen-label {
