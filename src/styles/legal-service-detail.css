@@ -202,6 +202,11 @@ body.dark .lsd-header-btn--icon {
     gap: 0;
 }
 
+/* الخطوات في الطريق: نحجز ارتفاع الشريط كي لا يقفز ما تحته حين تصل */
+.lsd-status-pipeline--pending {
+    min-height: 87px;
+}
+
 .lsd-pipeline-step {
     display: flex;
     align-items: center;

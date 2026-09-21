@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -94,11 +94,14 @@ import {
   CONTRACT_LANGUAGE_LABELS,
   CONVERTIBLE_SERVICE_TYPES,
 } from '../../types/legalServices';
-import { WorkspaceRegistry } from '../../components/legal-services/workspaces';
+import { WorkspaceRegistry, SkeletonCard } from '../../components/legal-services/workspaces';
 import { usePermission } from '../../hooks/usePermission';
 // الستايل يُحمَّل مركزياً عبر styles/appStyles.ts (ترتيب حقن ثابت — انظر التوثيق هناك)
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+// خط سير الحالات ثابت لكل نوع خدمة — يكفي جلبه مرة واحدة في الجلسة
+const statusFlowCache = new Map<string, StatusFlowItem[]>();
 
 const STATUS_LABELS: Record<string, string> = {
   // عام
@@ -450,10 +453,14 @@ const tabVariants = {
 interface StatusPipelineProps {
   steps: StatusFlowItem[];
   currentStatus: string;
+  /** الخطوات في الطريق — نحجز ارتفاع الشريط كي لا يقفز المحتوى تحته حين تصل. */
+  pending?: boolean;
 }
 
-const StatusPipeline: React.FC<StatusPipelineProps> = ({ steps, currentStatus }) => {
-  if (!steps.length) return null;
+const StatusPipeline: React.FC<StatusPipelineProps> = ({ steps, currentStatus, pending = false }) => {
+  if (!steps.length) {
+    return pending ? <div className="lsd-status-pipeline lsd-status-pipeline--pending" aria-hidden="true" /> : null;
+  }
 
   const currentIndex = steps.findIndex((s) => s.status === currentStatus);
 
@@ -884,6 +891,7 @@ const LegalServiceDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('info');
   const [statusFlow, setStatusFlow] = useState<StatusFlowItem[]>([]);
+  const [statusFlowPending, setStatusFlowPending] = useState(false);
 
   // ── Action state ──
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -1060,57 +1068,101 @@ const LegalServiceDetail: React.FC = () => {
   }, []);
 
   // ── Fetch service ──
+  // آخر `id` رُسمت خدمته فعلاً، ورقم آخر طلب — يحميان من ردٍّ متأخر لخدمةٍ غادرها المستخدم.
+  const loadedIdRef = useRef<string | null>(null);
+  const fetchSeqRef = useRef(0);
+
+  /**
+   * البيانات الثانوية (خط سير الحالات/ملخص الوقت/مهام التكليف/المؤقت النشط).
+   *
+   * كانت تُجلب **واحداً بعد الآخر** قبل رسم أي شيء — خمس رحلات متتالية إلى الخادم
+   * والصفحة على دوّامة التحميل، بينما الخدمة المبسطة ترسم بعد رحلةٍ واحدة. الآن
+   * تنطلق معاً بعد وصول الخدمة ولا تحجب الرسم، وكلٌّ منها يملأ مكانه حين يصل.
+   * فشلها لا يعطّل الصفحة، فلا نُغرق المستخدم بـ toasts — نكتفي بتسجيلها للمطوّر.
+   */
+  const loadSecondary = useCallback((serviceId: number, serviceType: string, seq: number) => {
+    const isCurrent = () => fetchSeqRef.current === seq;
+
+    // خط سير الحالات ثابت لكل نوع — يُجلب مرة واحدة في الجلسة
+    if (!statusFlowCache.has(serviceType)) {
+      setStatusFlowPending(true);
+      LegalServiceService.getStatusFlow(serviceType)
+        .then((flowRes) => {
+          if (!flowRes.success) return;
+          statusFlowCache.set(serviceType, flowRes.data);
+          if (isCurrent()) setStatusFlow(flowRes.data);
+        })
+        .catch((err) => console.warn('status-flow:', getApiErrorMessage(err)))
+        .finally(() => {
+          if (isCurrent()) setStatusFlowPending(false);
+        });
+    }
+
+    LegalServiceService.getTimeSummary(serviceId)
+      .then((summaryRes) => {
+        if (summaryRes.success && isCurrent()) setTimeSummary(summaryRes.data);
+      })
+      .catch((err) => console.warn('time-summary:', getApiErrorMessage(err)));
+
+    // مهام التكليف المرتبطة بالخدمة — تُغذّي بطاقة «جاهزة للعميل» بعد الاعتماد
+    TaskService.getTasks({ legal_service_id: serviceId, per_page: 50 })
+      .then((tasksRes) => {
+        if (isCurrent()) setServiceTasks(Array.isArray(tasksRes?.data) ? tasksRes.data : []);
+      })
+      .catch((err) => console.warn('service-tasks:', getApiErrorMessage(err)));
+
+    LegalServiceService.getActiveTimer()
+      .then((activeRes) => {
+        if (!isCurrent() || !activeRes.success || !activeRes.data) return;
+        setActiveTimerEntry(activeRes.data);
+        setTimerRunning(true);
+        const started = new Date(activeRes.data.started_at).getTime();
+        setTimerSeconds(Math.floor((Date.now() - started) / 1000));
+      })
+      .catch((err) => console.warn('active-timer:', getApiErrorMessage(err)));
+  }, []);
+
+  /**
+   * دوّامة التحميل للفتح الأول فقط (أو عند الانتقال إلى خدمةٍ أخرى).
+   *
+   * كل إجراء في الصفحة ومساحات العمل (تأشير بند، حفظ إصدار، رفع مستند…) يُنادي
+   * `fetchService` ليُحدّث البيانات — وكانت تُشعل `loading` في كل مرة، فتُستبدل
+   * الصفحة كلها بالدوّامة ثم تُبنى من جديد: يضيع موضع التمرير وحالة المحرر وما فُتح
+   * من نماذج. بعد الفتح الأول يصير التحديث صامتاً في مكانه.
+   */
   const fetchService = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
-    setError(null);
+    const seq = ++fetchSeqRef.current;
+    const firstLoad = loadedIdRef.current !== id;
+    if (firstLoad) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const res = await LegalServiceService.getService(Number(id));
+      if (fetchSeqRef.current !== seq) return;
       if (res.success) {
+        const cachedFlow = statusFlowCache.get(res.data.service_type);
+        if (cachedFlow) setStatusFlow(cachedFlow);
+        else if (firstLoad) setStatusFlow([]);
         setService(res.data);
-        // بيانات ثانوية (خط سير الحالات/ملخص الوقت/المؤقت النشط): فشلها لا يعطّل
-        // الصفحة، فلا نُغرق المستخدم بـ toasts عند التحميل — نكتفي بتسجيلها للمطوّر.
-        try {
-          const flowRes = await LegalServiceService.getStatusFlow(res.data.service_type);
-          if (flowRes.success) setStatusFlow(flowRes.data);
-        } catch (err) {
-          console.warn('status-flow:', getApiErrorMessage(err));
-        }
-        // Fetch time summary
-        try {
-          const summaryRes = await LegalServiceService.getTimeSummary(Number(id));
-          if (summaryRes.success) setTimeSummary(summaryRes.data);
-        } catch (err) {
-          console.warn('time-summary:', getApiErrorMessage(err));
-        }
-        // مهام التكليف المرتبطة بالخدمة — تُغذّي بطاقة «جاهزة للعميل» بعد الاعتماد
-        try {
-          const tasksRes = await TaskService.getTasks({ legal_service_id: Number(id), per_page: 50 });
-          setServiceTasks(Array.isArray(tasksRes?.data) ? tasksRes.data : []);
-        } catch (err) {
-          console.warn('service-tasks:', getApiErrorMessage(err));
-        }
-        // Check active timer
-        try {
-          const activeRes = await LegalServiceService.getActiveTimer();
-          if (activeRes.success && activeRes.data) {
-            setActiveTimerEntry(activeRes.data);
-            setTimerRunning(true);
-            const started = new Date(activeRes.data.started_at).getTime();
-            setTimerSeconds(Math.floor((Date.now() - started) / 1000));
-          }
-        } catch (err) {
-          console.warn('active-timer:', getApiErrorMessage(err));
-        }
-      } else {
+        loadedIdRef.current = id;
+        loadSecondary(Number(id), res.data.service_type, seq);
+      } else if (firstLoad) {
         setError('تعذّر تحميل بيانات الخدمة');
       }
     } catch (err) {
-      // نعرض رسالة الخادم الفعلية (404/403...) بدل نص عام
-      setError(getApiErrorMessage(err, 'حدث خطأ في الاتصال بالخادم'));
+      if (fetchSeqRef.current !== seq) return;
+      if (firstLoad) {
+        // نعرض رسالة الخادم الفعلية (404/403...) بدل نص عام
+        setError(getApiErrorMessage(err, 'حدث خطأ في الاتصال بالخادم'));
+      } else {
+        // التحديث الصامت يلي إجراءً نجح فعلاً — فشله لا يُبلَّغ كفشلٍ للإجراء
+        console.warn('service-refresh:', getApiErrorMessage(err));
+      }
     }
-    setLoading(false);
-  }, [id]);
+    if (firstLoad) setLoading(false);
+  }, [id, loadSecondary]);
 
   /**
    * إعادة تحميلٍ صامتة: تحدّث بيانات الخدمة **بلا** إشعال `loading` العام.
@@ -2722,7 +2774,12 @@ const LegalServiceDetail: React.FC = () => {
     // التحقق من وجود workspace مسجّل لهذا النوع
     const Workspace = WorkspaceRegistry[service.service_type];
     if (Workspace) {
-      return <Workspace service={service} refreshService={fetchService} />;
+      // المساحة تُحمَّل عند الطلب — الانتظار محصور هنا كي لا تومض الصفحة كلها
+      return (
+        <Suspense fallback={<SkeletonCard lines={5} />}>
+          <Workspace service={service} refreshService={fetchService} />
+        </Suspense>
+      );
     }
 
     return (
@@ -3826,7 +3883,7 @@ const LegalServiceDetail: React.FC = () => {
       </header>
 
       {/* ── Status Pipeline ── */}
-      <StatusPipeline steps={statusFlow} currentStatus={service.status} />
+      <StatusPipeline steps={statusFlow} currentStatus={service.status} pending={statusFlowPending} />
 
       {/* ── حالة التكليف: بانتظار الاعتماد أو جاهزة للعميل ── */}
       {renderAssignmentCard()}

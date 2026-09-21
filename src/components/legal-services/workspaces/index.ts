@@ -1,30 +1,23 @@
-import React from 'react';
+import type { ComponentType } from 'react';
 import type { WorkspaceProps } from './types';
-
-// ── استيراد مساحات العمل ──
-import LegalNoticesWorkspace from './LegalNoticesWorkspace';
-import TrainingWorkspace from './TrainingWorkspace';
-import ArbitrationWorkspace from './ArbitrationWorkspace';
-import CompanyFormationWorkspace from './CompanyFormationWorkspace';
-import LaborWorkspace from './LaborWorkspace';
-import ComplianceWorkspace from './ComplianceWorkspace';
-import RealEstateWorkspace from './RealEstateWorkspace';
-import IpWorkspace from './IpWorkspace';
-import DueDiligenceWorkspace from './DueDiligenceWorkspace';
-import LicensesWorkspace from './LicensesWorkspace';
+import { lazyWithRetry } from '../../../utils/lazyWithRetry';
 
 // ── سجل مساحات العمل ──
-export const WorkspaceRegistry: Record<string, React.FC<WorkspaceProps>> = {
-  legal_notices: LegalNoticesWorkspace,
-  training: TrainingWorkspace,
-  arbitration: ArbitrationWorkspace,
-  company_formation: CompanyFormationWorkspace,
-  labor: LaborWorkspace,
-  compliance: ComplianceWorkspace,
-  real_estate: RealEstateWorkspace,
-  ip: IpWorkspace,
-  due_diligence: DueDiligenceWorkspace,
-  licenses: LicensesWorkspace,
+// كل مساحة تُحمَّل عند الطلب: كانت العشر كلها (~6 آلاف سطر) تُستورد مع صفحة الخدمة،
+// فمن يفتح خدمة «صياغة عقود» يحمّل مساحات التحكيم والعقار والتدريب… ولا يرى منها شيئاً.
+// من يعرض `Workspace` يلفّه بـ`<Suspense>` قريب — وإلا سقط الانتظار إلى حدّ المسار
+// فومضت الصفحة كلها.
+export const WorkspaceRegistry: Record<string, ComponentType<WorkspaceProps>> = {
+  legal_notices: lazyWithRetry(() => import('./LegalNoticesWorkspace')),
+  training: lazyWithRetry(() => import('./TrainingWorkspace')),
+  arbitration: lazyWithRetry(() => import('./ArbitrationWorkspace')),
+  company_formation: lazyWithRetry(() => import('./CompanyFormationWorkspace')),
+  labor: lazyWithRetry(() => import('./LaborWorkspace')),
+  compliance: lazyWithRetry(() => import('./ComplianceWorkspace')),
+  real_estate: lazyWithRetry(() => import('./RealEstateWorkspace')),
+  ip: lazyWithRetry(() => import('./IpWorkspace')),
+  due_diligence: lazyWithRetry(() => import('./DueDiligenceWorkspace')),
+  licenses: lazyWithRetry(() => import('./LicensesWorkspace')),
 };
 
 export type { WorkspaceProps } from './types';
