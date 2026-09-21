@@ -162,7 +162,8 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
         priority: formData.priority as any,
         dueDate: new Date(formData.due_date),
         startDate: formData.start_date ? new Date(formData.start_date) : undefined,
-        autoStart: Boolean(formData.start_date) && formData.auto_start,
+        // تاريخُ البداية نفسُه هو الإعلان — لا خانةَ فوقه (انظر الحقل أعلاه)
+        autoStart: Boolean(formData.start_date),
         estimatedHours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : undefined,
         requiresApproval: formData.requires_approval,
         requiresAttachment: formData.requires_attachment,
@@ -261,24 +262,14 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                     max={formData.due_date || undefined}
                     onChange={(e) => updateField('start_date', e.target.value)}
                   />
-                  {/* الخيارُ لا يظهر بلا بداية: وعدٌ بلا موعدٍ لا يتحقّق،
-                      والباك يفرض القاعدةَ نفسها فلا يُخزَّن `auto_start` بلا `start_date`.
-                      🩸 والنصُّ قصيرٌ عمداً: الخليّةُ ~226 بكسل، وأيُّ عبارةٍ أطول
-                      تنكسر داخل الحبّة إلى أسطر. الشرحُ في الـtooltip. */}
-                  {formData.start_date && (
-                    <label
-                      className={`task-req-chip task-autostart-chip${formData.auto_start ? ' is-on' : ''}`}
-                      title="تتحوّل المهمة من «لم تبدأ» إلى «قيد التنفيذ» عند حلول هذا الوقت. لا تُلمَس إن كنتَ قد بدأتَها أو أوقفتَها بنفسك."
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.auto_start}
-                        onChange={(e) => updateField('auto_start', e.target.checked)}
-                      />
-                      <PlayCircle size={12} />
-                      بدء تلقائي
-                    </label>
-                  )}
+                  {/* 🩸 حُذفت خانة «بدء تلقائي»: كانت تَعِد بما صار افتراضاً.
+                      المهمّة الآن تولد «قيد التنفيذ»، وتاريخُ البداية المستقبليّ وحدَه
+                      هو ما يجعلها «لم تبدأ» حتى يحلّ موعدُها — فخانةٌ فوقه تُعطّل
+                      الوعدَ لا تمنحه (وكانت مطفأةً في كل الصفوف المقيسة).
+                      🩸 والنصُّ قصيرٌ عمداً: الخليّةُ ~226 بكسل، وأيُّ عبارةٍ أطول تنكسر. */}
+                  <span className="task-start-hint">
+                    {formData.start_date ? 'تبدأ في موعدها' : 'تبدأ الآن'}
+                  </span>
                 </div>
               </div>
 
