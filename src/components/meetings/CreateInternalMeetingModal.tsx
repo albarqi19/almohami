@@ -88,7 +88,9 @@ const CreateInternalMeetingModal: React.FC<Props> = ({
       name: a.display_name ?? '',
       email: a.email ?? '',
       phone: a.phone ?? '',
-      notify_opted_in: false,
+      // ‏موافقتُه المحفوظة لا false مثبّتة: الإرسال يستبدل القيمة، فكان كل تعديل
+      // ‏يُلغي موافقةَ الضيف على تنبيه واتساب صامتاً.
+      notify_opted_in: a.notify_opted_in ?? false,
     })) ?? []
   );
 
