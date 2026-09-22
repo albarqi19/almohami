@@ -133,7 +133,8 @@ export interface ClientMeeting {
   client_name: string | null;
   client_email: string | null;
   client_phone: string | null;
-  title: string;
+  /** قابل للفراغ فعلاً — الموعد المنشأ مباشرةً بلا عنوان يُحفظ null */
+  title: string | null;
   notes: string | null;
   scheduled_at: string;
   duration_minutes: number;
@@ -254,8 +255,9 @@ export interface CreateClientMeetingData {
   client_name?: string;
   client_email?: string;
   client_phone?: string;
-  title: string;
+  title?: string;
   notes?: string;
+  /** «YYYY-MM-DD HH:mm:ss» ساعة حائط بتوقيت الرياض — بلا لاحقة Z */
   scheduled_at: string;
   duration_minutes: number;
   timezone?: string;
@@ -263,6 +265,41 @@ export interface CreateClientMeetingData {
   location?: string;
   video_meeting_url?: string;
 }
+
+/**
+ * تعديل موعد عميل — يُرسل **المتغيّر وحده**: الخادم يرفض وقتاً ماضياً، فإعادة
+ * إرسال وقتٍ لم يتغيّر كانت ستمنع تعديل ملاحظات موعدٍ بدأ.
+ */
+export interface UpdateClientMeetingData {
+  title?: string | null;
+  notes?: string | null;
+  scheduled_at?: string;
+  duration_minutes?: number;
+  meeting_type?: 'in_person' | 'remote';
+  location?: string | null;
+  video_meeting_url?: string | null;
+}
+
+/** مرشّحات قائمة مواعيد العملاء — التاريخان «YYYY-MM-DD» بتوقيت الرياض */
+export interface ClientMeetingQuery {
+  status?: string;
+  lawyer_id?: number;
+  from_date?: string;
+  to_date?: string;
+}
+
+/** صفحةٌ كما يرجعها paginate() في Laravel */
+interface LaravelPage<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
+// جمعُ الصفحات بسقف أمان: 100 × 50 = 5000 موعد في النافذة — فوق أي مكتبٍ رأيناه،
+// ويمنع حلقةً بلا نهاية إن عاد last_page خاطئاً.
+const CLIENT_MEETINGS_PAGE_SIZE = 100;
+const CLIENT_MEETINGS_MAX_PAGES = 50;
 
 // ==========================================
 // Internal Meeting Service
@@ -461,24 +498,36 @@ export const internalMeetingService = {
 // ==========================================
 
 export const clientMeetingService = {
-  // جلب جميع اجتماعات العملاء
-  async getAll(params?: { status?: string; lawyer_id?: number; from?: string; to?: string }): Promise<ClientMeeting[]> {
-    let endpoint = '/meetings/client';
-    if (params) {
-      const queryParams = new URLSearchParams();
-      if (params.status) queryParams.append('status', params.status);
-      if (params.lawyer_id) queryParams.append('lawyer_id', params.lawyer_id.toString());
-      if (params.from) queryParams.append('from', params.from);
-      if (params.to) queryParams.append('to', params.to);
-      const queryString = queryParams.toString();
-      if (queryString) endpoint += `?${queryString}`;
+  /**
+   * مواعيد العملاء في النافذة المطلوبة — **كل الصفحات**.
+   *
+   * الخادم يقسّم بـpaginate (15 افتراضياً) وكانت الصفحة الأولى وحدها تُقرأ: أبعد
+   * 15 موعداً فقط، فتختفي مواعيد اليوم في مكتبٍ نشط، ويكذب العدّاد والتقويم
+   * والتصدير. وكان المرشّحان يُرسلان باسمَي from/to والخادم يقرأ from_date/to_date.
+   */
+  async getAll(params: ClientMeetingQuery = {}): Promise<ClientMeeting[]> {
+    const query = new URLSearchParams();
+    if (params.status) query.append('status', params.status);
+    if (params.lawyer_id) query.append('lawyer_id', String(params.lawyer_id));
+    if (params.from_date) query.append('from_date', params.from_date);
+    if (params.to_date) query.append('to_date', params.to_date);
+    query.append('per_page', String(CLIENT_MEETINGS_PAGE_SIZE));
+
+    const all: ClientMeeting[] = [];
+    for (let page = 1; page <= CLIENT_MEETINGS_MAX_PAGES; page++) {
+      query.set('page', String(page));
+      const response = await apiClient.get<{ success: boolean; data: LaravelPage<ClientMeeting> | ClientMeeting[] }>(
+        `/meetings/client?${query.toString()}`
+      );
+      const payload = response.data;
+
+      // استجابة غير مقسّمة — تأتي كاملةً في طلبٍ واحد
+      if (Array.isArray(payload)) return payload;
+
+      all.push(...(payload?.data ?? []));
+      if (!payload || page >= (payload.last_page ?? 1)) break;
     }
-    const response = await apiClient.get<{ success: boolean; data: { data: ClientMeeting[] } | ClientMeeting[] }>(endpoint);
-    // Handle both paginated and non-paginated responses
-    if (response.data && 'data' in response.data && Array.isArray((response.data as any).data)) {
-      return (response.data as any).data || [];
-    }
-    return Array.isArray(response.data) ? response.data : [];
+    return all;
   },
 
   // جلب الاجتماعات القادمة
@@ -506,8 +555,8 @@ export const clientMeetingService = {
     return response.data;
   },
 
-  // تحديث اجتماع
-  async update(id: number, data: Partial<CreateClientMeetingData>): Promise<ClientMeeting> {
+  // تحديث اجتماع — العميل المؤكَّد موعده يُبلَّغ بما يعنيه (الوقت، النوع، المكان، الرابط)
+  async update(id: number, data: UpdateClientMeetingData): Promise<ClientMeeting> {
     const response = await apiClient.put<{ success: boolean; data: ClientMeeting }>(
       `/meetings/client/${id}`,
       data
@@ -515,11 +564,12 @@ export const clientMeetingService = {
     return response.data;
   },
 
-  // اعتماد طلب موعد قادم من بوابة العميل (pending ⇒ confirmed + رسالة التأكيد للعميل)
-  async confirm(id: number): Promise<ClientMeeting> {
+  // اعتماد طلب موعد قادم من بوابة العميل (pending ⇒ confirmed + رسالة التأكيد للعميل).
+  // videoMeetingUrl: رابط موعدٍ «عن بُعد» يُحفظ مع الاعتماد فتحمله رسالة التأكيد.
+  async confirm(id: number, videoMeetingUrl?: string): Promise<ClientMeeting> {
     const response = await apiClient.patch<{ success: boolean; data: ClientMeeting }>(
       `/meetings/client/${id}/confirm`,
-      {}
+      videoMeetingUrl ? { video_meeting_url: videoMeetingUrl } : {}
     );
     return response.data;
   },
@@ -550,8 +600,8 @@ export const clientMeetingService = {
     return response.data;
   },
 
-  // ربط بقضية
-  async linkToCase(id: number, caseId: number): Promise<ClientMeeting> {
+  // ربط بقضية — null يفكّ الربط
+  async linkToCase(id: number, caseId: number | null): Promise<ClientMeeting> {
     const response = await apiClient.patch<{ success: boolean; data: ClientMeeting }>(
       `/meetings/client/${id}/link-case`,
       { case_id: caseId }

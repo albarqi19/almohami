@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Calendar,
   Clock,
   MapPin,
   Video,
-  User,
   Phone,
   Mail,
   RefreshCw,
@@ -12,7 +12,6 @@ import {
   Plus,
   Link2,
   Copy,
-  ExternalLink,
   MoreVertical,
   XCircle,
   CheckCircle,
@@ -25,7 +24,9 @@ import {
   Download,
   FileImage,
   FileText,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Pencil,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -41,9 +42,28 @@ import CreateBookingLinkModal from '../../components/meetings/CreateBookingLinkM
 import LinkToCaseModal from '../../components/meetings/LinkToCaseModal';
 import MeetingOutcomeModal from '../../components/meetings/MeetingOutcomeModal';
 import ClientMeetingsCalendar from '../../components/meetings/ClientMeetingsCalendar';
+import ClientMeetingFormModal from '../../components/meetings/ClientMeetingFormModal';
+import ClientMeetingDrawer from '../../components/meetings/ClientMeetingDrawer';
+import { ApproveClientMeetingDialog, CancelClientMeetingDialog } from '../../components/meetings/ClientMeetingActionDialogs';
+import {
+  clientDisplayName,
+  clientDisplayPhone,
+  clientMeetingActions,
+  isMissingLink,
+} from '../../components/meetings/clientMeetingHelpers';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { riyadhDayKey } from '../../utils/dateAr';
+import { getApiErrorMessage } from '../../utils/apiError';
+
+/** «YYYY-MM-DD» بيوم الرياض بعد n يوماً من الآن */
+const riyadhDayAfter = (days: number): string => riyadhDayKey(new Date(Date.now() + days * 86_400_000));
 
 const ClientMeetings: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  // ‏/meetings/client/:meetingId — يفتح لوحة الموعد (روابط الإشعارات و«يومي»)
+  const { meetingId } = useParams<{ meetingId?: string }>();
 
   // State
   const [meetings, setMeetings] = useState<ClientMeeting[]>([]);
@@ -52,10 +72,22 @@ const ClientMeetings: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [lawyerFilter, setLawyerFilter] = useState<number | 'all'>('all');
   const [activeTab, setActiveTab] = useState<'meetings' | 'links'>('meetings');
   const [showCreateLinkModal, setShowCreateLinkModal] = useState(false);
-  const [showLinkCaseModal, setShowLinkCaseModal] = useState(false);
-  const [selectedMeeting, setSelectedMeeting] = useState<ClientMeeting | null>(null);
+  const [linkCaseMeeting, setLinkCaseMeeting] = useState<ClientMeeting | null>(null);
+  // 'new' = موعد جديد، وموعدٌ = تعديله
+  const [formMeeting, setFormMeeting] = useState<ClientMeeting | 'new' | null>(null);
+  const [approveMeeting, setApproveMeeting] = useState<ClientMeeting | null>(null);
+  const [cancelMeeting, setCancelMeeting] = useState<ClientMeeting | null>(null);
+  const [noShowMeeting, setNoShowMeeting] = useState<ClientMeeting | null>(null);
+  const [noShowSaving, setNoShowSaving] = useState(false);
+  const [deleteLinkTarget, setDeleteLinkTarget] = useState<BookingLink | null>(null);
+  const [deletingLink, setDeletingLink] = useState(false);
+  // نتيجة الإجراء فوق القائمة — بديل alert(): الخطأ كان يُبتلع في console وحده
+  const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+  // موعدٌ فُتح برابطٍ مباشر ويقع خارج النافذة المحمّلة (موعد أمس و«القادمة» مختارة)
+  const [deepLinked, setDeepLinked] = useState<ClientMeeting | null>(null);
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [copiedLinkId, setCopiedLinkId] = useState<number | null>(null);
   const [linksViewMode, setLinksViewMode] = useState<'table' | 'cards'>('table');
@@ -66,17 +98,21 @@ const ClientMeetings: React.FC = () => {
   const [outcomeMeeting, setOutcomeMeeting] = useState<ClientMeeting | null>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
-  // Fetch data
-  const fetchData = useCallback(async () => {
+  // نافذة الجلب: الجدول بمرشّحٍ زمني يبدأ من اليوم فيكفيه ما بعده (والخادم يجمعه كاملاً
+  // صفحةً بعد صفحة)؛ أمّا «الكل» والتقويم فيحتاجان الماضي أيضاً.
+  const windowFrom = meetingsViewMode === 'table' && timeFilter !== 'all' ? riyadhDayKey(new Date()) : undefined;
+
+  // Fetch data — silent: تحديثٌ بعد إجراء بلا وميض «جاري التحميل»
+  const fetchData = useCallback(async (opts?: { silent?: boolean }) => {
     try {
-      setLoading(true);
+      if (!opts?.silent) setLoading(true);
       setError(null);
 
-      const params: any = {};
-      if (statusFilter !== 'all') params.status = statusFilter;
-
       const [meetingsData, linksData] = await Promise.all([
-        clientMeetingService.getAll(params),
+        clientMeetingService.getAll({
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          from_date: windowFrom,
+        }),
         bookingLinkService.getAll(),
       ]);
 
@@ -88,11 +124,70 @@ const ClientMeetings: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, windowFrom]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // ── لوحة الموعد: الرابط هو مصدر الحقيقة (/meetings/client/:meetingId) ──
+  const selectedId = meetingId ? Number(meetingId) : null;
+  const drawerMeeting = useMemo(() => {
+    if (!selectedId) return null;
+    return meetings.find((m) => m.id === selectedId) ?? (deepLinked?.id === selectedId ? deepLinked : null);
+  }, [selectedId, meetings, deepLinked]);
+
+  // موعدٌ فُتح برابط وليس في النافذة المحمّلة يُجلب وحده؛ وما لا يُرى يُغلق بتنبيه
+  useEffect(() => {
+    if (!selectedId || loading) return;
+    if (meetings.some((m) => m.id === selectedId) || deepLinked?.id === selectedId) return;
+
+    let cancelled = false;
+    clientMeetingService
+      .getById(selectedId)
+      .then((m) => {
+        if (!cancelled) setDeepLinked(m);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setNotice({ tone: 'error', text: 'الموعد غير موجود أو لا تملك صلاحية عرضه' });
+        navigate('/meetings/client', { replace: true });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, loading, meetings, deepLinked, navigate]);
+
+  // النقر من القائمة يُضيف خطوةً في السجلّ فيُغلق «رجوع» اللوحة؛ والرابط المباشر يُستبدل
+  const openMeeting = (meeting: ClientMeeting) => {
+    setActiveMenu(null);
+    navigate(`/meetings/client/${meeting.id}`, { state: { fromList: true } });
+  };
+
+  const closeMeeting = useCallback(() => {
+    if ((location.state as { fromList?: boolean } | null)?.fromList) {
+      navigate(-1);
+    } else {
+      navigate('/meetings/client', { replace: true });
+    }
+  }, [location.state, navigate]);
+
+  // التنبيه الناجح يختفي وحده؛ الخطأ يبقى حتى يُقرأ ويُغلق
+  useEffect(() => {
+    if (!notice || notice.tone !== 'success') return;
+    const timer = window.setTimeout(() => setNotice(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  /** بعد أي إجراء: التنبيه، وتحديث القائمة بصمت، ونسخةٌ حديثة من الموعد المفتوح برابط. */
+  const afterAction = (message: string) => {
+    setNotice({ tone: 'success', text: message });
+    fetchData({ silent: true });
+    if (deepLinked) {
+      clientMeetingService.getById(deepLinked.id).then(setDeepLinked).catch(() => undefined);
+    }
+  };
 
   // Close export menu when clicking outside
   useEffect(() => {
@@ -111,49 +206,57 @@ const ClientMeetings: React.FC = () => {
     };
   }, [showExportMenu]);
 
-  // Filter
-  const filteredMeetings = meetings.filter(meeting => {
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      const matchesTitle = meeting.title?.toLowerCase().includes(term);
-      const matchesClient = meeting.client_name?.toLowerCase().includes(term);
-      const matchesPhone = meeting.client_phone?.includes(term);
-      if (!matchesTitle && !matchesClient && !matchesPhone) return false;
-    }
-    // Time filter — يُتجاوز في وضع التقويم لأنه يحدّد النطاق بالشهر المعروض
-    // (وإلا تظهر أيام الماضي فارغة رغم وجود مواعيد فيها)
-    if (timeFilter !== 'all' && meetingsViewMode !== 'calendar') {
-      const meetingDate = new Date(meeting.scheduled_at);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const nextWeek = new Date(today);
-      nextWeek.setDate(nextWeek.getDate() + 7);
+  // محامو المواعيد المحمّلة — المرشّح يظهر لمن يرى أكثر من محامٍ (مدير المكتب) وحده
+  const lawyerOptions = useMemo(() => {
+    const names = new Map<number, string>();
+    meetings.forEach((m) => {
+      if (m.lawyer?.name) names.set(m.lawyer_id, m.lawyer.name);
+    });
+    return [...names.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+  }, [meetings]);
+  // مرشّحٌ لم يعد بين الخيارات (بعد تحديث) لا يبقى فعّالاً وهو مخفي
+  const activeLawyer = lawyerOptions.some((o) => o.id === lawyerFilter) ? lawyerFilter : 'all';
 
-      switch (timeFilter) {
-        case 'today':
-          // For today, we want meetings that occur on today's date
-          const todayEnd = new Date(today);
-          todayEnd.setHours(23, 59, 59, 999);
-          if (meetingDate < today || meetingDate > todayEnd) return false;
-          break;
-        case 'tomorrow':
-          const tomorrowEnd = new Date(tomorrow);
-          tomorrowEnd.setHours(23, 59, 59, 999);
-          if (meetingDate < tomorrow || meetingDate > tomorrowEnd) return false;
-          break;
-        case 'week':
-          if (meetingDate < today || meetingDate > nextWeek) return false;
-          break;
-        case 'upcoming':
-          if (meetingDate < today) return false;
-          break;
+  // Filter — بيوم الرياض لا يوم الجهاز: الخادم يبدأ نافذته بيوم الرياض أيضاً
+  const todayKey = riyadhDayKey(new Date());
+  const filteredMeetings = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const tomorrowKey = riyadhDayAfter(1);
+    const weekEndKey = riyadhDayAfter(6);
+
+    const list = meetings.filter(meeting => {
+      if (term) {
+        const matchesTitle = meeting.title?.toLowerCase().includes(term);
+        const matchesClient = clientDisplayName(meeting).toLowerCase().includes(term);
+        const matchesPhone = clientDisplayPhone(meeting)?.includes(term);
+        if (!matchesTitle && !matchesClient && !matchesPhone) return false;
       }
-    }
 
-    return true;
-  });
+      if (activeLawyer !== 'all' && meeting.lawyer_id !== activeLawyer) return false;
+
+      // Time filter — يُتجاوز في وضع التقويم لأنه يحدّد النطاق بالشهر المعروض
+      // (وإلا تظهر أيام الماضي فارغة رغم وجود مواعيد فيها)
+      if (timeFilter !== 'all' && meetingsViewMode !== 'calendar') {
+        const day = riyadhDayKey(meeting.scheduled_at);
+        if (timeFilter === 'today' && day !== todayKey) return false;
+        if (timeFilter === 'tomorrow' && day !== tomorrowKey) return false;
+        if (timeFilter === 'week' && (day < todayKey || day > weekEndKey)) return false;
+        if (timeFilter === 'upcoming' && day < todayKey) return false;
+      }
+
+      return true;
+    });
+
+    // «القادمة» وأخواتها: الأقرب أولاً — الخادم يرتّب تنازلياً فكان أبعدُ موعدٍ في
+    // الرأس. و«الكل» يبقى الأحدث أولاً.
+    const ascending = timeFilter !== 'all';
+    return [...list].sort((a, b) => {
+      const diff = new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime();
+      return ascending ? diff : -diff;
+    });
+  }, [meetings, searchTerm, activeLawyer, timeFilter, meetingsViewMode, todayKey]);
 
   // Helpers
   const formatDate = (dateStr: string) => {
@@ -225,29 +328,17 @@ const ClientMeetings: React.FC = () => {
     }
   };
 
-  // اعتمادُ طلبٍ قادم من بوابة العميل — يُرسل له التأكيد (واتساب/بريد) وجرس البوابة
-  const handleConfirmMeeting = async (meeting: ClientMeeting) => {
+  // اعتمادُ طلبٍ قادم من بوابة العميل — يُرسل له التأكيد (واتساب/بريد) وجرس البوابة.
+  // عبر نافذةٍ لا مباشرةً: طلبٌ «عن بُعد» يُرفق رابطه مع الاعتماد نفسه.
+  const handleConfirmMeeting = (meeting: ClientMeeting) => {
     setActiveMenu(null);
-    try {
-      await clientMeetingService.confirm(meeting.id);
-      fetchData();
-    } catch (err) {
-      console.error('Error confirming meeting:', err);
-      alert(err instanceof Error ? err.message : 'تعذّر اعتماد الموعد');
-    }
+    setApproveMeeting(meeting);
   };
 
-  const handleCancelMeeting = async (meeting: ClientMeeting) => {
-    const reason = prompt('سبب الإلغاء:');
-    if (reason) {
-      try {
-        await clientMeetingService.cancel(meeting.id, reason);
-        fetchData();
-      } catch (err) {
-        console.error('Error cancelling meeting:', err);
-      }
-    }
+  // الإلغاء عبر نافذةٍ بسببٍ إلزامي (يصل العميلَ) — بدل prompt() الذي كان يُلغي بصمت عند الخطأ
+  const handleCancelMeeting = (meeting: ClientMeeting) => {
     setActiveMenu(null);
+    setCancelMeeting(meeting);
   };
 
   // فتح modal نتيجة الاجتماع (إنهاء/عرض/تعديل) — بدل prompt
@@ -256,36 +347,57 @@ const ClientMeetings: React.FC = () => {
     setActiveMenu(null);
   };
 
-  const handleNoShow = async (meeting: ClientMeeting) => {
-    if (confirm('هل تريد تسجيل عدم حضور العميل؟')) {
-      try {
-        await clientMeetingService.markNoShow(meeting.id);
-        fetchData();
-      } catch (err) {
-        console.error('Error marking no-show:', err);
-      }
-    }
+  const handleEditMeeting = (meeting: ClientMeeting) => {
     setActiveMenu(null);
+    setFormMeeting(meeting);
   };
 
-  const handleDeleteLink = async (link: BookingLink) => {
-    if (confirm('هل تريد حذف هذا الرابط؟')) {
-      try {
-        await bookingLinkService.delete(link.id);
-        fetchData();
-      } catch (err) {
-        console.error('Error deleting link:', err);
-      }
+  const handleNoShow = (meeting: ClientMeeting) => {
+    setActiveMenu(null);
+    setNoShowMeeting(meeting);
+  };
+
+  const confirmNoShow = async () => {
+    if (!noShowMeeting) return;
+    setNoShowSaving(true);
+    try {
+      await clientMeetingService.markNoShow(noShowMeeting.id);
+      setNoShowMeeting(null);
+      afterAction('سُجّل عدم حضور العميل');
+    } catch (err) {
+      setNoShowMeeting(null);
+      setNotice({ tone: 'error', text: getApiErrorMessage(err, 'تعذّر تسجيل عدم الحضور') });
+    } finally {
+      setNoShowSaving(false);
+    }
+  };
+
+  const handleDeleteLink = (link: BookingLink) => {
+    setDeleteLinkTarget(link);
+  };
+
+  const confirmDeleteLink = async () => {
+    if (!deleteLinkTarget) return;
+    setDeletingLink(true);
+    try {
+      await bookingLinkService.delete(deleteLinkTarget.id);
+      setDeleteLinkTarget(null);
+      afterAction('حُذف رابط الحجز');
+    } catch (err) {
+      setDeleteLinkTarget(null);
+      setNotice({ tone: 'error', text: getApiErrorMessage(err, 'تعذّر حذف الرابط') });
+    } finally {
+      setDeletingLink(false);
     }
   };
 
   const handleResendLink = async (link: BookingLink) => {
     try {
       await bookingLinkService.resend(link.id, 'both');
-      alert('تم إعادة إرسال الرابط بنجاح');
-    } catch (err: any) {
+      setNotice({ tone: 'success', text: 'تم إعادة إرسال الرابط بنجاح' });
+    } catch (err) {
       console.error('Error resending link:', err);
-      alert(err?.message || 'تعذّر إعادة إرسال الرابط');
+      setNotice({ tone: 'error', text: getApiErrorMessage(err, 'تعذّر إعادة إرسال الرابط') });
     }
   };
 
@@ -315,7 +427,8 @@ const ClientMeetings: React.FC = () => {
   const exportAsImage = async () => {
     const todayMeetings = getTodayMeetings();
     if (todayMeetings.length === 0) {
-      alert('لا توجد جلسات لليوم');
+      setShowExportMenu(false);
+      setNotice({ tone: 'error', text: 'لا توجد مواعيد اليوم لتصديرها' });
       return;
     }
 
@@ -385,7 +498,7 @@ const ClientMeetings: React.FC = () => {
       link.click();
     } catch (err) {
       console.error('Error exporting image:', err);
-      alert('حدث خطأ أثناء التصدير. تأكد من تثبيت مكتبة html2canvas');
+      setNotice({ tone: 'error', text: 'حدث خطأ أثناء تصدير الصورة' });
     } finally {
       document.body.removeChild(container);
     }
@@ -396,7 +509,8 @@ const ClientMeetings: React.FC = () => {
   const exportAsWord = async () => {
     const todayMeetings = getTodayMeetings();
     if (todayMeetings.length === 0) {
-      alert('لا توجد جلسات لليوم');
+      setShowExportMenu(false);
+      setNotice({ tone: 'error', text: 'لا توجد مواعيد اليوم لتصديرها' });
       return;
     }
 
@@ -468,7 +582,8 @@ const ClientMeetings: React.FC = () => {
   const exportAsExcel = async () => {
     const todayMeetings = getTodayMeetings();
     if (todayMeetings.length === 0) {
-      alert('لا توجد جلسات لليوم');
+      setShowExportMenu(false);
+      setNotice({ tone: 'error', text: 'لا توجد مواعيد اليوم لتصديرها' });
       return;
     }
 
@@ -587,21 +702,42 @@ const ClientMeetings: React.FC = () => {
           </div>
           <button
             className="notion-icon-btn"
-            onClick={fetchData}
+            onClick={() => fetchData()}
             disabled={loading}
             title="تحديث"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
           <button
-            className="notion-primary-btn"
+            className="fin-btn"
             onClick={() => setShowCreateLinkModal(true)}
           >
             <Link2 size={16} />
             إنشاء رابط حجز
           </button>
+          {/* حجزٌ مباشر — السكرتير الذي يتلقّى اتصال العميل لم يكن يملك غير «رابط الحجز» */}
+          <button
+            className="notion-primary-btn"
+            onClick={() => setFormMeeting('new')}
+          >
+            <Plus size={16} />
+            موعد جديد
+          </button>
         </div>
       </header>
+
+      {notice && (
+        <div
+          className={`cmo-alert cmo-alert--${notice.tone} cmo-page-alert`}
+          role={notice.tone === 'error' ? 'alert' : 'status'}
+        >
+          {notice.tone === 'error' ? <AlertTriangle size={14} aria-hidden="true" /> : <CheckCircle size={14} aria-hidden="true" />}
+          <span className="cmo-alert__text">{notice.text}</span>
+          <button type="button" className="cmo-alert__close" onClick={() => setNotice(null)} aria-label="إخفاء التنبيه">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Meetings Tab */}
       {activeTab === 'meetings' && (
@@ -629,7 +765,7 @@ const ClientMeetings: React.FC = () => {
                 <button
                   key={tab.key}
                   className={`time-filter ${timeFilter === tab.key ? 'time-filter--active' : ''}`}
-                  onClick={() => setTimeFilter(tab.key as any)}
+                  onClick={() => setTimeFilter(tab.key as typeof timeFilter)}
                 >
                   <span className="time-filter__icon">{tab.icon}</span>
                   <span>{tab.label}</span>
@@ -653,6 +789,20 @@ const ClientMeetings: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            {lawyerOptions.length > 1 && (
+              <select
+                className="fin-input cmo-lawyer-filter"
+                value={activeLawyer}
+                onChange={(e) => setLawyerFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                aria-label="تصفية حسب المحامي"
+              >
+                <option value="all">كل المحامين</option>
+                {lawyerOptions.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </select>
+            )}
 
             {/* Table / Calendar toggle */}
             <div className="view-toggle">
@@ -683,32 +833,35 @@ const ClientMeetings: React.FC = () => {
             <div className="error-state">
               <XCircle size={32} />
               <p>{error}</p>
-              <button onClick={fetchData}>إعادة المحاولة</button>
+              <button onClick={() => fetchData()}>إعادة المحاولة</button>
             </div>
           ) : filteredMeetings.length === 0 ? (
             <div className="empty-state">
               <Calendar size={48} />
               <h3>لا توجد مواعيد</h3>
-              <p>أنشئ رابط حجز وأرسله للعميل لحجز موعد</p>
-              <button
-                className="primary-btn"
-                onClick={() => setShowCreateLinkModal(true)}
-              >
-                <Link2 size={18} />
-                إنشاء رابط حجز
-              </button>
+              <p>احجز موعداً مباشرةً، أو أرسل للعميل رابط حجز يختار منه وقته</p>
+              <div className="cmo-empty-actions">
+                <button
+                  className="primary-btn"
+                  onClick={() => setFormMeeting('new')}
+                >
+                  <Plus size={18} />
+                  موعد جديد
+                </button>
+                <button
+                  className="fin-btn"
+                  onClick={() => setShowCreateLinkModal(true)}
+                >
+                  <Link2 size={16} />
+                  إنشاء رابط حجز
+                </button>
+              </div>
             </div>
           ) : meetingsViewMode === 'calendar' ? (
+            // النقر يفتح لوحة الموعد — كان يفتح «إنهاء وتسجيل النتيجة» حتى لموعد الأسبوع القادم
             <ClientMeetingsCalendar
               meetings={filteredMeetings}
-              onSelectMeeting={(m) => {
-                if (m.status === 'completed' || m.status === 'confirmed' || m.status === 'pending') {
-                  handleOpenOutcome(m);
-                } else {
-                  setSelectedMeeting(m);
-                  setShowLinkCaseModal(true);
-                }
-              }}
+              onSelectMeeting={openMeeting}
             />
           ) : (
             <div className="meetings-table-wrapper">
@@ -725,18 +878,30 @@ const ClientMeetings: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredMeetings.map(meeting => (
-                    <tr key={meeting.id}>
+                  {filteredMeetings.map(meeting => {
+                    const actions = clientMeetingActions(meeting);
+                    const hasMenu = actions.approve || actions.edit || actions.complete || actions.noShow || actions.cancel;
+                    const phone = clientDisplayPhone(meeting);
+
+                    return (
+                    // الصفّ يفتح لوحة الموعد؛ وخلايا الأزرار توقف الانتشار كي لا يفتحها زرٌّ داخلها
+                    <tr
+                      key={meeting.id}
+                      className="cmo-row"
+                      tabIndex={0}
+                      onClick={() => openMeeting(meeting)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') openMeeting(meeting); }}
+                    >
                       <td>
                         <div className="client-info">
                           <div className="client-avatar">
-                            {meeting.client_name?.charAt(0) || '?'}
+                            {clientDisplayName(meeting).charAt(0) || '?'}
                           </div>
                           <div>
-                            <div className="client-name">{meeting.client_name || 'غير محدد'}</div>
+                            <div className="client-name">{clientDisplayName(meeting)}</div>
                             <div className="client-contact">
-                              {meeting.client_phone && (
-                                <span><Phone size={12} /> {meeting.client_phone}</span>
+                              {phone && (
+                                <span><Phone size={12} /> {phone}</span>
                               )}
                             </div>
                           </div>
@@ -748,9 +913,14 @@ const ClientMeetings: React.FC = () => {
                           <span className="time">{formatTime(meeting.scheduled_at)}</span>
                         </div>
                       </td>
-                      <td>{getMeetingTypeBadge(meeting.meeting_type)}</td>
-                      <td>{meeting.duration_minutes} دقيقة</td>
                       <td>
+                        {getMeetingTypeBadge(meeting.meeting_type)}
+                        {isMissingLink(meeting) && (
+                          <span className="fin-badge fin-badge--warning cmo-nolink" title="العميل وُعد برابطٍ قبل الموعد">بلا رابط</span>
+                        )}
+                      </td>
+                      <td>{meeting.duration_minutes} دقيقة</td>
+                      <td onClick={(e) => e.stopPropagation()}>
                         {meeting.case ? (
                           <span className="case-badge">
                             <Briefcase size={12} />
@@ -759,10 +929,7 @@ const ClientMeetings: React.FC = () => {
                         ) : (
                           <button
                             className="link-case-btn"
-                            onClick={() => {
-                              setSelectedMeeting(meeting);
-                              setShowLinkCaseModal(true);
-                            }}
+                            onClick={() => setLinkCaseMeeting(meeting)}
                           >
                             <Plus size={12} />
                             ربط بقضية
@@ -770,38 +937,51 @@ const ClientMeetings: React.FC = () => {
                         )}
                       </td>
                       <td>{getStatusBadge(meeting.status)}</td>
-                      <td>
-                        {(meeting.status === 'confirmed' || meeting.status === 'pending') && (
+                      <td onClick={(e) => e.stopPropagation()}>
+                        {hasMenu && (
                           <div className="dropdown">
                             <button
                               className="icon-btn-sm"
                               onClick={() => setActiveMenu(activeMenu === meeting.id ? null : meeting.id)}
+                              aria-label="إجراءات الموعد"
                             >
                               <MoreVertical size={16} />
                             </button>
                             {activeMenu === meeting.id && (
                               <div className="dropdown-menu">
-                                {meeting.status === 'pending' && (
+                                {actions.approve && (
                                   <button onClick={() => handleConfirmMeeting(meeting)}>
                                     <CheckCircle size={14} />
                                     اعتماد الموعد وإبلاغ العميل
                                   </button>
                                 )}
-                                <button onClick={() => handleOpenOutcome(meeting)}>
-                                  <CheckCircle size={14} />
-                                  إنهاء وتسجيل النتيجة
-                                </button>
-                                <button onClick={() => handleNoShow(meeting)}>
-                                  <AlertTriangle size={14} />
-                                  لم يحضر
-                                </button>
-                                <button
-                                  className="text-red-500"
-                                  onClick={() => handleCancelMeeting(meeting)}
-                                >
-                                  <XCircle size={14} />
-                                  إلغاء
-                                </button>
+                                {actions.edit && (
+                                  <button onClick={() => handleEditMeeting(meeting)}>
+                                    <Pencil size={14} />
+                                    تعديل أو تأجيل
+                                  </button>
+                                )}
+                                {actions.complete && (
+                                  <button onClick={() => handleOpenOutcome(meeting)}>
+                                    <CheckCircle size={14} />
+                                    إنهاء وتسجيل النتيجة
+                                  </button>
+                                )}
+                                {actions.noShow && (
+                                  <button onClick={() => handleNoShow(meeting)}>
+                                    <AlertTriangle size={14} />
+                                    لم يحضر
+                                  </button>
+                                )}
+                                {actions.cancel && (
+                                  <button
+                                    className="text-red-500"
+                                    onClick={() => handleCancelMeeting(meeting)}
+                                  >
+                                    <XCircle size={14} />
+                                    إلغاء
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>
@@ -818,7 +998,8 @@ const ClientMeetings: React.FC = () => {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1066,17 +1247,83 @@ const ClientMeetings: React.FC = () => {
         />
       )}
 
-      {showLinkCaseModal && selectedMeeting && (
-        <LinkToCaseModal
-          meeting={selectedMeeting}
-          onClose={() => {
-            setShowLinkCaseModal(false);
-            setSelectedMeeting(null);
+      {drawerMeeting && (
+        <ClientMeetingDrawer
+          meeting={drawerMeeting}
+          onClose={closeMeeting}
+          onApprove={handleConfirmMeeting}
+          onEdit={handleEditMeeting}
+          onOutcome={handleOpenOutcome}
+          onNoShow={handleNoShow}
+          onCancel={handleCancelMeeting}
+          onLinkCase={setLinkCaseMeeting}
+        />
+      )}
+
+      {formMeeting && (
+        <ClientMeetingFormModal
+          meeting={formMeeting === 'new' ? null : formMeeting}
+          onClose={() => setFormMeeting(null)}
+          onSaved={(saved, message) => {
+            setFormMeeting(null);
+            afterAction(message);
+            // الموعد الجديد يُفتح في لوحته: يرى المستخدم ما حُجز ويتصرّف منه مباشرةً
+            if (formMeeting === 'new') openMeeting(saved);
           }}
-          onSuccess={() => {
-            setShowLinkCaseModal(false);
-            setSelectedMeeting(null);
-            fetchData();
+        />
+      )}
+
+      {approveMeeting && (
+        <ApproveClientMeetingDialog
+          meeting={approveMeeting}
+          onClose={() => setApproveMeeting(null)}
+          onDone={(message) => {
+            setApproveMeeting(null);
+            afterAction(message);
+          }}
+        />
+      )}
+
+      {cancelMeeting && (
+        <CancelClientMeetingDialog
+          meeting={cancelMeeting}
+          onClose={() => setCancelMeeting(null)}
+          onDone={(message) => {
+            setCancelMeeting(null);
+            afterAction(message);
+          }}
+        />
+      )}
+
+      <ConfirmDialog
+        isOpen={noShowMeeting !== null}
+        title="تسجيل عدم الحضور"
+        message={noShowMeeting ? `تسجيل أن ${clientDisplayName(noShowMeeting)} لم يحضر الموعد؟` : ''}
+        note="لا تصل العميلَ رسالةٌ بهذا."
+        confirmLabel="تسجيل «لم يحضر»"
+        loading={noShowSaving}
+        onConfirm={confirmNoShow}
+        onClose={() => setNoShowMeeting(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={deleteLinkTarget !== null}
+        title="حذف رابط الحجز"
+        message="هل تريد حذف هذا الرابط؟ لن يتمكّن العميل من الحجز به بعد الحذف."
+        confirmLabel="حذف"
+        variant="danger"
+        loading={deletingLink}
+        onConfirm={confirmDeleteLink}
+        onClose={() => setDeleteLinkTarget(null)}
+      />
+
+      {linkCaseMeeting && (
+        <LinkToCaseModal
+          meeting={linkCaseMeeting}
+          onClose={() => setLinkCaseMeeting(null)}
+          onSuccess={(message) => {
+            setLinkCaseMeeting(null);
+            afterAction(message ?? 'حُفظ ربط القضية');
           }}
         />
       )}
@@ -1087,7 +1334,7 @@ const ClientMeetings: React.FC = () => {
           onClose={() => setOutcomeMeeting(null)}
           onSuccess={() => {
             setOutcomeMeeting(null);
-            fetchData();
+            afterAction('حُفظت نتيجة الاجتماع');
           }}
         />
       )}

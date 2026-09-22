@@ -27,6 +27,7 @@ const timeFmt = new Intl.DateTimeFormat(AR, { timeZone: TZ, hour: '2-digit', min
 const dayMonthFmt = new Intl.DateTimeFormat(AR, { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' });
 const shortDateFmt = new Intl.DateTimeFormat(AR, { timeZone: TZ, day: 'numeric', month: 'long', year: 'numeric' });
 const dayKeyFmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+const timeKeyFmt = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
 /** أشهر ميلادية عربية مثبّتة — لا تتبع لغة الجهاز ولا تقويمه. */
 export const GREGORIAN_MONTHS_AR = [
@@ -67,6 +68,16 @@ export function fmtMonthTitleAr(date: Date): string {
  */
 export function riyadhDayKey(input: string | Date): string {
   return dayKeyFmt.format(asDate(input));
+}
+
+/**
+ * «HH:mm» **بتوقيت الرياض** بأرقام لاتينية — نظير riyadhDayKey لحقل <input type="time">.
+ *
+ * تعبئة حقل التعديل من getHours() تتبع منطقة الجهاز، فمن جهازه خارج المملكة يرى
+ * الموعد مُزاحاً ثم يحفظه على وقتٍ غير الذي كان.
+ */
+export function riyadhTimeKey(input: string | Date): string {
+  return timeKeyFmt.format(asDate(input));
 }
 
 // ── ساعة الحائط: حقولُ الإدخال والإرسالُ إلى الخادم (القاعدة 3) ──────
