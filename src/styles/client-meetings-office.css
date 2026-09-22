@@ -52,12 +52,263 @@
   .cmo-page-alert { margin-inline: 16px; }
 }
 
-/* ---------- الجدول ---------- */
-.cmo-row { cursor: pointer; }
-.cmo-row:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
-.cmo-nolink { margin-inline-start: 6px; white-space: nowrap; }
-.cmo-lawyer-filter { width: auto; min-width: 170px; }
+/* ---------- شريط الملخّص: أرقامٌ تُنقر فتصير مرشِّحاً ---------- */
+.cmo-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px 32px 0;
+}
+.cmo-kpi {
+  --kpi-c: var(--color-primary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs, 0 1px 2px rgba(0, 0, 0, .04));
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.cmo-kpi:hover { border-color: var(--kpi-c); }
+.cmo-kpi:focus-visible { outline: 2px solid var(--kpi-c); outline-offset: 2px; }
+.cmo-kpi.is-active { border-color: var(--kpi-c); box-shadow: inset 0 0 0 1px var(--kpi-c); }
+.cmo-kpi__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--kpi-c) 12%, var(--color-surface, #fff));
+  color: var(--kpi-c);
+}
+.cmo-kpi__body { display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 8px; min-width: 0; }
+.cmo-kpi__value { font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--color-heading); }
+.cmo-kpi__label { font-size: 12.5px; font-weight: 700; color: var(--color-heading); }
+.cmo-kpi__hint { grid-column: 1 / -1; font-size: 11px; color: var(--color-text-secondary); }
+
+.cmo-kpi--today { --kpi-c: var(--color-primary); }
+.cmo-kpi--week { --kpi-c: var(--status-blue, #0284c7); }
+/* بطاقتا التنبيه هادئتان عند الصفر، وتُلوَّنان حين يوجد ما يستدعي تصرّفاً */
+.cmo-kpi--pending, .cmo-kpi--missing_link { --kpi-c: var(--color-text-secondary); }
+.cmo-kpi--pending.is-alert { --kpi-c: var(--status-orange, #d97706); }
+.cmo-kpi--missing_link.is-alert { --kpi-c: var(--status-red, #dc2626); }
+.cmo-kpi.is-alert { background: color-mix(in srgb, var(--kpi-c) 5%, var(--color-surface, #fff)); }
+.cmo-kpi.is-alert .cmo-kpi__value { color: var(--kpi-c); }
+
+/* ---------- شريط الأدوات ---------- */
+.cmo-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 32px;
+}
+.cmo-toolbar__search { flex: 1 1 220px; max-width: 320px; }
+.cmo-toolbar__end { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
+.cmo-seg__btn:disabled { opacity: .45; cursor: default; }
+.cmo-select { width: auto; min-width: 150px; }
+.cmo-view-btn { display: inline-flex; align-items: center; padding: 5px 10px; }
+.cmo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--status-red, #dc2626) 35%, var(--color-surface, #fff));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--status-red, #dc2626) 8%, var(--color-surface, #fff));
+  color: var(--status-red);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
 .cmo-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+
+/* ---------- القائمة بالأيام ---------- */
+.cmo-agenda { display: flex; flex-direction: column; gap: 18px; padding: 2px 32px 32px; }
+
+.cmo-day__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0 4px;
+}
+.cmo-day__label { font-size: 14.5px; font-weight: 800; color: var(--color-heading); }
+.cmo-day__head.is-today .cmo-day__label { color: var(--color-primary); }
+.cmo-day__date { font-size: 12.5px; color: var(--color-text-secondary); }
+.cmo-day__count {
+  margin-inline-start: auto;
+  padding: 1px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: 11.5px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.cmo-day__list {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs, 0 1px 2px rgba(0, 0, 0, .04));
+}
+
+.cmo-appt {
+  --appt-c: var(--color-border);
+  position: relative;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1.5fr) minmax(0, 1.2fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background .12s;
+}
+.cmo-appt:last-child { border-bottom: none; }
+.cmo-appt:hover { background: var(--color-surface-subtle); }
+.cmo-appt:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+/* خطّ الحالة على حافة الصفّ — يُقرأ اللون قبل الشارة */
+.cmo-appt::before {
+  content: '';
+  position: absolute;
+  inset-block: 10px;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--appt-c);
+}
+.cmo-appt--pending { --appt-c: var(--status-orange, #d97706); }
+.cmo-appt--confirmed { --appt-c: var(--status-green, #059669); }
+.cmo-appt--completed { --appt-c: var(--status-blue, #0284c7); }
+.cmo-appt--no_show { --appt-c: var(--color-text-secondary); }
+.cmo-appt--cancelled { --appt-c: var(--status-red, #dc2626); }
+.cmo-appt--cancelled .cmo-appt__time,
+.cmo-appt--cancelled .cmo-appt__who,
+.cmo-appt--cancelled .cmo-appt__tags { opacity: .55; }
+.cmo-appt--cancelled .cmo-appt__time strong { text-decoration: line-through; }
+
+.cmo-appt__time { display: flex; flex-direction: column; gap: 2px; }
+.cmo-appt__time strong { font-size: 14.5px; font-weight: 800; color: var(--color-heading); white-space: nowrap; }
+.cmo-appt__time span { font-size: 11.5px; color: var(--color-text-secondary); }
+
+.cmo-appt__who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cmo-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 800;
+}
+.cmo-appt__id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cmo-appt__name,
+.cmo-appt__sub { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cmo-appt__name { font-size: 13.5px; font-weight: 700; color: var(--color-heading); }
+.cmo-appt__sub { font-size: 12px; color: var(--color-text-secondary); }
+
+.cmo-appt__tags { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.cmo-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cmo-tag svg { flex-shrink: 0; }
+.cmo-tag__text { overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+.cmo-tag--remote {
+  border-color: color-mix(in srgb, var(--status-blue, #0284c7) 25%, var(--color-surface, #fff));
+  background: color-mix(in srgb, var(--status-blue, #0284c7) 8%, var(--color-surface, #fff));
+  color: var(--status-blue);
+}
+.cmo-tag--inperson {
+  border-color: color-mix(in srgb, var(--status-green, #059669) 25%, var(--color-surface, #fff));
+  background: color-mix(in srgb, var(--status-green, #059669) 8%, var(--color-surface, #fff));
+  color: var(--status-green);
+}
+.cmo-tag--warn {
+  border-color: color-mix(in srgb, var(--status-red, #dc2626) 30%, var(--color-surface, #fff));
+  background: color-mix(in srgb, var(--status-red, #dc2626) 8%, var(--color-surface, #fff));
+  color: var(--status-red);
+}
+.cmo-tag--case { color: var(--color-text); }
+
+.cmo-appt__end { display: flex; align-items: center; justify-content: flex-end; gap: 8px; cursor: default; }
+
+/* ---------- هيكل التحميل ---------- */
+.cmo-skel {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--color-surface-subtle) 25%, var(--color-border) 50%, var(--color-surface-subtle) 75%);
+  background-size: 200% 100%;
+  animation: cmo-shimmer 1.2s ease-in-out infinite;
+}
+.cmo-skel--head { width: 180px; height: 14px; margin: 0 4px 10px; }
+.cmo-skel-row {
+  display: grid;
+  grid-template-columns: 70px 36px minmax(0, 1fr) 70px;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+.cmo-skel-row:last-child { border-bottom: none; }
+.cmo-skel--time { height: 14px; }
+.cmo-skel--avatar { width: 36px; height: 36px; border-radius: 50%; }
+.cmo-skel--line { height: 12px; max-width: 260px; }
+.cmo-skel--badge { height: 20px; border-radius: 999px; }
+@keyframes cmo-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .cmo-skel { animation: none; }
+}
+
+/* ---------- الشاشات الضيّقة ---------- */
+@media (max-width: 1100px) {
+  .cmo-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cmo-appt { grid-template-columns: 84px minmax(0, 1fr) auto; }
+  .cmo-appt__tags { grid-column: 2 / -1; grid-row: 2; }
+}
+
+@media (max-width: 768px) {
+  .cmo-kpis { padding: 12px 16px 0; gap: 8px; }
+  .cmo-kpi { padding: 10px; gap: 10px; }
+  .cmo-kpi__icon { width: 32px; height: 32px; }
+  .cmo-kpi__hint { display: none; }
+  .cmo-toolbar { padding: 12px 16px; }
+  .cmo-toolbar__search { max-width: none; flex-basis: 100%; }
+  .cmo-seg { max-width: 100%; overflow-x: auto; }
+  .cmo-toolbar__end { margin-inline-start: 0; }
+  .cmo-agenda { padding: 2px 16px 24px; }
+  .cmo-appt { grid-template-columns: 64px minmax(0, 1fr); gap: 10px 12px; padding: 12px 14px; }
+  .cmo-appt__who .cmo-avatar { display: none; }
+  .cmo-appt__tags { grid-column: 1 / -1; grid-row: auto; }
+  .cmo-appt__end { grid-column: 1 / -1; justify-content: flex-start; }
+  /* قائمة الإجراءات في طرف السطر لا لصيقةَ الشارة */
+  .cmo-appt__menu { margin-inline-start: auto; }
+}
 
 /* ---------- النموذج ---------- */
 .cmo-field-head {
