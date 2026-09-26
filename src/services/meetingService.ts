@@ -92,6 +92,8 @@ export interface MeetingAttendee {
   left_at: string | null;
   display_name: string | null;
   user?: Pick<User, 'id' | 'name' | 'email' | 'role'> | null;
+  /** ‏موافقةُ الطرف الخارجي على تنبيه واتساب — تصل في القوائم أيضاً */
+  notify_opted_in?: boolean;
   /** لا يصل في القوائم — فقط في صفحة الاجتماع الواحد ولمن يملك تعديله */
   email?: string | null;
   phone?: string | null;
