@@ -1,397 +1,183 @@
-import React, { useState, useEffect } from 'react';
-import { X, Briefcase, Search } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AlertTriangle, Briefcase, Search, X } from 'lucide-react';
+import Modal from '../erp/Modal';
 import { clientMeetingService, type ClientMeeting } from '../../services/meetingService';
 import { apiClient } from '../../utils/api';
+import { getApiErrorMessage } from '../../utils/apiError';
+import { clientDisplayName } from './clientMeetingHelpers';
 
 interface Props {
   meeting: ClientMeeting;
   onClose: () => void;
-  onSuccess: () => void;
+  /** message: ما يُعرض فوق القائمة بعد النجاح */
+  onSuccess: (message?: string) => void;
 }
 
-interface Case {
+interface CaseRow {
   id: number;
   title: string;
-  file_number: string;
+  file_number: string | null;
   client_name: string | null;
-  status: string;
 }
 
+/**
+ * ربط موعد العميل بقضية — أو تغييرها أو فكّ الربط.
+ *
+ * النسخة السابقة كانت تقرأ `/cases` مصفوفةً وهو يُرجع صفحةً مقسّمة، فكان
+ * `cases.filter` يرمي عند فتح النافذة؛ ولو عملت لما عرضت إلا أول 15 قضية.
+ * البحث الآن على الخادم، وبلا بحث تظهر قضايا عميل الموعد أولاً.
+ */
 const LinkToCaseModal: React.FC<Props> = ({ meeting, onClose, onSuccess }) => {
-  const [cases, setCases] = useState<Case[]>([]);
-  const [selectedCaseId, setSelectedCaseId] = useState<number | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [rows, setRows] = useState<CaseRow[]>([]);
+  const [searching, setSearching] = useState(true);
+  const [chosen, setChosen] = useState<CaseRow | null>(null);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch cases
+  const term = query.trim();
+  const byClient = !term && Boolean(meeting.client_id);
+
   useEffect(() => {
-    const fetchCases = async () => {
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
       try {
-        const response = await apiClient.get<{ success: boolean; data: Case[] }>('/cases');
-        setCases(response.data || []);
-      } catch (err) {
-        console.error('Error fetching cases:', err);
+        const params = new URLSearchParams({ limit: '20' });
+        if (term) params.set('search', term);
+        else if (meeting.client_id) params.set('client_id', String(meeting.client_id));
+
+        const response = await apiClient.get<{ data: CaseRow[] | { data: CaseRow[] } }>(`/cases?${params.toString()}`);
+        const payload = response.data;
+        if (!cancelled) setRows(Array.isArray(payload) ? payload : payload?.data ?? []);
+      } catch {
+        if (!cancelled) setRows([]);
+      } finally {
+        if (!cancelled) setSearching(false);
       }
+    }, term ? 300 : 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
     };
-    fetchCases();
-  }, []);
+  }, [term, meeting.client_id]);
 
-  // Filter cases
-  const filteredCases = cases.filter(c => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      c.title.toLowerCase().includes(term) ||
-      c.file_number.toLowerCase().includes(term) ||
-      c.client_name?.toLowerCase().includes(term)
-    );
-  });
-
-  // Submit
-  const handleSubmit = async () => {
-    if (!selectedCaseId) {
-      setError('يرجى اختيار قضية');
-      return;
-    }
-
+  const save = async (caseId: number | null) => {
+    setSaving(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-      await clientMeetingService.linkToCase(meeting.id, selectedCaseId);
-      onSuccess();
-    } catch (err: any) {
-      console.error('Error linking case:', err);
-      setError(err.message || 'حدث خطأ في ربط القضية');
+      await clientMeetingService.linkToCase(meeting.id, caseId);
+      onSuccess(caseId ? 'ربط الموعد بالقضية' : 'فك ربط الموعد بالقضية');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'تعذر حفظ ربط القضية'));
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
+  const reference = (row: { file_number: string | null; id: number }) => row.file_number || `#${row.id}`;
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>
-            <Briefcase size={18} />
-            ربط بقضية
-          </h2>
-          <button className="close-btn" onClick={onClose}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="modal-body">
-          {error && (
-            <div className="error-message">
-              {error}
-            </div>
-          )}
-
-          <div className="meeting-info">
-            <span className="label">الموعد:</span>
-            <span>{meeting.title || `موعد مع ${meeting.client_name}`}</span>
-          </div>
-
-          <div className="search-box">
-            <Search size={16} />
-            <input
-              type="text"
-              placeholder="بحث في القضايا..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <div className="cases-list">
-            {filteredCases.length === 0 ? (
-              <div className="empty">لا توجد قضايا</div>
-            ) : (
-              filteredCases.map(c => (
-                <div
-                  key={c.id}
-                  className={`case-item ${selectedCaseId === c.id ? 'case-item--selected' : ''}`}
-                  onClick={() => setSelectedCaseId(c.id)}
-                >
-                  <div className="case-icon">
-                    <Briefcase size={16} />
-                  </div>
-                  <div className="case-info">
-                    <div className="case-title">{c.title}</div>
-                    <div className="case-meta">
-                      <span>{c.file_number}</span>
-                      {c.client_name && <span>• {c.client_name}</span>}
-                    </div>
-                  </div>
-                  <div className={`radio ${selectedCaseId === c.id ? 'radio--checked' : ''}`} />
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="modal-footer">
-          <button type="button" className="btn-secondary" onClick={onClose}>
-            إلغاء
-          </button>
+    <Modal
+      open
+      onClose={onClose}
+      size="narrow"
+      icon={Briefcase}
+      title={meeting.case ? 'تغيير القضية المرتبطة' : 'ربط الموعد بقضية'}
+      footerAlign="end"
+      closeOnOverlay={!saving}
+      footer={
+        <>
+          <button type="button" className="fin-btn" onClick={onClose} disabled={saving}>إلغاء</button>
           <button
             type="button"
-            className="btn-primary"
-            onClick={handleSubmit}
-            disabled={loading || !selectedCaseId}
+            className="fin-btn fin-btn--primary"
+            onClick={() => chosen && save(chosen.id)}
+            disabled={saving || !chosen || chosen.id === meeting.case_id}
           >
-            {loading ? 'جاري الربط...' : 'ربط بالقضية'}
+            {saving ? 'جار الحفظ…' : 'ربط بالقضية'}
           </button>
+        </>
+      }
+    >
+      {error && (
+        <div className="cmo-alert cmo-alert--error cmo-form-alert" role="alert">
+          <AlertTriangle size={14} aria-hidden="true" />
+          <span className="cmo-alert__text">{error}</span>
         </div>
+      )}
 
-        <style>{`
-          .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 20px;
-          }
-
-          .modal-content {
-            background: white;
-            border-radius: 12px;
-            width: 100%;
-            max-width: 480px;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-          }
-
-          .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--color-border, #e5e7eb);
-          }
-
-          .modal-header h2 {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 18px;
-            font-weight: 600;
-            margin: 0;
-          }
-
-          .close-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--color-text-secondary, #6b7280);
-          }
-
-          .close-btn:hover {
-            background: var(--color-bg-tertiary, #f3f4f6);
-          }
-
-          .modal-body {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-          }
-
-          .error-message {
-            padding: 12px;
-            border-radius: 8px;
-            background: #FEF2F2;
-            color: #DC2626;
-            font-size: 14px;
-          }
-
-          .meeting-info {
-            padding: 12px;
-            background: var(--color-bg-secondary, #f9fafb);
-            border-radius: 8px;
-            font-size: 14px;
-          }
-
-          .meeting-info .label {
-            color: var(--color-text-secondary, #6b7280);
-            margin-left: 8px;
-          }
-
-          .search-box {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 12px;
-            border-radius: 8px;
-            border: 1px solid var(--color-border, #e5e7eb);
-          }
-
-          .search-box input {
-            border: none;
-            background: none;
-            flex: 1;
-            font-size: 14px;
-            outline: none;
-          }
-
-          .search-box svg {
-            color: var(--color-text-secondary, #6b7280);
-          }
-
-          .cases-list {
-            border: 1px solid var(--color-border, #e5e7eb);
-            border-radius: 8px;
-            max-height: 300px;
-            overflow-y: auto;
-          }
-
-          .empty {
-            padding: 40px;
-            text-align: center;
-            color: var(--color-text-secondary, #6b7280);
-          }
-
-          .case-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px;
-            cursor: pointer;
-            border-bottom: 1px solid var(--color-border, #e5e7eb);
-            transition: background 0.15s;
-          }
-
-          .case-item:last-child {
-            border-bottom: none;
-          }
-
-          .case-item:hover {
-            background: var(--color-bg-tertiary, #f3f4f6);
-          }
-
-          .case-item--selected {
-            background: rgba(30, 58, 95, 0.08);
-          }
-
-          .case-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            background: var(--color-bg-tertiary, #f3f4f6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--color-text-secondary, #6b7280);
-          }
-
-          .case-item--selected .case-icon {
-            background: var(--law-navy, #1E3A5F);
-            color: white;
-          }
-
-          .case-info {
-            flex: 1;
-          }
-
-          .case-title {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--color-text-primary, #111827);
-          }
-
-          .case-meta {
-            font-size: 12px;
-            color: var(--color-text-secondary, #6b7280);
-            display: flex;
-            gap: 4px;
-          }
-
-          .radio {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            border: 2px solid var(--color-border, #e5e7eb);
-          }
-
-          .radio--checked {
-            border-color: var(--law-navy, #1E3A5F);
-            background: var(--law-navy, #1E3A5F);
-            position: relative;
-          }
-
-          .radio--checked::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: white;
-          }
-
-          .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            padding: 16px 20px;
-            border-top: 1px solid var(--color-border, #e5e7eb);
-          }
-
-          .btn-secondary,
-          .btn-primary {
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.15s;
-          }
-
-          .btn-secondary {
-            border: 1px solid var(--color-border, #e5e7eb);
-            background: white;
-            color: var(--color-text-primary, #111827);
-          }
-
-          .btn-secondary:hover {
-            background: var(--color-bg-tertiary, #f3f4f6);
-          }
-
-          .btn-primary {
-            border: none;
-            background: var(--law-navy, #1E3A5F);
-            color: white;
-          }
-
-          .btn-primary:hover {
-            background: #2d4a6f;
-          }
-
-          .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-          }
-        `}</style>
+      <div className="cmo-summary">
+        <span>{meeting.title || `موعد مع ${clientDisplayName(meeting)}`}</span>
+        <em>{clientDisplayName(meeting)}</em>
       </div>
-    </div>
+
+      <div className="mfm-link cmo-dialog-field">
+        {meeting.case && (
+          <div className="mfm-link__chosen">
+            <span>
+              <strong>مرتبط حاليا:</strong> {meeting.case.title}
+              <em> ({reference(meeting.case)})</em>
+            </span>
+            <button
+              type="button"
+              className="fin-btn fin-btn--ghost fin-btn--sm"
+              onClick={() => save(null)}
+              disabled={saving}
+            >
+              <X size={13} /> فك الربط
+            </button>
+          </div>
+        )}
+
+        {chosen ? (
+          <div className="mfm-link__chosen">
+            <span>
+              <strong>القضية المختارة:</strong> {chosen.title}
+              <em> ({reference(chosen)})</em>
+            </span>
+            <button type="button" className="fin-btn fin-btn--ghost fin-btn--sm" onClick={() => setChosen(null)} disabled={saving}>
+              <X size={13} /> تغيير
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="mfm-link__search">
+              <Search size={14} aria-hidden="true" />
+              <input
+                className="fin-input"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="ابحث بعنوان القضية أو رقمها أو اسم العميل…"
+                autoFocus
+              />
+            </div>
+
+            <p className="mfm-link__state">
+              {searching
+                ? 'جار البحث…'
+                : rows.length === 0
+                  ? (byClient ? 'لا قضايا لهذا العميل — ابحث في قضايا المكتب' : 'لا نتائج مطابقة')
+                  : (term ? 'نتائج البحث' : byClient ? 'قضايا هذا العميل' : 'أحدث القضايا')}
+            </p>
+
+            {!searching && rows.length > 0 && (
+              <ul className="mfm-link__results">
+                {rows.map((row) => (
+                  <li key={row.id}>
+                    <button type="button" onClick={() => setChosen(row)}>
+                      <span>{row.title}</span>
+                      <em>{reference(row)}{row.client_name ? ` · ${row.client_name}` : ''}</em>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
+    </Modal>
   );
 };
 

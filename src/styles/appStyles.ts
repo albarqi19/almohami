@@ -176,3 +176,6 @@ import './finance-dashboard.css';
 import './contract-drafting-workspace.css';
 // بطاقة مراجعة «مهمة بالصوت» (vtr-) — أصناف ببادئة خاصة، فلا تتعلّق بترتيب الحقن.
 import './voice-task-review.css';
+// مواعيد العملاء في المكتب — النموذج ولوحة التفاصيل (cmo-) فوق fin-*/mfm-*/mdp-*، بلا
+// إعادةِ تعريفِ أيّ صنفٍ قائم، فلا تتعلّق بترتيب الحقن.
+import './client-meetings-office.css';

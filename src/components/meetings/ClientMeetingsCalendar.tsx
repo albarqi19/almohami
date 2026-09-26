@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronRight, ChevronLeft, Video, MapPin, Clock, User } from 'lucide-react';
 import type { ClientMeeting } from '../../services/meetingService';
+import { fmtDayMonthAr, fmtMonthTitleAr, fmtTimeAr, riyadhDayKey } from '../../utils/dateAr';
+import { clientDisplayName } from './clientMeetingHelpers';
 
 interface Props {
   meetings: ClientMeeting[];
@@ -30,13 +32,14 @@ const ClientMeetingsCalendar: React.FC<Props> = ({ meetings, onSelectMeeting }) 
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
   });
-  const [selectedDay, setSelectedDay] = useState<string | null>(dayKey(new Date()));
+  const [selectedDay, setSelectedDay] = useState<string | null>(riyadhDayKey(new Date()));
 
   // تجميع المواعيد حسب اليوم
   const byDay = useMemo(() => {
     const map: Record<string, ClientMeeting[]> = {};
     for (const m of meetings) {
-      const k = dayKey(new Date(m.scheduled_at));
+      // يوم الرياض لا يوم الجهاز — كقائمة الأيام والخادم
+      const k = riyadhDayKey(m.scheduled_at);
       (map[k] ||= []).push(m);
     }
     // ترتيب مواعيد كل يوم زمنياً
@@ -59,15 +62,15 @@ const ClientMeetingsCalendar: React.FC<Props> = ({ meetings, onSelectMeeting }) 
     return arr;
   }, [cursor]);
 
-  const todayKey = dayKey(new Date());
-  const monthLabel = cursor.toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' });
+  const todayKey = riyadhDayKey(new Date());
+  // ميلاديٌّ صريح: 'ar-SA' المجرّدة كانت تكتب الشهر هجرياً («ربيع الأول») فوق شبكةٍ ميلادية
+  const monthLabel = fmtMonthTitleAr(cursor);
 
   const selectedMeetings = selectedDay ? (byDay[selectedDay] || []) : [];
 
-  const formatTime = (s: string) =>
-    new Date(s).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
-  const formatDayLabel = (k: string) =>
-    new Date(k).toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long' });
+  const formatTime = (s: string) => fmtTimeAr(s);
+  // ظهر اليوم بتوقيت الرياض — منتصف الليل قد يعبر إلى اليوم السابق في منطقةٍ أخرى
+  const formatDayLabel = (k: string) => fmtDayMonthAr(new Date(`${k}T12:00:00+03:00`));
 
   return (
     <div className="cmc">
@@ -134,7 +137,7 @@ const ClientMeetingsCalendar: React.FC<Props> = ({ meetings, onSelectMeeting }) 
                   <span className="cmc__item-bar" style={{ background: STATUS_COLOR[m.status] || '#9CA3AF' }} />
                   <span className="cmc__item-time"><Clock size={12} /> {formatTime(m.scheduled_at)}</span>
                   <span className="cmc__item-main">
-                    <span className="cmc__item-client"><User size={12} /> {m.client_name || m.client?.name || 'عميل'}</span>
+                    <span className="cmc__item-client"><User size={12} /> {clientDisplayName(m)}</span>
                     <span className="cmc__item-type">
                       {isRemote ? <Video size={11} /> : <MapPin size={11} />}
                       {isRemote ? 'عن بعد' : 'حضوري'} · {m.duration_minutes} د

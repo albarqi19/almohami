@@ -1,23 +1,17 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Calendar,
   Clock,
-  MapPin,
-  Video,
-  User,
-  Phone,
   Mail,
   RefreshCw,
   Search,
   Plus,
   Link2,
   Copy,
-  ExternalLink,
-  MoreVertical,
   XCircle,
   CheckCircle,
   AlertTriangle,
-  Briefcase,
   Send,
   Table,
   LayoutGrid,
@@ -25,7 +19,9 @@ import {
   Download,
   FileImage,
   FileText,
-  FileSpreadsheet
+  FileSpreadsheet,
+  List,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -41,9 +37,49 @@ import CreateBookingLinkModal from '../../components/meetings/CreateBookingLinkM
 import LinkToCaseModal from '../../components/meetings/LinkToCaseModal';
 import MeetingOutcomeModal from '../../components/meetings/MeetingOutcomeModal';
 import ClientMeetingsCalendar from '../../components/meetings/ClientMeetingsCalendar';
+import ClientMeetingFormModal from '../../components/meetings/ClientMeetingFormModal';
+import ClientMeetingDrawer from '../../components/meetings/ClientMeetingDrawer';
+import ClientMeetingsAgenda from '../../components/meetings/ClientMeetingsAgenda';
+import ClientMeetingsSummary, { type QuickFilter, useClientMeetingCounts } from '../../components/meetings/ClientMeetingsSummary';
+import { ApproveClientMeetingDialog, CancelClientMeetingDialog } from '../../components/meetings/ClientMeetingActionDialogs';
+import {
+  clientDisplayName,
+  clientDisplayPhone,
+  isMissingLink,
+} from '../../components/meetings/clientMeetingHelpers';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { fmtTimeAr, riyadhDayKey } from '../../utils/dateAr';
+import { getApiErrorMessage } from '../../utils/apiError';
+
+/** «YYYY-MM-DD» بيوم الرياض بعد n يوماً من الآن */
+const riyadhDayAfter = (days: number): string => riyadhDayKey(new Date(Date.now() + days * 86_400_000));
+
+type TimeFilter = 'all' | 'today' | 'tomorrow' | 'week' | 'upcoming';
+type StatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'no_show' | 'cancelled';
+
+const TIME_OPTIONS: { key: TimeFilter; label: string }[] = [
+  { key: 'upcoming', label: 'القادمة' },
+  { key: 'today', label: 'اليوم' },
+  { key: 'tomorrow', label: 'غدا' },
+  { key: 'week', label: '٧ أيام' },
+  { key: 'all', label: 'الكل' },
+];
+
+const STATUS_OPTIONS: { key: StatusFilter; label: string }[] = [
+  { key: 'all', label: 'كل الحالات' },
+  { key: 'pending', label: 'بانتظار الاعتماد' },
+  { key: 'confirmed', label: 'مؤكدة' },
+  { key: 'completed', label: 'مكتملة' },
+  { key: 'no_show', label: 'لم يحضر' },
+  { key: 'cancelled', label: 'ملغاة' },
+];
 
 const ClientMeetings: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  // ‏/meetings/client/:meetingId — يفتح لوحة الموعد (روابط الإشعارات و«يومي»)
+  const { meetingId } = useParams<{ meetingId?: string }>();
 
   // State
   const [meetings, setMeetings] = useState<ClientMeeting[]>([]);
@@ -51,32 +87,54 @@ const ClientMeetings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  // الحالة تُرشَّح في المتصفّح: النافذة محمّلة كاملةً أصلاً، وبقاؤها كاملةً يُبقي أرقام
+  // شريط الملخّص ثابتة مهما تغيّر المرشّح
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [onlyMissingLink, setOnlyMissingLink] = useState(false);
+  const [lawyerFilter, setLawyerFilter] = useState<number | 'all'>('all');
   const [activeTab, setActiveTab] = useState<'meetings' | 'links'>('meetings');
   const [showCreateLinkModal, setShowCreateLinkModal] = useState(false);
-  const [showLinkCaseModal, setShowLinkCaseModal] = useState(false);
-  const [selectedMeeting, setSelectedMeeting] = useState<ClientMeeting | null>(null);
-  const [activeMenu, setActiveMenu] = useState<number | null>(null);
+  const [linkCaseMeeting, setLinkCaseMeeting] = useState<ClientMeeting | null>(null);
+  // 'new' = موعد جديد، وموعدٌ = تعديله
+  const [formMeeting, setFormMeeting] = useState<ClientMeeting | 'new' | null>(null);
+  const [approveMeeting, setApproveMeeting] = useState<ClientMeeting | null>(null);
+  const [cancelMeeting, setCancelMeeting] = useState<ClientMeeting | null>(null);
+  const [noShowMeeting, setNoShowMeeting] = useState<ClientMeeting | null>(null);
+  const [noShowSaving, setNoShowSaving] = useState(false);
+  const [deleteLinkTarget, setDeleteLinkTarget] = useState<BookingLink | null>(null);
+  const [deletingLink, setDeletingLink] = useState(false);
+  // نتيجة الإجراء فوق القائمة — بديل alert(): الخطأ كان يُبتلع في console وحده
+  const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+  // موعدٌ فُتح برابطٍ مباشر ويقع خارج النافذة المحمّلة (موعد أمس و«القادمة» مختارة)
+  const [deepLinked, setDeepLinked] = useState<ClientMeeting | null>(null);
   const [copiedLinkId, setCopiedLinkId] = useState<number | null>(null);
   const [linksViewMode, setLinksViewMode] = useState<'table' | 'cards'>('table');
   const [meetingsViewMode, setMeetingsViewMode] = useState<'table' | 'calendar'>('table');
-  const [timeFilter, setTimeFilter] = useState<'all' | 'today' | 'tomorrow' | 'week' | 'upcoming'>('upcoming');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('upcoming');
   const [showExportMenu, setShowExportMenu] = useState(false);
   // نتيجة الاجتماع: الموعد المعروض في modal النتيجة (إنهاء/عرض/تعديل)
   const [outcomeMeeting, setOutcomeMeeting] = useState<ClientMeeting | null>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  // الصفحة شاشةٌ واحدة على الكمبيوتر: القائمة تتمرّر داخل .cmo-body لا الصفحة كلّها. فتغيير
+  // التصفية أو طريقة العرض يعيدها إلى أوّلها، وإلا بقيت عند موضعٍ من قائمةٍ لم تعد هي.
+  // (على الجوّال ليست حاوية تمرير، فلا أثر لهذا هناك.)
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    bodyRef.current?.scrollTo({ top: 0 });
+  }, [timeFilter, statusFilter, lawyerFilter, onlyMissingLink, searchTerm, meetingsViewMode]);
 
-  // Fetch data
-  const fetchData = useCallback(async () => {
+  // نافذة الجلب: الجدول بمرشّحٍ زمني يبدأ من اليوم فيكفيه ما بعده (والخادم يجمعه كاملاً
+  // صفحةً بعد صفحة)؛ أمّا «الكل» والتقويم فيحتاجان الماضي أيضاً.
+  const windowFrom = meetingsViewMode === 'table' && timeFilter !== 'all' ? riyadhDayKey(new Date()) : undefined;
+
+  // Fetch data — silent: تحديثٌ بعد إجراء بلا وميض «جاري التحميل»
+  const fetchData = useCallback(async (opts?: { silent?: boolean }) => {
     try {
-      setLoading(true);
+      if (!opts?.silent) setLoading(true);
       setError(null);
 
-      const params: any = {};
-      if (statusFilter !== 'all') params.status = statusFilter;
-
       const [meetingsData, linksData] = await Promise.all([
-        clientMeetingService.getAll(params),
+        clientMeetingService.getAll({ from_date: windowFrom }),
         bookingLinkService.getAll(),
       ]);
 
@@ -88,11 +146,69 @@ const ClientMeetings: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [windowFrom]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // ── لوحة الموعد: الرابط هو مصدر الحقيقة (/meetings/client/:meetingId) ──
+  const selectedId = meetingId ? Number(meetingId) : null;
+  const drawerMeeting = useMemo(() => {
+    if (!selectedId) return null;
+    return meetings.find((m) => m.id === selectedId) ?? (deepLinked?.id === selectedId ? deepLinked : null);
+  }, [selectedId, meetings, deepLinked]);
+
+  // موعدٌ فُتح برابط وليس في النافذة المحمّلة يُجلب وحده؛ وما لا يُرى يُغلق بتنبيه
+  useEffect(() => {
+    if (!selectedId || loading) return;
+    if (meetings.some((m) => m.id === selectedId) || deepLinked?.id === selectedId) return;
+
+    let cancelled = false;
+    clientMeetingService
+      .getById(selectedId)
+      .then((m) => {
+        if (!cancelled) setDeepLinked(m);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setNotice({ tone: 'error', text: 'الموعد غير موجود أو لا تملك صلاحية عرضه' });
+        navigate('/meetings/client', { replace: true });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, loading, meetings, deepLinked, navigate]);
+
+  // النقر من القائمة يُضيف خطوةً في السجلّ فيُغلق «رجوع» اللوحة؛ والرابط المباشر يُستبدل
+  const openMeeting = (meeting: ClientMeeting) => {
+    navigate(`/meetings/client/${meeting.id}`, { state: { fromList: true } });
+  };
+
+  const closeMeeting = useCallback(() => {
+    if ((location.state as { fromList?: boolean } | null)?.fromList) {
+      navigate(-1);
+    } else {
+      navigate('/meetings/client', { replace: true });
+    }
+  }, [location.state, navigate]);
+
+  // التنبيه الناجح يختفي وحده؛ الخطأ يبقى حتى يُقرأ ويُغلق
+  useEffect(() => {
+    if (!notice || notice.tone !== 'success') return;
+    const timer = window.setTimeout(() => setNotice(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  /** بعد أي إجراء: التنبيه، وتحديث القائمة بصمت، ونسخةٌ حديثة من الموعد المفتوح برابط. */
+  const afterAction = (message: string) => {
+    setNotice({ tone: 'success', text: message });
+    fetchData({ silent: true });
+    if (deepLinked) {
+      clientMeetingService.getById(deepLinked.id).then(setDeepLinked).catch(() => undefined);
+    }
+  };
 
   // Close export menu when clicking outside
   useEffect(() => {
@@ -111,108 +227,107 @@ const ClientMeetings: React.FC = () => {
     };
   }, [showExportMenu]);
 
-  // Filter
-  const filteredMeetings = meetings.filter(meeting => {
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      const matchesTitle = meeting.title?.toLowerCase().includes(term);
-      const matchesClient = meeting.client_name?.toLowerCase().includes(term);
-      const matchesPhone = meeting.client_phone?.includes(term);
-      if (!matchesTitle && !matchesClient && !matchesPhone) return false;
-    }
-    // Time filter — يُتجاوز في وضع التقويم لأنه يحدّد النطاق بالشهر المعروض
-    // (وإلا تظهر أيام الماضي فارغة رغم وجود مواعيد فيها)
-    if (timeFilter !== 'all' && meetingsViewMode !== 'calendar') {
-      const meetingDate = new Date(meeting.scheduled_at);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const nextWeek = new Date(today);
-      nextWeek.setDate(nextWeek.getDate() + 7);
+  // محامو المواعيد المحمّلة — المرشّح يظهر لمن يرى أكثر من محامٍ (مدير المكتب) وحده
+  const lawyerOptions = useMemo(() => {
+    const names = new Map<number, string>();
+    meetings.forEach((m) => {
+      if (m.lawyer?.name) names.set(m.lawyer_id, m.lawyer.name);
+    });
+    return [...names.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+  }, [meetings]);
+  // مرشّحٌ لم يعد بين الخيارات (بعد تحديث) لا يبقى فعّالاً وهو مخفي
+  const activeLawyer = lawyerOptions.some((o) => o.id === lawyerFilter) ? lawyerFilter : 'all';
 
-      switch (timeFilter) {
-        case 'today':
-          // For today, we want meetings that occur on today's date
-          const todayEnd = new Date(today);
-          todayEnd.setHours(23, 59, 59, 999);
-          if (meetingDate < today || meetingDate > todayEnd) return false;
-          break;
-        case 'tomorrow':
-          const tomorrowEnd = new Date(tomorrow);
-          tomorrowEnd.setHours(23, 59, 59, 999);
-          if (meetingDate < tomorrow || meetingDate > tomorrowEnd) return false;
-          break;
-        case 'week':
-          if (meetingDate < today || meetingDate > nextWeek) return false;
-          break;
-        case 'upcoming':
-          if (meetingDate < today) return false;
-          break;
+  // Filter — بيوم الرياض لا يوم الجهاز: الخادم يبدأ نافذته بيوم الرياض أيضاً
+  const todayKey = riyadhDayKey(new Date());
+  const filteredMeetings = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const tomorrowKey = riyadhDayAfter(1);
+    const weekEndKey = riyadhDayAfter(6);
+
+    const list = meetings.filter(meeting => {
+      if (term) {
+        const matchesTitle = meeting.title?.toLowerCase().includes(term);
+        const matchesClient = clientDisplayName(meeting).toLowerCase().includes(term);
+        const matchesPhone = clientDisplayPhone(meeting)?.includes(term);
+        if (!matchesTitle && !matchesClient && !matchesPhone) return false;
       }
+
+      if (activeLawyer !== 'all' && meeting.lawyer_id !== activeLawyer) return false;
+
+      if (statusFilter === 'cancelled') {
+        if (meeting.status !== 'cancelled_by_client' && meeting.status !== 'cancelled_by_lawyer') return false;
+      } else if (statusFilter !== 'all' && meeting.status !== statusFilter) {
+        return false;
+      }
+
+      if (onlyMissingLink && !isMissingLink(meeting)) return false;
+
+      // Time filter — يُتجاوز في وضع التقويم لأنه يحدّد النطاق بالشهر المعروض
+      // (وإلا تظهر أيام الماضي فارغة رغم وجود مواعيد فيها)
+      if (timeFilter !== 'all' && meetingsViewMode !== 'calendar') {
+        const day = riyadhDayKey(meeting.scheduled_at);
+        if (timeFilter === 'today' && day !== todayKey) return false;
+        if (timeFilter === 'tomorrow' && day !== tomorrowKey) return false;
+        if (timeFilter === 'week' && (day < todayKey || day > weekEndKey)) return false;
+        if (timeFilter === 'upcoming' && day < todayKey) return false;
+      }
+
+      return true;
+    });
+
+    // «القادمة» وأخواتها: الأقرب أولاً — الخادم يرتّب تنازلياً فكان أبعدُ موعدٍ في
+    // الرأس. و«الكل» يبقى الأحدث أولاً.
+    const ascending = timeFilter !== 'all';
+    return [...list].sort((a, b) => {
+      const diff = new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime();
+      return ascending ? diff : -diff;
+    });
+  }, [meetings, searchTerm, activeLawyer, statusFilter, onlyMissingLink, timeFilter, meetingsViewMode, todayKey]);
+
+  // عدّادات «اليوم» و«٧ أيام» على زرَّي الفترة، وشريحتا التنبيه في شريط الأدوات
+  const counts = useClientMeetingCounts(meetings);
+
+  // بطاقة الملخّص النشطة مشتقّةٌ من المرشّحات نفسها — لا حالةٌ ثالثة تنحرف عنها
+  const activeQuick: QuickFilter | null = onlyMissingLink
+    ? 'missing_link'
+    : statusFilter === 'pending'
+      ? 'pending'
+      : statusFilter === 'all' && timeFilter === 'today'
+        ? 'today'
+        : statusFilter === 'all' && timeFilter === 'week'
+          ? 'week'
+          : null;
+
+  const hasFilters = searchTerm.trim() !== '' || statusFilter !== 'all' || onlyMissingLink
+    || activeLawyer !== 'all' || timeFilter !== 'upcoming';
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setOnlyMissingLink(false);
+    setLawyerFilter('all');
+    setTimeFilter('upcoming');
+  };
+
+  // نقر البطاقة يطبّق مرشّحها؛ ونقرها ثانيةً يعيد «القادمة» كما كانت
+  const pickQuick = (quick: QuickFilter) => {
+    if (quick === activeQuick) {
+      setStatusFilter('all');
+      setOnlyMissingLink(false);
+      setTimeFilter('upcoming');
+      return;
     }
-
-    return true;
-  });
-
-  // Helpers
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ar-SA', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    setMeetingsViewMode('table');
+    setOnlyMissingLink(quick === 'missing_link');
+    setStatusFilter(quick === 'pending' ? 'pending' : 'all');
+    setTimeFilter(quick === 'today' ? 'today' : quick === 'week' ? 'week' : 'upcoming');
   };
 
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString('ar-SA', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
-      pending: { label: 'قيد الانتظار', color: '#F59E0B', bg: '#FFFBEB' },
-      confirmed: { label: 'مؤكد', color: '#10B981', bg: '#ECFDF5' },
-      completed: { label: 'مكتمل', color: '#3B82F6', bg: '#EFF6FF' },
-      cancelled_by_client: { label: 'ملغي (العميل)', color: '#EF4444', bg: '#FEF2F2' },
-      cancelled_by_lawyer: { label: 'ملغي (المحامي)', color: '#EF4444', bg: '#FEF2F2' },
-      no_show: { label: 'لم يحضر', color: '#6B7280', bg: '#F3F4F6' },
-    };
-    const config = statusConfig[status] || statusConfig.pending;
-    return (
-      <span
-        style={{
-          padding: '4px 10px',
-          borderRadius: '12px',
-          fontSize: '12px',
-          fontWeight: 500,
-          color: config.color,
-          backgroundColor: config.bg,
-        }}
-      >
-        {config.label}
-      </span>
-    );
-  };
-
-  const getMeetingTypeBadge = (type: 'in_person' | 'remote') => {
-    return type === 'remote' ? (
-      <span className="type-badge type-badge--remote">
-        <Video size={12} />
-        عن بعد
-      </span>
-    ) : (
-      <span className="type-badge type-badge--inperson">
-        <MapPin size={12} />
-        حضوري
-      </span>
-    );
-  };
+  // وقت التصدير بتوقيت الرياض — كالقائمة نفسها لا كمنطقة جهاز المستخدم
+  const formatTime = (dateStr: string) => fmtTimeAr(dateStr);
 
   // Actions
   const handleCopyLink = async (link: BookingLink) => {
@@ -225,67 +340,71 @@ const ClientMeetings: React.FC = () => {
     }
   };
 
-  // اعتمادُ طلبٍ قادم من بوابة العميل — يُرسل له التأكيد (واتساب/بريد) وجرس البوابة
-  const handleConfirmMeeting = async (meeting: ClientMeeting) => {
-    setActiveMenu(null);
-    try {
-      await clientMeetingService.confirm(meeting.id);
-      fetchData();
-    } catch (err) {
-      console.error('Error confirming meeting:', err);
-      alert(err instanceof Error ? err.message : 'تعذّر اعتماد الموعد');
-    }
+  // اعتمادُ طلبٍ قادم من بوابة العميل — يُرسل له التأكيد (واتساب/بريد) وجرس البوابة.
+  // عبر نافذةٍ لا مباشرةً: طلبٌ «عن بُعد» يُرفق رابطه مع الاعتماد نفسه.
+  const handleConfirmMeeting = (meeting: ClientMeeting) => {
+    setApproveMeeting(meeting);
   };
 
-  const handleCancelMeeting = async (meeting: ClientMeeting) => {
-    const reason = prompt('سبب الإلغاء:');
-    if (reason) {
-      try {
-        await clientMeetingService.cancel(meeting.id, reason);
-        fetchData();
-      } catch (err) {
-        console.error('Error cancelling meeting:', err);
-      }
-    }
-    setActiveMenu(null);
+  // الإلغاء عبر نافذةٍ بسببٍ إلزامي (يصل العميلَ) — بدل prompt() الذي كان يُلغي بصمت عند الخطأ
+  const handleCancelMeeting = (meeting: ClientMeeting) => {
+    setCancelMeeting(meeting);
   };
 
   // فتح modal نتيجة الاجتماع (إنهاء/عرض/تعديل) — بدل prompt
   const handleOpenOutcome = (meeting: ClientMeeting) => {
     setOutcomeMeeting(meeting);
-    setActiveMenu(null);
   };
 
-  const handleNoShow = async (meeting: ClientMeeting) => {
-    if (confirm('هل تريد تسجيل عدم حضور العميل؟')) {
-      try {
-        await clientMeetingService.markNoShow(meeting.id);
-        fetchData();
-      } catch (err) {
-        console.error('Error marking no-show:', err);
-      }
+  const handleEditMeeting = (meeting: ClientMeeting) => {
+    setFormMeeting(meeting);
+  };
+
+  const handleNoShow = (meeting: ClientMeeting) => {
+    setNoShowMeeting(meeting);
+  };
+
+  const confirmNoShow = async () => {
+    if (!noShowMeeting) return;
+    setNoShowSaving(true);
+    try {
+      await clientMeetingService.markNoShow(noShowMeeting.id);
+      setNoShowMeeting(null);
+      afterAction('سجل عدم حضور العميل');
+    } catch (err) {
+      setNoShowMeeting(null);
+      setNotice({ tone: 'error', text: getApiErrorMessage(err, 'تعذر تسجيل عدم الحضور') });
+    } finally {
+      setNoShowSaving(false);
     }
-    setActiveMenu(null);
   };
 
-  const handleDeleteLink = async (link: BookingLink) => {
-    if (confirm('هل تريد حذف هذا الرابط؟')) {
-      try {
-        await bookingLinkService.delete(link.id);
-        fetchData();
-      } catch (err) {
-        console.error('Error deleting link:', err);
-      }
+  const handleDeleteLink = (link: BookingLink) => {
+    setDeleteLinkTarget(link);
+  };
+
+  const confirmDeleteLink = async () => {
+    if (!deleteLinkTarget) return;
+    setDeletingLink(true);
+    try {
+      await bookingLinkService.delete(deleteLinkTarget.id);
+      setDeleteLinkTarget(null);
+      afterAction('حذف رابط الحجز');
+    } catch (err) {
+      setDeleteLinkTarget(null);
+      setNotice({ tone: 'error', text: getApiErrorMessage(err, 'تعذر حذف الرابط') });
+    } finally {
+      setDeletingLink(false);
     }
   };
 
   const handleResendLink = async (link: BookingLink) => {
     try {
       await bookingLinkService.resend(link.id, 'both');
-      alert('تم إعادة إرسال الرابط بنجاح');
-    } catch (err: any) {
+      setNotice({ tone: 'success', text: 'تم إعادة إرسال الرابط بنجاح' });
+    } catch (err) {
       console.error('Error resending link:', err);
-      alert(err?.message || 'تعذّر إعادة إرسال الرابط');
+      setNotice({ tone: 'error', text: getApiErrorMessage(err, 'تعذر إعادة إرسال الرابط') });
     }
   };
 
@@ -308,14 +427,15 @@ const ClientMeetings: React.FC = () => {
     const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     const dayName = dayNames[today.getDay()];
     const dateStr = today.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-    return `جلسات_${dayName}_${dateStr}`.replace(/\s/g, '_');
+    return `مواعيد_${dayName}_${dateStr}`.replace(/\s/g, '_');
   };
 
   // Export as Image
   const exportAsImage = async () => {
     const todayMeetings = getTodayMeetings();
     if (todayMeetings.length === 0) {
-      alert('لا توجد جلسات لليوم');
+      setShowExportMenu(false);
+      setNotice({ tone: 'error', text: 'لا توجد مواعيد اليوم لتصديرها' });
       return;
     }
 
@@ -336,7 +456,7 @@ const ClientMeetings: React.FC = () => {
 
     container.innerHTML = `
       <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">📅 جلسات اليوم</h1>
+        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">📅 مواعيد اليوم</h1>
         <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0; font-size: 16px;">${dateStr}</p>
       </div>
       <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
@@ -385,7 +505,7 @@ const ClientMeetings: React.FC = () => {
       link.click();
     } catch (err) {
       console.error('Error exporting image:', err);
-      alert('حدث خطأ أثناء التصدير. تأكد من تثبيت مكتبة html2canvas');
+      setNotice({ tone: 'error', text: 'حدث خطأ أثناء تصدير الصورة' });
     } finally {
       document.body.removeChild(container);
     }
@@ -396,7 +516,8 @@ const ClientMeetings: React.FC = () => {
   const exportAsWord = async () => {
     const todayMeetings = getTodayMeetings();
     if (todayMeetings.length === 0) {
-      alert('لا توجد جلسات لليوم');
+      setShowExportMenu(false);
+      setNotice({ tone: 'error', text: 'لا توجد مواعيد اليوم لتصديرها' });
       return;
     }
 
@@ -421,7 +542,7 @@ const ClientMeetings: React.FC = () => {
         </style>
       </head>
       <body>
-        <h1>📅 جلسات اليوم</h1>
+        <h1>📅 مواعيد اليوم</h1>
         <p class="date">${dateStr}</p>
         <table>
           <thead>
@@ -468,7 +589,8 @@ const ClientMeetings: React.FC = () => {
   const exportAsExcel = async () => {
     const todayMeetings = getTodayMeetings();
     if (todayMeetings.length === 0) {
-      alert('لا توجد جلسات لليوم');
+      setShowExportMenu(false);
+      setNotice({ tone: 'error', text: 'لا توجد مواعيد اليوم لتصديرها' });
       return;
     }
 
@@ -489,7 +611,7 @@ const ClientMeetings: React.FC = () => {
       </head>
       <body>
         <table>
-          <tr><td colspan="7" class="header">📅 جلسات اليوم</td></tr>
+          <tr><td colspan="7" class="header">📅 مواعيد اليوم</td></tr>
           <tr><td colspan="7" class="date">${dateStr}</td></tr>
           <tr><td colspan="7"></td></tr>
           <tr>
@@ -527,7 +649,7 @@ const ClientMeetings: React.FC = () => {
   };
 
   return (
-    <div className="meetings-page">
+    <div className="meetings-page cmo-page">
       {/* Unified Header */}
       <header className="notion-header">
         <div className="notion-header__title">
@@ -560,7 +682,7 @@ const ClientMeetings: React.FC = () => {
             <button
               className="notion-icon-btn"
               onClick={() => setShowExportMenu(!showExportMenu)}
-              title="تصدير جلسات اليوم"
+              title="تصدير مواعيد اليوم"
             >
               <Download size={16} />
             </button>
@@ -568,7 +690,7 @@ const ClientMeetings: React.FC = () => {
               <div className="export-dropdown__menu">
                 <div className="export-dropdown__header">
                   <Download size={14} />
-                  تصدير جلسات اليوم
+                  تصدير مواعيد اليوم
                 </div>
                 <button onClick={exportAsImage}>
                   <FileImage size={16} />
@@ -587,242 +709,212 @@ const ClientMeetings: React.FC = () => {
           </div>
           <button
             className="notion-icon-btn"
-            onClick={fetchData}
+            onClick={() => fetchData()}
             disabled={loading}
             title="تحديث"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
           <button
-            className="notion-primary-btn"
+            className="fin-btn"
             onClick={() => setShowCreateLinkModal(true)}
           >
             <Link2 size={16} />
             إنشاء رابط حجز
           </button>
+          {/* حجزٌ مباشر — السكرتير الذي يتلقّى اتصال العميل لم يكن يملك غير «رابط الحجز» */}
+          <button
+            className="notion-primary-btn"
+            onClick={() => setFormMeeting('new')}
+          >
+            <Plus size={16} />
+            موعد جديد
+          </button>
         </div>
       </header>
+
+      {notice && (
+        <div
+          className={`cmo-alert cmo-alert--${notice.tone} cmo-page-alert`}
+          role={notice.tone === 'error' ? 'alert' : 'status'}
+        >
+          {notice.tone === 'error' ? <AlertTriangle size={14} aria-hidden="true" /> : <CheckCircle size={14} aria-hidden="true" />}
+          <span className="cmo-alert__text">{notice.text}</span>
+          <button type="button" className="cmo-alert__close" onClick={() => setNotice(null)} aria-label="إخفاء التنبيه">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Meetings Tab */}
       {activeTab === 'meetings' && (
         <>
-          {/* Filters */}
-          <div className="notion-filters">
-            <div className="search-box">
-              <Search size={16} />
+          {/* شريط الأدوات: بحث، فترة (بعدّادَي اليوم والأسبوع)، حالة، محامٍ، ثم ما يحتاج انتباهك
+              وطريقة العرض — سطر واحد يلتف إلى ثان حين يضيق العرض. كانت فوقه أربع بطاقات ملخص */}
+          <div className="cmo-toolbar">
+            <div className="mfm-search cmo-toolbar__search">
+              <Search size={14} aria-hidden="true" />
               <input
-                type="text"
-                placeholder="بحث بالاسم أو الهاتف..."
+                className="fin-input"
+                type="search"
+                placeholder="بحث بالاسم أو الجوال…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                aria-label="بحث في المواعيد"
               />
             </div>
 
-            <div className="time-filters">
-              {[
-                { key: 'upcoming', label: 'القادمة', icon: '📅' },
-                { key: 'today', label: 'اليوم', icon: '🌟' },
-                { key: 'tomorrow', label: 'غداً', icon: '☀️' },
-                { key: 'week', label: 'الأسبوع', icon: '📆' },
-                { key: 'all', label: 'الكل', icon: '📋' },
-              ].map(tab => (
-                <button
-                  key={tab.key}
-                  className={`time-filter ${timeFilter === tab.key ? 'time-filter--active' : ''}`}
-                  onClick={() => setTimeFilter(tab.key as any)}
-                >
-                  <span className="time-filter__icon">{tab.icon}</span>
-                  <span>{tab.label}</span>
-                </button>
-              ))}
+            <div className="mfm-types cmo-seg" role="group" aria-label="الفترة">
+              {TIME_OPTIONS.map((o) => {
+                const n = o.key === 'today' ? counts.today : o.key === 'week' ? counts.week : 0;
+                return (
+                  <button
+                    key={o.key}
+                    type="button"
+                    className={`mfm-type cmo-seg__btn${timeFilter === o.key && meetingsViewMode !== 'calendar' ? ' is-active' : ''}`}
+                    aria-pressed={timeFilter === o.key}
+                    onClick={() => setTimeFilter(o.key)}
+                    // التقويم يحدّد نطاقه بالشهر المعروض، فالفترة لا تعني فيه شيئاً
+                    disabled={meetingsViewMode === 'calendar'}
+                    title={n > 0 ? `${n} ${o.key === 'today' ? 'غير ملغاة' : 'مؤكدة ومعلقة'}` : undefined}
+                  >
+                    {o.label}
+                    {n > 0 && <span className="cmo-seg__count">{n}</span>}
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="filter-tabs">
-              {[
-                { key: 'all', label: 'الكل' },
-                { key: 'confirmed', label: 'المؤكدة' },
-                { key: 'pending', label: 'قيد الانتظار' },
-                { key: 'completed', label: 'المكتملة' },
-              ].map(tab => (
-                <button
-                  key={tab.key}
-                  className={`filter-tab ${statusFilter === tab.key ? 'filter-tab--active' : ''}`}
-                  onClick={() => setStatusFilter(tab.key)}
-                >
-                  {tab.label}
-                </button>
+            <select
+              className="fin-input cmo-select"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+              aria-label="تصفية حسب الحالة"
+            >
+              {STATUS_OPTIONS.map((o) => (
+                <option key={o.key} value={o.key}>{o.label}</option>
               ))}
-            </div>
+            </select>
 
-            {/* Table / Calendar toggle */}
-            <div className="view-toggle">
-              <button
-                className={`view-toggle-btn ${meetingsViewMode === 'table' ? 'view-toggle-btn--active' : ''}`}
-                onClick={() => setMeetingsViewMode('table')}
-                title="عرض جدول"
+            {lawyerOptions.length > 1 && (
+              <select
+                className="fin-input cmo-select"
+                value={activeLawyer}
+                onChange={(e) => setLawyerFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                aria-label="تصفية حسب المحامي"
               >
-                <Table size={16} />
-              </button>
-              <button
-                className={`view-toggle-btn ${meetingsViewMode === 'calendar' ? 'view-toggle-btn--active' : ''}`}
-                onClick={() => setMeetingsViewMode('calendar')}
-                title="عرض تقويم"
-              >
-                <Calendar size={16} />
-              </button>
+                <option value="all">كل المحامين</option>
+                {lawyerOptions.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </select>
+            )}
+
+            <div className="cmo-toolbar__end">
+              <ClientMeetingsSummary counts={counts} active={activeQuick} onPick={pickQuick} />
+              {hasFilters && (
+                <button type="button" className="fin-btn fin-btn--ghost fin-btn--sm" onClick={resetFilters}>
+                  مسح التصفية
+                </button>
+              )}
+              <div className="mfm-types" role="group" aria-label="طريقة العرض">
+                <button
+                  type="button"
+                  className={`mfm-type cmo-view-btn${meetingsViewMode === 'table' ? ' is-active' : ''}`}
+                  onClick={() => setMeetingsViewMode('table')}
+                  aria-pressed={meetingsViewMode === 'table'}
+                  title="قائمة بالأيام"
+                >
+                  <List size={15} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className={`mfm-type cmo-view-btn${meetingsViewMode === 'calendar' ? ' is-active' : ''}`}
+                  onClick={() => setMeetingsViewMode('calendar')}
+                  aria-pressed={meetingsViewMode === 'calendar'}
+                  title="تقويم"
+                >
+                  <Calendar size={15} aria-hidden="true" />
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Meetings List */}
-          {loading ? (
-            <div className="loading-state">
-              <RefreshCw size={32} className="animate-spin" />
-              <p>جاري تحميل المواعيد...</p>
-            </div>
-          ) : error ? (
-            <div className="error-state">
-              <XCircle size={32} />
-              <p>{error}</p>
-              <button onClick={fetchData}>إعادة المحاولة</button>
-            </div>
-          ) : filteredMeetings.length === 0 ? (
-            <div className="empty-state">
-              <Calendar size={48} />
-              <h3>لا توجد مواعيد</h3>
-              <p>أنشئ رابط حجز وأرسله للعميل لحجز موعد</p>
-              <button
-                className="primary-btn"
-                onClick={() => setShowCreateLinkModal(true)}
-              >
-                <Link2 size={18} />
-                إنشاء رابط حجز
-              </button>
-            </div>
-          ) : meetingsViewMode === 'calendar' ? (
-            <ClientMeetingsCalendar
-              meetings={filteredMeetings}
-              onSelectMeeting={(m) => {
-                if (m.status === 'completed' || m.status === 'confirmed' || m.status === 'pending') {
-                  handleOpenOutcome(m);
-                } else {
-                  setSelectedMeeting(m);
-                  setShowLinkCaseModal(true);
-                }
-              }}
-            />
-          ) : (
-            <div className="meetings-table-wrapper">
-              <table className="meetings-table">
-                <thead>
-                  <tr>
-                    <th>العميل</th>
-                    <th>التاريخ والوقت</th>
-                    <th>النوع</th>
-                    <th>المدة</th>
-                    <th>القضية</th>
-                    <th>الحالة</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMeetings.map(meeting => (
-                    <tr key={meeting.id}>
-                      <td>
-                        <div className="client-info">
-                          <div className="client-avatar">
-                            {meeting.client_name?.charAt(0) || '?'}
-                          </div>
-                          <div>
-                            <div className="client-name">{meeting.client_name || 'غير محدد'}</div>
-                            <div className="client-contact">
-                              {meeting.client_phone && (
-                                <span><Phone size={12} /> {meeting.client_phone}</span>
-                              )}
-                            </div>
-                          </div>
+          <div ref={bodyRef} className="cmo-body">
+            {loading ? (
+              <div className="cmo-agenda" aria-busy="true" aria-label="جاري تحميل المواعيد">
+                {[0, 1].map((g) => (
+                  <section key={g} className="cmo-day">
+                    <div className="cmo-skel cmo-skel--head" />
+                    <div className="cmo-day__list">
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="cmo-skel-row">
+                          <div className="cmo-skel cmo-skel--time" />
+                          <div className="cmo-skel cmo-skel--avatar" />
+                          <div className="cmo-skel cmo-skel--line" />
+                          <div className="cmo-skel cmo-skel--badge" />
                         </div>
-                      </td>
-                      <td>
-                        <div className="datetime-info">
-                          <span className="date">{formatDate(meeting.scheduled_at)}</span>
-                          <span className="time">{formatTime(meeting.scheduled_at)}</span>
-                        </div>
-                      </td>
-                      <td>{getMeetingTypeBadge(meeting.meeting_type)}</td>
-                      <td>{meeting.duration_minutes} دقيقة</td>
-                      <td>
-                        {meeting.case ? (
-                          <span className="case-badge">
-                            <Briefcase size={12} />
-                            {meeting.case.title}
-                          </span>
-                        ) : (
-                          <button
-                            className="link-case-btn"
-                            onClick={() => {
-                              setSelectedMeeting(meeting);
-                              setShowLinkCaseModal(true);
-                            }}
-                          >
-                            <Plus size={12} />
-                            ربط بقضية
-                          </button>
-                        )}
-                      </td>
-                      <td>{getStatusBadge(meeting.status)}</td>
-                      <td>
-                        {(meeting.status === 'confirmed' || meeting.status === 'pending') && (
-                          <div className="dropdown">
-                            <button
-                              className="icon-btn-sm"
-                              onClick={() => setActiveMenu(activeMenu === meeting.id ? null : meeting.id)}
-                            >
-                              <MoreVertical size={16} />
-                            </button>
-                            {activeMenu === meeting.id && (
-                              <div className="dropdown-menu">
-                                {meeting.status === 'pending' && (
-                                  <button onClick={() => handleConfirmMeeting(meeting)}>
-                                    <CheckCircle size={14} />
-                                    اعتماد الموعد وإبلاغ العميل
-                                  </button>
-                                )}
-                                <button onClick={() => handleOpenOutcome(meeting)}>
-                                  <CheckCircle size={14} />
-                                  إنهاء وتسجيل النتيجة
-                                </button>
-                                <button onClick={() => handleNoShow(meeting)}>
-                                  <AlertTriangle size={14} />
-                                  لم يحضر
-                                </button>
-                                <button
-                                  className="text-red-500"
-                                  onClick={() => handleCancelMeeting(meeting)}
-                                >
-                                  <XCircle size={14} />
-                                  إلغاء
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {meeting.status === 'completed' && (
-                          <button
-                            className="result-btn"
-                            onClick={() => handleOpenOutcome(meeting)}
-                            title="عرض نتيجة الاجتماع"
-                          >
-                            <FileText size={13} />
-                            {meeting.outcome ? 'النتيجة' : 'إضافة نتيجة'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            ) : error ? (
+              <div className="error-state">
+                <XCircle size={32} />
+                <p>{error}</p>
+                <button onClick={() => fetchData()}>إعادة المحاولة</button>
+              </div>
+            ) : meetingsViewMode === 'calendar' ? (
+              // النقر يفتح لوحة الموعد — كان يفتح «إنهاء وتسجيل النتيجة» حتى لموعد الأسبوع القادم
+              <ClientMeetingsCalendar
+                meetings={filteredMeetings}
+                onSelectMeeting={openMeeting}
+              />
+            ) : filteredMeetings.length === 0 && hasFilters && meetings.length > 0 ? (
+              <div className="empty-state">
+                <Search size={40} />
+                <h3>لا مواعيد تطابق التصفية</h3>
+                <p>غير الفترة أو الحالة، أو امسح التصفية لترى المواعيد القادمة كلها.</p>
+                <button className="fin-btn" onClick={resetFilters}>مسح التصفية</button>
+              </div>
+            ) : filteredMeetings.length === 0 ? (
+              <div className="empty-state">
+                <Calendar size={48} />
+                <h3>لا توجد مواعيد</h3>
+                <p>احجز موعدا مباشرة، أو أرسل للعميل رابط حجز يختار منه وقته</p>
+                <div className="cmo-empty-actions">
+                  <button
+                    className="primary-btn"
+                    onClick={() => setFormMeeting('new')}
+                  >
+                    <Plus size={18} />
+                    موعد جديد
+                  </button>
+                  <button
+                    className="fin-btn"
+                    onClick={() => setShowCreateLinkModal(true)}
+                  >
+                    <Link2 size={16} />
+                    إنشاء رابط حجز
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <ClientMeetingsAgenda
+                meetings={filteredMeetings}
+                showLawyer={lawyerOptions.length > 1}
+                onOpen={openMeeting}
+                onApprove={handleConfirmMeeting}
+                onEdit={handleEditMeeting}
+                onOutcome={handleOpenOutcome}
+                onNoShow={handleNoShow}
+                onCancel={handleCancelMeeting}
+                onLinkCase={setLinkCaseMeeting}
+              />
+            )}
+          </div>
         </>
       )}
 
@@ -849,208 +941,210 @@ const ClientMeetings: React.FC = () => {
             </div>
           </div>
 
-          {bookingLinks.length === 0 ? (
-            <div className="empty-state">
-              <Link2 size={48} />
-              <h3>لا توجد روابط حجز</h3>
-              <p>أنشئ رابط حجز لإرساله للعميل</p>
-              <button
-                className="primary-btn"
-                onClick={() => setShowCreateLinkModal(true)}
-              >
-                <Plus size={18} />
-                إنشاء رابط جديد
-              </button>
-            </div>
-          ) : linksViewMode === 'table' ? (
-            /* Table View */
-            <div className="links-table-wrapper">
-              <table className="links-table">
-                <thead>
-                  <tr>
-                    <th>العميل</th>
-                    <th>الرابط</th>
-                    <th>الحالة</th>
-                    <th>تاريخ الانتهاء</th>
-                    <th>الإجراءات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookingLinks.map(link => (
-                    <tr key={link.id} className={link.is_used || !bookingHelpers.isLinkValid(link) ? 'row-disabled' : ''}>
-                      <td>
-                        <div className="table-client">
-                          <div className="table-client-avatar">
-                            {link.client?.name?.charAt(0) || '؟'}
-                          </div>
-                          <span>{link.client?.name || 'رابط عام'}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="table-link-url">
-                          <input type="text" value={link.full_url || link.url || ''} readOnly />
-                          <button
-                            className="icon-btn-xs"
-                            onClick={() => handleCopyLink(link)}
-                            disabled={link.is_used || !bookingHelpers.isLinkValid(link)}
-                            title="نسخ الرابط"
-                          >
-                            {copiedLinkId === link.id ? <CheckCircle size={14} /> : <Copy size={14} />}
-                          </button>
-                        </div>
-                      </td>
-                      <td>
-                        {link.is_used ? (
-                          <span className="status-badge status-badge--used">
-                            <CheckCircle size={12} />
-                            مستخدم
-                          </span>
-                        ) : !bookingHelpers.isLinkValid(link) ? (
-                          <span className="status-badge status-badge--expired">
-                            <XCircle size={12} />
-                            منتهي
-                          </span>
-                        ) : (
-                          <span className="status-badge status-badge--active">
-                            <Clock size={12} />
-                            صالح
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        <span className="expiry-text">
-                          {bookingHelpers.isLinkValid(link) ? bookingHelpers.getTimeUntilExpiry(link.expires_at) : 'منتهي'}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="table-actions">
-                          {!link.is_used && bookingHelpers.isLinkValid(link) && (
-                            <>
-                              <a
-                                href={bookingHelpers.createWhatsAppShareLink(link.full_url || link.url || '', link.client?.name)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="icon-btn-action icon-btn-action--whatsapp"
-                                title="إرسال عبر واتساب"
-                              >
-                                <Send size={14} />
-                              </a>
-                              <a
-                                href={bookingHelpers.createEmailShareLink(link.full_url || link.url || '', link.client?.email, user?.name)}
-                                className="icon-btn-action icon-btn-action--email"
-                                title="إرسال عبر البريد"
-                              >
-                                <Mail size={14} />
-                              </a>
-                              {link.client && (
-                                <button
-                                  className="icon-btn-action"
-                                  onClick={() => handleResendLink(link)}
-                                  title="إعادة إرسال"
-                                >
-                                  <RefreshCw size={14} />
-                                </button>
-                              )}
-                            </>
-                          )}
-                          <button
-                            className="icon-btn-action icon-btn-action--delete"
-                            onClick={() => handleDeleteLink(link)}
-                            title="حذف"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            /* Cards View */
-            <div className="links-cards">
-              {bookingLinks.map(link => (
-                <div
-                  key={link.id}
-                  className={`link-card-v2 ${link.is_used ? 'link-card-v2--used' : ''} ${!bookingHelpers.isLinkValid(link) ? 'link-card-v2--expired' : ''
-                    }`}
+          <div className="cmo-body cmo-body--links">
+            {bookingLinks.length === 0 ? (
+              <div className="empty-state">
+                <Link2 size={48} />
+                <h3>لا توجد روابط حجز</h3>
+                <p>أنشئ رابط حجز لإرساله للعميل</p>
+                <button
+                  className="primary-btn"
+                  onClick={() => setShowCreateLinkModal(true)}
                 >
-                  <div className="link-card-v2__top">
-                    <div className="link-card-v2__client">
-                      <div className="link-card-v2__avatar">
-                        {link.client?.name?.charAt(0) || '؟'}
+                  <Plus size={18} />
+                  إنشاء رابط جديد
+                </button>
+              </div>
+            ) : linksViewMode === 'table' ? (
+              /* Table View */
+              <div className="links-table-wrapper">
+                <table className="links-table">
+                  <thead>
+                    <tr>
+                      <th>العميل</th>
+                      <th>الرابط</th>
+                      <th>الحالة</th>
+                      <th>تاريخ الانتهاء</th>
+                      <th>الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookingLinks.map(link => (
+                      <tr key={link.id} className={link.is_used || !bookingHelpers.isLinkValid(link) ? 'row-disabled' : ''}>
+                        <td>
+                          <div className="table-client">
+                            <div className="table-client-avatar">
+                              {link.client?.name?.charAt(0) || '؟'}
+                            </div>
+                            <span>{link.client?.name || 'رابط عام'}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="table-link-url">
+                            <input type="text" value={link.full_url || link.url || ''} readOnly />
+                            <button
+                              className="icon-btn-xs"
+                              onClick={() => handleCopyLink(link)}
+                              disabled={link.is_used || !bookingHelpers.isLinkValid(link)}
+                              title="نسخ الرابط"
+                            >
+                              {copiedLinkId === link.id ? <CheckCircle size={14} /> : <Copy size={14} />}
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          {link.is_used ? (
+                            <span className="status-badge status-badge--used">
+                              <CheckCircle size={12} />
+                              مستخدم
+                            </span>
+                          ) : !bookingHelpers.isLinkValid(link) ? (
+                            <span className="status-badge status-badge--expired">
+                              <XCircle size={12} />
+                              منتهي
+                            </span>
+                          ) : (
+                            <span className="status-badge status-badge--active">
+                              <Clock size={12} />
+                              صالح
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <span className="expiry-text">
+                            {bookingHelpers.isLinkValid(link) ? bookingHelpers.getTimeUntilExpiry(link.expires_at) : 'منتهي'}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="table-actions">
+                            {!link.is_used && bookingHelpers.isLinkValid(link) && (
+                              <>
+                                <a
+                                  href={bookingHelpers.createWhatsAppShareLink(link.full_url || link.url || '', link.client?.name)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="icon-btn-action icon-btn-action--whatsapp"
+                                  title="إرسال عبر واتساب"
+                                >
+                                  <Send size={14} />
+                                </a>
+                                <a
+                                  href={bookingHelpers.createEmailShareLink(link.full_url || link.url || '', link.client?.email, user?.name)}
+                                  className="icon-btn-action icon-btn-action--email"
+                                  title="إرسال عبر البريد"
+                                >
+                                  <Mail size={14} />
+                                </a>
+                                {link.client && (
+                                  <button
+                                    className="icon-btn-action"
+                                    onClick={() => handleResendLink(link)}
+                                    title="إعادة إرسال"
+                                  >
+                                    <RefreshCw size={14} />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            <button
+                              className="icon-btn-action icon-btn-action--delete"
+                              onClick={() => handleDeleteLink(link)}
+                              title="حذف"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              /* Cards View */
+              <div className="links-cards">
+                {bookingLinks.map(link => (
+                  <div
+                    key={link.id}
+                    className={`link-card-v2 ${link.is_used ? 'link-card-v2--used' : ''} ${!bookingHelpers.isLinkValid(link) ? 'link-card-v2--expired' : ''
+                      }`}
+                  >
+                    <div className="link-card-v2__top">
+                      <div className="link-card-v2__client">
+                        <div className="link-card-v2__avatar">
+                          {link.client?.name?.charAt(0) || '؟'}
+                        </div>
+                        <div className="link-card-v2__info">
+                          <span className="link-card-v2__name">{link.client?.name || 'رابط عام'}</span>
+                          <span className="link-card-v2__phone">{link.client?.phone || '-'}</span>
+                        </div>
                       </div>
-                      <div className="link-card-v2__info">
-                        <span className="link-card-v2__name">{link.client?.name || 'رابط عام'}</span>
-                        <span className="link-card-v2__phone">{link.client?.phone || '-'}</span>
-                      </div>
+                      {link.is_used ? (
+                        <span className="status-chip status-chip--used">مستخدم</span>
+                      ) : !bookingHelpers.isLinkValid(link) ? (
+                        <span className="status-chip status-chip--expired">منتهي</span>
+                      ) : (
+                        <span className="status-chip status-chip--active">
+                          {bookingHelpers.getTimeUntilExpiry(link.expires_at)}
+                        </span>
+                      )}
                     </div>
-                    {link.is_used ? (
-                      <span className="status-chip status-chip--used">مستخدم</span>
-                    ) : !bookingHelpers.isLinkValid(link) ? (
-                      <span className="status-chip status-chip--expired">منتهي</span>
-                    ) : (
-                      <span className="status-chip status-chip--active">
-                        {bookingHelpers.getTimeUntilExpiry(link.expires_at)}
-                      </span>
-                    )}
-                  </div>
 
-                  <div className="link-card-v2__url">
-                    <input type="text" value={link.full_url || link.url || ''} readOnly />
-                    <button
-                      className="copy-btn-v2"
-                      onClick={() => handleCopyLink(link)}
-                      disabled={link.is_used || !bookingHelpers.isLinkValid(link)}
-                    >
-                      {copiedLinkId === link.id ? <CheckCircle size={16} /> : <Copy size={16} />}
-                      {copiedLinkId === link.id ? 'تم النسخ' : 'نسخ'}
-                    </button>
-                  </div>
+                    <div className="link-card-v2__url">
+                      <input type="text" value={link.full_url || link.url || ''} readOnly />
+                      <button
+                        className="copy-btn-v2"
+                        onClick={() => handleCopyLink(link)}
+                        disabled={link.is_used || !bookingHelpers.isLinkValid(link)}
+                      >
+                        {copiedLinkId === link.id ? <CheckCircle size={16} /> : <Copy size={16} />}
+                        {copiedLinkId === link.id ? 'تم النسخ' : 'نسخ'}
+                      </button>
+                    </div>
 
-                  <div className="link-card-v2__actions">
-                    {!link.is_used && bookingHelpers.isLinkValid(link) && (
-                      <>
-                        <a
-                          href={bookingHelpers.createWhatsAppShareLink(link.full_url || link.url || '', link.client?.name)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="card-action-btn card-action-btn--whatsapp"
-                          title="واتساب"
-                        >
-                          <Send size={16} />
-                        </a>
-                        <a
-                          href={bookingHelpers.createEmailShareLink(link.full_url || link.url || '', link.client?.email, user?.name)}
-                          className="card-action-btn card-action-btn--email"
-                          title="بريد إلكتروني"
-                        >
-                          <Mail size={16} />
-                        </a>
-                        {link.client && (
-                          <button
-                            className="card-action-btn"
-                            onClick={() => handleResendLink(link)}
-                            title="إعادة إرسال"
+                    <div className="link-card-v2__actions">
+                      {!link.is_used && bookingHelpers.isLinkValid(link) && (
+                        <>
+                          <a
+                            href={bookingHelpers.createWhatsAppShareLink(link.full_url || link.url || '', link.client?.name)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="card-action-btn card-action-btn--whatsapp"
+                            title="واتساب"
                           >
-                            <RefreshCw size={16} />
-                          </button>
-                        )}
-                      </>
-                    )}
-                    <button
-                      className="card-action-btn card-action-btn--delete"
-                      onClick={() => handleDeleteLink(link)}
-                      title="حذف"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                            <Send size={16} />
+                          </a>
+                          <a
+                            href={bookingHelpers.createEmailShareLink(link.full_url || link.url || '', link.client?.email, user?.name)}
+                            className="card-action-btn card-action-btn--email"
+                            title="بريد إلكتروني"
+                          >
+                            <Mail size={16} />
+                          </a>
+                          {link.client && (
+                            <button
+                              className="card-action-btn"
+                              onClick={() => handleResendLink(link)}
+                              title="إعادة إرسال"
+                            >
+                              <RefreshCw size={16} />
+                            </button>
+                          )}
+                        </>
+                      )}
+                      <button
+                        className="card-action-btn card-action-btn--delete"
+                        onClick={() => handleDeleteLink(link)}
+                        title="حذف"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
 
@@ -1066,17 +1160,83 @@ const ClientMeetings: React.FC = () => {
         />
       )}
 
-      {showLinkCaseModal && selectedMeeting && (
-        <LinkToCaseModal
-          meeting={selectedMeeting}
-          onClose={() => {
-            setShowLinkCaseModal(false);
-            setSelectedMeeting(null);
+      {drawerMeeting && (
+        <ClientMeetingDrawer
+          meeting={drawerMeeting}
+          onClose={closeMeeting}
+          onApprove={handleConfirmMeeting}
+          onEdit={handleEditMeeting}
+          onOutcome={handleOpenOutcome}
+          onNoShow={handleNoShow}
+          onCancel={handleCancelMeeting}
+          onLinkCase={setLinkCaseMeeting}
+        />
+      )}
+
+      {formMeeting && (
+        <ClientMeetingFormModal
+          meeting={formMeeting === 'new' ? null : formMeeting}
+          onClose={() => setFormMeeting(null)}
+          onSaved={(saved, message) => {
+            setFormMeeting(null);
+            afterAction(message);
+            // الموعد الجديد يُفتح في لوحته: يرى المستخدم ما حُجز ويتصرّف منه مباشرةً
+            if (formMeeting === 'new') openMeeting(saved);
           }}
-          onSuccess={() => {
-            setShowLinkCaseModal(false);
-            setSelectedMeeting(null);
-            fetchData();
+        />
+      )}
+
+      {approveMeeting && (
+        <ApproveClientMeetingDialog
+          meeting={approveMeeting}
+          onClose={() => setApproveMeeting(null)}
+          onDone={(message) => {
+            setApproveMeeting(null);
+            afterAction(message);
+          }}
+        />
+      )}
+
+      {cancelMeeting && (
+        <CancelClientMeetingDialog
+          meeting={cancelMeeting}
+          onClose={() => setCancelMeeting(null)}
+          onDone={(message) => {
+            setCancelMeeting(null);
+            afterAction(message);
+          }}
+        />
+      )}
+
+      <ConfirmDialog
+        isOpen={noShowMeeting !== null}
+        title="تسجيل عدم الحضور"
+        message={noShowMeeting ? `تسجيل أن ${clientDisplayName(noShowMeeting)} لم يحضر الموعد؟` : ''}
+        note="لا تصل العميل رسالة بهذا."
+        confirmLabel="تسجيل «لم يحضر»"
+        loading={noShowSaving}
+        onConfirm={confirmNoShow}
+        onClose={() => setNoShowMeeting(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={deleteLinkTarget !== null}
+        title="حذف رابط الحجز"
+        message="هل تريد حذف هذا الرابط؟ لن يتمكن العميل من الحجز به بعد الحذف."
+        confirmLabel="حذف"
+        variant="danger"
+        loading={deletingLink}
+        onConfirm={confirmDeleteLink}
+        onClose={() => setDeleteLinkTarget(null)}
+      />
+
+      {linkCaseMeeting && (
+        <LinkToCaseModal
+          meeting={linkCaseMeeting}
+          onClose={() => setLinkCaseMeeting(null)}
+          onSuccess={(message) => {
+            setLinkCaseMeeting(null);
+            afterAction(message ?? 'حفظ ربط القضية');
           }}
         />
       )}
@@ -1087,7 +1247,7 @@ const ClientMeetings: React.FC = () => {
           onClose={() => setOutcomeMeeting(null)}
           onSuccess={() => {
             setOutcomeMeeting(null);
-            fetchData();
+            afterAction('حفظت نتيجة الاجتماع');
           }}
         />
       )}
@@ -1095,7 +1255,7 @@ const ClientMeetings: React.FC = () => {
       <style>{`
         .meetings-page {
           padding: 0;
-          min-height: 100vh;
+          min-height: 100%;
           background: var(--color-surface-subtle);
         }
 
