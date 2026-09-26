@@ -85,13 +85,13 @@ const ClientMeetingDrawer: React.FC<Props> = ({
 
           {meeting.status === 'pending' && (
             <p className="mdp__hint">
-              <AlertTriangle size={13} /> طلبٌ من العميل بانتظار اعتمادك — لم يصله تأكيدٌ بعد.
+              <AlertTriangle size={13} /> طلب من العميل بانتظار اعتمادك — لم يصله تأكيد بعد.
             </p>
           )}
 
           {isMissingLink(meeting) && (
             <p className="mdp__hint">
-              <AlertTriangle size={13} /> الموعد عن بُعد ولم يُضف رابطه بعد — العميل وُعد به قبل الموعد.
+              <AlertTriangle size={13} /> الموعد عن بعد ولم يضف رابطه بعد — العميل وعد به قبل الموعد.
             </p>
           )}
 
@@ -108,26 +108,26 @@ const ClientMeetingDrawer: React.FC<Props> = ({
 
             {meeting.meeting_type === 'remote' ? (
               <div>
-                <dt><Video size={13} /> عن بُعد</dt>
+                <dt><Video size={13} /> عن بعد</dt>
                 <dd>
                   {meeting.video_meeting_url ? (
                     <>
                       <span className="cmo-url">{meeting.video_meeting_url}</span>
                       <span className="cmo-fact-actions">
                         <button type="button" className="fin-btn fin-btn--sm" onClick={copyLink}>
-                          {copied ? <CheckCircle size={12} /> : <Copy size={12} />} {copied ? 'نُسخ' : 'نسخ الرابط'}
+                          {copied ? <CheckCircle size={12} /> : <Copy size={12} />} {copied ? 'نسخ' : 'نسخ الرابط'}
                         </button>
                       </span>
                     </>
                   ) : (
-                    'لم يُضف رابط بعد'
+                    'لم يضف رابط بعد'
                   )}
                 </dd>
               </div>
             ) : (
               <div>
                 <dt><MapPin size={13} /> حضوري</dt>
-                <dd>{meeting.location || 'لم يُحدَّد المكان'}</dd>
+                <dd>{meeting.location || 'لم يحدد المكان'}</dd>
               </div>
             )}
 
@@ -177,7 +177,7 @@ const ClientMeetingDrawer: React.FC<Props> = ({
                 {meeting.status !== 'cancelled_by_client' && meeting.status !== 'cancelled_by_lawyer' && (
                   <span className="cmo-fact-actions">
                     <button type="button" className="fin-btn fin-btn--sm" onClick={() => onLinkCase(meeting)}>
-                      <Link2 size={12} /> {meeting.case ? 'تغيير أو فكّ الربط' : 'ربط بقضية'}
+                      <Link2 size={12} /> {meeting.case ? 'تغيير أو فك الربط' : 'ربط بقضية'}
                     </button>
                   </span>
                 )}
@@ -194,7 +194,7 @@ const ClientMeetingDrawer: React.FC<Props> = ({
             {meeting.status === 'completed' && (
               <div>
                 <dt><FileText size={13} /> نتيجة الاجتماع</dt>
-                <dd className="mdp__notes">{meeting.outcome || 'لم تُسجَّل نتيجة'}</dd>
+                <dd className="mdp__notes">{meeting.outcome || 'لم تسجل نتيجة'}</dd>
               </div>
             )}
 

@@ -67,7 +67,7 @@ interface Chip {
 const ClientMeetingsSummary: React.FC<Props> = ({ counts, active, onPick }) => {
   const chips: Chip[] = [
     { key: 'pending', label: 'بانتظار اعتمادك', hint: 'طلبات من بوابة العميل', icon: Hourglass, count: counts.pending },
-    { key: 'missing_link', label: 'بلا رابط', hint: 'مواعيد عن بُعد وُعد العميل فيها برابط', icon: VideoOff, count: counts.missing },
+    { key: 'missing_link', label: 'بلا رابط', hint: 'مواعيد عن بعد وعد العميل فيها برابط', icon: VideoOff, count: counts.missing },
   ];
   // المفعّلة تبقى ولو صار عددها صفراً — هي الزرّ الذي يرفع مرشّحها
   const visible = chips.filter((c) => c.count > 0 || active === c.key);

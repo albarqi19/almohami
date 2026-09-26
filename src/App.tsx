@@ -431,8 +431,8 @@ function App() {
                 </ProtectedRoute>
               } />
               {/* ‏:meetingId اختياري في المسار نفسه: إشعارات «حجز موعد جديد» و«طلب موعد»
-                  تحمل /meetings/client/{id} وكانت تسقط على «الصفحة غير موجودة». مسارٌ واحد
-                  لا اثنان كي لا تُعاد تهيئة الصفحة عند فتح موعدٍ وإغلاقه. */}
+                  تحمل /meetings/client/{id} وكانت تسقط على «الصفحة غير موجودة». مسار واحد
+                  لا اثنان كي لا تعاد تهيئة الصفحة عند فتح موعد وإغلاقه. */}
               <Route path="meetings/client/:meetingId?" element={
                 <ProtectedRoute requiredPermission="meetings.view" denyClient>
                   <ClientMeetings />

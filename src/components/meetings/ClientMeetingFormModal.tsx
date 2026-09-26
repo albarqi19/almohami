@@ -204,9 +204,9 @@ const ClientMeetingFormModal: React.FC<Props> = ({ meeting, onClose, onSaved }) 
     setError(null);
     setFieldErrors({});
 
-    if (!date || !time) return setError('حدّد تاريخ الموعد ووقته');
+    if (!date || !time) return setError('حدد تاريخ الموعد ووقته');
     if (!isEditing && clientMode === 'registered' && !client) {
-      return setError('اختر العميل من نتائج البحث، أو أدخل عميلاً غير مسجّل');
+      return setError('اختر العميل من نتائج البحث، أو أدخل عميلا غير مسجل');
     }
     if (!isEditing && clientMode === 'guest' && !guestName.trim()) return setError('اكتب اسم العميل');
 
@@ -221,7 +221,7 @@ const ClientMeetingFormModal: React.FC<Props> = ({ meeting, onClose, onSaved }) 
 
         const saved = await clientMeetingService.update(meeting.id, changes);
         const notified = meeting.status === 'confirmed' && CLIENT_FACING.some((k) => k in changes);
-        onSaved(saved, notified ? 'حُفظ التعديل وأُبلغ العميل بالتفاصيل الجديدة' : 'حُفظ التعديل');
+        onSaved(saved, notified ? 'حفظ التعديل وأبلغ العميل بالتفاصيل الجديدة' : 'حفظ التعديل');
         return;
       }
 
@@ -246,13 +246,13 @@ const ClientMeetingFormModal: React.FC<Props> = ({ meeting, onClose, onSaved }) 
       };
 
       const saved = await clientMeetingService.create(payload);
-      onSaved(saved, 'أُنشئ الموعد وأُرسل تأكيده للعميل');
+      onSaved(saved, 'أنشئ الموعد وأرسل تأكيده للعميل');
     } catch (err: unknown) {
       // 422 حقلاً بحقل تحت موضعه؛ وما سواه (تعارض الوقت 400 مثلاً) رسالةٌ عامة
       const e = err as { message?: string; errors?: Record<string, string[]> };
       const errors = e.errors ?? {};
       setFieldErrors(errors);
-      setError(Object.keys(errors).length > 0 ? null : e.message || 'تعذّر حفظ الموعد');
+      setError(Object.keys(errors).length > 0 ? null : e.message || 'تعذر حفظ الموعد');
     } finally {
       setSaving(false);
     }
@@ -273,7 +273,7 @@ const ClientMeetingFormModal: React.FC<Props> = ({ meeting, onClose, onSaved }) 
         <>
           <button type="button" className="fin-btn" onClick={onClose} disabled={saving}>إلغاء</button>
           <button type="button" className="fin-btn fin-btn--primary" onClick={handleSubmit} disabled={saving}>
-            {saving ? 'جارٍ الحفظ…' : isEditing ? 'حفظ التعديلات' : 'حجز الموعد'}
+            {saving ? 'جار الحفظ…' : isEditing ? 'حفظ التعديلات' : 'حجز الموعد'}
           </button>
         </>
       }
@@ -346,7 +346,7 @@ const ClientMeetingFormModal: React.FC<Props> = ({ meeting, onClose, onSaved }) 
                   ))}
                 </div>
               ) : (
-                <p className="mfm-note">لا فترات معلنة لهذا اليوم — ويمكنك كتابة أي وقت، والتعارض يُفحص عند الحفظ.</p>
+                <p className="mfm-note">لا فترات معلنة لهذا اليوم — ويمكنك كتابة أي وقت، والتعارض يفحص عند الحفظ.</p>
               )}
             </div>
           )}
@@ -366,7 +366,7 @@ const ClientMeetingFormModal: React.FC<Props> = ({ meeting, onClose, onSaved }) 
                 className={`mfm-type${meetingType === 'remote' ? ' is-active' : ''}`}
                 onClick={() => setMeetingType('remote')}
               >
-                عن بُعد
+                عن بعد
               </button>
             </div>
           </div>
@@ -378,7 +378,7 @@ const ClientMeetingFormModal: React.FC<Props> = ({ meeting, onClose, onSaved }) 
                 className="fin-input"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder={isEditing ? 'مقر المكتب' : 'يُترك فارغاً ليأخذ موقع المكتب الافتراضي'}
+                placeholder={isEditing ? 'مقر المكتب' : 'يترك فارغا ليأخذ موقع المكتب الافتراضي'}
                 maxLength={255}
               />
               {fieldError('location') && <span className="fin-field__error">{fieldError('location')}</span>}
@@ -398,7 +398,7 @@ const ClientMeetingFormModal: React.FC<Props> = ({ meeting, onClose, onSaved }) 
                 <span className="fin-field__error">{fieldError('video_meeting_url')}</span>
               ) : (
                 !videoUrl.trim() && (
-                  <p className="mfm-note">يمكن إضافته لاحقاً — يصل العميلَ فور حفظه.</p>
+                  <p className="mfm-note">يمكن إضافته لاحقا — يصل العميل فور حفظه.</p>
                 )
               )}
             </div>
@@ -428,8 +428,8 @@ const ClientMeetingFormModal: React.FC<Props> = ({ meeting, onClose, onSaved }) 
               </div>
               <p className="mfm-note">
                 {meeting.status === 'confirmed'
-                  ? 'يُبلَّغ العميل بأي تغيير في الوقت أو المدة أو النوع أو المكان أو الرابط. تعديل العنوان والملاحظات لا يُرسل شيئاً.'
-                  : 'الطلب بانتظار الاعتماد — لا يُرسل للعميل شيء الآن، ورسالة الاعتماد تحمل التفاصيل الجديدة.'}
+                  ? 'يبلغ العميل بأي تغيير في الوقت أو المدة أو النوع أو المكان أو الرابط. تعديل العنوان والملاحظات لا يرسل شيئا.'
+                  : 'الطلب بانتظار الاعتماد — لا يرسل للعميل شيء الآن، ورسالة الاعتماد تحمل التفاصيل الجديدة.'}
               </p>
             </>
           ) : (
@@ -458,14 +458,14 @@ const ClientMeetingFormModal: React.FC<Props> = ({ meeting, onClose, onSaved }) 
                     className={`mfm-type${clientMode === 'registered' ? ' is-active' : ''}`}
                     onClick={() => setClientMode('registered')}
                   >
-                    عميل مسجّل
+                    عميل مسجل
                   </button>
                   <button
                     type="button"
                     className={`mfm-type${clientMode === 'guest' ? ' is-active' : ''}`}
                     onClick={() => setClientMode('guest')}
                   >
-                    غير مسجّل
+                    غير مسجل
                   </button>
                 </div>
               </div>
@@ -497,9 +497,9 @@ const ClientMeetingFormModal: React.FC<Props> = ({ meeting, onClose, onSaved }) 
                       {clientSearch.trim().length >= 2 && (
                         <div className="mfm-people">
                           {searchingClients ? (
-                            <p className="mfm-empty">يُبحث…</p>
+                            <p className="mfm-empty">يبحث…</p>
                           ) : clientResults.length === 0 ? (
-                            <p className="mfm-empty">لا نتائج — جرّب «غير مسجّل»</p>
+                            <p className="mfm-empty">لا نتائج — جرب «غير مسجل»</p>
                           ) : (
                             clientResults.map((c) => (
                               <button key={c.id} type="button" className="mfm-person" onClick={() => setClient(c)}>
@@ -553,7 +553,7 @@ const ClientMeetingFormModal: React.FC<Props> = ({ meeting, onClose, onSaved }) 
               )}
 
               <p className="mfm-note">
-                يُؤكَّد الموعد فور حجزه، ويصل العميلَ تأكيده بالواتساب والبريد إن وُجدا.
+                يؤكد الموعد فور حجزه، ويصل العميل تأكيده بالواتساب والبريد إن وجدا.
               </p>
             </>
           )}

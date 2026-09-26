@@ -32,14 +32,14 @@ interface Props {
   onLinkCase: Handler;
 }
 
-const NEAR_DAYS = ['اليوم', 'غداً', 'أمس'];
+const NEAR_DAYS = ['اليوم', 'غدا', 'أمس'];
 
 /** «موعد واحد / موعدان / ٣ مواعيد / ١١ موعداً» */
 const countLabel = (n: number): string => {
   if (n === 1) return 'موعد واحد';
   if (n === 2) return 'موعدان';
   if (n >= 3 && n <= 10) return `${n} مواعيد`;
-  return `${n} موعداً`;
+  return `${n} موعدا`;
 };
 
 const statusKey = (m: ClientMeeting): string =>
@@ -181,10 +181,10 @@ const ClientMeetingsAgenda: React.FC<Props> = ({
                     <div className="cmo-appt__tags">
                       <span className={`cmo-tag cmo-tag--${remote ? 'remote' : 'inperson'}`}>
                         {remote ? <Video size={12} /> : <MapPin size={12} />}
-                        {remote ? 'عن بُعد' : 'حضوري'}
+                        {remote ? 'عن بعد' : 'حضوري'}
                       </span>
                       {isMissingLink(m) && (
-                        <span className="cmo-tag cmo-tag--warn" title="العميل وُعد برابطٍ قبل الموعد">
+                        <span className="cmo-tag cmo-tag--warn" title="العميل وعد برابط قبل الموعد">
                           <VideoOff size={12} /> بلا رابط
                         </span>
                       )}

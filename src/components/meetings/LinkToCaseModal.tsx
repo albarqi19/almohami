@@ -68,9 +68,9 @@ const LinkToCaseModal: React.FC<Props> = ({ meeting, onClose, onSuccess }) => {
     setError(null);
     try {
       await clientMeetingService.linkToCase(meeting.id, caseId);
-      onSuccess(caseId ? 'رُبط الموعد بالقضية' : 'فُكّ ربط الموعد بالقضية');
+      onSuccess(caseId ? 'ربط الموعد بالقضية' : 'فك ربط الموعد بالقضية');
     } catch (err) {
-      setError(getApiErrorMessage(err, 'تعذّر حفظ ربط القضية'));
+      setError(getApiErrorMessage(err, 'تعذر حفظ ربط القضية'));
     } finally {
       setSaving(false);
     }
@@ -96,7 +96,7 @@ const LinkToCaseModal: React.FC<Props> = ({ meeting, onClose, onSuccess }) => {
             onClick={() => chosen && save(chosen.id)}
             disabled={saving || !chosen || chosen.id === meeting.case_id}
           >
-            {saving ? 'جارٍ الحفظ…' : 'ربط بالقضية'}
+            {saving ? 'جار الحفظ…' : 'ربط بالقضية'}
           </button>
         </>
       }
@@ -117,7 +117,7 @@ const LinkToCaseModal: React.FC<Props> = ({ meeting, onClose, onSuccess }) => {
         {meeting.case && (
           <div className="mfm-link__chosen">
             <span>
-              <strong>مرتبط حالياً:</strong> {meeting.case.title}
+              <strong>مرتبط حاليا:</strong> {meeting.case.title}
               <em> ({reference(meeting.case)})</em>
             </span>
             <button
@@ -126,7 +126,7 @@ const LinkToCaseModal: React.FC<Props> = ({ meeting, onClose, onSuccess }) => {
               onClick={() => save(null)}
               disabled={saving}
             >
-              <X size={13} /> فكّ الربط
+              <X size={13} /> فك الربط
             </button>
           </div>
         )}
@@ -156,7 +156,7 @@ const LinkToCaseModal: React.FC<Props> = ({ meeting, onClose, onSuccess }) => {
 
             <p className="mfm-link__state">
               {searching
-                ? 'جارٍ البحث…'
+                ? 'جار البحث…'
                 : rows.length === 0
                   ? (byClient ? 'لا قضايا لهذا العميل — ابحث في قضايا المكتب' : 'لا نتائج مطابقة')
                   : (term ? 'نتائج البحث' : byClient ? 'قضايا هذا العميل' : 'أحدث القضايا')}

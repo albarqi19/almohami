@@ -60,7 +60,7 @@ type StatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'no_show' | 
 const TIME_OPTIONS: { key: TimeFilter; label: string }[] = [
   { key: 'upcoming', label: 'القادمة' },
   { key: 'today', label: 'اليوم' },
-  { key: 'tomorrow', label: 'غداً' },
+  { key: 'tomorrow', label: 'غدا' },
   { key: 'week', label: '٧ أيام' },
   { key: 'all', label: 'الكل' },
 ];
@@ -370,10 +370,10 @@ const ClientMeetings: React.FC = () => {
     try {
       await clientMeetingService.markNoShow(noShowMeeting.id);
       setNoShowMeeting(null);
-      afterAction('سُجّل عدم حضور العميل');
+      afterAction('سجل عدم حضور العميل');
     } catch (err) {
       setNoShowMeeting(null);
-      setNotice({ tone: 'error', text: getApiErrorMessage(err, 'تعذّر تسجيل عدم الحضور') });
+      setNotice({ tone: 'error', text: getApiErrorMessage(err, 'تعذر تسجيل عدم الحضور') });
     } finally {
       setNoShowSaving(false);
     }
@@ -389,10 +389,10 @@ const ClientMeetings: React.FC = () => {
     try {
       await bookingLinkService.delete(deleteLinkTarget.id);
       setDeleteLinkTarget(null);
-      afterAction('حُذف رابط الحجز');
+      afterAction('حذف رابط الحجز');
     } catch (err) {
       setDeleteLinkTarget(null);
-      setNotice({ tone: 'error', text: getApiErrorMessage(err, 'تعذّر حذف الرابط') });
+      setNotice({ tone: 'error', text: getApiErrorMessage(err, 'تعذر حذف الرابط') });
     } finally {
       setDeletingLink(false);
     }
@@ -404,7 +404,7 @@ const ClientMeetings: React.FC = () => {
       setNotice({ tone: 'success', text: 'تم إعادة إرسال الرابط بنجاح' });
     } catch (err) {
       console.error('Error resending link:', err);
-      setNotice({ tone: 'error', text: getApiErrorMessage(err, 'تعذّر إعادة إرسال الرابط') });
+      setNotice({ tone: 'error', text: getApiErrorMessage(err, 'تعذر إعادة إرسال الرابط') });
     }
   };
 
@@ -750,7 +750,7 @@ const ClientMeetings: React.FC = () => {
       {activeTab === 'meetings' && (
         <>
           {/* شريط الأدوات: بحث، فترة (بعدّادَي اليوم والأسبوع)، حالة، محامٍ، ثم ما يحتاج انتباهك
-              وطريقة العرض — سطرٌ واحد يلتفّ إلى ثانٍ حين يضيق العرض. كانت فوقه أربع بطاقات ملخّص */}
+              وطريقة العرض — سطر واحد يلتف إلى ثان حين يضيق العرض. كانت فوقه أربع بطاقات ملخص */}
           <div className="cmo-toolbar">
             <div className="mfm-search cmo-toolbar__search">
               <Search size={14} aria-hidden="true" />
@@ -776,7 +776,7 @@ const ClientMeetings: React.FC = () => {
                     onClick={() => setTimeFilter(o.key)}
                     // التقويم يحدّد نطاقه بالشهر المعروض، فالفترة لا تعني فيه شيئاً
                     disabled={meetingsViewMode === 'calendar'}
-                    title={n > 0 ? `${n} ${o.key === 'today' ? 'غير ملغاة' : 'مؤكدة ومعلّقة'}` : undefined}
+                    title={n > 0 ? `${n} ${o.key === 'today' ? 'غير ملغاة' : 'مؤكدة ومعلقة'}` : undefined}
                   >
                     {o.label}
                     {n > 0 && <span className="cmo-seg__count">{n}</span>}
@@ -876,14 +876,14 @@ const ClientMeetings: React.FC = () => {
               <div className="empty-state">
                 <Search size={40} />
                 <h3>لا مواعيد تطابق التصفية</h3>
-                <p>غيّر الفترة أو الحالة، أو امسح التصفية لترى المواعيد القادمة كلّها.</p>
+                <p>غير الفترة أو الحالة، أو امسح التصفية لترى المواعيد القادمة كلها.</p>
                 <button className="fin-btn" onClick={resetFilters}>مسح التصفية</button>
               </div>
             ) : filteredMeetings.length === 0 ? (
               <div className="empty-state">
                 <Calendar size={48} />
                 <h3>لا توجد مواعيد</h3>
-                <p>احجز موعداً مباشرةً، أو أرسل للعميل رابط حجز يختار منه وقته</p>
+                <p>احجز موعدا مباشرة، أو أرسل للعميل رابط حجز يختار منه وقته</p>
                 <div className="cmo-empty-actions">
                   <button
                     className="primary-btn"
@@ -1212,7 +1212,7 @@ const ClientMeetings: React.FC = () => {
         isOpen={noShowMeeting !== null}
         title="تسجيل عدم الحضور"
         message={noShowMeeting ? `تسجيل أن ${clientDisplayName(noShowMeeting)} لم يحضر الموعد؟` : ''}
-        note="لا تصل العميلَ رسالةٌ بهذا."
+        note="لا تصل العميل رسالة بهذا."
         confirmLabel="تسجيل «لم يحضر»"
         loading={noShowSaving}
         onConfirm={confirmNoShow}
@@ -1222,7 +1222,7 @@ const ClientMeetings: React.FC = () => {
       <ConfirmDialog
         isOpen={deleteLinkTarget !== null}
         title="حذف رابط الحجز"
-        message="هل تريد حذف هذا الرابط؟ لن يتمكّن العميل من الحجز به بعد الحذف."
+        message="هل تريد حذف هذا الرابط؟ لن يتمكن العميل من الحجز به بعد الحذف."
         confirmLabel="حذف"
         variant="danger"
         loading={deletingLink}
@@ -1236,7 +1236,7 @@ const ClientMeetings: React.FC = () => {
           onClose={() => setLinkCaseMeeting(null)}
           onSuccess={(message) => {
             setLinkCaseMeeting(null);
-            afterAction(message ?? 'حُفظ ربط القضية');
+            afterAction(message ?? 'حفظ ربط القضية');
           }}
         />
       )}
@@ -1247,7 +1247,7 @@ const ClientMeetings: React.FC = () => {
           onClose={() => setOutcomeMeeting(null)}
           onSuccess={() => {
             setOutcomeMeeting(null);
-            afterAction('حُفظت نتيجة الاجتماع');
+            afterAction('حفظت نتيجة الاجتماع');
           }}
         />
       )}

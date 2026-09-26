@@ -19,7 +19,7 @@ const When: React.FC<{ meeting: ClientMeeting }> = ({ meeting }) => (
     <em>
       {fmtDualAr(meeting.scheduled_at)} — {fmtTimeAr(meeting.scheduled_at)} · {meeting.duration_minutes} دقيقة
       {' · '}
-      {meeting.meeting_type === 'remote' ? 'عن بُعد' : 'حضوري'}
+      {meeting.meeting_type === 'remote' ? 'عن بعد' : 'حضوري'}
     </em>
   </div>
 );
@@ -45,11 +45,11 @@ export const ApproveClientMeetingDialog: React.FC<DialogProps> = ({ meeting, onC
       await clientMeetingService.confirm(meeting.id, needsLink && url ? url : undefined);
       onDone(
         needsLink && !url
-          ? 'اعتُمد الموعد وأُبلغ العميل — أضف رابط الاجتماع قبل موعده'
-          : 'اعتُمد الموعد وأُبلغ العميل'
+          ? 'اعتمد الموعد وأبلغ العميل — أضف رابط الاجتماع قبل موعده'
+          : 'اعتمد الموعد وأبلغ العميل'
       );
     } catch (err) {
-      setError(getApiErrorMessage(err, 'تعذّر اعتماد الموعد'));
+      setError(getApiErrorMessage(err, 'تعذر اعتماد الموعد'));
     } finally {
       setSaving(false);
     }
@@ -68,7 +68,7 @@ export const ApproveClientMeetingDialog: React.FC<DialogProps> = ({ meeting, onC
         <>
           <button type="button" className="fin-btn" onClick={onClose} disabled={saving}>تراجع</button>
           <button type="button" className="fin-btn fin-btn--primary" onClick={submit} disabled={saving}>
-            {saving ? 'جارٍ الاعتماد…' : 'اعتماد وإبلاغ العميل'}
+            {saving ? 'جار الاعتماد…' : 'اعتماد وإبلاغ العميل'}
           </button>
         </>
       }
@@ -94,11 +94,11 @@ export const ApproveClientMeetingDialog: React.FC<DialogProps> = ({ meeting, onC
             maxLength={255}
             autoFocus
           />
-          <p className="mfm-note">يصل مع رسالة التأكيد. وبدونه تَعِد الرسالةُ العميلَ برابطٍ قبل الموعد.</p>
+          <p className="mfm-note">يصل مع رسالة التأكيد. وبدونه تعد الرسالة العميل برابط قبل الموعد.</p>
         </div>
       )}
 
-      <p className="mfm-note">تصل العميلَ رسالة التأكيد بالواتساب والبريد، ويُجرَس في بوابته.</p>
+      <p className="mfm-note">تصل العميل رسالة التأكيد بالواتساب والبريد، ويجرس في بوابته.</p>
     </Modal>
   );
 };
@@ -115,7 +115,7 @@ export const CancelClientMeetingDialog: React.FC<DialogProps> = ({ meeting, onCl
   const submit = async () => {
     const trimmed = reason.trim();
     if (!trimmed) {
-      setError('اكتب سبب الإلغاء — يصل العميلَ مع رسالة الإلغاء');
+      setError('اكتب سبب الإلغاء — يصل العميل مع رسالة الإلغاء');
       return;
     }
 
@@ -123,9 +123,9 @@ export const CancelClientMeetingDialog: React.FC<DialogProps> = ({ meeting, onCl
     setError(null);
     try {
       await clientMeetingService.cancel(meeting.id, trimmed);
-      onDone('أُلغي الموعد وأُبلغ العميل');
+      onDone('ألغي الموعد وأبلغ العميل');
     } catch (err) {
-      setError(getApiErrorMessage(err, 'تعذّر إلغاء الموعد'));
+      setError(getApiErrorMessage(err, 'تعذر إلغاء الموعد'));
     } finally {
       setSaving(false);
     }
@@ -144,7 +144,7 @@ export const CancelClientMeetingDialog: React.FC<DialogProps> = ({ meeting, onCl
         <>
           <button type="button" className="fin-btn" onClick={onClose} disabled={saving}>تراجع</button>
           <button type="button" className="fin-btn fin-btn--danger" onClick={submit} disabled={saving}>
-            {saving ? 'جارٍ الإلغاء…' : 'إلغاء الموعد'}
+            {saving ? 'جار الإلغاء…' : 'إلغاء الموعد'}
           </button>
         </>
       }
@@ -165,11 +165,11 @@ export const CancelClientMeetingDialog: React.FC<DialogProps> = ({ meeting, onCl
           rows={3}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="مثال: اعتذار المحامي لظرف طارئ — نقترح موعداً بديلاً"
+          placeholder="مثال: اعتذار المحامي لظرف طارئ — نقترح موعدا بديلا"
           maxLength={500}
           autoFocus
         />
-        <p className="mfm-note">يصل العميلَ بالواتساب والبريد.</p>
+        <p className="mfm-note">يصل العميل بالواتساب والبريد.</p>
       </div>
     </Modal>
   );
