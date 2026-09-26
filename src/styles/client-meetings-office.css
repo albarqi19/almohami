@@ -52,84 +52,70 @@
   .cmo-page-alert { margin-inline: 16px; }
 }
 
-/* ---------- شريط الملخّص: أرقامٌ تُنقر فتصير مرشِّحاً ---------- */
-.cmo-kpis {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  padding: 16px 32px 0;
-}
-.cmo-kpi {
-  --kpi-c: var(--color-primary);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-family: inherit;
-  text-align: start;
-  cursor: pointer;
-  box-shadow: var(--shadow-xs, 0 1px 2px rgba(0, 0, 0, .04));
-  transition: border-color .15s, box-shadow .15s, transform .15s;
-}
-.cmo-kpi:hover { border-color: var(--kpi-c); }
-.cmo-kpi:focus-visible { outline: 2px solid var(--kpi-c); outline-offset: 2px; }
-.cmo-kpi.is-active { border-color: var(--kpi-c); box-shadow: inset 0 0 0 1px var(--kpi-c); }
-.cmo-kpi__icon {
+/* ---------- ما يحتاج انتباهك: شريحتان في شريط الأدوات تُنقران فتصيران مرشِّحاً ----------
+   كانت أربع بطاقات فوق الشريط؛ عدّادا «اليوم» و«٧ أيام» صارا على زرَّي الفترة (.cmo-seg__count) */
+.cmo-attn { display: flex; align-items: center; gap: 6px; }
+.cmo-attn__chip {
+  --attn-c: var(--status-orange, #d97706);
   display: inline-flex;
-  flex-shrink: 0;
   align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--kpi-c) 12%, var(--color-surface, #fff));
-  color: var(--kpi-c);
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--attn-c) 35%, var(--color-surface, #fff));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--attn-c) 8%, var(--color-surface, #fff));
+  color: var(--attn-c);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
 }
-.cmo-kpi__body { display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 8px; min-width: 0; }
-.cmo-kpi__value { font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--color-heading); }
-.cmo-kpi__label { font-size: 12.5px; font-weight: 700; color: var(--color-heading); }
-.cmo-kpi__hint { grid-column: 1 / -1; font-size: 11px; color: var(--color-text-secondary); }
+.cmo-attn__chip--missing_link { --attn-c: var(--status-red, #dc2626); }
+.cmo-attn__chip:hover { border-color: var(--attn-c); }
+.cmo-attn__chip:focus-visible { outline: 2px solid var(--attn-c); outline-offset: 2px; }
+/* مفعّلة = مرشّحها مطبَّق */
+.cmo-attn__chip.is-active { border-color: var(--attn-c); box-shadow: inset 0 0 0 1px var(--attn-c); }
+.cmo-attn__count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--attn-c) 16%, var(--color-surface, #fff));
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
 
-.cmo-kpi--today { --kpi-c: var(--color-primary); }
-.cmo-kpi--week { --kpi-c: var(--status-blue, #0284c7); }
-/* بطاقتا التنبيه هادئتان عند الصفر، وتُلوَّنان حين يوجد ما يستدعي تصرّفاً */
-.cmo-kpi--pending, .cmo-kpi--missing_link { --kpi-c: var(--color-text-secondary); }
-.cmo-kpi--pending.is-alert { --kpi-c: var(--status-orange, #d97706); }
-.cmo-kpi--missing_link.is-alert { --kpi-c: var(--status-red, #dc2626); }
-.cmo-kpi.is-alert { background: color-mix(in srgb, var(--kpi-c) 5%, var(--color-surface, #fff)); }
-.cmo-kpi.is-alert .cmo-kpi__value { color: var(--kpi-c); }
+.cmo-seg__count {
+  display: inline-block;
+  min-width: 18px;
+  margin-inline-start: 5px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface, #fff));
+  color: var(--color-primary);
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+}
 
 /* ---------- شريط الأدوات ---------- */
 .cmo-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  padding: 14px 32px;
+  gap: 8px;
+  padding: 12px 32px;
 }
-.cmo-toolbar__search { flex: 1 1 220px; max-width: 320px; }
+.cmo-toolbar__search { flex: 1 1 180px; max-width: 300px; }
 .cmo-toolbar__end { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
 .cmo-seg__btn:disabled { opacity: .45; cursor: default; }
-.cmo-select { width: auto; min-width: 150px; }
+.cmo-select { width: auto; min-width: 130px; }
 .cmo-view-btn { display: inline-flex; align-items: center; padding: 5px 10px; }
-.cmo-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border: 1px solid color-mix(in srgb, var(--status-red, #dc2626) 35%, var(--color-surface, #fff));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--status-red, #dc2626) 8%, var(--color-surface, #fff));
-  color: var(--status-red);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
 .cmo-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 
 /* ---------- القائمة بالأيام ---------- */
@@ -287,16 +273,11 @@
 
 /* ---------- الشاشات الضيّقة ---------- */
 @media (max-width: 1100px) {
-  .cmo-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cmo-appt { grid-template-columns: 84px minmax(0, 1fr) auto; }
   .cmo-appt__tags { grid-column: 2 / -1; grid-row: 2; }
 }
 
 @media (max-width: 768px) {
-  .cmo-kpis { padding: 12px 16px 0; gap: 8px; }
-  .cmo-kpi { padding: 10px; gap: 10px; }
-  .cmo-kpi__icon { width: 32px; height: 32px; }
-  .cmo-kpi__hint { display: none; }
   .cmo-toolbar { padding: 12px 16px; }
   .cmo-toolbar__search { max-width: none; flex-basis: 100%; }
   .cmo-seg { max-width: 100%; overflow-x: auto; }
@@ -338,4 +319,101 @@
   unicode-bidi: plaintext;
   overflow-wrap: anywhere;
   font-size: 11.5px;
+}
+
+/* ---------- الشاشة الواحدة (الكمبيوتر) ----------
+   الصفحة تملأ حاوية المحتوى (.app-content) ولا تتمرّر: العنوان والملخّص وشريط الأدوات ثابتة،
+   والتمرير في .cmo-body وحدها — قائمة المواعيد أو التقويم أو روابط الحجز. الارتفاع 100% لا
+   100vh كي تتكيّف مع الهيدر وشريط المدير السفلي. على الجوّال والنوافذ القصيرة جدّاً تعود
+   الصفحة للتمرير العادي: الجزء الثابت هناك يأكل معظم الشاشة. */
+@media (min-width: 769px) and (min-height: 540px) {
+  .cmo-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+  /* الأجزاء الثابتة لا تنكمش — لو انكمشت لقُصّ محتواها بدل أن تتمرّر القائمة */
+  .cmo-page > * { flex-shrink: 0; }
+  .cmo-page > .cmo-body {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: auto;
+  }
+  /* حدٌّ بين الثابت وما يتمرّر تحته */
+  .cmo-page .cmo-toolbar { border-bottom: 1px solid var(--color-border); }
+
+  /* رأس اليوم يلتصق أعلى القائمة ما دامت مواعيده تمرّ تحته، ثم يدفعه اليوم التالي */
+  .cmo-body .cmo-agenda { gap: 6px; padding-top: 0; }
+  .cmo-body .cmo-day__head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin: 0;
+    padding: 12px 4px 8px;
+    background: var(--color-surface-subtle);
+  }
+  /* على تكبير 125% و150% في ويندوز تقع الحافّة العليا لمنطقة التمرير على كسرٍ من بكسل، فيُرسم
+     صفّ البكسل هناك جزئياً: يظهر فيه أثرٌ خافت من نصّ الموعد المارّ تحت الرأس الملتصق. كلّ غطاءٍ
+     داخل منطقة التمرير (رفعُ الرأس، غطاءٌ فوقه) يُقصّ عند الحافّة نفسها فلا يُخفيه — قِيس على 356
+     موضعاً. هذا الشريط خارجها: يبدأ من أعلى حدّ شريط الأدوات ويعيد رسم ذلك الحدّ، ثم يغطّي 2px تحته */
+  .cmo-page .cmo-toolbar,
+  .cmo-page .links-toolbar { position: relative; z-index: 3; }
+  .cmo-page .cmo-toolbar::after,
+  .cmo-page .links-toolbar::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 100%; /* يُقاس من حافّة الحشو = أعلى الحدّ السفلي */
+    box-sizing: content-box;
+    height: 2px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+    pointer-events: none;
+  }
+
+  /* الفارغ والخطأ في وسط المساحة لا ملتصقَين بأعلاها */
+  .cmo-body > .empty-state,
+  .cmo-body > .error-state { box-sizing: border-box; min-height: 100%; }
+
+  /* التقويم يملأ المساحة: الخلايا تتمدّد مع الارتفاع بدل أن تبقى مربّعة فيطول،
+     وقائمة اليوم المختار تتمرّر داخل عمودها */
+  .cmo-body .cmc {
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 400px;
+    padding: 14px 32px;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .cmo-body .cmc__grid-wrap { display: flex; flex-direction: column; min-height: 0; }
+  .cmo-body .cmc__toolbar,
+  .cmo-body .cmc__week { flex-shrink: 0; }
+  .cmo-body .cmc__days { flex: 1 1 0; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
+  .cmo-body .cmc__cell { aspect-ratio: auto; align-self: stretch; min-height: 0; }
+  .cmo-body .cmc__panel { display: flex; flex-direction: column; min-height: 0; }
+  .cmo-body .cmc__panel-head { flex-shrink: 0; }
+  .cmo-body .cmc__list { flex: 1 1 auto; min-height: 0; max-height: none; }
+
+  /* روابط الحجز: رأس الجدول يبقى ظاهراً. التصاقه يحتاج ألّا يكون الجدول ولا غلافه حاوية
+     تمرير (overflow غير visible)، وحدوداً منفصلة كي لا يفقد خطّه السفلي وهو ملتصق */
+  .cmo-body--links .links-table-wrapper { overflow: visible; }
+  .cmo-body--links .links-table { overflow: visible; border-collapse: separate; border-spacing: 0; }
+  .cmo-body--links .links-table th { position: sticky; top: 0; z-index: 1; }
+  .cmo-body--links .links-table th:first-child { border-start-start-radius: 12px; }
+  .cmo-body--links .links-table th:last-child { border-start-end-radius: 12px; }
+}
+
+/* العرض المتوسط: عمود اليوم المختار في التقويم أضيق */
+@media (min-width: 769px) and (max-width: 1100px) and (min-height: 540px) {
+  .cmo-body .cmc { grid-template-columns: minmax(0, 1fr) 260px; }
+}
+
+/* اللابتوب (ارتفاعٌ حتى 820) والعرض المتوسط: رأسٌ وشريطٌ أنحف كي تبقى للقائمة مساحتها */
+@media (min-width: 769px) and (min-height: 540px) and (max-height: 820px),
+       (min-width: 769px) and (max-width: 1100px) and (min-height: 540px) {
+  .cmo-page .notion-header { padding: 14px 32px 10px; }
+  .cmo-page .cmo-toolbar { padding-block: 10px; }
 }

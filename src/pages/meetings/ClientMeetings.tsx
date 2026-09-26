@@ -21,7 +21,6 @@ import {
   FileText,
   FileSpreadsheet,
   List,
-  VideoOff,
   X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -41,7 +40,7 @@ import ClientMeetingsCalendar from '../../components/meetings/ClientMeetingsCale
 import ClientMeetingFormModal from '../../components/meetings/ClientMeetingFormModal';
 import ClientMeetingDrawer from '../../components/meetings/ClientMeetingDrawer';
 import ClientMeetingsAgenda from '../../components/meetings/ClientMeetingsAgenda';
-import ClientMeetingsSummary, { type QuickFilter } from '../../components/meetings/ClientMeetingsSummary';
+import ClientMeetingsSummary, { type QuickFilter, useClientMeetingCounts } from '../../components/meetings/ClientMeetingsSummary';
 import { ApproveClientMeetingDialog, CancelClientMeetingDialog } from '../../components/meetings/ClientMeetingActionDialogs';
 import {
   clientDisplayName,
@@ -116,6 +115,13 @@ const ClientMeetings: React.FC = () => {
   // نتيجة الاجتماع: الموعد المعروض في modal النتيجة (إنهاء/عرض/تعديل)
   const [outcomeMeeting, setOutcomeMeeting] = useState<ClientMeeting | null>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  // الصفحة شاشةٌ واحدة على الكمبيوتر: القائمة تتمرّر داخل .cmo-body لا الصفحة كلّها. فتغيير
+  // التصفية أو طريقة العرض يعيدها إلى أوّلها، وإلا بقيت عند موضعٍ من قائمةٍ لم تعد هي.
+  // (على الجوّال ليست حاوية تمرير، فلا أثر لهذا هناك.)
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    bodyRef.current?.scrollTo({ top: 0 });
+  }, [timeFilter, statusFilter, lawyerFilter, onlyMissingLink, searchTerm, meetingsViewMode]);
 
   // نافذة الجلب: الجدول بمرشّحٍ زمني يبدأ من اليوم فيكفيه ما بعده (والخادم يجمعه كاملاً
   // صفحةً بعد صفحة)؛ أمّا «الكل» والتقويم فيحتاجان الماضي أيضاً.
@@ -281,6 +287,9 @@ const ClientMeetings: React.FC = () => {
     });
   }, [meetings, searchTerm, activeLawyer, statusFilter, onlyMissingLink, timeFilter, meetingsViewMode, todayKey]);
 
+  // عدّادات «اليوم» و«٧ أيام» على زرَّي الفترة، وشريحتا التنبيه في شريط الأدوات
+  const counts = useClientMeetingCounts(meetings);
+
   // بطاقة الملخّص النشطة مشتقّةٌ من المرشّحات نفسها — لا حالةٌ ثالثة تنحرف عنها
   const activeQuick: QuickFilter | null = onlyMissingLink
     ? 'missing_link'
@@ -418,7 +427,7 @@ const ClientMeetings: React.FC = () => {
     const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     const dayName = dayNames[today.getDay()];
     const dateStr = today.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-    return `جلسات_${dayName}_${dateStr}`.replace(/\s/g, '_');
+    return `مواعيد_${dayName}_${dateStr}`.replace(/\s/g, '_');
   };
 
   // Export as Image
@@ -447,7 +456,7 @@ const ClientMeetings: React.FC = () => {
 
     container.innerHTML = `
       <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">📅 جلسات اليوم</h1>
+        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">📅 مواعيد اليوم</h1>
         <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0; font-size: 16px;">${dateStr}</p>
       </div>
       <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
@@ -533,7 +542,7 @@ const ClientMeetings: React.FC = () => {
         </style>
       </head>
       <body>
-        <h1>📅 جلسات اليوم</h1>
+        <h1>📅 مواعيد اليوم</h1>
         <p class="date">${dateStr}</p>
         <table>
           <thead>
@@ -602,7 +611,7 @@ const ClientMeetings: React.FC = () => {
       </head>
       <body>
         <table>
-          <tr><td colspan="7" class="header">📅 جلسات اليوم</td></tr>
+          <tr><td colspan="7" class="header">📅 مواعيد اليوم</td></tr>
           <tr><td colspan="7" class="date">${dateStr}</td></tr>
           <tr><td colspan="7"></td></tr>
           <tr>
@@ -640,7 +649,7 @@ const ClientMeetings: React.FC = () => {
   };
 
   return (
-    <div className="meetings-page">
+    <div className="meetings-page cmo-page">
       {/* Unified Header */}
       <header className="notion-header">
         <div className="notion-header__title">
@@ -673,7 +682,7 @@ const ClientMeetings: React.FC = () => {
             <button
               className="notion-icon-btn"
               onClick={() => setShowExportMenu(!showExportMenu)}
-              title="تصدير جلسات اليوم"
+              title="تصدير مواعيد اليوم"
             >
               <Download size={16} />
             </button>
@@ -681,7 +690,7 @@ const ClientMeetings: React.FC = () => {
               <div className="export-dropdown__menu">
                 <div className="export-dropdown__header">
                   <Download size={14} />
-                  تصدير جلسات اليوم
+                  تصدير مواعيد اليوم
                 </div>
                 <button onClick={exportAsImage}>
                   <FileImage size={16} />
@@ -740,17 +749,15 @@ const ClientMeetings: React.FC = () => {
       {/* Meetings Tab */}
       {activeTab === 'meetings' && (
         <>
-          <ClientMeetingsSummary meetings={meetings} active={activeQuick} onPick={pickQuick} />
-
-          {/* شريط الأدوات: بحث، فترة، حالة، محامٍ، وطريقة العرض — سطرٌ واحد بدل
-              صفَّي أزرارٍ فيهما «الكل» مرّتين بمعنيين مختلفين */}
+          {/* شريط الأدوات: بحث، فترة (بعدّادَي اليوم والأسبوع)، حالة، محامٍ، ثم ما يحتاج انتباهك
+              وطريقة العرض — سطرٌ واحد يلتفّ إلى ثانٍ حين يضيق العرض. كانت فوقه أربع بطاقات ملخّص */}
           <div className="cmo-toolbar">
             <div className="mfm-search cmo-toolbar__search">
               <Search size={14} aria-hidden="true" />
               <input
                 className="fin-input"
                 type="search"
-                placeholder="بحث بالاسم أو الجوال أو العنوان…"
+                placeholder="بحث بالاسم أو الجوال…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 aria-label="بحث في المواعيد"
@@ -758,19 +765,24 @@ const ClientMeetings: React.FC = () => {
             </div>
 
             <div className="mfm-types cmo-seg" role="group" aria-label="الفترة">
-              {TIME_OPTIONS.map((o) => (
-                <button
-                  key={o.key}
-                  type="button"
-                  className={`mfm-type cmo-seg__btn${timeFilter === o.key && meetingsViewMode !== 'calendar' ? ' is-active' : ''}`}
-                  aria-pressed={timeFilter === o.key}
-                  onClick={() => setTimeFilter(o.key)}
-                  // التقويم يحدّد نطاقه بالشهر المعروض، فالفترة لا تعني فيه شيئاً
-                  disabled={meetingsViewMode === 'calendar'}
-                >
-                  {o.label}
-                </button>
-              ))}
+              {TIME_OPTIONS.map((o) => {
+                const n = o.key === 'today' ? counts.today : o.key === 'week' ? counts.week : 0;
+                return (
+                  <button
+                    key={o.key}
+                    type="button"
+                    className={`mfm-type cmo-seg__btn${timeFilter === o.key && meetingsViewMode !== 'calendar' ? ' is-active' : ''}`}
+                    aria-pressed={timeFilter === o.key}
+                    onClick={() => setTimeFilter(o.key)}
+                    // التقويم يحدّد نطاقه بالشهر المعروض، فالفترة لا تعني فيه شيئاً
+                    disabled={meetingsViewMode === 'calendar'}
+                    title={n > 0 ? `${n} ${o.key === 'today' ? 'غير ملغاة' : 'مؤكدة ومعلّقة'}` : undefined}
+                  >
+                    {o.label}
+                    {n > 0 && <span className="cmo-seg__count">{n}</span>}
+                  </button>
+                );
+              })}
             </div>
 
             <select
@@ -798,13 +810,8 @@ const ClientMeetings: React.FC = () => {
               </select>
             )}
 
-            {onlyMissingLink && (
-              <button type="button" className="cmo-chip" onClick={() => setOnlyMissingLink(false)}>
-                <VideoOff size={12} aria-hidden="true" /> بلا رابط فقط <X size={12} aria-label="إزالة" />
-              </button>
-            )}
-
             <div className="cmo-toolbar__end">
+              <ClientMeetingsSummary counts={counts} active={activeQuick} onPick={pickQuick} />
               {hasFilters && (
                 <button type="button" className="fin-btn fin-btn--ghost fin-btn--sm" onClick={resetFilters}>
                   مسح التصفية
@@ -834,78 +841,80 @@ const ClientMeetings: React.FC = () => {
           </div>
 
           {/* Meetings List */}
-          {loading ? (
-            <div className="cmo-agenda" aria-busy="true" aria-label="جاري تحميل المواعيد">
-              {[0, 1].map((g) => (
-                <section key={g} className="cmo-day">
-                  <div className="cmo-skel cmo-skel--head" />
-                  <div className="cmo-day__list">
-                    {[0, 1, 2].map((i) => (
-                      <div key={i} className="cmo-skel-row">
-                        <div className="cmo-skel cmo-skel--time" />
-                        <div className="cmo-skel cmo-skel--avatar" />
-                        <div className="cmo-skel cmo-skel--line" />
-                        <div className="cmo-skel cmo-skel--badge" />
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          ) : error ? (
-            <div className="error-state">
-              <XCircle size={32} />
-              <p>{error}</p>
-              <button onClick={() => fetchData()}>إعادة المحاولة</button>
-            </div>
-          ) : meetingsViewMode === 'calendar' ? (
-            // النقر يفتح لوحة الموعد — كان يفتح «إنهاء وتسجيل النتيجة» حتى لموعد الأسبوع القادم
-            <ClientMeetingsCalendar
-              meetings={filteredMeetings}
-              onSelectMeeting={openMeeting}
-            />
-          ) : filteredMeetings.length === 0 && hasFilters && meetings.length > 0 ? (
-            <div className="empty-state">
-              <Search size={40} />
-              <h3>لا مواعيد تطابق التصفية</h3>
-              <p>غيّر الفترة أو الحالة، أو امسح التصفية لترى المواعيد القادمة كلّها.</p>
-              <button className="fin-btn" onClick={resetFilters}>مسح التصفية</button>
-            </div>
-          ) : filteredMeetings.length === 0 ? (
-            <div className="empty-state">
-              <Calendar size={48} />
-              <h3>لا توجد مواعيد</h3>
-              <p>احجز موعداً مباشرةً، أو أرسل للعميل رابط حجز يختار منه وقته</p>
-              <div className="cmo-empty-actions">
-                <button
-                  className="primary-btn"
-                  onClick={() => setFormMeeting('new')}
-                >
-                  <Plus size={18} />
-                  موعد جديد
-                </button>
-                <button
-                  className="fin-btn"
-                  onClick={() => setShowCreateLinkModal(true)}
-                >
-                  <Link2 size={16} />
-                  إنشاء رابط حجز
-                </button>
+          <div ref={bodyRef} className="cmo-body">
+            {loading ? (
+              <div className="cmo-agenda" aria-busy="true" aria-label="جاري تحميل المواعيد">
+                {[0, 1].map((g) => (
+                  <section key={g} className="cmo-day">
+                    <div className="cmo-skel cmo-skel--head" />
+                    <div className="cmo-day__list">
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="cmo-skel-row">
+                          <div className="cmo-skel cmo-skel--time" />
+                          <div className="cmo-skel cmo-skel--avatar" />
+                          <div className="cmo-skel cmo-skel--line" />
+                          <div className="cmo-skel cmo-skel--badge" />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))}
               </div>
-            </div>
-          ) : (
-            <ClientMeetingsAgenda
-              meetings={filteredMeetings}
-              showLawyer={lawyerOptions.length > 1}
-              onOpen={openMeeting}
-              onApprove={handleConfirmMeeting}
-              onEdit={handleEditMeeting}
-              onOutcome={handleOpenOutcome}
-              onNoShow={handleNoShow}
-              onCancel={handleCancelMeeting}
-              onLinkCase={setLinkCaseMeeting}
-            />
-          )}
+            ) : error ? (
+              <div className="error-state">
+                <XCircle size={32} />
+                <p>{error}</p>
+                <button onClick={() => fetchData()}>إعادة المحاولة</button>
+              </div>
+            ) : meetingsViewMode === 'calendar' ? (
+              // النقر يفتح لوحة الموعد — كان يفتح «إنهاء وتسجيل النتيجة» حتى لموعد الأسبوع القادم
+              <ClientMeetingsCalendar
+                meetings={filteredMeetings}
+                onSelectMeeting={openMeeting}
+              />
+            ) : filteredMeetings.length === 0 && hasFilters && meetings.length > 0 ? (
+              <div className="empty-state">
+                <Search size={40} />
+                <h3>لا مواعيد تطابق التصفية</h3>
+                <p>غيّر الفترة أو الحالة، أو امسح التصفية لترى المواعيد القادمة كلّها.</p>
+                <button className="fin-btn" onClick={resetFilters}>مسح التصفية</button>
+              </div>
+            ) : filteredMeetings.length === 0 ? (
+              <div className="empty-state">
+                <Calendar size={48} />
+                <h3>لا توجد مواعيد</h3>
+                <p>احجز موعداً مباشرةً، أو أرسل للعميل رابط حجز يختار منه وقته</p>
+                <div className="cmo-empty-actions">
+                  <button
+                    className="primary-btn"
+                    onClick={() => setFormMeeting('new')}
+                  >
+                    <Plus size={18} />
+                    موعد جديد
+                  </button>
+                  <button
+                    className="fin-btn"
+                    onClick={() => setShowCreateLinkModal(true)}
+                  >
+                    <Link2 size={16} />
+                    إنشاء رابط حجز
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <ClientMeetingsAgenda
+                meetings={filteredMeetings}
+                showLawyer={lawyerOptions.length > 1}
+                onOpen={openMeeting}
+                onApprove={handleConfirmMeeting}
+                onEdit={handleEditMeeting}
+                onOutcome={handleOpenOutcome}
+                onNoShow={handleNoShow}
+                onCancel={handleCancelMeeting}
+                onLinkCase={setLinkCaseMeeting}
+              />
+            )}
+          </div>
         </>
       )}
 
@@ -932,208 +941,210 @@ const ClientMeetings: React.FC = () => {
             </div>
           </div>
 
-          {bookingLinks.length === 0 ? (
-            <div className="empty-state">
-              <Link2 size={48} />
-              <h3>لا توجد روابط حجز</h3>
-              <p>أنشئ رابط حجز لإرساله للعميل</p>
-              <button
-                className="primary-btn"
-                onClick={() => setShowCreateLinkModal(true)}
-              >
-                <Plus size={18} />
-                إنشاء رابط جديد
-              </button>
-            </div>
-          ) : linksViewMode === 'table' ? (
-            /* Table View */
-            <div className="links-table-wrapper">
-              <table className="links-table">
-                <thead>
-                  <tr>
-                    <th>العميل</th>
-                    <th>الرابط</th>
-                    <th>الحالة</th>
-                    <th>تاريخ الانتهاء</th>
-                    <th>الإجراءات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookingLinks.map(link => (
-                    <tr key={link.id} className={link.is_used || !bookingHelpers.isLinkValid(link) ? 'row-disabled' : ''}>
-                      <td>
-                        <div className="table-client">
-                          <div className="table-client-avatar">
-                            {link.client?.name?.charAt(0) || '؟'}
-                          </div>
-                          <span>{link.client?.name || 'رابط عام'}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="table-link-url">
-                          <input type="text" value={link.full_url || link.url || ''} readOnly />
-                          <button
-                            className="icon-btn-xs"
-                            onClick={() => handleCopyLink(link)}
-                            disabled={link.is_used || !bookingHelpers.isLinkValid(link)}
-                            title="نسخ الرابط"
-                          >
-                            {copiedLinkId === link.id ? <CheckCircle size={14} /> : <Copy size={14} />}
-                          </button>
-                        </div>
-                      </td>
-                      <td>
-                        {link.is_used ? (
-                          <span className="status-badge status-badge--used">
-                            <CheckCircle size={12} />
-                            مستخدم
-                          </span>
-                        ) : !bookingHelpers.isLinkValid(link) ? (
-                          <span className="status-badge status-badge--expired">
-                            <XCircle size={12} />
-                            منتهي
-                          </span>
-                        ) : (
-                          <span className="status-badge status-badge--active">
-                            <Clock size={12} />
-                            صالح
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        <span className="expiry-text">
-                          {bookingHelpers.isLinkValid(link) ? bookingHelpers.getTimeUntilExpiry(link.expires_at) : 'منتهي'}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="table-actions">
-                          {!link.is_used && bookingHelpers.isLinkValid(link) && (
-                            <>
-                              <a
-                                href={bookingHelpers.createWhatsAppShareLink(link.full_url || link.url || '', link.client?.name)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="icon-btn-action icon-btn-action--whatsapp"
-                                title="إرسال عبر واتساب"
-                              >
-                                <Send size={14} />
-                              </a>
-                              <a
-                                href={bookingHelpers.createEmailShareLink(link.full_url || link.url || '', link.client?.email, user?.name)}
-                                className="icon-btn-action icon-btn-action--email"
-                                title="إرسال عبر البريد"
-                              >
-                                <Mail size={14} />
-                              </a>
-                              {link.client && (
-                                <button
-                                  className="icon-btn-action"
-                                  onClick={() => handleResendLink(link)}
-                                  title="إعادة إرسال"
-                                >
-                                  <RefreshCw size={14} />
-                                </button>
-                              )}
-                            </>
-                          )}
-                          <button
-                            className="icon-btn-action icon-btn-action--delete"
-                            onClick={() => handleDeleteLink(link)}
-                            title="حذف"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            /* Cards View */
-            <div className="links-cards">
-              {bookingLinks.map(link => (
-                <div
-                  key={link.id}
-                  className={`link-card-v2 ${link.is_used ? 'link-card-v2--used' : ''} ${!bookingHelpers.isLinkValid(link) ? 'link-card-v2--expired' : ''
-                    }`}
+          <div className="cmo-body cmo-body--links">
+            {bookingLinks.length === 0 ? (
+              <div className="empty-state">
+                <Link2 size={48} />
+                <h3>لا توجد روابط حجز</h3>
+                <p>أنشئ رابط حجز لإرساله للعميل</p>
+                <button
+                  className="primary-btn"
+                  onClick={() => setShowCreateLinkModal(true)}
                 >
-                  <div className="link-card-v2__top">
-                    <div className="link-card-v2__client">
-                      <div className="link-card-v2__avatar">
-                        {link.client?.name?.charAt(0) || '؟'}
+                  <Plus size={18} />
+                  إنشاء رابط جديد
+                </button>
+              </div>
+            ) : linksViewMode === 'table' ? (
+              /* Table View */
+              <div className="links-table-wrapper">
+                <table className="links-table">
+                  <thead>
+                    <tr>
+                      <th>العميل</th>
+                      <th>الرابط</th>
+                      <th>الحالة</th>
+                      <th>تاريخ الانتهاء</th>
+                      <th>الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookingLinks.map(link => (
+                      <tr key={link.id} className={link.is_used || !bookingHelpers.isLinkValid(link) ? 'row-disabled' : ''}>
+                        <td>
+                          <div className="table-client">
+                            <div className="table-client-avatar">
+                              {link.client?.name?.charAt(0) || '؟'}
+                            </div>
+                            <span>{link.client?.name || 'رابط عام'}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="table-link-url">
+                            <input type="text" value={link.full_url || link.url || ''} readOnly />
+                            <button
+                              className="icon-btn-xs"
+                              onClick={() => handleCopyLink(link)}
+                              disabled={link.is_used || !bookingHelpers.isLinkValid(link)}
+                              title="نسخ الرابط"
+                            >
+                              {copiedLinkId === link.id ? <CheckCircle size={14} /> : <Copy size={14} />}
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          {link.is_used ? (
+                            <span className="status-badge status-badge--used">
+                              <CheckCircle size={12} />
+                              مستخدم
+                            </span>
+                          ) : !bookingHelpers.isLinkValid(link) ? (
+                            <span className="status-badge status-badge--expired">
+                              <XCircle size={12} />
+                              منتهي
+                            </span>
+                          ) : (
+                            <span className="status-badge status-badge--active">
+                              <Clock size={12} />
+                              صالح
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <span className="expiry-text">
+                            {bookingHelpers.isLinkValid(link) ? bookingHelpers.getTimeUntilExpiry(link.expires_at) : 'منتهي'}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="table-actions">
+                            {!link.is_used && bookingHelpers.isLinkValid(link) && (
+                              <>
+                                <a
+                                  href={bookingHelpers.createWhatsAppShareLink(link.full_url || link.url || '', link.client?.name)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="icon-btn-action icon-btn-action--whatsapp"
+                                  title="إرسال عبر واتساب"
+                                >
+                                  <Send size={14} />
+                                </a>
+                                <a
+                                  href={bookingHelpers.createEmailShareLink(link.full_url || link.url || '', link.client?.email, user?.name)}
+                                  className="icon-btn-action icon-btn-action--email"
+                                  title="إرسال عبر البريد"
+                                >
+                                  <Mail size={14} />
+                                </a>
+                                {link.client && (
+                                  <button
+                                    className="icon-btn-action"
+                                    onClick={() => handleResendLink(link)}
+                                    title="إعادة إرسال"
+                                  >
+                                    <RefreshCw size={14} />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            <button
+                              className="icon-btn-action icon-btn-action--delete"
+                              onClick={() => handleDeleteLink(link)}
+                              title="حذف"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              /* Cards View */
+              <div className="links-cards">
+                {bookingLinks.map(link => (
+                  <div
+                    key={link.id}
+                    className={`link-card-v2 ${link.is_used ? 'link-card-v2--used' : ''} ${!bookingHelpers.isLinkValid(link) ? 'link-card-v2--expired' : ''
+                      }`}
+                  >
+                    <div className="link-card-v2__top">
+                      <div className="link-card-v2__client">
+                        <div className="link-card-v2__avatar">
+                          {link.client?.name?.charAt(0) || '؟'}
+                        </div>
+                        <div className="link-card-v2__info">
+                          <span className="link-card-v2__name">{link.client?.name || 'رابط عام'}</span>
+                          <span className="link-card-v2__phone">{link.client?.phone || '-'}</span>
+                        </div>
                       </div>
-                      <div className="link-card-v2__info">
-                        <span className="link-card-v2__name">{link.client?.name || 'رابط عام'}</span>
-                        <span className="link-card-v2__phone">{link.client?.phone || '-'}</span>
-                      </div>
+                      {link.is_used ? (
+                        <span className="status-chip status-chip--used">مستخدم</span>
+                      ) : !bookingHelpers.isLinkValid(link) ? (
+                        <span className="status-chip status-chip--expired">منتهي</span>
+                      ) : (
+                        <span className="status-chip status-chip--active">
+                          {bookingHelpers.getTimeUntilExpiry(link.expires_at)}
+                        </span>
+                      )}
                     </div>
-                    {link.is_used ? (
-                      <span className="status-chip status-chip--used">مستخدم</span>
-                    ) : !bookingHelpers.isLinkValid(link) ? (
-                      <span className="status-chip status-chip--expired">منتهي</span>
-                    ) : (
-                      <span className="status-chip status-chip--active">
-                        {bookingHelpers.getTimeUntilExpiry(link.expires_at)}
-                      </span>
-                    )}
-                  </div>
 
-                  <div className="link-card-v2__url">
-                    <input type="text" value={link.full_url || link.url || ''} readOnly />
-                    <button
-                      className="copy-btn-v2"
-                      onClick={() => handleCopyLink(link)}
-                      disabled={link.is_used || !bookingHelpers.isLinkValid(link)}
-                    >
-                      {copiedLinkId === link.id ? <CheckCircle size={16} /> : <Copy size={16} />}
-                      {copiedLinkId === link.id ? 'تم النسخ' : 'نسخ'}
-                    </button>
-                  </div>
+                    <div className="link-card-v2__url">
+                      <input type="text" value={link.full_url || link.url || ''} readOnly />
+                      <button
+                        className="copy-btn-v2"
+                        onClick={() => handleCopyLink(link)}
+                        disabled={link.is_used || !bookingHelpers.isLinkValid(link)}
+                      >
+                        {copiedLinkId === link.id ? <CheckCircle size={16} /> : <Copy size={16} />}
+                        {copiedLinkId === link.id ? 'تم النسخ' : 'نسخ'}
+                      </button>
+                    </div>
 
-                  <div className="link-card-v2__actions">
-                    {!link.is_used && bookingHelpers.isLinkValid(link) && (
-                      <>
-                        <a
-                          href={bookingHelpers.createWhatsAppShareLink(link.full_url || link.url || '', link.client?.name)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="card-action-btn card-action-btn--whatsapp"
-                          title="واتساب"
-                        >
-                          <Send size={16} />
-                        </a>
-                        <a
-                          href={bookingHelpers.createEmailShareLink(link.full_url || link.url || '', link.client?.email, user?.name)}
-                          className="card-action-btn card-action-btn--email"
-                          title="بريد إلكتروني"
-                        >
-                          <Mail size={16} />
-                        </a>
-                        {link.client && (
-                          <button
-                            className="card-action-btn"
-                            onClick={() => handleResendLink(link)}
-                            title="إعادة إرسال"
+                    <div className="link-card-v2__actions">
+                      {!link.is_used && bookingHelpers.isLinkValid(link) && (
+                        <>
+                          <a
+                            href={bookingHelpers.createWhatsAppShareLink(link.full_url || link.url || '', link.client?.name)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="card-action-btn card-action-btn--whatsapp"
+                            title="واتساب"
                           >
-                            <RefreshCw size={16} />
-                          </button>
-                        )}
-                      </>
-                    )}
-                    <button
-                      className="card-action-btn card-action-btn--delete"
-                      onClick={() => handleDeleteLink(link)}
-                      title="حذف"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                            <Send size={16} />
+                          </a>
+                          <a
+                            href={bookingHelpers.createEmailShareLink(link.full_url || link.url || '', link.client?.email, user?.name)}
+                            className="card-action-btn card-action-btn--email"
+                            title="بريد إلكتروني"
+                          >
+                            <Mail size={16} />
+                          </a>
+                          {link.client && (
+                            <button
+                              className="card-action-btn"
+                              onClick={() => handleResendLink(link)}
+                              title="إعادة إرسال"
+                            >
+                              <RefreshCw size={16} />
+                            </button>
+                          )}
+                        </>
+                      )}
+                      <button
+                        className="card-action-btn card-action-btn--delete"
+                        onClick={() => handleDeleteLink(link)}
+                        title="حذف"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
 
@@ -1244,7 +1255,7 @@ const ClientMeetings: React.FC = () => {
       <style>{`
         .meetings-page {
           padding: 0;
-          min-height: 100vh;
+          min-height: 100%;
           background: var(--color-surface-subtle);
         }
 
